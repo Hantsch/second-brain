@@ -187,6 +187,7 @@ export const enWiki = {
   'sources.list.noModule': 'without module',
   'sources.list.open': 'Open details for source {title}',
   'sources.list.page': 'To the wiki page',
+  'sources.list.moduleFor': 'Target module for {title}',
   'sources.detail.title': 'Source details',
   'sources.detail.status': 'Status',
   'sources.detail.condensed': 'Condensed',

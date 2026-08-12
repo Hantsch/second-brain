@@ -194,6 +194,7 @@ export const deWiki = {
   'sources.list.noModule': 'ohne Modul',
   'sources.list.open': 'Details der Quelle {title} öffnen',
   'sources.list.page': 'Zur Wiki-Seite',
+  'sources.list.moduleFor': 'Zielmodul für {title}',
   'sources.detail.title': 'Quellendetails',
   'sources.detail.status': 'Status',
   'sources.detail.condensed': 'Verdichtet',

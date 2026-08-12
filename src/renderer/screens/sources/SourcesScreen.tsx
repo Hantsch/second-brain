@@ -199,6 +199,14 @@ export function SourcesScreen() {
                       if (target === undefined) return;
                       openSourcePage(slug, target);
                     }}
+                    modules={modules.data ?? []}
+                    onCondense={(path, targetModule) =>
+                      mutations.condense.mutate({ path, module: targetModule })
+                    }
+                    condensing={
+                      mutations.condense.isPending &&
+                      mutations.condense.variables?.path === source.path
+                    }
                   />
                 ))}
               </ul>

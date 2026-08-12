@@ -426,6 +426,28 @@ describe('Quellen: Bestand', () => {
     );
   });
 
+  it('verdichtet direkt aus der Liste, ohne die Details zu öffnen', async () => {
+    const { sb } = renderScreen({
+      'ingest:condense': ({ path, module }) =>
+        job({ kind: 'url', rawPath: path, module, stage: 'queued', progress: 0 }),
+    });
+
+    await screen.findByText('Digital Gardening: ein Überblick');
+    await userEvent.selectOptions(
+      screen.getByLabelText('Zielmodul für Digital Gardening: ein Überblick'),
+      MODULE,
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Verdichten' }));
+
+    await waitFor(() =>
+      expect(sb.calls.find((call) => call.channel === 'ingest:condense')?.payload).toEqual({
+        path: raw.path,
+        module: MODULE,
+      }),
+    );
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
   it('zeigt den YouTube-Ressourcenreport und nimmt Dateien nachträglich an', async () => {
     const report: SourceDetail = sourceDetail(condensed, {
       resourceReport: {
