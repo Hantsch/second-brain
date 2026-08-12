@@ -1,0 +1,18 @@
+node_modules/
+out/
+dist/
+release/
+*.tsbuildinfo
+
+# Lokale Artefakte der Entwicklung
+.demo-vault/
+.screenshots/
+.vault/
+coverage/
+
+# Nie ins Repo: echte Second-Brain-Inhalte und Schlüssel
+vault/
+*.local
+.env
+.env.*
+.audit

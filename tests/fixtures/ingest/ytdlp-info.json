@@ -1,0 +1,31 @@
+{
+  "id": "xOFkpf9KgKg",
+  "title": "Dein zweites Gehirn verrottet langsam",
+  "description": "Warum ein Wiki Pflege braucht.\n\n0:00 Einleitung\n0:30 Drei Anzeichen\n1:10 Was hilft\n\nQuelle: https://example.org/karpathy-wiki\nMastodon: https://example.social/@beispiel",
+  "channel": "Beispielkanal",
+  "channel_id": "UC1234567890abcdefghij",
+  "channel_url": "https://www.youtube.com/channel/UC1234567890abcdefghij",
+  "timestamp": 1785931200,
+  "upload_date": "20260805",
+  "duration": 96,
+  "view_count": 12345,
+  "like_count": 678,
+  "comment_count": 42,
+  "language": "de",
+  "thumbnail": "https://i.ytimg.com/vi/xOFkpf9KgKg/maxresdefault.jpg",
+  "tags": ["wissen", "pflege", "wiki"],
+  "categories": ["Education"],
+  "chapters": [
+    { "start_time": 0, "end_time": 30, "title": "Einleitung" },
+    { "start_time": 30, "end_time": 70, "title": "Drei Anzeichen" },
+    { "start_time": 70, "end_time": 96, "title": "Was hilft" }
+  ],
+  "is_live": false,
+  "age_limit": 0,
+  "subtitles": { "de": [{ "ext": "json3" }], "live_chat": [{ "ext": "json" }] },
+  "automatic_captions": {
+    "de-orig": [{ "ext": "json3" }],
+    "en": [{ "ext": "json3" }],
+    "es": [{ "ext": "json3" }]
+  }
+}

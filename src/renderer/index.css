@@ -1,0 +1,81 @@
+@import 'tailwindcss';
+@import './styles/gaston/styles.css';
+@import '@fontsource/ibm-plex-sans/400.css';
+@import '@fontsource/ibm-plex-sans/500.css';
+@import '@fontsource/ibm-plex-sans/600.css';
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/500.css';
+@import './styles/app/shell.css';
+@import './styles/app/content.css';
+@import './styles/app/screens.css';
+@import './styles/app/dashboard.css';
+@import './styles/app/capture.css';
+@import './styles/app/inbox.css';
+@import './styles/app/projects.css';
+@import './styles/app/markdown.css';
+@import './styles/app/ask.css';
+@import './styles/app/journal.css';
+@import './styles/app/modules.css';
+@import './styles/app/sources.css';
+@import './styles/app/garden.css';
+@import './styles/app/settings.css';
+@import './styles/app/overlays.css';
+
+/* Grundlage der Anwendung: Farbschema, Kennzahlen des Fensters, Ziehbereich.
+   Das Layout selbst liegt in `styles/app/`. Farben, Abstände und Radien kommen
+   ausschließlich aus den Gaston-Tokens — keine rohe Tailwind-Palette. */
+
+:root {
+  color-scheme: dark;
+  /* Gaston setzt 28 px für kleine Bedienelemente. ARCHITECTURE.md verlangt
+     mindestens 32 px für jede interaktive Fläche — das ist A11y-Pflicht, keine
+     Empfehlung, und sie gewinnt. Überschrieben hier statt im vendorierten
+     Token-Satz, damit ein neuer Gaston-Stand ohne Konflikt einziehen kann. */
+  --control-h-sm: 32px;
+  /* Mindestmaß für alles, was klickt — eine Zahl, viele Stellen. */
+  --sb-hit: 32px;
+  --sb-rail-w: var(--sidebar-w);
+  --sb-titlebar-h: 36px;
+  /* Wie `--focus-ring`, aber mit der Fläche der Rail und der Titelzeile als
+     innerem Abstand — auf `--surface-sunken` würde der Seitenton auffallen. */
+  --sb-focus-ring-sunken: 0 0 0 2px var(--surface-sunken), 0 0 0 4px var(--accent);
+}
+
+/* Derselbe A11y-Zwang wie bei `--control-h-sm`, aber am Icon-Knopf selbst: der
+   vendorierte `.gs-dialog-x` (16 px Icon + 4 px Padding = 24 px) unterschreitet
+   `--sb-hit` in jedem Dialog der App, egal welcher — der Knopf kommt aus
+   `atoms/Dialog.tsx` und steht überall gleich. Überschrieben hier statt im
+   vendorierten Satz, aus demselben Grund wie oben. */
+.gs-dialog-x {
+  min-width: var(--sb-hit);
+  min-height: var(--sb-hit);
+  align-items: center;
+  justify-content: center;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  overflow: hidden;
+  user-select: none;
+}
+
+/* Ziehbereich des rahmenlosen Fensters. Interaktive Flächen darin brauchen
+   `sb-no-drag`, sonst schluckt der Rahmen den Klick. */
+.sb-drag {
+  -webkit-app-region: drag;
+}
+.sb-no-drag {
+  -webkit-app-region: no-drag;
+}
+
+.sb-app {
+  display: grid;
+  grid-template-rows: var(--sb-titlebar-h) 1fr;
+  height: 100%;
+  background: var(--surface-page);
+}

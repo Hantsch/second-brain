@@ -1,0 +1,8 @@
+node_modules/
+out/
+dist/
+release/
+.demo-vault/
+.screenshots/
+package-lock.json
+src/renderer/styles/gaston/

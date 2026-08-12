@@ -1,0 +1,749 @@
+/* Tagebuch: Tagesliste, Tageseintrag, Stimmung, Gespräch, Tagesabschluss.
+   Farben, Abstände und Radien ausschließlich aus den Gaston-Tokens.
+
+   Zwei Maße tragen den Screen: die Liste links bleibt schmal (240 px — Datum,
+   Punkt, erste Worte), und der Tag rechts liest sich in einer Spalte von 72
+   Zeichen. Tagebuchtext über die ganze Fensterbreite liest niemand. */
+
+/* ── Zwei Spalten: Tage, Tag ─────────────────────────────────────────────── */
+
+.sb-journal {
+  display: grid;
+  grid-template-columns: minmax(200px, 240px) minmax(0, 1fr);
+  gap: var(--space-6);
+  align-items: stretch;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.sb-journal-side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  min-height: 0;
+  border-right: 1px solid var(--border-subtle);
+  padding-right: var(--space-4);
+}
+.sb-journal-count {
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+}
+.sb-journal-keys {
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+  padding-top: var(--space-1);
+}
+.sb-journal-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  padding-right: var(--space-2);
+}
+
+/* ── Tagesliste ──────────────────────────────────────────────────────────── */
+
+.sb-daylist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-height: 0;
+  overflow-y: auto;
+}
+.sb-dayrow {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  min-height: var(--sb-hit);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+.sb-dayrow:hover {
+  background: var(--surface-raised);
+}
+.sb-dayrow:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+/* Die Auswahl ist eine Fläche, kein zweites Teal. */
+.sb-dayrow--active {
+  background: var(--surface-raised);
+  border-color: var(--border-strong);
+}
+/* „Heute" ist der Einstieg: eine Linie in Teal, kein gefülltes Feld. */
+.sb-dayrow--today {
+  border-left: 2px solid var(--accent);
+  border-radius: var(--radius-sm) var(--radius-md) var(--radius-md) var(--radius-sm);
+}
+.sb-dayrow-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.sb-dayrow-date {
+  font-size: var(--text-xs);
+  color: var(--text-body);
+}
+.sb-dayrow-weekday {
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+}
+.sb-dayrow-excerpt {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  line-height: var(--leading-snug);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.sb-dayrow-words {
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+}
+.sb-dayrow-none {
+  font-size: var(--text-sm);
+  color: var(--text-faint);
+}
+/* Der Stimmungspunkt: eine Stufe, eine Sättigung — die Farbe bleibt der Akzent. */
+.sb-moodmark {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+  background: var(--accent);
+  margin-left: auto;
+}
+.sb-moodmark[data-level='1'] {
+  opacity: 0.25;
+}
+.sb-moodmark[data-level='2'] {
+  opacity: 0.45;
+}
+.sb-moodmark[data-level='3'] {
+  opacity: 0.65;
+}
+.sb-moodmark[data-level='4'] {
+  opacity: 0.85;
+}
+.sb-moodmark[data-level='5'] {
+  opacity: 1;
+}
+.sb-dayrow-talk {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+  border: 1px solid var(--border-strong);
+}
+
+/* Die Lücke: eine ruhige Zeile, kein erfundener Tag. */
+.sb-daygap {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+}
+.sb-daygap-line {
+  flex: 1;
+  height: 1px;
+  background: var(--border-subtle);
+}
+.sb-daygap-text {
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+}
+
+/* ── Kopf des Tages ──────────────────────────────────────────────────────── */
+
+.sb-dayentry {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  max-width: 74ch;
+}
+.sb-dayentry-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+.sb-dayentry-title {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.sb-dayentry-date {
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  color: var(--text-heading);
+  line-height: var(--leading-tight);
+}
+.sb-dayentry-path {
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+  word-break: break-all;
+}
+.sb-dayentry-levels {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.sb-dayentry-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+}
+/* Ein Chip ohne Klickweg ist keine Fläche, sondern eine Angabe. */
+.sb-chip--static {
+  cursor: default;
+  min-height: auto;
+  padding: 2px var(--space-2);
+}
+
+/* ── Reiter „Tag" / „Gespräch" (nur im engen Fenster) ───────────────────── */
+
+/* Unsichtbar im breiten Fenster: dort gibt es zwei Spalten, keine Reiter, und
+   diese Zeile darf an der abgenommenen breiten Ansicht nichts ändern.
+   `journal.css` wird nach den Gaston-Komponenten eingebunden (`index.css`) —
+   dieselbe Klassenspezifität wie `.gs-tabs`, aber die spätere Regel gewinnt. */
+.sb-dayentry-tabs {
+  display: none;
+}
+/* Beide Hüllen bleiben im breiten Fenster unsichtbare Rahmen: ihre Kinder
+   liegen dann wieder direkt im Fluss von `.sb-dayentry`, an derselben Stelle
+   und mit demselben `gap`, als gäbe es die Hülle nicht — die bisherige
+   Anordnung bleibt so unverändert. Erst im engen Fenster (unten) werden sie
+   zu echten Rahmen, die je einen Reiter tragen. */
+.sb-dayentry-tagpanel,
+.sb-dayentry-talkpanel {
+  display: contents;
+}
+.sb-dayentry-closewrap {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* ── Stimmung und Energie ────────────────────────────────────────────────── */
+
+/* Beschriftung, Stufen und Rückmeldung in einer Zeile: der Kopf des Tages darf
+   nicht die halbe Höhe kosten, sonst liegt das Gespräch unter dem Rand. */
+.sb-mood {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+/* Feste Breite, damit „Stimmung" und „Energie" untereinander bündig stehen. */
+.sb-mood-label {
+  min-width: 5.5em;
+}
+.sb-mood-steps {
+  display: inline-flex;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+}
+.sb-moodstep {
+  all: unset;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--sb-hit);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+.sb-moodstep:hover {
+  border-color: var(--border-strong);
+  color: var(--text-body);
+}
+.sb-moodstep:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+.sb-moodstep--active {
+  border-color: var(--accent-soft-border);
+  background: var(--accent-soft);
+  color: var(--text-heading);
+}
+.sb-moodstep-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--text-faint);
+}
+.sb-moodstep--active .sb-moodstep-dot {
+  background: var(--accent);
+}
+.sb-mood-state {
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+  min-height: 14px;
+}
+
+/* ── Abschnitte des Tages ────────────────────────────────────────────────── */
+
+.sb-daysection,
+.sb-coach,
+.sb-dayfacts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.sb-section-title {
+  font-size: var(--text-2xs);
+  font-family: var(--font-mono);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--text-faint);
+  padding-bottom: var(--space-1);
+  border-bottom: 1px solid var(--border-subtle);
+}
+/* Wörtlich wie in der Datei: die Marker (`@due:`, `#tag`) bleiben stehen, und
+   eine Checkbox-Zeile wird nicht zu einer Liste umgedeutet, die sie nicht ist. */
+.sb-dayfacts-text {
+  font-size: var(--text-sm);
+  color: var(--text-body);
+  line-height: var(--leading-relaxed);
+  white-space: pre-wrap;
+  user-select: text;
+}
+
+/* ── Tagestext ───────────────────────────────────────────────────────────── */
+
+.sb-daytext {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.sb-daytext-view {
+  all: unset;
+  box-sizing: border-box;
+  display: block;
+  position: relative;
+  width: 100%;
+  cursor: text;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  user-select: text;
+}
+.sb-daytext-view:hover {
+  border-color: var(--border-subtle);
+  background: var(--surface-raised);
+}
+.sb-daytext-view:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+.sb-daytext-md {
+  font-size: var(--text-base);
+}
+.sb-daytext-pen {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  color: var(--text-faint);
+  opacity: 0;
+}
+.sb-daytext-view:hover .sb-daytext-pen,
+.sb-daytext-view:focus-visible .sb-daytext-pen {
+  opacity: 1;
+}
+.sb-daytext-field {
+  width: 100%;
+  resize: vertical;
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: var(--leading-relaxed);
+  user-select: text;
+}
+.sb-daytext-foot {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+/* ── Gespräch ────────────────────────────────────────────────────────────── */
+
+.sb-dialogue {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+.sb-dturn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.sb-dturn--user {
+  padding-left: var(--space-3);
+  border-left: 2px solid var(--border-strong);
+}
+.sb-dturn-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+.sb-dturn-time {
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+}
+.sb-dturn-said {
+  font-size: var(--text-md);
+  color: var(--text-heading);
+  line-height: var(--leading-snug);
+  white-space: pre-wrap;
+  user-select: text;
+}
+.sb-dturn-text {
+  user-select: text;
+}
+.sb-coach-failure {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-left: 2px solid var(--border-subtle);
+}
+.sb-evidence {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.sb-evidence-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.sb-evidence-item {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: var(--sb-hit);
+  padding: var(--space-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+.sb-evidence-item:hover {
+  background: var(--surface-raised);
+}
+.sb-evidence-item:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+.sb-evidence-date {
+  font-size: var(--text-2xs);
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.sb-evidence-quote {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  line-height: var(--leading-snug);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+/* Composer, Haltung und Tagesabschluss: die beiden Aktionen, die den Tag
+   betreffen, stehen am unteren Rand der Detailspalte fest — sie dürfen nie
+   unter den sichtbaren Rand rutschen, egal wie lang Verlauf oder Fakten sind.
+   `bottom: 0` verankert relativ zum nächsten rollenden Vorfahren: das ist im
+   breiten Fenster `.sb-journal-main` selbst, im engen (wo die Spalte nicht
+   mehr eigenständig rollt) `.sb-content`, der Rahmen des ganzen Screens.
+   Dasselbe Muster wie `.sb-proposal-actions` in inbox.css.
+
+   Wichtig ist die zweite Grenze, die `position: sticky` genauso setzt: der
+   Rahmen, INNERHALB dessen geklebt werden darf, ist der nächste
+   block-bildende Vorfahre — nicht der ganze Rollbereich. Deshalb ist dieses
+   Element ein direkter Nachfahre von `.sb-dayentry` (`CoachComposer.tsx`,
+   gerendert über `DayEntry`s `composer`-Slot) und nicht Teil des
+   „Gespräch"-Abschnitts (`.sb-coach`): als Nachfahre von `.sb-coach` hätte der
+   Klebe-Rahmen nur dessen schmale, tief unten liegende Box umfasst — ohne
+   Spielraum, um bis zum unteren Fensterrand hochgezogen zu werden. */
+.sb-journal-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  padding-bottom: var(--space-2);
+  background: var(--surface-page);
+  border-top: 1px solid var(--border-subtle);
+  /* Deckt ein paar Pixel oberhalb der eigenen Kante ab: klebt die Leiste
+     genau an der Zeile, die davor endet (Fakten, ein Gesprächssatz), reicht
+     der Rahmen selbst sonst nicht, um sie ganz zu verdecken. */
+  box-shadow: 0 -8px 0 0 var(--surface-page);
+}
+.sb-journal-footer-close {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Die Zeile über dem Feld: eine Tatsache, keine Warnung. */
+.sb-privacy {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+  max-width: 72ch;
+}
+
+/* ── Haltung des Coachs ──────────────────────────────────────────────────── */
+
+.sb-stance {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.sb-stance-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.sb-stance-label {
+  color: var(--text-faint);
+}
+.sb-stance-seg {
+  display: inline-flex;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.sb-stancebtn {
+  all: unset;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--sb-hit);
+  padding: 0 var(--space-3);
+  cursor: pointer;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  border-right: 1px solid var(--border-subtle);
+}
+.sb-stance-seg .gs-tooltipwrap:last-child .sb-stancebtn {
+  border-right: none;
+}
+.sb-stancebtn:hover {
+  background: var(--surface-raised);
+  color: var(--text-body);
+}
+.sb-stancebtn:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+.sb-stancebtn--active {
+  background: var(--accent-soft);
+  color: var(--text-heading);
+}
+.sb-stancebtn:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+.sb-stance-keys {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+}
+.sb-stance-hint {
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+  line-height: var(--leading-snug);
+}
+
+/* ── Tagesabschluss ──────────────────────────────────────────────────────── */
+
+.sb-close {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.sb-closefield-value {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+/* Im engen Fenster (der Wert prüft `npm run shot` mit 1152 px, deshalb 1200 und
+   nicht 1100 — sonst greift die Regel bei genau der Breite nicht, die geprüft
+   wird) steht der Tag mit Tagestext und Composer zuerst, die Tagesliste wird
+   zu einem knapp gehaltenen Datums-Wähler darunter: der Zweck des Screens ist
+   der Tag, nicht die Liste der Tage.
+
+   Beide Zeilen bleiben eigene Scroller — `.sb-journal-main` bekommt mit
+   `minmax(0, 1fr)` den Rest der Höhe, `.sb-journal-side` mit `auto` genau so
+   viel, wie ihr knapper Inhalt braucht (`.sb-daylist` deckelt sich selbst).
+   Ohne eigenen Scroller (`overflow-y: visible`) müsste die Zeile ihre volle
+   Inhaltshöhe bekommen — das hätte sie über die zweite Zeile hinweg gelegt,
+   nicht danebengesetzt.
+
+   Innerhalb von `.sb-journal-main` steht hier — dritter Anlauf — die
+   vorgegebene Bauform: zwei Reiter (`DayEntry.tsx`), „Tag" und „Gespräch",
+   statt einer einzigen Rollspalte für beides. Zwei frühere Bauformen sind
+   deshalb verworfen, nicht nur eine:
+   - `position: sticky` auf dem Composer klebte ihn von der ersten Bildzeile
+     an über den ganzen Tag — Text, Stimmung, Energie und Chips lagen
+     dahinter, für `elementFromPoint` nicht mehr erreichbar.
+   - Der Composer im normalen Fluss (ohne Klebe-Rahmen) verlagerte das
+     Problem nur in die andere Richtung: er lag selbst hinter dem unteren
+     Bildrand, ungerollt nicht sichtbar — auf dem einzigen Screen, dessen
+     Zweck das Schreiben ist, der schlimmere Fehler.
+   Der Grund für beide Fehlschläge war derselbe: rund 370 px Rollhöhe reichen
+   nicht für Tageseintrag UND Gespräch gleichzeitig. Reiter umgehen die Frage,
+   statt sie neu zu stellen — jeder zeigt nur, wozu er da ist.
+
+   `.sb-dayentry-tagpanel` läuft dafür weiterhin im Fluss von
+   `.sb-journal-main` mit (dieselbe Knappheit wie zuvor: Stimmung, Energie und
+   Chips stehen ungerollt oben, Fakten und „Tag abschließen" darunter, nötigenfalls
+   gerollt). `.sb-dayentry-talkpanel` bekommt dagegen eine eigene, auf die
+   Fensterhöhe begrenzte Spalte: nur der Verlauf (`.sb-coach`) rollt darin,
+   der Composer bleibt als letztes, nicht wachsendes Element immer im
+   Fenster — ohne `position: sticky`, weil er nichts mehr zu überlappen
+   braucht (im Reiter „Gespräch" steht sonst nichts). Kein zweiter Roller
+   schneidet dabei eine Zeile ab: `.sb-coach` endet an der Zeilenkante, die
+   der Browser selbst wählt, nicht an einer geschätzten Pixelzahl. */
+@media (max-width: 1200px) {
+  .sb-journal {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+    gap: var(--space-3);
+  }
+  .sb-journal-main {
+    order: -1;
+  }
+  .sb-journal-side {
+    order: 1;
+    border-right: none;
+    border-top: 1px solid var(--border-subtle);
+    padding-right: 0;
+    padding-top: var(--space-3);
+  }
+  /* Mindestens eine ganze Zeile der Tagesliste, nicht nur ihr oberer Rand
+     (gemessen: eine Zeile ist rund 93 px hoch). 60 px zeigte keine einzige
+     vollständig. Gilt für beide Reiter — die Liste liegt außerhalb von
+     `.sb-dayentry` und weiß von den Reitern nichts. */
+  .sb-daylist {
+    max-height: 108px;
+  }
+  /* Dieselbe Knappheit gilt zwischen den Abschnitten des Tages. */
+  .sb-dayentry {
+    gap: var(--space-3);
+  }
+  /* Der Reiter selbst — sonst per Grundregel unsichtbar (siehe oben). */
+  .sb-dayentry-tabs {
+    display: flex;
+  }
+  .sb-dayentry-tagpanel,
+  .sb-dayentry-talkpanel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+  /* Nur die Seite des aktiven Reiters steht im Fenster — `data-tab` trägt
+     `DayEntry.tsx`. Die andere bleibt im Baum (kein Umschalten entfernt
+     etwas, siehe dort), nur unsichtbar: für `elementFromPoint` unerreichbar,
+     genau wie es das Gate verlangt. */
+  .sb-dayentry[data-tab='day'] .sb-dayentry-talkpanel {
+    display: none;
+  }
+  .sb-dayentry[data-tab='talk'] .sb-dayentry-tagpanel {
+    display: none;
+  }
+  /* Reiter „Gespräch": eine eigene, auf die Fensterhöhe begrenzte Spalte —
+     nicht mehr der gemeinsame Rollbereich mit dem Tageseintrag. `flex: 1 1
+     auto` auf `.sb-dayentry` selbst zieht sie exakt auf den Rest der Höhe von
+     `.sb-journal-main` (dessen eigenes Rollen dadurch hier ungenutzt bleibt —
+     es gibt nichts mehr, das über sie hinausragt). */
+  .sb-dayentry[data-tab='talk'] {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+  /* Der Kopf (Datum, Pfad, Editor-Link) gehört inhaltlich zum Reiter „Tag"
+     (siehe die Aufzählung in der Aufgabe) — und Platz ist hier die knappste
+     Ressource: gemessen bei 1152×720 braucht der Composer allein (Vertraulich-
+     keitszeile, Feld, Haltungswahl, „Sagen") rund 318 px, der Kopf weitere
+     rund 74 px (mit Abstand). Ausgeblendet reicht der Rest gerade für den
+     Composer plus einen schmalen Streifen Verlauf — sichtbar bliebe er sonst
+     nur teilweise, vom `overflow: hidden` oben abgeschnitten (`elementFromPoint`
+     träfe dann die Tagesliste darunter statt „Sagen", genau der Fund, mit dem
+     dieser dritte Anlauf gemessen wurde). */
+  .sb-dayentry[data-tab='talk'] .sb-dayentry-head {
+    display: none;
+  }
+  .sb-dayentry[data-tab='talk'] .sb-dayentry-talkpanel {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  /* Nur der Verlauf rollt; der Composer danach ist ein letztes, nicht
+     wachsendes Element und bleibt deshalb immer im Fenster — `flex-shrink: 0`
+     ausdrücklich, weil ein Feld sonst über sein automatisches Mindestmaß
+     hinaus schrumpfen könnte, statt den Verlauf schrumpfen zu lassen. */
+  .sb-dayentry[data-tab='talk'] .sb-coach {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+  }
+  .sb-dayentry[data-tab='talk'] .sb-journal-footer {
+    flex: 0 0 auto;
+  }
+  /* Dieselbe Not: die Tagesliste braucht nur ihre eine Pflichtzeile (siehe
+     oben), nicht auch noch die Zählung und den Tastaturhinweis darüber und
+     darunter — im Reiter „Tag" bleiben beide stehen, dort ist genug Raum.
+     `:has()` statt eines eigenen Zustands im Screen: die beiden Spalten
+     (`.sb-journal-main`, `.sb-journal-side`) sind Geschwister, keine
+     Vorfahren-Nachfahren-Beziehung, über die eine gewöhnliche Regel das
+     wüsste. */
+  .sb-journal:has(.sb-dayentry[data-tab='talk']) .sb-journal-count,
+  .sb-journal:has(.sb-dayentry[data-tab='talk']) .sb-journal-keys {
+    display: none;
+  }
+  /* 72ch sind hier zwei bis drei Zeilen statt einer — genau der Platz, den
+     der Composer nicht mehr hat, seit er auch Esc erklärt. */
+  .sb-privacy {
+    max-width: none;
+  }
+  /* Der Klebe-Rahmen aus der Grundregel gilt hier ausdrücklich nicht: der
+     Composer braucht ihn nicht mehr, seit sein Reiter nichts außer dem
+     Verlauf über ihm zeigt — er ist ohnehin das letzte, nicht wachsende
+     Element seiner eigenen Spalte (siehe oben). `position: static` statt
+     `sticky` reicht; der Schatten gehörte allein zur Klebekante und wäre
+     hier eine Behauptung ohne Funktion. */
+  .sb-journal-footer {
+    position: static;
+    box-shadow: none;
+    gap: var(--space-2);
+  }
+}

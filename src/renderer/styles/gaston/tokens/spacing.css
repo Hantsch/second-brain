@@ -1,0 +1,30 @@
+/* Gaston — spacing & radius tokens. 4px base grid. */
+:root {
+  --space-0: 0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+
+  /* Radii — technical, restrained */
+  --radius-sm: 4px;   /* chips, kbd, tags */
+  --radius-md: 6px;   /* buttons, inputs */
+  --radius-lg: 10px;  /* cards, panels */
+  --radius-xl: 14px;  /* dialogs */
+  --radius-full: 999px;
+
+  /* Fixed layout metrics */
+  --control-h-sm: 28px;
+  --control-h-md: 36px;
+  --control-h-lg: 44px;
+  --sidebar-w: 232px;
+  --topbar-h: 52px;
+  --content-max: 760px; /* reading column */
+}

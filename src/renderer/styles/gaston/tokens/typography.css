@@ -1,0 +1,37 @@
+/* Gaston — typography tokens. One sans family, mono for data & labels. */
+:root {
+  --font-sans: "IBM Plex Sans", -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", "Cascadia Code", Menlo, monospace;
+
+  /* Size scale (UI density: 14px base) */
+  --text-2xs: 11px;
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-base: 14px;
+  --text-md: 16px;
+  --text-lg: 18px;
+  --text-xl: 22px;
+  --text-2xl: 28px;
+  --text-3xl: 36px;
+  --text-display: 46px;
+
+  /* Line heights */
+  --leading-tight: 1.2;
+  --leading-snug: 1.35;
+  --leading-normal: 1.55;
+  --leading-relaxed: 1.7;
+
+  /* Weights */
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* Tracking */
+  --tracking-tight: -0.015em;
+  --tracking-normal: 0;
+  --tracking-caps: 0.08em;
+
+  /* Composite: the Gaston overline — mono, uppercase, wide */
+  --overline-font: var(--weight-semibold) var(--text-2xs) / 1 var(--font-mono);
+}

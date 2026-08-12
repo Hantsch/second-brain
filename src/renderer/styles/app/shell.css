@@ -1,0 +1,293 @@
+/* Gerüst der Anwendung: Titelzeile, Rail, Inhaltsbereich, Screen-Kopf und der
+   Leerzustand. Farben, Abstände und Radien ausschließlich aus den Gaston-Tokens.
+   Die Bauteile im Inhalt stehen in content.css und screens.css. */
+
+/* ── Titelzeile ─────────────────────────────────────────────────────────── */
+
+.sb-titlebar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding-left: var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--surface-sunken);
+}
+.sb-titlebar-name {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.sb-titlebar-context {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Sichtbarer Einstieg in die Befehlspalette: eine Attrappe eines Suchfelds.
+   Sie ist ein Knopf — deshalb 32 px hoch und mit eigenem Fokusring. */
+.sb-titlebar-search {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: var(--space-2);
+}
+.sb-searchtrigger {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 32px;
+  min-width: 260px;
+  padding: 0 var(--space-2) 0 var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-card);
+  color: var(--text-faint);
+  cursor: pointer;
+  font-size: var(--text-xs);
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+.sb-searchtrigger:hover {
+  border-color: var(--border-strong);
+  color: var(--text-muted);
+}
+.sb-searchtrigger:focus-visible {
+  box-shadow: var(--sb-focus-ring-sunken);
+}
+.sb-searchtrigger-text {
+  margin-right: auto;
+  white-space: nowrap;
+}
+
+.sb-window-controls {
+  display: flex;
+  margin-left: auto;
+}
+.sb-window-controls .gs-btn {
+  height: var(--sb-titlebar-h);
+  width: 44px;
+  border-radius: 0;
+}
+
+/* ── Rail ───────────────────────────────────────────────────────────────── */
+
+.sb-body {
+  display: grid;
+  grid-template-columns: var(--sb-rail-w) 1fr;
+  min-height: 0;
+}
+
+.sb-rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-2);
+  border-right: 1px solid var(--border-subtle);
+  background: var(--surface-sunken);
+  min-height: 0;
+}
+.sb-rail-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  /* `overflow-y: auto` macht die Querachse automatisch scrollbar. `clip` hält
+     sie stumm — in der Rail gibt es nichts, was seitlich herausragen darf. */
+  overflow-x: clip;
+  min-height: 0;
+}
+.sb-rail-item {
+  all: unset;
+  box-sizing: border-box;
+  /* Nach `all: unset` — sonst setzt der Reset die Breite wieder zurück. Ohne
+     das wäre der aktive Zustand nur so breit wie der Text. */
+  width: 100%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  height: var(--control-h-md);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  /* Der Reset von `a:hover` in tokens/base.css: ein unterstrichenes Nav-Label
+     sieht in jedem Zustand nach Fließtext aus. Hover markiert die Fläche. */
+  text-decoration: none;
+  transition:
+    background var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+.sb-rail-item:hover,
+.sb-rail-item:focus,
+.sb-rail-item:active,
+.sb-rail-item[aria-current='page'] {
+  text-decoration: none;
+}
+.sb-rail-item:hover {
+  background: var(--surface-hover);
+  color: var(--text-body);
+}
+.sb-rail-item[aria-current='page'] {
+  background: var(--accent-soft);
+  color: var(--text-heading);
+}
+/* Die Aktivmarkierung ist ein Pseudoelement, kein `box-shadow`: sonst
+   überschreibt sie den globalen Fokusring (Spezifität 0,2,0 gegen 0,1,0) und der
+   Eintrag, auf dem man steht, verliert bei Tastaturbedienung seine Markierung. */
+.sb-rail-item[aria-current='page']::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  border-radius: var(--radius-full);
+  background: var(--accent);
+}
+/* Ausdrücklich und mit höherer Spezifität als die Aktivmarkierung. */
+.sb-rail-item:focus-visible,
+.sb-rail-item[aria-current='page']:focus-visible {
+  box-shadow: var(--sb-focus-ring-sunken);
+}
+/* Die Tastenziffer stand auf --text-disabled (2,8:1) und war kaum zu erkennen.
+   --text-faint liegt bei 5,96:1 gegen die Rail-Fläche. */
+.sb-rail-key {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+}
+.sb-rail-item[aria-current='page'] .sb-rail-key {
+  color: var(--teal-300);
+}
+
+.sb-rail-foot {
+  margin-top: auto;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+}
+.sb-vault {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+.sb-vault:hover {
+  background: var(--surface-hover);
+}
+.sb-vault-name {
+  font-size: var(--text-sm);
+  color: var(--text-body);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sb-vault-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+.sb-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--fog-600);
+  flex-shrink: 0;
+}
+.sb-dot--ok {
+  background: var(--success);
+}
+.sb-dot--busy {
+  background: var(--accent);
+}
+
+/* ── Inhaltsbereich ─────────────────────────────────────────────────────── */
+
+.sb-content {
+  overflow-y: auto;
+  /* Hält die Spalte des Rollbalkens frei, auch wenn keiner gebraucht wird: sonst
+     springt der ganze Inhalt beim Tabwechsel um dessen Breite. */
+  scrollbar-gutter: stable;
+  min-height: 0;
+  padding: var(--space-8) var(--space-8) var(--space-16);
+  user-select: text;
+}
+.sb-screen {
+  max-width: 960px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.sb-header {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-4);
+}
+.sb-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.sb-header-title {
+  font-size: var(--text-2xl);
+}
+.sb-header-action {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* Die Karte folgt ihrem Inhalt statt auf 960 px zu spannen — sonst steht rechts
+   dauerhaft leere Kartenfläche neben einem 56ch breiten Text. */
+.sb-empty-card {
+  max-width: 64ch;
+}
+.sb-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-4);
+  padding: var(--space-8);
+}
+/* Neutral: das einzige Teal des Screens gehört dem Primärknopf. */
+.sb-empty-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+}
+.sb-empty-title {
+  font-size: var(--text-lg);
+}
+.sb-empty-body {
+  max-width: 56ch;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+}

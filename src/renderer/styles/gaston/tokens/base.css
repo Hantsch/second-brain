@@ -1,0 +1,50 @@
+/* Gaston — global element defaults. */
+* { box-sizing: border-box; }
+
+html, body { margin: 0; padding: 0; }
+
+body {
+  background: var(--surface-page);
+  color: var(--text-body);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4 {
+  color: var(--text-heading);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
+  margin: 0;
+}
+
+p { margin: 0; }
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+a:hover { color: var(--accent-hover); text-decoration: underline; text-underline-offset: 3px; }
+
+code, kbd, samp {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+}
+
+::selection { background: var(--selection-bg); color: var(--fog-100); }
+
+:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: var(--radius-sm); }
+
+/* Scrollbars — thin, quiet */
+* { scrollbar-width: thin; scrollbar-color: var(--ink-700) transparent; }
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-thumb { background: var(--ink-700); border-radius: 4px; }
+*::-webkit-scrollbar-track { background: transparent; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}

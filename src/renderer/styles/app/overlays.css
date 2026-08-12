@@ -1,0 +1,184 @@
+/* Alles, was über dem Gerüst liegt: Meldungen, Befehlspalette, Onboarding und
+   das Schnell-Erfassen-Fenster. */
+
+/* ── Overlays ───────────────────────────────────────────────────────────── */
+
+.sb-toasts {
+  position: fixed;
+  right: var(--space-6);
+  bottom: var(--space-6);
+  z-index: 70;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* „Rückgängig" ist die wichtigste Fläche der App: sie steht sechs Sekunden und
+   nimmt einen Schreibvorgang zurück. Gaston gibt dem Textknopf einer Meldung mit
+   `all: unset` gar keine Höhe (gemessen: 19 px) — das reißt `--sb-hit: 32px`, und
+   kein a11y-Lauf sieht es, weil kein Schritt eine Meldung öffnet. Überschrieben
+   hier statt im vendorierten Gaston-Stand, damit ein neuer Stand ohne Konflikt
+   einziehen kann. */
+.sb-toasts .gs-toast-action {
+  min-height: var(--sb-hit);
+  display: inline-flex;
+  align-items: center;
+  /* Der negative Rand hält die Schrift dort, wo sie vorher stand: die Fläche
+     wächst nach oben und unten, die Zeile bleibt an ihrem Platz. */
+  margin-top: 0;
+  padding: 0;
+}
+.sb-toasts .gs-toast-x {
+  min-width: var(--sb-hit);
+  min-height: var(--sb-hit);
+  align-items: center;
+  justify-content: center;
+  /* Ohne negativen Ausgleich schöbe die größere Fläche die Meldung auseinander. */
+  margin: calc(-1 * var(--space-2)) calc(-1 * var(--space-2)) auto auto;
+}
+
+.sb-palette {
+  width: 100%;
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+}
+.sb-palette-input {
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.sb-palette-list {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-2);
+  max-height: 320px;
+  overflow-y: auto;
+}
+.sb-palette-group {
+  padding: var(--space-2) var(--space-3) var(--space-1);
+}
+.sb-palette-item {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  height: var(--control-h-md);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-md);
+  color: var(--text-body);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+.sb-palette-item[data-active='true'] {
+  background: var(--accent-soft);
+  color: var(--text-heading);
+}
+.sb-palette-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Der Pfad eines Treffers: Daten gehören in Mono. Er darf höchstens die Hälfte
+   der Zeile nehmen — der Titel ist die Antwort, der Pfad nur der Beleg. */
+.sb-palette-hint {
+  margin-left: auto;
+  min-width: 0;
+  max-width: 50%;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sb-palette-foot {
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--border-subtle);
+  font-size: var(--text-xs);
+  color: var(--text-faint);
+}
+
+/* ── Onboarding ─────────────────────────────────────────────────────────── */
+
+.sb-onboarding {
+  display: grid;
+  place-items: center;
+  min-height: 100%;
+  padding: var(--space-8);
+}
+.sb-onboarding-card {
+  width: 100%;
+  max-width: 620px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+.sb-recent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.sb-recent-item {
+  all: unset;
+  /* `all: unset` nimmt die Unterstreichung nicht zurück, wenn ein Vorfahre sie
+     setzt — hier ausdrücklich, damit die Zeile nie nach Link aussieht. */
+  text-decoration: none;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.sb-recent-item:hover {
+  background: var(--surface-hover);
+  color: var(--text-body);
+  text-decoration: none;
+}
+.sb-recent-item:disabled {
+  cursor: not-allowed;
+  color: var(--text-disabled);
+}
+
+/* ── Schnell-Erfassen-Fenster ───────────────────────────────────────────── */
+
+.sb-quick {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  height: 100%;
+  background: var(--surface-page);
+  border: 1px solid var(--border-strong);
+}
+.sb-quick-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.sb-quick-body {
+  padding: var(--space-3);
+  min-height: 0;
+}
+.sb-quick-body textarea {
+  width: 100%;
+  height: 100%;
+  resize: none;
+  user-select: text;
+}
+.sb-quick-foot {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+  font-size: var(--text-xs);
+  color: var(--text-faint);
+}

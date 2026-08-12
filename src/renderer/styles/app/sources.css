@@ -1,0 +1,190 @@
+/* Quellen aufnehmen: Ablagefläche, Eingang, yt-dlp-Zeile, Aufträge.
+   Farben, Abstände und Radien ausschließlich aus den Gaston-Tokens.
+   Die Quellenzeile selbst benutzt `sb-row*` aus content.css — eine Quelle sieht
+   im Modul-Screen genauso aus wie hier. */
+
+/* ── Quellen: Eingang ───────────────────────────────────────────────────── */
+
+.sb-dropzone {
+  position: relative;
+  min-height: 100%;
+}
+.sb-dropzone-veil {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  border: 2px dashed var(--accent);
+  border-radius: var(--radius-lg);
+  background: var(--accent-soft);
+}
+.sb-dropzone-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--surface-card);
+  color: var(--text-heading);
+  font-size: var(--text-md);
+}
+.sb-dropzone-note {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.sb-sourceinput {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+.sb-sourceinput-field {
+  min-height: 76px;
+  resize: vertical;
+  user-select: text;
+}
+.sb-detect {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--accent);
+}
+.sb-detect--idle {
+  color: var(--text-faint);
+}
+.sb-sourceinput-foot {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+.sb-sourceinput-module {
+  min-width: 220px;
+}
+.sb-sourceinput-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+
+.sb-ytdlp {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--border-subtle);
+  font-size: var(--text-sm);
+}
+.sb-ytdlp-text {
+  color: var(--text-body);
+}
+.sb-ytdlp-what {
+  flex: 1 1 32ch;
+  max-width: 72ch;
+  font-size: var(--text-xs);
+  color: var(--text-faint);
+  line-height: var(--leading-snug);
+}
+.sb-ytdlp-busy {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--text-faint);
+}
+
+/* ── Quellen: Aufträge ──────────────────────────────────────────────────── */
+
+.sb-joblist {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.sb-job {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  min-width: 0;
+}
+.sb-job-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.sb-job-label {
+  font-size: var(--text-sm);
+  color: var(--text-heading);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 52ch;
+}
+.sb-job-meta {
+  color: var(--text-faint);
+}
+.sb-job-percent {
+  margin-left: auto;
+  color: var(--text-muted);
+}
+.sb-job-bar {
+  height: 4px;
+  border-radius: var(--radius-full);
+  background: var(--surface-raised);
+  overflow: hidden;
+}
+.sb-job-fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width var(--duration-normal) var(--ease-out);
+}
+.sb-job-note {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  max-width: 72ch;
+}
+.sb-job-note--error {
+  color: var(--danger);
+}
+.sb-job-notetitle {
+  color: var(--text-heading);
+  font-weight: var(--weight-medium);
+}
+.sb-job-ways {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.sb-job-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.sb-row-side {
+  flex-shrink: 0;
+  font-size: var(--text-xs);
+}

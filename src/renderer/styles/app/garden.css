@@ -1,0 +1,487 @@
+/* Pflege: Gesundheitsbalken mit Begründung, Fortschritt, Filter, Befundkarten und
+   die Widerspruchs-Karte mit ihren zwei Spalten.
+
+   Farben, Abstände und Radien ausschließlich aus den Gaston-Tokens. Der Balken
+   trägt genau drei Töne (gut, mittel, schlecht) plus „unbekannt" — kein Verlauf,
+   der Genauigkeit vortäuscht. Jede klickbare Fläche ist mindestens `--sb-hit`
+   hoch; das gilt auch für die Pfade in Mono. */
+
+/* ── Gesundheit ─────────────────────────────────────────────────────────── */
+
+.sb-health {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-width: 0;
+}
+.sb-health-value {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: var(--text-heading);
+}
+.sb-health--lg .sb-health-value {
+  font-size: var(--text-3xl);
+}
+.sb-health--sm .sb-health-value {
+  font-size: var(--text-xl);
+}
+.sb-health-value--good {
+  color: var(--success);
+}
+.sb-health-value--fair {
+  color: var(--warning);
+}
+.sb-health-value--poor {
+  color: var(--danger);
+}
+.sb-health-value--unknown {
+  color: var(--text-faint);
+}
+/* Groß (Kopf des Pflege-Screens): die Zahl bleibt ruhig, die Farbe trägt
+   allein der Balken — sonst stehen zwei starke Farben (Zahl und Balken, dazu
+   Bernstein/Rot in den Befund-Badges) auf einem Screen nebeneinander. Klein
+   (Dashboard-Kachel) bleibt die Farbe an der Zahl: dort ist sie die einzige
+   auffällige Fläche der Kachel, kein zweiter Akzent neben einer Kopf-Aktion. */
+.sb-health--lg .sb-health-value {
+  color: var(--text-heading);
+}
+.sb-health-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  flex: 1;
+}
+.sb-health-label {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+.sb-health-track {
+  display: block;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  overflow: hidden;
+}
+.sb-health--lg .sb-health-track {
+  min-width: 180px;
+}
+.sb-health-fill {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: var(--fog-500);
+}
+.sb-health-fill--good {
+  background: var(--success);
+}
+.sb-health-fill--fair {
+  background: var(--warning);
+}
+.sb-health-fill--poor {
+  background: var(--danger);
+}
+.sb-health-fill--unknown {
+  background: transparent;
+}
+
+.sb-ghealth {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5);
+}
+.sb-ghealth-top {
+  display: grid;
+  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+  gap: var(--space-6);
+  align-items: start;
+}
+@media (max-width: 1100px) {
+  .sb-ghealth-top {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-4);
+  }
+}
+.sb-ghealth-why {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.sb-ghealth-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  /* Die Punkte stehen rechts an der Zahl, nicht am Fensterrand: über 60 Zeichen
+     hinaus verliert die Zuordnung „Kategorie → Punkte" den Blickkontakt. */
+  max-width: 62ch;
+}
+.sb-ghealth-item {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--text-body);
+}
+.sb-ghealth-points {
+  margin-left: auto;
+  white-space: nowrap;
+}
+.sb-ghealth-note {
+  max-width: 78ch;
+  font-size: var(--text-xs);
+  color: var(--text-faint);
+  line-height: var(--leading-snug);
+}
+.sb-ghealth-stamp {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+.sb-ghealth-model {
+  color: var(--text-faint);
+}
+
+.sb-gadvice {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  border: 1px solid var(--border-subtle);
+}
+.sb-gadvice-list {
+  margin: 0;
+  padding-left: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  max-width: 82ch;
+  font-size: var(--text-sm);
+  color: var(--text-body);
+  line-height: var(--leading-snug);
+}
+
+/* Die Kachel: Balken, Zahl, die zwei dringendsten Kategorien — untereinander,
+   weil drei Angaben in einer Zeile auf der schmalsten Kachelbreite umbrechen. */
+.sb-gtile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  min-width: 0;
+}
+.sb-gtile .sb-line {
+  min-height: 24px;
+  padding: 0 var(--space-1);
+}
+
+/* ── Ohne Modell ────────────────────────────────────────────────────────── */
+
+.sb-gllm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--border-strong);
+  background: var(--surface-sunken);
+}
+.sb-gllm-title {
+  color: var(--text-muted);
+}
+
+/* ── Lauf ───────────────────────────────────────────────────────────────── */
+
+.sb-grun {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--accent-soft-border);
+  background: var(--accent-soft);
+}
+.sb-grun-text {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.sb-grun-what {
+  font-size: var(--text-sm);
+  color: var(--text-body);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sb-grun-track {
+  display: block;
+  flex: 1;
+  min-width: 80px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--surface-raised);
+  overflow: hidden;
+}
+.sb-grun-fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  border-radius: var(--radius-full);
+}
+
+/* ── Filter ─────────────────────────────────────────────────────────────── */
+
+.sb-gfilter {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  padding: var(--space-2) var(--space-3) var(--space-4);
+}
+.sb-gfilter .gs-field {
+  min-width: 180px;
+}
+
+/* ── Gruppen und Karten ─────────────────────────────────────────────────── */
+
+.sb-ggroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3) var(--space-5);
+}
+.sb-ggroup-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  text-transform: none;
+}
+.sb-ggroup-count {
+  font-variant-numeric: tabular-nums;
+}
+.sb-glist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.sb-finding {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+.sb-finding-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.sb-finding-title {
+  font-size: var(--text-md);
+  min-width: 0;
+}
+.sb-finding-module {
+  margin-left: auto;
+}
+.sb-finding-why {
+  max-width: 88ch;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  line-height: var(--leading-normal);
+}
+.sb-finding-files {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.sb-finding-paths {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+/* Ein Pfad ist ein Knopf: 32 px hoch, auch wenn die Schrift kleiner ist. */
+.sb-finding-path {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--sb-hit);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  text-align: left;
+  word-break: break-all;
+}
+.sb-finding-fix {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.sb-finding-note {
+  max-width: 88ch;
+  font-size: var(--text-xs);
+  color: var(--text-faint);
+  line-height: var(--leading-snug);
+}
+.sb-finding-preview {
+  margin: 0;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-sunken);
+  color: var(--success);
+  font-size: var(--text-xs);
+  line-height: var(--leading-snug);
+  white-space: pre-wrap;
+  word-break: break-word;
+  user-select: text;
+}
+.sb-finding-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  padding-top: var(--space-1);
+}
+
+/* ── Widerspruch ────────────────────────────────────────────────────────── */
+
+.sb-contra {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+@media (max-width: 1100px) {
+  .sb-contra {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.sb-contra-side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-sunken);
+}
+.sb-contra-title {
+  all: unset;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--sb-hit);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text-heading);
+  border-radius: var(--radius-sm);
+}
+.sb-contra-title:hover,
+.sb-contra-title:focus-visible {
+  color: var(--accent-hover);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.sb-contra-title:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+.sb-contra-date {
+  color: var(--text-faint);
+}
+.sb-contra-passage {
+  max-width: 62ch;
+  font-size: var(--text-sm);
+  color: var(--text-body);
+  line-height: var(--leading-normal);
+  white-space: pre-wrap;
+  user-select: text;
+}
+
+/* ── Ruhig stellen ──────────────────────────────────────────────────────── */
+
+.sb-snooze {
+  position: relative;
+  display: inline-flex;
+}
+.sb-snooze-panel {
+  position: absolute;
+  top: calc(100% + var(--space-1));
+  right: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 232px;
+  padding: var(--space-2);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-strong);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-3);
+}
+.sb-snooze-title {
+  padding: var(--space-1) var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.sb-snooze-item {
+  all: unset;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: var(--sb-hit);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  color: var(--text-body);
+}
+.sb-snooze-item:hover {
+  background: var(--surface-hover);
+  color: var(--text-heading);
+}
+.sb-snooze-item:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+.sb-snooze-when {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+}
+.sb-snooze-custom {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border-top: 1px solid var(--border-subtle);
+}
+.sb-snooze-custom .gs-field {
+  flex: 1;
+  min-width: 0;
+}

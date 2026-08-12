@@ -1,0 +1,150 @@
+/* English texts for the models tab — same key set as `de-settings-models.ts`,
+   enforced by the type in `en-settings.ts`. */
+
+import type { SettingsModelsKey } from './de-settings-models';
+
+export const enSettingsModels: Record<SettingsModelsKey, string> = {
+  'settings.models.start.title': 'No model set up yet',
+  'settings.models.start.body':
+    'Three ways are open, and you can switch at any time. Without a model the app stays usable.',
+  'settings.models.start.local.title': 'Local (Ollama)',
+  'settings.models.start.local.body': 'Runs on this machine, nothing leaves the device, no cost.',
+  'settings.models.start.cloud.title': 'API key (Anthropic, OpenAI, OpenRouter)',
+  'settings.models.start.cloud.body':
+    'Strong, costs per request. The key stays encrypted on this machine.',
+  'settings.models.start.none.title': 'Carry on without a model',
+  'settings.models.start.none.body':
+    'Capturing, searching, projects and todos work without any model.',
+  'settings.models.start.none.action': 'Go to the dashboard',
+
+  'settings.detect.title': 'Is a model already running here?',
+  'settings.detect.checking': 'Looking on this machine',
+  'settings.detect.found':
+    '{label} runs on this machine, {count} models found. Take it as the local provider?',
+  'settings.detect.foundOne':
+    '{label} runs on this machine, one model found. Take it as the local provider?',
+  'settings.detect.foundEmpty':
+    '{label} answers on this machine but has no model loaded. Load a model first, then take it.',
+  'settings.detect.configured': '{label} is already set up as a provider.',
+  'settings.detect.adopt': 'Take it as a provider',
+  'settings.detect.none': 'No local model found.',
+  'settings.detect.guide':
+    'How to: open ollama.com, install Ollama, then pull the model in your terminal.',
+  'settings.detect.guideLink': 'Open ollama.com',
+  'settings.detect.command': 'ollama pull llama3.1:8b',
+  'settings.detect.recheck': 'Look again',
+  'settings.detect.failed': 'The search failed.',
+
+  'settings.providers.title': 'Providers',
+  'settings.providers.count': '{count} providers',
+  'settings.providers.countOne': 'one provider',
+  'settings.providers.empty':
+    'No provider set up yet. As soon as one is, it appears here as a card with connection test and model list.',
+  'settings.providers.add': 'Add a provider',
+  'settings.providers.note':
+    'The provider list travels with the vault. The keys stay encrypted on this machine.',
+
+  'provider.kind.anthropic': 'Anthropic Messages',
+  'provider.kind.openai-compatible': 'OpenAI-compatible',
+  'provider.kind.fake': 'Test responder',
+  'provider.local': 'Local',
+  'provider.remote': 'Cloud',
+  'provider.models': '{count} models',
+  'provider.modelsOne': 'one model',
+  'provider.noModels': 'no models loaded yet',
+  'provider.probeOk': 'Connection held, {ms} ms',
+  'provider.probeFailed': 'Connection failed',
+  'provider.probeNever': 'not tested yet',
+  'provider.probeAt': 'last {when}',
+  'provider.needsKey': 'Key missing',
+  'provider.disabled': 'Switched off',
+  'provider.probe': 'Test the connection',
+  'provider.loadModels': 'Load models',
+  'provider.modelsLoaded': '{count} models loaded.',
+  'provider.edit': 'Edit',
+  'provider.remove': 'Remove',
+  'provider.removeAsk': 'Remove this provider? Tasks pointing at it lose their model.',
+  'provider.removeConfirm': 'Yes, remove it',
+  'provider.enable': 'Switch on',
+  'provider.disable': 'Switch off',
+
+  'provider.dialog.addTitle': 'Add a provider',
+  'provider.dialog.editTitle': 'Edit the provider',
+  'provider.dialog.presetLead': 'What should we talk to?',
+  'provider.dialog.labelLabel': 'Name',
+  'provider.dialog.labelHint': 'For you only — it shows up in the model picker.',
+  'provider.dialog.baseUrlLabel': 'Address',
+  'provider.dialog.baseUrlHint': 'The API endpoint, for example http://localhost:11434/v1.',
+  'provider.dialog.keyLabel': 'API key',
+  'provider.dialog.keyHint': 'Stored encrypted on this machine, never in the vault.',
+  'provider.dialog.keyKeep': 'Leaving it empty keeps the stored key.',
+  'provider.dialog.localLabel': 'Runs on this machine',
+  'provider.dialog.localHint': 'Local providers are recommended for personal tasks.',
+  'provider.dialog.save': 'Save and test',
+  'provider.dialog.testing': 'Testing the connection',
+  'provider.dialog.back': 'Another template',
+
+  'settings.routing.title': 'Task routing',
+  'settings.routing.summary': '{routed} of {total} tasks have a model.',
+  'settings.routing.withoutRow': 'Without a model: {fallback}',
+  'settings.routing.callToAction':
+    'A provider with models is set up. “Assign automatically” proposes a model for every task; nothing is saved until you agree.',
+  'settings.routing.allRouted': 'Every task has a model.',
+  'settings.routing.empty':
+    'As soon as a provider has models, every task can be assigned one here.',
+  'settings.routing.col.task': 'Task',
+  'settings.routing.col.suggestion': 'Recommendation',
+  'settings.routing.col.model': 'Provider and model',
+  'settings.routing.col.test': 'Test',
+  'settings.routing.sensitive': 'Reads personal content — a local model is recommended.',
+  'settings.routing.sensitiveShort': 'Personal',
+  'settings.routing.inherit': 'Default: {model}',
+  'settings.routing.noModel': 'no model',
+  'settings.routing.selectAria': 'Model for {task}',
+  'settings.routing.note': 'Tasks without a choice of their own take their class default.',
+  'settings.routing.test': 'Test',
+  'settings.routing.testOk': 'Answer after {ms} ms',
+  'settings.routing.testFailed': 'No result',
+  'settings.routing.reason.no-route': 'No model is assigned to this task.',
+  'settings.routing.reason.provider-disabled': 'The assigned provider is switched off.',
+  'settings.routing.reason.no-key': 'The key for the assigned provider is missing.',
+  'settings.routing.reason.unreachable': 'The assigned provider was not reachable.',
+  'settings.routing.reason.no-vault': 'No vault is open.',
+  'settings.routing.reason.error': 'The call failed.',
+
+  'settings.routing.defaults': 'Default per performance class',
+  'settings.routing.defaultsNote':
+    'These three apply to every task without a choice of its own — the fallback chain.',
+  'settings.routing.defaultAria': 'Default model for the {tier} class',
+  'settings.routing.auto': 'Assign automatically',
+  'settings.routing.autoHint':
+    'Looks for a fitting model for every task among the ones you set up.',
+  'settings.routing.preview.title': 'Proposal',
+  'settings.routing.preview.lead':
+    '{count} assignments would change. Nothing is saved until you agree.',
+  'settings.routing.preview.leadOne':
+    'One assignment would change. Nothing is saved until you agree.',
+  'settings.routing.preview.none': 'The proposal matches what is already set.',
+  'settings.routing.preview.apply': 'Take it over',
+  'settings.routing.preview.discard': 'Discard',
+  'settings.routing.preview.tier': '{tier} default',
+  'settings.routing.preview.arrow': 'becomes',
+
+  'settings.tier.cheap': 'Small',
+  'settings.tier.balanced': 'Medium',
+  'settings.tier.strong': 'Large',
+  'settings.tier.cheap.why': 'Short input and output — a large model would be waste.',
+  'settings.tier.balanced.why': 'Needs care with context, but no top-end model.',
+  'settings.tier.strong.why': 'Changes what you have and needs judgement.',
+
+  'settings.fallback.title-tags': 'the title comes from the first line',
+  'settings.fallback.classify-dump': 'the dump stays in the inbox',
+  'settings.fallback.extract-tasks': 'checkboxes in the text are still found',
+  'settings.fallback.query-answer': 'full-text search shows the passages',
+  'settings.fallback.query-rerank': 'hits keep the order of the search',
+  'settings.fallback.summarize-source': 'the source stays under raw/',
+  'settings.fallback.wiki-ingest': 'pages stay as they are',
+  'settings.fallback.journal-chat': 'the day entry can still be written',
+  'settings.fallback.project-status': 'status and next step stay handwork',
+  'settings.fallback.gardener-audit': 'the deterministic findings keep running',
+};

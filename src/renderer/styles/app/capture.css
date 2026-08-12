@@ -1,0 +1,143 @@
+/* Erfassen und Schnell-Erfassen: die Fläche, auf der ein Gedanke ankommt.
+   Farben, Abstände und Radien ausschließlich aus den Gaston-Tokens.
+
+   Ein Gedanke trägt alles hier: das Feld ist die Fläche, nicht ein Kasten darin.
+   Deshalb hat `sb-dumpfield` keinen Rahmen; den Fokus zeigen der Rahmen der
+   Karte und die teale Schreibmarke.
+
+   Das Einordnen steht in inbox.css. */
+
+/* ── Das Feld ───────────────────────────────────────────────────────────── */
+
+.sb-dumpfield {
+  width: 100%;
+  min-height: 260px;
+  resize: vertical;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-heading);
+  font-family: var(--font-sans);
+  font-size: var(--text-md);
+  line-height: var(--leading-relaxed);
+  caret-color: var(--accent);
+  user-select: text;
+}
+.sb-dumpfield::placeholder {
+  color: var(--text-faint);
+}
+/* Der Fokusring des Systems würde hier einen Kasten um die ganze Fläche legen —
+   genau das, was der Screen nicht sein soll. Sichtbar bleibt der Fokus trotzdem:
+   der Rahmen der Karte zieht an (`:focus-within`) und die Schreibmarke ist teal. */
+.sb-dumpfield:focus,
+.sb-dumpfield:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+.sb-capture:focus-within,
+.sb-quick:focus-within {
+  border-color: var(--accent-soft-border);
+}
+
+/* ── Erfassen ───────────────────────────────────────────────────────────── */
+
+/* Eine Zeile in Ruhe statt einer Feldbeschriftung. */
+.sb-capture-ask {
+  font-size: var(--text-md);
+  color: var(--text-faint);
+  cursor: text;
+}
+.sb-capture-count {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.sb-capture-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.sb-capture-choice .gs-label {
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+.sb-capture-scope,
+.sb-capture-tagfield {
+  height: var(--control-h-sm);
+  width: auto;
+  min-width: 128px;
+  font-size: var(--text-sm);
+}
+/* Der Fokuspunkt steht rechts — das Ende der Zeile ist der Abschluss der Geste. */
+.sb-capture-save {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-left: auto;
+}
+.sb-savedbox {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.sb-capture-saved .sb-mono {
+  font-size: var(--text-xs);
+}
+.sb-capture-strip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  font-size: var(--text-xs);
+  color: var(--text-faint);
+}
+/* Esc verlässt das Feld, Ctrl+K bleibt von dort aus erreichbar — beides griff
+   vorher nicht, solange der Fokus im Feld stand. */
+.sb-capture-keys {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+}
+
+/* ── Schnell erfassen ───────────────────────────────────────────────────── */
+
+.sb-quick-close {
+  margin-left: auto;
+}
+.sb-quick-field {
+  font-size: var(--text-base);
+  min-height: 0;
+}
+.sb-quick-ask,
+.sb-quick-saved,
+.sb-quick-novault {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  padding: var(--space-2) var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+.sb-quick-status {
+  margin-left: auto;
+  white-space: nowrap;
+}
+/* Die Bestätigung nennt den Pfad — sonst ist „gespeichert" eine Behauptung. */
+.sb-quick-saved {
+  color: var(--text-body);
+}
+.sb-quick-path {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+}

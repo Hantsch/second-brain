@@ -1,0 +1,318 @@
+/* Die gemeinsamen Bauteile des Inhalts: Module, Listen, Zeilen, Kennzahlen.
+   Farben, Abstände und Radien ausschließlich aus den Gaston-Tokens.
+
+   Zwei Rhythmen, mehr nicht: `sb-rows` sind Listenzeilen mit Fließtext,
+   `sb-lines` sind knappe Zeilen für die Dashboard-Module. Was nur einem Screen
+   gehört, steht in screens.css. */
+
+/* ── Module ─────────────────────────────────────────────────────────────── */
+
+.sb-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.sb-panel-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.sb-panel-title {
+  font-size: var(--text-md);
+}
+.sb-panel-meta {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sb-panel-action {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.sb-panel-body {
+  padding: var(--space-2);
+  min-width: 0;
+}
+.sb-panel-note {
+  padding: var(--space-3) var(--space-5);
+  border-top: 1px solid var(--border-subtle);
+  /* Fließtext bleibt bei etwa 72 Zeichen lesbar, auch wenn das Modul breiter ist. */
+  max-width: 72ch;
+  font-size: var(--text-xs);
+  color: var(--text-faint);
+  line-height: var(--leading-snug);
+}
+.sb-panel-empty {
+  padding: var(--space-3);
+  max-width: 64ch;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  line-height: var(--leading-relaxed);
+}
+
+.sb-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-6);
+}
+/* Im engen Fenster untereinander: zwei Spalten würden die Zeilen zerreißen. */
+@media (max-width: 1100px) {
+  .sb-grid-2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.sb-note-line {
+  font-size: var(--text-xs);
+  color: var(--text-faint);
+  line-height: var(--leading-snug);
+}
+
+/* ── Listenzeilen ───────────────────────────────────────────────────────── */
+
+.sb-rows,
+.sb-lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.sb-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  min-width: 0;
+}
+.sb-row + .sb-row {
+  border-top: 1px solid var(--border-subtle);
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+.sb-row:hover {
+  background: var(--surface-raised);
+}
+.sb-row-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  flex: 1;
+}
+/* Ein ganzer Treffer als Knopf: die Fläche ist das Ziel, nicht ein Icon daneben. */
+.sb-row-button {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  flex: 1;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+.sb-row-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  color: var(--text-faint);
+}
+.sb-row-name {
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  color: var(--text-heading);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sb-row-body {
+  max-width: 72ch;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  line-height: var(--leading-snug);
+  /* Zwei Zeilen genügen: die Liste ist eine Übersicht, keine Leseansicht. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.sb-row-lead {
+  color: var(--text-faint);
+}
+.sb-row-missing {
+  color: var(--text-faint);
+  font-style: italic;
+}
+.sb-row-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+  min-width: 0;
+}
+.sb-row-meta .sb-mono {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 48ch;
+}
+.sb-row-touch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* Eine Zeile ist 40 px hoch und mittig ausgerichtet: darin passt ein Knopf mit
+   32 px Trefferfläche, ohne dass die Zeile auseinanderfällt. Vorher war die Zeile
+   36 px hoch und der Titel darin 20 px — zu klein für die Regel aus
+   ARCHITECTURE.md. */
+.sb-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 40px;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-md);
+  min-width: 0;
+}
+.sb-line + .sb-line {
+  border-top: 1px solid var(--border-subtle);
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+.sb-line-name {
+  font-size: var(--text-sm);
+  color: var(--text-body);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 0;
+  max-width: 46%;
+}
+.sb-line-name--full {
+  max-width: none;
+  flex: 1;
+}
+.sb-line-detail {
+  font-size: var(--text-sm);
+  color: var(--text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex: 1;
+}
+.sb-line-meta {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.sb-due--overdue {
+  color: var(--danger);
+}
+.sb-due--soon {
+  color: var(--warning);
+}
+
+.sb-mono {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+  word-break: break-all;
+}
+
+/* Ein Link, der wie ein Link aussieht, aber ein Knopf ist — er löst eine Aktion
+   in der App aus, keine Navigation im Web. */
+/* Ein Textknopf ist ein Knopf: 32 px hoch, auch wenn die Schrift kleiner ist
+   (ARCHITECTURE.md, jede interaktive Fläche ≥ 32 px). `inline-flex` statt Block,
+   damit er weiter in einer Zeile stehen kann. */
+.sb-textlink {
+  all: unset;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--sb-hit);
+  color: var(--accent);
+  font-size: inherit;
+  border-radius: var(--radius-sm);
+}
+.sb-textlink:hover,
+.sb-textlink:focus-visible {
+  color: var(--accent-hover);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.sb-textlink:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+/* ── Kennzahlen ─────────────────────────────────────────────────────────── */
+
+.sb-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+  margin: 0;
+}
+.sb-stat {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: var(--space-1);
+}
+.sb-stat-label {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+.sb-stat-value {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-xl);
+  color: var(--text-heading);
+  font-variant-numeric: tabular-nums;
+}
+
+.sb-note {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+.sb-note-detail {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-faint);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.sb-skeleton {
+  border-radius: var(--radius-sm);
+  background: linear-gradient(
+    90deg,
+    var(--surface-raised) 0%,
+    var(--surface-hover) 50%,
+    var(--surface-raised) 100%
+  );
+  background-size: 200% 100%;
+  animation: sb-shimmer 1.4s var(--ease-in-out) infinite;
+}
+@keyframes sb-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}

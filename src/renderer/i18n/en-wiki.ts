@@ -1,0 +1,194 @@
+/* English strings of the knowledge screens: modules and sources.
+   Same key set as `de-wiki.ts` — a test compares both. */
+
+export const enWiki = {
+  // ── Modules: overview ─────────────────────────────────────────────────────
+  'modules.count': '{count} modules',
+  'modules.countOne': 'one module',
+  'modules.counts': '{sources} sources · {entities} entities · {concepts} concepts',
+  'modules.lastIngest': 'last condensed {date}',
+  'modules.neverIngested': 'nothing condensed yet',
+  'modules.findings': '{count} maintenance findings',
+  'modules.findingsOne': 'one maintenance finding',
+  'modules.open': 'Open module {title}',
+  'modules.back': 'All modules',
+  'modules.noDescription': 'No description.',
+
+  'modules.create.action': 'Create module',
+  'modules.create.title': 'Create module',
+  'modules.create.what':
+    'A module is a small wiki on one topic: sources are condensed once, terms and connections grow together, and every claim carries its evidence.',
+  'modules.create.name': 'Title',
+  'modules.create.namePlaceholder': 'Identity management',
+  'modules.create.purpose': 'Purpose',
+  'modules.create.purposePlaceholder': 'What belongs here — and what does not?',
+  'modules.create.hint':
+    'Created are the folder, the catalogue, the chronicle, the synthesis and AGENTS.md — the schema that lets any model maintain this module.',
+  'modules.create.submit': 'Create',
+
+  // ── Modules: detail ───────────────────────────────────────────────────────
+  'modules.tab.pages': 'Pages',
+  'modules.tab.graph': 'Graph',
+  'modules.tab.sources': 'Sources',
+  'modules.tab.log': 'Chronicle',
+
+  'modules.category.source': 'Sources',
+  'modules.category.entity': 'Entities',
+  'modules.category.concept': 'Concepts',
+  'modules.category.overview': 'Synthesis',
+  'modules.category.all': 'All categories',
+  'modules.type.source': 'Source',
+  'modules.type.entity': 'Entity',
+  'modules.type.concept': 'Concept',
+  'modules.type.overview': 'Synthesis',
+
+  'pages.list': 'Pages of this module',
+  'pages.search': 'Search page',
+  'pages.filter': 'Category',
+  'pages.count': '{count} pages',
+  'pages.countOne': 'one page',
+  'pages.noMatch': 'No page matches “{query}”.',
+  'pages.empty': 'This module has no page yet. Take in a source and they appear.',
+  'pages.words': '{count} words',
+  'pages.choose': 'Pick a page on the left.',
+  'pages.chooseBody':
+    'The page then stands on the right: facts from the frontmatter, the text with clickable wikilinks, and who links here.',
+
+  'page.facts.type': 'Type',
+  'page.facts.created': 'Created',
+  'page.facts.updated': 'Updated',
+  'page.facts.reviewed': 'Reviewed',
+  'page.facts.notReviewed': 'never',
+  'page.facts.sources': 'Sources',
+  'page.facts.noSources': 'without evidence',
+  'page.inbound': 'Links here',
+  'page.inbound.empty': 'No other page links here.',
+  'page.view': 'View',
+  'page.edit': 'Edit',
+  'page.editLabel': 'Markdown of this page',
+  'page.editHint': 'The text as it stands in the file. Frontmatter stays untouched.',
+  'page.save': 'Save',
+  'page.saved': 'Saved.',
+  'page.unsaved': 'Not saved — the file was changed outside the app.',
+  'page.cancel': 'Discard',
+  'page.conflict.title': 'Nothing was saved — the file has changed',
+  'page.conflict.body':
+    'Someone else wrote since you opened it — your editor, Obsidian, an ingest. Nothing was overwritten. Reload takes their version, overwrite puts yours on top.',
+  'page.conflict.reload': 'Reload',
+  'page.conflict.overwrite': 'Overwrite',
+  'page.external.title': 'The file is changing outside right now',
+  'page.external.body':
+    'Someone wrote into the file while you were typing here. Your draft is still there. Reload discards it and takes their version; keep yours and saving will ask again.',
+  'page.external.reload': 'Reload',
+  'page.external.keep': 'Keep my version',
+  'page.empty': 'This page has no text yet.',
+
+  'wiki.link.open': 'Open page {target}',
+  'wiki.link.missing': 'Page {target} does not exist',
+  'wiki.link.missingMark': 'missing',
+
+  'graph.title': 'Wikilink graph',
+  'graph.meta': '{nodes} pages · {edges} connections',
+  'graph.hint': 'Hovering highlights the neighbours, clicking opens the page.',
+  'graph.empty': 'No page in this module yet — so no graph either.',
+  'graph.capped':
+    'Too large to stay readable: shown are the {shown} most connected pages out of {total}.',
+  'graph.lonely': 'No page links to another. The graph shows them on their own.',
+
+  'log.title': 'Chronicle',
+  'log.empty': 'The chronicle is empty. Every ingest and every question writes a line here.',
+  'log.missing': 'This module has no chronicle yet.',
+  'log.kind.ingest': 'Source taken in',
+  'log.kind.query': 'Question answered',
+  'log.kind.lint': 'Maintenance run',
+  'log.touched': 'Touched',
+  'log.summary': 'Summary',
+  'log.notes': 'Note',
+  'log.answeredFrom': 'Answered from',
+  'log.filedBack': 'Filed as',
+  'log.findings': 'Findings',
+
+  'modules.sourcesTab.empty':
+    'No raw source condensed into this module yet. Sources come in through the “Sources” screen.',
+
+  // ── Sources: input ────────────────────────────────────────────────────────
+  'sources.input.title': 'Take in a source',
+  'sources.input.label': 'URL, YouTube link or text',
+  'sources.input.placeholder': 'Paste https://…, or drop text in here',
+  'sources.input.submit': 'Take in',
+  'sources.input.files': 'Choose files',
+  'sources.input.module': 'Target module',
+  'sources.input.moduleLater': 'File later',
+  'sources.input.moduleHint':
+    'Without a target module the source rests unchanged in raw/ and waits to be condensed.',
+  'sources.detect.youtube': 'YouTube video detected',
+  'sources.detect.url': 'Web page detected',
+  'sources.detect.file': 'File path detected',
+  'sources.detect.text': 'Text detected — filed as a source',
+  'sources.detect.empty': 'What comes in is recognised on its own.',
+
+  'sources.drop.title': 'Drop the file here',
+  'sources.drop.body': 'Text and markdown are taken over.',
+  'sources.drop.unsupported':
+    'This file type cannot be dropped: {names}. Via “Choose files” the original moves into raw/ unchanged.',
+  'sources.drop.unreadable': 'This file could not be read: {names}',
+
+  'sources.ytdlp.present': 'yt-dlp present',
+  'sources.ytdlp.missing': 'yt-dlp missing',
+  'sources.ytdlp.checking': 'Checking yt-dlp',
+  'sources.ytdlp.what':
+    'Without yt-dlp the fallback path remains: subtitles yes, chapter marks and manual tracks no. “Fetch automatically” puts the standalone binary into the application folder — no Python, no system-wide install.',
+  'sources.ytdlp.install': 'Fetch automatically',
+  'sources.ytdlp.installing': 'Fetching',
+
+  // ── Sources: jobs ─────────────────────────────────────────────────────────
+  'sources.jobs.title': 'Jobs',
+  'sources.jobs.count': '{count} jobs',
+  'sources.jobs.countOne': 'one job',
+  'sources.jobs.empty': 'No job in this session yet.',
+  'sources.stage.queued': 'Waiting',
+  'sources.stage.fetching': 'Fetching',
+  'sources.stage.writing-raw': 'Raw source written',
+  'sources.stage.summarizing': 'Condensing',
+  'sources.stage.wiki-update': 'Updating the wiki',
+  'sources.stage.indexing': 'Index catching up',
+  'sources.stage.done': 'Taken in',
+  'sources.stage.error': 'Failed',
+  'sources.stage.awaiting-llm': 'Waiting for a model',
+  'sources.job.cancel': 'Cancel',
+  'sources.job.retry': 'Retry',
+  'sources.job.raw': 'View raw source',
+  'sources.job.page': 'View wiki page',
+  'sources.job.pages': '{count} pages touched',
+  'sources.job.module': 'into {module}',
+  'sources.job.noModule': 'without module',
+  'sources.awaiting.title': 'The source rests in the vault, condensing needs a model',
+  'sources.awaiting.body':
+    'The raw source is stored unchanged. As soon as a model is routed to “condense source”, wiki pages grow from it.',
+  'sources.awaiting.model': 'Set up a model',
+  'sources.unfiled.title': 'The source rests in the vault, not filed into a module',
+  'sources.unfiled.body':
+    'Intended with “file later”: the raw source stands, condensing follows — the maintenance run reports it as not condensed.',
+
+  // ── Sources: what is already in ───────────────────────────────────────────
+  'sources.list.title': 'Sources taken in',
+  'sources.list.count': '{count} sources',
+  'sources.list.countOne': 'one source',
+  'sources.list.uncondensed': 'Not condensed',
+  'sources.list.module': 'in {module}',
+  'sources.list.noModule': 'without module',
+  'sources.list.open': 'Show raw source {title} in the folder',
+  'sources.list.page': 'To the wiki page',
+  'sources.kind.youtube': 'YouTube',
+  'sources.kind.url': 'Web page',
+  'sources.kind.file': 'File',
+  'sources.kind.text': 'Text',
+  'sources.kind.bundle': 'Bundle',
+  'sources.kinds.title': 'Four ways in',
+  'sources.kinds.youtube':
+    'YouTube: transcript, chapters and metadata land in raw/, quotable with time marks.',
+  'sources.kinds.url': 'Web page: the article becomes markdown, navigation and ads fall away.',
+  'sources.kinds.file':
+    'File: the original moves into raw/ unchanged, the readable text beside it.',
+  'sources.kinds.text': 'Text: pasted material from chat, mail or PDF, filed word for word.',
+} as const;

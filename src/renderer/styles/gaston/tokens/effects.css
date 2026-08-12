@@ -1,0 +1,18 @@
+/* Gaston — elevation, focus, motion. Borders carry structure; shadows stay quiet. */
+:root {
+  /* Elevation (dark UI: faint drop + hairline top light on raised surfaces) */
+  --shadow-1: 0 1px 2px rgba(2, 4, 7, 0.5);
+  --shadow-2: 0 4px 14px rgba(2, 4, 7, 0.45);
+  --shadow-3: 0 16px 44px rgba(2, 4, 7, 0.6);
+  --edge-light: inset 0 1px 0 rgba(242, 247, 252, 0.04); /* @kind shadow */
+
+  /* Focus — the "clear focus point": 2px accent ring, offset from the element */
+  --focus-ring: 0 0 0 2px var(--surface-page), 0 0 0 4px var(--accent);
+
+  /* Motion — fast, decisive, ease-out. Nothing bounces. */
+  --ease-out: cubic-bezier(0.2, 0.7, 0.3, 1); /* @kind other */
+  --ease-in-out: cubic-bezier(0.55, 0, 0.2, 1); /* @kind other */
+  --duration-fast: 120ms; /* @kind other */
+  --duration-base: 180ms; /* @kind other */
+  --duration-slow: 280ms; /* @kind other */
+}

@@ -1,0 +1,734 @@
+/* Gaston — component classes. React components in components/ emit these;
+   plain-HTML surfaces may use them directly. */
+
+/* ===== Overline (mono uppercase label — core Gaston motif) ===== */
+.gs-overline {
+  font: var(--overline-font);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+/* ===== Buttons ===== */
+.gs-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--font-sans);
+  font-weight: var(--weight-semibold);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+  text-decoration: none;
+  transition:
+    background var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+.gs-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.gs-btn--sm {
+  height: var(--control-h-sm);
+  padding: 0 10px;
+  font-size: var(--text-sm);
+  gap: 6px;
+}
+.gs-btn--md {
+  height: var(--control-h-md);
+  padding: 0 14px;
+  font-size: var(--text-base);
+}
+.gs-btn--lg {
+  height: var(--control-h-lg);
+  padding: 0 18px;
+  font-size: var(--text-md);
+}
+.gs-btn--primary {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.gs-btn--primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+.gs-btn--primary:active:not(:disabled) {
+  background: var(--accent-down);
+}
+.gs-btn--secondary {
+  background: var(--surface-raised);
+  border-color: var(--border-strong);
+  color: var(--text-body);
+}
+.gs-btn--secondary:hover:not(:disabled) {
+  background: var(--surface-hover);
+  color: var(--text-heading);
+}
+.gs-btn--secondary:active:not(:disabled) {
+  background: var(--surface-active);
+}
+.gs-btn--ghost {
+  background: transparent;
+  color: var(--text-muted);
+}
+.gs-btn--ghost:hover:not(:disabled) {
+  background: var(--surface-hover);
+  color: var(--text-body);
+}
+.gs-btn--ghost:active:not(:disabled) {
+  background: var(--surface-active);
+}
+.gs-btn--danger {
+  background: var(--danger);
+  color: #2a0808;
+}
+.gs-btn--danger:hover:not(:disabled) {
+  background: var(--danger-hover);
+}
+
+/* Icon-only button */
+.gs-iconbtn {
+  padding: 0;
+  flex-shrink: 0;
+}
+.gs-iconbtn.gs-btn--sm {
+  width: var(--control-h-sm);
+}
+.gs-iconbtn.gs-btn--md {
+  width: var(--control-h-md);
+}
+.gs-iconbtn.gs-btn--lg {
+  width: var(--control-h-lg);
+}
+
+/* ===== Fields ===== */
+.gs-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.gs-label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text-body);
+}
+.gs-hint {
+  font-size: var(--text-xs);
+  color: var(--text-faint);
+}
+.gs-errormsg {
+  font-size: var(--text-xs);
+  color: var(--danger);
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+}
+.gs-inputwrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.gs-input {
+  width: 100%;
+  height: var(--control-h-md);
+  background: var(--surface-sunken);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--text-body);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  padding: 0 12px;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out),
+    background var(--duration-fast) var(--ease-out);
+}
+.gs-input::placeholder {
+  color: var(--text-faint);
+}
+.gs-input:hover:not(:disabled):not(:focus) {
+  border-color: var(--border-strong);
+}
+.gs-input:focus,
+.gs-input:focus-visible {
+  outline: none;
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  border-radius: var(--radius-md);
+}
+.gs-input:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.gs-input--withicon {
+  padding-left: 36px;
+}
+.gs-input--invalid {
+  border-color: var(--danger);
+}
+.gs-input--invalid:focus {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px var(--danger-soft);
+}
+.gs-input-icon {
+  position: absolute;
+  left: 12px;
+  color: var(--text-faint);
+  pointer-events: none;
+  display: flex;
+}
+textarea.gs-input {
+  height: auto;
+  min-height: 76px;
+  padding: 10px 12px;
+  line-height: var(--leading-normal);
+  resize: vertical;
+}
+
+/* Select */
+.gs-select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 34px;
+  cursor: pointer;
+}
+.gs-select-chevron {
+  position: absolute;
+  right: 11px;
+  color: var(--text-faint);
+  pointer-events: none;
+  display: flex;
+}
+.gs-select option {
+  background: var(--ink-800);
+  color: var(--text-body);
+}
+
+/* ===== Checkbox / Radio / Switch ===== */
+.gs-check,
+.gs-radio,
+.gs-switch {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+  position: relative;
+}
+.gs-check input,
+.gs-radio input,
+.gs-switch input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.gs-check--disabled,
+.gs-radio--disabled,
+.gs-switch--disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.gs-ctrl-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.gs-ctrl-label {
+  font-size: var(--text-base);
+  color: var(--text-body);
+  line-height: 1.3;
+}
+
+.gs-check-box {
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  flex-shrink: 0;
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+  color: transparent;
+  display: grid;
+  place-items: center;
+  transition:
+    background var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
+}
+.gs-check:hover input:not(:disabled) + .gs-check-box {
+  border-color: var(--fog-500);
+}
+.gs-check input:checked + .gs-check-box {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
+.gs-check input:focus-visible + .gs-check-box {
+  box-shadow: var(--focus-ring);
+}
+
+.gs-radio-dot {
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  flex-shrink: 0;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 50%;
+  background: var(--surface-sunken);
+  position: relative;
+  transition: border-color var(--duration-fast) var(--ease-out);
+}
+.gs-radio-dot::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: var(--accent);
+  transform: scale(0);
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+.gs-radio:hover input:not(:disabled) + .gs-radio-dot {
+  border-color: var(--fog-500);
+}
+.gs-radio input:checked + .gs-radio-dot {
+  border-color: var(--accent);
+}
+.gs-radio input:checked + .gs-radio-dot::after {
+  transform: scale(1);
+}
+.gs-radio input:focus-visible + .gs-radio-dot {
+  box-shadow: var(--focus-ring);
+}
+
+.gs-switch {
+  align-items: center;
+}
+.gs-switch-track {
+  width: 34px;
+  height: 20px;
+  flex-shrink: 0;
+  position: relative;
+  border-radius: var(--radius-full);
+  background: var(--ink-700);
+  transition: background var(--duration-base) var(--ease-out);
+}
+.gs-switch-track::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--fog-200);
+  transition:
+    transform var(--duration-base) var(--ease-out),
+    background var(--duration-base) var(--ease-out);
+}
+.gs-switch:hover input:not(:disabled) + .gs-switch-track {
+  background: var(--ink-600);
+}
+.gs-switch input:checked + .gs-switch-track {
+  background: var(--accent) !important;
+}
+.gs-switch input:checked + .gs-switch-track::after {
+  transform: translateX(14px);
+  background: var(--teal-ink);
+}
+.gs-switch input:focus-visible + .gs-switch-track {
+  box-shadow: var(--focus-ring);
+}
+
+/* ===== Card ===== */
+.gs-card {
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-1), var(--edge-light);
+}
+.gs-card--padded {
+  padding: var(--space-5);
+}
+.gs-card--interactive {
+  cursor: pointer;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    background var(--duration-fast) var(--ease-out);
+}
+.gs-card--interactive:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-raised);
+}
+
+/* ===== Badge / Tag / Kbd ===== */
+.gs-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: var(--radius-full);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.02em;
+  border: 1px solid;
+}
+.gs-badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.gs-badge--neutral {
+  color: var(--text-muted);
+  border-color: var(--border-strong);
+  background: var(--surface-raised);
+}
+.gs-badge--accent {
+  color: var(--teal-300);
+  border-color: var(--accent-soft-border);
+  background: var(--accent-soft);
+}
+.gs-badge--success {
+  color: var(--success);
+  border-color: rgba(83, 206, 135, 0.35);
+  background: var(--success-soft);
+}
+.gs-badge--warning {
+  color: var(--warning);
+  border-color: rgba(232, 180, 90, 0.35);
+  background: var(--warning-soft);
+}
+.gs-badge--danger {
+  color: var(--danger);
+  border-color: rgba(240, 122, 122, 0.35);
+  background: var(--danger-soft);
+}
+
+.gs-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--text-muted);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+}
+.gs-tag-x {
+  all: unset;
+  display: flex;
+  cursor: pointer;
+  color: var(--text-faint);
+  border-radius: 2px;
+}
+.gs-tag-x:hover {
+  color: var(--text-heading);
+}
+.gs-tag-x:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+.gs-kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 2px;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--text-muted);
+}
+
+/* ===== Tabs ===== */
+.gs-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.gs-tab {
+  appearance: none;
+  background: none;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 38px;
+  padding: 0 12px;
+  margin-bottom: -1px;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+.gs-tab:hover {
+  color: var(--text-body);
+}
+.gs-tab[aria-selected="true"] {
+  color: var(--text-heading);
+  border-bottom-color: var(--accent);
+}
+.gs-tab-count {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 1px 5px;
+}
+.gs-tab[aria-selected="true"] .gs-tab-count {
+  color: var(--teal-300);
+  border-color: var(--accent-soft-border);
+  background: var(--accent-soft);
+}
+
+/* ===== Tooltip ===== */
+.gs-tooltipwrap {
+  position: relative;
+  display: inline-flex;
+}
+.gs-tooltip {
+  position: absolute;
+  z-index: 60;
+  background: var(--fog-100);
+  color: var(--ink-900);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  line-height: 1.3;
+  padding: 5px 9px;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-2);
+  white-space: nowrap;
+  pointer-events: none;
+  animation: gs-fade-in var(--duration-fast) var(--ease-out);
+}
+.gs-tooltip--top {
+  bottom: calc(100% + 7px);
+  left: 50%;
+  transform: translateX(-50%);
+}
+.gs-tooltip--bottom {
+  top: calc(100% + 7px);
+  left: 50%;
+  transform: translateX(-50%);
+}
+.gs-tooltip--right {
+  left: calc(100% + 7px);
+  top: 50%;
+  transform: translateY(-50%);
+}
+.gs-tooltip--left {
+  right: calc(100% + 7px);
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* ===== Toast ===== */
+.gs-toast {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  width: 360px;
+  max-width: 100%;
+  padding: 13px 14px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-3), var(--edge-light);
+  animation: gs-toast-in var(--duration-base) var(--ease-out);
+}
+.gs-toast-icon {
+  display: flex;
+  margin-top: 1px;
+}
+.gs-toast--success .gs-toast-icon {
+  color: var(--success);
+}
+.gs-toast--danger .gs-toast-icon {
+  color: var(--danger);
+}
+.gs-toast--warning .gs-toast-icon {
+  color: var(--warning);
+}
+.gs-toast--info .gs-toast-icon {
+  color: var(--accent);
+}
+.gs-toast-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.gs-toast-title {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--text-heading);
+}
+.gs-toast-desc {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  line-height: var(--leading-snug);
+}
+.gs-toast-action {
+  all: unset;
+  cursor: pointer;
+  margin-top: 6px;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  color: var(--accent);
+}
+.gs-toast-action:hover {
+  color: var(--accent-hover);
+}
+.gs-toast-x {
+  all: unset;
+  display: flex;
+  cursor: pointer;
+  color: var(--text-faint);
+  padding: 2px;
+  border-radius: var(--radius-sm);
+}
+.gs-toast-x:hover {
+  color: var(--text-heading);
+}
+
+/* ===== Dialog ===== */
+.gs-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: var(--scrim);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  display: grid;
+  place-items: center;
+  padding: var(--space-6);
+  animation: gs-fade-in var(--duration-base) var(--ease-out);
+}
+.gs-dialog {
+  width: 100%;
+  background: var(--surface-card);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-3), var(--edge-light);
+  animation: gs-pop-in var(--duration-base) var(--ease-out);
+}
+.gs-dialog-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: var(--space-5) var(--space-5) 0;
+}
+.gs-dialog-title {
+  font-size: var(--text-lg);
+}
+.gs-dialog-desc {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+.gs-dialog-x {
+  all: unset;
+  display: flex;
+  cursor: pointer;
+  margin-left: auto;
+  flex-shrink: 0;
+  color: var(--text-faint);
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  transition:
+    color var(--duration-fast) var(--ease-out),
+    background var(--duration-fast) var(--ease-out);
+}
+.gs-dialog-x:hover {
+  color: var(--text-heading);
+  background: var(--surface-hover);
+}
+.gs-dialog-body {
+  padding: var(--space-5);
+}
+.gs-dialog-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* ===== Table ===== */
+.gs-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+}
+.gs-table thead th {
+  text-align: left;
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  color: var(--text-faint);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.gs-table tbody td {
+  padding: var(--space-3) var(--space-4);
+  color: var(--text-body);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.gs-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.gs-table tbody tr:hover td {
+  background: var(--surface-hover);
+}
+.gs-table-empty-cell {
+  color: var(--text-faint);
+  text-align: center;
+  padding: var(--space-6);
+}
+
+/* ===== Spinner ===== */
+.gs-spin {
+  animation: gs-spin 0.8s linear infinite;
+}
+
+/* ===== Keyframes ===== */
+@keyframes gs-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes gs-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes gs-pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translateY(4px);
+  }
+}
+@keyframes gs-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}

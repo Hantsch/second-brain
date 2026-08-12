@@ -1,0 +1,482 @@
+/* Inbox: die Arbeitsfläche des Einordnens — Liste, Dump, Vorschlag, Rückweg und
+   die Auswahl eines anderen Ziels. Farben, Abstände und Radien ausschließlich aus
+   den Gaston-Tokens.
+
+   Gelesen wird in Spalten von etwa 72 Zeichen. Alles, was Fließtext ist, bekommt
+   diese Breite; Zahlen und Pfade stehen daneben in Mono. */
+
+/* ── Inbox: zwei Spalten ────────────────────────────────────────────────── */
+
+.sb-screen--wide {
+  max-width: 1180px;
+}
+/* Der Screen füllt den Inhaltsbereich genau, statt ihn zu überlaufen: gescrollt
+   wird dann in den Spalten. Nur so steht die Aktionsleiste des Vorschlags
+   verlässlich im Bild — auf 1152×720 lag sie 145 px unter dem Fensterrand. */
+.sb-screen--fill {
+  height: 100%;
+  min-height: 0;
+}
+.sb-inbox {
+  display: grid;
+  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+  gap: var(--space-6);
+  align-items: stretch;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.sb-inbox-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+.sb-inbox-count {
+  padding: 0 var(--space-2);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+.sb-dumplist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.sb-dumpitem {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: 100%;
+  min-height: 56px;
+  padding: var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+.sb-dumpitem:hover {
+  background: var(--surface-raised);
+}
+.sb-dumpitem:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+/* Die Auswahl ist eine Fläche, kein zweites Teal: der Akzent gehört dem Knopf. */
+.sb-dumpitem--active {
+  background: var(--surface-raised);
+  border-color: var(--border-strong);
+}
+.sb-dumpitem-title {
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  color: var(--text-heading);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sb-dumpitem-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+  min-width: 0;
+}
+.sb-dumpitem-old {
+  color: var(--warning);
+}
+/* Das Abzeichen folgt seinem Text, statt die Zeilenbreite zu füllen. */
+.sb-dumpitem .gs-badge {
+  align-self: flex-start;
+}
+
+/* ── Inbox: der Dump ────────────────────────────────────────────────────── */
+
+/* Die Detailspalte ist so hoch wie ihre Spur — nicht höher. Gescrollt wird
+   darin: der Dumptext ist gekürzt, Text und Todos des Vorschlags rollen, Kopf
+   und Aktionsleiste stehen. */
+.sb-inbox-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+  min-height: 0;
+}
+.sb-inbox-detail:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: var(--radius-lg);
+}
+.sb-dumphead {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  flex: none;
+}
+.sb-dumphead-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  flex: 1;
+}
+.sb-dumphead-title {
+  font-size: var(--text-lg);
+  line-height: var(--leading-snug);
+}
+.sb-dumphead-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--text-faint);
+}
+.sb-dumphead-path {
+  word-break: break-all;
+}
+.sb-dumpview {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  min-width: 0;
+  flex: none;
+}
+.sb-dumptext {
+  max-width: 72ch;
+  white-space: pre-wrap;
+  font-size: var(--text-base);
+  line-height: var(--leading-relaxed);
+  color: var(--text-body);
+}
+/* Die Vorschau, nicht der Volltext: der steht unten im Feld noch einmal. Vier
+   Zeilen reichen, um den Dump zu erkennen — mehr schiebt die Aktionsleiste aus
+   dem Fenster. */
+.sb-dumptext--clamped {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  overflow: hidden;
+}
+/* Steht derselbe Text unten schon im Feld, genügen zwei Zeilen. */
+.sb-dumptext--twice.sb-dumptext--clamped {
+  -webkit-line-clamp: 2;
+}
+
+/* ── Der Vorschlag ──────────────────────────────────────────────────────── */
+
+/* Die Karte darf schrumpfen, aber nicht wachsen, und sie rollt selbst: Ziel,
+   Begründung, Text und Todos wandern durch, die Aktionsleiste bleibt am unteren
+   Rand stehen (`position: sticky` unten). Damit liegt sie auch dann im Bild,
+   wenn der Vorschlag länger ist als das Fenster. */
+.sb-proposal {
+  display: flex;
+  flex-direction: column;
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+.sb-proposal-head,
+.sb-proposal-note {
+  flex: none;
+}
+.sb-proposal-loading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border: 1px dashed var(--border-subtle);
+  border-radius: var(--radius-lg);
+}
+.sb-proposal-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-5);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.sb-proposal-target {
+  font-size: var(--text-lg);
+  line-height: var(--leading-snug);
+  color: var(--text-heading);
+}
+.sb-proposal-reason {
+  max-width: 72ch;
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--text-muted);
+}
+.sb-proposal-confidence {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.sb-proposal-value {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.sb-meter {
+  display: block;
+  width: 120px;
+  height: 4px;
+  border-radius: var(--radius-full);
+  background: var(--surface-hover);
+  overflow: hidden;
+}
+.sb-meter-fill {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: var(--text-muted);
+}
+.sb-proposal-note {
+  padding: var(--space-3) var(--space-5);
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--surface-sunken);
+}
+/* Rollt mit der Karte, statt einen zweiten Rollbalken aufzumachen. */
+.sb-proposal-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  flex: none;
+}
+.sb-proposal-text {
+  max-width: 76ch;
+  height: auto;
+  min-height: 180px;
+  padding: var(--space-3);
+  line-height: var(--leading-relaxed);
+  resize: vertical;
+  user-select: text;
+}
+.sb-proposal-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+.sb-todoedit {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.sb-todoedit-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  min-height: 32px;
+  min-width: 0;
+}
+.sb-todoedit-row .gs-check {
+  flex: 1;
+  min-width: 0;
+}
+/* Wohin ein Todo geht, wenn nicht zum Hauptziel. Nebentext, kein Zweitakzent. */
+.sb-todoedit-into {
+  flex: none;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 14ch;
+}
+/* Das Datum eines Warte-auf steht nur da; geändert wird es in der Projektdatei. */
+.sb-todoedit-due {
+  flex: none;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* ── Frist: drei Chips statt eines Systemkalenders ──────────────────────── */
+
+.sb-due {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: none;
+  flex-wrap: wrap;
+}
+.sb-due-label {
+  font-size: var(--text-xs);
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+.sb-due-chips {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+/* Ein gewählter Chip ist eine Fläche, kein zweites Teal. */
+.sb-due-chips .gs-btn[aria-pressed='true'] {
+  color: var(--text-heading);
+}
+/* Nur wenn jemand ein anderes Datum braucht — und dann im dunklen Schema, statt
+   einen hellen Systemkalender in die Fläche zu schneiden. */
+.sb-due-input {
+  width: auto;
+  min-width: 140px;
+  height: var(--control-h-sm);
+  font-size: var(--text-sm);
+  font-family: var(--font-mono);
+  color-scheme: dark;
+}
+.sb-due-value {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* ── Die Aktionsleiste des Vorschlags ───────────────────────────────────── */
+
+/* Am unteren Rand der Karte verankert, mit eigener Fläche und Trennstrich —
+   durchscheinender Text darunter wäre unlesbar. */
+.sb-proposal-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--border-subtle);
+  background: var(--surface-card);
+  border-bottom-left-radius: var(--radius-lg);
+  border-bottom-right-radius: var(--radius-lg);
+}
+.sb-proposal-hint {
+  margin-left: auto;
+}
+/* „Nichts wird geschrieben": die Feststellung steht dort, wo sonst das Feld war. */
+.sb-proposal-nothing {
+  max-width: 72ch;
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--text-muted);
+}
+
+/* ── Rückgängig ─────────────────────────────────────────────────────────── */
+
+.sb-undostrip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-card);
+  color: var(--success);
+}
+.sb-undostrip-text {
+  font-size: var(--text-sm);
+  color: var(--text-body);
+}
+.sb-undostrip-path {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 48ch;
+}
+
+/* Im engen Fenster stehen Liste und Vorschlag untereinander. Dann rollt wieder
+   die Seite — zwei Spalten übereinander in Fensterhöhe zu pressen ergäbe zwei
+   Guckkästen. */
+@media (max-width: 1100px) {
+  .sb-inbox {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .sb-screen--fill {
+    height: auto;
+  }
+  .sb-inbox-list,
+  .sb-proposal {
+    overflow-y: visible;
+  }
+}
+
+/* ── Ziel wählen ────────────────────────────────────────────────────────── */
+
+.sb-picker-search {
+  margin-bottom: var(--space-3);
+}
+.sb-picker-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  max-height: 46vh;
+  overflow-y: auto;
+}
+.sb-picker-item {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 40px;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  color: var(--text-body);
+}
+.sb-picker-item:hover {
+  background: var(--surface-hover);
+}
+.sb-picker-item:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+.sb-picker-item[aria-current='true'] {
+  background: var(--accent-soft);
+  color: var(--text-heading);
+}
+/* `.sb-mono` setzt eine eigene, blasse Farbe direkt am Kind — die gewinnt
+   gegen die vererbte Farbe der Zeile, egal wie stark die Zeilenregel ist.
+   Auf `--accent-soft` (Auswahl) und `--surface-hover` (Maus drüber)
+   unterschritt das den Kontrast (axe: color-contrast, 4.44 statt 4.5).
+   Deshalb hier ausdrücklich, direkt am Kind. */
+.sb-picker-item[aria-current='true'] .sb-picker-path,
+.sb-picker-item:hover .sb-picker-path {
+  color: var(--text-heading);
+}
+.sb-picker-name {
+  font-size: var(--text-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sb-picker-path {
+  margin-left: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 40%;
+}
+.sb-picker-empty {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}

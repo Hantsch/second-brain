@@ -1,0 +1,41 @@
+{
+  "wireMagic": "pb3",
+  "events": [
+    { "tStartMs": 0, "dDurationMs": 500, "aAppend": 1 },
+    {
+      "tStartMs": 0,
+      "dDurationMs": 3200,
+      "segs": [{ "utf8": "[Music]" }]
+    },
+    {
+      "tStartMs": 3200,
+      "dDurationMs": 2600,
+      "segs": [{ "utf8": "Wir sprechen über Größe" }, { "utf8": "\n" }, { "utf8": " und Übersicht." }]
+    },
+    {
+      "tStartMs": 5800,
+      "dDurationMs": 2400,
+      "segs": [{ "utf8": "Ein Wiki wächst schnell" }]
+    },
+    {
+      "tStartMs": 8200,
+      "dDurationMs": 2600,
+      "segs": [{ "utf8": "und verrottet genauso schnell." }]
+    },
+    {
+      "tStartMs": 10800,
+      "dDurationMs": 2000,
+      "segs": [{ "utf8": "[Applause]" }]
+    },
+    {
+      "tStartMs": 30000,
+      "dDurationMs": 3000,
+      "segs": [{ "utf8": "Kapitel zwei beginnt mit Pflege." }]
+    },
+    {
+      "tStartMs": 33000,
+      "dDurationMs": 3000,
+      "segs": [{ "utf8": "Befunde entstehen maschinell, das Urteil bleibt beim Menschen." }]
+    }
+  ]
+}

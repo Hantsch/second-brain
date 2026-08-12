@@ -1,0 +1,140 @@
+/* Der ganze Lauf. Drei Fragen:
+   1. Findet er im Demo-Vault genau die absichtlichen Mängel — und nichts dazu?
+   2. Halten Sortierung, Ausblenden und die Ehrlichkeit über `usedLlm`?
+   3. Bleibt er auf 1000 Seiten unter drei Sekunden? */
+
+import { describe, expect, it } from 'vitest';
+import { runGardener, sortFindings } from '@core/gardener';
+import type { GardenerFinding, GardenerFindingKind } from '@shared/types';
+import { emptyGateway } from '../../helpers/llm';
+import { day } from '../../helpers/time';
+import { DEMO } from './demo-vault';
+import { SETTINGS, demoFixture, gardenerFixture } from './fixtures';
+
+function kinds(findings: readonly GardenerFinding[]): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const finding of findings) counts[finding.kind] = (counts[finding.kind] ?? 0) + 1;
+  return counts;
+}
+
+function of(findings: readonly GardenerFinding[], kind: GardenerFindingKind): GardenerFinding[] {
+  return findings.filter((finding) => finding.kind === kind);
+}
+
+describe('runGardener über den Demo-Bestand', () => {
+  it('findet die absichtlichen Mängel — und keinen dazu', async () => {
+    const fixture = await demoFixture();
+
+    const report = await runGardener(fixture.deps(), { settings: SETTINGS });
+
+    expect(kinds(report.findings)).toEqual({
+      orphan: 1,
+      'broken-link': 1,
+      'index-drift': 1,
+      'stale-page': 1,
+      'unfiled-dump': 1,
+      'unprocessed-source': 1,
+      'project-without-next-step': 1,
+    });
+    expect(of(report.findings, 'orphan')[0]?.paths).toContain(DEMO.scim);
+    expect(of(report.findings, 'broken-link')[0]?.title).toContain('device-code-flow');
+    expect(of(report.findings, 'index-drift')[0]?.paths).toContain(DEMO.jit);
+    expect(of(report.findings, 'stale-page')[0]?.paths).toEqual([DEMO.tenants]);
+    expect(of(report.findings, 'unfiled-dump')[0]?.paths).toEqual([DEMO.oldDump]);
+    expect(of(report.findings, 'unprocessed-source')[0]?.paths).toEqual([DEMO.rawWeb]);
+    expect(of(report.findings, 'project-without-next-step')[0]?.paths).toEqual([
+      DEMO.projectWithoutStep,
+    ]);
+  });
+
+  it('bleibt ohne Modell deterministisch und behauptet keine Deutung', async () => {
+    const fixture = await demoFixture();
+
+    const report = await runGardener(fixture.deps(emptyGateway()), {
+      settings: SETTINGS,
+      useLlm: true,
+    });
+
+    expect(report.usedLlm).toBe(false);
+    expect(report.advice).toEqual([]);
+    expect(report.findings.length).toBeGreaterThan(0);
+    expect(report.healthKnown).toBe(true);
+  });
+
+  it('gibt denselben Befunden über zwei Läufe dieselben Kennungen', async () => {
+    const fixture = await demoFixture();
+
+    const first = await runGardener(fixture.deps(), { settings: SETTINGS });
+    const second = await runGardener(fixture.deps(), { settings: SETTINGS });
+
+    expect(second.findings.map((finding) => finding.id)).toEqual(
+      first.findings.map((finding) => finding.id),
+    );
+  });
+
+  it('blendet ausgeblendete Befunde aus und rechnet sie nicht gegen die Gesundheit', async () => {
+    const fixture = await demoFixture();
+    const before = await runGardener(fixture.deps(), { settings: SETTINGS });
+    const dismissed = of(before.findings, 'broken-link')[0]?.id ?? '';
+
+    const after = await runGardener(fixture.deps(), { settings: SETTINGS, dismissed: [dismissed] });
+
+    expect(after.findings.map((finding) => finding.id)).not.toContain(dismissed);
+    expect(after.findings).toHaveLength(before.findings.length - 1);
+    expect(after.health).toBeGreaterThan(before.health);
+  });
+
+  it('sortiert nach Schwere, dann nach Modul, und stellt Befunde ohne Modul hinten an', () => {
+    const base: Omit<GardenerFinding, 'id' | 'kind' | 'severity' | 'title' | 'module'> = {
+      detail: '',
+      paths: [],
+      foundAt: '2026-08-10T00:00:00.000Z',
+      fix: null,
+    };
+    const findings: GardenerFinding[] = [
+      { ...base, id: 'c', kind: 'unfiled-dump', severity: 'warn', title: 'c', module: null },
+      { ...base, id: 'b', kind: 'broken-link', severity: 'warn', title: 'b', module: 'zeta' },
+      { ...base, id: 'a', kind: 'contradiction', severity: 'high', title: 'a', module: 'alpha' },
+      { ...base, id: 'd', kind: 'orphan', severity: 'info', title: 'd', module: 'alpha' },
+    ];
+
+    expect(sortFindings(findings).map((finding) => finding.id)).toEqual(['a', 'b', 'c', 'd']);
+  });
+
+  it('hat für einen leeren Vault keine Gesundheit statt einer erfundenen', async () => {
+    const fixture = await gardenerFixture({ 'README.md': '# Leer\n' });
+
+    const report = await runGardener(fixture.deps(), { settings: SETTINGS });
+
+    expect(report.findings).toEqual([]);
+    expect(report.healthKnown).toBe(false);
+    expect(report.healthContributions).toEqual([]);
+  });
+});
+
+describe('Laufzeit', () => {
+  it('läuft über 1000 Seiten in unter drei Sekunden', async () => {
+    const files: Record<string, string> = {
+      'modules/gross/wiki/index.md': '# Katalog\n\n## Begriffe\n',
+      'modules/gross/wiki/log.md': '# Chronik\n',
+    };
+    for (let at = 0; at < 1000; at += 1) {
+      const slug = `seite-${String(at).padStart(4, '0')}`;
+      const link = `seite-${String((at + 1) % 1000).padStart(4, '0')}`;
+      files[`modules/gross/wiki/concepts/${slug}.md`] =
+        `---\ntype: concept\ntitle: Seite ${at}\nmodule: gross\ncreated: ${day(-40)}\n` +
+        `updated: ${day(-10)}\nreviewed: ${day(-10)}\ntags: []\nsources: []\n---\n\n` +
+        `Abschnitt ${at} beschreibt Vorgang ${at} mit Kennung ${at * 7} und Schwelle ${at % 13}.\n` +
+        `Verwandt ist [[${link}]]; die Messreihe ${at % 29} lag bei ${at % 97} Prozent.\n` +
+        `Notiert wurde das am Tag ${at % 31} von Person ${at % 17} im Raum ${at % 11}.\n`;
+    }
+    const fixture = await gardenerFixture(files);
+
+    const started = Date.now();
+    const report = await runGardener(fixture.deps(), { settings: SETTINGS });
+    const elapsed = Date.now() - started;
+
+    expect(report.findings.length).toBeGreaterThan(0);
+    expect(elapsed).toBeLessThan(3000);
+  });
+});

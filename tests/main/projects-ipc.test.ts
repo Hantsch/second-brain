@@ -1,0 +1,499 @@
+/* Die Projekt- und Todo-Kanäle im Hauptprozess — an echten Dateien, ohne Netz.
+ *
+ * Der Prüfstein dieses Bereichs ist ein Versprechen an die Datei: was die App
+ * schreibt, ist genau das, was sie ankündigt. Deshalb steht hier vor allem, was
+ * *nicht* passieren darf — ein verlorenes Nutzerfeld, eine zweite umgeschriebene
+ * Zeile, ein Statuswechsel ohne Bestätigung, ein Häkchen über eine fremde
+ * Änderung hinweg.
+ */
+
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { IpcChannel, IpcRequest, IpcResponse } from '@shared/ipc';
+import { createFetchFake, jsonResponse } from '../fakes/llm';
+import { CLAUDE_PROJECTS_DIR } from '../fixtures';
+import { createTempVault } from '../helpers/vault';
+import type { TempVault } from '../helpers/vault';
+import { TODAY, freezeTime } from '../helpers/time';
+
+/* Electron gibt es im Test nicht: Fenster keine, Verschlüsselung keine. */
+vi.mock('electron', () => ({
+  BrowserWindow: { getAllWindows: () => [] },
+  safeStorage: { isEncryptionAvailable: () => false },
+  app: { getVersion: () => '0.0.0-test', getPath: () => '' },
+}));
+
+type Handlers = Partial<{
+  [K in IpcChannel]: (request: IpcRequest<K>) => IpcResponse<K> | Promise<IpcResponse<K>>;
+}>;
+
+const WORK = 'projects/work/kundenportal-relaunch/project.md';
+const PRIVATE = 'projects/private/hochbeet-bauen/project.md';
+
+async function createHarness(userDataDir: string) {
+  const { FsVaultStore } = await import('@core/vault');
+  const { IndexService } = await import('@core/index');
+  const { createKeyStore } = await import('../../src/main/secrets');
+  const { createServices } = await import('../../src/main/services');
+  const { SettingsService } = await import('../../src/main/settings');
+  const { projectHandlers } = await import('../../src/main/ipc/projects');
+  const { todoHandlers } = await import('../../src/main/ipc/todos');
+
+  const settings = await SettingsService.load(userDataDir);
+  const keys = await createKeyStore(userDataDir);
+  const services = createServices(settings, keys, userDataDir);
+  services.attachVaultStore((root) => new FsVaultStore(root));
+  /* Kein Watcher: der Index zieht über `settle()` im Handler nach — genau das
+     soll geprüft werden. */
+  services.attachIndex((root) => IndexService.open(new FsVaultStore(root)));
+
+  const handlers: Handlers = { ...projectHandlers(services), ...todoHandlers(services) };
+  const events = vi.spyOn(services, 'sendEvent');
+  const call = async <K extends IpcChannel>(
+    channel: K,
+    request: IpcRequest<K>,
+  ): Promise<IpcResponse<K>> => {
+    const handler = handlers[channel];
+    if (!handler) throw new Error(`kein Handler für ${channel}`);
+    return (handler as (payload: IpcRequest<K>) => Promise<IpcResponse<K>>)(request);
+  };
+
+  return { services, settings, call, events };
+}
+
+type Harness = Awaited<ReturnType<typeof createHarness>>;
+
+describe('Projekt- und Todo-Kanäle im Main', () => {
+  let vault: TempVault;
+  let userDataDir: string;
+  let harness: Harness;
+
+  beforeEach(async () => {
+    /* `@done:` und die Tagesdatei hängen am Kalendertag — der muss feststehen,
+       sonst prüft der Test morgen etwas anderes. */
+    freezeTime();
+    vault = await createTempVault({ sample: true });
+    userDataDir = await mkdtemp(join(tmpdir(), 'sb-userdata-projects-'));
+    harness = await createHarness(userDataDir);
+    await harness.services.openVault(vault.root);
+    /* `projects:suggestStatus` liest Arbeitsspuren mit. Sie kommen aus den
+       Fixtures, nie aus dem echten `~/.claude`. */
+    await harness.settings.patchVault({ overview: { claudeProjectsDir: CLAUDE_PROJECTS_DIR } });
+  });
+
+  afterEach(async () => {
+    vi.unstubAllGlobals();
+    await harness.services.closeVault();
+    await vault.cleanup();
+    await rm(userDataDir, { recursive: true, force: true });
+  });
+
+  // ── Lesen ──────────────────────────────────────────────────────────────────
+
+  it('trennt Arbeit und Privat und lässt Erledigtes draußen', async () => {
+    const work = await harness.call('projects:list', { scope: 'work' });
+    const all = await harness.call('projects:list', {});
+
+    expect(work.map((project) => project.slug)).toEqual(['kundenportal-relaunch']);
+    expect(all.map((project) => project.scope).sort()).toEqual(['private', 'work']);
+  });
+
+  it('gibt Projekt und Datei zusammen zurück, mit Hash für den Schreibweg', async () => {
+    const found = await harness.call('projects:get', { slug: 'kundenportal-relaunch' });
+
+    expect(found?.project.title).toBe('Kundenportal Relaunch');
+    expect(found?.doc.path).toBe(WORK);
+    expect(found?.doc.hash).toHaveLength(64);
+    expect(found?.doc.body).toContain('## Stand');
+  });
+
+  it('sagt bei einem Projekt, das es nicht gibt, dass es keins gibt', async () => {
+    expect(await harness.call('projects:get', { slug: 'gibt-es-nicht' })).toBeNull();
+    await expect(
+      harness.call('projects:patch', { slug: 'gibt-es-nicht', patch: { status: 'done' } }),
+    ).rejects.toMatchObject({ code: 'not-found' });
+  });
+
+  // ── Ändern ─────────────────────────────────────────────────────────────────
+
+  it('erhält beim Patchen unbekannte Frontmatter-Felder des Nutzers', async () => {
+    await vault.write(
+      WORK,
+      ((await vault.read(WORK)) ?? '').replace(
+        'type: project',
+        'type: project\nkostenstelle: 4711\neigene_liste:\n  - a\n  - b',
+      ),
+    );
+    await harness.services.requireIndex().refresh?.([WORK]);
+
+    const patched = await harness.call('projects:patch', {
+      slug: 'kundenportal-relaunch',
+      patch: { status: 'paused', next_step: 'Erst nach dem Release weitermachen' },
+    });
+
+    expect(patched.status).toBe('paused');
+    expect(patched.nextStep).toBe('Erst nach dem Release weitermachen');
+    const raw = (await vault.read(WORK)) ?? '';
+    expect(raw).toContain('kostenstelle: 4711');
+    expect(raw).toContain('eigene_liste:');
+    expect(raw).toContain('  - b');
+    /* Die App hat geschrieben, also trägt sie `updated` nach. */
+    expect(raw).toContain(`updated: ${TODAY}`);
+    /* Der Rumpf bleibt Zeile für Zeile stehen. */
+    expect(raw).toContain('- [ ] Abnahmeprotokoll mit Miriam durchgehen @due:2026-08-10 !!!');
+  });
+
+  it('weist ein Feld ab, das die App nicht kennt, statt es stillschweigend zu schlucken', async () => {
+    await expect(
+      harness.call('projects:patch', {
+        slug: 'kundenportal-relaunch',
+        patch: { erfunden: 'ja' } as never,
+      }),
+    ).rejects.toMatchObject({ code: 'invalid' });
+    await expect(
+      harness.call('projects:patch', {
+        slug: 'kundenportal-relaunch',
+        patch: { scope: 'private' },
+      }),
+    ).rejects.toMatchObject({ code: 'invalid' });
+    await expect(
+      harness.call('projects:patch', {
+        slug: 'kundenportal-relaunch',
+        patch: { status: 'irgendwas' as never },
+      }),
+    ).rejects.toMatchObject({ code: 'invalid' });
+  });
+
+  it('schreibt mit veraltetem Hash nicht, sondern meldet den Konflikt', async () => {
+    await expect(
+      harness.call('projects:patch', {
+        slug: 'kundenportal-relaunch',
+        patch: { status: 'done' },
+        expectedHash: 'von-vorgestern',
+      }),
+    ).rejects.toMatchObject({ code: 'conflict' });
+
+    expect(await vault.read(WORK)).toContain('status: active');
+  });
+
+  it('meldet die Änderung, damit der Renderer nachlädt', async () => {
+    await harness.call('projects:patch', {
+      slug: 'hochbeet-bauen',
+      patch: { priority: 1 },
+    });
+
+    expect(harness.events).toHaveBeenCalledWith('event:vault-changed', {
+      paths: [PRIVATE],
+      external: false,
+    });
+  });
+
+  // ── Anlegen ────────────────────────────────────────────────────────────────
+
+  it('legt ein Projekt nach VAULT-FORMAT.md an', async () => {
+    const created = await harness.call('projects:create', {
+      title: 'Küche renovieren',
+      scope: 'private',
+      status: 'idea',
+      body: 'Angebote von zwei Schreinern liegen vor.',
+    });
+
+    expect(created.slug).toBe('kueche-renovieren');
+    expect(created.path).toBe('projects/private/kueche-renovieren/project.md');
+    expect(created.status).toBe('idea');
+    const raw = (await vault.read(created.path)) ?? '';
+    expect(raw).toContain('type: project');
+    expect(raw).toContain('title: Küche renovieren');
+    expect(raw).toContain('slug: kueche-renovieren');
+    expect(raw).toContain('scope: private');
+    expect(raw).toContain('## Stand');
+    expect(raw).toContain('Angebote von zwei Schreinern liegen vor.');
+    expect(raw).toContain('## Todos');
+    expect(raw).toContain('## Notizen');
+    /* Sofort in der Liste — der Index ist nachgezogen. */
+    const list = await harness.call('projects:list', { scope: 'private' });
+    expect(list.map((project) => project.slug)).toContain('kueche-renovieren');
+  });
+
+  /* Der Ordner entscheidet, nicht der Titel: „Hochbeet bauen" landet im Ordner
+     des bestehenden Projekts — und wird deshalb abgewiesen. */
+  it('legt kein zweites Projekt über ein bestehendes', async () => {
+    await expect(
+      harness.call('projects:create', { title: 'Hochbeet bauen', scope: 'private' }),
+    ).rejects.toMatchObject({ code: 'conflict' });
+  });
+
+  it('hängt einen Text unter einem Abschnitt an, ohne den Rest anzufassen', async () => {
+    const before = (await vault.read(PRIVATE)) ?? '';
+
+    await harness.call('projects:append', {
+      slug: 'hochbeet-bauen',
+      section: 'Notizen',
+      content: '### 2026-08-10\n\nLärche war teurer als gedacht.',
+    });
+
+    const raw = (await vault.read(PRIVATE)) ?? '';
+    expect(raw).toContain('Lärche war teurer als gedacht.');
+    expect(raw).toContain('Maße stehen: 120 × 60 × 80');
+    expect(raw.indexOf('## Notizen')).toBe(before.indexOf('## Notizen'));
+  });
+
+  // ── Warte-auf ──────────────────────────────────────────────────────────────
+
+  it('hakt genau den gemeinten Warte-auf-Eintrag ab und behält den anderen', async () => {
+    await vault.write(
+      WORK,
+      ((await vault.read(WORK)) ?? '').replace(
+        '    due: 2026-08-12',
+        '    due: 2026-08-12\n    ticket: OPS-88\n  - who: Miriam\n    what: Abnahmetermin\n    since: 2026-08-07',
+      ),
+    );
+    await harness.services.requireIndex().refresh?.([WORK]);
+
+    const patched = await harness.call('projects:resolveWaiting', {
+      slug: 'kundenportal-relaunch',
+      index: 1,
+    });
+
+    expect(patched.waitingOn.map((entry) => [entry.who, entry.resolved === true])).toEqual([
+      ['Jonas', false],
+      ['Miriam', true],
+    ]);
+    /* Ein eigenes Feld am Eintrag überlebt. */
+    expect(await vault.read(WORK)).toContain('ticket: OPS-88');
+  });
+
+  it('sagt bei einem Warte-auf, das es nicht gibt, dass es keins gibt', async () => {
+    await expect(
+      harness.call('projects:resolveWaiting', { slug: 'kundenportal-relaunch', index: 9 }),
+    ).rejects.toMatchObject({ code: 'not-found' });
+    await expect(
+      harness.call('projects:resolveWaiting', { slug: 'hochbeet-bauen', index: 0 }),
+    ).rejects.toMatchObject({ code: 'not-found' });
+  });
+
+  // ── Vorschlag für den Stand ────────────────────────────────────────────────
+
+  it('schlägt ohne Modell heuristisch vor und schreibt nichts', async () => {
+    const before = await vault.read(WORK);
+
+    const suggestion = await harness.call('projects:suggestStatus', {
+      slug: 'kundenportal-relaunch',
+    });
+
+    expect(suggestion).not.toBeNull();
+    /* Ein unerledigtes Warte-auf steht im Frontmatter — das ist der Beleg. */
+    expect(suggestion?.status).toBe('waiting');
+    expect(suggestion?.reason).toContain('Jonas');
+    /* Der Vorschlag steht so schon im Projekt: er ist kein erfundener Satz. */
+    expect(
+      ((await vault.read(WORK)) ?? '').includes(suggestion?.nextStep.slice(0, 20) ?? 'x'),
+    ).toBe(true);
+    expect(await vault.read(WORK)).toBe(before);
+  });
+
+  it('nimmt den Vorschlag des Modells und schreibt ihn erst nach der Bestätigung', async () => {
+    await harness.settings.setVaultSection('providers', [
+      {
+        id: 'local-1',
+        label: 'Lokal',
+        kind: 'openai-compatible',
+        baseUrl: 'http://localhost:11434/v1',
+        hasKey: false,
+        local: true,
+        enabled: true,
+        models: ['qwen2.5:14b'],
+        createdAt: '2026-08-10T12:00:00.000Z',
+      },
+    ]);
+    await harness.settings.setVaultSection('routing', {
+      tasks: { 'project-status': { providerId: 'local-1', model: 'qwen2.5:14b' } },
+      defaults: {},
+    });
+    const fake = createFetchFake(() =>
+      jsonResponse({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                status: 'paused',
+                nextStep: 'Nach dem Release der Angebotsliste weitermachen',
+                reason: 'Alle offenen Punkte hängen am Release.',
+              }),
+            },
+          },
+        ],
+      }),
+    );
+    vi.stubGlobal('fetch', fake.fetch);
+
+    const suggestion = await harness.call('projects:suggestStatus', {
+      slug: 'kundenportal-relaunch',
+    });
+
+    expect(fake.calls).toHaveLength(1);
+    expect(suggestion?.status).toBe('paused');
+    expect(suggestion?.nextStep).toBe('Nach dem Release der Angebotsliste weitermachen');
+    /* Nichts geschrieben, solange niemand bestätigt hat. */
+    expect(await vault.read(WORK)).toContain('status: active');
+
+    await harness.call('projects:patch', {
+      slug: 'kundenportal-relaunch',
+      patch: { status: suggestion?.status, next_step: suggestion?.nextStep },
+    });
+    const raw = (await vault.read(WORK)) ?? '';
+    expect(raw).toContain('status: paused');
+    expect(raw).toContain('next_step: Nach dem Release der Angebotsliste weitermachen');
+  });
+
+  it('bleibt bei der Heuristik, wenn das Modell ausfällt', async () => {
+    await harness.settings.setVaultSection('providers', [
+      {
+        id: 'local-1',
+        label: 'Lokal',
+        kind: 'openai-compatible',
+        baseUrl: 'http://localhost:11434/v1',
+        hasKey: false,
+        local: true,
+        enabled: true,
+        models: ['qwen2.5:14b'],
+        createdAt: '2026-08-10T12:00:00.000Z',
+      },
+    ]);
+    await harness.settings.setVaultSection('routing', {
+      tasks: { 'project-status': { providerId: 'local-1', model: 'qwen2.5:14b' } },
+      defaults: {},
+    });
+    vi.stubGlobal('fetch', createFetchFake(() => new Error('connect ECONNREFUSED')).fetch);
+
+    const suggestion = await harness.call('projects:suggestStatus', {
+      slug: 'hochbeet-bauen',
+    });
+
+    expect(suggestion).not.toBeNull();
+    expect(suggestion?.reason).toContain('Todos');
+  });
+
+  // ── Todos ──────────────────────────────────────────────────────────────────
+
+  const openTodo = async (text: string) => {
+    const todos = await harness.call('todos:list', { open: true });
+    const found = todos.find((todo) => todo.text === text);
+    expect(found, `Todo „${text}" nicht gefunden`).toBeDefined();
+    return found as NonNullable<typeof found>;
+  };
+
+  it('hakt genau eine Zeile ab und setzt den @done:-Marker', async () => {
+    const before = ((await vault.read(PRIVATE)) ?? '').split('\n');
+    const todo = await openTodo('Noppenfolie innen anbringen');
+
+    const toggled = await harness.call('todos:toggle', { id: todo.id });
+
+    expect(toggled.state).toBe('done');
+    expect(toggled.doneAt).toBe(TODAY);
+    const after = ((await vault.read(PRIVATE)) ?? '').split('\n');
+    expect(after).toHaveLength(before.length);
+    const changed = after.filter((line, at) => line !== before[at]);
+    expect(changed).toEqual([`- [x] Noppenfolie innen anbringen @done:${TODAY}`]);
+  });
+
+  it('nimmt das Häkchen wieder weg und entfernt den Marker', async () => {
+    const todo = await openTodo('Bretter auf Länge sägen');
+    const done = await harness.call('todos:toggle', { id: todo.id });
+    expect(done.state).toBe('done');
+
+    const back = await harness.call('todos:toggle', { id: done.id });
+
+    expect(back.state).toBe('open');
+    expect(back.doneAt).toBeNull();
+    const raw = (await vault.read(PRIVATE)) ?? '';
+    expect(raw).toContain('- [ ] Bretter auf Länge sägen @due:2026-08-10');
+    expect(raw).not.toContain('@done:');
+  });
+
+  it('schreibt nicht, wenn die Zeile zwischenzeitlich von außen geändert wurde', async () => {
+    const todo = await openTodo('Erde und Kompost holen');
+    await vault.write(
+      PRIVATE,
+      ((await vault.read(PRIVATE)) ?? '').replace(
+        '- [ ] Erde und Kompost holen',
+        '- [x] Erde und Kompost holen @done:2026-08-09',
+      ),
+    );
+
+    await expect(harness.call('todos:toggle', { id: todo.id })).rejects.toMatchObject({
+      code: 'conflict',
+    });
+    /* Die fremde Änderung steht unverändert da. */
+    expect(await vault.read(PRIVATE)).toContain('- [x] Erde und Kompost holen @done:2026-08-09');
+  });
+
+  it('legt ein Todo mit Frist in der Projektdatei an', async () => {
+    const created = await harness.call('todos:create', {
+      text: 'Schrauben nachkaufen',
+      scope: 'private',
+      project: 'hochbeet-bauen',
+      due: '2026-08-12',
+    });
+
+    expect(created.text).toBe('Schrauben nachkaufen');
+    expect(created.due).toBe('2026-08-12');
+    expect(created.project).toBe('hochbeet-bauen');
+    expect(created.state).toBe('open');
+    const raw = (await vault.read(PRIVATE)) ?? '';
+    expect(raw).toContain('- [ ] Schrauben nachkaufen @due:2026-08-12');
+    /* Unter „Todos", nicht am Dateiende. */
+    expect(raw.indexOf('Schrauben nachkaufen')).toBeLessThan(raw.indexOf('## Notizen'));
+  });
+
+  it('legt ein Todo ohne Projekt im heutigen Tageseintrag an', async () => {
+    const created = await harness.call('todos:create', {
+      text: 'Zahnarzttermin verschieben',
+      scope: 'private',
+      project: null,
+      due: null,
+    });
+
+    expect(created.path).toBe(`journal/2026/08/${TODAY}.md`);
+    expect(created.project).toBeNull();
+    expect(created.scope).toBe('private');
+    expect(await vault.read(created.path)).toContain('- [ ] Zahnarzttermin verschieben');
+  });
+
+  it('ändert die Frist inline und behält alle übrigen Marker', async () => {
+    const todo = await openTodo('Fallback für abgelaufene Sitzungen bauen');
+
+    const updated = await harness.call('todos:update', { id: todo.id, due: '2026-08-20' });
+
+    expect(updated.due).toBe('2026-08-20');
+    expect(updated.waitingFor).toBe('Jonas');
+    expect(updated.neededBy).toBe('2026-08-12');
+    expect(await vault.read(WORK)).toContain(
+      '- [ ] Fallback für abgelaufene Sitzungen bauen @wait:Jonas @needed:2026-08-12 @due:2026-08-20',
+    );
+  });
+
+  it('ändert den Text und lässt Frist und Priorität stehen', async () => {
+    const todo = await openTodo('Ladezeiten der Angebotsliste unter 1,5 s bringen');
+
+    const updated = await harness.call('todos:update', {
+      id: todo.id,
+      text: 'Ladezeiten der Angebotsliste messen und senken',
+    });
+
+    expect(updated.text).toBe('Ladezeiten der Angebotsliste messen und senken');
+    expect(updated.due).toBe('2026-08-08');
+    expect(updated.priority).toBe(2);
+    expect(await vault.read(WORK)).toContain(
+      '- [ ] Ladezeiten der Angebotsliste messen und senken @due:2026-08-08 !!',
+    );
+  });
+
+  it('verlangt einen offenen Vault', async () => {
+    await harness.services.closeVault();
+    await expect(harness.call('projects:list', {})).rejects.toMatchObject({ code: 'no-vault' });
+    await expect(harness.call('todos:list', {})).rejects.toMatchObject({ code: 'no-vault' });
+  });
+});

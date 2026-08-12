@@ -1,0 +1,537 @@
+/* Wissens-Module: Karten, Seitenliste, Seitenansicht, Wikilinks, Markdown,
+   Graph und Chronik. Farben, Abstände und Radien ausschließlich aus den
+   Gaston-Tokens.
+
+   Der Graph ist der einzige Ort mit eigener Geometrie: eine Fläche in Prozent,
+   Linien im SVG darunter, Knöpfe darüber. Alles andere folgt den Rhythmen aus
+   content.css. Der Quellen-Screen hat seine eigene Datei (sources.css).
+*/
+
+/* ── Module: Übersicht ──────────────────────────────────────────────────── */
+
+/* Derselbe Zähler wie „5 Dumps" in der Inbox oder „9 Projekte" bei den
+   Projekten — keine zweite Rahmenkarte mit dem Titel „Module" nur für eine
+   Zahl. */
+.sb-modules-count {
+  padding: 0 var(--space-2);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.sb-modulegrid {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-2);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-4);
+}
+.sb-modulecard {
+  height: 100%;
+}
+.sb-modulecard-button {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+  height: 100%;
+  padding: var(--space-4);
+  cursor: pointer;
+  border-radius: var(--radius-lg);
+}
+.sb-modulecard-button:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+.sb-modulecard-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-faint);
+  min-width: 0;
+}
+.sb-modulecard-title {
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+  color: var(--text-heading);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sb-modulecard-body {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  line-height: var(--leading-snug);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.sb-modulecard-meta {
+  display: block;
+}
+
+.sb-modulecreate {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.sb-modulecreate-purpose .gs-input {
+  min-height: 76px;
+  resize: vertical;
+}
+
+/* ── Module: Detail ─────────────────────────────────────────────────────── */
+
+.sb-moduledetail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+}
+.sb-moduledetail-head {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+.sb-moduledetail-title {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+/* Zählungen, letzter Ingest und Befunde in einer Zeile — mit Luft dazwischen,
+   sonst liest man „6 Konzepte zuletzt verdichtet" als einen Satz. */
+.sb-moduledetail-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+.sb-modulepages {
+  display: grid;
+  grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
+  gap: var(--space-6);
+  align-items: start;
+}
+@media (max-width: 1100px) {
+  .sb-modulepages {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.sb-modulepage {
+  min-width: 0;
+}
+.sb-modulepage-hint {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-6);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-card);
+}
+
+/* ── Seitenliste ────────────────────────────────────────────────────────── */
+
+.sb-pagelist {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.sb-pagelist-tools {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+.sb-pagelist-tools .gs-field {
+  flex: 1 1 140px;
+}
+.sb-pagelist-count {
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+.sb-pagelist-groups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.sb-pagegroup-title {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin-bottom: var(--space-1);
+}
+.sb-pagegroup-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sb-pageitem {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  min-height: 34px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+.sb-pageitem:hover {
+  background: var(--surface-raised);
+}
+.sb-pageitem:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+.sb-pageitem--active {
+  background: var(--surface-raised);
+  border-color: var(--border-strong);
+}
+.sb-pageitem-title {
+  font-size: var(--text-sm);
+  color: var(--text-body);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sb-pageitem--active .sb-pageitem-title {
+  color: var(--text-heading);
+}
+.sb-pageitem-meta {
+  display: block;
+}
+
+/* ── Seitenansicht ──────────────────────────────────────────────────────── */
+
+.sb-pageview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+}
+.sb-pageview-head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+.sb-pageview-title {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+  flex: 1;
+}
+.sb-pageview-name {
+  font-size: var(--text-lg);
+}
+.sb-pageview-actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.sb-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-5);
+  margin: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-card);
+}
+.sb-fact {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.sb-fact--wide {
+  flex: 1 1 100%;
+}
+.sb-fact-label {
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.sb-fact-value {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-body);
+}
+.sb-fact-none {
+  font-size: var(--text-sm);
+  color: var(--text-faint);
+  font-style: italic;
+}
+.sb-reflist {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.sb-inbound {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-subtle);
+}
+.sb-inbound-title {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.sb-pageedit {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+/* Mit `textarea` davor: `textarea.gs-input` in components.css setzt 76 px, und
+   ohne dieselbe Spezifität bliebe das Feld eine Zeile hoch. */
+textarea.sb-pageedit-field {
+  min-height: 380px;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+  resize: vertical;
+  user-select: text;
+}
+.sb-pageedit-foot {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+/* Die Zeile neben „Speichern", wenn nichts geschrieben wurde. Warnfarbe, kein
+   zweites Teal: sie ist eine Aussage, kein Fokuspunkt. */
+.sb-pageedit-warn {
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  color: var(--warning);
+}
+
+.sb-conflict {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  border-color: var(--warning);
+}
+.sb-conflict-title {
+  font-size: var(--text-md);
+}
+.sb-conflict-actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+/* ── Wikilinks und Markdown ─────────────────────────────────────────────── */
+
+.sb-wikilink {
+  all: unset;
+  cursor: pointer;
+  color: var(--accent);
+  font-size: inherit;
+  border-radius: var(--radius-sm);
+  border-bottom: 1px solid transparent;
+}
+.sb-wikilink:hover {
+  color: var(--accent-hover);
+  border-bottom-color: var(--accent-hover);
+}
+.sb-wikilink:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+/* Ein kaputter Wikilink darf nicht aussehen wie ein guter. */
+.sb-wikilink--missing {
+  color: var(--warning);
+  text-decoration: line-through;
+  text-decoration-color: var(--warning);
+}
+.sb-wikilink--missing:hover {
+  color: var(--warning);
+  border-bottom-color: transparent;
+}
+.sb-wikilink-mark {
+  margin-left: var(--space-1);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  text-decoration: none;
+  color: var(--warning);
+}
+
+/* ── Graph ──────────────────────────────────────────────────────────────── */
+
+.sb-graphwrap,
+.sb-graph {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.sb-graph-capped {
+  font-size: var(--text-sm);
+  color: var(--warning);
+  max-width: 72ch;
+}
+.sb-graph-heads {
+  position: relative;
+  height: 18px;
+}
+.sb-graph-head {
+  position: absolute;
+  transform: translateX(-50%);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.sb-graph-plane {
+  position: relative;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-card);
+  overflow: hidden;
+}
+.sb-graph-lines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.sb-graph-edge {
+  stroke: var(--border-strong);
+  stroke-width: 1;
+}
+.sb-graph-edge--lit {
+  stroke: var(--accent);
+  stroke-width: 1.5;
+}
+.sb-graph-node {
+  all: unset;
+  box-sizing: border-box;
+  position: absolute;
+  transform: translate(-50%, -50%);
+  max-width: 22%;
+  padding: 4px var(--space-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-full);
+  background: var(--surface-raised);
+  color: var(--text-body);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition:
+    opacity var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
+}
+.sb-graph-node:hover {
+  border-color: var(--accent);
+  color: var(--text-heading);
+}
+.sb-graph-node:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+.sb-graph-node--active {
+  border-color: var(--accent);
+  color: var(--text-heading);
+}
+.sb-graph-node--dim {
+  opacity: 0.35;
+}
+/* Die Kategorie färbt den Rand dezent — sie steht schon als Spaltenkopf da. */
+.sb-graph-node--source {
+  border-left: 3px solid var(--fog-500);
+}
+.sb-graph-node--entity {
+  border-left: 3px solid var(--fog-400);
+}
+.sb-graph-node--concept {
+  border-left: 3px solid var(--teal-600);
+}
+.sb-graph-node--overview {
+  border-left: 3px solid var(--accent);
+}
+
+/* ── Chronik ────────────────────────────────────────────────────────────── */
+
+.sb-log {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+.sb-log-entries {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: 100%;
+}
+.sb-log-entry {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.sb-log-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+.sb-log-day {
+  color: var(--text-muted);
+}
+.sb-log-kind {
+  font-size: var(--text-xs);
+  color: var(--text-faint);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+.sb-log-title {
+  font-size: var(--text-base);
+  color: var(--text-heading);
+}
+.sb-log-fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+}
+.sb-log-field {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+.sb-log-label {
+  min-width: 12ch;
+  font-size: var(--text-xs);
+  color: var(--text-faint);
+}
+.sb-log-value {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  min-width: 0;
+}

@@ -1,0 +1,640 @@
+/* Projekte: zwei Spalten, Liste und Detail. Farben, Abstände und Radien
+   ausschließlich aus den Gaston-Tokens.
+
+   Wie bei der Inbox füllt der Screen den Inhaltsbereich genau und gescrollt wird
+   in den Spalten — sonst liegt die Aktionsleiste des Details auf 1152×720 unter
+   dem Fensterrand. */
+
+.sb-projects {
+  display: grid;
+  grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+  gap: var(--space-6);
+  align-items: stretch;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+/* Im engen Fenster untereinander: zwei Spalten würden beide unlesbar. */
+@media (max-width: 1000px) {
+  .sb-projects {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ── Liste ──────────────────────────────────────────────────────────────── */
+
+.sb-plist {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+.sb-plist-count {
+  padding: 0 var(--space-2);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+.sb-plist-keys {
+  padding: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--text-disabled);
+  line-height: var(--leading-snug);
+}
+
+.sb-pfilters {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.sb-segment {
+  display: inline-flex;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+}
+.sb-segment .gs-btn {
+  flex: 1;
+}
+.sb-pfilters-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.sb-projectlist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.sb-projectitem {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 56px;
+  padding: var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+.sb-projectitem:hover {
+  background: var(--surface-raised);
+}
+.sb-projectitem:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+/* Die Auswahl ist eine Fläche, kein zweites Teal: der Akzent gehört dem Knopf. */
+.sb-projectitem--active {
+  background: var(--surface-raised);
+  border-color: var(--border-strong);
+}
+.sb-projectitem-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.sb-projectitem-title {
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  color: var(--text-heading);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sb-projectitem-count {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+.sb-projectitem-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+  min-width: 0;
+}
+.sb-projectitem-status {
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+}
+/* Der Bereich als Mono-Overline, wie die Gruppen der Todo-Kacheln — kein zweiter
+   Farbakzent, nur eine Kante, die Arbeit und Privat auseinanderhält. */
+.sb-projectitem-scope {
+  padding-right: var(--space-2);
+  border-right: 1px solid var(--border-subtle);
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  color: var(--text-muted);
+}
+
+/* Die Überschrift eines Bereichs in der Liste. */
+.sb-pgroup-title {
+  list-style: none;
+  padding: var(--space-1) var(--space-3) 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  color: var(--text-faint);
+}
+.sb-projectitem-age,
+.sb-projectitem-wait {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.sb-projectitem-wait {
+  color: var(--text-muted);
+}
+.sb-projectitem-stale {
+  color: var(--warning);
+}
+
+/* Der Statuspunkt ist der geteilte `.sb-dot` aus shell.css — hier kommt nur der
+   Ton dazu, den es dort noch nicht gab. Farbe ist ohnehin Beiwerk: das Wort
+   steht daneben. */
+.sb-dot--warn {
+  background: var(--warning);
+}
+
+.sb-stalled {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+}
+.sb-stalled-toggle {
+  justify-content: flex-start;
+}
+
+/* ── Detail ─────────────────────────────────────────────────────────────── */
+
+.sb-pdetail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  padding-right: var(--space-1);
+}
+
+.sb-phead {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.sb-phead-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.sb-phead-name {
+  font-size: var(--text-xl);
+  color: var(--text-heading);
+  min-width: 0;
+}
+.sb-phead-facts {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+.sb-phead-fact {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-bottom: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--text-faint);
+}
+.sb-phead-none {
+  color: var(--text-disabled);
+}
+
+.sb-statuspick {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.sb-statuspick-field {
+  min-width: 160px;
+}
+.sb-statuspick-note {
+  min-height: 1em;
+  font-size: var(--text-2xs);
+  color: var(--success);
+}
+
+/* ── Nächster Schritt: die eine große Zeile ─────────────────────────────── */
+
+/* Die wichtigste Zeile des Screens darf nicht aussehen wie die zweitwichtigste:
+   eigene Fläche, eigene Kante. Die 2 px in `--accent` sind der Fokuspunkt dieses
+   Screens — keine zweite primäre Aktion, sondern die Stelle, an der der Blick
+   landen soll. */
+.sb-nextstep {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--border-subtle);
+  border-left: 2px solid var(--accent);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+}
+.sb-nextstep--editing {
+  border-color: var(--border-strong);
+  border-left-color: var(--accent);
+}
+.sb-nextstep-line {
+  all: unset;
+  cursor: text;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--sb-hit);
+  max-width: 72ch;
+  font-size: var(--text-lg);
+  line-height: var(--leading-snug);
+  color: var(--text-heading);
+  border-radius: var(--radius-sm);
+}
+.sb-nextstep-line:hover .sb-nextstep-pen {
+  color: var(--accent);
+}
+.sb-nextstep-line:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+/* Der Stift ist der einzige Hinweis, dass die Zeile ein Feld ist — auf
+   `--text-disabled` (2,4:1) war er praktisch unsichtbar. */
+.sb-nextstep-pen {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.sb-nextstep-line--empty {
+  font-style: italic;
+  color: var(--text-faint);
+}
+.sb-nextstep-missing {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+.sb-nextstep-input {
+  font-size: var(--text-lg);
+  height: var(--control-h-lg);
+}
+.sb-nextstep-hint,
+.sb-nextstep-saved {
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+}
+.sb-nextstep-saved {
+  min-height: 1em;
+  color: var(--success);
+}
+/* Fremde Änderung an genau dieser Zeile, während das Feld offen ist. Warnfarbe,
+   kein zweites Teal: die Meldung ist kein Fokuspunkt, sondern eine Aussage. */
+.sb-nextstep-external {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--warning);
+  border-radius: var(--radius-md);
+  background: var(--warning-soft);
+}
+.sb-nextstep-external-text {
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--text-body);
+}
+.sb-nextstep-external-actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+/* ── Vorschlag ──────────────────────────────────────────────────────────── */
+
+.sb-suggest {
+  border-color: var(--accent-soft-border);
+}
+.sb-suggest-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-5);
+}
+.sb-suggest-step {
+  max-width: 72ch;
+  font-size: var(--text-md);
+  color: var(--text-heading);
+}
+.sb-suggest-status {
+  font-size: var(--text-sm);
+  color: var(--text-body);
+}
+.sb-suggest-reason {
+  max-width: 72ch;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  line-height: var(--leading-snug);
+}
+.sb-suggest-notice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--text-faint);
+}
+.sb-suggest-actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  padding-top: var(--space-2);
+}
+
+/* ── Warte auf ──────────────────────────────────────────────────────────── */
+
+.sb-waitlist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.sb-waitrow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+}
+.sb-waitrow + .sb-waitrow {
+  border-top: 1px solid var(--border-subtle);
+  border-radius: 0;
+}
+.sb-waitrow-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+  flex: 1;
+}
+.sb-waitrow-who {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-base);
+  color: var(--text-heading);
+}
+.sb-waitrow-overdue {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  color: var(--danger);
+}
+.sb-waitrow-what {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+.sb-waitrow-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+/* ── Todos ──────────────────────────────────────────────────────────────── */
+
+.sb-todolist {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+.sb-todos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}
+.sb-todorow {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  min-width: 0;
+}
+.sb-todorow:hover {
+  background: var(--surface-raised);
+}
+.sb-todorow--active {
+  background: var(--surface-raised);
+}
+/* Die häufigste Aktion der App braucht die größte Sorgfalt: das Kästchen bleibt
+   16 px, die Trefferfläche ist 32 × 32. Die negativen Ränder lassen das Kästchen
+   dort stehen, wo es vorher stand, und die Fläche wächst nach außen — bis in die
+   Innenkante der Zeile. */
+.sb-todorow-box {
+  display: grid;
+  place-items: center;
+  width: var(--sb-hit);
+  height: var(--sb-hit);
+  flex-shrink: 0;
+  margin: -6px 0 -6px calc(-1 * var(--space-2));
+  border-radius: var(--radius-sm);
+}
+.sb-todorow-box .gs-check-box {
+  margin-top: 0;
+}
+.sb-todorow-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+  flex: 1;
+}
+.sb-todorow-text {
+  max-width: 72ch;
+  font-size: var(--text-sm);
+  color: var(--text-body);
+  line-height: var(--leading-snug);
+}
+.sb-todorow-text--done {
+  color: var(--text-disabled);
+  text-decoration: line-through;
+}
+.sb-todorow-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+}
+.sb-todorow-prio {
+  font-family: var(--font-mono);
+  color: var(--danger);
+}
+.sb-todorow-wait,
+.sb-todorow-project {
+  color: var(--text-muted);
+}
+.sb-todocompose {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+}
+.sb-todocompose-foot {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+.sb-todocompose-hint {
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+}
+
+/* ── Fristen-Chip ───────────────────────────────────────────────────────── */
+
+/* Eigener Name, nicht `sb-chip`: das sind die Filter-Chips des Fragen-Screens,
+   und die sind Knöpfe. Zwei Dinge mit einem Namen wären zwei Fehler. */
+.sb-deadline {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 1px var(--space-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.sb-deadline-rel {
+  margin-left: var(--space-1);
+  padding-left: var(--space-2);
+  border-left: 1px solid var(--border-subtle);
+  color: var(--text-faint);
+}
+.sb-deadline--overdue {
+  border-color: var(--danger-soft-border);
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+.sb-deadline--soon {
+  border-color: rgba(232, 180, 90, 0.35);
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+/* ── Alle Todos ─────────────────────────────────────────────────────────── */
+
+.sb-alltodos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-height: 0;
+  overflow-y: auto;
+  flex: 1 1 auto;
+}
+.sb-alltodos-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+.sb-todogroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2) 0;
+}
+.sb-todogroup-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-3);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  color: var(--text-faint);
+}
+.sb-todogroup-title--overdue {
+  color: var(--danger);
+}
+.sb-todogroup-title--today {
+  color: var(--warning);
+}
+
+/* ── Arbeitsspur ────────────────────────────────────────────────────────── */
+
+.sb-trace {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-2);
+}
+.sb-trace-touch {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-body);
+}
+.sb-trace-source {
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+}
+.sb-trace-repos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* ── Neues Projekt ──────────────────────────────────────────────────────── */
+
+.sb-newproject {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.sb-newproject-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+.sb-newproject-path {
+  min-height: 1em;
+}

@@ -1,0 +1,72 @@
+/* Gaston — color tokens. Dark-first, high contrast, single teal accent. */
+:root {
+  /* Base scale — night surfaces (blue-cast near-black) */
+  --ink-950: #070B11;
+  --ink-900: #0A0F16;
+  --ink-850: #101722;
+  --ink-800: #16202E;
+  --ink-750: #1D2938;
+  --ink-700: #263447;
+  --ink-600: #33445B;
+
+  /* Base scale — fog text (cool grays) */
+  --fog-100: #F2F7FC;
+  --fog-200: #D7E0EA;
+  --fog-300: #A8B7C7;
+  --fog-400: #7E8FA3;
+  --fog-500: #64758A;
+  --fog-600: #4A5A6E;
+
+  /* Accent — Gaston teal */
+  --teal-200: #9BEDE4;
+  --teal-300: #6FE0D3;
+  --teal-400: #4FD1C5;
+  --teal-500: #2FB3A6;
+  --teal-600: #1E8D83;
+  --teal-ink: #06211E;
+
+  /* Semantic hues */
+  --green-400: #53CE87;
+  --amber-400: #E8B45A;
+  --red-400: #F07A7A;
+  --red-300: #F9A8A8;
+
+  /* ---- Semantic aliases ---- */
+  --surface-page: var(--ink-900);
+  --surface-sunken: var(--ink-950);
+  --surface-card: var(--ink-850);
+  --surface-raised: var(--ink-800);
+  --surface-hover: var(--ink-750);
+  --surface-active: var(--ink-700);
+
+  --border-subtle: #1C2836;
+  --border-strong: #2C3B50;
+  --border-focus: var(--teal-400);
+
+  --text-heading: var(--fog-100);
+  --text-body: var(--fog-200);
+  --text-muted: var(--fog-300);
+  --text-faint: var(--fog-400);
+  --text-disabled: var(--fog-600);
+
+  --accent: var(--teal-400);
+  --accent-hover: var(--teal-300);
+  --accent-down: var(--teal-500);
+  --on-accent: var(--teal-ink);
+  --accent-soft: rgba(79, 209, 197, 0.12);
+  --accent-soft-border: rgba(79, 209, 197, 0.35);
+
+  --success: var(--green-400);
+  --success-soft: rgba(83, 206, 135, 0.12);
+  --warning: var(--amber-400);
+  --warning-soft: rgba(232, 180, 90, 0.12);
+  --danger: var(--red-400);
+  --danger-hover: var(--red-300);
+  --danger-soft: rgba(240, 122, 122, 0.12);
+  --danger-soft-border: rgba(240, 122, 122, 0.35);
+  --info: var(--teal-400);
+  --info-soft: var(--accent-soft);
+
+  --selection-bg: rgba(79, 209, 197, 0.28);
+  --scrim: rgba(4, 7, 11, 0.66);
+}

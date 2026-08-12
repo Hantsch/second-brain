@@ -1,0 +1,88 @@
+/**
+ * Oeffentliche Oberflaeche des Tagebuch-Kerns. Andere Module importieren von hier,
+ * nicht aus den Einzeldateien.
+ *
+ * Der Weg eines Tages, in dieser Reihenfolge:
+ *   `day`       Tagesdatei anlegen (idempotent), lesen, anhaengen, Stimmung setzen
+ *   `dialog`    das Gespraech im Tageseintrag protokollieren und zurueck lesen
+ *   `coach`     die drei Haltungen — zuhoeren, Tipps, analysieren
+ *   `close`     Tagesabschluss: Todos, Warte-auf, Personen, Stimmung als Vorschlag
+ *   `streak`    Serie, laengste Serie, Monat, Stimmungsverlauf
+ *
+ * Geschrieben wird nur, was der Mensch selbst gesagt hat, plus die Antwort, die
+ * wirklich kam. Der Tagesabschluss schreibt nichts — er schlaegt vor.
+ */
+
+export {
+  appendToDay,
+  dayOf,
+  ensureDay,
+  journalTitle,
+  listDays,
+  newDayBody,
+  newDayFrontmatter,
+  pathFor,
+  readDay,
+  requireDay,
+  setMood,
+} from './day';
+export {
+  appendTurn,
+  dialogHistory,
+  formatTurn,
+  parseDialog,
+  timeOf,
+  type AppendTurnOptions,
+} from './dialog';
+export {
+  dayText,
+  isSectionOf,
+  journalSections,
+  sectionIn,
+  sectionText,
+  type JournalSectionKind,
+  type JournalSections,
+} from './sections';
+export { coach, earlierDays, type EarlierDaysOptions } from './coach';
+export {
+  dayFacts,
+  heuristicFacts,
+  heuristicMood,
+  knownPeople,
+  sanitizeFacts,
+  type DayFacts,
+  type FactsDeps,
+  type FactsInput,
+} from './facts';
+export { GERMAN_CLOSE_LABELS, closeDay } from './close';
+export {
+  DEFAULT_MOOD_SPAN,
+  entriesInMonth,
+  journalStreaks,
+  lastEntryDate,
+  longestStreak,
+  moodHistory,
+  type JournalStreakStats,
+  type MoodPoint,
+} from './streak';
+export {
+  DIALOG_HISTORY_TURNS,
+  JournalError,
+  MAX_EARLIER_DAYS,
+  type CloseDayDeps,
+  type CloseFindings,
+  type CloseLabels,
+  type CoachDeps,
+  type CoachEvidence,
+  type CoachResult,
+  type DayCloseSuggestion,
+  type DialogRole,
+  type DialogTurn,
+  type EnsureDayResult,
+  type JournalDayDoc,
+  type JournalFrontmatterSuggestion,
+  type JournalIndexView,
+  type JournalOptions,
+  type JournalStore,
+  type MoodPatch,
+} from './types';
