@@ -21,19 +21,31 @@ import { dialog } from 'electron';
 import {
   IngestQueue,
   TERMINAL_STAGES,
+  analyzeYoutubeResources,
   allIngestors,
   innertubeClient,
   installYtdlp,
   logPathFor,
+  loadExistingOutcome,
   nodeFileSystem,
   nodeProcessRunner,
   resolveYtdlp,
+  patchIngestLog,
+  readIngestLog,
+  sourceFingerprint,
 } from '@core/ingest';
-import type { CondenseResult, IngestContext, YtdlpStatus } from '@core/ingest';
+import type { CondenseResult, IngestContext, IngestOutcome, YtdlpStatus } from '@core/ingest';
 import { ingestSource } from '@core/wiki';
+import { assertSafeVaultPath } from '@core/vault/paths';
 import type { IngestJob } from '@shared/types';
 import type { HandlerMap } from './registry';
 import { defineHandlers, fail } from './registry';
+import {
+  analyzeResourceDetail,
+  attachSourceFiles,
+  findDuplicate,
+  sourceDetail,
+} from './source-detail';
 import { docLanguage, settle, wikiDeps, wikiStore } from './wiki-bridge';
 import { createGateway } from '../llm-bridge';
 import type { Services } from '../services';
@@ -133,7 +145,7 @@ class QueueHolder {
   /** Raw source → source page, entities, concepts, catalog, chronicle. */
   private async condense(
     job: IngestJob,
-    outcome: { rawPath: string; title: string; text: string; origin: string },
+    outcome: IngestOutcome,
     signal: AbortSignal | undefined,
   ): Promise<CondenseResult> {
     const module = job.module;
@@ -141,6 +153,16 @@ class QueueHolder {
        catalog stays untouched, and the source shows up as uncondensed in the
        list. */
     if (module === null || module.length === 0) return { pages: [] };
+
+    if (outcome.kind === 'youtube') {
+      const resourceReport = await analyzeYoutubeResources({
+        store: wikiStore(this.services),
+        gateway: createGateway(this.services),
+        rawPath: outcome.rawPath,
+        ...(signal === undefined ? {} : { signal }),
+      });
+      await patchIngestLog(wikiStore(this.services), outcome.rawPath, { resourceReport });
+    }
 
     const result = await ingestSource(wikiDeps(this.services, signal), {
       rawPath: outcome.rawPath,
@@ -182,10 +204,26 @@ export function ingestHandlers(services: Services): HandlerMap {
       return result.canceled ? [] : result.filePaths;
     },
 
-    'ingest:start': ({ kind, input, module }) => {
+    'ingest:start': async ({ kind, input, module }) => {
       const text = String(input ?? '').trim();
       if (text.length === 0) throw fail('invalid', 'ohne Eingabe gibt es keine Quelle');
-      return holder.current().add({ kind, input, module: module ?? null });
+      const queue = holder.current();
+      const fingerprint = sourceFingerprint(kind, text);
+      const session = queue
+        .jobs()
+        .find(
+          (job) =>
+            job.error !== 'cancelled' && sourceFingerprint(job.kind, job.input) === fingerprint,
+        );
+      if (session?.rawPath === null || session?.rawPath === undefined) {
+        if (session !== undefined) return session;
+      } else {
+        return queue.addDuplicate({ kind, input: text, module: module ?? null }, session.rawPath);
+      }
+      const duplicate = await findDuplicate(services, kind, text);
+      return duplicate === null
+        ? queue.add({ kind, input: text, module: module ?? null })
+        : queue.addDuplicate({ kind, input: text, module: module ?? null }, duplicate);
     },
 
     'ingest:jobs': () => holder.current().jobs(),
@@ -195,6 +233,43 @@ export function ingestHandlers(services: Services): HandlerMap {
     },
 
     'ingest:retry': ({ id }) => holder.current().retry(id),
+
+    'ingest:condense': async ({ path, module }) => {
+      const target = String(module ?? '').trim();
+      if (target.length === 0) throw fail('invalid', 'Verdichtung braucht ein Zielmodul');
+      const rawPath = assertSafeVaultPath(path);
+      if (!rawPath.startsWith('raw/')) throw fail('invalid', 'keine Rohquelle');
+      const store = wikiStore(services);
+      const log = await readIngestLog(store, rawPath);
+      if (log === null) throw fail('not-found', `keine Rohquelle: ${rawPath}`);
+      if (typeof log.sourcePage === 'string' && log.sourcePage.length > 0) {
+        throw fail('conflict', 'Quelle ist bereits verdichtet');
+      }
+      const outcome = await loadExistingOutcome(store, rawPath);
+      return holder
+        .current()
+        .addExisting({ kind: outcome.kind, input: outcome.origin, module: target }, outcome);
+    },
+
+    'ingest:detail': ({ path }) => sourceDetail(services, path),
+
+    'ingest:analyzeResources': async ({ path }) => {
+      const detail = await analyzeResourceDetail(services, path);
+      await settle(services, [logPathFor(path)], 'ingest');
+      return detail;
+    },
+
+    'ingest:attachFiles': async ({ path }) => {
+      const parent = services.mainWindow();
+      const properties = ['openFile', 'multiSelections'] as const;
+      const result = await (parent
+        ? dialog.showOpenDialog(parent, { properties: [...properties] })
+        : dialog.showOpenDialog({ properties: [...properties] }));
+      if (result.canceled || result.filePaths.length === 0) return sourceDetail(services, path);
+      const attached = await attachSourceFiles(services, path, result.filePaths);
+      await settle(services, attached.copied, 'ingest');
+      return attached.detail;
+    },
 
     /* Only checks: the path named in settings doesn't exist yet
        (`VaultSettings` has no `ingest` section), so PATH and the managed

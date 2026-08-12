@@ -12,6 +12,7 @@ import type { IngestKind, IngestJob, IngestStage } from '@shared/types';
 export const TERMINAL_STAGES: ReadonlySet<IngestStage> = new Set<IngestStage>([
   'done',
   'error',
+  'duplicate',
   'awaiting-llm',
 ]);
 

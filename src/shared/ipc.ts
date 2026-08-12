@@ -51,6 +51,7 @@ import type {
   VaultStatus,
   WikiPage,
   WriteResult,
+  SourceDetail,
 } from './types';
 
 /** Antwort auf eine Frage an das Second Brain. */
@@ -319,6 +320,14 @@ export interface IpcRoutes {
   'ingest:jobs': { req: void; res: IngestJob[] };
   'ingest:cancel': { req: { id: string }; res: void };
   'ingest:retry': { req: { id: string }; res: IngestJob };
+  /** Condense a raw source that already exists, including one from an earlier session. */
+  'ingest:condense': { req: { path: string; module: string }; res: IngestJob };
+  /** Read the persistent state shown by the source detail window. */
+  'ingest:detail': { req: { path: string }; res: SourceDetail };
+  /** Re-run the YouTube resource check without re-condensing the wiki source. */
+  'ingest:analyzeResources': { req: { path: string }; res: SourceDetail };
+  /** Pick files and copy them below the YouTube source's `sources/` folder. */
+  'ingest:attachFiles': { req: { path: string }; res: SourceDetail };
   /** Dateien per Dialog auswählen. */
   'ingest:pickFiles': { req: void; res: string[] };
   /** Status des yt-dlp-Binaries. */
@@ -513,6 +522,10 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'ingest:jobs',
   'ingest:cancel',
   'ingest:retry',
+  'ingest:condense',
+  'ingest:detail',
+  'ingest:analyzeResources',
+  'ingest:attachFiles',
   'ingest:pickFiles',
   'ingest:ytdlpStatus',
   'ingest:ytdlpInstall',

@@ -11,7 +11,7 @@ import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { QueryClient, UseMutationResult, UseQueryResult } from '@tanstack/react-query';
 import type { IpcRequest, IpcResponse } from '@shared/ipc';
-import type { IngestJob } from '@shared/types';
+import type { IngestJob, SourceDetail } from '@shared/types';
 import { api } from '../api';
 import { bridge } from '../bridge';
 import { qk } from './keys';
@@ -56,6 +56,15 @@ export function useYtdlpStatus(): UseQueryResult<YtdlpStatus> {
   });
 }
 
+export function useSourceDetail(path: string | null): UseQueryResult<SourceDetail> {
+  return useQuery({
+    queryKey: qk.ingest.detail(path ?? ''),
+    queryFn: () => api.ingest.detail(path ?? ''),
+    enabled: path !== null,
+    retry: false,
+  });
+}
+
 function refreshJobs(client: QueryClient): void {
   void client.invalidateQueries({ queryKey: qk.ingest.jobs() });
 }
@@ -64,16 +73,29 @@ export interface IngestMutations {
   start: UseMutationResult<IngestJob, unknown, IpcRequest<'ingest:start'>>;
   cancel: UseMutationResult<void, unknown, string>;
   retry: UseMutationResult<IngestJob, unknown, string>;
+  condense: UseMutationResult<IngestJob, unknown, IpcRequest<'ingest:condense'>>;
+  analyzeResources: UseMutationResult<SourceDetail, unknown, string>;
+  attachFiles: UseMutationResult<SourceDetail, unknown, string>;
   install: UseMutationResult<YtdlpStatus, unknown, void>;
 }
 
 export function useIngestMutations(): IngestMutations {
   const client = useQueryClient();
   const done = (): void => refreshJobs(client);
+  const updateDetail = (detail: SourceDetail): void => {
+    client.setQueryData(qk.ingest.detail(detail.source.path), detail);
+    void client.invalidateQueries({ queryKey: qk.modules.sources() });
+  };
   return {
     start: useMutation({ mutationFn: api.ingest.start, onSuccess: done }),
     cancel: useMutation({ mutationFn: api.ingest.cancel, onSuccess: done }),
     retry: useMutation({ mutationFn: api.ingest.retry, onSuccess: done }),
+    condense: useMutation({ mutationFn: api.ingest.condense, onSuccess: done }),
+    analyzeResources: useMutation({
+      mutationFn: api.ingest.analyzeResources,
+      onSuccess: updateDetail,
+    }),
+    attachFiles: useMutation({ mutationFn: api.ingest.attachFiles, onSuccess: updateDetail }),
     install: useMutation({
       mutationFn: () => api.ingest.ytdlpInstall(),
       onSuccess: (status) => client.setQueryData(qk.ingest.ytdlp(), status),

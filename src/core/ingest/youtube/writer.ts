@@ -27,6 +27,7 @@ import { countWords } from './cues';
 import type { Harvest } from './pipeline';
 import { renderProseTranscript, renderTimestampedTranscript } from './transcript';
 import { watchUrl } from './video-url';
+import { sourceFingerprint } from '../fingerprint';
 
 export const YOUTUBE_FILES = {
   metadataMd: 'metadata.md',
@@ -234,6 +235,10 @@ export async function writeYoutubeSource(
       metadata: harvest.providers[0] ?? 'unbekannt',
       ...(transcript.provider === null ? {} : { transcript: transcript.provider }),
     },
+    fingerprint: sourceFingerprint(
+      'youtube',
+      harvest.metadata.url ?? watchUrl(harvest.metadata.videoId ?? ''),
+    ),
     notes,
     providers: harvest.providers,
     transcript,

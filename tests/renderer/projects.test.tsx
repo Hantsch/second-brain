@@ -790,6 +790,56 @@ describe('Todos im Projekt', () => {
     );
   });
 
+  it('scrollt das Projektdetail beim Ziehen eines Todos am oberen Rand', async () => {
+    mount();
+    await detailReady();
+
+    const detail = screen.getByLabelText('Projektdetail');
+    detail.style.overflowY = 'auto';
+    Object.defineProperties(detail, {
+      clientHeight: { configurable: true, value: 400 },
+      scrollHeight: { configurable: true, value: 1_000 },
+    });
+    detail.scrollTop = 300;
+    detail.getBoundingClientRect = () => ({ top: 100, bottom: 500, height: 400 }) as DOMRect;
+
+    let nextFrame: FrameRequestCallback | null = null;
+    const requestFrame = vi
+      .spyOn(window, 'requestAnimationFrame')
+      .mockImplementation((callback) => {
+        nextFrame = callback;
+        return 17;
+      });
+    const cancelFrame = vi
+      .spyOn(window, 'cancelAnimationFrame')
+      .mockImplementation(() => undefined);
+
+    try {
+      const handle = screen.getByRole('button', { name: '„Testmandant aufsetzen“ umsortieren' });
+      const target = screen
+        .getByRole('button', { name: '„Ladezeiten der Angebotsliste senken“ umsortieren' })
+        .closest('li');
+      const transfer = {
+        effectAllowed: 'none',
+        setData: vi.fn(),
+        getData: vi.fn(() => someday.id),
+      };
+
+      fireEvent.dragStart(handle, { dataTransfer: transfer });
+      fireEvent.dragOver(target as HTMLElement, { dataTransfer: transfer, clientY: 110 });
+      window.dispatchEvent(new MouseEvent('dragover', { bubbles: true, clientY: 110 }));
+      expect(nextFrame).not.toBeNull();
+      (nextFrame as unknown as FrameRequestCallback)(0);
+
+      expect(detail.scrollTop).toBeLessThan(300);
+      fireEvent.dragEnd(handle, { dataTransfer: transfer });
+      expect(cancelFrame).toHaveBeenCalledWith(17);
+    } finally {
+      requestFrame.mockRestore();
+      cancelFrame.mockRestore();
+    }
+  });
+
   it('erklärt im Leerzustand die Inline-Marker', async () => {
     mount({ todos: [] });
     await detailReady();

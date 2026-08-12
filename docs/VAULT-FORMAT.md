@@ -138,14 +138,14 @@ directory, it counts as a work trace for the project.
 A todo is a GFM checkbox in any vault file — no dedicated format, so Obsidian and
 any editor can work with it. Optional inline markers:
 
-| Marker                | Meaning                                  |
-| ---------------------- | ------------------------------------------ |
-| `@due:2026-08-15`     | Due on                                     |
-| `@wait:Stefan`        | Waiting on a person                        |
-| `@needed:2026-08-20`  | Reply must be there by then at the latest  |
-| `!` `!!` `!!!`        | Low, medium (default), high priority        |
-| `#tag`                | Tag                                        |
-| `@done:2026-08-09`    | Set when checked off                       |
+| Marker               | Meaning                                   |
+| -------------------- | ----------------------------------------- |
+| `@due:2026-08-15`    | Due on                                    |
+| `@wait:Stefan`       | Waiting on a person                       |
+| `@needed:2026-08-20` | Reply must be there by then at the latest |
+| `!` `!!` `!!!`       | Low, medium (default), high priority      |
+| `#tag`               | Tag                                       |
+| `@done:2026-08-09`   | Set when checked off                      |
 
 Scope comes from the file: todos in `projects/work/...` are work, in
 `projects/private/...` private. In `journal/` and `areas/`, `scope` in the
@@ -226,9 +226,11 @@ A statement backed by evidence (source: [[s-2026-07-02-auth0-rbac-guide]]).
 
 ## Raw sources (`raw/`)
 
-**Immutable.** A source, once ingested, is never overwritten — it's the fixed
-point citations are backed by. A new version = a new, dated folder. Every source
-carries `.ingest.json`:
+**The source payload is immutable.** Once ingested, transcripts, fetched pages,
+and original files are never overwritten — they are the fixed point citations
+are backed by. A new version = a new, dated folder. Two companions may grow:
+`.ingest.json` records app bookkeeping, and a YouTube folder's `sources/`
+contains files the user supplies manually. Every source carries `.ingest.json`:
 
 ```json
 {
@@ -236,6 +238,7 @@ carries `.ingest.json`:
   "origin": "https://www.youtube.com/watch?v=xOFkpf9KgKg",
   "ingestedAt": "2026-08-10T14:40:00+02:00",
   "title": "Your AI Second Brain Is Slowly Rotting",
+  "fingerprint": "youtube:xOFkpf9KgKg",
   "sourcePage": "s-2026-08-10-ai-second-brain-rotting",
   "modules": ["second-brain-methodik"],
   "provenance": { "transcript": "yt-dlp", "metadata": "yt-dlp" }
@@ -244,11 +247,15 @@ carries `.ingest.json`:
 
 YouTube folders follow the structure from `../yougrab`: `metadata.md`,
 `metadata.json`, `transcript.md` (prose, for ingest), `transcript.timestamped.md`
-(citable, with deep links).
+(citable, with deep links), and `sources/` for manually supplied workflows,
+models, or other files. During condensation, `resourceReport` in `.ingest.json`
+records resources mentioned in the transcript or description and preserves all
+description links. Re-running ingestion never removes or overwrites `sources/`.
 
 ## What the app never does
 
-- Change or delete a file under `raw/`.
+- Change or delete an ingested source payload under `raw/`; bookkeeping in
+  `.ingest.json` and files explicitly added to `sources/` are the two exceptions.
 - Rewrite a user's line in a Markdown file it didn't create itself.
 - Remove frontmatter fields it doesn't recognize.
 - Write without checking the hash first.

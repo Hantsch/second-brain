@@ -47,6 +47,7 @@ export const qk = {
   },
   ingest: {
     jobs: () => ['ingest', 'jobs'] as const,
+    detail: (path: string) => ['ingest', 'detail', path] as const,
     ytdlp: () => ['ingest', 'ytdlp'] as const,
   },
   llm: {

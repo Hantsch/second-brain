@@ -8,7 +8,7 @@
    Moduls: gibt es das Ziel, wird es geöffnet; gibt es es nicht, war es schon in
    der Anzeige als fehlend markiert und der Klick tut nichts. */
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import type { KnowledgeModule, WikiPage, WikiPageType } from '@shared/types';
 import { Badge } from '../../atoms/Badge';
 import { Button } from '../../atoms/Button';
@@ -30,6 +30,7 @@ import {
 import { ModuleLog } from './ModuleLog';
 import { PageView } from './PageView';
 import { SourceRow } from '../sources/SourceRow';
+import { SourceDetailDialog } from '../sources/SourceDetailDialog';
 
 export const MODULE_TABS = ['pages', 'graph', 'sources', 'log'] as const;
 
@@ -75,6 +76,7 @@ export function ModuleDetail({ module, tab, page, onTab, onPage, onBack }: Modul
   const graph = useModuleGraph(tab === 'graph' ? module.slug : null);
   const sources = useModuleSources(tab === 'sources' ? module.slug : null);
   const log = useModuleLog(tab === 'log' ? module.slug : null);
+  const [selectedSource, setSelectedSource] = useState<string | null>(null);
   /* Eine stabile Liste: sonst rechnet jeder Rendervorgang Graph-Kennungen neu. */
   const known = useMemo(() => pages.data ?? [], [pages.data]);
   const current = useModulePage(page);
@@ -221,7 +223,7 @@ export function ModuleDetail({ module, tab, page, onTab, onPage, onBack }: Modul
               <SourceRow
                 key={source.path}
                 source={source}
-                onOpen={(path) => void api.shell.showInFolder(path).catch(() => undefined)}
+                onOpen={setSelectedSource}
                 onOpenPage={openTarget}
               />
             ))}
@@ -239,6 +241,16 @@ export function ModuleDetail({ module, tab, page, onTab, onPage, onBack }: Modul
           exists={exists}
         />
       ) : null}
+
+      <SourceDetailDialog
+        key={selectedSource ?? 'closed'}
+        path={selectedSource}
+        modules={[module]}
+        jobs={[]}
+        onClose={() => setSelectedSource(null)}
+        onOpenRaw={(path) => void api.shell.showInFolder(path).catch(() => undefined)}
+        onOpenPage={(sourcePage) => openTarget(sourcePage)}
+      />
     </div>
   );
 }

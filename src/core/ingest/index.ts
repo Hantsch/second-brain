@@ -46,6 +46,9 @@ export {
   type IngestLogRecord,
 } from './raw';
 
+export { legacyFingerprint, sourceFingerprint } from './fingerprint';
+export { loadExistingOutcome } from './existing';
+
 export {
   compact,
   escapeTableCell,
@@ -189,6 +192,12 @@ export {
   writeYoutubeSource,
   type TranscriptInfo,
 } from './youtube/writer';
+export {
+  RESOURCE_REPORT_SCHEMA,
+  analyzeYoutubeResources,
+  youtubeResourceFallback,
+  type AnalyzeYoutubeResourcesOptions,
+} from './youtube/resources';
 
 // ── Alle Ingestoren auf einmal ─────────────────────────────────────────────────
 

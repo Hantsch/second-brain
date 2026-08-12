@@ -22,7 +22,7 @@ const ICONS: Record<RawSource['kind'], string> = {
 
 export interface SourceRowProps {
   source: RawSource;
-  /** Rohquelle im Ordner zeigen. */
+  /** Open the source's detail view. */
   onOpen: (path: string) => void;
   /** Zur Wiki-Seite springen, wenn es eine gibt. */
   onOpenPage?: (sourcePage: string) => void;

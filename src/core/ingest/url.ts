@@ -19,6 +19,7 @@ import { markdownDoc } from './markdown';
 import { freeRawPath, isoStamp, writeIngestLog } from './raw';
 import { IngestError, throwIfCancelled } from './types';
 import type { IngestContext, IngestNote, IngestOutcome, SourceIngestor } from './types';
+import { sourceFingerprint } from './fingerprint';
 
 /** Groessenlimit einer abgerufenen Seite. */
 export const MAX_BYTES = 5 * 1024 * 1024;
@@ -219,6 +220,7 @@ export function createUrlIngestor(): SourceIngestor {
         sourcePage: null,
         modules: ctx.module === null || ctx.module === undefined ? [] : [ctx.module],
         provenance: { content: 'fetch', metadata: 'fetch' },
+        fingerprint: sourceFingerprint('url', address),
         notes: page.notes,
       });
 

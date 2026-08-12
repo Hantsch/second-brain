@@ -91,6 +91,35 @@ export class IngestQueue {
     return copyJob(job);
   }
 
+  /** Queue only the condensation phase for a raw source that is already in the vault. */
+  addExisting(input: AddJobInput, outcome: IngestOutcome): IngestJob {
+    this.sequence += 1;
+    const id = this.deps.newId?.() ?? `ingest-${this.sequence}`;
+    const job = createJob(id, input, this.stamp());
+    job.rawPath = outcome.rawPath;
+    this.entries.push({ job, controller: null, outcome });
+    this.emit(job);
+    this.pump();
+    return copyJob(job);
+  }
+
+  /** Record a stopped duplicate import without touching or condensing the existing source. */
+  addDuplicate(input: AddJobInput, rawPath: string): IngestJob {
+    this.sequence += 1;
+    const id = this.deps.newId?.() ?? `ingest-${this.sequence}`;
+    const job = createJob(id, input, this.stamp());
+    Object.assign(job, {
+      stage: 'duplicate' as const,
+      progress: 1,
+      finishedAt: this.stamp(),
+      rawPath,
+      duplicateOf: rawPath,
+    });
+    this.entries.push({ job, controller: null, outcome: null });
+    this.emit(job);
+    return copyJob(job);
+  }
+
   /** Alle Auftraege, juengster zuletzt — Kopien, nichts Lebendiges. */
   jobs(): IngestJob[] {
     return this.entries.map((entry) => copyJob(entry.job));
@@ -130,6 +159,7 @@ export class IngestQueue {
   retry(id: string): IngestJob {
     const entry = this.find(id);
     if (entry === null) throw new IngestError('not-found', `Kein Auftrag ${id}.`);
+    if (entry.job.stage === 'duplicate') return copyJob(entry.job);
     if (!TERMINAL_STAGES.has(entry.job.stage)) return copyJob(entry.job);
     this.update(entry, {
       stage: 'queued',

@@ -17,7 +17,7 @@ import userEvent from '@testing-library/user-event';
 import axe from 'axe-core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { IpcChannel, IpcEventName, IpcEvents, IpcRequest, IpcResponse } from '@shared/ipc';
-import type { IngestJob, KnowledgeModule, RawSource } from '@shared/types';
+import type { IngestJob, KnowledgeModule, RawSource, SourceDetail } from '@shared/types';
 import { SourcesScreen } from '@renderer/screens/sources/SourcesScreen';
 import { detectKind } from '@renderer/screens/sources/detect';
 import { setLanguage } from '@renderer/i18n';
@@ -104,6 +104,10 @@ const raw: RawSource = {
   bytes: 4210,
   modules: [],
 };
+
+function sourceDetail(source: RawSource, patch: Partial<SourceDetail> = {}): SourceDetail {
+  return { source, resourceReport: null, attachments: [], ...patch };
+}
 
 function job(patch: Partial<IngestJob> = {}): IngestJob {
   return {
@@ -373,15 +377,104 @@ describe('Quellen: fallen lassen', () => {
 });
 
 describe('Quellen: Bestand', () => {
-  it('hebt unverdichtete Quellen hervor', async () => {
+  it('blendet erfolgreiche Quellen standardmäßig aus und zeigt sie per Toggle', async () => {
     renderScreen();
 
     const row = (await screen.findByText('Digital Gardening: ein Überblick')).closest('li');
     expect(row).not.toBeNull();
     expect(within(row as HTMLElement).getByText('Unverdichtet')).toBeTruthy();
-    /* Die verdichtete Quelle trägt die Marke nicht. */
-    const other = screen.getByText('Your AI second brain is slowly rotting').closest('li');
+    const toggle = screen.getByLabelText('Erfolgreiche ausblenden') as HTMLInputElement;
+    expect(toggle.checked).toBe(true);
+    expect(screen.queryByText('Your AI second brain is slowly rotting')).toBeNull();
+
+    await userEvent.click(toggle);
+
+    /* Die erfolgreiche Quelle ist wieder sichtbar und trägt die Warnmarke nicht. */
+    const other = (await screen.findByText('Your AI second brain is slowly rotting')).closest('li');
     expect(within(other as HTMLElement).queryByText('Unverdichtet')).toBeNull();
+  });
+
+  it('meldet, wenn keine Quelle Aufmerksamkeit braucht', async () => {
+    renderScreen({ 'modules:sources': () => [condensed] });
+
+    expect(
+      await screen.findByText(
+        'Keine Quelle braucht gerade Aufmerksamkeit. Alle aufgenommenen Quellen sind erfolgreich verdichtet.',
+      ),
+    ).toBeTruthy();
+  });
+
+  it('öffnet Details und stößt die Verdichtung einer alten Rohquelle an', async () => {
+    const { sb } = renderScreen({
+      'ingest:detail': ({ path }) => sourceDetail({ ...raw, path }),
+      'ingest:condense': ({ path, module }) =>
+        job({ kind: 'url', rawPath: path, module, stage: 'queued', progress: 0 }),
+    });
+
+    await userEvent.click(await screen.findByText('Digital Gardening: ein Überblick'));
+
+    const dialog = await screen.findByRole('dialog', { name: raw.title });
+    expect(within(dialog).getByText('Unverdichtet')).toBeTruthy();
+    await userEvent.selectOptions(within(dialog).getByLabelText('Zielmodul'), MODULE);
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Verdichten' }));
+
+    await waitFor(() =>
+      expect(sb.calls.find((call) => call.channel === 'ingest:condense')?.payload).toEqual({
+        path: raw.path,
+        module: MODULE,
+      }),
+    );
+  });
+
+  it('zeigt den YouTube-Ressourcenreport und nimmt Dateien nachträglich an', async () => {
+    const report: SourceDetail = sourceDetail(condensed, {
+      resourceReport: {
+        generatedAt: NOW,
+        analyzedWithModel: true,
+        model: 'local/qwen',
+        resources: [
+          {
+            name: 'ComfyUI workflow',
+            mention: 'The complete workflow is linked below.',
+            location: 'video',
+            timestamp: '12:34',
+            links: [{ url: 'https://example.org/workflow.json', label: 'Workflow download' }],
+          },
+        ],
+        descriptionLinks: [
+          { url: 'https://example.org/workflow.json', label: 'Workflow download' },
+        ],
+      },
+    });
+    const { sb, container } = renderScreen({
+      'ingest:detail': () => report,
+      'ingest:attachFiles': () => ({
+        ...report,
+        attachments: [
+          {
+            name: 'workflow.json',
+            path: `${condensed.path}/sources/workflow.json`,
+            bytes: 2048,
+            directory: false,
+          },
+        ],
+      }),
+    });
+
+    await userEvent.click(await screen.findByLabelText('Erfolgreiche ausblenden'));
+    await userEvent.click(await screen.findByText(condensed.title));
+
+    expect(await screen.findByText('ComfyUI workflow')).toBeTruthy();
+    expect(screen.getByText('im Video bei 12:34')).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: 'Workflow download' })).toHaveLength(2);
+    await userEvent.click(screen.getByRole('button', { name: 'Dateien hinzufügen' }));
+    await waitFor(() =>
+      expect(sb.calls.find((call) => call.channel === 'ingest:attachFiles')?.payload).toEqual({
+        path: condensed.path,
+      }),
+    );
+    expect(await screen.findByText('workflow.json')).toBeTruthy();
+    await expectNoViolations(container);
   });
 
   it('erklärt im Leerzustand die vier Quellenarten', async () => {

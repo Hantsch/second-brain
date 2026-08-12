@@ -63,6 +63,51 @@ export interface RawSource {
   modules: string[];
 }
 
+/** A URL found while checking a YouTube video for downloadable resources. */
+export interface SourceResourceLink {
+  url: string;
+  /** Context from the description, when it provides a useful label. */
+  label: string | null;
+}
+
+/** A workflow, model, file, repository, or other resource mentioned by a video. */
+export interface SourceResourceMention {
+  name: string;
+  /** The evidence from the transcript or description, kept short. */
+  mention: string;
+  location: 'video' | 'description';
+  /** Timecode such as `12:34`, only when the transcript supports it. */
+  timestamp: string | null;
+  /** Description links that plausibly lead to this resource. */
+  links: SourceResourceLink[];
+}
+
+/** Persistent result of the resource check performed during YouTube condensation. */
+export interface SourceResourceReport {
+  generatedAt: string;
+  /** True only if a model inspected the transcript, not merely the description links. */
+  analyzedWithModel: boolean;
+  model: string | null;
+  resources: SourceResourceMention[];
+  /** Every description link remains visible, even when it could not be matched safely. */
+  descriptionLinks: SourceResourceLink[];
+}
+
+/** A file manually supplied for a source, stored below its `sources/` directory. */
+export interface SourceAttachment {
+  name: string;
+  path: string;
+  bytes: number | null;
+  directory: boolean;
+}
+
+/** Everything the source detail window needs in one read. */
+export interface SourceDetail {
+  source: RawSource;
+  resourceReport: SourceResourceReport | null;
+  attachments: SourceAttachment[];
+}
+
 export interface SearchHit {
   path: string;
   title: string;
@@ -141,6 +186,8 @@ export type IngestStage =
   | 'indexing'
   | 'done'
   | 'error'
+  /** The exact source already exists; no second raw source was written. */
+  | 'duplicate'
   /** Rohquelle liegt, aber der Verdichtungsschritt braucht ein LLM. */
   | 'awaiting-llm';
 
@@ -162,4 +209,6 @@ export interface IngestJob {
   rawPath: string | null;
   /** Geschriebene bzw. geänderte Wiki-Seiten. */
   touchedPages: string[];
+  /** Existing raw path when duplicate detection stopped this import. */
+  duplicateOf?: string | null;
 }

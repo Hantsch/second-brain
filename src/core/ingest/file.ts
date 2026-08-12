@@ -17,6 +17,7 @@ import { markdownDoc } from './markdown';
 import { freeRawPath, isoStamp, writeIngestLog } from './raw';
 import { IngestError, throwIfCancelled } from './types';
 import type { IngestContext, IngestNote, IngestOutcome, SourceIngestor } from './types';
+import { sourceFingerprint } from './fingerprint';
 
 /** Der Name der Datei, die den ausgelesenen Text traegt. */
 export const TEXT_FILE = 'source.md';
@@ -152,6 +153,7 @@ export function createFileIngestor(): SourceIngestor {
         sourcePage: null,
         modules: ctx.module === null || ctx.module === undefined ? [] : [ctx.module],
         provenance: { content: handling === 'pdf' || handling === 'opaque' ? 'none' : 'file' },
+        fingerprint: sourceFingerprint('file', source),
         notes,
         file: copyName,
         bytes: stat.size,

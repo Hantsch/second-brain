@@ -30,6 +30,20 @@ export function formatNumber(value: number, language: UiLanguage): string {
   return new Intl.NumberFormat(locale(language)).format(value);
 }
 
+/** Compact binary file size for source details. */
+export function formatBytes(bytes: number | null, language: UiLanguage): string {
+  if (bytes === null || !Number.isFinite(bytes) || bytes < 0) return '';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let value = bytes;
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit += 1;
+  }
+  const digits = unit === 0 || value >= 10 ? 0 : 1;
+  return `${new Intl.NumberFormat(locale(language), { maximumFractionDigits: digits }).format(value)} ${units[unit]}`;
+}
+
 /** Short date: '10. Aug. 2026' or '10 Aug 2026'. Empty for an unusable value. */
 export function formatDate(iso: string | null, language: UiLanguage): string {
   if (iso === null || iso.length === 0) return '';

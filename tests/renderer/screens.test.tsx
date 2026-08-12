@@ -233,7 +233,10 @@ describe('Wissen', () => {
 
   it('zeigt bei Quellen den Bestand aus raw/', async () => {
     await openScreen('#/sources', 'Quellen');
-    expect(await screen.findByText('Your AI second brain is slowly rotting')).toBeTruthy();
+    const sourceButtonName = 'Details der Quelle Your AI second brain is slowly rotting öffnen';
+    expect(screen.queryByRole('button', { name: sourceButtonName })).toBeNull();
+    await userEvent.click(await screen.findByLabelText('Erfolgreiche ausblenden'));
+    expect(await screen.findByRole('button', { name: sourceButtonName })).toBeTruthy();
     expect(screen.queryByText('Noch nicht gebaut')).toBeNull();
     expect(screen.queryByText('Noch keine Rohquelle im Vault')).toBeNull();
   });

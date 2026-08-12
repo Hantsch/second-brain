@@ -13,6 +13,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { IngestKind } from '@shared/types';
+import type { IngestJob } from '@shared/types';
+import { Switch } from '../../atoms/Switch';
 import { DropZone } from '../../components/DropZone';
 import { ErrorState } from '../../components/ErrorState';
 import { Panel } from '../../components/Panel';
@@ -26,6 +28,7 @@ import { useIngestJobs, useIngestMutations, useYtdlpStatus } from '../../lib/que
 import { pushToast } from '../../lib/toast';
 import { JobList } from './JobList';
 import { SourceInput } from './SourceInput';
+import { SourceDetailDialog } from './SourceDetailDialog';
 import { SourceRow } from './SourceRow';
 import { YtdlpRow } from './YtdlpRow';
 
@@ -40,9 +43,20 @@ export function SourcesScreen() {
 
   const [input, setInput] = useState('');
   const [module, setModule] = useState<string | null>(null);
+  const [selectedPath, setSelectedPath] = useState<string | null>(null);
+  const [hideSuccessful, setHideSuccessful] = useState(true);
+
+  const afterStart = (job: IngestJob): void => {
+    setInput('');
+    if (job.stage !== 'duplicate' || job.duplicateOf === null || job.duplicateOf === undefined) {
+      return;
+    }
+    setSelectedPath(job.duplicateOf);
+    pushToast('warn', t('sources.duplicate', { path: job.duplicateOf }));
+  };
 
   const start = (kind: IngestKind, text: string): void => {
-    mutations.start.mutate({ kind, input: text, module }, { onSuccess: () => setInput('') });
+    mutations.start.mutate({ kind, input: text, module }, { onSuccess: afterStart });
   };
 
   /** Selected files come with their path — the original moves into raw/. */
@@ -50,7 +64,9 @@ export function SourcesScreen() {
     void api.ingest
       .pickFiles()
       .then((paths) => {
-        for (const path of paths) mutations.start.mutate({ kind: 'file', input: path, module });
+        for (const path of paths) {
+          mutations.start.mutate({ kind: 'file', input: path, module }, { onSuccess: afterStart });
+        }
       })
       .catch(() => undefined);
   };
@@ -65,8 +81,17 @@ export function SourcesScreen() {
     void navigate(`/modules?m=${encodeURIComponent(slug)}&p=${encodeURIComponent(path)}`);
   };
 
+  const openSourcePage = (sourcePage: string, target: string): void => {
+    void navigate(
+      `/modules?m=${encodeURIComponent(target)}&p=${encodeURIComponent(
+        `modules/${target}/wiki/sources/${sourcePage}.md`,
+      )}`,
+    );
+  };
+
   const failure = mutations.start.error ?? mutations.retry.error ?? mutations.install.error ?? null;
   const list = sources.data ?? [];
+  const visibleList = hideSuccessful ? list.filter((source) => source.sourcePage === null) : list;
 
   return (
     <DropZone
@@ -151,28 +176,44 @@ export function SourcesScreen() {
           <Panel
             title={t('sources.list.title')}
             meta={plural(list.length, 'sources.list.countOne', 'sources.list.count')}
+            action={
+              <Switch
+                label={t('sources.list.hideSuccessful')}
+                checked={hideSuccessful}
+                onChange={(event) => setHideSuccessful(event.target.checked)}
+              />
+            }
           >
-            <ul className="sb-rows">
-              {list.map((source) => (
-                <SourceRow
-                  key={source.path}
-                  source={source}
-                  onOpen={openRaw}
-                  onOpenPage={(slug) => {
-                    const found = list.find((entry) => entry.sourcePage === slug);
-                    const target = found?.modules[0];
-                    if (target === undefined) return;
-                    void navigate(
-                      `/modules?m=${encodeURIComponent(target)}&p=${encodeURIComponent(
-                        `modules/${target}/wiki/sources/${slug}.md`,
-                      )}`,
-                    );
-                  }}
-                />
-              ))}
-            </ul>
+            {visibleList.length === 0 ? (
+              <p className="sb-panel-empty">{t('sources.list.noAttention')}</p>
+            ) : (
+              <ul className="sb-rows">
+                {visibleList.map((source) => (
+                  <SourceRow
+                    key={source.path}
+                    source={source}
+                    onOpen={setSelectedPath}
+                    onOpenPage={(slug) => {
+                      const found = list.find((entry) => entry.sourcePage === slug);
+                      const target = found?.modules[0];
+                      if (target === undefined) return;
+                      openSourcePage(slug, target);
+                    }}
+                  />
+                ))}
+              </ul>
+            )}
           </Panel>
         )}
+        <SourceDetailDialog
+          key={selectedPath ?? 'closed'}
+          path={selectedPath}
+          modules={modules.data ?? []}
+          jobs={jobs.data ?? []}
+          onClose={() => setSelectedPath(null)}
+          onOpenRaw={openRaw}
+          onOpenPage={openSourcePage}
+        />
       </div>
     </DropZone>
   );

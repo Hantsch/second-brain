@@ -13,6 +13,7 @@ import { TEXT_FILE, titleFromMarkdown } from './file';
 import { freeRawPath, isoStamp, writeIngestLog } from './raw';
 import { IngestError, throwIfCancelled } from './types';
 import type { IngestContext, IngestOutcome, SourceIngestor } from './types';
+import { sourceFingerprint } from './fingerprint';
 
 /** So viele Zeichen der ersten Zeile werden zum Titel, wenn keine Ueberschrift da ist. */
 const TITLE_CHARS = 70;
@@ -71,6 +72,7 @@ export function createTextIngestor(): SourceIngestor {
         sourcePage: null,
         modules: ctx.module === null || ctx.module === undefined ? [] : [ctx.module],
         provenance: { content: 'paste' },
+        fingerprint: sourceFingerprint('text', text),
         notes: [],
       });
 

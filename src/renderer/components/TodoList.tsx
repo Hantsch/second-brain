@@ -11,6 +11,7 @@ import type { DragEvent } from 'react';
 import { Button } from '../atoms/Button';
 import type { Todo } from '@shared/types';
 import { useT } from '../i18n';
+import { DragAutoScroller } from '../lib/drag-auto-scroll';
 import { DueField } from './DueField';
 import { PriorityToggle } from './PriorityToggle';
 import { TodoRow } from './TodoRow';
@@ -79,6 +80,8 @@ export function TodoList({
     position: DropPosition;
   } | null>(null);
   const field = useRef<HTMLInputElement>(null);
+  const autoScroll = useRef<DragAutoScroller | null>(null);
+  if (autoScroll.current === null) autoScroll.current = new DragAutoScroller();
 
   /* Open is open — regardless of whether the click came from here or the `t`
      key from outside. Two sources, one derived state instead of an effect. */
@@ -87,6 +90,8 @@ export function TodoList({
   useEffect(() => {
     if (open) field.current?.focus();
   }, [open]);
+
+  useEffect(() => () => autoScroll.current?.stop(), []);
 
   const close = (): void => {
     setLocal(false);
@@ -195,10 +200,12 @@ export function TodoList({
               onDragStart={(event) => {
                 setDragging(todo.id);
                 setDropTarget(null);
+                autoScroll.current?.start(event.currentTarget);
                 event.dataTransfer.effectAllowed = 'move';
                 event.dataTransfer.setData('text/plain', todo.id);
               }}
               onDragOver={(event) => {
+                autoScroll.current?.update(event.clientY);
                 if (dragging === null || dragging === todo.id) {
                   setDropTarget(null);
                   return;
@@ -214,6 +221,7 @@ export function TodoList({
               }}
               onDrop={(event) => {
                 event.preventDefault();
+                autoScroll.current?.stop();
                 const source = dragging ?? event.dataTransfer.getData('text/plain');
                 const from = todos.findIndex((entry) => entry.id === source);
                 const target = todos.findIndex((entry) => entry.id === todo.id);
@@ -232,6 +240,7 @@ export function TodoList({
                 if (next.some((id, index) => id !== todos[index]?.id)) onReorder(next);
               }}
               onDragEnd={() => {
+                autoScroll.current?.stop();
                 setDragging(null);
                 setDropTarget(null);
               }}

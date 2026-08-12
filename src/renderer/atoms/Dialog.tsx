@@ -3,14 +3,14 @@ import type { MouseEvent, ReactNode } from 'react';
 import { useEffect } from 'react';
 import { Icon } from './Icon';
 
-const DIALOG_WIDTHS: Record<string, number> = { sm: 380, md: 460, lg: 620 };
+const DIALOG_WIDTHS: Record<string, number> = { sm: 380, md: 460, lg: 620, xl: 820 };
 
 export interface DialogProps {
   open: boolean;
   onClose?: () => void;
   title: string;
   description?: string;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
   footer?: ReactNode;
   children?: ReactNode;
   closeLabel?: string;

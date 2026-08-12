@@ -779,6 +779,42 @@ async function shootSourceJobs(session, shooter, log, skipped) {
   }
 }
 
+/** Die offene Rohquelle ist der wichtigste Quellen-Zustand: Von hier muss die
+    Verdichtung erreichbar sein, auch nachdem die App neu gestartet wurde. */
+async function shootSourceDetail(session, shooter, log, skipped) {
+  await gotoScreen(session.page, 'sources');
+  const row = session.page.getByRole('button', {
+    name: /Details der Quelle Digital Gardening: ein Überblick öffnen/,
+  });
+  const available = (await row.count()) > 0;
+  if (!available) {
+    skipped.push('Quellendetail: die unverdichtete Seed-Quelle stand nicht in der Liste');
+    return;
+  }
+
+  await row.click();
+  const dialog = session.page.getByRole('dialog');
+  const open = await dialog.waitFor({ state: 'visible', timeout: 4000 }).then(
+    () => true,
+    () => false,
+  );
+  await settle(session.page);
+  if (!open) {
+    skipped.push('Quellendetail: der Klick auf die unverdichtete Quelle öffnete nichts');
+    return;
+  }
+
+  log(`  Unverdichtete Quelle → ${await shooter.shot('source-detail', session.page)}`);
+  await session.resize(NARROW.width, NARROW.height);
+  await settle(session.page);
+  log(
+    `  eng ${NARROW.width}×${NARROW.height}  Quellendetail → ` +
+      `${await shooter.shotAs('source-detail-narrow.png', session.page)}`,
+  );
+  await session.resize(WIDE.width, WIDE.height);
+  await session.page.keyboard.press('Escape');
+}
+
 /** Zustände, die in der Adresse stehen: Modul-Detail und die Einstellungen-Tabs. */
 async function shootDeepStates(session, shooter, log, skipped) {
   for (const state of DEEP_STATES) {
@@ -1059,6 +1095,7 @@ async function main() {
     await checkLlmMissing(session, log, skipped);
     await shootAskAnswer(session, shooter, log, skipped);
     await shootAskAnswered(session, shooter, log, skipped);
+    await shootSourceDetail(session, shooter, log, skipped);
     await shootSourceJobs(session, shooter, log, skipped);
     await shootDeepStates(session, shooter, log, skipped);
     if (options.screens.includes('modules')) {

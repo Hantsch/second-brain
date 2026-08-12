@@ -9,7 +9,7 @@
  * (`@core/wiki`) und dieselbe Verdrahtung brauchen: Store, Index, Nachlauf.
  */
 
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -279,6 +279,104 @@ describe('Quellen- und Modul-Kanäle im Main', () => {
       },
       { timeout: 5000, interval: 25 },
     );
+  });
+
+  it('stoppt denselben Import als Duplikat, bevor eine zweite Rohquelle entsteht', async () => {
+    const input = 'Eine Quelle, die exakt einmal in raw liegen soll.';
+    const first = await settled(
+      (
+        await harness.call('ingest:start', {
+          kind: 'text',
+          input,
+          module: null,
+        })
+      ).id,
+    );
+
+    const duplicate = await harness.call('ingest:start', {
+      kind: 'text',
+      input: `${input}\r\n`,
+      module: null,
+    });
+
+    expect(duplicate.stage).toBe('duplicate');
+    expect(duplicate.duplicateOf).toBe(first.rawPath);
+    expect(duplicate.rawPath).toBe(first.rawPath);
+    await vi.waitFor(async () => {
+      const matching = (await harness.call('modules:sources', {})).filter(
+        (source) => source.path === first.rawPath,
+      );
+      expect(matching).toHaveLength(1);
+    });
+  });
+
+  it('verdichtet eine Bestandsquelle aus dem Detailfenster ohne neuen Rohimport', async () => {
+    const first = await settled(
+      (
+        await harness.call('ingest:start', {
+          kind: 'text',
+          input: '# Später verdichten\n\nDiese Quelle wurde in einer früheren Phase nur abgelegt.',
+          module: null,
+        })
+      ).id,
+    );
+    expect(first.stage).toBe('awaiting-llm');
+    await vi.waitFor(async () => {
+      expect(
+        (await harness.call('modules:sources', {})).some((source) => source.path === first.rawPath),
+      ).toBe(true);
+    });
+
+    const detail = await harness.call('ingest:detail', { path: first.rawPath ?? '' });
+    expect(detail.source.sourcePage).toBeNull();
+
+    await routeToFakeModel();
+    const started = await harness.call('ingest:condense', {
+      path: first.rawPath ?? '',
+      module: MODULE,
+    });
+    const condensed = await settled(started.id);
+
+    expect(condensed.stage).toBe('done');
+    expect(condensed.rawPath).toBe(first.rawPath);
+    const protocol = JSON.parse((await vault.read(`${first.rawPath}/.ingest.json`)) ?? '{}');
+    expect(protocol.sourcePage).toMatch(/^s-/);
+  });
+
+  it('kopiert nachgereichte Dateien kollisionsfrei in den sources-Ordner des Videos', async () => {
+    const youtubePath = 'raw/youtube/xOFkpf9KgKg';
+    await vault.write(
+      `${youtubePath}/.ingest.json`,
+      `${JSON.stringify({
+        kind: 'youtube',
+        origin: 'https://www.youtube.com/watch?v=xOFkpf9KgKg',
+        ingestedAt: '2026-08-12T08:00:00+02:00',
+        title: 'ComfyUI workflow',
+        sourcePage: null,
+        modules: [],
+        provenance: { metadata: 'test' },
+      })}\n`,
+    );
+    await vault.write(`${youtubePath}/metadata.json`, '{"links":[]}\n');
+    await harness.services.requireIndex().rebuild();
+    const youtube = (await harness.call('modules:sources', {})).find(
+      (source) => source.kind === 'youtube',
+    );
+    expect(youtube).toBeDefined();
+    const external = join(userDataDir, 'workflow.json');
+    await writeFile(external, '{"workflow":true}\n', 'utf8');
+    const { attachSourceFiles } = await import('../../src/main/ipc/source-detail');
+
+    const first = await attachSourceFiles(harness.services, youtube?.path ?? '', [external]);
+    const second = await attachSourceFiles(harness.services, youtube?.path ?? '', [external]);
+
+    expect(first.detail.attachments.map((entry) => entry.name)).toContain('workflow.json');
+    expect(second.detail.attachments.map((entry) => entry.name)).toEqual([
+      'workflow-2.json',
+      'workflow.json',
+    ]);
+    expect(await vault.read(`${youtube?.path}/sources/workflow.json`)).toContain('workflow');
+    expect(await vault.read(`${youtube?.path}/sources/workflow-2.json`)).toContain('workflow');
   });
 
   // ── Module ─────────────────────────────────────────────────────────────────

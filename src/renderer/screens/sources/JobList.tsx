@@ -21,7 +21,7 @@ import { useT } from '../../i18n';
 const ROUTING_ROUTE = '/settings?tab=models';
 
 /** Stages where nothing is running anymore — same as `TERMINAL_STAGES` in the core. */
-const TERMINAL: readonly IngestJob['stage'][] = ['done', 'error', 'awaiting-llm'];
+const TERMINAL: readonly IngestJob['stage'][] = ['done', 'error', 'duplicate', 'awaiting-llm'];
 
 /* `job.message` either carries an `IngestNoteCode` — in which case there's a
    sentence for it — or a technical detail. Passing a detail through as a key
@@ -78,7 +78,15 @@ function JobRow({
       <div className="sb-job-head">
         <span className="sb-job-label">{job.label}</span>
         <Badge
-          variant={job.stage === 'error' ? 'danger' : job.stage === 'done' ? 'success' : 'neutral'}
+          variant={
+            job.stage === 'error'
+              ? 'danger'
+              : job.stage === 'done'
+                ? 'success'
+                : job.stage === 'duplicate'
+                  ? 'warning'
+                  : 'neutral'
+          }
         >
           {t(`sources.stage.${job.stage}`)}
         </Badge>
@@ -152,12 +160,22 @@ function JobRow({
         </div>
       ) : null}
 
+      {job.stage === 'duplicate' ? (
+        <div className="sb-job-note">
+          <strong className="sb-job-notetitle">{t('sources.duplicate.title')}</strong>
+          <span>{t('sources.duplicate.body')}</span>
+          {job.duplicateOf === null || job.duplicateOf === undefined ? null : (
+            <span className="sb-mono">{job.duplicateOf}</span>
+          )}
+        </div>
+      ) : null}
+
       <div className="sb-job-actions">
         {running ? (
           <Button variant="ghost" size="sm" icon="x" onClick={() => onCancel(job.id)}>
             {t('sources.job.cancel')}
           </Button>
-        ) : (
+        ) : job.stage === 'duplicate' ? null : (
           <Button variant="ghost" size="sm" icon="refresh-cw" onClick={() => onRetry(job.id)}>
             {t('sources.job.retry')}
           </Button>
