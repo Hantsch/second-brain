@@ -107,6 +107,7 @@ export const deDashboard = {
   'tile.claude.linkedTo': 'Sitzung „{name}" zugeordnet',
   'tile.claude.linkSearch': 'Projekt suchen',
   'tile.claude.linkNoMatch': 'Kein Projekt passt zu „{query}".',
+  'tile.claude.openBrowser': 'Alle Agent-Sitzungen öffnen',
 
   'tile.stale.empty': 'Kein Projekt liegt länger als die eingestellte Schwelle brach.',
   'tile.stale.days': 'seit {count} Tagen',

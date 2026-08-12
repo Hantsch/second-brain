@@ -93,6 +93,30 @@ export class ClaudeSessionReader implements SessionReader {
     return sessions;
   }
 
+  /**
+   * Die Verlaufsdatei einer einzelnen Sitzung — was der Transkript-Kanal
+   * braucht (Guardrail 4/D10: `readTranscriptPage` will `path`/`size`, die
+   * `ClaudeSession` selbst nicht trägt). Schneller Weg zuerst: der Dateiname
+   * ist die Sitzungs-ID, wenn kein Record im Kopf eine eigene `sessionId`
+   * mitbringt (`toSession`s Fallback). Nur wenn das fehlschlägt, werden die
+   * Fakten der Kandidaten gelesen — Kopf und Ende, nie die ganze Datei — bis
+   * eine mit passender `sessionId` gefunden ist. `null`, wenn keine passt;
+   * nie erfunden.
+   */
+  async findFile(sessionId: string): Promise<ClaudeFileInfo | null> {
+    const candidates = await this.candidates();
+    const byName = candidates.find(
+      (candidate) => candidate.file.name.slice(0, -TRANSCRIPT_EXTENSION.length) === sessionId,
+    );
+    if (byName !== undefined) return byName.file;
+
+    for (const candidate of candidates) {
+      const fact = await readSessionFacts(this.fs, candidate.file, this.factsOptions);
+      if (fact.sessionId === sessionId) return candidate.file;
+    }
+    return null;
+  }
+
   /** Alle Verlaufsdateien unter der Wurzel, neueste zuerst. */
   private async candidates(since?: string): Promise<Candidate[]> {
     const dirs = await this.fs.listDirs(this.root);
@@ -181,5 +205,8 @@ function toSession(
     firstPrompt: facts.firstPrompt ?? '',
     summary: facts.summary,
     files: facts.files,
+    model: facts.model,
+    subagents: facts.subagents,
+    contextTokens: facts.contextTokens,
   };
 }

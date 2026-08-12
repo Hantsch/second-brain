@@ -3,7 +3,7 @@
    immer als `IpcCallError` zurück, also in `IpcError`-Form. */
 
 import type { IpcChannel, IpcError, IpcRequest, IpcResponse } from '@shared/ipc';
-import type { DocLanguage, UiLanguage } from '@shared/types';
+import type { AgentKind, DocLanguage, UiLanguage } from '@shared/types';
 import { bridge } from './bridge';
 import { decodeIpcError } from './ipc-error';
 
@@ -162,6 +162,14 @@ export const api = {
   claude: {
     sessions: (limit?: number) => call('claude:sessions', limit === undefined ? {} : { limit }),
     link: (sessionId: string, project: string) => call('claude:link', { sessionId, project }),
+  },
+  agents: {
+    projects: (agent: AgentKind) => call('agents:projects', { agent }),
+    sessions: (agent: AgentKind, projectKey: string) =>
+      call('agents:sessions', { agent, projectKey }),
+    transcript: (request: IpcRequest<'agents:transcript'>) => call('agents:transcript', request),
+    link: (agent: AgentKind, projectKey: string, project: string) =>
+      call('agents:link', { agent, projectKey, project }),
   },
   settings: {
     get: () => call('settings:get'),

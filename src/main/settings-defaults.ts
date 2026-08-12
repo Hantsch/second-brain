@@ -48,6 +48,8 @@ export function defaultVaultSettings(now = new Date().toISOString()): VaultSetti
       waitingNudgeDays: 5,
       useClaudeSessions: true,
       claudeProjectsDir: '',
+      useCodexSessions: true,
+      codexSessionsDir: '',
       notifications: true,
     },
     journal: { mode: 'tips' },

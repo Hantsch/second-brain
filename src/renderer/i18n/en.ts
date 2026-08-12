@@ -5,6 +5,7 @@
    tests/renderer/i18n.test.ts. Sentence case, no emoji. */
 
 import type { TranslationKey } from './de';
+import { enAgents } from './en-agents';
 import { enDashboard } from './en-dashboard';
 import { enGarden } from './en-garden';
 import { enJournal } from './en-journal';
@@ -45,6 +46,7 @@ export const en: Record<TranslationKey, string> = {
   'rail.modules': 'Modules',
   'rail.sources': 'Sources',
   'rail.garden': 'Care',
+  'rail.agents': 'Agents',
   'rail.settings': 'Settings',
 
   'time.today': 'today',
@@ -183,6 +185,7 @@ export const en: Record<TranslationKey, string> = {
   'ingest.note.awaiting-llm': 'The raw source is stored. Distilling needs a model.',
 
   ...enScreens,
+  ...enAgents,
   ...enDashboard,
   ...enGarden,
   ...enJournal,

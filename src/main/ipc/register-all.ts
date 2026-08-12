@@ -5,6 +5,7 @@
 import type { HandlerMap } from './registry';
 import { register } from './registry';
 import type { Services } from '../services';
+import { agentHandlers } from './agents';
 import { appHandlers } from './app';
 import { captureHandlers } from './capture';
 import { chatHandlers } from './chat';
@@ -42,6 +43,7 @@ export function buildHandlers(services: Services): HandlerMap {
     ...reminderHandlers(services),
     ...gardenerHandlers(services),
     ...claudeHandlers(services),
+    ...agentHandlers(services),
     ...settingsHandlers(services),
     ...windowHandlers(services),
     ...shellHandlers(services),

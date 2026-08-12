@@ -288,6 +288,13 @@ const RESPONSES: MockResponses = {
   'claude:sessions': () => [fx.claudeSession],
   'claude:link': () => undefined,
 
+  /* D1 of the agent session browser only defines the contract — no fixture
+     data yet, so the mock returns "nothing found" for all three channels. */
+  'agents:projects': () => [],
+  'agents:sessions': () => [],
+  'agents:transcript': () => ({ entries: [], nextCursor: null, totalKnown: true }),
+  'agents:link': () => undefined,
+
   'settings:get': () => st.settingsSnapshot,
   'settings:setApp': () => st.settingsSnapshot,
   'settings:setVault': () => st.settingsSnapshot,

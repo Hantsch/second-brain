@@ -102,6 +102,11 @@ const own = {
     'CLI work traces count as progress on the project whose repo lives there.',
   'settings.behavior.claude.dir.label': 'Folder of the Claude projects',
   'settings.behavior.claude.dir.hint': 'Leave empty for ~/.claude/projects.',
+  'settings.behavior.codex.label': 'Read Codex CLI sessions',
+  'settings.behavior.codex.hint':
+    'CLI work traces count as progress on the project whose repo lives there.',
+  'settings.behavior.codex.dir.label': 'Folder of the Codex sessions',
+  'settings.behavior.codex.dir.hint': 'Leave empty for ~/.codex/sessions.',
   'settings.behavior.notifications.label': 'Notifications for due reminders',
   'settings.behavior.notifications.hint': 'Reports deadlines even when the window is closed.',
   'settings.behavior.journal': 'Journal',

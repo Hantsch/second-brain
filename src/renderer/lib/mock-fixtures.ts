@@ -257,6 +257,9 @@ export const claudeSession: ClaudeSession = {
   firstPrompt: 'Terraform-State auf den neuen Mandanten migrieren',
   summary: 'State migriert, Rollen noch offen.',
   files: ['main.tf', 'roles.tf'],
+  model: null,
+  subagents: null,
+  contextTokens: null,
 };
 
 /* The mock report carries three kinds of findings, because the maintenance

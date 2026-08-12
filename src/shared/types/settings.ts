@@ -76,6 +76,10 @@ export interface OverviewSettings {
   useClaudeSessions: boolean;
   /** Root of the Claude projects; empty = `~/.claude/projects`. */
   claudeProjectsDir: string;
+  /** Read Codex sessions in as part of the work trace. */
+  useCodexSessions: boolean;
+  /** Root of the Codex sessions; empty = `~/.codex/sessions`. */
+  codexSessionsDir: string;
   /** Windows notifications for due reminders. */
   notifications: boolean;
 }

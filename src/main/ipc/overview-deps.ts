@@ -104,7 +104,19 @@ export function usesClaudeSessions(services: Services): boolean {
   return settings !== undefined && settings.useClaudeSessions;
 }
 
-function reader(services: Services): ClaudeSessionReader {
+/** Does the vault read the Codex sessions? Same honest-empty convention as Claude's. */
+export function usesCodexSessions(services: Services): boolean {
+  const settings = overviewSettings(services);
+  return settings !== undefined && settings.useCodexSessions;
+}
+
+/**
+ * The Claude reader for this vault's settings. Exported so `agents.ts` can
+ * resolve a session's transcript file (`findFile`) without opening a second,
+ * differently-configured reader — same `claudeProjectsDir` override this
+ * module's own `claudeSessions()` uses below.
+ */
+export function claudeReader(services: Services): ClaudeSessionReader {
   return new ClaudeSessionReader({
     fs: nodeClaudeFileSystem(),
     projectsDir: overviewSettings(services)?.claudeProjectsDir ?? null,
@@ -137,7 +149,7 @@ export async function claudeSessions(
   if (fresh && cache !== null) return cache.sessions.slice(0, want);
 
   const read = Math.max(want, SESSION_LIMIT);
-  const sessions = await reader(services).list({ limit: read });
+  const sessions = await claudeReader(services).list({ limit: read });
   const index = overviewIndex(services);
   const linked = linkSessions(sessions, index.projects());
 

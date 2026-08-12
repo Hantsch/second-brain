@@ -17,10 +17,10 @@ Rules (so this document does not drift):
 
 ## Phase overview
 
-| Phase | Goal | Status |
-| --- | --- | --- |
+| Phase      | Goal                                    | Status            |
+| ---------- | --------------------------------------- | ----------------- |
 | 1 — <name> | <what is true at the end of this phase> | ▶ **in progress** |
-| 2 — <name> | <…> | planned |
+| 2 — <name> | <…>                                     | planned           |
 
 ---
 
@@ -36,12 +36,13 @@ so scope does not balloon up front.>
 <What this milestone delivers, in 1–3 sentences.>
 Sprints: <link to sprint.md / review.md / testplan.md once they exist>
 Gaps/notes:
+
 - <lasting gaps from the sprint findings — struck through and marked "resolved" once closed>
 
 ---
 
 ## Open / unprioritised
 
-| Topic | State | Next step |
-| --- | --- | --- |
+| Topic             | State                         | Next step                                          |
+| ----------------- | ----------------------------- | -------------------------------------------------- |
 | <concept or idea> | <e.g. concept drafted (link)> | <e.g. cut into stories via /ai-scrum:roadmap plan> |

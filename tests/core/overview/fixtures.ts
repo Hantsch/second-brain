@@ -170,6 +170,9 @@ export function session(patch: Partial<ClaudeSession> = {}): ClaudeSession {
     firstPrompt: 'Ueberblick-Kern bauen',
     summary: null,
     files: [],
+    model: null,
+    subagents: null,
+    contextTokens: null,
     ...patch,
   };
 }

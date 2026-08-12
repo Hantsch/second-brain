@@ -86,6 +86,11 @@ export function ClaudeSessionsTile() {
             }
           : { body: t('tile.claude.empty') }
       }
+      foot={
+        <button type="button" className="sb-textlink" onClick={() => void navigate('/agents')}>
+          {t('tile.claude.openBrowser')}
+        </button>
+      }
     >
       <ul className="sb-lines">
         {rows.map((session) => (
@@ -113,7 +118,7 @@ export function ClaudeSessionsTile() {
               </span>
               {session.vaultProject !== null ? null : linking === session.id ? (
                 <SessionLink
-                  session={session}
+                  name={session.projectName}
                   projects={projects.data ?? []}
                   onPick={(slug) => {
                     setLinking(null);

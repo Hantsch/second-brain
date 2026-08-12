@@ -12,6 +12,7 @@ import { setLanguage } from './i18n';
 import { api } from './lib/api';
 import { backgroundImage } from './lib/customization-assets';
 import { qk } from './lib/queries/keys';
+import { AgentsScreen } from './screens/agents/AgentsScreen';
 import { AskScreen } from './screens/ask/AskScreen';
 import { CaptureScreen } from './screens/capture/CaptureScreen';
 import { DashboardScreen } from './screens/dashboard/DashboardScreen';
@@ -86,6 +87,7 @@ export function App() {
         <Route path="/modules" element={<ModulesScreen />} />
         <Route path="/sources" element={<SourcesScreen />} />
         <Route path="/garden" element={<GardenScreen />} />
+        <Route path="/agents" element={<AgentsScreen />} />
         <Route path="/settings" element={<SettingsScreen />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>

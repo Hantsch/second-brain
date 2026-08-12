@@ -1,4 +1,5 @@
 export * from './vault';
+export * from './agents';
 export * from './domain';
 export * from './knowledge';
 export * from './capture';

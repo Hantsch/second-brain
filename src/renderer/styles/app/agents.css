@@ -1,0 +1,199 @@
+/* Agent session browser (story 001). D11 built the shell — the switch and
+   the four honest states. D12 replaces the placeholder count line with the
+   project list below; `.sb-agents-count` went with it. */
+
+/* ── Project list (D12) ─────────────────────────────────────────────────── */
+
+/* Same grid as `.sb-modulegrid`: cards that size to their content, wrapping
+   as the window narrows. The agent card carries two more meta lines than a
+   module card (path, first activity) — the grid itself doesn't change. */
+.sb-agentgrid {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-2);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-4);
+}
+.sb-agentcard {
+  height: 100%;
+}
+.sb-agentcard-button {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+  height: 100%;
+  padding: var(--space-4);
+  cursor: pointer;
+  border-radius: var(--radius-lg);
+}
+.sb-agentcard-button:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+.sb-agentcard-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-faint);
+  min-width: 0;
+}
+.sb-agentcard-title {
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+  color: var(--text-heading);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* The working directory: often long, always secondary to the name above
+   it — one line, ellipsis at the end, full path in the title tooltip. */
+.sb-agentcard-path {
+  display: block;
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sb-agentcard-meta {
+  display: block;
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+}
+/* A quiet hint, not a seventh equal-weight fact: only shown when a link is
+   known, and even then it stays below the primary facts in weight. */
+.sb-agentcard-vault {
+  display: block;
+  font-size: var(--text-2xs);
+  color: var(--text-muted);
+}
+
+/* ── Project detail (D13) ───────────────────────────────────────────────── */
+
+/* Session cards reuse `.sb-agentgrid`/`.sb-agentcard-*` above unchanged —
+   one visual language for the whole screen, only the facts per card grow
+   from four to six. */
+
+.sb-projectdetail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+}
+.sb-projectdetail-head {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+.sb-projectdetail-title {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.sb-projectdetail-name {
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+  color: var(--text-heading);
+}
+.sb-projectdetail-path {
+  display: block;
+}
+.sb-projectdetail-meta {
+  display: block;
+  color: var(--text-faint);
+}
+/* The vault link: either the statement or the picker (`SessionLink`, which
+   brings its own `.sb-line-*` layout). One row, so the picker's search field
+   may sit next to the selection without stretching the header. */
+.sb-projectdetail-link {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+  min-width: 0;
+}
+
+/* ── Transcript (D14) ───────────────────────────────────────────────────── */
+
+/* `user`/`assistant` rows reuse `.sb-dturn`/`.sb-dturn--{role}` from
+   `journal.css` as-is (see the comment in `TranscriptEntryRow.tsx`) — only
+   the container and the tool rows below are new. */
+
+.sb-transcript {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+}
+.sb-transcript-head {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+.sb-transcript-session {
+  color: var(--text-faint);
+}
+.sb-transcript-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+.sb-transcript-footer {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-3) 0;
+}
+
+/* One collapsed row per `tool-call`/`tool-result` — quieter than a
+   user/assistant turn (smaller text, no speaker overline), so a long
+   sequence of tool calls stays visually secondary to the conversation
+   around it. `--tool-result` is indented slightly to read as paired with
+   the call above it, without any explicit call/result pairing logic. */
+.sb-transcript-tool {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.sb-transcript-tool--tool-result {
+  padding-left: var(--space-4);
+}
+.sb-transcript-tool-toggle {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  color: var(--text-faint);
+  cursor: pointer;
+}
+.sb-transcript-tool-toggle:hover {
+  background: var(--surface-raised);
+}
+.sb-transcript-tool-toggle:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+.sb-transcript-tool-name {
+  color: var(--text-body);
+  font-size: var(--text-xs);
+}
+.sb-transcript-tool-target {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-xs);
+}
+.sb-transcript-tool-time {
+  margin-left: auto;
+  font-size: var(--text-2xs);
+  flex-shrink: 0;
+}

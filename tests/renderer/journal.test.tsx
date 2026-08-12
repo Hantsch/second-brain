@@ -290,6 +290,8 @@ const settings: SettingsSnapshot = {
       waitingNudgeDays: 5,
       useClaudeSessions: false,
       claudeProjectsDir: '',
+      useCodexSessions: false,
+      codexSessionsDir: '',
       notifications: false,
     },
     journal: { mode: 'listen' },

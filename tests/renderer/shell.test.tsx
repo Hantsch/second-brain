@@ -5,7 +5,7 @@
 import { StrictMode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { HashRouter } from 'react-router-dom';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import axe from 'axe-core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -58,15 +58,24 @@ describe('AppShell', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Dashboard' })).toBeTruthy();
   });
 
-  it('führt in zehn Screens, jeder mit aria-label', async () => {
+  it('führt in elf Screens, jeder mit aria-label', async () => {
     renderApp();
     const nav = await screen.findByRole('navigation', { name: 'Hauptnavigation' });
     const links = nav.querySelectorAll('a');
     expect(links.length).toBe(SCREENS.length);
-    expect(SCREENS.length).toBe(10);
+    /* Zehn Screens mit Ziffer 1–0, dazu „Agents" ohne — story 001. */
+    expect(SCREENS.length).toBe(11);
     for (const link of links) {
       expect(link.getAttribute('aria-label')?.length ?? 0).toBeGreaterThan(0);
     }
+  });
+
+  it('hat für „Agents" keine Ziffer, aber trotzdem ein Ziel', async () => {
+    renderApp();
+    const nav = await screen.findByRole('navigation', { name: 'Hauptnavigation' });
+    const agents = within(nav).getByRole('link', { name: 'Agents' });
+    expect(agents.getAttribute('aria-keyshortcuts')).toBeNull();
+    expect(agents.querySelector('.sb-rail-key')).toBeNull();
   });
 
   it('wechselt den Screen über die Ziffern', async () => {

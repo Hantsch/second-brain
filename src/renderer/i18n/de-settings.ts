@@ -102,6 +102,11 @@ const own = {
     'Arbeitsspuren der CLI zählen als Fortschritt des Projekts, dessen Repo dort liegt.',
   'settings.behavior.claude.dir.label': 'Ordner der Claude-Projekte',
   'settings.behavior.claude.dir.hint': 'Leer lassen für ~/.claude/projects.',
+  'settings.behavior.codex.label': 'Codex-CLI-Sessions mitlesen',
+  'settings.behavior.codex.hint':
+    'Arbeitsspuren der CLI zählen als Fortschritt des Projekts, dessen Repo dort liegt.',
+  'settings.behavior.codex.dir.label': 'Ordner der Codex-Sessions',
+  'settings.behavior.codex.dir.hint': 'Leer lassen für ~/.codex/sessions.',
   'settings.behavior.notifications.label': 'Benachrichtigungen für fällige Erinnerungen',
   'settings.behavior.notifications.hint': 'Meldet Fristen, auch wenn das Fenster geschlossen ist.',
   'settings.behavior.journal': 'Tagebuch',

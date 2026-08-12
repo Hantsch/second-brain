@@ -71,6 +71,13 @@ export const qk = {
   claude: {
     sessions: () => ['claude', 'sessions'] as const,
   },
+  agents: {
+    projects: (agent: string) => ['agents', 'projects', agent] as const,
+    sessions: (agent: string, projectKey: string) =>
+      ['agents', 'sessions', agent, projectKey] as const,
+    transcript: (agent: string, sessionId: string, cursor?: string | null) =>
+      ['agents', 'transcript', agent, sessionId, cursor ?? null] as const,
+  },
   settings: {
     snapshot: () => ['settings', 'snapshot'] as const,
   },
@@ -98,4 +105,5 @@ export const VAULT_DEPENDENT_ROOTS: readonly string[] = [
   'reminders',
   'gardener',
   'claude',
+  'agents',
 ];

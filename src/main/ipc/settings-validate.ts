@@ -113,6 +113,12 @@ function overview(source: Bag): Partial<VaultSettings['overview']> {
   if (source.claudeProjectsDir !== undefined) {
     out.claudeProjectsDir = text(source.claudeProjectsDir, 'overview.claudeProjectsDir', 260);
   }
+  if (source.useCodexSessions !== undefined) {
+    out.useCodexSessions = boolean(source.useCodexSessions, 'overview.useCodexSessions');
+  }
+  if (source.codexSessionsDir !== undefined) {
+    out.codexSessionsDir = text(source.codexSessionsDir, 'overview.codexSessionsDir', 260);
+  }
   if (source.notifications !== undefined) {
     out.notifications = boolean(source.notifications, 'overview.notifications');
   }

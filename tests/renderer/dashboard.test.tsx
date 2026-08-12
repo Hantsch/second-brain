@@ -127,6 +127,8 @@ function vaultSettings(overview: Partial<OverviewSettings>): VaultSettings {
       waitingNudgeDays: 5,
       useClaudeSessions: true,
       claudeProjectsDir: '',
+      useCodexSessions: true,
+      codexSessionsDir: '',
       notifications: true,
       ...overview,
     },

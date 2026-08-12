@@ -98,6 +98,7 @@ export const enDashboard = {
   'tile.claude.linkedTo': 'Session linked to “{name}”',
   'tile.claude.linkSearch': 'Search projects',
   'tile.claude.linkNoMatch': 'No project matches “{query}”.',
+  'tile.claude.openBrowser': 'Open all agent sessions',
 
   'tile.stale.empty': 'No project has been idle longer than the configured threshold.',
   'tile.stale.days': 'for {count} days',

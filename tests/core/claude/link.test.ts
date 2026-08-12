@@ -30,6 +30,9 @@ function session(patch: Partial<ClaudeSession> = {}): ClaudeSession {
     firstPrompt: 'Terraform-State migrieren',
     summary: null,
     files: [],
+    model: null,
+    subagents: null,
+    contextTokens: null,
     ...patch,
   };
 }

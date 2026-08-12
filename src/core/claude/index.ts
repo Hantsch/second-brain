@@ -41,6 +41,7 @@ export {
   type ResolvedProject,
 } from './paths';
 export {
+  PATH_FIELDS,
   cleanPromptText,
   clip,
   isPrompt,
@@ -48,9 +49,12 @@ export {
   isToolResult,
   recordText,
   summaryOf,
+  toolCallsOf,
   toolFilePaths,
+  toolResultOf,
   type ClaudeContentBlock,
   type ClaudeRecord,
+  type ClaudeToolCall,
 } from './records';
 export {
   parseJsonlChunk,

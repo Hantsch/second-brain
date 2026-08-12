@@ -173,6 +173,45 @@ describe('readSessionFacts', () => {
     expect(facts.files).toHaveLength(5);
     expect(facts.files[0]).toBe('src/a.ts');
   });
+
+  it('liest Modell, Subagenten und Token-Verbrauch aus Assistant-Records', async () => {
+    const withFacts = jsonl([
+      prompt('Recherchiere die Migration', { at: AT }),
+      assistant('Ich starte einen Subagenten', {
+        at: '2026-08-10T09:12:11.000Z',
+        model: 'claude-opus-5',
+        subagentType: 'general-purpose',
+        usage: {
+          input_tokens: 120,
+          cache_creation_input_tokens: 400,
+          cache_read_input_tokens: 900,
+          output_tokens: 80,
+        },
+      }),
+      assistant('Fertig', {
+        at: '2026-08-10T09:15:02.000Z',
+        model: 'claude-sonnet-5',
+        usage: { input_tokens: 50, output_tokens: 30 },
+      }),
+    ]);
+    const { fs, info } = fileWith(withFacts);
+    const facts = await readSessionFacts(fs, info);
+
+    // Juengstes Modell gewinnt, nicht das erste.
+    expect(facts.model).toBe('claude-sonnet-5');
+    expect(facts.subagents).toEqual(['general-purpose']);
+    // Juengster Assistant-Turn: 50 + 30, ohne Cache-Felder (er hat keine).
+    expect(facts.contextTokens).toBe(80);
+  });
+
+  it('meldet Modell, Subagenten und Token als unbekannt, wenn keine Records das tragen', async () => {
+    const { fs, info } = fileWith(NORMAL);
+    const facts = await readSessionFacts(fs, info);
+
+    expect(facts.model).toBeNull();
+    expect(facts.subagents).toBeNull();
+    expect(facts.contextTokens).toBeNull();
+  });
 });
 
 describe('cleanPromptText', () => {

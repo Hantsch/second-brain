@@ -246,6 +246,11 @@ export const deScreens = {
     'Die Prüfung findet verwaiste Seiten, kaputte Links, unverdichtete Quellen und Projekte ohne nächsten Schritt.',
   'screen.garden.empty.action': 'Prüfung starten',
 
+  /* Die Texte des Screens selbst (Umschalter, Leer- und Aus-Zustände) liegen
+     in `de-agents.ts` — das Kopfpaar steht hier, wie bei jedem anderen Screen. */
+  'screen.agents.overline': 'Arbeitsspur der Agenten',
+  'screen.agents.title': 'Agents',
+
   /* Not "Behavior": that's one of the tabs — read as an overline, the screen
      would look as if that tab were already open. */
   'screen.settings.overline': 'Einrichten',

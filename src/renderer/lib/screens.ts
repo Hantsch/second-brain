@@ -11,6 +11,7 @@ export type ScreenId =
   | 'modules'
   | 'sources'
   | 'garden'
+  | 'agents'
   | 'settings';
 
 export interface ScreenDef {
@@ -20,8 +21,10 @@ export interface ScreenDef {
   /** Kebab-case-Name für das Icon-Atom. */
   icon: string;
   labelKey: string;
-  /** Ziffer, die diesen Screen öffnet. */
-  hotkey: string;
+  /** Ziffer, die diesen Screen öffnet. Fehlt sie, ist der Screen nur per
+   *  Klick und Befehlspalette erreichbar (z. B. "agents" — die Ziffern 1–0
+   *  sind an die zehn ursprünglichen Screens vergeben). */
+  hotkey?: string;
 }
 
 export const SCREENS: readonly ScreenDef[] = [
@@ -41,6 +44,9 @@ export const SCREENS: readonly ScreenDef[] = [
   { id: 'sources', path: '/sources', icon: 'download', labelKey: 'rail.sources', hotkey: '8' },
   { id: 'garden', path: '/garden', icon: 'sprout', labelKey: 'rail.garden', hotkey: '9' },
   { id: 'settings', path: '/settings', icon: 'settings', labelKey: 'rail.settings', hotkey: '0' },
+  /* No hotkey: 1–0 are taken by the ten screens above. Reachable by click
+     and command palette only (story 001, resolved Open Questions). */
+  { id: 'agents', path: '/agents', icon: 'workflow', labelKey: 'rail.agents' },
 ];
 
 export function screenByHotkey(key: string): ScreenDef | undefined {

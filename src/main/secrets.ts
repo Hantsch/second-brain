@@ -126,9 +126,7 @@ export async function createKeyStore(
   const available = encryptionAvailable(storage);
   const stored = await readJson<KeysFile>(file);
   if (!available) {
-    console.warn(
-      '[secrets] No OS-level encryption available — keys remain in memory only.',
-    );
+    console.warn('[secrets] No OS-level encryption available — keys remain in memory only.');
   }
   return new SafeStorageKeyStore(file, storage, available, stored?.keys ?? {});
 }

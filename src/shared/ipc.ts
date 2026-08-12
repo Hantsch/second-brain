@@ -12,6 +12,9 @@
  */
 
 import type {
+  AgentKind,
+  AgentProject,
+  AgentSessionSummary,
   AppSettings,
   ChatThread,
   Citation,
@@ -48,6 +51,7 @@ import type {
   TaskDefinition,
   TaskKind,
   Todo,
+  TranscriptPage,
   VaultDoc,
   VaultSettings,
   VaultStatus,
@@ -435,6 +439,21 @@ export interface IpcRoutes {
   'claude:sessions': { req: { limit?: number }; res: ClaudeSession[] };
   'claude:link': { req: { sessionId: string; project: string }; res: void };
 
+  // ── Agent sessions (Claude & Codex) ──────────────────────────────────────
+  'agents:projects': { req: { agent: AgentKind }; res: AgentProject[] };
+  'agents:sessions': { req: { agent: AgentKind; projectKey: string }; res: AgentSessionSummary[] };
+  'agents:transcript': {
+    req: { agent: AgentKind; sessionId: string; projectKey: string; cursor?: string | null };
+    res: TranscriptPage;
+  };
+  /**
+   * Link an agent project (a working directory) to a vault project: the
+   * directory moves into that project's `repos`, exactly as `claude:link`
+   * does it for a single session. Per project, not per session — `repos`
+   * names the directory, so every session in it shares the link.
+   */
+  'agents:link': { req: { agent: AgentKind; projectKey: string; project: string }; res: void };
+
   // ── Settings ──────────────────────────────────────────────────────────────
   'settings:get': { req: void; res: SettingsSnapshot };
   'settings:setApp': { req: { patch: DeepPartial<AppSettings> }; res: SettingsSnapshot };
@@ -562,6 +581,10 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'gardener:undoFix',
   'claude:sessions',
   'claude:link',
+  'agents:projects',
+  'agents:sessions',
+  'agents:transcript',
+  'agents:link',
   'settings:get',
   'settings:setApp',
   'settings:setVault',

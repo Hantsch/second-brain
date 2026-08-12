@@ -231,6 +231,11 @@ export const enScreens = {
     'The check finds orphan pages, broken links, undistilled sources and projects without a next step.',
   'screen.garden.empty.action': 'Start check',
 
+  /* The texts of the screen itself (switch, empty and off states) live in
+     `en-agents.ts` — the header pair sits here, like every other screen. */
+  'screen.agents.overline': 'Agent work trails',
+  'screen.agents.title': 'Agents',
+
   /* Not “Behaviour”: that is one of the tabs — as an overline it would read as if
      that tab were open. */
   'screen.settings.overline': 'Setup',

@@ -5,3 +5,8 @@ Format: `- NNN — <title> · <sprint or —> · <one-sentence result>`.
 
 The full texts live next to this file. This index is the fast overview — do not turn it into a
 second roadmap.
+
+- 001 — Agent session browser (Claude & Codex) · — · New three-level screen (sources → projects
+  → sessions/transcript) reading both Claude Code and Codex CLI session trails, read-only, with
+  project linking and honest empty/off/misconfigured states; passed clean-agent review after one
+  fix cycle.

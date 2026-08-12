@@ -5,6 +5,7 @@
    Flat keys, sentence case, no emoji. `en.ts` must carry the same key set —
    a test checks that. */
 
+import { deAgents } from './de-agents';
 import { deDashboard } from './de-dashboard';
 import { deGarden } from './de-garden';
 import { deJournal } from './de-journal';
@@ -45,6 +46,7 @@ export const de = {
   'rail.modules': 'Module',
   'rail.sources': 'Quellen',
   'rail.garden': 'Pflege',
+  'rail.agents': 'Agents',
   'rail.settings': 'Einstellungen',
 
   'time.today': 'heute',
@@ -191,6 +193,7 @@ export const de = {
   'ingest.note.awaiting-llm': 'Rohquelle liegt. Die Verdichtung braucht ein Modell.',
 
   ...deScreens,
+  ...deAgents,
   ...deDashboard,
   ...deGarden,
   ...deJournal,

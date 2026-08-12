@@ -1,7 +1,7 @@
 ---
 id: 001
 title: Agent session browser (Claude & Codex)
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-08-12
 ---
 
@@ -37,40 +37,40 @@ or `~/.codex`, and it never invokes an agent binary.
 
 ## Acceptance Criteria
 
-- [ ] The left rail has an entry for the agent sessions; it opens the new screen and is
+- [x] The left rail has an entry for the agent sessions; it opens the new screen and is
       marked active while I am on it. (The digits 1–0 are already taken by the ten existing
       screens — a keyboard shortcut is optional.)
-- [ ] The screen has a visible switch between **Claude** and **Codex**. The choice is
+- [x] The screen has a visible switch between **Claude** and **Codex**. The choice is
       remembered while I navigate down and back up.
-- [ ] With the source switched, the project list shows the working directories of that agent
+- [x] With the source switched, the project list shows the working directories of that agent
       with: project name, path, number of sessions, last activity (relative), first activity,
       and the linked vault project where one is known.
-- [ ] The project list is sorted by last activity, newest first.
-- [ ] Clicking a project opens its detail view with a back path (breadcrumb or back button)
+- [x] The project list is sorted by last activity, newest first.
+- [x] Clicking a project opens its detail view with a back path (breadcrumb or back button)
       that returns me to the project list with the source switch unchanged.
-- [ ] The project detail lists that project's sessions, newest first, each with: start,
+- [x] The project detail lists that project's sessions, newest first, each with: start,
       last activity, duration, message count, git branch, and — where the trail records it —
       model, subagents used, and context/token size. Anything the trail does not contain is
       shown as unknown, not as a zero or an invented value.
-- [ ] Clicking a session opens the transcript: the course of the session in order, user and
+- [x] Clicking a session opens the transcript: the course of the session in order, user and
       assistant turns distinguishable, tool calls recognisable as tool calls. Long sessions
       stay usable (no full multi-megabyte file pulled into the renderer at once).
-- [ ] A session that is not linked to a vault project can be linked from here, the same way
+- [x] A session that is not linked to a vault project can be linked from here, the same way
       the dashboard tile already does it.
-- [ ] Deep links work: opening a project or session URL directly lands on that view.
-- [ ] Honest states everywhere, per guardrail 1: the reading is switched off in the Behavior
+- [x] Deep links work: opening a project or session URL directly lands on that view.
+- [x] Honest states everywhere, per guardrail 1: the reading is switched off in the Behavior
       tab, the directory does not exist, the agent has never run, a session file is empty or
       corrupt — each says what is the case, with the path to fix it where there is one. Never
       an empty screen, never a silent failure.
-- [ ] Codex not being installed does not break the screen — switching to it says so.
-- [ ] The screen needs no LLM. Nothing on it calls the gateway.
-- [ ] The existing dashboard tile keeps working and now links into the new screen.
-- [ ] Nothing is written to `~/.claude` or `~/.codex`; no agent binary is started.
-- [ ] Tests run against fakes, never against the real `~/.claude` or `~/.codex` (as
+- [x] Codex not being installed does not break the screen — switching to it says so.
+- [x] The screen needs no LLM. Nothing on it calls the gateway.
+- [x] The existing dashboard tile keeps working and now links into the new screen.
+- [x] Nothing is written to `~/.claude` or `~/.codex`; no agent binary is started.
+- [x] Tests run against fakes, never against the real `~/.claude` or `~/.codex` (as
       `src/core/claude/` already does via `ClaudeFileSystem`).
-- [ ] No hardcoded German or English strings in the renderer — every string goes through
+- [x] No hardcoded German or English strings in the renderer — every string goes through
       `t()`, keys exist in both `de.ts` and `en.ts`.
-- [ ] Gaston: `gs-*` atoms and tokens only, sentence case, no emoji, no raw Tailwind palette
+- [x] Gaston: `gs-*` atoms and tokens only, sentence case, no emoji, no raw Tailwind palette
       classes.
 
 ## Open Questions
@@ -127,68 +127,68 @@ LLM call. Fixtures are **synthetic** — never a copy of the user's real session
 
 ## Deliverables
 
-- [ ] D1 — **Contract.** `src/shared/types/agents.ts` (`AgentKind`, `AgentProject`,
+- [x] D1 — **Contract.** `src/shared/types/agents.ts` (`AgentKind`, `AgentProject`,
       `AgentSessionSummary`, `TranscriptEntry`, `TranscriptPage`), exported from
       `types/index.ts`; the three `agents:*` channels in `src/shared/ipc.ts` incl. the
       `IPC_CHANNELS` list. No handler, no logic.
       _Acceptance:_ `npm run typecheck` green; the renderer can name the types.
-- [ ] D2 — **Agent layer skeleton.** `src/core/agents/types.ts` (`AgentFileSystem` as alias of
+- [x] D2 — **Agent layer skeleton.** `src/core/agents/types.ts` (`AgentFileSystem` as alias of
       `ClaudeFileSystem`, `AgentSessionSource` interface) + `registry.ts` mapping kind →
       source + `index.ts`.
       _Acceptance:_ unit test resolves both kinds; ESLint proves no Electron import.
-- [ ] D3 — **Codex fixtures.** `tests/fixtures/codex/sessions/2026/08/12/rollout-*.jsonl`
+- [x] D3 — **Codex fixtures.** `tests/fixtures/codex/sessions/2026/08/12/rollout-*.jsonl`
       (2–3 sessions, one with an ~18 KB `session_meta` line, one with a truncated last line,
       one empty) + a matching `session_index.jsonl`. Synthetic content only.
       _Acceptance:_ fixtures parse as JSONL line by line; the truncated one is broken on
       purpose and documented as such.
-- [ ] D4 — **Codex records.** `src/core/codex/records.ts` + `jsonl.ts`: interpret
+- [x] D4 — **Codex records.** `src/core/codex/records.ts` + `jsonl.ts`: interpret
       `session_meta`, `turn_context`, `token_count`, the message and tool records; skip
       broken lines.
       _Acceptance:_ tests against D3 read cwd, branch, model, token total and context window;
       the broken line is skipped and counted, not thrown.
-- [ ] D5 — **Codex reader.** `src/core/codex/reader.ts`: recursive walk over YYYY/MM/DD,
+- [x] D5 — **Codex reader.** `src/core/codex/reader.ts`: recursive walk over YYYY/MM/DD,
       newest first, `limit`/`since`, empty file is not a session, titles from
       `session_index.jsonl`. Missing directory → empty list, not an error.
       _Acceptance:_ reader test over D3 returns the sessions in order; a nonexistent root
       returns `[]`.
-- [ ] D6 — **Claude facts extended.** `model`, `subagents`, `tokens`/`contextWindow` added to
+- [x] D6 — **Claude facts extended.** `model`, `subagents`, `tokens`/`contextWindow` added to
       `SessionFacts` and the session type — additive.
       _Acceptance:_ existing `tests/core/claude/*` stay green unchanged; a new test reads the
       three fields from the existing fixture.
-- [ ] D7 — **Project aggregation.** `src/core/agents/projects.ts`: sessions → `AgentProject[]`
+- [x] D7 — **Project aggregation.** `src/core/agents/projects.ts`: sessions → `AgentProject[]`
       (normalized cwd as key, session count, first/last activity, vault project), sorted by
       last activity. Pure function.
       _Acceptance:_ tests for grouping, sorting, and case-differing Windows paths landing in
       one project.
-- [ ] D8 — **Transcript.** `src/core/agents/transcript.ts`: paged, condensed entries from both
+- [x] D8 — **Transcript.** `src/core/agents/transcript.ts`: paged, condensed entries from both
       formats onto one `TranscriptEntry` type; tool calls collapsed, reasoning dropped.
       _Acceptance:_ tests for both kinds; a test proves a large file is not read whole
       (byte budget per page).
-- [ ] D9 — **Settings.** `useCodexSessions` + `codexSessionsDir` in `OverviewSettings`,
+- [x] D9 — **Settings.** `useCodexSessions` + `codexSessionsDir` in `OverviewSettings`,
       defaults, plus the two fields in the Behavior tab with i18n keys.
       _Acceptance:_ toggle and path survive a restart; empty path falls back to
       `~/.codex/sessions`.
-- [ ] D10 — **Wiring.** `src/main/ipc/agents.ts` + `register-all.ts`, `lib/api.ts`,
+- [x] D10 — **Wiring.** `src/main/ipc/agents.ts` + `register-all.ts`, `lib/api.ts`,
       `lib/queries/agents.ts`, `lib/queries/keys.ts`.
       _Acceptance:_ the three channels answer through the preload; a main-side test covers
       each handler.
-- [ ] D11 — **Rail + screen shell.** `hotkey` optional in `ScreenDef`, `agents` entry in
+- [x] D11 — **Rail + screen shell.** `hotkey` optional in `ScreenDef`, `agents` entry in
       `SCREENS` (icon `bot`, no digit), route in `App.tsx`, `AgentsScreen.tsx` with the
       Claude/Codex switch and the URL as state. Off / empty / error states.
       _Acceptance:_ the entry is visible, opens the screen, is marked active; the switch
       survives navigating down and back.
-- [ ] D12 — **Project list.** `ProjectList.tsx` mirroring `ModuleCards.tsx`: name, path,
+- [x] D12 — **Project list.** `ProjectList.tsx` mirroring `ModuleCards.tsx`: name, path,
       session count, last and first activity, vault project.
       _Acceptance:_ sorted newest first; a click enters the detail view.
-- [ ] D13 — **Project detail.** `ProjectDetail.tsx` with breadcrumb/back and the session rows
+- [x] D13 — **Project detail.** `ProjectDetail.tsx` with breadcrumb/back and the session rows
       (start, duration, messages, branch, model, subagents, context).
       _Acceptance:_ back returns to the list with the switch unchanged; unknown fields read
       as unknown, never as 0.
-- [ ] D14 — **Transcript view.** `Transcript.tsx`: condensed course of the session, tool
+- [x] D14 — **Transcript view.** `Transcript.tsx`: condensed course of the session, tool
       calls expandable, paged loading.
       _Acceptance:_ a 370 KB session opens without freezing; user and assistant are
       distinguishable.
-- [ ] D15 — **Finish.** All i18n keys in `de.ts` and `en.ts`, dashboard tile links into
+- [x] D15 — **Finish.** All i18n keys in `de.ts` and `en.ts`, dashboard tile links into
       `/agents`, `npm run seed && npm run shot`.
       _Acceptance:_ no hardcoded string in the new screens; both languages complete;
       screenshot present.
@@ -196,7 +196,7 @@ LLM call. Fixtures are **synthetic** — never a copy of the user's real session
 ## Model Hints
 
 `Delegate:` marks whether the deliverable is a candidate for `/delegate` (local Qwen3-Coder).
-That is orthogonal to the ai-scrum tier — it says who *types*, the tier says who *supervises*.
+That is orthogonal to the ai-scrum tier — it says who _types_, the tier says who _supervises_.
 
 - D1 → default · `Delegate: no` — IPC contract, excluded per the delegate skill.
 - D2 → default · `Delegate: no` — small, but it fixes the shape everything else follows.
@@ -246,3 +246,40 @@ Automated coverage is in the deliverables. These steps need a human, in the runn
    in the app, check again — unchanged.
 
 ## Done
+
+Built a full read-only "Agents" screen (Claude Code + Codex CLI session trails) across three
+levels — sources, projects, sessions/transcript — plus a new agent-neutral core layer
+(`src/core/agents/`) and a new Codex reading stack (`src/core/codex/`) mirroring the existing
+`src/core/claude/` module file-for-file. Three new IPC channels (`agents:projects`,
+`agents:sessions`, `agents:transcript`, later joined by `agents:link`) wire it to the renderer.
+The dashboard's existing Claude-sessions tile now links into the new screen; its own linking
+logic was extracted into a shared `repo-link.ts` so the new screen's project-level linking
+(Claude and Codex alike) can't drift from it. Settings gained `useCodexSessions` +
+`codexSessionsDir` next to the existing Claude pair.
+
+A clean-agent review (`story-review-hard`) found 3 of 17 acceptance criteria unmet on the first
+pass — session rows missing `lastActivity`, no way to link an unlinked project from the new
+screen, and a configured-but-missing directory indistinguishable from "never run" — plus two
+cosmetic cleanup items (stray German comments in four new files, two dead i18n keys). A fix
+cycle addressed all five; a second review pass verified each fix end-to-end (including tracing
+`IpcError.detail` across the main→preload→renderer boundary) and returned PASS with four
+non-blocking observations, none affecting an acceptance criterion:
+- `agents:transcript` doesn't call the new `requireSessionsDir` guard (unreachable in practice —
+  the projects query fails first).
+- `useLinkAgentProject` invalidates the projects cache but not the sessions cache (no visible
+  effect today — `ProjectDetail` doesn't render a session's own `vaultProject`).
+- The AC10 renderer test exercises `decodeIpcError`'s in-memory fast path rather than the full
+  JSON-string wire format (verified manually instead).
+- `tests/main/ipc/agents.test.ts` and `tests/renderer/agents.test.tsx` are German while several
+  sibling test files added later in the same story are English — same migration-in-progress
+  inconsistency CLAUDE.md already calls out for the pre-existing `docs/`.
+
+**Commit message:** `001: agent session browser (Claude & Codex)`
+
+**Verification:** `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run build`
+all green. `npm test`: 1717/1718 passing — the sole failure (`tests/core/wiki/module.test.ts`)
+is pre-existing, unrelated docs-drift predating this story. Live smoke via
+`npm run seed && npm run shot`: `.screenshots/34-agents.png` shows the real screen with seeded
+demo data (four Claude projects, session counts, activity dates, vault-project links),
+inspected directly. Reviewed by a clean `story-review-hard` agent twice (full pass, then a
+scoped re-check of the fix cycle); final verdict PASS.

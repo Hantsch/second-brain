@@ -88,6 +88,21 @@ export function dueTone(dueInDays: number | null): 'overdue' | 'soon' | 'later' 
   return dueInDays <= 2 ? 'soon' : 'later';
 }
 
+/**
+ * Compact session/job duration: '42m', '1h 12m'. Units are technical
+ * notation, not prose — same convention as `formatBytes`'s 'KB'/'MB', so no
+ * `t()` lookup for the letter itself. Callers render `null` (the trail
+ * didn't record a duration) as their own "unknown" text; this function only
+ * covers the "we have a number" case.
+ */
+export function formatDuration(ms: number): string {
+  const totalMinutes = Math.max(0, Math.floor(ms / 60_000));
+  if (totalMinutes < 1) return '<1m';
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+}
+
 /** Singular or plural via two keys — German and English both need them. */
 export function plural(count: number, oneKey: string, manyKey: string): string {
   return count === 1 ? t(oneKey) : t(manyKey, { count });

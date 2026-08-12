@@ -1,4 +1,7 @@
-/* Eine Sitzung einem Projekt zuordnen — die Auswahl dazu.
+/* Einem Vault-Projekt etwas zuordnen — die Auswahl dazu. Zwei Stellen brauchen
+   sie: die Dashboard-Kachel ordnet eine Sitzung zu, der Agent-Browser ein
+   Projekt (ein Arbeitsverzeichnis). Deshalb weiß diese Auswahl nur noch, wie
+   das Ding heißt, das zugeordnet wird — nicht mehr, was es ist.
 
    Ab acht Projekten steht ein Suchfeld darüber. Vorher wäre es Zierde; danach
    ist eine Liste ohne Suche ein Ratespiel, und ein Fehlgriff schreibt einen
@@ -9,7 +12,7 @@
    ruft die Zuordnung auf und sagt danach, was passiert ist — mit Rückweg. */
 
 import { useState } from 'react';
-import type { ClaudeSession, Project } from '@shared/types';
+import type { Project } from '@shared/types';
 import { Icon } from '../../atoms/Icon';
 import { Input } from '../../atoms/Input';
 import { useT } from '../../i18n';
@@ -18,12 +21,24 @@ import { useT } from '../../i18n';
 const SEARCH_FROM = 8;
 
 export interface SessionLinkProps {
-  session: ClaudeSession;
+  /** Was zugeordnet wird — steht als Subjekt in der Beschriftung der Auswahl. */
+  name: string;
+  /**
+   * i18n-Key der Beschriftung, mit `{name}` darin. Standard ist die Sitzung, wie
+   * die Dashboard-Kachel sie zuordnet; der Agent-Browser ordnet ein Projekt zu
+   * und sagt genau das.
+   */
+  labelKey?: string;
   projects: readonly Project[];
   onPick: (slug: string) => void;
 }
 
-export function SessionLink({ session, projects, onPick }: SessionLinkProps) {
+export function SessionLink({
+  name,
+  labelKey = 'tile.claude.linkFor',
+  projects,
+  onPick,
+}: SessionLinkProps) {
   const t = useT();
   const [query, setQuery] = useState('');
   const needle = query.trim().toLowerCase();
@@ -48,7 +63,7 @@ export function SessionLink({ session, projects, onPick }: SessionLinkProps) {
       <span className="gs-inputwrap sb-line-picker">
         <select
           className="gs-input gs-select"
-          aria-label={t('tile.claude.linkFor', { name: session.projectName })}
+          aria-label={t(labelKey, { name })}
           value=""
           onChange={(event) => {
             const slug = event.target.value;

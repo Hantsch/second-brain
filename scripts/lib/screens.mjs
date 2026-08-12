@@ -85,6 +85,13 @@ export const DEEP_STATES = [
   { id: 'settings-behavior', hash: '/settings?tab=behavior', wait: '.sb-panel' },
   { id: 'settings-customization', hash: '/settings?tab=customization', wait: '.sb-image-radio' },
   { id: 'settings-about', hash: '/settings?tab=about', wait: '.sb-panel' },
+  /* Story 001: the agent session browser has no rail digit (hotkey optional,
+     see src/renderer/lib/screens.ts) and is otherwise reachable only by click
+     or the command palette — same reasoning as the module tabs above. `.gs-tabs`
+     is the Claude/Codex switch, present in every state (loading, off, empty,
+     list), so the wait proves the screen rendered regardless of which state
+     the reading machine's real `~/.claude`/`~/.codex` happen to be in. */
+  { id: 'agents', hash: '/agents', wait: '.gs-tabs' },
 ];
 
 /**

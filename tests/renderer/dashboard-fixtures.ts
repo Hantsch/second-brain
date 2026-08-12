@@ -143,6 +143,9 @@ export const sessions: ClaudeSession[] = [
     firstPrompt: 'Terraform-State auf den neuen Mandanten migrieren',
     summary: null,
     files: ['main.tf'],
+    model: null,
+    subagents: null,
+    contextTokens: null,
   },
   {
     id: 'session-2',
@@ -156,6 +159,9 @@ export const sessions: ClaudeSession[] = [
     firstPrompt: 'Kurz was ausprobiert',
     summary: null,
     files: [],
+    model: null,
+    subagents: null,
+    contextTokens: null,
   },
 ];
 

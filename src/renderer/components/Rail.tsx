@@ -25,13 +25,15 @@ export function Rail() {
               to={screen.path}
               className="sb-rail-item"
               aria-label={label}
-              aria-keyshortcuts={screen.hotkey}
+              {...(screen.hotkey === undefined ? {} : { 'aria-keyshortcuts': screen.hotkey })}
             >
               <Icon name={screen.icon} size={16} />
               <span>{label}</span>
-              <span className="sb-rail-key" aria-hidden="true">
-                {screen.hotkey}
-              </span>
+              {screen.hotkey === undefined ? null : (
+                <span className="sb-rail-key" aria-hidden="true">
+                  {screen.hotkey}
+                </span>
+              )}
             </NavLink>
           );
         })}

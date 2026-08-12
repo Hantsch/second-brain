@@ -97,6 +97,8 @@ export const settingsSnapshot: SettingsSnapshot = {
       waitingNudgeDays: 5,
       useClaudeSessions: true,
       claudeProjectsDir: '',
+      useCodexSessions: true,
+      codexSessionsDir: '',
       notifications: true,
     },
     journal: { mode: 'tips' },

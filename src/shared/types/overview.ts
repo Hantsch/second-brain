@@ -146,6 +146,12 @@ export interface ClaudeSession {
   summary: string | null;
   /** Files touched by the user, most frequent first. */
   files: string[];
+  /** Model name from the most recent assistant record, or unknown. */
+  model: string | null;
+  /** Distinct subagent types invoked, first-seen order; `null` means none seen. */
+  subagents: string[] | null;
+  /** Approximate context size from the most recent assistant record's token usage. */
+  contextTokens: number | null;
 }
 
 /** Work from recent days, mixed from file changes and Claude sessions. */
