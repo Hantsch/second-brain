@@ -1,9 +1,9 @@
 /* Group todos: first by scope, then by due date.
 
    The user wants to see work and private separated — that's not a sort
-   order, it's a separation. Within a scope, the deadline decides: overdue,
-   today, this week, later, no deadline. "No deadline" doesn't disappear;
-   concealed tasks are the reason this app exists. */
+   order, it's a separation. Within a scope, due dates provide the groups;
+   inside each group priority decides: high, medium, low. "No deadline" doesn't
+   disappear; concealed tasks are the reason this app exists. */
 
 import type { Scope, Todo } from '@shared/types';
 
@@ -21,14 +21,19 @@ export function bucketOf(todo: Todo): DueBucket {
   return todo.dueInDays <= WEEK_DAYS ? 'week' : 'later';
 }
 
-/** Within a group: deadline first, then priority, then text. */
+function sortPriority(todo: Todo): 1 | 2 | 3 {
+  return todo.priority === 1 || todo.priority === 3 ? todo.priority : 2;
+}
+
+/** Within a group: priority first, then deadline, then text. */
 export function byDue(a: Todo, b: Todo): number {
+  const priorityDifference = sortPriority(b) - sortPriority(a);
+  if (priorityDifference !== 0) return priorityDifference;
   if (a.dueInDays !== b.dueInDays) {
     if (a.dueInDays === null) return 1;
     if (b.dueInDays === null) return -1;
     return a.dueInDays - b.dueInDays;
   }
-  if (a.priority !== b.priority) return b.priority - a.priority;
   return a.text.localeCompare(b.text);
 }
 

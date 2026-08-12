@@ -431,6 +431,7 @@ describe('Projekt- und Todo-Kanäle im Main', () => {
   });
 
   it('legt ein Todo mit Frist in der Projektdatei an', async () => {
+    const before = await harness.call('todos:list', { project: 'hochbeet-bauen' });
     const created = await harness.call('todos:create', {
       text: 'Schrauben nachkaufen',
       scope: 'private',
@@ -442,10 +443,14 @@ describe('Projekt- und Todo-Kanäle im Main', () => {
     expect(created.due).toBe('2026-08-12');
     expect(created.project).toBe('hochbeet-bauen');
     expect(created.state).toBe('open');
+    expect(created.priority).toBe(2);
     const raw = (await vault.read(PRIVATE)) ?? '';
-    expect(raw).toContain('- [ ] Schrauben nachkaufen @due:2026-08-12');
+    expect(raw).toContain('- [ ] Schrauben nachkaufen @due:2026-08-12 !!');
     /* Unter „Todos", nicht am Dateiende. */
     expect(raw.indexOf('Schrauben nachkaufen')).toBeLessThan(raw.indexOf('## Notizen'));
+    const after = await harness.call('todos:list', { project: 'hochbeet-bauen' });
+    expect(after.slice(0, -1).map((todo) => todo.id)).toEqual(before.map((todo) => todo.id));
+    expect(after.at(-1)?.id).toBe(created.id);
   });
 
   it('legt ein Todo ohne Projekt im heutigen Tageseintrag an', async () => {
@@ -489,6 +494,60 @@ describe('Projekt- und Todo-Kanäle im Main', () => {
     expect(await vault.read(WORK)).toContain(
       '- [ ] Ladezeiten der Angebotsliste messen und senken @due:2026-08-08 !!',
     );
+  });
+
+  it('ändert Text, Frist und Priorität in einem Schreibvorgang', async () => {
+    const todo = await openTodo('Noppenfolie innen anbringen');
+
+    const updated = await harness.call('todos:update', {
+      id: todo.id,
+      text: 'Noppenfolie sauber befestigen',
+      due: '2026-08-14',
+      priority: 3,
+    });
+
+    expect(updated).toMatchObject({
+      text: 'Noppenfolie sauber befestigen',
+      due: '2026-08-14',
+      priority: 3,
+    });
+    expect(await vault.read(PRIVATE)).toContain(
+      '- [ ] Noppenfolie sauber befestigen @due:2026-08-14 !!!',
+    );
+  });
+
+  it('sortiert alle Todos einer Projektdatei und lässt den übrigen Inhalt stehen', async () => {
+    const todos = await harness.call('todos:list', { project: 'hochbeet-bauen' });
+    const ids = todos.map((todo) => todo.id).reverse();
+    const before = (await vault.read(PRIVATE)) ?? '';
+
+    const reordered = await harness.call('todos:reorder', { ids });
+    const after = (await vault.read(PRIVATE)) ?? '';
+
+    expect(reordered.map((todo) => todo.id)).toEqual(ids);
+    expect(after.indexOf('Erde und Kompost holen')).toBeLessThan(
+      after.indexOf('Noppenfolie innen anbringen'),
+    );
+    expect(after).toContain('## Notizen');
+    expect(after.slice(after.indexOf('## Notizen'))).toBe(
+      before.slice(before.indexOf('## Notizen')),
+    );
+  });
+
+  it('verweigert das Umsortieren nach einer externen Änderung', async () => {
+    const todos = await harness.call('todos:list', { project: 'hochbeet-bauen' });
+    await vault.write(
+      PRIVATE,
+      ((await vault.read(PRIVATE)) ?? '').replace(
+        '- [ ] Noppenfolie innen anbringen',
+        '- [ ] Noppenfolie exakt zuschneiden',
+      ),
+    );
+
+    await expect(
+      harness.call('todos:reorder', { ids: todos.map((todo) => todo.id).reverse() }),
+    ).rejects.toMatchObject({ code: 'conflict' });
+    expect(await vault.read(PRIVATE)).toContain('Noppenfolie exakt zuschneiden');
   });
 
   it('verlangt einen offenen Vault', async () => {

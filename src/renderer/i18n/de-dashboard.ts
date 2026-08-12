@@ -80,7 +80,7 @@ export const deDashboard = {
   'module.claude-sessions.name': 'Claude-Sessions',
   'module.claude-sessions.purpose': 'Arbeitsspuren der Agenten-CLI, den Projekten zugeordnet.',
   'module.gardener.name': 'Pflege',
-  'module.gardener.purpose': 'Gesundheitswert und Befunde des letzten Pflegelaufs.',
+  'module.gardener.purpose': 'Gesundheit und Ergebnisse der letzten Prüfung.',
 
   // ── Tiles ──────────────────────────────────────────────────────────────
   'tile.more': '{count} weitere',
@@ -166,11 +166,11 @@ export const deDashboard = {
   'tile.journal.open': 'Zum Tagebuch',
 
   'tile.gardener.unknown':
-    'Noch nicht geprüft. Der Pflegelauf findet verwaiste Seiten, kaputte Links und liegengebliebene Dumps.',
+    'Noch nicht geprüft. Die Prüfung findet verwaiste Seiten, kaputte Links und liegengebliebene Dumps.',
   'tile.gardener.check': 'Jetzt prüfen',
   'tile.gardener.worst': 'Am schwersten',
   'tile.gardener.health': 'Gesundheit',
-  'tile.gardener.findingsOne': '1 Befund',
-  'tile.gardener.findingsMany': '{count} Befunde',
+  'tile.gardener.findingsOne': '1 Ergebnis',
+  'tile.gardener.findingsMany': '{count} Ergebnisse',
   'tile.gardener.open': 'Zur Pflege',
 } as const;

@@ -16,6 +16,7 @@
 import { useState } from 'react';
 import type { Project, ProjectStatus, Todo, VaultDoc, WaitingOn } from '@shared/types';
 import { Button } from '../../atoms/Button';
+import { Checkbox } from '../../atoms/Checkbox';
 import { ErrorState } from '../../components/ErrorState';
 import { LlmMissing } from '../../components/LlmMissing';
 import { Markdown } from '../../components/Markdown';
@@ -78,6 +79,7 @@ export function ProjectDetail({ project, doc, now }: ProjectDetailProps) {
   const [waitingBusy, setWaitingBusy] = useState<number | null>(null);
   const [focused, setFocused] = useState<Todo | null>(null);
   const [composeOpen, setComposeOpen] = useState(false);
+  const [showDone, setShowDone] = useState(false);
 
   const sessions = useProjectSessions(project);
 
@@ -164,7 +166,21 @@ export function ProjectDetail({ project, doc, now }: ProjectDetailProps) {
     todoMutations.toggle.error ??
     todoMutations.create.error ??
     todoMutations.update.error ??
+    todoMutations.reorder.error ??
     null;
+  const allTodos = todos.data ?? [];
+  const shownTodos = showDone ? allTodos : allTodos.filter((todo) => todo.state === 'open');
+
+  /* Reordering the visible rows still sends every file row. Completed todos
+     keep their hidden slots, so filtering cannot turn a drag into a conflict. */
+  const reorderShown = (ids: string[]): void => {
+    const visible = new Set(shownTodos.map((todo) => todo.id));
+    let nextVisible = 0;
+    const allIds = allTodos.map((todo) =>
+      visible.has(todo.id) ? (ids[nextVisible++] ?? todo.id) : todo.id,
+    );
+    todoMutations.reorder.mutate({ ids: allIds });
+  };
 
   return (
     /* `section` mit Namen, nicht ein `div` mit `aria-label`: an einem Element
@@ -230,29 +246,44 @@ export function ProjectDetail({ project, doc, now }: ProjectDetailProps) {
       <Panel
         title={t('project.todos.title')}
         meta={t('todos.openOf', { open: project.openTodoCount, total: project.todoCount })}
+        action={
+          <Checkbox
+            label={t('todos.showDone')}
+            checked={showDone}
+            onChange={(event) => setShowDone(event.target.checked)}
+          />
+        }
       >
         {todos.isPending ? (
           <Skeleton lines={3} height={30} />
         ) : (
           <TodoList
-            todos={todos.data ?? []}
-            emptyText={t('project.todos.empty')}
+            todos={shownTodos}
+            emptyText={
+              allTodos.length > 0 && !showDone ? t('todos.scopeEmpty') : t('project.todos.empty')
+            }
             activeId={focused?.id ?? null}
             busyId={
-              todoMutations.toggle.isPending ? (todoMutations.toggle.variables ?? null) : null
+              todoMutations.toggle.isPending
+                ? (todoMutations.toggle.variables ?? null)
+                : todoMutations.update.isPending
+                  ? (todoMutations.update.variables?.id ?? null)
+                  : null
             }
             createBusy={todoMutations.create.isPending}
             composerOpen={composeOpen}
             onComposerChange={setComposeOpen}
             onFocusTodo={setFocused}
             onToggle={(todo) => todoMutations.toggle.mutate(todo.id)}
-            onDue={(todo, day) => todoMutations.update.mutate({ id: todo.id, due: day })}
-            onCreate={(text, due) =>
+            onEdit={(todo, values) => todoMutations.update.mutateAsync({ id: todo.id, ...values })}
+            onReorder={reorderShown}
+            onCreate={(text, due, priority) =>
               todoMutations.create.mutateAsync({
                 text,
                 scope: project.scope,
                 project: project.slug,
                 due,
+                priority,
               })
             }
             {...(now === undefined ? {} : { now })}

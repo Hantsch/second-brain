@@ -224,12 +224,12 @@ export const enScreens = {
   'screen.sources.empty.body':
     'Videos, files and web pages land immutably in raw/ and are distilled into wiki pages from there.',
   'screen.sources.empty.action': 'Add a source',
-  'screen.garden.overline': 'Against the rot',
-  'screen.garden.title': 'Gardening',
-  'screen.garden.empty.title': 'No gardening run yet',
+  'screen.garden.overline': 'Keep your knowledge healthy',
+  'screen.garden.title': 'Knowledge Care',
+  'screen.garden.empty.title': 'No check yet',
   'screen.garden.empty.body':
-    'The gardening run finds orphan pages, broken links, undistilled sources and projects without a next step.',
-  'screen.garden.empty.action': 'Start a run',
+    'The check finds orphan pages, broken links, undistilled sources and projects without a next step.',
+  'screen.garden.empty.action': 'Start check',
 
   /* Not “Behaviour”: that is one of the tabs — as an overline it would read as if
      that tab were open. */

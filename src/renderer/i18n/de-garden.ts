@@ -16,10 +16,10 @@ export const deGarden = {
   // ── Lauf ──────────────────────────────────────────────────────────────────
   'garden.run.action': 'Jetzt prüfen',
   'garden.run.again': 'Neu prüfen',
-  'garden.run.cancel': 'Lauf abbrechen',
-  'garden.run.running': 'Pflegelauf läuft',
+  'garden.run.cancel': 'Prüfung abbrechen',
+  'garden.run.running': 'Prüfung läuft',
   'garden.run.check': 'Prüfung: {check}',
-  'garden.run.audit': 'Das Modell deutet die Befunde',
+  'garden.run.audit': 'Das Modell deutet die Ergebnisse',
   'garden.run.step': '{done} von {total}',
   'garden.run.cancelled': 'Abgebrochen. Der letzte Bericht bleibt, wie er war.',
 
@@ -28,12 +28,12 @@ export const deGarden = {
   'garden.health.aria': 'Gesundheit {score} von 100',
   'garden.health.unknown': 'Noch nicht geprüft',
   'garden.health.unknownBody':
-    'Es liegt kein Pflegelauf vor. Ohne Lauf gibt es keinen Wert — eine 100 wäre erfunden.',
+    'Es liegt noch keine Prüfung vor. Ohne Prüfung gibt es keinen Wert — eine 100 wäre erfunden.',
   'garden.health.noStock':
     'Kein Bestand, auf den sich ein Wert beziehen könnte: keine Seiten, keine Projekte, keine Quellen, keine Dumps.',
   'garden.health.why': 'Woher der Wert kommt',
-  'garden.health.perfect': 'Nichts drückt den Wert: der Lauf hat keinen Befund gefunden.',
-  'garden.health.lost': '{count} von 100 Punkten gehen auf diese Befunde zurück.',
+  'garden.health.perfect': 'Nichts drückt den Wert: Die Prüfung hat keine Ergebnisse ergeben.',
+  'garden.health.lost': '{count} von 100 Punkten gehen auf diese Ergebnisse zurück.',
   'garden.health.pointOne': '1 Punkt',
   'garden.health.points': '{count} Punkte',
   'garden.health.ranAt': 'Zuletzt geprüft',
@@ -43,7 +43,7 @@ export const deGarden = {
   // ── Rat ───────────────────────────────────────────────────────────────────
   'garden.advice.label': 'Was als nächstes',
   'garden.advice.fromModel': 'Vom Modell gedeutet.',
-  'garden.advice.heuristic': 'Ohne Modell aus Zahl und Schwere der Befunde abgeleitet.',
+  'garden.advice.heuristic': 'Ohne Modell aus Zahl und Schwere der Ergebnisse abgeleitet.',
   'garden.advice.orphan':
     'Auf verwaiste Seiten einen Verweis setzen — über Links findet sie sonst niemand.',
   'garden.advice.broken-link': 'Kaputte Wikilinks in den genannten Zeilen richtigstellen.',
@@ -59,18 +59,18 @@ export const deGarden = {
   'garden.advice.missing-page': 'Für häufig genannte Begriffe eigene Seiten anlegen.',
 
   // ── Befunde ───────────────────────────────────────────────────────────────
-  'garden.findings.label': 'Befunde',
-  'garden.findings.totalOne': '1 Befund',
-  'garden.findings.total': '{count} Befunde',
+  'garden.findings.label': 'Ergebnisse',
+  'garden.findings.totalOne': '1 Ergebnis',
+  'garden.findings.total': '{count} Ergebnisse',
   'garden.findings.shown': '{shown} von {total} angezeigt',
-  'garden.findings.none': 'Keine Befunde.',
+  'garden.findings.none': 'Keine Ergebnisse.',
   'garden.findings.noneBody':
     'Geprüft wurden Wiki-Seiten und Kataloge, Rohquellen, Dumps in der Inbox und Projekte ohne nächsten Schritt.',
-  'garden.findings.filtered': 'Kein Befund passt zu diesem Filter.',
+  'garden.findings.filtered': 'Kein Ergebnis passt zu diesem Filter.',
   'garden.checkedAt': 'Zuletzt geprüft: {when}',
 
   // ── Filter ────────────────────────────────────────────────────────────────
-  'garden.filter.label': 'Befunde filtern',
+  'garden.filter.label': 'Ergebnisse filtern',
   'garden.filter.kind': 'Art',
   'garden.filter.module': 'Modul',
   'garden.filter.severity': 'Schwere',
@@ -121,7 +121,7 @@ export const deGarden = {
   'garden.card.preview': 'Geschrieben wird in {file}:',
   'garden.card.previewNothing': 'Schreibt nichts. Öffnet nur, wo es weitergeht.',
   'garden.card.dismiss': 'Passt so',
-  'garden.card.dismissed': 'Passt so. Der Befund zählt nicht mehr gegen die Gesundheit.',
+  'garden.card.dismissed': 'Passt so. Das Ergebnis zählt nicht mehr gegen die Gesundheit.',
   'garden.card.undismiss': 'Wieder anzeigen',
   'garden.card.written': 'Geschrieben: {file}',
   'garden.card.undo': 'Rückgängig',

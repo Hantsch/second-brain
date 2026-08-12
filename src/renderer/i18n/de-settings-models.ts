@@ -154,7 +154,7 @@ export const deSettingsModels = {
   'settings.fallback.wiki-ingest': 'Seiten bleiben, wie sie sind',
   'settings.fallback.journal-chat': 'Tageseintrag lässt sich weiter schreiben',
   'settings.fallback.project-status': 'Stand und nächster Schritt bleiben Handarbeit',
-  'settings.fallback.gardener-audit': 'Die deterministischen Befunde laufen weiter',
+  'settings.fallback.gardener-audit': 'Die deterministischen Prüfungen laufen weiter',
 } as const;
 
 export type SettingsModelsKey = keyof typeof deSettingsModels;

@@ -79,6 +79,7 @@ const RESPONSES: MockResponses = {
   'todos:toggle': () => ({ ...fx.todo, state: 'done', doneAt: fx.NOW }),
   'todos:create': ({ text, scope }) => ({ ...fx.todo, text, scope }),
   'todos:update': ({ text }) => ({ ...fx.todo, text: text ?? fx.todo.text }),
+  'todos:reorder': () => [fx.todo],
 
   'journal:list': () => [fx.journalDay],
   /* Der Tag kommt in Abschnitten — so zeigt die Ansicht im Browser-Modus

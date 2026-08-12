@@ -9,7 +9,7 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import axe from 'axe-core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -623,6 +623,27 @@ describe('Projektdetail', () => {
 // ── Todos ────────────────────────────────────────────────────────────────────
 
 describe('Todos im Projekt', () => {
+  it('blendet erledigte Todos standardmäßig aus und zeigt sie über die Kopfzeile', async () => {
+    mount();
+    await detailReady();
+
+    const toggle = screen.getByLabelText('Erledigte zeigen') as HTMLInputElement;
+    expect(toggle.checked).toBe(false);
+    expect(screen.queryByText(doneTodo.text)).toBeNull();
+
+    await userEvent.click(toggle);
+    expect(screen.getByText(doneTodo.text)).toBeTruthy();
+  });
+
+  it('zeigt Todo hinzufügen vor den bestehenden Einträgen', async () => {
+    mount();
+    await detailReady();
+
+    const add = screen.getByRole('button', { name: 'Todo hinzufügen' });
+    const firstTodo = screen.getByText(overdue.text);
+    expect(add.compareDocumentPosition(firstTodo) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
+  });
+
   it('hakt ein Todo ab', async () => {
     const { sb } = mount({ extra: { 'todos:toggle': () => ({ ...someday, state: 'done' }) } });
     await detailReady();
@@ -640,6 +661,10 @@ describe('Todos im Projekt', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Todo hinzufügen' }));
     await userEvent.type(screen.getByLabelText('Neues Todo'), 'Sitzungs-Fallback testen');
+    const priority = screen.getByRole('group', { name: 'Priorität des neuen Todos' });
+    expect(
+      within(priority).getByRole('button', { name: 'Medium' }).getAttribute('aria-pressed'),
+    ).toBe('true');
     await userEvent.click(screen.getAllByRole('button', { name: 'heute' })[0] as HTMLElement);
     await userEvent.click(screen.getByRole('button', { name: 'Anlegen' }));
 
@@ -650,6 +675,7 @@ describe('Todos im Projekt', () => {
           scope: 'work',
           project: portal.slug,
           due: '2026-08-10',
+          priority: 2,
         },
       ]),
     );
@@ -675,17 +701,92 @@ describe('Todos im Projekt', () => {
     );
   });
 
-  it('ändert eine Frist inline', async () => {
-    const { sb } = mount({ extra: { 'todos:update': () => ({ ...someday, due: TODAY }) } });
+  it('bearbeitet Text, Frist und Priorität nachträglich', async () => {
+    const { sb } = mount({
+      extra: {
+        'todos:update': () => ({
+          ...someday,
+          text: 'Testmandant vorbereiten',
+          due: TODAY,
+          priority: 3,
+        }),
+      },
+    });
     await detailReady();
 
     await userEvent.click(
-      screen.getByRole('button', { name: 'Frist von „Testmandant aufsetzen" ändern' }),
+      screen.getByRole('button', { name: '„Testmandant aufsetzen“ bearbeiten' }),
     );
+    await userEvent.clear(screen.getByLabelText('Todo-Text'));
+    await userEvent.type(screen.getByLabelText('Todo-Text'), 'Testmandant vorbereiten');
     await userEvent.click(screen.getAllByRole('button', { name: 'heute' })[0] as HTMLElement);
+    const priority = screen.getByRole('group', {
+      name: 'Priorität von „Testmandant aufsetzen“ ändern',
+    });
+    expect(
+      within(priority).getByRole('button', { name: 'Medium' }).getAttribute('aria-pressed'),
+    ).toBe('true');
+    await userEvent.click(within(priority).getByRole('button', { name: 'High' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
 
     await waitFor(() =>
-      expect(callsTo(sb, 'todos:update')).toEqual([{ id: someday.id, due: '2026-08-10' }]),
+      expect(callsTo(sb, 'todos:update')).toEqual([
+        {
+          id: someday.id,
+          text: 'Testmandant vorbereiten',
+          due: '2026-08-10',
+          priority: 3,
+        },
+      ]),
+    );
+  });
+
+  it('behält die bearbeitete Fassung bei einem Schreibkonflikt', async () => {
+    mount({
+      extra: {
+        'todos:update': () => {
+          throw Object.assign(new Error('Konflikt'), { code: 'conflict' });
+        },
+      },
+    });
+    await detailReady();
+
+    await userEvent.click(
+      screen.getByRole('button', { name: '„Testmandant aufsetzen“ bearbeiten' }),
+    );
+    await userEvent.clear(screen.getByLabelText('Todo-Text'));
+    await userEvent.type(screen.getByLabelText('Todo-Text'), 'Meine überarbeitete Fassung');
+    await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+
+    expect(await screen.findByText(/wurde zwischenzeitlich geändert/)).toBeTruthy();
+    expect((screen.getByLabelText('Todo-Text') as HTMLInputElement).value).toBe(
+      'Meine überarbeitete Fassung',
+    );
+  });
+
+  it('sortiert Projekt-Todos per Drag-and-drop um', async () => {
+    const { sb } = mount({ extra: { 'todos:reorder': () => TODOS } });
+    await detailReady();
+
+    const handle = screen.getByRole('button', { name: '„Testmandant aufsetzen“ umsortieren' });
+    const target = screen
+      .getByRole('button', { name: '„Ladezeiten der Angebotsliste senken“ umsortieren' })
+      .closest('li');
+    const transfer = {
+      effectAllowed: 'none',
+      setData: vi.fn(),
+      getData: vi.fn(() => someday.id),
+    };
+    fireEvent.dragStart(handle, { dataTransfer: transfer });
+    fireEvent.dragOver(target as HTMLElement, { dataTransfer: transfer, clientY: 0 });
+    expect(target?.classList.contains('sb-todorow--drop-before')).toBe(true);
+    fireEvent.drop(target as HTMLElement, { dataTransfer: transfer, clientY: 0 });
+    expect(target?.classList.contains('sb-todorow--drop-before')).toBe(false);
+
+    await waitFor(() =>
+      expect(callsTo(sb, 'todos:reorder')).toEqual([
+        { ids: [someday.id, overdue.id, today.id, doneTodo.id] },
+      ]),
     );
   });
 
@@ -726,6 +827,46 @@ describe('Alle Todos', () => {
     expect(within(privatePanel).getByText('Später')).toBeTruthy();
   });
 
+  it('sortiert innerhalb einer Fälligkeitsgruppe High vor Medium vor Low', async () => {
+    const low = todo({
+      id: 'todo-low',
+      text: 'Low zuerst fällig',
+      due: '2026-08-11',
+      dueInDays: 1,
+      priority: 1,
+    });
+    const medium = todo({
+      id: 'todo-medium',
+      text: 'Medium mittig fällig',
+      due: '2026-08-13',
+      dueInDays: 3,
+      priority: 2,
+    });
+    const high = todo({
+      id: 'todo-high',
+      text: 'High zuletzt fällig',
+      due: '2026-08-16',
+      dueInDays: 6,
+      priority: 3,
+    });
+
+    await openTab({ todos: [low, medium, high] });
+
+    const workPanel = (await screen.findByRole('heading', { name: 'Arbeit' })).closest(
+      '.sb-panel',
+    ) as HTMLElement;
+    const highText = within(workPanel).getByText(high.text);
+    const mediumText = within(workPanel).getByText(medium.text);
+    const lowText = within(workPanel).getByText(low.text);
+
+    expect(
+      highText.compareDocumentPosition(mediumText) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).not.toBe(0);
+    expect(mediumText.compareDocumentPosition(lowText) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(
+      0,
+    );
+  });
+
   it('zeigt Erledigte erst auf Wunsch', async () => {
     await openTab();
     await screen.findByRole('heading', { name: 'Arbeit' });
@@ -744,12 +885,16 @@ describe('Alle Todos', () => {
       .getByRole('heading', { name: 'Privat' })
       .closest('.sb-panel') as HTMLElement;
 
-    await userEvent.click(within(privatePanel).getByRole('button', { name: 'Todo hinzufügen' }));
+    const add = within(privatePanel).getByRole('button', { name: 'Todo hinzufügen' });
+    const firstTodo = within(privatePanel).getByText(privateTodo.text);
+    expect(add.compareDocumentPosition(firstTodo) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
+
+    await userEvent.click(add);
     await userEvent.type(within(privatePanel).getByLabelText('Neues Todo'), 'Balkon kehren{Enter}');
 
     await waitFor(() =>
       expect(callsTo(sb, 'todos:create')).toEqual([
-        { text: 'Balkon kehren', scope: 'private', project: null, due: null },
+        { text: 'Balkon kehren', scope: 'private', project: null, due: null, priority: 2 },
       ]),
     );
   });

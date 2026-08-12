@@ -114,16 +114,16 @@ const own = {
   'settings.behavior.coach.analyze.hint': 'Show patterns in the light of earlier entries.',
   'settings.behavior.coach.where':
     'This is the default. In the journal the attitude switches per round with Ctrl+1 to Ctrl+3.',
-  'settings.behavior.gardener': 'Gardening',
-  'settings.behavior.runOnOpen.label': 'Run the gardening pass when the vault opens',
+  'settings.behavior.gardener': 'Care',
+  'settings.behavior.runOnOpen.label': 'Check automatically when the vault opens',
   'settings.behavior.runOnOpen.hint':
     'Finds orphaned pages, broken links and dumps left lying around.',
   'settings.behavior.review.label': 'A page counts as stale after',
   'settings.behavior.review.hint':
-    'Days since the last "reviewed" in the frontmatter. Gardening names the page, it does not change it.',
-  'settings.behavior.gardenerLlm.label': 'Let a model interpret the findings',
+    'Days since the last "reviewed" in the frontmatter. The check flags the page, it does not change it.',
+  'settings.behavior.gardenerLlm.label': 'Let a model interpret the results',
   'settings.behavior.gardenerLlm.hint':
-    'On top of the checks: contradictions between pages, near duplicates, terms without a page. Without a route the pass stays deterministic and costs nothing.',
+    'On top of the checks: contradictions between pages, near duplicates, terms without a page. Without a route the check stays deterministic and costs nothing.',
 
   'settings.about.title': 'About this app',
   'settings.about.version': 'Version',

@@ -15,11 +15,11 @@ const BACKGROUND = '#0A0F16';
 const SAVE_DEBOUNCE_MS = 400;
 
 const ICON_FILES: Record<AppIcon, string> = {
-  'knowledge-garden': 'knowledge-garden.png',
-  'neural-core': 'neural-core.png',
-  'circuit-cortex': 'circuit-cortex.png',
-  'brain-chip': 'brain-chip.png',
-  'vault-brain': 'vault-brain.png',
+  'knowledge-garden': 'knowledge-garden.ico',
+  'neural-core': 'neural-core.ico',
+  'circuit-cortex': 'circuit-cortex.ico',
+  'brain-chip': 'brain-chip.ico',
+  'vault-brain': 'vault-brain.ico',
 };
 
 function appIconPath(icon: AppIcon): string {
@@ -66,8 +66,16 @@ export function createMainWindow(services: Services): BrowserWindow {
 
   attachBoundsPersistence(window, services);
   const stopIconSync = services.settings.onChange(({ app: settings }) => {
-    window.setIcon(appIconPath(settings.customization.appIcon));
+    const icon = appIconPath(settings.customization.appIcon);
+    window.setIcon(icon);
+    if (process.platform === 'win32') {
+      window.setAppDetails({ appId: 'app.hantsch.guston', appIconPath: icon, appIconIndex: 0 });
+    }
   });
+  if (process.platform === 'win32') {
+    const icon = appIconPath(services.settings.app().customization.appIcon);
+    window.setAppDetails({ appId: 'app.hantsch.guston', appIconPath: icon, appIconIndex: 0 });
+  }
   window.once('closed', stopIconSync);
   attachNavigationGuards(window);
   if (isDev()) attachDevToolsShortcut(window);

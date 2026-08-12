@@ -27,12 +27,13 @@
         "from": "assets/app-icons",
         "to": "assets/app-icons",
         "filter": [
-          "*.png"
+          "*.png",
+          "*.ico"
         ]
       }
     ],
     "win": {
-      "icon": "app-icons/knowledge-garden.png",
+      "icon": "app-icons/knowledge-garden.ico",
       "target": [
         "portable"
       ]

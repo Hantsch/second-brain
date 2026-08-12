@@ -413,7 +413,7 @@ describe('Lauf', () => {
     expect(screen.getByText('2 von 10')).toBeTruthy();
     expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe('20');
 
-    await userEvent.click(screen.getByRole('button', { name: 'Lauf abbrechen' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Prüfung abbrechen' }));
     expect(calls('gardener:cancel')).toEqual([undefined]);
     expect(
       await screen.findByText('Abgebrochen. Der letzte Bericht bleibt, wie er war.'),
@@ -438,7 +438,7 @@ describe('Lauf', () => {
       running: true,
     });
 
-    expect(await screen.findByText('Das Modell deutet die Befunde')).toBeTruthy();
+    expect(await screen.findByText('Das Modell deutet die Ergebnisse')).toBeTruthy();
   });
 });
 
@@ -453,7 +453,7 @@ describe('Bericht', () => {
     expect(screen.getByRole('img', { name: 'Gesundheit 72 von 100' })).toBeTruthy();
     expect(screen.getByText('1 Widerspruch')).toBeTruthy();
     expect(screen.getByText('1 kaputter Wikilink')).toBeTruthy();
-    expect(screen.getByText('28 von 100 Punkten gehen auf diese Befunde zurück.')).toBeTruthy();
+    expect(screen.getByText('28 von 100 Punkten gehen auf diese Ergebnisse zurück.')).toBeTruthy();
     /* Zeitpunkt in Mono, und ob ein Modell beteiligt war. */
     expect(screen.getByText('Zuletzt geprüft')).toBeTruthy();
     expect(screen.getByText('ohne Modell, nur die maschinellen Prüfungen')).toBeTruthy();
@@ -468,7 +468,7 @@ describe('Bericht', () => {
       screen.getByText('Widersprüche benennen — beide Fassungen bleiben stehen.'),
     ).toBeTruthy();
     expect(
-      screen.getByText('Ohne Modell aus Zahl und Schwere der Befunde abgeleitet.'),
+      screen.getByText('Ohne Modell aus Zahl und Schwere der Ergebnisse abgeleitet.'),
     ).toBeTruthy();
     /* Höchstens drei Sätze. */
     expect(
@@ -482,7 +482,7 @@ describe('Bericht', () => {
     await screen.findByText('72');
 
     /* Vollständig: fünf Befunde, fünf Gruppen. */
-    expect(screen.getByText('5 Befunde')).toBeTruthy();
+    expect(screen.getByText('5 Ergebnisse')).toBeTruthy();
     expect(screen.getByRole('heading', { name: /Kaputte Wikilinks/ })).toBeTruthy();
     expect(screen.getByText('Was ein Modell zusätzlich fände:')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Routing einrichten' })).toBeTruthy();
@@ -499,13 +499,13 @@ describe('Bericht', () => {
     );
     wrap(<GardenScreen />);
 
-    expect(await screen.findByText('Keine Befunde.')).toBeTruthy();
+    expect(await screen.findByText('Keine Ergebnisse.')).toBeTruthy();
     /* Zeitpunkt und Umfang stehen in einem Satz: „zuletzt geprüft" plus was
        geprüft wurde. Der Tag selbst hängt an der Uhr des Rechners. */
     expect(screen.getByText(/Zuletzt geprüft:/)).toBeTruthy();
     expect(screen.getByText(/Geprüft wurden Wiki-Seiten/)).toBeTruthy();
     expect(
-      screen.getByText('Nichts drückt den Wert: der Lauf hat keinen Befund gefunden.'),
+      screen.getByText('Nichts drückt den Wert: Die Prüfung hat keine Ergebnisse ergeben.'),
     ).toBeTruthy();
   });
 
@@ -519,7 +519,7 @@ describe('Bericht', () => {
     expect(await screen.findByText('1 von 5 angezeigt')).toBeTruthy();
     expect(screen.queryByRole('heading', { name: /Kaputte Wikilinks/ })).toBeNull();
     await userEvent.click(screen.getByRole('button', { name: 'Filter zurücksetzen' }));
-    expect(await screen.findByText('5 Befunde')).toBeTruthy();
+    expect(await screen.findByText('5 Ergebnisse')).toBeTruthy();
   });
 });
 
@@ -705,7 +705,7 @@ describe('Pflege-Kachel', () => {
     wrap(<GardenerTile />);
 
     expect(await screen.findByText('72')).toBeTruthy();
-    expect(screen.getByText('5 Befunde')).toBeTruthy();
+    expect(screen.getByText('5 Ergebnisse')).toBeTruthy();
     expect(await screen.findByText('1 Widerspruch')).toBeTruthy();
     expect(screen.getByText('1 liegengebliebener Dump')).toBeTruthy();
     /* Nur die zwei dringendsten. */

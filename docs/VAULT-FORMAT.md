@@ -143,7 +143,7 @@ any editor can work with it. Optional inline markers:
 | `@due:2026-08-15`     | Due on                                     |
 | `@wait:Stefan`        | Waiting on a person                        |
 | `@needed:2026-08-20`  | Reply must be there by then at the latest  |
-| `!` `!!` `!!!`        | Priority 1–3                               |
+| `!` `!!` `!!!`        | Low, medium (default), high priority        |
 | `#tag`                | Tag                                        |
 | `@done:2026-08-09`    | Set when checked off                       |
 

@@ -440,6 +440,7 @@
   width: 100%;
 }
 .sb-todorow {
+  position: relative;
   display: flex;
   align-items: flex-start;
   gap: var(--space-3);
@@ -447,11 +448,41 @@
   border-radius: var(--radius-md);
   min-width: 0;
 }
+.sb-todorow--drop-before::before,
+.sb-todorow--drop-after::after {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  left: var(--space-2);
+  right: var(--space-2);
+  height: 2px;
+  border-radius: var(--radius-full);
+  background: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  pointer-events: none;
+}
+.sb-todorow--drop-before::before {
+  top: -1px;
+}
+.sb-todorow--drop-after::after {
+  bottom: -1px;
+}
 .sb-todorow:hover {
   background: var(--surface-raised);
 }
 .sb-todorow--active {
   background: var(--surface-raised);
+}
+.sb-todorow--dragging {
+  opacity: 0.45;
+}
+.sb-todorow-drag {
+  flex-shrink: 0;
+  margin: -6px 0 -6px calc(-1 * var(--space-2));
+  cursor: grab;
+}
+.sb-todorow-drag:active {
+  cursor: grabbing;
 }
 /* The app's most frequent action needs the greatest care: the checkbox
    stays 16px, the hit area is 32x32. The negative margins keep the checkbox
@@ -495,8 +526,20 @@
   color: var(--text-faint);
 }
 .sb-todorow-prio {
-  font-family: var(--font-mono);
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  height: 20px;
+  flex-shrink: 0;
+}
+.sb-todorow-prio--high {
   color: var(--danger);
+}
+.sb-todorow-prio--medium {
+  color: var(--text-muted);
+}
+.sb-todorow-prio--low {
+  color: var(--text-faint);
 }
 .sb-todorow-wait,
 .sb-todorow-project {
@@ -521,6 +564,41 @@
 .sb-todocompose-hint {
   font-size: var(--text-2xs);
   color: var(--text-faint);
+}
+.sb-priority-toggle {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+}
+.sb-priority-choice {
+  min-width: 4.75rem;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+}
+.sb-priority-choice--high[aria-pressed='true'] {
+  color: var(--danger);
+}
+.sb-priority-choice--medium[aria-pressed='true'] {
+  color: var(--text-muted);
+}
+.sb-priority-choice--low[aria-pressed='true'] {
+  color: var(--text-faint);
+}
+.sb-todoedit {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+}
+.sb-todoedit-fields {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
 }
 
 /* ── Deadline chip ──────────────────────────────────────────────────────── */

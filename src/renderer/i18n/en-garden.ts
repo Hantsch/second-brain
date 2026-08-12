@@ -5,10 +5,10 @@ export const enGarden = {
   // ── Run ───────────────────────────────────────────────────────────────────
   'garden.run.action': 'Check now',
   'garden.run.again': 'Check again',
-  'garden.run.cancel': 'Cancel the run',
-  'garden.run.running': 'Gardening pass running',
+  'garden.run.cancel': 'Cancel check',
+  'garden.run.running': 'Check running',
   'garden.run.check': 'Check: {check}',
-  'garden.run.audit': 'The model is interpreting the findings',
+  'garden.run.audit': 'The model is interpreting the results',
   'garden.run.step': '{done} of {total}',
   'garden.run.cancelled': 'Cancelled. The last report stays as it was.',
 
@@ -17,12 +17,12 @@ export const enGarden = {
   'garden.health.aria': 'Health {score} out of 100',
   'garden.health.unknown': 'Not checked yet',
   'garden.health.unknownBody':
-    'There is no gardening pass yet. Without one there is no score — a 100 would be invented.',
+    'There is no check yet. Without one there is no score — a 100 would be invented.',
   'garden.health.noStock':
     'Nothing for a score to refer to: no pages, no projects, no sources, no dumps.',
   'garden.health.why': 'Where the score comes from',
-  'garden.health.perfect': 'Nothing pulls the score down: the pass found no findings.',
-  'garden.health.lost': '{count} of 100 points come from these findings.',
+  'garden.health.perfect': 'Nothing pulls the score down: the check returned no results.',
+  'garden.health.lost': '{count} of 100 points come from these results.',
   'garden.health.pointOne': '1 point',
   'garden.health.points': '{count} points',
   'garden.health.ranAt': 'Last checked',
@@ -32,7 +32,7 @@ export const enGarden = {
   // ── Advice ────────────────────────────────────────────────────────────────
   'garden.advice.label': 'What to do next',
   'garden.advice.fromModel': 'Interpreted by the model.',
-  'garden.advice.heuristic': 'Derived from the number and weight of the findings, without a model.',
+  'garden.advice.heuristic': 'Derived from the number and weight of the results, without a model.',
   'garden.advice.orphan':
     'Add a reference to orphaned pages — through links nobody finds them otherwise.',
   'garden.advice.broken-link': 'Correct broken wikilinks in the lines named.',
@@ -46,18 +46,18 @@ export const enGarden = {
   'garden.advice.missing-page': 'Give frequently named terms their own pages.',
 
   // ── Findings ──────────────────────────────────────────────────────────────
-  'garden.findings.label': 'Findings',
-  'garden.findings.totalOne': '1 finding',
-  'garden.findings.total': '{count} findings',
+  'garden.findings.label': 'Results',
+  'garden.findings.totalOne': '1 result',
+  'garden.findings.total': '{count} results',
   'garden.findings.shown': '{shown} of {total} shown',
-  'garden.findings.none': 'No findings.',
+  'garden.findings.none': 'No results.',
   'garden.findings.noneBody':
     'Checked: wiki pages and catalogues, raw sources, dumps in the inbox, and projects without a next step.',
-  'garden.findings.filtered': 'No finding matches this filter.',
+  'garden.findings.filtered': 'No result matches this filter.',
   'garden.checkedAt': 'Last checked: {when}',
 
   // ── Filter ────────────────────────────────────────────────────────────────
-  'garden.filter.label': 'Filter findings',
+  'garden.filter.label': 'Filter results',
   'garden.filter.kind': 'Kind',
   'garden.filter.module': 'Module',
   'garden.filter.severity': 'Weight',
@@ -108,7 +108,7 @@ export const enGarden = {
   'garden.card.preview': 'What gets written to {file}:',
   'garden.card.previewNothing': 'Writes nothing. Only opens where the work continues.',
   'garden.card.dismiss': 'Fine as it is',
-  'garden.card.dismissed': 'Fine as it is. The finding no longer counts against the health score.',
+  'garden.card.dismissed': 'Fine as it is. The result no longer counts against the health score.',
   'garden.card.undismiss': 'Show it again',
   'garden.card.written': 'Written: {file}',
   'garden.card.undo': 'Undo',

@@ -44,6 +44,7 @@ export interface TodoMutations {
   toggle: UseMutationResult<Todo, unknown, string>;
   create: UseMutationResult<Todo, unknown, IpcRequest<'todos:create'>>;
   update: UseMutationResult<Todo, unknown, IpcRequest<'todos:update'>>;
+  reorder: UseMutationResult<Todo[], unknown, IpcRequest<'todos:reorder'>>;
 }
 
 export function useTodoMutations(): TodoMutations {
@@ -59,6 +60,10 @@ export function useTodoMutations(): TodoMutations {
     }),
     update: useMutation({
       mutationFn: api.todos.update,
+      onSuccess: () => refresh(client),
+    }),
+    reorder: useMutation({
+      mutationFn: api.todos.reorder,
       onSuccess: () => refresh(client),
     }),
   };

@@ -2,8 +2,8 @@
 
    A todo is a checkbox in a file the user also edits in Obsidian. That's why
    the strictest version of the write rule from docs/VAULT-FORMAT.md applies
-   here: **exactly one line gets rewritten**, the rest of the file goes back
-   to disk verbatim (`todo-lines.ts`).
+   here: edits rewrite exactly one line; reordering only permutes the existing
+   checkbox lines. Everything else goes back to disk verbatim (`todo-lines.ts`).
 
    What counts as "changed externally" is decided by comparing against the
    version the UI has seen: if the line can no longer be found, or it now
@@ -21,7 +21,13 @@ import type { HandlerMap } from './registry';
 import { defineHandlers, fail } from './registry';
 import { journalStore } from './journal-day';
 import { requireLists } from './lists';
-import { formatCheckboxLine, parseCheckboxLine, replaceTodoText, setDayMarker } from './todo-lines';
+import {
+  formatCheckboxLine,
+  parseCheckboxLine,
+  replaceTodoText,
+  setDayMarker,
+  setPriority,
+} from './todo-lines';
 import type { CheckboxLine } from './todo-lines';
 import { settle } from './wiki-bridge';
 import type { VaultStoreLike } from '../contracts';
@@ -210,7 +216,7 @@ export function todoHandlers(services: Services): HandlerMap {
       return reread(services, found.todo.path, found.ordinal, now);
     },
 
-    'todos:create': async ({ text, scope, project, due }) => {
+    'todos:create': async ({ text, scope, project, due, priority = 2 }) => {
       const body = typeof text === 'string' ? text.replace(/\s+/g, ' ').trim() : '';
       if (body.length === 0) throw fail('invalid', 'text: darf nicht leer sein');
       if (scope !== 'work' && scope !== 'private') {
@@ -219,6 +225,9 @@ export function todoHandlers(services: Services): HandlerMap {
       const day = typeof due === 'string' && due.length > 0 ? due : null;
       if (day !== null && !/^\d{4}-\d{2}-\d{2}$/.test(day)) {
         throw fail('invalid', 'due: erwartet ein Datum YYYY-MM-DD');
+      }
+      if (priority !== 1 && priority !== 2 && priority !== 3) {
+        throw fail('invalid', 'priority: erwartet 1, 2 oder 3');
       }
       const now = new Date();
       const target = await targetFor(services, project, scope, now);
@@ -230,7 +239,7 @@ export function todoHandlers(services: Services): HandlerMap {
         scope,
         due: day,
         waitingFor: null,
-        priority: 0,
+        priority,
         project: null,
       });
 
@@ -246,9 +255,9 @@ export function todoHandlers(services: Services): HandlerMap {
       return reread(services, target.path, ordinal, now);
     },
 
-    /* Change text and due date, keep all other markers — including the ones
-       the app doesn't set itself. */
-    'todos:update': async ({ id, text, due }) => {
+    /* Change text, due date and priority, keep all other markers — including
+       the ones the app doesn't set itself. */
+    'todos:update': async ({ id, text, due, priority }) => {
       const now = new Date();
       const found = await locate(services, id, now);
       let rest = found.parts.rest;
@@ -263,9 +272,75 @@ export function todoHandlers(services: Services): HandlerMap {
         }
         rest = setDayMarker(rest, 'due', due);
       }
+      if (priority !== undefined) {
+        if (priority !== 1 && priority !== 2 && priority !== 3) {
+          throw fail('invalid', 'priority: erwartet 1, 2 oder 3');
+        }
+        rest = setPriority(rest, priority);
+      }
       if (rest === found.parts.rest) return found.todo;
       await writeLine(services, found, rest);
       return reread(services, found.todo.path, found.ordinal, now);
+    },
+
+    'todos:reorder': async ({ ids }) => {
+      if (!Array.isArray(ids) || ids.length === 0 || new Set(ids).size !== ids.length) {
+        throw fail('invalid', 'ids: erwartet alle Todo-IDs genau einmal');
+      }
+      const now = new Date();
+      const indexed = requireLists(services).todos();
+      const first = indexed.find((todo) => todo.id === ids[0]);
+      if (first === undefined) throw fail('not-found', 'dieses Todo gibt es nicht');
+      if (first.project === null)
+        throw fail('invalid', 'nur Projekt-Todos lassen sich umsortieren');
+
+      const expected = indexed.filter((todo) => todo.path === first.path);
+      if (
+        expected.length !== ids.length ||
+        expected.some((todo) => !ids.includes(todo.id)) ||
+        expected.some((todo) => todo.project !== first.project)
+      ) {
+        throw fail('conflict', 'Die Todo-Liste hat sich zwischenzeitlich geändert.');
+      }
+
+      const doc = await store(services).read(first.path);
+      if (doc === null) throw fail('not-found', `diese Datei gibt es nicht: ${first.path}`);
+      const fresh = todosOf(first.path, doc, now);
+      if (
+        fresh.length !== expected.length ||
+        fresh.some((todo) => {
+          const before = expected.find((entry) => entry.id === todo.id);
+          return before === undefined || !sameTodo(todo, before);
+        })
+      ) {
+        throw fail('conflict', `Die Todo-Liste in ${first.path} wurde zwischenzeitlich geändert.`);
+      }
+
+      const byId = new Map(
+        fresh.map(
+          (todo) => [todo.id, doc.body.split('\n')[todo.line - BODY_OFFSET] ?? ''] as const,
+        ),
+      );
+      const lines = doc.body.split('\n');
+      const slots = fresh.map((todo) => todo.line - BODY_OFFSET).sort((a, b) => a - b);
+      ids.forEach((id, index) => {
+        const line = byId.get(id);
+        if (line === undefined)
+          throw fail('conflict', 'Die Todo-Liste ist nicht mehr vollständig.');
+        const at = slots[index];
+        if (at !== undefined) lines[at] = line;
+      });
+
+      await store(services).write({
+        path: first.path,
+        body: lines.join('\n'),
+        expectedHash: doc.hash,
+      });
+      await settle(services, [first.path], 'todos');
+      const written = await store(services).read(first.path);
+      if (written === null)
+        throw fail('io', `die Datei ließ sich nicht wieder einlesen: ${first.path}`);
+      return todosOf(first.path, written, now);
     },
   });
 }

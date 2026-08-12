@@ -239,12 +239,12 @@ export const deScreens = {
   'screen.sources.empty.body':
     'Videos, Dateien und Webseiten landen unveränderlich in raw/ und werden von dort zu Wiki-Seiten verdichtet.',
   'screen.sources.empty.action': 'Quelle aufnehmen',
-  'screen.garden.overline': 'Gegen das Verrotten',
+  'screen.garden.overline': 'Wissen gesund halten',
   'screen.garden.title': 'Pflege',
-  'screen.garden.empty.title': 'Noch kein Pflegelauf',
+  'screen.garden.empty.title': 'Noch keine Prüfung',
   'screen.garden.empty.body':
-    'Der Pflegelauf findet verwaiste Seiten, kaputte Links, unverdichtete Quellen und Projekte ohne nächsten Schritt.',
-  'screen.garden.empty.action': 'Pflegelauf starten',
+    'Die Prüfung findet verwaiste Seiten, kaputte Links, unverdichtete Quellen und Projekte ohne nächsten Schritt.',
+  'screen.garden.empty.action': 'Prüfung starten',
 
   /* Nicht „Verhalten": das ist einer der Tabs — als Überzeile gelesen sähe der
      Screen aus, als wäre dieser Tab offen. */

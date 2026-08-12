@@ -70,8 +70,8 @@ export const enDashboard = {
   'module.journal-streak.purpose': 'Days in a row, last entry, mood over the past weeks.',
   'module.claude-sessions.name': 'Claude sessions',
   'module.claude-sessions.purpose': 'Work traces of the agent CLI, linked to your projects.',
-  'module.gardener.name': 'Gardening',
-  'module.gardener.purpose': 'Health score and findings of the last gardening pass.',
+  'module.gardener.name': 'Care',
+  'module.gardener.purpose': 'Health and results from the last check.',
 
   // ── Tiles ────────────────────────────────────────────────────────────────
   'tile.more': '{count} more',
@@ -153,11 +153,11 @@ export const enDashboard = {
   'tile.journal.open': 'To the journal',
 
   'tile.gardener.unknown':
-    'Not checked yet. The gardening pass finds orphaned pages, broken links and forgotten dumps.',
+    'Not checked yet. The check finds orphaned pages, broken links and forgotten dumps.',
   'tile.gardener.check': 'Check now',
   'tile.gardener.worst': 'Heaviest',
   'tile.gardener.health': 'Health',
-  'tile.gardener.findingsOne': '1 finding',
-  'tile.gardener.findingsMany': '{count} findings',
-  'tile.gardener.open': 'To gardening',
+  'tile.gardener.findingsOne': '1 result',
+  'tile.gardener.findingsMany': '{count} results',
+  'tile.gardener.open': 'Open Care',
 } as const;

@@ -14,8 +14,8 @@ export const deWiki = {
   'modules.counts': '{sources} Quellen · {entities} Entitäten · {concepts} Konzepte',
   'modules.lastIngest': 'zuletzt verdichtet {date}',
   'modules.neverIngested': 'noch nichts verdichtet',
-  'modules.findings': '{count} Pflege-Befunde',
-  'modules.findingsOne': 'ein Pflege-Befund',
+  'modules.findings': '{count} Ergebnisse aus der Pflege',
+  'modules.findingsOne': 'ein Ergebnis aus der Pflege',
   'modules.open': 'Modul {title} öffnen',
   'modules.back': 'Alle Module',
   'modules.noDescription': 'Ohne Beschreibung.',
@@ -106,13 +106,13 @@ export const deWiki = {
   'log.missing': 'Für dieses Modul gibt es noch keine Chronik.',
   'log.kind.ingest': 'Quelle aufgenommen',
   'log.kind.query': 'Frage beantwortet',
-  'log.kind.lint': 'Pflegelauf',
+  'log.kind.lint': 'Prüfung',
   'log.touched': 'Berührt',
   'log.summary': 'Zusammenfassung',
   'log.notes': 'Notiz',
   'log.answeredFrom': 'Beantwortet aus',
   'log.filedBack': 'Abgelegt als',
-  'log.findings': 'Befunde',
+  'log.findings': 'Ergebnisse',
 
   'modules.sourcesTab.empty':
     'Für dieses Modul ist noch keine Rohquelle verdichtet. Quellen kommen über den Screen „Quellen" herein.',
@@ -174,7 +174,7 @@ export const deWiki = {
   'sources.awaiting.model': 'Modell einrichten',
   'sources.unfiled.title': 'Quelle liegt im Vault, noch keinem Modul zugeordnet',
   'sources.unfiled.body':
-    'So gewollt bei „später einordnen": die Rohquelle steht, verdichtet wird sie später — der Pflegelauf meldet sie als unverdichtet.',
+    'So gewollt bei „später einordnen": die Rohquelle steht, verdichtet wird sie später — die Prüfung meldet sie als unverdichtet.',
 
   // ── Quellen: Bestand ──────────────────────────────────────────────────────
   'sources.list.title': 'Aufgenommene Quellen',

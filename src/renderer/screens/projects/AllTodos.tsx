@@ -73,9 +73,11 @@ export function AllTodos({ onNewProject, now }: AllTodosProps) {
         />
       </div>
 
-      {mutations.toggle.error === null && mutations.create.error === null ? null : (
+      {mutations.toggle.error === null &&
+      mutations.create.error === null &&
+      mutations.update.error === null ? null : (
         <ErrorState
-          error={mutations.toggle.error ?? mutations.create.error}
+          error={mutations.toggle.error ?? mutations.create.error ?? mutations.update.error}
           variant="secondary"
           scrollIntoView
         />
@@ -88,6 +90,24 @@ export function AllTodos({ onNewProject, now }: AllTodosProps) {
             title={t(`scope.${group.scope}`)}
             meta={t('todos.openOf', { open: group.openCount, total: group.total })}
           >
+            <TodoList
+              todos={[]}
+              emptyText=""
+              createBusy={mutations.create.isPending}
+              composerOpen={composeScope === group.scope}
+              onComposerChange={(open) => setComposeScope(open ? group.scope : null)}
+              onToggle={() => undefined}
+              onCreate={(text, due, priority) =>
+                mutations.create.mutateAsync({
+                  text,
+                  scope: group.scope,
+                  project: null,
+                  due,
+                  priority,
+                })
+              }
+              {...(now === undefined ? {} : { now })}
+            />
             {group.groups.length === 0 ? (
               <p className="sb-panel-empty">{t('todos.scopeEmpty')}</p>
             ) : (
@@ -105,24 +125,14 @@ export function AllTodos({ onNewProject, now }: AllTodosProps) {
                     showProject
                     onFocusTodo={setFocused}
                     onToggle={(todo) => mutations.toggle.mutate(todo.id)}
-                    onDue={(todo, day) => mutations.update.mutate({ id: todo.id, due: day })}
+                    onEdit={(todo, values) =>
+                      mutations.update.mutateAsync({ id: todo.id, ...values })
+                    }
                     {...(now === undefined ? {} : { now })}
                   />
                 </div>
               ))
             )}
-            <TodoList
-              todos={[]}
-              emptyText=""
-              createBusy={mutations.create.isPending}
-              composerOpen={composeScope === group.scope}
-              onComposerChange={(open) => setComposeScope(open ? group.scope : null)}
-              onToggle={() => undefined}
-              onCreate={(text, due) =>
-                mutations.create.mutateAsync({ text, scope: group.scope, project: null, due })
-              }
-              {...(now === undefined ? {} : { now })}
-            />
           </Panel>
         ))}
       </div>

@@ -146,5 +146,5 @@ export const enSettingsModels: Record<SettingsModelsKey, string> = {
   'settings.fallback.wiki-ingest': 'pages stay as they are',
   'settings.fallback.journal-chat': 'the day entry can still be written',
   'settings.fallback.project-status': 'status and next step stay handwork',
-  'settings.fallback.gardener-audit': 'the deterministic findings keep running',
+  'settings.fallback.gardener-audit': 'the deterministic checks keep running',
 };

@@ -216,10 +216,22 @@ export interface IpcRoutes {
   };
   'todos:toggle': { req: { id: string }; res: Todo };
   'todos:create': {
-    req: { text: string; scope: Scope; project?: string | null; due?: string | null };
+    req: {
+      text: string;
+      scope: Scope;
+      project?: string | null;
+      due?: string | null;
+      /** 1 = low, 2 = medium, 3 = high. Medium is the default. */
+      priority?: 1 | 2 | 3;
+    };
     res: Todo;
   };
-  'todos:update': { req: { id: string; text?: string; due?: string | null }; res: Todo };
+  'todos:update': {
+    req: { id: string; text?: string; due?: string | null; priority?: 1 | 2 | 3 };
+    res: Todo;
+  };
+  /** Reorder every checkbox in one project file by stable todo id. */
+  'todos:reorder': { req: { ids: string[] }; res: Todo[] };
 
   // ── Journal & Coaching ───────────────────────────────────────────────────
   'journal:list': { req: { limit?: number }; res: JournalDay[] };
@@ -474,6 +486,7 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'todos:toggle',
   'todos:create',
   'todos:update',
+  'todos:reorder',
   'journal:list',
   'journal:get',
   'journal:append',

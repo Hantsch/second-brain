@@ -115,15 +115,15 @@ const own = {
   'settings.behavior.coach.where':
     'Gilt als Vorgabe. Im Tagebuch lässt sich die Haltung pro Runde mit Strg+1 bis Strg+3 wechseln.',
   'settings.behavior.gardener': 'Pflege',
-  'settings.behavior.runOnOpen.label': 'Pflegelauf beim Öffnen des Vaults',
+  'settings.behavior.runOnOpen.label': 'Beim Öffnen des Vaults automatisch prüfen',
   'settings.behavior.runOnOpen.hint':
     'Findet verwaiste Seiten, kaputte Links und liegengebliebene Dumps.',
   'settings.behavior.review.label': 'Eine Seite gilt als angestaubt nach',
   'settings.behavior.review.hint':
-    'Tage seit dem letzten „reviewed" im Frontmatter. Die Pflege nennt die Seite dann, sie ändert sie nicht.',
-  'settings.behavior.gardenerLlm.label': 'Befunde von einem Modell deuten lassen',
+    'Tage seit dem letzten „reviewed" im Frontmatter. Die Prüfung nennt die Seite dann, sie ändert sie nicht.',
+  'settings.behavior.gardenerLlm.label': 'Ergebnisse von einem Modell deuten lassen',
   'settings.behavior.gardenerLlm.hint':
-    'Zusätzlich zu den Prüfungen: Widersprüche zwischen Seiten, Beinahe-Dubletten, Begriffe ohne Seite. Ohne Route bleibt der Lauf deterministisch und kostet nichts.',
+    'Zusätzlich zu den Prüfungen: Widersprüche zwischen Seiten, Beinahe-Dubletten, Begriffe ohne Seite. Ohne Route bleibt die Prüfung deterministisch und kostet nichts.',
 
   'settings.about.title': 'Über diese App',
   'settings.about.version': 'Version',

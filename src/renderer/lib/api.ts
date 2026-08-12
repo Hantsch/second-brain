@@ -78,6 +78,7 @@ export const api = {
     toggle: (id: string) => call('todos:toggle', { id }),
     create: (request: IpcRequest<'todos:create'>) => call('todos:create', request),
     update: (request: IpcRequest<'todos:update'>) => call('todos:update', request),
+    reorder: (request: IpcRequest<'todos:reorder'>) => call('todos:reorder', request),
   },
   journal: {
     list: (limit?: number) => call('journal:list', limit === undefined ? {} : { limit }),

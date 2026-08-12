@@ -76,6 +76,18 @@ export function setDayMarker(rest: string, marker: DayMarker, day: string | null
   return base.length === 0 ? `@${marker}:${day}` : `${base} @${marker}:${day}`;
 }
 
+/** Set the portable `!`/`!!`/`!!!` priority marker without moving other markers. */
+export function setPriority(rest: string, priority: 1 | 2 | 3): string {
+  const pattern = /(?:^|[ \t]+)!{1,3}(?=[ \t]|$)/;
+  const found = pattern.exec(rest);
+  if (found !== null) {
+    const lead = /^\s/.test(found[0] ?? '') ? ' ' : '';
+    return tidy(rest.replace(pattern, `${lead}${'!'.repeat(priority)}`));
+  }
+  const base = tidy(rest);
+  return base.length === 0 ? '!'.repeat(priority) : `${base} ${'!'.repeat(priority)}`;
+}
+
 /**
  * Swap out the display text and keep all markers. The text is whatever
  * comes before the first marker — exactly the split the parser sees.

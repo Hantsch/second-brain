@@ -44,7 +44,7 @@ export const en: Record<TranslationKey, string> = {
   'rail.journal': 'Journal',
   'rail.modules': 'Modules',
   'rail.sources': 'Sources',
-  'rail.garden': 'Gardening',
+  'rail.garden': 'Care',
   'rail.settings': 'Settings',
 
   'time.today': 'today',
@@ -162,7 +162,7 @@ export const en: Record<TranslationKey, string> = {
   'task.project-status.label': 'Project status',
   'task.project-status.hint':
     'Derives status and next step from the project history — as a proposal.',
-  'task.gardener-audit.label': 'Interpret findings',
+  'task.gardener-audit.label': 'Interpret results',
   'task.gardener-audit.hint':
     'Finds contradictions, stale claims and missing pages. Needs judgement.',
 

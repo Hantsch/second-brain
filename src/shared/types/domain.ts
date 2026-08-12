@@ -96,7 +96,7 @@ export interface Todo {
   waitingFor: string | null;
   /** Bis wann die Antwort spätestens kommen muss. */
   neededBy: string | null;
-  /** 0 = keine, 3 = `!!!`. */
+  /** 1 = low, 2 = medium, 3 = high; 0 is a legacy todo without a marker. */
   priority: number;
   tags: string[];
   createdAt: string | null;

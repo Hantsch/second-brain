@@ -200,7 +200,7 @@ describe('Module: Übersicht', () => {
 
     expect(await screen.findByText('Identitätsmanagement')).toBeTruthy();
     expect(screen.getByText('1 Quellen · 2 Entitäten · 1 Konzepte')).toBeTruthy();
-    expect(screen.getByText('2 Pflege-Befunde')).toBeTruthy();
+    expect(screen.getByText('2 Ergebnisse aus der Pflege')).toBeTruthy();
   });
 
   it('erklärt im Dialog in einem Satz, was ein Modul ist', async () => {

@@ -8,8 +8,8 @@ export const enWiki = {
   'modules.counts': '{sources} sources · {entities} entities · {concepts} concepts',
   'modules.lastIngest': 'last condensed {date}',
   'modules.neverIngested': 'nothing condensed yet',
-  'modules.findings': '{count} maintenance findings',
-  'modules.findingsOne': 'one maintenance finding',
+  'modules.findings': '{count} results from Care',
+  'modules.findingsOne': 'one result from Care',
   'modules.open': 'Open module {title}',
   'modules.back': 'All modules',
   'modules.noDescription': 'No description.',
@@ -100,13 +100,13 @@ export const enWiki = {
   'log.missing': 'This module has no chronicle yet.',
   'log.kind.ingest': 'Source taken in',
   'log.kind.query': 'Question answered',
-  'log.kind.lint': 'Maintenance run',
+  'log.kind.lint': 'Knowledge check',
   'log.touched': 'Touched',
   'log.summary': 'Summary',
   'log.notes': 'Note',
   'log.answeredFrom': 'Answered from',
   'log.filedBack': 'Filed as',
-  'log.findings': 'Findings',
+  'log.findings': 'Results',
 
   'modules.sourcesTab.empty':
     'No raw source condensed into this module yet. Sources come in through the “Sources” screen.',
@@ -168,7 +168,7 @@ export const enWiki = {
   'sources.awaiting.model': 'Set up a model',
   'sources.unfiled.title': 'The source rests in the vault, not filed into a module',
   'sources.unfiled.body':
-    'Intended with “file later”: the raw source stands, condensing follows — the maintenance run reports it as not condensed.',
+    'Intended with “file later”: the raw source stands, condensing follows — the check reports it as not condensed.',
 
   // ── Sources: what is already in ───────────────────────────────────────────
   'sources.list.title': 'Sources taken in',
