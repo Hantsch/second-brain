@@ -1,9 +1,9 @@
-/* Deutsche Oberflächentexte, Teil 1: Hülle, gemeinsame Bausteine, Fehler,
-   Aufgaben. Die Screen-Texte liegen in `de-screens.ts` — zwei Dateien, damit
-   keine über den Zeilenrahmen wächst.
+/* German UI text, part 1: shell, shared building blocks, errors, tasks.
+   The screen texts live in `de-screens.ts` — two files so neither grows
+   past the line limit.
 
-   Flache Keys, sentence case, keine Emoji. `en.ts` muss denselben Key-Satz
-   tragen — ein Test prüft das. */
+   Flat keys, sentence case, no emoji. `en.ts` must carry the same key set —
+   a test checks that. */
 
 import { deDashboard } from './de-dashboard';
 import { deGarden } from './de-garden';

@@ -1,21 +1,21 @@
-/* Der Pflegelauf beim Öffnen des Vaults — die Einstellung `gardener.runOnOpen`.
+/* The maintenance run on opening the vault — the `gardener.runOnOpen` setting.
 
-   Der Schalter im Verhalten-Tab liest jetzt jemand, deshalb ist er scharf. Vier
-   Regeln, damit er nicht zur Last wird:
+   The toggle in the Behavior tab is now read by someone, so it's live. Four
+   rules keep it from becoming a burden:
 
-   - **Nur wenn er an ist.** Sonst passiert nichts, und der Schalter sagt die
-     Wahrheit.
-   - **Erst wenn der Index steht.** Beim Öffnen baut er noch; ein Lauf über einen
-     halben Index fände Befunde, die es nicht gibt. Also warten und erneut
-     versuchen — genauso wie die Benachrichtigung der Erinnerungen.
-   - **Ein Lauf je Öffnen.** Nicht auf Vorrat, nicht im Takt: wer öfter prüfen
-     will, klickt im Screen „Jetzt prüfen".
-   - **Die Deutung entscheidet die Einstellung**, nicht dieser Automat: ohne
-     `gardener.useLlm` bleibt der Lauf deterministisch und kostet nichts.
+   - **Only when it's on.** Otherwise nothing happens, and the toggle tells the
+     truth.
+   - **Only once the index is ready.** It's still building right after opening;
+     a run over a half-built index would find findings that don't exist. So we
+     wait and retry — the same as the reminder notification.
+   - **One run per open.** Not stockpiled, not on a timer: anyone who wants to
+     check more often clicks "Check now" in the screen.
+   - **The setting decides interpretation**, not this automaton: without
+     `gardener.useLlm` the run stays deterministic and costs nothing.
 
-   Ein Vaultwechsel wird an `app.lastVault` erkannt — dieselbe Mechanik wie in
-   `reminder-notify.ts`, damit der Service-Container keinen zweiten Haken braucht.
-   Fehler bleiben leise: ein ausgefallener Pflegelauf darf die App nicht kosten. */
+   A vault switch is detected via `app.lastVault` — the same mechanism as in
+   `reminder-notify.ts`, so the service container doesn't need a second hook.
+   Errors stay quiet: a failed maintenance run must not cost the app anything. */
 
 import { runWithProgress } from './ipc/gardener-deps';
 import { gardenerStateFor } from './ipc/gardener-deps';
@@ -23,22 +23,22 @@ import { GARDENER_STATE_FILE } from './gardener-state';
 import type { Services } from './services';
 
 /**
- * So lange nach dem Öffnen wird geprüft — der Index braucht kurz. Kein langes
- * Warten nötig: steht er noch nicht, wird derselbe Abstand später erneut
- * versucht, und der Lauf selbst kostet Millisekunden (er rechnet nur über den
- * Index). Mit Deutung kostet er ein Modell — deshalb entscheidet `useLlm` in den
- * Einstellungen, nicht dieser Automat.
+ * How long after opening the check happens — the index takes a moment. No long
+ * wait needed: if it's not ready yet, the same interval is retried later, and
+ * the run itself costs milliseconds (it only computes over the index). With
+ * interpretation it costs a model call — that's why `useLlm` in the settings
+ * decides, not this automaton.
  */
 export const FIRST_RUN_DELAY_MS = 2500;
 
-/** So oft wird auf den Index gewartet, bevor der Lauf ausfällt. */
+/** How many times we wait for the index before the run gives up. */
 const INDEX_RETRIES = 8;
 
-/** Was ein Anlauf getan hat — der Test liest daran ab, dass nichts erfunden wurde. */
+/** What an attempt did — the test reads from this that nothing was invented. */
 export type AutorunResult = 'ran' | 'off' | 'no-index' | 'busy';
 
 export interface AutorunOptions {
-  /** Verzögerung bis zum ersten Versuch. Tests setzen sie auf 0. */
+  /** Delay until the first attempt. Tests set it to 0. */
   delayMs?: number;
 }
 
@@ -78,7 +78,7 @@ export class GardenerAutorun {
     }, this.options.delayMs ?? FIRST_RUN_DELAY_MS);
   }
 
-  /** Wartet, bis der Index steht. Danach höchstens ein Lauf. */
+  /** Waits until the index is ready. After that, at most one run. */
   async runWhenReady(attempt = 0): Promise<AutorunResult> {
     const result = await this.run();
     if (result !== 'no-index' || attempt >= INDEX_RETRIES) return result;
@@ -90,7 +90,7 @@ export class GardenerAutorun {
     });
   }
 
-  /** Ein Anlauf. Meldet, was er getan hat. */
+  /** One attempt. Reports what it did. */
   async run(): Promise<AutorunResult> {
     if (this.busy) return 'busy';
     const settings = this.services.settings.vault();
@@ -103,14 +103,14 @@ export class GardenerAutorun {
       const state = await gardenerStateFor(this.services);
       const run = await runWithProgress(this.services);
       await state.save(run);
-      /* Dieselbe Weckung wie im Kanal: der Bericht liegt jetzt anders. */
+      /* Same wake-up as in the channel: the report now sits differently. */
       this.services.sendEvent('event:vault-changed', {
         paths: [GARDENER_STATE_FILE],
         external: false,
       });
       return 'ran';
     } catch (error) {
-      console.warn('[gardener] Pflegelauf beim Öffnen fehlgeschlagen:', error);
+      console.warn('[gardener] Maintenance run on open failed:', error);
       return 'no-index';
     } finally {
       this.busy = false;
@@ -118,7 +118,7 @@ export class GardenerAutorun {
   }
 }
 
-/** Baut den Automaten und startet ihn. Rückgabe hält ihn wieder an. */
+/** Builds the automaton and starts it. The return value stops it again. */
 export function startGardenerAutorun(
   services: Services,
   options: AutorunOptions = {},

@@ -1,20 +1,23 @@
-/* Eigene Titelzeile für das rahmenlose Fenster. Der linke Teil ist Ziehfläche,
-   das Suchfeld und die Knöpfe rechts sind ausdrücklich keine. */
+/* Custom title bar for the frameless window. The left part is the drag
+   region; the search field and the buttons on the right explicitly are not. */
 
 import { useEffect, useState } from 'react';
+import type { AppIcon } from '@shared/types';
 import { IconButton } from '../atoms/IconButton';
 import { useT } from '../i18n';
 import { api } from '../lib/api';
+import { ICON_ASSETS } from '../lib/customization-assets';
 import { SearchTrigger } from './SearchTrigger';
 
 export interface TitleBarProps {
-  /** Kontext rechts vom Namen, z. B. der offene Vault. */
+  /** Context to the right of the name, e.g. the open vault. */
   context?: string | null;
-  /** Öffnet die Befehlspalette. Fehlt sie, bleibt das Suchfeld weg. */
+  /** Opens the command palette. If missing, the search field stays hidden. */
   onSearch?: () => void;
+  appIcon?: AppIcon;
 }
 
-export function TitleBar({ context, onSearch }: TitleBarProps) {
+export function TitleBar({ context, onSearch, appIcon = 'knowledge-garden' }: TitleBarProps) {
   const t = useT();
   const [maximized, setMaximized] = useState(false);
 
@@ -34,6 +37,7 @@ export function TitleBar({ context, onSearch }: TitleBarProps) {
 
   return (
     <header className="sb-titlebar sb-drag">
+      <img className="sb-titlebar-icon" src={ICON_ASSETS[appIcon]} alt="" aria-hidden="true" />
       <span className="sb-titlebar-name">{t('app.name')}</span>
       {context ? <span className="sb-titlebar-context">{context}</span> : null}
       {onSearch ? (

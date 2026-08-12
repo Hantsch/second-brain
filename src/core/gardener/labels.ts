@@ -1,36 +1,38 @@
 /**
- * Die Beschriftungen der Befunde.
+ * The labels of the findings.
  *
- * `GardenerFinding.title`/`detail` und `GardenerFix.label` sind im IPC-Vertrag
- * fertige Saetze, kein Code — der Screen soll einen Befund vorlesen koennen, ohne
- * ihn zu deuten. Der Kern waehlt aber keine Sprache: deshalb sind die Texte
- * **einsetzbar** (genau wie `RecentWorkLabels` im Ueberblick), mit Deutsch als
- * Vorgabe. Das englische Gegenstueck liegt im Main (`src/main/gardener-labels.ts`),
- * weil `src/core/` die Sprache der Oberflaeche nicht kennt.
+ * `GardenerFinding.title`/`detail` and `GardenerFix.label` are finished
+ * sentences in the IPC contract, not code — the screen should be able to
+ * read a finding aloud without interpreting it. But the core does not choose
+ * a language: that's why the texts are **swappable** (exactly like
+ * `RecentWorkLabels` in the overview), with German as the default. The
+ * English counterpart lives in main (`src/main/gardener-labels.ts`), because
+ * `src/core/` does not know the UI language.
  *
- * Ton wie ueberall: Aussagen statt Ausrufe, Sentence case, keine Emoji. Jeder Satz
- * nennt die Sache und, wo es hilft, die Folge — nie eine Vermutung.
+ * Tone as everywhere: statements instead of exclamations, sentence case, no
+ * emoji. Every sentence names the thing and, where it helps, the consequence
+ * — never a guess.
  */
 
 import type { GardenerFindingKind, GardenerFix } from '@shared/types';
 
-/** Titel und Erklaerung eines Befunds. */
+/** Title and explanation of a finding. */
 export interface FindingText {
   title: string;
   detail: string;
 }
 
-/** Welche Art von Katalog-Drift vorliegt. */
+/** Which kind of catalog drift is present. */
 export type IndexDriftKind =
-  /** Das Modul hat gar keinen Katalog — `wiki/index.md` fehlt. */
+  /** The module has no catalog at all — `wiki/index.md` is missing. */
   | 'no-catalog'
-  /** Die Seite gibt es, im Katalog fehlt sie. */
+  /** The page exists, but is missing from the catalog. */
   | 'missing'
-  /** Der Eintrag steht da, aber ohne Einzeiler. */
+  /** The entry is there, but without a one-liner. */
   | 'summary'
-  /** Der Eintrag steht in einer Rubrik, die nicht zum Seitentyp passt. */
+  /** The entry is filed under a category that doesn't match the page type. */
   | 'category'
-  /** Der Eintrag zeigt auf eine Seite, die es nicht mehr gibt. */
+  /** The entry points to a page that no longer exists. */
   | 'stale-entry';
 
 export interface GardenerLabels {
@@ -45,8 +47,8 @@ export interface GardenerLabels {
   missingPage(term: string, pages: number): FindingText;
   contradiction(first: string, second: string, note: string, named: boolean): FindingText;
   /**
-   * Beschriftung des Knopfs. Sie sagt, was **passiert** — die drei Aktionen, die
-   * nichts schreiben, heissen deshalb „oeffnen" und nicht „einordnen".
+   * Label of the button. It says what **happens** — the three actions that
+   * write nothing are therefore called "open" rather than "file".
    */
   fix(action: GardenerFix['action'], kind?: GardenerFindingKind): string;
 }
@@ -56,9 +58,10 @@ function percent(value: number): string {
 }
 
 /**
- * Tage nach „seit" — also im Dativ. Beide Verwender schreiben „seit X", und
- * „seit 19 Tage" ist ein Satz, den niemand so sagt; auf dem Pflege-Screen stand
- * er in jeder zweiten Zeile.
+ * Days after "seit" (since) — i.e. in the German dative case. Both callers
+ * write "seit X", and "seit 19 Tage" is grammatically wrong German that
+ * nobody would say; on the maintenance screen it showed up in every other
+ * line.
  */
 function daysAgo(count: number): string {
   return count === 1 ? '1 Tag' : `${count} Tagen`;
@@ -68,9 +71,9 @@ const GERMAN_FIX_LABELS: Record<GardenerFix['action'], string> = {
   'add-to-index': 'In den Katalog eintragen',
   'add-links': 'Verweis eintragen',
   'mark-reviewed': 'Als geprüft markieren',
-  /* Führt zusammen wird nichts — die beiden Seiten gehen nur auf. */
+  /* Nothing gets merged — both pages simply get opened. */
   merge: 'Beide Seiten vergleichen',
-  /* Ordnet nichts ein und verdichtet nichts: öffnet den Ort, an dem es passiert. */
+  /* Files nothing and condenses nothing: opens the place where it happens. */
   'open-classify': 'Zum Einordnen öffnen',
   'open-ingest': 'Zum Verdichten öffnen',
 };
@@ -103,7 +106,7 @@ const GERMAN_DRIFT: Record<IndexDriftKind, (page: string) => FindingText> = {
   }),
 };
 
-/** Vorgabe auf Deutsch. */
+/** Default in German. */
 export const GERMAN_GARDENER_LABELS: GardenerLabels = {
   orphan(page: string): FindingText {
     return {
@@ -179,8 +182,8 @@ export const GERMAN_GARDENER_LABELS: GardenerLabels = {
   },
 
   fix(action: GardenerFix['action'], kind?: GardenerFindingKind): string {
-    /* Dieselbe Aktion, zwei Anlässe: bei einem Widerspruch wird nicht „ein
-       Verweis" eingetragen, sondern der Konflikt benannt. */
+    /* Same action, two occasions: for a contradiction, it's not "a
+       reference" being added, but the conflict being named. */
     if (action === 'add-links' && kind === 'contradiction') return 'Widerspruch benennen';
     return GERMAN_FIX_LABELS[action];
   },

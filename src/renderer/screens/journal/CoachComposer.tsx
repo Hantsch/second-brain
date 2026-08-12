@@ -1,26 +1,26 @@
-/* Das Feld, in dem der Tag entsteht: Vertraulichkeitszeile, Composer mit
- * Haltung — im breiten Fenster als ein Block am unteren Rand der Detailspalte
- * verankert (`position: sticky`, `styles/app/journal.css`), samt „Tag
- * abschließen" (`footerAction`) direkt daneben.
+/* The field where the day takes shape: privacy line, composer with stance —
+ * in the wide window anchored as one block at the bottom edge of the detail
+ * column (`position: sticky`, `styles/app/journal.css`), with "close the
+ * day" (`footerAction`) right next to it.
  *
- * Ein eigener Baustein statt ein Teil von `CoachPanel`, aus genau einem Grund:
- * `position: sticky` klebt nur innerhalb der Box, die dieses Element umgibt
- * (seines nächsten block-bildenden Vorfahren) — nicht am ganzen Rollbereich.
- * Als Nachfahre von `.sb-coach` wäre dieser Rahmen nur der schmale Rest des
- * Gesprächsabschnitts gewesen, tief unten auf der Seite, ohne Spielraum nach
- * oben. Als direkter Nachfahre von `.sb-dayentry` (siehe `DayEntry.tsx`) ist
- * der Rahmen die ganze Detailspalte — das Feld erreicht so den unteren Rand
- * des Fensters, ohne dass jemand scrollen muss.
+ * A separate component instead of part of `CoachPanel`, for exactly one
+ * reason: `position: sticky` only sticks within the box surrounding this
+ * element (its nearest block-forming ancestor) — not the whole scroll area.
+ * As a descendant of `.sb-coach`, this frame would only have been the
+ * narrow remainder of the talk section, deep at the bottom of the page,
+ * with no room to move upward. As a direct descendant of `.sb-dayentry`
+ * (see `DayEntry.tsx`), the frame is the whole detail column — the field
+ * thus reaches the bottom window edge without anyone having to scroll.
  *
- * Im engen Fenster (≤ 1200 px) trägt der Tag eigene Reiter „Tag" und
- * „Gespräch" (siehe `DayEntry.tsx`, `styles/app/journal.css`): dort lebt
- * dieser Baustein allein im Reiter „Gespräch", ohne `footerAction` — „Tag
- * abschließen" steht dort stattdessen neben den Fakten im Reiter „Tag"
- * (`JournalScreen.tsx` entscheidet anhand der Fensterbreite, wohin der eine
- * Knopf geht; verdoppelt wird er nirgends). Das Kleben braucht der Composer
- * dort ohnehin nicht mehr: sein Reiter zeigt nichts außer dem Verlauf über
- * ihm, und er ist als letztes, nicht wachsendes Element seiner eigenen,
- * begrenzten Spalte ohnehin immer im Fenster.
+ * In the narrow window (≤ 1200 px) the day carries its own "Day" and "Talk"
+ * tabs (see `DayEntry.tsx`, `styles/app/journal.css`): there this component
+ * lives alone in the "Talk" tab, without `footerAction` — "close the day"
+ * sits there instead next to the facts in the "Day" tab
+ * (`JournalScreen.tsx` decides based on window width where the one button
+ * goes; it's never duplicated). The composer no longer needs the sticking
+ * there anyway: its tab shows nothing but the history above it, and as the
+ * last, non-growing element of its own, bounded column it's always within
+ * the window regardless.
  */
 
 import type { RefObject } from 'react';
@@ -33,7 +33,7 @@ import { CoachModeSwitch } from '../../components/CoachModeSwitch';
 import { useT } from '../../i18n';
 import type { CoachRoute } from '../../lib/queries/journal';
 
-/** Der Weg in die Routing-Einstellung — dieselbe Adresse wie in `LlmMissing`. */
+/** The path to the routing setting — the same address as in `LlmMissing`. */
 const ROUTING_ROUTE = '/settings?tab=models';
 
 export interface CoachComposerProps {
@@ -46,13 +46,13 @@ export interface CoachComposerProps {
   onMode: (mode: CoachMode) => void;
   route: CoachRoute;
   fieldRef?: RefObject<HTMLTextAreaElement | null>;
-  /** „Tag abschließen" — nur im breiten Fenster (`JournalScreen.tsx` reicht sie
-      dort und nur dort durch): sie steht neben dem Sendeknopf, damit beide
-      Aktionen, die den Tag betreffen, gemeinsam am unteren Rand der
-      Detailspalte stehen und nie unter den sichtbaren Rand rutschen
-      (dasselbe Anker-Muster wie die Aktionsleiste der Inbox). Im engen
-      Fenster steht derselbe Knopf stattdessen bei den Fakten im Reiter „Tag"
-      (`DayEntry.tsx`) — hier bleibt die Stelle dann leer. */
+  /** "Close the day" — only in the wide window (`JournalScreen.tsx` passes
+      it through there and only there): it sits next to the send button, so
+      both actions concerning the day stand together at the bottom edge of
+      the detail column and never slide below the visible edge (same anchor
+      pattern as the inbox's action bar). In the narrow window the same
+      button instead sits next to the facts in the "Day" tab
+      (`DayEntry.tsx`) — here the spot then stays empty. */
   footerAction?: ReactNode;
 }
 
@@ -73,9 +73,9 @@ export function CoachComposer({
 
   return (
     <div className="sb-journal-footer">
-      {/* Eine Tatsache in einer Zeile, direkt über dem Feld. Solange die
-          Route unbekannt ist, steht hier nichts: eine Zusage über
-          Vertraulichkeit darf nicht auf einer Annahme stehen. */}
+      {/* A fact in one line, right above the field. As long as the route is
+          unknown, nothing is shown here: a promise about privacy must not
+          rest on an assumption. */}
       {route.routed === undefined ? null : (
         <p className="sb-privacy">
           <Icon name={route.local ? 'sprout' : 'globe'} size={13} />
@@ -122,8 +122,8 @@ export function CoachComposer({
           send: t('journal.send'),
           cancel: t('common.cancel'),
         }}
-        /* Die Haltung sitzt in der Fußzeile des Feldes: man muss wissen, mit
-           wem man spricht, während man tippt. */
+        /* The stance sits in the field's footer: you need to know who
+           you're talking to while you type. */
         extra={<CoachModeSwitch value={mode} onChange={onMode} disabled={busy} />}
       />
 

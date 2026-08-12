@@ -9,7 +9,27 @@ const own = {
   'settings.tab.languages': 'Languages',
   'settings.tab.models': 'Models',
   'settings.tab.behavior': 'Behaviour',
+  'settings.tab.customization': 'Customization',
   'settings.tab.about': 'About',
+
+  'settings.customization.background.title': 'Background',
+  'settings.customization.background.note':
+    'The artwork stays centred and very subtle behind the content. Changes apply immediately.',
+  'settings.customization.background.none': 'None',
+  'settings.customization.background.none.preview': 'No image',
+  'settings.customization.background.thought-catcher': 'Thought catcher',
+  'settings.customization.background.knowledge-constellation': 'Knowledge constellation',
+  'settings.customization.background.pocket-vault': 'Pocket vault',
+  'settings.customization.background.thread-of-return': 'Thread of return',
+  'settings.customization.background.knowledge-garden': 'Knowledge garden',
+  'settings.customization.icon.title': 'App icon',
+  'settings.customization.icon.note':
+    'The cropped icon appears in the title bar and in the operating system.',
+  'settings.customization.icon.knowledge-garden': 'Knowledge garden',
+  'settings.customization.icon.neural-core': 'Neural core',
+  'settings.customization.icon.circuit-cortex': 'Circuit cortex',
+  'settings.customization.icon.brain-chip': 'Brain chip',
+  'settings.customization.icon.vault-brain': 'Vault brain',
 
   'settings.vault.about':
     'A vault is an ordinary folder of markdown files. It is portable: copy it to a USB stick or an external drive and it keeps working there in full.',

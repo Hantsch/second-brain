@@ -783,6 +783,19 @@ async function shootSourceJobs(session, shooter, log, skipped) {
 async function shootDeepStates(session, shooter, log, skipped) {
   for (const state of DEEP_STATES) {
     const ready = await gotoHash(session.page, state.hash, { wait: state.wait });
+    if (state.id === 'settings-customization') {
+      const background = session.page.locator(
+        'input[name="app-background"][value="knowledge-garden"]',
+      );
+      await background.click();
+      await session.page.waitForFunction(
+        () =>
+          document.querySelector(
+            'input[name="app-background"][value="knowledge-garden"]:checked',
+          ) !== null,
+      );
+      await settle(session.page);
+    }
     const file = await shooter.shot(state.id, session.page);
     log(`  ${state.id.padEnd(18)} → ${file}${ready ? '' : ' (Inhalt blieb aus)'}`);
     if (!ready) skipped.push(`${state.id}: ${state.wait} erschien nicht`);

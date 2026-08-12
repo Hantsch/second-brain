@@ -1,16 +1,16 @@
-/* Projekte: lesen, anlegen, ändern, Warte-auf abhaken, Stand vorschlagen.
+/* Projects: read, create, change, check off waiting-on, suggest status.
 
-   Die Liste kommt aus dem Index (er ist die abgeleitete Wahrheit), jeder
-   Schreibweg geht durch `VaultStore` — mit Hash, mit Merge, mit Nachlauf.
+   The list comes from the index (it's the derived truth), every write path
+   goes through `VaultStore` — with hash, with merge, with follow-up.
 
-   Drei Entscheidungen, die man im Code sonst nicht sieht:
+   Three decisions you otherwise wouldn't see in the code:
 
-   - **`patch` schreibt nur bekannte Felder** und lässt alles andere in Ruhe
-     (`project-patch.ts`). Der Store mergt, also überlebt jedes Nutzerfeld.
-   - **`updated` wird gesetzt, wenn die App schreibt** — so steht es in
-     VAULT-FORMAT.md. Bei einer externen Änderung zählt die mtime, nicht wir.
-   - **`suggestStatus` schreibt nichts.** Der Vorschlag geht zurück, das
-     Übernehmen ist ein eigener Aufruf des Nutzers. */
+   - **`patch` writes only known fields** and leaves everything else alone
+     (`project-patch.ts`). The store merges, so every user field survives.
+   - **`updated` is set when the app writes** — as documented in
+     VAULT-FORMAT.md. On an external change, the mtime counts, not us.
+   - **`suggestStatus` writes nothing.** The suggestion goes back to the
+     caller; accepting it is a separate call the user makes. */
 
 import { SECTION_NOTES, SECTION_STATE, SECTION_TODOS } from '@core/capture';
 import { deriveProjects, toIndexedDoc } from '@core/index';
@@ -28,7 +28,7 @@ import { createGateway } from '../llm-bridge';
 import type { VaultStoreLike } from '../contracts';
 import type { Services } from '../services';
 
-/** Erledigtes und Verworfenes bleibt draußen, solange niemand danach fragt. */
+/** Done and dropped items stay out, as long as nobody asks for them. */
 function isOpen(project: Project): boolean {
   return project.status !== 'done' && project.status !== 'dropped';
 }
@@ -37,15 +37,15 @@ function store(services: Services): VaultStoreLike {
   return services.requireStore();
 }
 
-/** Alle Projekte, die der Index kennt — leer, wenn er sie nicht ableitet. */
+/** All projects the index knows — empty if it doesn't derive any. */
 function known(services: Services): readonly Project[] {
   return services.index()?.projects?.() ?? [];
 }
 
 /**
- * Ein Projekt aus einer gelesenen Datei ableiten. Nötig, solange der Index das
- * gerade angelegte Projekt noch nicht kennt: eine leere Antwort wäre eine
- * Behauptung über einen Vault, in dem die Datei schon liegt.
+ * Derive a project from a file that was just read. Needed as long as the
+ * index doesn't yet know about the just-created project: an empty answer
+ * would be a false claim about a vault where the file already exists.
  */
 async function derive(services: Services, path: string): Promise<Project> {
   const raw = await store(services).readText(path);
@@ -56,7 +56,7 @@ async function derive(services: Services, path: string): Promise<Project> {
   return project;
 }
 
-/** Das Projekt zu einem Slug — aus dem Index, sonst aus der Datei. */
+/** The project for a slug — from the index, otherwise from the file. */
 async function projectFor(services: Services, slug: string): Promise<Project> {
   const found = known(services).find((project) => project.slug === slug);
   if (found !== undefined) return found;
@@ -67,7 +67,7 @@ async function projectFor(services: Services, slug: string): Promise<Project> {
   throw fail('not-found', `dieses Projekt gibt es nicht: ${slug}`);
 }
 
-/** Projektdatei und Dokument in einem Zug — beide Schreibwege brauchen beides. */
+/** Project file and document in one go — both write paths need both. */
 async function readProject(
   services: Services,
   slug: string,
@@ -78,7 +78,7 @@ async function readProject(
   return { project, doc };
 }
 
-/** Rumpf einer neuen Projektdatei: die drei Abschnitte, die jedes Projekt hat. */
+/** Body of a new project file: the three sections every project has. */
 function newBody(state: string): string {
   const stand = state.replace(/\r\n/g, '\n').trim();
   return [
@@ -99,8 +99,8 @@ function requireScope(value: unknown): Scope {
 
 export function projectHandlers(services: Services): HandlerMap {
   return defineHandlers({
-    /* Sortierung kommt aus dem Index: jüngste Spur zuerst — das ist die Antwort
-       auf „woran habe ich zuletzt gearbeitet". */
+    /* Sorting comes from the index: most recent trail first — that's the
+       answer to "what did I last work on". */
     'projects:list': ({ scope, includeDone }) =>
       requireLists(services)
         .projects()
@@ -123,8 +123,8 @@ export function projectHandlers(services: Services): HandlerMap {
       return null;
     },
 
-    /* Angelegt wird mit `create`: gibt es die Datei schon, ist das ein Konflikt
-       und kein zweites Projekt mit demselben Slug. */
+    /* Created with `create`: if the file already exists, that's a conflict,
+       not a second project with the same slug. */
     'projects:create': async ({ title, scope, status, body }) => {
       const name = typeof title === 'string' ? title.replace(/\s+/g, ' ').trim() : '';
       if (name.length === 0) throw fail('invalid', 'title: darf nicht leer sein');
@@ -165,8 +165,8 @@ export function projectHandlers(services: Services): HandlerMap {
         frontmatter: { ...fields, updated: isoDay(new Date()) },
         expectedHash: expectedHash ?? doc.hash,
       });
-      /* `repos` ist die Zuordnung der Sitzungen. Ändert sie sich, ist der
-         Sitzungspuffer falsch — auch beim Zurücknehmen einer Zuordnung. */
+      /* `repos` is the link for sessions. If it changes, the session buffer
+         is stale — including when undoing a link. */
       if (fields['repos'] !== undefined) forgetSessions();
       await settle(services, [project.path], 'projects');
       return projectFor(services, slug);
@@ -199,16 +199,17 @@ export function projectHandlers(services: Services): HandlerMap {
       return projectFor(services, slug);
     },
 
-    /* Nur ein Vorschlag: übernommen wird er über `projects:patch`, wenn der
-       Nutzer ihn bestätigt. Gerechnet wird er in `@core/overview/status` — die
-       eine Fassung, die auch Tageseinträge und Arbeitsspuren mitliest. */
+    /* Only a suggestion: it's applied via `projects:patch` once the user
+       confirms it. Calculated in `@core/overview/status` — the single
+       version that also reads day entries and work trails. */
     'projects:suggestStatus': async ({ slug }) => {
-      /* Wirft `not-found`, wenn es das Projekt nicht gibt — der Kern gäbe `null`
-         zurück, und „kein Vorschlag" wäre für einen fehlenden Slug gelogen. */
+      /* Throws `not-found` if the project doesn't exist — the core would
+         return `null`, and "no suggestion" would be a lie for a missing
+         slug. */
       const project = await projectFor(services, slug);
       const index = overviewIndex(services);
       if (!index.projects().some((entry) => entry.slug === project.slug)) {
-        /* Die Datei liegt da, der Index hat sie noch nicht gelesen. */
+        /* The file is there, the index hasn't read it yet. */
         await services.index()?.refresh?.([project.path]);
       }
       return suggestProjectStatus(

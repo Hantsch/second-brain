@@ -1,9 +1,9 @@
-/* Die Hooks der Todos: die Liste eines Projekts, die Liste über alles — und die
-   drei Schreibwege (abhaken, anlegen, ändern).
+/* The todo hooks: a project's list, the list across everything — and the
+   three write paths (toggle, create, update).
 
-   `open` bleibt aus der Anfrage heraus: der Screen zeigt Erledigte auf Wunsch,
-   und zwei Listen mit unterschiedlichen Schlüsseln wären zweimal derselbe
-   Dateizugriff. Gefiltert wird im Renderer. */
+   `open` stays out of the request: the screen shows completed ones on
+   demand, and two lists with different keys would be the same file access
+   twice. Filtering happens in the renderer. */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { QueryClient, UseMutationResult, UseQueryResult } from '@tanstack/react-query';
@@ -13,7 +13,7 @@ import { api } from '../api';
 import { qk } from './keys';
 import { useVaultReady } from './data';
 
-/** Alle Todos des Vaults, offene und erledigte. */
+/** All todos in the vault, open and completed. */
 export function useAllTodos(): UseQueryResult<Todo[]> {
   const ready = useVaultReady();
   return useQuery({
@@ -23,7 +23,7 @@ export function useAllTodos(): UseQueryResult<Todo[]> {
   });
 }
 
-/** Die Todos eines Projekts, in Dateireihenfolge. */
+/** A project's todos, in file order. */
 export function useProjectTodos(slug: string | null): UseQueryResult<Todo[]> {
   const ready = useVaultReady();
   return useQuery({
@@ -35,7 +35,7 @@ export function useProjectTodos(slug: string | null): UseQueryResult<Todo[]> {
 
 function refresh(client: QueryClient): void {
   void client.invalidateQueries({ queryKey: ['todos'] });
-  /* Zählungen und `lastTouch` der Projekte hängen an den Todos. */
+  /* Project counts and `lastTouch` depend on the todos. */
   void client.invalidateQueries({ queryKey: ['projects'] });
   void client.invalidateQueries({ queryKey: qk.dashboard.data() });
 }

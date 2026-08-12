@@ -1,18 +1,19 @@
-/* Die Textarbeit am Tageseintrag: Abschnitte lesen, den Abschnitt „Tag" ersetzen,
- * den bestätigten Tagesabschluss schreiben.
+/* The text work on the daily entry: reading sections, replacing the "Day"
+ * section, writing the confirmed day close.
  *
- * Getrennt von `journal.ts`, weil das zwei Verantwortungen sind: dort steht der
- * Ablauf (wer streamt, wer abbricht, wer den Index nachzieht), hier steht, was
- * genau in der Datei passiert.
+ * Separate from `journal.ts`, because that's two responsibilities: the flow
+ * lives there (who streams, who aborts, who brings the index up to date),
+ * here is what exactly happens in the file.
  *
- * Zwei Zusagen gelten in dieser Datei über allem:
+ * Two promises hold above everything else in this file:
  *
- * - **Es wird nur der eigene Abschnitt angefasst.** Gespräch, Fakten und alles,
- *   was der Nutzer sonst hineingeschrieben hat, bleiben Zeichen für Zeichen stehen.
- * - **Kein halber Zustand.** Scheitert der Tagesabschluss in der Mitte, geht das
- *   Geschriebene zurück; der Rückweg für den gelungenen Lauf kommt als Liste von
- *   `vault:write`-Aufträgen heraus. `capture:apply` taugt hier nicht — es würde
- *   den „Dump", hier also den Tageseintrag, am Ende löschen.
+ * - **Only its own section gets touched.** Conversation, facts, and
+ *   anything else the user has written in stay character-for-character
+ *   intact.
+ * - **No half-finished state.** If the day close fails partway through, what
+ *   was written gets reverted; the undo path for a successful run comes out
+ *   as a list of `vault:write` requests. `capture:apply` doesn't fit here —
+ *   it would delete the "dump", here the daily entry, at the end.
  */
 
 import { SECTION_FACTS, todoActions, todoBlock } from '@core/capture';
@@ -38,21 +39,21 @@ import { fail } from './errors';
 import type { Services } from '../services';
 
 /**
- * Der Store, wie der Tagebuch-Kern ihn braucht: `stat` und ein `append`, das über
- * den angelegten Abschnitt Auskunft gibt, kennt die schmale Sicht der Shell nicht.
- * `FsVaultStore` hält keinen Zustand, ein zweiter kostet nichts (dieselbe Stelle
- * wie in `wiki-bridge.ts`).
+ * The store as the journal core needs it: `stat` and an `append` that
+ * reports the section it created — the shell's narrow view doesn't know
+ * those. `FsVaultStore` holds no state, so a second one costs nothing (same
+ * spot as in `wiki-bridge.ts`).
  *
- * Die **einzige** Stelle, an der er entsteht: Tagebuch, Tagesabschluss und der
- * Todo-Bereich sollen denselben Weg in dieselbe Datei nehmen.
+ * The **only** place where it gets created: journal, day close, and the
+ * todos module should all take the same path into the same file.
  */
 export function journalStore(services: Services): JournalStore {
   return new FsVaultStore(services.requireVaultRoot());
 }
 
-// ── Abschnitte lesen ─────────────────────────────────────────────────────────
+// ── Reading sections ─────────────────────────────────────────────────────────
 
-/** Der erste Abschnitt dieser Art; mehrere gleichnamige gibt es nur von Hand. */
+/** The first section of this kind; several with the same name only happen by hand. */
 function sectionOf(body: string, kind: 'day' | 'facts'): SectionRange | null {
   return findSections(body, 2).find((range) => isSectionOf(range.heading, kind)) ?? null;
 }
@@ -62,10 +63,11 @@ function textIn(body: string, range: SectionRange): string {
 }
 
 /**
- * Der Tageseintrag für die Anzeige. Fehlt die Überschrift „Tag" ganz (eine von
- * Hand geschriebene Datei), gilt alles außer Gespräch und Fakten als Tagestext —
- * genau das, was `dayText` liest, und genau das, was `withDayText` ersetzt. So
- * zeigt der Screen nie einen leeren Tag, in dessen Datei Prosa steht.
+ * The daily entry for display. If the "Day" heading is missing entirely (a
+ * hand-written file), everything except conversation and facts counts as the
+ * day's text — exactly what `dayText` reads, and exactly what `withDayText`
+ * replaces. This way the screen never shows an empty day whose file actually
+ * has prose in it.
  */
 export function toView(found: { day: JournalDay; doc: VaultDoc }): JournalDayView {
   const body = found.doc.body;
@@ -75,15 +77,15 @@ export function toView(found: { day: JournalDay; doc: VaultDoc }): JournalDayVie
     day: found.day,
     doc: found.doc,
     text: day === null ? dayText(body) : textIn(body, day),
-    /* Die Runden kommen aus dem Kern (`parseDialog`, nachsichtig gegen von Hand
-       ergänzte Blöcke) — der Renderer bekommt sie fertig. */
+    /* The turns come from the core (`parseDialog`, lenient about blocks
+       added by hand) — the renderer receives them pre-built. */
     turns: parseDialog(body).map((turn) => ({ role: turn.role, text: turn.text, at: turn.at })),
     facts: facts === null ? '' : textIn(body, facts),
   };
 }
 
 /**
- * Den Abschnitt „Tag" durch `text` ersetzen — der Schreibweg des Editors.
+ * Replace the "Day" section with `text` — the editor's write path.
  */
 export function withDayText(body: string, text: string, language: DocLanguage): string {
   const lines = body.split('\n');
@@ -93,16 +95,16 @@ export function withDayText(body: string, text: string, language: DocLanguage): 
   if (range !== null) {
     return [...lines.slice(0, range.start), ...middle, ...lines.slice(range.end)].join('\n');
   }
-  /* Keine Überschrift „Tag": die losen Zeilen vor dem ersten Abschnitt sind der
-     Tagestext. Die Überschrift kommt dazu, damit die Datei danach dem Format aus
-     docs/VAULT-FORMAT.md entspricht. */
+  /* No "Day" heading: the loose lines before the first section are the day's
+     text. The heading gets added so the file matches the format from
+     docs/VAULT-FORMAT.md afterward. */
   const first = findSections(body, 2)[0]?.headingLine ?? lines.length;
   return [`## ${journalSections(language).day}`, ...middle, ...lines.slice(first)].join('\n');
 }
 
-// ── Tagesabschluss ausführen ─────────────────────────────────────────────────
+// ── Executing the day close ──────────────────────────────────────────────────
 
-/** Bestand gewinnt: was schon im Frontmatter steht, überlebt jeden Schreibvorgang. */
+/** What's there wins: whatever is already in the frontmatter survives every write. */
 function union(existing: unknown, added: readonly string[]): string[] {
   const known = Array.isArray(existing)
     ? existing.filter((entry): entry is string => typeof entry === 'string')
@@ -118,7 +120,7 @@ function union(existing: unknown, added: readonly string[]): string[] {
   return merged;
 }
 
-/** Die Felder, die wirklich geschrieben werden. Leere Listen ändern nichts. */
+/** The fields that actually get written. Empty lists change nothing. */
 function fieldPatch(doc: VaultDoc, fields: JournalFrontmatterFields): Record<string, unknown> {
   const patch: Record<string, unknown> = {};
   for (const key of ['people', 'projects', 'tags'] as const) {
@@ -132,19 +134,19 @@ function fieldPatch(doc: VaultDoc, fields: JournalFrontmatterFields): Record<str
   return patch;
 }
 
-/** Der Stand vor dem Schreiben — Grundlage des Rückwegs. */
+/** The state before writing — the basis of the undo path. */
 function previousFields(doc: VaultDoc, patch: Record<string, unknown>): Record<string, unknown> {
   const before: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(patch)) {
     const old = doc.frontmatter[key];
-    /* Ein Feld, das es vorher nicht gab, wird geleert: entfernen kann ein
-       Frontmatter-Patch nicht, und ein alter Wert wäre erfunden. */
+    /* A field that didn't exist before gets cleared: a frontmatter patch
+       can't remove it, and an old value would be invented. */
     before[key] = old ?? (Array.isArray(value) ? [] : null);
   }
   return before;
 }
 
-/** Zurückdrehen, was dieser Lauf geschrieben hat. Ein Fehler dabei verdeckt nichts. */
+/** Revert what this run has written. An error here hides nothing. */
 async function revert(store: JournalStore, plan: readonly WriteRequest[]): Promise<void> {
   for (const entry of [...plan].reverse()) {
     try {
@@ -156,10 +158,11 @@ async function revert(store: JournalStore, plan: readonly WriteRequest[]): Promi
 }
 
 /**
- * Eine Zieldatei lesen; fehlt sie, wird nichts geschrieben.
+ * Read a target file; if it's missing, nothing gets written.
  *
- * Über den Kern (`toVaultDoc`): Rumpf und Hash müssen dieselbe Rechnung sein wie
- * beim Schreiben, sonst wäre der Konfliktschutz eine Behauptung.
+ * Through the core (`toVaultDoc`): body and hash have to be computed the
+ * same way as when writing, or the conflict protection would be a false
+ * claim.
  */
 async function readTarget(
   store: JournalStore,
@@ -172,9 +175,8 @@ async function readTarget(
 }
 
 /**
- * Den bestätigten Tagesabschluss schreiben: Todos als Checkboxen und die
- * Frontmatter-Felder des Tages. Zurück kommt, was geschrieben wurde, und der
- * Rückweg dazu.
+ * Write the confirmed day close: todos as checkboxes and the day's
+ * frontmatter fields. Returns what was written and the undo path for it.
  */
 export async function applyClose(
   store: JournalStore,
@@ -191,8 +193,8 @@ export async function applyClose(
     content: todoBlock([]),
   };
   const projects = index.projects();
-  /* Dieselbe Stelle, die auch die Inbox benutzt: nur `core/capture/actions` weiß,
-     wie eine Checkbox-Zeile aussieht und wohin ein Todo mit Projekt gehört. */
+  /* The same spot the inbox also uses: only `core/capture/actions` knows
+     what a checkbox line looks like and where a todo with a project belongs. */
   const actions = todoActions(
     home,
     request.todos,
@@ -210,8 +212,8 @@ export async function applyClose(
         body: day.doc.body,
         frontmatter: previousFields(day.doc, patch),
       };
-      /* Der Hash, den der Renderer beim Öffnen gelesen hat — danach der eigene:
-         der Lauf darf sich nicht selbst im Weg stehen. */
+      /* The hash the renderer read on opening — its own after that: the run
+         must not get in its own way. */
       let hash = request.expectedHash ?? day.doc.hash;
       if (own !== null) {
         hash = (await store.append(day.doc.path, section, own.content, { expectedHash: hash }))
@@ -235,11 +237,11 @@ export async function applyClose(
       written.push(action.path);
     }
   } catch (error) {
-    /* Kein halber Zustand: was schon geschrieben wurde, geht zurück. */
+    /* No half-finished state: whatever was already written gets reverted. */
     await revert(store, undo);
     throw error;
   }
-  /* Der Rückweg steht in umgekehrter Reihenfolge — der Renderer führt ihn so aus,
-     wie er hier steht. */
+  /* The undo path is in reverse order — the renderer executes it exactly as
+     it stands here. */
   return { written, undo: [...undo].reverse() };
 }

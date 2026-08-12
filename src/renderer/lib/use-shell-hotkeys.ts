@@ -1,5 +1,5 @@
-/* Tastatur zuerst: Ziffern wechseln Screens, Ctrl+K öffnet die Palette.
-   In Eingabefeldern greift nichts davon — dort tippt der Nutzer. */
+/* Keyboard first: digit keys switch screens, Ctrl+K opens the palette.
+   None of this applies in input fields — the user is typing there. */
 
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';

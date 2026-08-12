@@ -1,30 +1,30 @@
-/* Der Wikilink-Graph eines Moduls — ohne Bibliothek, ohne Kräftesimulation.
+/* The wikilink graph of a knowledge module — no library, no force simulation.
 
-   Warum Spalten statt eines Kreises: mit 40 Knoten überlappen sich auf einem
-   Kreis die Beschriftungen, und ein Graph, dessen Namen man nicht lesen kann,
-   zeigt nichts. Die vier Kategorien werden zu vier Spalten, die Knoten
-   untereinander; die Kanten laufen als dezente Linien dazwischen.
+   Why columns instead of a circle: with 40 nodes, labels on a circle overlap
+   each other, and a graph whose names you can't read shows nothing. The four
+   categories become four columns, with nodes stacked within each; the edges
+   run as subtle lines between them.
 
-   Zwei Dinge sind Absicht:
-   - **Die Knoten sind Knöpfe, keine SVG-Formen.** Damit sind sie mit der Tastatur
-     erreichbar, haben einen Namen und einen Fokusring. Das SVG zeichnet nur
-     Linien und ist für Hilfsmittel unsichtbar.
-   - **Über 80 Knoten wird gekappt.** Gezeigt werden die 40 am stärksten
-     verbundenen, und die Karte sagt das — statt ein unlesbares Knäuel zu zeigen
-     und zu hoffen, dass niemand hinsieht. */
+   Two things are deliberate:
+   - **The nodes are buttons, not SVG shapes.** That makes them reachable by
+     keyboard, gives them a name, and a focus ring. The SVG only draws lines
+     and is invisible to assistive tech.
+   - **Beyond 80 nodes, the graph is capped.** The 40 most connected nodes are
+     shown, and the card says so — instead of showing an unreadable tangle and
+     hoping nobody looks closely. */
 
 import { useMemo, useState } from 'react';
 import { useT } from '../i18n';
 
-/** Ab so vielen Knoten wird gekappt. */
+/** Beyond this many nodes, the graph is capped. */
 export const GRAPH_LIMIT = 80;
-/** So viele bleiben dann übrig. */
+/** This many remain after capping. */
 export const GRAPH_KEPT = 40;
 
-/** Reihenfolge der Spalten — wie die Rubriken im Katalog. */
+/** Column order — same as the categories in the catalog. */
 const COLUMNS: readonly string[] = ['source', 'entity', 'concept', 'overview'];
 
-/** Höhe je Zeile in px, plus Platz für die Spaltenköpfe. */
+/** Height per row in px, plus room for the column headers. */
 const ROW_HEIGHT = 34;
 const HEAD_ROOM = 56;
 const MIN_HEIGHT = 220;
@@ -38,30 +38,30 @@ export interface GraphNode {
 export interface WikiGraphProps {
   nodes: readonly GraphNode[];
   edges: readonly [string, string][];
-  /** Klick auf einen Knoten. */
+  /** Click on a node. */
   onOpen: (id: string) => void;
-  /** Hervorgehobener Knoten (die gerade gelesene Seite). */
+  /** Highlighted node (the page currently being read). */
   active?: string | null;
 }
 
 interface Placed extends GraphNode {
-  /** Prozent der Breite bzw. Höhe — so skaliert der Graph mit dem Fenster. */
+  /** Percent of width and height respectively — this way the graph scales with the window. */
   left: number;
   top: number;
 }
 
 interface Layout {
   placed: Placed[];
-  /** Spaltenköpfe: Kategorie und ihre Mitte in Prozent. */
+  /** Column headers: category and its center, in percent. */
   columns: { type: string; left: number }[];
   rows: number;
-  /** Kanten, deren beide Enden gezeigt werden. */
+  /** Edges whose both ends are shown. */
   edges: [string, string][];
-  /** Wie viele Knoten es insgesamt gibt, wenn gekappt wurde. */
+  /** Total number of nodes, if the graph was capped. */
   total: number | null;
 }
 
-/** Grad je Knoten: wie viele Kanten hängen daran. */
+/** Degree per node: how many edges are attached to it. */
 function degrees(edges: readonly [string, string][]): Map<string, number> {
   const count = new Map<string, number>();
   for (const [from, to] of edges) {
@@ -72,8 +72,8 @@ function degrees(edges: readonly [string, string][]): Map<string, number> {
 }
 
 /**
- * Knoten in Spalten legen. Bei zu vielen Knoten bleiben die am stärksten
- * verbundenen — sie tragen die Struktur, die man sehen will.
+ * Place nodes into columns. When there are too many, the most connected ones
+ * remain — they carry the structure that's worth seeing.
  */
 function layout(nodes: readonly GraphNode[], edges: readonly [string, string][]): Layout {
   const capped = nodes.length > GRAPH_LIMIT;
@@ -89,7 +89,7 @@ function layout(nodes: readonly GraphNode[], edges: readonly [string, string][])
 
   const visible = new Set(kept.map((node) => node.id));
   const known = COLUMNS.filter((type) => kept.some((node) => node.type === type));
-  /* Ein unbekannter Typ bekommt seine eigene Spalte statt zu verschwinden. */
+  /* An unknown type gets its own column instead of disappearing. */
   const others = [...new Set(kept.map((node) => node.type))].filter(
     (type) => !COLUMNS.includes(type),
   );
@@ -165,7 +165,7 @@ export function WikiGraph({ nodes, edges, onOpen, active = null }: WikiGraphProp
       </div>
 
       <div className="sb-graph-plane" style={{ height }}>
-        {/* Nur Linien: die Knoten darüber sind Knöpfe und tragen die Bedienung. */}
+        {/* Lines only: the nodes drawn on top are buttons and carry the interaction. */}
         <svg className="sb-graph-lines" aria-hidden="true">
           {view.edges.map(([from, to]) => {
             const a = byId.get(from);

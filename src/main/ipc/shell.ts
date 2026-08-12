@@ -1,5 +1,5 @@
-/* System-Kanäle: Datei im Standardprogramm öffnen, Ordner zeigen, Link im
-   Browser öffnen. Nur http, https und mailto verlassen die App. */
+/* System channels: open a file in its default program, reveal a folder, open
+   a link in the browser. Only http, https, and mailto leave the app. */
 
 import { isAbsolute, join } from 'node:path';
 import { shell } from 'electron';
@@ -9,7 +9,7 @@ import type { Services } from '../services';
 
 const ALLOWED_PROTOCOLS = new Set(['http:', 'https:', 'mailto:']);
 
-/** Vault-relative Pfade werden gegen die Vault-Wurzel aufgelöst. */
+/** Vault-relative paths are resolved against the vault root. */
 function resolvePath(services: Services, path: string): string {
   if (isAbsolute(path)) return path;
   const root = services.vaultRoot();

@@ -1,14 +1,13 @@
-/* Der laufende Pflegelauf: welche Prüfung dran ist, wie weit es ist, und der Weg
-   heraus.
+/* The running maintenance run: which check is up, how far along it is, and the
+   way out.
 
-   ARCHITECTURE.md: alles über zwei Sekunden bekommt einen Fortschritt mit
-   abbrechbarer Aktion. Die zehn maschinellen Prüfungen sind in Millisekunden
-   durch — die Deutung durch ein Modell ist es nicht. Deshalb zeigt die Zeile
-   beides: die laufende Prüfung beim Namen und „das Modell deutet die Befunde",
-   wenn es soweit ist.
+   ARCHITECTURE.md: anything over two seconds gets progress with a cancellable
+   action. The ten mechanical checks finish in milliseconds — the model's
+   interpretation does not. That's why the line shows both: the running check by
+   name, and "the model is interpreting the findings" once it gets there.
 
-   Der Balken hat `role="progressbar"` mit Werten, und der Text daneben sagt
-   dasselbe in Worten — ein Balken allein ist für ein Hilfsmittel nichts. */
+   The bar has `role="progressbar"` with values, and the text next to it says
+   the same thing in words — a bar alone is nothing for an assistive tool. */
 
 import { Button } from '../../atoms/Button';
 import type { GardenerProgress } from '../../lib/queries/gardener';
@@ -16,7 +15,7 @@ import { useT } from '../../i18n';
 
 export interface RunBarProps {
   progress: GardenerProgress | null;
-  /** Läuft der Aufruf noch, auch wenn noch kein Ereignis da war? */
+  /** Is the call still running, even if no event has arrived yet? */
   busy: boolean;
   cancelling: boolean;
   onCancel: () => void;

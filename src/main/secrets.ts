@@ -1,9 +1,9 @@
-/* Schlüsselspeicher. API-Keys liegen verschlüsselt in `<userData>/keys.json`,
-   niemals im Vault, niemals im Repo, niemals in einem Log.
+/* Key storage. API keys live encrypted in `<userData>/keys.json`,
+   never in the vault, never in the repo, never in a log.
 
-   Steht `safeStorage` nicht zur Verfügung (z. B. Linux ohne Keyring), wird
-   nichts auf die Platte geschrieben: die Schlüssel leben dann nur für die
-   Laufzeit, und der Aufrufer erfährt das über `persisted: false`. */
+   If `safeStorage` is not available (e.g. Linux without a keyring), nothing
+   is written to disk: the keys then live only for the runtime session, and
+   the caller learns this via `persisted: false`. */
 
 import { join } from 'node:path';
 import { safeStorage } from 'electron';
@@ -14,34 +14,34 @@ const KEYS_VERSION = 1;
 
 interface KeysFile {
   version: number;
-  /** Provider-ID → base64 des verschlüsselten Blobs. */
+  /** Provider ID → base64 of the encrypted blob. */
   keys: Record<string, string>;
 }
 
 export interface KeySetResult {
-  /** Wurde der Schlüssel verschlüsselt auf die Platte geschrieben? */
+  /** Was the key written to disk in encrypted form? */
   persisted: boolean;
-  /** Stand eine Betriebssystem-Verschlüsselung zur Verfügung? */
+  /** Was OS-level encryption available? */
   encrypted: boolean;
 }
 
-/** Schlüssel-ID eines Providers. Eine Stelle, damit Main und Kern dieselbe benutzen. */
+/** Key ID of a provider. One place, so main and core use the same one. */
 export function providerKeyId(providerId: string): string {
   return `provider:${providerId}`;
 }
 
 export interface KeyStore {
-  /** false = die Schlüssel überleben den Neustart nicht. Die Oberfläche sagt das. */
+  /** false = the keys do not survive a restart. The UI states this. */
   readonly encryptionAvailable: boolean;
   has(id: string): boolean;
   get(id: string): string | null;
   set(id: string, secret: string): Promise<KeySetResult>;
   remove(id: string): Promise<void>;
-  /** IDs aller bekannten Schlüssel — nie die Schlüssel selbst. */
+  /** IDs of all known keys — never the keys themselves. */
   ids(): string[];
 }
 
-/** Der Teil von Electrons `safeStorage`, den wir brauchen. Injizierbar für Tests. */
+/** The part of Electron's `safeStorage` that we need. Injectable for tests. */
 export interface SafeStorageLike {
   isEncryptionAvailable(): boolean;
   encryptString(plain: string): Buffer;
@@ -72,9 +72,9 @@ class SafeStorageKeyStore implements KeyStore {
       this.cache.set(id, plain);
       return plain;
     } catch {
-      /* Nicht entschlüsselbar (anderes Benutzerprofil, anderer Rechner): der
-         Schlüssel ist verloren, aber die App läuft weiter. */
-      console.warn('[secrets] Schlüssel nicht entschlüsselbar:', id);
+      /* Not decryptable (different user profile, different machine): the
+         key is lost, but the app keeps running. */
+      console.warn('[secrets] key not decryptable:', id);
       return null;
     }
   }
@@ -108,7 +108,7 @@ class SafeStorageKeyStore implements KeyStore {
   }
 }
 
-/** Auf manchen Systemen wirft die Abfrage, statt false zu liefern. */
+/** On some systems the check throws instead of returning false. */
 function encryptionAvailable(storage: SafeStorageLike): boolean {
   try {
     return storage.isEncryptionAvailable();
@@ -117,7 +117,7 @@ function encryptionAvailable(storage: SafeStorageLike): boolean {
   }
 }
 
-/** Baut den Schlüsselspeicher. Muss nach `app.whenReady()` laufen. */
+/** Builds the key store. Must run after `app.whenReady()`. */
 export async function createKeyStore(
   userDataDir: string,
   storage: SafeStorageLike = safeStorage,
@@ -127,7 +127,7 @@ export async function createKeyStore(
   const stored = await readJson<KeysFile>(file);
   if (!available) {
     console.warn(
-      '[secrets] Keine Betriebssystem-Verschlüsselung verfügbar — Schlüssel bleiben nur im Speicher.',
+      '[secrets] No OS-level encryption available — keys remain in memory only.',
     );
   }
   return new SafeStorageKeyStore(file, storage, available, stored?.keys ?? {});

@@ -1,14 +1,14 @@
-/* Deutsche Texte des Tagebuchs: Tagesliste, Tageseintrag, Coaching-Gespräch,
-   Tagesabschluss.
+/* German texts for the journal: day list, day entry, coaching dialogue,
+   day close-out.
 
-   Zwei Dinge, die hier Text sind und nicht Code:
+   Two things here are text, not code:
 
-   - **Die Haltungen erklären sich selbst.** Jede trägt einen Satz in der Ich-Form
-     des Coachs („ich spiegle und frage nach, ohne Ratschläge") — man muss wissen,
-     mit wem man spricht, bevor man tippt.
-   - **Der Ausfall ist eine Feststellung, keine Entschuldigung.** Jeder Grund aus
-     `LlmUnavailable.reason` hat einen eigenen Satz, und jeder beginnt mit dem, was
-     trotzdem passiert ist: aufgeschrieben. */
+   - **The stances explain themselves.** Each carries a sentence in the coach's
+     first-person voice ("I mirror and ask follow-up questions, no advice") —
+     you need to know who you're talking to before you type.
+   - **The failure is a statement, not an apology.** Every reason from
+     `LlmUnavailable.reason` has its own sentence, and each begins with what
+     happened anyway: it was written down. */
 
 export const deJournal = {
   // ── Tagesliste ────────────────────────────────────────────────────────────

@@ -1,13 +1,13 @@
-/* Onboarding — was der Nutzer sieht, solange kein Vault offen ist.
+/* Onboarding — what the user sees as long as no vault is open.
 
-   Zwei getrennte Wege, in Lesereihenfolge: oben „Vault öffnen" als die eine
-   primäre Aktion, darunter abgesetzt „Neuen Vault anlegen" — dort erst Label,
-   dann Namensfeld, dann Hinweis, dann der Knopf, der das Feld benutzt. Das Feld
-   erscheint erst, wenn dieser Weg gewählt ist: wer nur öffnen will, soll nicht
-   rätseln, ob er einen Namen braucht.
+   Two separate paths, in reading order: at the top "open vault" as the one
+   primary action, below it, set apart, "create new vault" — there, label
+   first, then the name field, then a hint, then the button that uses the
+   field. The field only appears once this path is chosen: someone who just
+   wants to open a vault shouldn't have to wonder whether they need a name.
 
-   Der Fehler steht unmittelbar unter der Aktion, die ihn ausgelöst hat, und
-   bietet dieselbe Aktion noch einmal an. */
+   The error appears directly below the action that triggered it, and offers
+   the same action again. */
 
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -22,7 +22,7 @@ import { api } from '../../lib/api';
 import { decodeIpcError } from '../../lib/ipc-error';
 import { qk } from '../../lib/queries/keys';
 
-/** Aktionsgruppe, aus der ein Versuch kam. */
+/** Action group an attempt originated from. */
 type Origin = 'open' | 'create' | 'recent';
 
 export function OnboardingScreen() {
@@ -32,12 +32,12 @@ export function OnboardingScreen() {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
-  /* Der letzte Versuch, damit „Erneut versuchen" wirklich dasselbe tut, und die
-     Gruppe, aus der er kam — die Fehlerkarte gehört unter genau diese Gruppe. */
+  /* The last attempt, so "retry" really does the same thing again, and the
+     group it came from — the error card belongs exactly under that group. */
   const [attempt, setAttempt] = useState<{
     origin: Origin;
     run: () => Promise<unknown>;
-    /** Der Gegenstand des Versuchs, wenn er bekannt ist — steht in der Meldung. */
+    /** The subject of the attempt, if known — appears in the message. */
     subject?: string;
   } | null>(null);
   const { data: recent } = useQuery({ queryKey: qk.vault.recent(), queryFn: api.vault.recent });
@@ -54,16 +54,16 @@ export function OnboardingScreen() {
       await action();
       await client.invalidateQueries({ queryKey: qk.vault.status() });
     } catch (caught) {
-      /* Ein abgebrochener Ordner-Dialog ist kein Fehler. */
+      /* A cancelled folder dialog is not an error. */
       if (decodeIpcError(caught).code !== 'cancelled') setError(caught);
     } finally {
       setBusy(false);
     }
   };
 
-  /* Der Fehler erscheint genau unter der Gruppe, die ihn ausgelöst hat — und
-     nennt den Ordner, um den es ging. „Erneut versuchen" bleibt sekundär: das
-     eine Teal dieses Screens gehört „Vault öffnen". */
+  /* The error appears exactly below the group that triggered it — and names
+     the folder in question. "Retry" stays secondary: this screen's one teal
+     belongs to "open vault". */
   const failureAt = (origin: Origin) =>
     error === null || attempt?.origin !== origin ? null : (
       <ErrorState

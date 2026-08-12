@@ -1,13 +1,13 @@
-/* Anderes Ziel wählen: die Alternativen des Vorschlags als Liste, dazu ein
-   Suchfeld für die freie Wahl.
+/* Choosing a different target: the proposal's alternatives as a list, plus a
+   search field for free choice.
 
-   Gewählt wird ausschließlich aus fertigen Aktionen — Pfad und Text kommen aus
-   dem Hauptprozess. Der Renderer baut keinen Vault-Pfad und kein Markdown; sonst
-   stünde das Dateiformat an zwei Stellen.
+   Selection happens exclusively from finished actions — path and text come
+   from the main process. The renderer never builds a vault path or
+   markdown; otherwise the file format would end up defined in two places.
 
-   Der Name eines Ziels wird hier gebildet, weil er nur zur Anzeige dient: aus
-   der Art, dem Pfad und — wenn der Index sie kennt — dem echten Titel des
-   Projekts oder Moduls. */
+   The name of a target is assembled here because it's for display only:
+   from the kind, the path, and — when the index knows it — the real title
+   of the project or module. */
 
 import { useMemo, useRef, useState } from 'react';
 import type { FilingAction, KnowledgeModule, Project } from '@shared/types';
@@ -15,7 +15,7 @@ import { Dialog } from '../atoms/Dialog';
 import { Icon } from '../atoms/Icon';
 import { t as translate, useT } from '../i18n';
 
-/** Ab so vielen Zielen lohnt das Suchfeld. */
+/** From this many targets on, the search field pays off. */
 const SEARCH_FROM = 8;
 
 export interface TargetNames {
@@ -23,25 +23,25 @@ export interface TargetNames {
   modules: readonly KnowledgeModule[];
 }
 
-/** Letzter Teil eines Pfades ohne Endung — `areas/gesundheit.md` → `gesundheit`. */
+/** Last part of a path without extension — `areas/gesundheit.md` → `gesundheit`. */
 function leaf(path: string): string {
   const name = path.split('/').pop() ?? path;
   return name.replace(/\.md$/i, '');
 }
 
-/** Der Ordnername über der Datei — `projects/work/kundenportal/project.md`. */
+/** The folder name above the file — `projects/work/kundenportal/project.md`. */
 function folder(path: string): string {
   const parts = path.split('/');
   return parts.length >= 2 ? (parts.at(-2) ?? leaf(path)) : leaf(path);
 }
 
-/** Aus einem Slug ein lesbares Wort machen, wenn kein Titel bekannt ist. */
+/** Turn a slug into a readable word when no title is known. */
 function humanize(slug: string): string {
   const words = slug.replace(/[-_]+/g, ' ').trim();
   return words.length === 0 ? slug : words.charAt(0).toUpperCase() + words.slice(1);
 }
 
-/** Der Name des Ziels: „Projekt Kundenportal Relaunch". Bereits übersetzt. */
+/** The target's name: "Project Kundenportal Relaunch". Already translated. */
 export function targetName(action: FilingAction, names: TargetNames): string {
   const kind = translate(`inbox.target.${action.target}`);
   if (action.target === 'inbox') return kind;
@@ -58,7 +58,7 @@ export function targetName(action: FilingAction, names: TargetNames): string {
   return `${kind} ${humanize(leaf(action.path))}`;
 }
 
-/** Ziel samt Abschnitt: „Projekt Kundenportal Relaunch → Abschnitt Notizen". */
+/** Target including section: "Project Kundenportal Relaunch → Section Notes". */
 export function targetLabel(action: FilingAction, names: TargetNames): string {
   const name = targetName(action, names);
   if (action.section === null || action.section.length === 0) return name;
@@ -67,9 +67,9 @@ export function targetLabel(action: FilingAction, names: TargetNames): string {
 
 export interface TargetPickerProps {
   open: boolean;
-  /** Alle wählbaren Ziele, in der Reihenfolge des Vorschlags. */
+  /** All selectable targets, in the order of the proposal. */
   actions: readonly FilingAction[];
-  /** Was gerade gewählt ist — steht als solches gekennzeichnet in der Liste. */
+  /** What's currently selected — marked as such in the list. */
   current: FilingAction;
   names: TargetNames;
   onPick: (action: FilingAction) => void;

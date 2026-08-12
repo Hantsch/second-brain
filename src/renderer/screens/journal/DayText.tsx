@@ -1,25 +1,24 @@
-/* Der Abschnitt „Tag": der Prosatext, gerendert — ein Klick macht ihn editierbar.
+/* The "day" section: the prose text, rendered — a click makes it editable.
  *
- * Der Konfliktschutz ist der Kern dieser Datei, und er hängt an einem Detail:
- * **Wert und Hash werden beim Öffnen eingefroren, nicht beim Klick auf Speichern
- * gelesen.** Der Watcher erneuert die Tagesabfrage, sobald jemand von außen
- * schreibt; würde erst beim Speichern der aktuelle Hash genommen, ginge der alte
- * Text mit dem neuen Hash raus — und der Hauptprozess nähme ihn an. Das ist der
- * stille Verlust, den CLAUDE.md ausschließt.
+ * Conflict protection is the core of this file, and it hinges on one detail:
+ * **the value and hash are frozen when the editor opens, not read at the moment
+ * Save is clicked.** The watcher refreshes the day query as soon as someone
+ * writes from outside; if the current hash were taken only at save time, the old
+ * text would go out with the new hash — and the main process would accept it.
+ * That is exactly the silent data loss CLAUDE.md rules out.
  *
- * Zwei Sorten fremder Änderung, zwei Antworten:
+ * Two kinds of outside change, two responses:
  *
- * - **Der Abschnitt selbst hat sich geändert** → Leiste am Feld mit zwei Wegen
- *   (fremden Stand holen oder den eigenen behalten). Verglichen wird der Wert, denn
- *   nur er ist die Änderung, um die es geht.
- * - **Die Datei hat sich geändert, dieser Abschnitt nicht** (eine Coaching-Runde
- *   ist dazugekommen, der Tagesabschluss hat Fakten geschrieben) → der eingefrorene
- *   Hash zieht still nach. Ein Konflikt wäre hier reine Reibung: gespeichert wird
- *   ohnehin nur dieser Abschnitt.
+ * - **The section itself has changed** → a bar on the field with two options
+ *   (take the outside version or keep your own). The value is compared, since
+ *   that's the only change that matters here.
+ * - **The file has changed, but this section hasn't** (a coaching round was
+ *   added, the day close wrote facts) → the frozen hash quietly catches up. A
+ *   conflict here would be pure friction: only this section gets saved anyway.
  *
- * Kommt vom Hauptprozess trotzdem ein `conflict` zurück, steht der Entwurf still
- * und die Meldung bietet den ausdrücklichen Weg zum Überschreiben. Nichts geht
- * verloren, ohne dass jemand es entschieden hat.
+ * If the main process still returns a `conflict`, the draft stays put and the
+ * message offers the explicit path to overwrite. Nothing is lost without someone
+ * deciding it.
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -33,28 +32,28 @@ import { Markdown } from '../../components/Markdown';
 import { useT } from '../../i18n';
 import { decodeIpcError } from '../../lib/ipc-error';
 
-/** Die Fassung, auf der ein Entwurf beruht: Text und Hash gehören zusammen. */
+/** The version a draft is based on: text and hash belong together. */
 interface Base {
   text: string;
   hash: string;
 }
 
 export interface DayTextProps {
-  /** Der Prosatext des Abschnitts, wie er in der Datei steht. */
+  /** The section's prose text, as it stands in the file. */
   text: string;
-  /** Hash der Datei, in der er steht. */
+  /** Hash of the file it's in. */
   hash: string;
-  /** Der Tag hat noch keine Datei — dann ist das Feld der Einstieg. */
+  /** The day has no file yet — then the field is the entry point. */
   fresh: boolean;
   busy: boolean;
-  /** Der Hauptprozess hat den letzten Versuch abgelehnt. */
+  /** The main process rejected the last attempt. */
   error: unknown;
-  /** Zeitpunkt des letzten Versuchs — dieselbe Karte, neuer Anlass. */
+  /** Timestamp of the last attempt — same card, new occasion. */
   attemptedAt: number;
   saved: boolean;
-  /** Speichern mit dem eingefrorenen Hash; `undefined` heißt ausdrücklich überschreiben. */
+  /** Save with the frozen hash; `undefined` means explicitly overwrite. */
   onSave: (text: string, expectedHash: string | undefined) => void;
-  /** Der Nutzer will den fremden Stand sehen. */
+  /** The user wants to see the outside version. */
   onReload: () => void;
   onReset: () => void;
 }
@@ -73,21 +72,22 @@ export function DayText({
 }: DayTextProps) {
   const t = useT();
   /**
-   * Der Entwurf **und** die Fassung, auf der er beruht — ein Stand, nicht zwei.
-   * Er entsteht beim Öffnen des Editors und beim ersten Zeichen im einladenden
-   * Feld; abgeleitet, nicht in einem Effekt nachgezogen (`useProposalEdit` macht
-   * es genauso). So gibt es kein Bild, in dem Text und Hash nicht zusammenpassen.
+   * The draft **and** the version it's based on — one state, not two. It's
+   * created when the editor opens and on the first keystroke in the inviting
+   * field; derived, not chased in an effect (`useProposalEdit` does the same).
+   * That way there's no state where text and hash don't match.
    */
   const [stored, setStored] = useState<{ draft: string; base: Base } | null>(null);
-  /** Fremde Fassung, deren Meldung der Nutzer weggeklickt hat. */
+  /** Outside version whose notice the user has dismissed. */
   const [accepted, setAccepted] = useState<string | null>(null);
   const field = useRef<HTMLTextAreaElement>(null);
 
-  /* Nach dem Speichern ist der Entwurf angekommen — dann gilt wieder die Datei. */
+  /* Once saved, the draft has arrived — then the file takes over again. */
   const draft = saved ? null : (stored?.draft ?? null);
   const base = saved ? null : (stored?.base ?? null);
-  /* Ein Tag ohne Prosa lädt ein, statt eine leere Fläche mit Stift zu zeigen —
-     auch dann, wenn die Datei schon existiert (ein Tag, an dem nur geredet wurde). */
+  /* A day without prose invites input instead of showing an empty area with a
+     pen icon — even when the file already exists (a day where only talking
+     happened). */
   const inviting = draft === null && (fresh || text.trim().length === 0);
   const editing = draft !== null || inviting;
   const conflict =
@@ -95,13 +95,13 @@ export function DayText({
   const changedOutside = base !== null && text !== base.text && accepted !== text;
 
   /**
-   * Der Hash, mit dem gespeichert wird.
+   * The hash used for saving.
    *
-   * Steht in der Datei noch derselbe Abschnitt wie beim Öffnen, zählt der aktuelle
-   * Hash: eine Coaching-Runde oder ein Tagesabschluss hat die Datei geändert, aber
-   * nicht diesen Text — ein Konflikt wäre da reine Reibung. Hat sich der Abschnitt
-   * selbst geändert, bleibt der eingefrorene Hash stehen: dann **muss** der
-   * Schreibvorgang scheitern, statt fremden Text zu überschreiben.
+   * If the file still holds the same section as when it was opened, the current
+   * hash counts: a coaching round or a day close changed the file, but not this
+   * text — a conflict there would be pure friction. If the section itself has
+   * changed, the frozen hash stays put: then the write **must** fail rather than
+   * overwrite someone else's text.
    */
   const expected = base === null || base.text === text ? hash : base.hash;
   const frozen = expected.length > 0 ? expected : undefined;
@@ -122,7 +122,7 @@ export function DayText({
     onReset();
   };
 
-  /* Das erste Zeichen im einladenden Feld friert ein, was dort vorher stand. */
+  /* The first keystroke in the inviting field freezes what was there before. */
   const type = (value: string): void => {
     setStored({ draft: value, base: stored?.base ?? { text, hash } });
   };
@@ -149,7 +149,7 @@ export function DayText({
     return (
       <div className="sb-daytext">
         {saved ? <p className="sb-note-line">{t('journal.day.saved')}</p> : null}
-        {/* Ein Klick auf den Text öffnet ihn — deshalb ist der Text der Knopf. */}
+        {/* A click on the text opens it — that's why the text is the button. */}
         <button
           type="button"
           className="sb-daytext-view"
@@ -179,8 +179,8 @@ export function DayText({
         onKeyDown={onKeyDown}
       />
 
-      {/* Die Meldung steht zwischen Feld und Fußzeile, nicht darüber: wer unten
-          klickt und oben eine Antwort bekommt, sieht keine. */}
+      {/* The notice sits between the field and the footer, not above it: someone
+          clicking below and getting a response above would never see it. */}
       {conflict ? (
         <AlertCard
           title={t('journal.day.conflict.title')}
@@ -263,9 +263,9 @@ export function DayText({
 }
 
 /**
- * Eine Meldung, die man nicht verpassen darf: sie rollt beim Erscheinen in den
- * Blick und meldet sich als `alert` an. `nonce` ist der Anlass — bleibt die Karte
- * stehen und wird nur erneut ausgelöst, rollt sie wieder.
+ * A message that must not be missed: it scrolls into view when it appears and
+ * announces itself as `alert`. `nonce` is the occasion — if the card stays put
+ * and is only triggered again, it scrolls into view again.
  */
 function AlertCard({
   title,

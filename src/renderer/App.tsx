@@ -2,6 +2,7 @@
    Hülle mit der Rail. Die UI-Sprache folgt den Einstellungen. */
 
 import { useEffect } from 'react';
+import type { CSSProperties } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { AppShell } from './components/AppShell';
@@ -9,6 +10,7 @@ import { TitleBar } from './components/TitleBar';
 import { ToastHost } from './components/ToastHost';
 import { setLanguage } from './i18n';
 import { api } from './lib/api';
+import { backgroundImage } from './lib/customization-assets';
 import { qk } from './lib/queries/keys';
 import { AskScreen } from './screens/ask/AskScreen';
 import { CaptureScreen } from './screens/capture/CaptureScreen';
@@ -23,16 +25,17 @@ import { SettingsScreen } from './screens/settings/SettingsScreen';
 import { SourcesScreen } from './screens/sources/SourcesScreen';
 
 /** Hält die Oberflächensprache an den Einstellungen. */
-function useUiLanguage(): void {
+function useSettings() {
   const { data } = useQuery({ queryKey: qk.settings.snapshot(), queryFn: api.settings.get });
   useEffect(() => {
     if (!data) return;
     setLanguage(data.vault?.languages.ui ?? data.app.uiLanguage);
   }, [data]);
+  return data;
 }
 
 export function App() {
-  useUiLanguage();
+  const settings = useSettings();
   const location = useLocation();
   const { data: status, isPending } = useQuery({
     queryKey: qk.vault.status(),
@@ -41,13 +44,28 @@ export function App() {
 
   const onboarding = location.pathname === '/onboarding';
   const noVault = !isPending && (status?.root ?? null) === null;
+  const customization = settings?.app.customization ?? {
+    background: 'none' as const,
+    appIcon: 'knowledge-garden' as const,
+  };
 
   /* Auch ohne Vault braucht das rahmenlose Fenster seine Titelzeile. */
   if (onboarding || noVault) {
     return (
       <div className="sb-app">
-        <TitleBar />
-        <div className="sb-content">
+        <TitleBar appIcon={customization.appIcon} />
+        <div
+          className={
+            customization.background === 'none'
+              ? 'sb-content'
+              : 'sb-content sb-content--custom-background'
+          }
+          style={
+            {
+              '--sb-custom-background': backgroundImage(customization.background),
+            } as CSSProperties
+          }
+        >
           <OnboardingScreen />
         </div>
         <ToastHost />
@@ -56,7 +74,7 @@ export function App() {
   }
 
   return (
-    <AppShell>
+    <AppShell background={customization.background} appIcon={customization.appIcon}>
       <Routes>
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<DashboardScreen />} />

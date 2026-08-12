@@ -1,12 +1,12 @@
-/* Neues Projekt: Titel, Bereich, Status, optional der erste nächste Schritt.
+/* New project: title, scope, status, optionally the first next step.
 
-   Der Dialog wird nur gerendert, wenn er offen ist: dann sind die Felder beim
-   Öffnen leer, ohne dass ein Effekt sie zurücksetzen müsste.
+   The dialog is only rendered when open: that way the fields are empty on
+   open, without an effect having to reset them.
 
-   Er sagt, welche Datei entsteht — der Nutzer soll nicht raten, wo sein
-   Projekt landet. Der Slug wird dabei genauso gebildet wie im Kern
-   (klein, Bindestriche, Umlaute ausgeschrieben); er ist eine Vorschau, keine
-   Zusage: geschrieben wird der Pfad, den der Hauptprozess bildet. */
+   It shows which file will be created — the user shouldn't have to guess
+   where their project ends up. The slug is built exactly as in the core
+   (lowercase, hyphens, umlauts spelled out); it's a preview, not a promise:
+   what gets written is the path the main process builds. */
 
 import { useState } from 'react';
 import type { ProjectStatus, Scope } from '@shared/types';
@@ -18,14 +18,14 @@ import { Select } from '../../atoms/Select';
 import { ErrorState } from '../../components/ErrorState';
 import { useT } from '../../i18n';
 
-/* Kombinierende Diakritika. Als Konstruktor, damit im Quelltext kein
-   kombinierendes Zeichen steht — es waere dort unsichtbar und zerbrechlich. */
+/* Combining diacritics. As a constructor, so that no combining character
+   appears in the source — it would be invisible and fragile there. */
 const DIACRITICS = new RegExp('[\u0300-\u036f]', 'g');
 
 /**
- * Vorschau des Dateinamens. Die Regel steht in `core/vault/slug` und gilt dort;
- * hier ist sie nachgebildet, weil der Renderer den Kern nicht kennt — deshalb
- * ist der Pfad eine Vorschau und keine Zusage.
+ * Preview of the file name. The rule lives in `core/vault/slug` and applies
+ * there; here it's replicated because the renderer doesn't know the core —
+ * that's why the path is a preview and not a promise.
  */
 export function previewSlug(title: string): string {
   return title

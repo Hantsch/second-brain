@@ -1,6 +1,6 @@
-/* Die einzige Brücke. Sie lässt genau die Kanäle aus `IPC_CHANNELS` und genau
-   die Ereignisse aus `IPC_EVENTS` durch — alles andere ist ein Fehler. Der
-   Renderer bekommt kein `require`, kein `fs`, kein `ipcRenderer`. */
+/* The one and only bridge. It lets through exactly the channels from
+   `IPC_CHANNELS` and exactly the events from `IPC_EVENTS` — anything else is
+   an error. The renderer gets no `require`, no `fs`, no `ipcRenderer`. */
 
 import { contextBridge, ipcRenderer } from 'electron';
 import { IPC_CHANNELS, IPC_EVENTS } from '@shared/ipc';
@@ -28,7 +28,7 @@ async function invoke(channel: string, payload?: unknown): Promise<unknown> {
   return result.value;
 }
 
-/** Pro Ereignis: Callback des Renderers → Listener, den `ipcRenderer` kennt. */
+/** Per event: renderer callback → listener that `ipcRenderer` knows. */
 const listeners = new Map<string, Map<(payload: never) => void, (...args: unknown[]) => void>>();
 
 function on(event: string, callback: (payload: never) => void): () => void {
@@ -55,7 +55,7 @@ function off(event: string, callback: (payload: never) => void): void {
   listeners.get(event)?.delete(callback);
 }
 
-/** Was im Renderer als `window.sb` steht. Typen in `src/renderer/global.d.ts`. */
+/** What appears in the renderer as `window.sb`. Types in `src/renderer/global.d.ts`. */
 const bridge = {
   invoke: <K extends IpcChannel>(channel: K, payload?: IpcRequest<K>): Promise<unknown> =>
     invoke(channel, payload),

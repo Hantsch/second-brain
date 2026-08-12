@@ -1,5 +1,5 @@
-/* Fenster-Kanäle für die eigene Titelzeile. Rahmenlos heißt: Minimieren,
-   Maximieren und Schließen liegen beim Renderer — hier ist die Gegenseite. */
+/* Window channels for the custom title bar. Frameless means minimize,
+   maximize, and close live in the renderer — this is the counterpart. */
 
 import { BrowserWindow } from 'electron';
 import type { HandlerMap } from './registry';
@@ -30,8 +30,9 @@ export function windowHandlers(services: Services): HandlerMap {
 
     'window:isMaximized': () => target(services)?.isMaximized() ?? false,
 
-    /* Ausdrücklich das Hauptfenster, nicht das fokussierte: gerufen wird dieser
-       Kanal aus dem Schnell-Erfassen — das ist gerade das fokussierte. */
+    /* Explicitly the main window, not the focused one: this channel is
+       called from quick capture — which is itself the focused window at
+       that point. */
     'window:show': () => {
       const main = services.mainWindow();
       if (!main) return;

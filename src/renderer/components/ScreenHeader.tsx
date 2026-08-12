@@ -1,14 +1,14 @@
-/* Kopf eines Screens: Overline, Titel und genau eine primäre Aktion.
-   Ein Fokuspunkt pro Screen — mehr als eine Teal-Aktion gibt es hier nicht. */
+/* Header of a screen: overline, title, and exactly one primary action.
+   One focal point per screen — there's never more than one teal action here. */
 
 import type { ReactNode } from 'react';
 
 export interface ScreenHeaderProps {
-  /** Kurzes Mono-Label über dem Titel, bereits übersetzt. */
+  /** Short mono label above the title, already translated. */
   overline: string;
-  /** Titel des Screens, bereits übersetzt. */
+  /** Title of the screen, already translated. */
   title: string;
-  /** Die eine primäre Aktion. */
+  /** The one primary action. */
   action?: ReactNode;
 }
 

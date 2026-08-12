@@ -1,11 +1,11 @@
-/* Die gemeinsamen Bauteile des Inhalts: Module, Listen, Zeilen, Kennzahlen.
-   Farben, Abstände und Radien ausschließlich aus den Gaston-Tokens.
+/* The shared building blocks of content: modules, lists, rows, stats.
+   Colors, spacing, and radii exclusively from the Gaston tokens.
 
-   Zwei Rhythmen, mehr nicht: `sb-rows` sind Listenzeilen mit Fließtext,
-   `sb-lines` sind knappe Zeilen für die Dashboard-Module. Was nur einem Screen
-   gehört, steht in screens.css. */
+   Two rhythms, no more: `sb-rows` are list rows with prose, `sb-lines` are
+   compact rows for the dashboard modules. Whatever belongs to only one
+   screen lives in screens.css. */
 
-/* ── Module ─────────────────────────────────────────────────────────────── */
+/* ── Modules ────────────────────────────────────────────────────────────── */
 
 .sb-panel {
   display: flex;
@@ -42,7 +42,7 @@
 .sb-panel-note {
   padding: var(--space-3) var(--space-5);
   border-top: 1px solid var(--border-subtle);
-  /* Fließtext bleibt bei etwa 72 Zeichen lesbar, auch wenn das Modul breiter ist. */
+  /* Prose stays readable at around 72 characters, even if the module is wider. */
   max-width: 72ch;
   font-size: var(--text-xs);
   color: var(--text-faint);
@@ -61,7 +61,7 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-6);
 }
-/* Im engen Fenster untereinander: zwei Spalten würden die Zeilen zerreißen. */
+/* Stacked in a narrow window: two columns would tear the rows apart. */
 @media (max-width: 1100px) {
   .sb-grid-2 {
     grid-template-columns: minmax(0, 1fr);
@@ -74,7 +74,7 @@
   line-height: var(--leading-snug);
 }
 
-/* ── Listenzeilen ───────────────────────────────────────────────────────── */
+/* ── List rows ──────────────────────────────────────────────────────────── */
 
 .sb-rows,
 .sb-lines {
@@ -107,7 +107,7 @@
   min-width: 0;
   flex: 1;
 }
-/* Ein ganzer Treffer als Knopf: die Fläche ist das Ziel, nicht ein Icon daneben. */
+/* A whole result as a button: the surface is the target, not an icon next to it. */
 .sb-row-button {
   all: unset;
   box-sizing: border-box;
@@ -139,7 +139,7 @@
   font-size: var(--text-sm);
   color: var(--text-muted);
   line-height: var(--leading-snug);
-  /* Zwei Zeilen genügen: die Liste ist eine Übersicht, keine Leseansicht. */
+  /* Two lines are enough: the list is an overview, not a reading view. */
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -174,9 +174,9 @@
   gap: var(--space-1);
 }
 
-/* Eine Zeile ist 40 px hoch und mittig ausgerichtet: darin passt ein Knopf mit
-   32 px Trefferfläche, ohne dass die Zeile auseinanderfällt. Vorher war die Zeile
-   36 px hoch und der Titel darin 20 px — zu klein für die Regel aus
+/* A row is 40px tall and centered: a button with a 32px hit area fits
+   inside it without the row falling apart. Previously the row was 36px
+   tall and the title inside it 20px — too small for the rule in
    ARCHITECTURE.md. */
 .sb-line {
   display: flex;
@@ -236,11 +236,11 @@
   word-break: break-all;
 }
 
-/* Ein Link, der wie ein Link aussieht, aber ein Knopf ist — er löst eine Aktion
-   in der App aus, keine Navigation im Web. */
-/* Ein Textknopf ist ein Knopf: 32 px hoch, auch wenn die Schrift kleiner ist
-   (ARCHITECTURE.md, jede interaktive Fläche ≥ 32 px). `inline-flex` statt Block,
-   damit er weiter in einer Zeile stehen kann. */
+/* A link that looks like a link but is a button — it triggers an action in
+   the app, not navigation on the web. */
+/* A text button is a button: 32px tall, even if the font is smaller
+   (ARCHITECTURE.md, every interactive surface >= 32px). `inline-flex`
+   instead of block, so it can still sit within a line. */
 .sb-textlink {
   all: unset;
   cursor: pointer;
@@ -261,7 +261,7 @@
   box-shadow: var(--focus-ring);
 }
 
-/* ── Kennzahlen ─────────────────────────────────────────────────────────── */
+/* ── Stats ──────────────────────────────────────────────────────────────── */
 
 .sb-stats {
   display: flex;

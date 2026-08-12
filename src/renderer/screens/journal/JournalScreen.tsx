@@ -1,27 +1,26 @@
-/* Tagebuch — der Screen, auf dem die App nicht nützlich, sondern menschlich sein
-   muss.
+/* Journal — the screen where the app must not be useful, but human.
 
-   Aufbau: links eine schmale Liste der Tage (mit benannten Lücken, „Heute" oben),
-   rechts der Tag — Kopf, Tagestext, Gespräch, Fakten.
+   Layout: on the left a narrow list of days (with named gaps, "Today" on
+   top), on the right the day — header, day text, talk, facts.
 
-   Die vier Zustände aus ARCHITECTURE.md, alle ausdrücklich:
-   - **Leer**: gar kein Eintrag im Vault → zwei Sätze, was hier entsteht, und ein
-     Feld, das gleich losgeht. Heute ohne Eintrag ist kein Leerzustand, sondern die
-     Frage „Wie war der Tag?" mit fokussiertem Feld.
-   - **Kein Modell**: der Eintrag lässt sich schreiben, das Gespräch sagt ehrlich,
-     dass es ohne Modell nicht antwortet — und zeigt im Modus „analysieren" die
-     früheren Stellen, die es wirklich gefunden hat.
-   - **Fehler**: was beim Schreiben, Abschließen oder Zurücknehmen schiefgeht, steht
-     als Karte da, nie stumm.
-   - **Kein Vault**: dafür sorgt die Hülle (`App.tsx`).
+   The four states from ARCHITECTURE.md, all explicit:
+   - **Empty**: no entry at all in the vault → two sentences about what's
+     forming here, and a field ready to go. Today without an entry isn't an
+     empty state, but the question "How was the day?" with a focused field.
+   - **No model**: the entry can still be written, the talk honestly says
+     it can't respond without a model — and in "analyze" mode shows the
+     earlier spots it actually found.
+   - **Error**: whatever goes wrong while writing, closing out, or undoing
+     shows up as a card, never silently.
+   - **No vault**: handled by the shell (`App.tsx`).
 
-   Der offene Tag steht in der Adresse (`#/journal?d=2026-08-10`): so führt ein
-   Verweis von außen — Dashboard, Befehlspalette, ein Beleg des Coachs — direkt
-   dorthin.
+   The open day lives in the address (`#/journal?d=2026-08-10`): that way a
+   link from elsewhere — dashboard, command palette, a coach citation —
+   leads straight there.
 
-   Der Stream läuft nicht über TanStack Query: die Stücke landen im Puffer aus
-   `lib/llm-stream.ts`, und der Hauptprozess lädt den Tag über
-   `event:vault-changed` neu, sobald die Runde als Datei steht. */
+   The stream doesn't run through TanStack Query: the chunks land in the
+   buffer from `lib/llm-stream.ts`, and the main process reloads the day via
+   `event:vault-changed` as soon as the turn is on disk as a file. */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -50,19 +49,19 @@ import { FactsSection } from './FactsSection';
 import type { AppliedClose } from './FactsSection';
 import { useJournalKeys } from './use-journal-keys';
 
-/** Eine laufende Gesprächsrunde: Marke und der eigene Satz. */
+/** A talk turn in progress: marker and one's own message. */
 interface Pending {
   threadId: string;
   messageId: string;
   message: string;
 }
 
-/** Dieselbe Schwelle wie `journal.css` (`@media (max-width: 1200px)`) — die
-    einzige Stelle, an der dieser Screen selbst wissen muss, welche der beiden
-    Bauformen gerade gilt: „Tag abschließen" steht im engen Fenster bei den
-    Fakten (Reiter „Tag"), im breiten Fenster neben dem Sendeknopf, nie an
-    beiden Stellen zugleich (siehe `closeAction` unten). Nach demselben Muster
-    wie `useGridColumns` im Dashboard (`screens/dashboard/TileGrid.tsx`). */
+/** Same threshold as `journal.css` (`@media (max-width: 1200px)`) — the only
+    place where this screen itself needs to know which of the two designs
+    currently applies: "close the day" sits in the narrow window next to the
+    facts (tab "Day"), in the wide window next to the send button, never in
+    both places at once (see `closeAction` below). Same pattern as
+    `useGridColumns` in the dashboard (`screens/dashboard/TileGrid.tsx`). */
 function useNarrow(): boolean {
   const [narrow, setNarrow] = useState(() =>
     typeof window === 'undefined' ? false : window.innerWidth <= 1200,
@@ -91,7 +90,7 @@ export function JournalScreen() {
   const mutations = useJournalMutations(date);
   const narrow = useNarrow();
 
-  /* Die Haltung: Vorgabe aus den Einstellungen, umschaltbar pro Gespräch. */
+  /* The stance: defaults from settings, switchable per conversation. */
   const [mode, setMode] = useState<CoachMode | null>(null);
   const stance: CoachMode = mode ?? settings?.mode ?? 'listen';
 
@@ -111,8 +110,8 @@ export function JournalScreen() {
 
   const select = (next: string, focus = false): void => {
     setParams(next === today ? {} : { d: next }, { replace: true });
-    /* Ein Tageswechsel beendet die Sicht auf die laufende Runde: sie gehört zum
-       anderen Tag und steht dort in der Datei. */
+    /* A day switch ends the view of the running turn: it belongs to the
+       other day and lives in its file there. */
     setPending(null);
     setApplied(null);
     setTextSaved(false);
@@ -123,10 +122,10 @@ export function JournalScreen() {
 
   const busy = pending !== null && !stream.done;
 
-  /* Solange eine Antwort läuft, wird keine zweite Runde geschickt: zwei
-     Schreibvorgänge in dieselbe Datei würden sich überholen, und eine Runde ginge
-     verloren. Der Composer zeigt in dieser Zeit „Abbrechen"; die Enter-Taste
-     braucht denselben Riegel. */
+  /* While an answer is running, no second turn gets sent: two writes to the
+     same file would race each other, and one turn would be lost. The
+     composer shows "Cancel" during this time; the Enter key needs the same
+     lock. */
   const say = (): void => {
     const message = draft.trim();
     if (message.length === 0 || busy || mutations.coach.isPending) return;
@@ -184,16 +183,16 @@ export function JournalScreen() {
     days.error ??
     null;
 
-  /* Ein Knopf, zwei mögliche Stellen — nie beide zugleich. Im breiten Fenster
-     steht er neben dem Composer, am unteren Rand der Detailspalte verankert
-     (`footerAction`), damit keiner der beiden Aktionen, die den Tag
-     betreffen, unter den sichtbaren Rand rutscht. Im engen Fenster gehört er
-     stattdessen zum Reiter „Tag", direkt bei den Fakten (`DayEntry.tsx`) —
-     der Reiter „Gespräch" zeigt sonst nur Verlauf und Feld. `narrow`
-     entscheidet, welcher der beiden Wege den Knopf tatsächlich bekommt; der
-     andere bleibt `undefined`. Sekundär bleibt die Aktion in jedem Fall — der
-     eine Teal-Punkt dieses Screens ist das Gespräch, und im Dialog dessen
-     „Übernehmen". */
+  /* One button, two possible spots — never both at once. In the wide
+     window it sits next to the composer, anchored at the bottom edge of
+     the detail column (`footerAction`), so neither of the two actions
+     concerning the day slides below the visible edge. In the narrow window
+     it instead belongs to the "Day" tab, right next to the facts
+     (`DayEntry.tsx`) — the "Talk" tab otherwise shows only history and
+     field. `narrow` decides which of the two paths actually gets the
+     button; the other stays `undefined`. The action remains secondary
+     either way — this screen's one teal point is the talk, and in the
+     dialog, its "apply". */
   const closeAction = (
     <Button
       variant="secondary"
@@ -207,17 +206,18 @@ export function JournalScreen() {
     </Button>
   );
 
-  /* „Anzahl Runden" am Reiter „Gespräch" — jede Runde beginnt mit genau einer
-     eigenen Zeile, die Antwort folgt oder bleibt aus (siehe `CoachPanel.tsx`);
-     die laufende Runde zählt erst mit, sobald sie in der Datei steht. */
+  /* "Turn count" badge on the "Talk" tab — every turn starts with exactly
+     one own line, the response follows or is missing (see `CoachPanel.tsx`);
+     the running turn only counts once it's on disk as a file. */
   const talkCount = (view.data?.turns ?? []).filter((turn) => turn.role === 'user').length;
 
   const header = (
     <ScreenHeader overline={t('screen.journal.overline')} title={t('screen.journal.title')} />
   );
 
-  /* Gar kein Eintrag im Vault und auch heute keiner: dann erklärt der Screen in
-     zwei Sätzen, was hier entsteht — und der Tag darunter ist der Anfang. */
+  /* No entry at all in the vault and none for today either: then the
+     screen explains in two sentences what's forming here — and the day
+     below it is the beginning. */
   const nothingYet = (days.data ?? []).length === 0 && view.data === null;
 
   if (days.isPending || days.data === undefined) {
@@ -275,9 +275,9 @@ export function JournalScreen() {
                 saved: moodSaved,
                 onPick: (kind, level) => {
                   setMoodSaved(false);
-                  /* Ohne eingefrorenen Hash: ein Feld-Patch schreibt keine
-                     Nutzerzeile um, und ein Konflikt wäre hier reine Reibung
-                     (dieselbe Abwägung wie beim nächsten Schritt im Projekt). */
+                  /* Without a frozen hash: a field patch doesn't rewrite any
+                     user line, and a conflict here would be pure friction
+                     (same trade-off as with a project's next step). */
                   mutations.setMood.mutate(
                     { date, ...(kind === 'mood' ? { mood: level } : { energy: level }) },
                     { onSuccess: () => setMoodSaved(true) },

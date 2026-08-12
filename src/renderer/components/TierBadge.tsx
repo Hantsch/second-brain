@@ -1,13 +1,13 @@
-/* Die Leistungsklasse eines Modells als Marke: klein, mittel, groß.
+/* A model's performance tier as a badge: cheap, balanced, strong.
 
-   Bewusst alle drei neutral: das eine Teal des Screens gehört der primären
-   Aktion, nicht einer Einordnung. Unterschieden wird über den Text, nicht über
-   die Farbe — das bleibt auch bei Farbfehlsicht lesbar.
+   Deliberately all three neutral: the screen's one teal belongs to the
+   primary action, not to a classification. Tiers are told apart via text, not
+   color — that stays legible even with color blindness.
 
-   Die Begründung („warum diese Klasse") steht nicht in jeder Zeile: in einer
-   Tabelle mit zehn Aufgaben wiederholt sie sich wortwörtlich und macht jede Zeile
-   doppelt so hoch. Sie gehört an eine Stelle — unter „Standard je
-   Leistungsklasse" — und als `title` an die Marke. */
+   The reasoning ("why this tier") doesn't appear in every row: in a table
+   with ten tasks it would repeat verbatim and double the height of every row.
+   It belongs in one place — under "default per performance tier" — and as a
+   `title` on the badge. */
 
 import type { ModelTier } from '@shared/types';
 import { Badge } from '../atoms/Badge';
@@ -15,9 +15,9 @@ import { useT } from '../i18n';
 
 export interface TierBadgeProps {
   tier: ModelTier;
-  /** Erklärt in einem Satz, warum diese Klasse empfohlen ist — unter der Marke. */
+  /** Explains in one sentence why this tier is recommended — below the badge. */
   withReason?: boolean;
-  /** Derselbe Satz nur beim Verweilen, für die enge Tabellenzeile. */
+  /** The same sentence, only on hover, for the tight table row. */
   title?: string;
 }
 

@@ -1,11 +1,11 @@
-/* Fehlerübergabe über die contextBridge.
+/* Error handoff across the contextBridge.
 
-   Electron reduziert Fehlerobjekte auf ihre Message, wenn sie die Brücke
-   überqueren — eigene Felder wie `code` gehen verloren. Deshalb reist der
-   `IpcError` als JSON in der Message, mit festem Präfix.
+   Electron reduces error objects to their message when they cross the
+   bridge — custom fields like `code` are lost. That's why the `IpcError`
+   travels as JSON inside the message, with a fixed prefix.
 
-   Gegenstück: `src/renderer/lib/ipc-error.ts` (decodeIpcError). Beide Seiten
-   müssen dasselbe Präfix benutzen. */
+   Counterpart: `src/renderer/lib/ipc-error.ts` (decodeIpcError). Both sides
+   must use the same prefix. */
 
 import type { IpcError } from '@shared/ipc';
 

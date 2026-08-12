@@ -1,4 +1,4 @@
-/* Einstiegspunkt des Hauptfensters. */
+/* Entry point of the main window. */
 
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -8,8 +8,8 @@ import { App } from './App';
 import { wireEvents } from './lib/events';
 import './index.css';
 
-/* HashRouter, weil der gebaute Renderer über `file://` läuft — dort gibt es
-   keine History-API, die auf Pfade antwortet. */
+/* HashRouter, because the built renderer runs over `file://` — there is no
+   History API there that responds to paths. */
 const client = new QueryClient({
   defaultOptions: {
     queries: { retry: false, staleTime: 5_000, refetchOnWindowFocus: false },

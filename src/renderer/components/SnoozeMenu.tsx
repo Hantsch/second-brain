@@ -1,19 +1,19 @@
-/* Eine Erinnerung ruhig stellen — bis wann, sagt der Nutzer.
+/* Snoozing a reminder — the user says until when.
 
-   Vorher stand hier eine feste Zahl (drei Tage). Das war eine Entscheidung der
-   App über etwas, das nur der Nutzer weiß: „nicht mehr heute" und „nächste
-   Woche" sind zwei verschiedene Dinge.
+   This used to be a fixed number (three days). That was the app making a
+   decision about something only the user knows: "not today" and "next week"
+   are two different things.
 
-   Zwei Regeln:
-   - **Jede Wahl nennt den Tag, an dem wieder gemahnt wird.** Der Kanal rechnet in
-     Tagen (`reminders:snooze`), der Mensch denkt in Tagen des Kalenders. „Für drei
-     Tage" wäre eine Rechnung, die er im Kopf machen müsste.
-   - **Eigenes Datum heißt eigenes Datum.** Ein Tag, der nicht in der Zukunft
-     liegt, wird abgelehnt statt stillschweigend auf morgen gerundet — er würde
-     nichts ruhig stellen.
+   Two rules:
+   - **Every choice names the day the reminder returns.** The channel computes
+     in days (`reminders:snooze`), but the human thinks in calendar days. "For
+     three days" would be a calculation they'd have to do in their head.
+   - **A custom date means a custom date.** A day that isn't in the future is
+     rejected instead of silently rounded up to tomorrow — it wouldn't snooze
+     anything.
 
-   Kein `role="menu"`: darin darf kein Datumsfeld stehen (`aria-required-children`).
-   Eine Gruppe mit Namen trägt dieselbe Bedeutung und hält axe still. */
+   No `role="menu"`: it must not contain a date field (`aria-required-children`).
+   A named group carries the same meaning and keeps axe quiet. */
 
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '../atoms/Button';
@@ -21,7 +21,7 @@ import { IconButton } from '../atoms/IconButton';
 import { useLanguage, useT } from '../i18n';
 import { formatDate } from '../lib/format';
 
-/** Kalendertag in lokaler Zeit als `YYYY-MM-DD` — wie in `DueField`. */
+/** Calendar day in local time as `YYYY-MM-DD` — same as in `DueField`. */
 function isoDay(value: Date): string {
   const month = String(value.getMonth() + 1).padStart(2, '0');
   const day = String(value.getDate()).padStart(2, '0');
@@ -32,7 +32,7 @@ function shifted(from: Date, days: number): string {
   return isoDay(new Date(from.getFullYear(), from.getMonth(), from.getDate() + days));
 }
 
-/** Kalendertage zwischen zwei Tagen (`YYYY-MM-DD`). */
+/** Calendar days between two days (`YYYY-MM-DD`). */
 export function daysUntil(today: string, target: string): number {
   const from = new Date(`${today}T00:00:00`);
   const to = new Date(`${target}T00:00:00`);
@@ -40,7 +40,7 @@ export function daysUntil(today: string, target: string): number {
   return Math.round((to.getTime() - from.getTime()) / 86_400_000);
 }
 
-/** Die drei Vorgaben: `days` ist der Abstand zum Tag, an dem wieder gemahnt wird. */
+/** The three presets: `days` is the distance to the day the reminder returns. */
 export const SNOOZE_PRESETS: readonly { key: string; labelKey: string; days: number }[] = [
   { key: 'today', labelKey: 'reminder.snooze.today', days: 1 },
   { key: 'tomorrow', labelKey: 'reminder.snooze.tomorrow', days: 2 },
@@ -48,12 +48,12 @@ export const SNOOZE_PRESETS: readonly { key: string; labelKey: string; days: num
 ];
 
 export interface SnoozeMenuProps {
-  /** Name des Knopfs, bereits übersetzt — er nennt die Sache. */
+  /** Name of the button, already translated — it names the thing. */
   label: string;
   disabled?: boolean;
-  /** `days` ist der Abstand in Kalendertagen; `until` derselbe Tag als Datum. */
+  /** `days` is the distance in calendar days; `until` is the same day as a date. */
   onSnooze: (days: number, until: string) => void;
-  /** Das „heute" dieser Anzeige. Tests geben eine feste Zeit. */
+  /** This display's "today". Tests supply a fixed time. */
   now?: Date;
 }
 
@@ -72,7 +72,7 @@ export function SnoozeMenu({
   const panel = useRef<HTMLDivElement>(null);
   const today = isoDay(now);
 
-  /* Kein Panel ohne Fluchtweg: Esc schließt, ein Klick daneben auch. */
+  /* No panel without an escape route: Esc closes it, so does a click outside. */
   useEffect(() => {
     if (!open) return undefined;
     const onDown = (event: globalThis.MouseEvent): void => {

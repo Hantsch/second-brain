@@ -1,8 +1,8 @@
-/* Gerüst der Anwendung: Titelzeile, Rail, Inhaltsbereich, Screen-Kopf und der
-   Leerzustand. Farben, Abstände und Radien ausschließlich aus den Gaston-Tokens.
-   Die Bauteile im Inhalt stehen in content.css und screens.css. */
+/* Application shell: title bar, rail, content area, screen header, and the
+   empty state. Colors, spacing, and radii exclusively from the Gaston tokens.
+   The building blocks inside the content live in content.css and screens.css. */
 
-/* ── Titelzeile ─────────────────────────────────────────────────────────── */
+/* ── Title bar ──────────────────────────────────────────────────────────── */
 
 .sb-titlebar {
   display: flex;
@@ -11,6 +11,13 @@
   padding-left: var(--space-4);
   border-bottom: 1px solid var(--border-subtle);
   background: var(--surface-sunken);
+}
+.sb-titlebar-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  flex-shrink: 0;
 }
 .sb-titlebar-name {
   font-family: var(--font-mono);
@@ -27,8 +34,8 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* Sichtbarer Einstieg in die Befehlspalette: eine Attrappe eines Suchfelds.
-   Sie ist ein Knopf — deshalb 32 px hoch und mit eigenem Fokusring. */
+/* Visible entry point into the command palette: a mock-up of a search field.
+   It's actually a button — hence 32px tall and with its own focus ring. */
 .sb-titlebar-search {
   flex: 1;
   display: flex;
@@ -84,6 +91,21 @@
   grid-template-columns: var(--sb-rail-w) 1fr;
   min-height: 0;
 }
+.sb-body--custom-background,
+.sb-content--custom-background {
+  background-color: var(--surface-page);
+  background-image:
+    linear-gradient(
+      color-mix(in srgb, var(--surface-page) 92%, transparent),
+      color-mix(in srgb, var(--surface-page) 92%, transparent)
+    ),
+    var(--sb-custom-background);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size:
+    cover,
+    min(78vw, 1100px) auto;
+}
 
 .sb-rail {
   display: flex;
@@ -99,16 +121,16 @@
   flex-direction: column;
   gap: 2px;
   overflow-y: auto;
-  /* `overflow-y: auto` macht die Querachse automatisch scrollbar. `clip` hält
-     sie stumm — in der Rail gibt es nichts, was seitlich herausragen darf. */
+  /* `overflow-y: auto` would make the cross axis scrollable automatically.
+     `clip` keeps it silent — nothing in the rail is allowed to overflow sideways. */
   overflow-x: clip;
   min-height: 0;
 }
 .sb-rail-item {
   all: unset;
   box-sizing: border-box;
-  /* Nach `all: unset` — sonst setzt der Reset die Breite wieder zurück. Ohne
-     das wäre der aktive Zustand nur so breit wie der Text. */
+  /* Placed after `all: unset` — otherwise the reset would set the width back.
+     Without it, the active state would only be as wide as the text. */
   width: 100%;
   position: relative;
   display: flex;
@@ -120,8 +142,8 @@
   color: var(--text-muted);
   cursor: pointer;
   font-size: var(--text-sm);
-  /* Der Reset von `a:hover` in tokens/base.css: ein unterstrichenes Nav-Label
-     sieht in jedem Zustand nach Fließtext aus. Hover markiert die Fläche. */
+  /* The reset of `a:hover` in tokens/base.css: an underlined nav label would
+     look like body text in every state. Hover highlights the surface instead. */
   text-decoration: none;
   transition:
     background var(--duration-fast) var(--ease-out),
@@ -141,9 +163,9 @@
   background: var(--accent-soft);
   color: var(--text-heading);
 }
-/* Die Aktivmarkierung ist ein Pseudoelement, kein `box-shadow`: sonst
-   überschreibt sie den globalen Fokusring (Spezifität 0,2,0 gegen 0,1,0) und der
-   Eintrag, auf dem man steht, verliert bei Tastaturbedienung seine Markierung. */
+/* The active marker is a pseudo-element, not a `box-shadow`: otherwise it
+   would override the global focus ring (specificity 0,2,0 vs 0,1,0) and the
+   entry you're on would lose its marker during keyboard navigation. */
 .sb-rail-item[aria-current='page']::before {
   content: '';
   position: absolute;
@@ -154,13 +176,13 @@
   border-radius: var(--radius-full);
   background: var(--accent);
 }
-/* Ausdrücklich und mit höherer Spezifität als die Aktivmarkierung. */
+/* Explicit, and with higher specificity than the active marker. */
 .sb-rail-item:focus-visible,
 .sb-rail-item[aria-current='page']:focus-visible {
   box-shadow: var(--sb-focus-ring-sunken);
 }
-/* Die Tastenziffer stand auf --text-disabled (2,8:1) und war kaum zu erkennen.
-   --text-faint liegt bei 5,96:1 gegen die Rail-Fläche. */
+/* The key number used to be --text-disabled (2.8:1) and was barely visible.
+   --text-faint sits at 5.96:1 against the rail surface. */
 .sb-rail-key {
   margin-left: auto;
   font-family: var(--font-mono);
@@ -221,12 +243,12 @@
   background: var(--accent);
 }
 
-/* ── Inhaltsbereich ─────────────────────────────────────────────────────── */
+/* ── Content area ───────────────────────────────────────────────────────── */
 
 .sb-content {
   overflow-y: auto;
-  /* Hält die Spalte des Rollbalkens frei, auch wenn keiner gebraucht wird: sonst
-     springt der ganze Inhalt beim Tabwechsel um dessen Breite. */
+  /* Reserves the scrollbar's column even when none is needed: otherwise the
+     whole content would jump by its width when switching tabs. */
   scrollbar-gutter: stable;
   min-height: 0;
   padding: var(--space-8) var(--space-8) var(--space-16);
@@ -259,8 +281,8 @@
   flex-shrink: 0;
 }
 
-/* Die Karte folgt ihrem Inhalt statt auf 960 px zu spannen — sonst steht rechts
-   dauerhaft leere Kartenfläche neben einem 56ch breiten Text. */
+/* The card follows its content instead of stretching to 960px — otherwise
+   there'd be permanently empty card surface to the right of a 56ch-wide text. */
 .sb-empty-card {
   max-width: 64ch;
 }
@@ -271,7 +293,7 @@
   gap: var(--space-4);
   padding: var(--space-8);
 }
-/* Neutral: das einzige Teal des Screens gehört dem Primärknopf. */
+/* Neutral: the screen's one teal belongs to the primary button. */
 .sb-empty-icon {
   display: grid;
   place-items: center;

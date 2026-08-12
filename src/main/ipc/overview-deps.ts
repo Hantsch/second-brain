@@ -1,20 +1,20 @@
-/* Die Verdrahtung des Überblicks — an genau einer Stelle.
+/* Wiring for the overview — in exactly one place.
 
-   Drei Kanalgruppen hängen an `@core/overview` und `@core/claude`: das Dashboard,
-   die Erinnerungen und die Sessions. Sie brauchen dieselben vier Dinge — den
-   Index als schmale Sicht, die Schwellen aus den Vault-Einstellungen, die
-   Sitzungsliste und den Ruhezustand.
+   Three channel groups hang off `@core/overview` and `@core/claude`: the
+   dashboard, the reminders, and the sessions. They need the same four things —
+   the index as a narrow view, the thresholds from the vault settings, the
+   session list, and the snooze state.
 
-   Zwei Entscheidungen, die man im Code sonst nicht sieht:
+   Two decisions that aren't otherwise visible in the code:
 
-   - **Die Sitzungen werden kurz gepuffert.** Ein Dashboard-Aufruf, ein
-     Erinnerungs-Aufruf und die Sessions-Kachel fragen innerhalb einer Sekunde
-     dreimal; `~/.claude` dreimal zu lesen wäre Verschwendung. Der Puffer gilt
-     nur Sekunden und wird nach `claude:link` verworfen.
-   - **Nach dem Sitzungslauf zieht der Index nach, ohne ein Ereignis zu
-     schicken.** `lastTouch` und `stale` sollen die Sessions kennen; ein
-     `event:vault-changed` würde das Dashboard invalidieren, das gerade fragt —
-     eine Schleife. */
+   - **Sessions are briefly cached.** A dashboard call, a reminders call, and
+     the sessions tile all query within one second; reading `~/.claude` three
+     times would be wasteful. The cache lasts only seconds and is discarded
+     after `claude:link`.
+   - **After the session run, the index catches up without sending an event.**
+     `lastTouch` and `stale` need to know about the sessions; an
+     `event:vault-changed` would invalidate the dashboard that's currently
+     querying — a loop. */
 
 import { ClaudeSessionReader, linkSessions, nodeClaudeFileSystem } from '@core/claude';
 import type { OverviewIndex } from '@core/overview';
@@ -28,13 +28,13 @@ import { overviewState } from '../overview-state';
 import type { OverviewState } from '../overview-state';
 import type { Services } from '../services';
 
-/** So lange gilt eine gelesene Sitzungsliste als frisch. */
+/** How long a read session list counts as fresh. */
 export const SESSION_CACHE_MS = 4000;
 
-/** So viele Sitzungen liest ein Lauf, wenn niemand eine Zahl nennt. */
+/** How many sessions a run reads when no one specifies a number. */
 export const SESSION_LIMIT = 20;
 
-/** Was der Überblick am Index braucht — `IndexService` erfüllt es strukturell. */
+/** What the overview needs from the index — `IndexService` satisfies it structurally. */
 const OVERVIEW_INDEX_METHODS: readonly string[] = ['projects', 'todos', 'sources', 'index'];
 
 interface SessionCache {
@@ -46,7 +46,7 @@ interface SessionCache {
 
 let cache: SessionCache | null = null;
 
-/** Verwirft den Sitzungspuffer — nach `claude:link` und beim Vaultwechsel. */
+/** Discards the session cache — after `claude:link` and on vault switch. */
 export function forgetSessions(): void {
   cache = null;
 }
@@ -57,9 +57,9 @@ function knowsOverview(index: IndexLike): index is IndexLike & OverviewIndex {
 }
 
 /**
- * Der Index als Lesesicht des Überblicks. Fehlt eine Ableitung, sagt der Kanal
- * das — eine leere Antwort wäre eine Behauptung über einen Vault, den niemand
- * gelesen hat.
+ * The index as the overview's read view. If a derivation is missing, the
+ * channel says so — an empty answer would be a claim about a vault that no
+ * one has read.
  */
 export function overviewIndex(services: Services): IndexLike & OverviewIndex {
   const index = services.requireIndex();
@@ -67,28 +67,28 @@ export function overviewIndex(services: Services): IndexLike & OverviewIndex {
   return index;
 }
 
-/** Die Schwellen des offenen Vaults. `undefined` heißt: die Vorgaben des Kerns. */
+/** The open vault's thresholds. `undefined` means: the core's defaults. */
 export function overviewSettings(services: Services): OverviewSettings | undefined {
   return services.settings.vault()?.overview;
 }
 
-/** Beschriftungen für „zuletzt gearbeitet" in der Sprache der Oberfläche. */
+/** Labels for "recent work" in the UI's language. */
 export function overviewLabels(services: Services): ReturnType<typeof recentWorkLabels> {
   return recentWorkLabels(services.settings.uiLanguage());
 }
 
-/** Der Ruhezustand dieses Vaults, aus `.secondbrain/overview.json`. */
+/** This vault's snooze state, from `.secondbrain/overview.json`. */
 export function overviewStateFor(services: Services, today: string): Promise<OverviewState> {
   return overviewState(services.requireVaultRoot(), today);
 }
 
 /**
- * Der Pflegewert aus dem letzten Pflegelauf (`.secondbrain/gardener.json`).
+ * The health value from the last maintenance run (`.secondbrain/gardener.json`).
  *
- * Solange kein Lauf existiert, ist die Antwort `null` — das Dashboard sagt dann
- * „noch nicht geprüft" statt eine 100 zu behaupten. Gezählt wird genau die Liste,
- * die auch der Pflege-Screen zeigt: ohne die Befunde, die der Nutzer als „passt
- * so" markiert oder per Fix erledigt hat.
+ * As long as no run exists, the answer is `null` — the dashboard then says
+ * "not checked yet" instead of claiming a 100. What's counted is exactly the
+ * list the maintenance screen also shows: without the findings the user marked
+ * as "looks fine" or resolved via a fix.
  */
 export async function gardenerSummary(
   services: Services,
@@ -98,7 +98,7 @@ export async function gardenerSummary(
   return { health: report.health, findingCount: report.findings.length };
 }
 
-/** Liest der Vault die Claude-Sessions mit? */
+/** Does the vault read the Claude sessions? */
 export function usesClaudeSessions(services: Services): boolean {
   const settings = overviewSettings(services);
   return settings !== undefined && settings.useClaudeSessions;
@@ -112,10 +112,10 @@ function reader(services: Services): ClaudeSessionReader {
 }
 
 /**
- * Die neuesten Sitzungen, den Vault-Projekten zugeordnet.
+ * The most recent sessions, linked to the vault's projects.
  *
- * Ist das Mitlesen abgeschaltet, ist die Antwort leer — der Renderer kennt die
- * Einstellung und sagt es an der Kachel, statt „keine Sitzungen" zu behaupten.
+ * If reading them is turned off, the answer is empty — the renderer knows the
+ * setting and reports it at the tile, instead of claiming "no sessions".
  */
 export async function claudeSessions(
   services: Services,
@@ -123,7 +123,7 @@ export async function claudeSessions(
 ): Promise<ClaudeSession[]> {
   const root = services.requireVaultRoot();
   if (!usesClaudeSessions(services)) {
-    /* Ohne Mitlesen dürfen auch keine Spuren im Index stehen bleiben. */
+    /* Without reading them in, no traces may remain in the index either. */
     if (applyExternalTouches(new Map())) await catchUp(services);
     return [];
   }
@@ -147,19 +147,19 @@ export async function claudeSessions(
 }
 
 /**
- * Index nachziehen, damit `lastTouch` und `stale` die Sitzungen kennen. Ohne
- * Ereignis: der Aufrufer fragt gerade selbst und liest danach die frischen
- * Projekte. Schlägt es fehl, bleibt die Antwort gültig — sie kennt dann die
- * Sitzungsspuren noch nicht, und das ist besser als kein Dashboard.
+ * Catch up the index so `lastTouch` and `stale` know about the sessions. No
+ * event: the caller is querying right now and reads the fresh projects
+ * afterward. If it fails, the answer stays valid — it just doesn't know about
+ * the session traces yet, and that's better than no dashboard.
  */
 async function catchUp(services: Services): Promise<void> {
   const index = services.index();
   if (!index?.refresh) return;
   try {
-    /* Ohne Pfadliste: geändert hat sich keine Datei, sondern die Rechengrundlage. */
+    /* Without a path list: no file changed, only the basis for the computation. */
     await index.refresh();
     await services.refreshIndexState();
   } catch (error) {
-    console.warn('[overview] Index-Nachlauf nach dem Sitzungslauf fehlgeschlagen:', error);
+    console.warn('[overview] Index catch-up after the session run failed:', error);
   }
 }

@@ -1,15 +1,16 @@
-/* Tab „Modelle": Provider oben, Aufgaben-Routing unten.
+/* "Models" tab: providers on top, task routing below.
 
-   Der Tab muss ohne jeden Provider vollständig sinnvoll aussehen — das ist der
-   Zustand, in dem der Nutzer ihn zuerst sieht. Deshalb steht dann die
-   Einstiegskarte ganz oben: drei Wege, der Befund dieses Rechners und die
-   Anleitung. Die Routing-Tabelle bleibt daneben sichtbar; sie zeigt, welche
-   Aufgabe später welches Modell bekäme.
+   The tab has to look fully meaningful with zero providers configured — that's
+   the state the user sees first. So the entry card sits at the very top in
+   that case: three paths, this machine's detection results, and the
+   instructions. The routing table stays visible next to it; it shows which
+   model each task would get, once one is assigned.
 
-   Ein Provider allein macht die App nicht klüger: ohne Zuordnung bleibt jede
-   Aufgabe ohne Modell und die Inbox sagt weiter „braucht ein Modell". Sobald ein
-   Zugang steht und antwortet, holt der Tab deshalb selbst einen Routing-Vorschlag
-   und zeigt ihn als Vorher/Nachher. Bestätigt wird er von Hand — Guardrail 2. */
+   A provider alone doesn't make the app any smarter: without routing, every
+   task stays without a model and the inbox keeps saying "needs a model". So as
+   soon as a connection is set up and responds, the tab fetches a routing
+   proposal on its own and shows it as before/after. It's confirmed by hand —
+   guardrail 2. */
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -56,14 +57,14 @@ export function ModelsTab() {
   const [dialog, setDialog] = useState<{ provider: ProviderConfig | null } | null>(null);
   const [notes, setNotes] = useState<Record<string, Note>>({});
   const [busyId, setBusyId] = useState<string | null>(null);
-  /** Jeder Zähler-Sprung heißt: ein Zugang antwortet, hol einen Routing-Vorschlag. */
+  /** Every counter bump means: a connection responded, fetch a routing proposal. */
   const [proposeSignal, setProposeSignal] = useState(0);
 
   const askForRouting = (provider: ProviderConfig): void => {
     if (provider.models.length > 0) setProposeSignal((count) => count + 1);
   };
 
-  /* Wie viele Aufgaben schon ein Modell haben — dieselbe Kette wie im Gateway. */
+  /* How many tasks already have a model — same resolution chain as in the gateway. */
   const routedCount =
     tasks.data === undefined || routing.data === undefined
       ? null
@@ -71,7 +72,7 @@ export function ModelsTab() {
           (task) => resolveRoute(routing.data, tasks.data ?? [], task.kind) !== null,
         ).length;
   const hasModels = (providers.data ?? []).some((provider) => provider.models.length > 0);
-  /* Der Fokuspunkt des Tabs liegt beim Zuordnen, solange keine Aufgabe eines hat. */
+  /* The tab's focus point is on routing, as long as no task has one yet. */
   const needsRouting = hasModels && routedCount === 0;
 
   const note = (id: string, value: Note | null): void =>
@@ -111,9 +112,9 @@ export function ModelsTab() {
   };
 
   /**
-   * Erkannte lokale Runtime übernehmen: anlegen, testen — und danach gleich den
-   * Routing-Vorschlag holen. „Übernehmen" ohne diesen Schritt endete in einem
-   * Halbzustand: Provider grün, keine Aufgabe zugeordnet.
+   * Adopt a detected local runtime: create it, test it — and right after that,
+   * fetch the routing proposal. "Adopt" without this step would end in a
+   * half-finished state: provider green, no task routed.
    */
   const adopt = (runtime: LocalRuntime): void => {
     mutations.add.mutate(
@@ -161,8 +162,8 @@ export function ModelsTab() {
         }
         action={
           empty ? undefined : (
-            /* Sekundär, solange keine Aufgabe ein Modell hat: dann gehört das
-               Teal dem Zuordnen, nicht dem nächsten Provider. */
+            /* Secondary as long as no task has a model: in that case the teal
+               belongs to routing, not to adding the next provider. */
             <Button
               variant={needsRouting ? 'secondary' : 'primary'}
               size="sm"

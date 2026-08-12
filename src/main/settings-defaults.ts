@@ -1,19 +1,19 @@
-/* Die Defaults beider Einstellungsebenen an einem Ort.
-   Alles, was hier nicht steht, existiert nicht — beim Laden wird immer über
-   diese Defaults gemergt, damit neue Felder alte Dateien nicht zerbrechen. */
+/* The defaults of both settings levels in one place.
+   Anything not listed here does not exist — loading always merges over
+   these defaults so new fields don't break old files. */
 
 import { DEFAULT_DASHBOARD_TILES } from '@shared/types';
 import type { AppSettings, DashboardLayout, VaultSettings } from '@shared/types';
 
-export const APP_SETTINGS_VERSION = 1;
+export const APP_SETTINGS_VERSION = 2;
 export const VAULT_SETTINGS_VERSION = 1;
 
-/** Startgröße des Hauptfensters. Auch die Untergrenze steht hier, damit sie nur einmal existiert. */
+/** Default size of the main window. The lower bound lives here too, so it exists only once. */
 export const WINDOW_DEFAULT = { width: 1440, height: 900 } as const;
 export const WINDOW_MIN = { width: 1024, height: 680 } as const;
 
-/* Die Startanordnung steht in `@shared/types`: der Renderer braucht dieselbe für
-   „Anordnung zurücksetzen", und zwei Listen wären zwei Wahrheiten. */
+/* The default layout lives in `@shared/types`: the renderer needs the same one
+   for "reset layout", and two lists would be two truths. */
 export function defaultDashboardLayout(now = new Date().toISOString()): DashboardLayout {
   return { tiles: DEFAULT_DASHBOARD_TILES.map((tile) => ({ ...tile })), updated: now };
 }
@@ -24,6 +24,7 @@ export function defaultAppSettings(): AppSettings {
     lastVault: null,
     recentVaults: [],
     theme: 'dark',
+    customization: { background: 'none', appIcon: 'knowledge-garden' },
     uiLanguage: 'de',
     window: { width: WINDOW_DEFAULT.width, height: WINDOW_DEFAULT.height },
     startMinimized: false,
@@ -38,7 +39,7 @@ export function defaultVaultSettings(now = new Date().toISOString()): VaultSetti
     capture: {
       quickCaptureShortcut: 'Control+Shift+Space',
       autoClassify: true,
-      /* 1 = nie automatisch ablegen: die KI schlägt vor, der Mensch bestätigt. */
+      /* 1 = never file automatically: the AI proposes, the human confirms. */
       closeAfterCapture: true,
     },
     overview: {

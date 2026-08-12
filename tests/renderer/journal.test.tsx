@@ -270,6 +270,7 @@ const settings: SettingsSnapshot = {
     lastVault: 'C:/vaults/demo',
     recentVaults: [],
     theme: 'dark',
+    customization: { background: 'none', appIcon: 'knowledge-garden' },
     uiLanguage: 'de',
     window: { width: 1440, height: 900 },
     startMinimized: false,

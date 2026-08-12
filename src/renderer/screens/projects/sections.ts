@@ -1,12 +1,11 @@
-/* Einen Abschnitt aus einem Markdown-Rumpf holen.
+/* Get a section from a Markdown body.
 
-   Die Überschriften einer Projektdatei sind Format, nicht Oberfläche: sie heißen
-   in docs/VAULT-FORMAT.md „Stand", „Todos" und „Notizen", unabhängig von der
-   Sprache der Oberfläche. Deshalb stehen sie hier als Konstanten und nicht als
-   Übersetzung.
+   The headings of a project file are format, not UI: docs/VAULT-FORMAT.md
+   calls them "Stand", "Todos", and "Notizen", independent of the UI language.
+   That's why they appear here as constants and not as a translation.
 
-   Der Renderer bekommt den Rumpf über `projects:get` und zerlegt ihn selbst — er
-   fasst keine Datei an und kennt den Kern nicht. */
+   The renderer gets the body via `projects:get` and parses it itself — it
+   never touches a file and doesn't know the core. */
 
 export const SECTION_STATE = 'Stand';
 export const SECTION_TODOS = 'Todos';
@@ -16,8 +15,8 @@ const HEADING = /^(#{2,6})\s+(.+?)\s*$/;
 const FENCE = /^ {0,3}(?:`{3,}|~{3,})/;
 
 /**
- * Der Text unter `## <heading>` bis zur nächsten Überschrift derselben Ebene.
- * Zeilen in Code-Zäunen zählen nicht als Überschrift — dort steht ein Beispiel.
+ * The text under `## <heading>` up to the next heading of the same level.
+ * Lines inside code fences don't count as a heading — that's example content.
  */
 export function sectionOf(body: string, heading: string): string {
   const wanted = heading.trim().toLowerCase();
@@ -44,7 +43,7 @@ export function sectionOf(body: string, heading: string): string {
   return out.join('\n').trim();
 }
 
-/** Wie viele datierte Einträge (`### …`) ein Abschnitt trägt. */
+/** How many dated entries (`### …`) a section holds. */
 export function datedEntries(section: string): number {
   let count = 0;
   let inFence = false;

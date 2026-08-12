@@ -1,11 +1,10 @@
-/* Das Gitter: vier Spalten, verschiebbare Kacheln — von Hand gebaut, ohne neue
-   Abhängigkeit. Eine Bibliothek für Drag-and-drop bringt ihre eigene
-   Tastaturbedienung mit, oder keine; hier ist beides derselbe Zustand
-   (`use-tile-move.ts`).
+/* The grid: four columns, movable tiles — built by hand, without a new
+   dependency. A drag-and-drop library brings its own keyboard handling, or
+   none at all; here both are the same state (`use-tile-move.ts`).
 
-   Diese Datei ist nur die Ansicht: Reihenfolge im DOM, die Lücke am Ziel, die
-   gezogene Kachel am Zeiger und die zwei unsichtbaren Absätze — der Hinweis, auf
-   den jeder Griff zeigt, und die Ansage, die jeden Schritt mitspricht. */
+   This file is only the view: order in the DOM, the gap at the target, the
+   dragged tile at the pointer, and the two invisible paragraphs — the hint
+   that every handle points to, and the announcement that speaks each step. */
 
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
@@ -16,12 +15,12 @@ import { gridColumns, spanOf } from './layout';
 import { useTileMove } from './use-tile-move';
 
 /**
- * Spalten des Gitters bei der aktuellen Fensterbreite, mitgeführt.
+ * Columns of the grid at the current window width, kept in sync.
  *
- * Die Lücke am Ziel wird daraus bemessen. Ohne die Breite rechnete sie im
- * vierspaltigen Maß weiter: bei 1152 px belegt eine `md`-Kachel eine Spalte, die
- * Lücke wäre zwei breit — eine Vorschau, die einen Platz zeigt, den die Kachel
- * nie einnimmt.
+ * The gap at the target is sized from this. Without the width it would keep
+ * calculating in the four-column measure: at 1152 px an `md` tile occupies one
+ * column, but the gap would be two wide — a preview that shows a spot the tile
+ * never actually occupies.
  */
 function useGridColumns(): number {
   const [columns, setColumns] = useState(() =>
@@ -38,11 +37,11 @@ function useGridColumns(): number {
 
 export interface TileGridProps {
   layout: DashboardLayout;
-  /** Speichert eine geänderte Anordnung — optimistisch, mit Rücknahme im Hook. */
+  /** Saves a changed arrangement — optimistically, with rollback in the hook. */
   onSave: (layout: DashboardLayout) => void;
-  /** Rendert die Kachel eines Moduls. */
+  /** Renders the tile of a module. */
   render: (id: DashboardModuleId) => ReactNode;
-  /** Kachel, auf die gesprungen werden soll. `nonce` löst den Sprung erneut aus. */
+  /** Tile to jump to. `nonce` re-triggers the jump. */
   focus?: { id: DashboardModuleId; nonce: number } | null;
 }
 
@@ -107,8 +106,8 @@ export function TileGrid({ layout, onSave, render, focus = null }: TileGridProps
       <ul className="sb-tiles" aria-label={t('dashboard.tiles.label')}>
         {items}
       </ul>
-      {/* Sichtbar, solange etwas angehoben ist: dieselbe Zeile, die `aria-live`
-          ansagt. `aria-hidden`, damit sie nicht zweimal vorgelesen wird. */}
+      {/* Visible as long as something is lifted: the same line that `aria-live`
+          announces. `aria-hidden` so it isn't read out twice. */}
       {move.moveBar === null ? null : (
         <p className="sb-movebar" aria-hidden="true">
           <span className="sb-movebar-mark" />
@@ -123,10 +122,10 @@ export function TileGrid({ layout, onSave, render, focus = null }: TileGridProps
 }
 
 /**
- * Die Lücke am Ziel — in der Breite, die die Kachel **hier** einnimmt.
+ * The gap at the target — in the width the tile would occupy **here**.
  *
- * Gerechnet wird mit `spanOf`, derselben Fassung, die auch die Pfeiltasten
- * benutzen und die die Media-Queries in `styles/app/dashboard.css` abbildet.
+ * Calculated with `spanOf`, the same version the arrow keys use and which
+ * mirrors the media queries in `styles/app/dashboard.css`.
  */
 function Gap({ size, columns }: { size: ModuleSize; columns: number }) {
   return (

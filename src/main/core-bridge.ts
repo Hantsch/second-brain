@@ -1,7 +1,8 @@
-/* Die eine Stelle, an der Shell und Kern zusammenkommen.
+/* The one place where shell and core come together.
 
-   Wer ein Kernmodul liefert, hängt es hier ein — sonst nirgends. Der Container
-   kennt nur die Nahtstellen aus `contracts.ts`, nie eine konkrete Klasse. */
+   Whoever supplies a core module wires it in here — nowhere else. The
+   container only knows the seams from `contracts.ts`, never a concrete
+   class. */
 
 import { FsVaultStore, watchVault } from '@core/vault';
 import { IndexService } from '@core/index';
@@ -10,36 +11,36 @@ import { createLlmBridge } from './llm-bridge';
 import type { Services } from './services';
 
 export function attachCore(services: Services): void {
-  /* Dateien: der echte Store des Kerns, pro geöffnetem Vault einer. */
+  /* Files: the core's real store, one per opened vault. */
   services.attachVaultStore((root) => new FsVaultStore(root));
 
-  /* Index: beim Öffnen aus `.secondbrain/index/index.json` geladen und
-     inkrementell nachgezogen; fehlt oder taugt die Datei nicht, wird neu
-     gebaut. `IndexService` braucht den vollen `VaultStore` (walk, readText,
-     writeText) — die Nahtstelle der Shell reicht nicht, also baut die Brücke
-     ihren eigenen. `FsVaultStore` hält keinen Zustand, das kostet nichts. */
+  /* Index: loaded from `.secondbrain/index/index.json` on open and updated
+     incrementally; if the file is missing or unusable, it's rebuilt.
+     `IndexService` needs the full `VaultStore` (walk, readText, writeText) —
+     the shell's seam isn't enough, so the bridge builds its own. `FsVaultStore`
+     holds no state, so this costs nothing. */
   services.attachIndex(async (root) => {
     const staleAfterDays = services.settings.vault()?.overview.staleAfterDays;
-    /* Dieselbe Karte über die Lebenszeit dieses Vaults: der erste Sitzungslauf
-       füllt sie, jeder Indexlauf danach liest sie (siehe claude-touches.ts). */
+    /* The same map for the lifetime of this vault: the first session run
+       fills it, every index run after that reads it (see claude-touches.ts). */
     return IndexService.open(new FsVaultStore(root), {
       ...(staleAfterDays === undefined ? {} : { staleAfterDays }),
       externalTouches: resetExternalTouches(),
     });
   });
 
-  /* Externe Änderungen: chokidar mit 250 ms Nachlauf, gemeldet als `external`. */
+  /* External changes: chokidar with a 250ms debounce, reported as `external`. */
   services.attachWatcher(async (root, onChange) => {
     const watcher = watchVault(root, (paths) => onChange(paths, true), {
       onError: (error) => console.warn('[watch]', error),
     });
-    /* Erst nach dem ersten Durchlauf meldet chokidar Änderungen. Wer vorher
-       zurückkehrt, verliert stillschweigend alles, was in dieser Lücke
-       geschrieben wird — deshalb wird hier gewartet. */
+    /* Chokidar only reports changes after the initial scan. Returning before
+       that would silently lose anything written during this gap — hence the
+       wait here. */
     await watcher.whenReady();
     return watcher;
   });
 
-  /* Sprachmodelle: Provider-Bestand und Routing kommen aus den Einstellungen. */
+  /* Language models: provider inventory and routing come from settings. */
   services.attachLlm(createLlmBridge(services));
 }

@@ -1,19 +1,19 @@
-/* Die Anordnung als Rechnung — ohne React, ohne DOM, damit sie prüfbar ist.
+/* The arrangement as a calculation — without React, without the DOM, so that
+   it's testable.
 
-   Ein Grundsatz durchzieht alles hier: **die Reihenfolge der sichtbaren Module
-   ist die Wahrheit.** Ausgeblendete Module haben keine Position; sie stehen
-   hinten und warten darauf, wieder angehakt zu werden. Deshalb ergibt jede
-   Änderung eine Liste `[sichtbar in neuer Reihenfolge, ausgeblendet wie gehabt]`
-   — und nicht eine Liste mit Löchern, in der eine Position etwas anderes
-   bedeutet als das, was man sieht. */
+   One principle runs through all of it: **the order of the visible modules
+   is the truth.** Hidden modules have no position; they sit at the back and
+   wait to be checked on again. That's why every change produces a list
+   `[visible in new order, hidden as before]` — and not a list with holes,
+   where a position means something different than what you see. */
 
 import { DEFAULT_DASHBOARD_TILES } from '@shared/types';
 import type { DashboardLayout, DashboardModuleId, DashboardTile, ModuleSize } from '@shared/types';
 
-/** Spaltenbreite je Größe im vierspaltigen Raster. */
+/** Column width per size in the four-column grid. */
 export const SPANS: Record<ModuleSize, number> = { sm: 1, md: 2, lg: 3, xl: 4 };
 
-/** Die sichtbaren Module in ihrer Reihenfolge — das ist das Gitter. */
+/** The visible modules in their order — that's the grid. */
 export function visibleTiles(layout: DashboardLayout): DashboardTile[] {
   return layout.tiles.filter((tile) => tile.hidden !== true);
 }
@@ -26,16 +26,16 @@ function rebuild(layout: DashboardLayout, visible: readonly DashboardTile[]): Da
   return { tiles: [...visible, ...hiddenTiles(layout)], updated: layout.updated };
 }
 
-/** Position eines Moduls unter den sichtbaren; -1, wenn es ausgeblendet ist. */
+/** Position of a module among the visible ones; -1 if it's hidden. */
 export function positionOf(layout: DashboardLayout, id: DashboardModuleId): number {
   return visibleTiles(layout).findIndex((tile) => tile.id === id);
 }
 
 /**
- * Ein Modul an eine andere Position setzen. `to` zählt in der Liste **ohne** das
- * verschobene Modul — genau das, was eine Lücke im Gitter anzeigt. Werte
- * außerhalb werden geklemmt, nicht abgelehnt: ein Zug über den Rand hinaus soll
- * am Rand landen, nicht ins Leere.
+ * Set a module to a different position. `to` counts in the list **without**
+ * the moved module — exactly what a gap in the grid indicates. Out-of-range
+ * values are clamped, not rejected: a drag past the edge should land at the
+ * edge, not into nothing.
  */
 export function moveTile(
   layout: DashboardLayout,
@@ -53,9 +53,9 @@ export function moveTile(
 }
 
 /**
- * Spalten des Gitters bei dieser Fensterbreite — dieselben Schwellen wie die
- * Media-Queries in `styles/app/dashboard.css`. Weicht eine Seite ab, schiebt die
- * Pfeiltaste in eine Richtung, die es auf dem Bildschirm nicht gibt.
+ * Columns of the grid at this window width — the same thresholds as the
+ * media queries in `styles/app/dashboard.css`. If one side deviates, the
+ * arrow key pushes in a direction that doesn't exist on screen.
  */
 export function gridColumns(width: number): number {
   if (width <= 900) return 1;
@@ -64,11 +64,11 @@ export function gridColumns(width: number): number {
 }
 
 /**
- * Breite eines Moduls in Spalten — im engen Gitter halbiert, wie im CSS.
+ * Width of a module in columns — halved in the narrow grid, as in the CSS.
  *
- * Auch die Ziellücke beim Ziehen rechnet damit (`TileGrid`): eine Lücke, die
- * `SPANS[size]` breit ist, zeigt bei zwei Spalten einen Platz, den die Kachel nie
- * einnimmt — eine Vorschau, die etwas anderes verspricht als das Ergebnis.
+ * The target gap while dragging also calculates with this (`TileGrid`): a gap
+ * that is `SPANS[size]` wide would, at two columns, show a spot the tile never
+ * occupies — a preview that promises something different than the result.
  */
 export function spanOf(size: ModuleSize, columns: number): number {
   if (columns <= 1) return 1;
@@ -77,8 +77,8 @@ export function spanOf(size: ModuleSize, columns: number): number {
 }
 
 /**
- * Die Reihen, wie sie das Gitter füllt: zeilenweise, eine Kachel bricht um, wenn
- * sie nicht mehr passt. Grundlage der senkrechten Pfeiltasten.
+ * The rows as the grid fills them: row by row, a tile wraps when it no
+ * longer fits. Basis for the vertical arrow keys.
  */
 export function tileRows(layout: DashboardLayout, columns: number): DashboardModuleId[][] {
   const rows: DashboardModuleId[][] = [];
@@ -99,10 +99,10 @@ export function tileRows(layout: DashboardLayout, columns: number): DashboardMod
 }
 
 /**
- * Wie viele Positionen ein senkrechter Schritt bedeutet: nach unten so viele,
- * wie in der eigenen Reihe stehen; nach oben so viele, wie in der Reihe darüber
- * stehen. Ohne diese Rechnung wäre `ArrowDown` dasselbe wie `ArrowRight` — und
- * eine Pfeiltaste, die seitwärts schiebt, macht das Ausprobieren unmöglich.
+ * How many positions a vertical step means: downward as many as stand in the
+ * current row; upward as many as stand in the row above. Without this
+ * calculation `ArrowDown` would be the same as `ArrowRight` — and an arrow
+ * key that shifts sideways makes exploring by feel impossible.
  */
 export function verticalStep(
   layout: DashboardLayout,
@@ -117,7 +117,7 @@ export function verticalStep(
   return -(rows[at - 1]?.length ?? rows[at]?.length ?? 1);
 }
 
-/** Ein Modul um `offset` Positionen verschieben — der Weg der Pfeiltasten. */
+/** Move a module by `offset` positions — the path taken by the arrow keys. */
 export function shiftTile(
   layout: DashboardLayout,
   id: DashboardModuleId,
@@ -125,8 +125,8 @@ export function shiftTile(
 ): DashboardLayout {
   const from = positionOf(layout, id);
   if (from < 0) return layout;
-  /* `moveTile` zählt ohne das Modul selbst: ein Schritt nach rechts ist deshalb
-     `from + 1`, ein Schritt nach links `from - 1`. */
+  /* `moveTile` counts without the module itself: a step to the right is
+     therefore `from + 1`, a step to the left `from - 1`. */
   return moveTile(layout, id, from + offset);
 }
 
@@ -135,8 +135,8 @@ export function resizeTile(
   id: DashboardModuleId,
   size: ModuleSize,
 ): DashboardLayout {
-  /* Dieselbe Breite noch einmal wählen ist keine Änderung — und darf deshalb
-     auch kein Schreibvorgang sein. */
+  /* Choosing the same width again is not a change — and therefore must not
+     be a write either. */
   if (layout.tiles.find((tile) => tile.id === id)?.size === size) return layout;
   return {
     tiles: layout.tiles.map((tile) => (tile.id === id ? { ...tile, size } : tile)),
@@ -145,8 +145,8 @@ export function resizeTile(
 }
 
 /**
- * Ein Modul aus- oder einblenden. Eingeblendet wird es hinten sichtbar — dort
- * findet man es, und von dort verschiebt man es hin, wo es hingehört.
+ * Show or hide a module. When shown, it becomes visible at the back — that's
+ * where you find it, and from there you move it to where it belongs.
  */
 export function setTileHidden(
   layout: DashboardLayout,
@@ -159,9 +159,9 @@ export function setTileHidden(
   if (hidden) next.hidden = true;
   else delete next.hidden;
   const others = layout.tiles.filter((tile) => tile.id !== id);
-  /* Dieselbe Stelle für beide Richtungen: das Modul landet als letztes Sichtbares
-     bzw. als erstes Ausgeblendetes — und damit immer an der Grenze zwischen den
-     beiden Gruppen. */
+  /* The same spot for both directions: the module lands as the last visible
+     one or as the first hidden one — and thus always at the boundary between
+     the two groups. */
   return {
     tiles: [
       ...others.filter((tile) => tile.hidden !== true),
@@ -172,17 +172,18 @@ export function setTileHidden(
   };
 }
 
-/** Die Startanordnung — dieselbe, die ein frischer Vault bekommt. */
+/** The starting arrangement — the same one a fresh vault gets. */
 export function defaultLayout(updated: string): DashboardLayout {
   return { tiles: DEFAULT_DASHBOARD_TILES.map((tile) => ({ ...tile })), updated };
 }
 
 /**
- * Zielposition beim Ziehen: wie viele der übrigen Kacheln liegen vor dem Zeiger?
+ * Target position while dragging: how many of the remaining tiles lie before
+ * the pointer?
  *
- * Zeilenweise gelesen, weil das Gitter zeilenweise fließt: was über dem Zeiger
- * liegt, kommt vorher; in derselben Zeile entscheidet die Mitte der Kachel.
- * Damit springt die Lücke nicht, wenn die Maus in einer Kachel wackelt.
+ * Read row by row, because the grid flows row by row: what lies above the
+ * pointer comes first; in the same row, the center of the tile decides.
+ * This keeps the gap from jumping when the mouse wobbles within a tile.
  */
 export function dropIndex(
   rects: readonly { top: number; bottom: number; left: number; width: number }[],

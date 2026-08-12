@@ -1,17 +1,17 @@
-/* Titel und Tags für einen Text. Die billigste Aufgabe der App: ein Satz Ausgabe. */
+/* Title and tags for a text. The cheapest task in the app: one sentence of output. */
 
 import type { ChatTurn, DocLanguage } from '@shared/types';
 import { clamp, documentLanguageRule, turns } from './shared';
 
 export interface TitleTagsInput {
   text: string;
-  /** Bereits im Vault benutzte Tags — bevorzugt wiederverwenden statt neu erfinden. */
+  /** Tags already used in the vault — prefer reusing these over inventing new ones. */
   knownTags?: readonly string[];
-  /** Wie viele Tags höchstens (Default 4). */
+  /** Maximum number of tags (default 4). */
   maxTags?: number;
 }
 
-/** Erwartete Antwortform. Wird als `schema` mitgeschickt. */
+/** Expected response shape. Sent along as `schema`. */
 export const TITLE_TAGS_SCHEMA: Record<string, unknown> = {
   type: 'object',
   additionalProperties: false,

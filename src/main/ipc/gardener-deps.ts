@@ -1,22 +1,23 @@
-/* Die Verdrahtung des Pflegelaufs — an genau einer Stelle.
+/* Wiring for the maintenance run — in exactly one place.
 
-   Der Kern rechnet (`@core/gardener`), hier kommt zusammen, was er nicht kennt:
-   der Index als Lesesicht, die Schwellen aus den Vault-Einstellungen, die
-   Sprachen, die Beschriftungen der Oberfläche und das Gateway.
+   The core does the computing (`@core/gardener`); here everything it doesn't
+   know about comes together: the index as a read view, the thresholds from the
+   vault settings, the languages, the UI labels, and the gateway.
 
-   Zwei Entscheidungen, die man im Code sonst nicht sieht:
+   Two decisions that aren't otherwise visible in the code:
 
-   - **Der Lauf ruft die Checks selbst auf, statt `runGardener` zu nehmen.** Genau
-     deshalb: `runGardener` ist ein Aufruf ohne Zwischenstand, und ein Lauf ohne
-     Zwischenstand ist ein Lauf ohne Fortschritt und ohne Abbruch. Zwischen zwei
-     Prüfungen wird der Ereignisschleife das Wort gegeben — sonst käme das
-     Fortschritts-Ereignis erst, wenn schon alles fertig ist, und ein `cancel`
-     nie an. Die Reihenfolge (deterministisch, dann Deutung, dann Ordnung, dann
-     Zahl) ist dieselbe wie in `core/gardener/report.ts`.
-   - **Ausgeblendete Befunde werden hier *nicht* herausgefiltert.** Der Lauf legt
-     alles ab, was er gefunden hat; „passt so" filtert erst beim Lesen
-     (`gardener-state.ts`). Sonst wäre ein zurückgenommenes „passt so" nur mit
-     einem neuen Lauf wieder sichtbar. */
+   - **The run calls the checks itself, instead of using `runGardener`.**
+     Precisely because `runGardener` is a call with no intermediate state, and a
+     run without intermediate state is a run without progress and without
+     cancellation. Between two checks, the event loop is given a turn —
+     otherwise the progress event would only arrive once everything is already
+     done, and a `cancel` would never land. The order (deterministic, then
+     interpretation, then sorting, then count) is the same as in
+     `core/gardener/report.ts`.
+   - **Hidden findings are *not* filtered out here.** The run records everything
+     it found; "looks fine" only filters on read (`gardener-state.ts`).
+     Otherwise a reversed "looks fine" would only become visible again with a
+     new run. */
 
 import { CHECKS, auditFindings, buildContext, sortFindings, vaultSize } from '@core/gardener';
 import type { GardenerDeps, GardenerIndexView } from '@core/gardener';
@@ -30,7 +31,7 @@ import type { GardenerState, StoredRun } from '../gardener-state';
 import type { IndexLike } from '../contracts';
 import type { Services } from '../services';
 
-/** Was der Pflegelauf am Index braucht — `IndexService` erfüllt es strukturell. */
+/** What the maintenance run needs from the index — `IndexService` satisfies it structurally. */
 const GARDENER_INDEX_METHODS: readonly string[] = [
   'index',
   'pages',
@@ -45,9 +46,9 @@ function knowsGardener(index: IndexLike): index is IndexLike & GardenerIndexView
 }
 
 /**
- * Der Index als Lesesicht des Pflegelaufs. Fehlt eine Ableitung, sagt der Kanal
- * das — ein Bericht ohne Bestand wäre eine Behauptung über einen Vault, den
- * niemand gelesen hat.
+ * The index as the maintenance run's read view. If a derivation is missing,
+ * the channel says so — a report without content would be a claim about a
+ * vault that no one has read.
  */
 export function gardenerIndex(services: Services): GardenerIndexView {
   const index = services.requireIndex();
@@ -55,12 +56,12 @@ export function gardenerIndex(services: Services): GardenerIndexView {
   return index;
 }
 
-/** Der Pflegezustand dieses Vaults, aus `.secondbrain/gardener.json`. */
+/** This vault's maintenance state, from `.secondbrain/gardener.json`. */
 export function gardenerStateFor(services: Services): Promise<GardenerState> {
   return gardenerState(services.requireVaultRoot());
 }
 
-/** Die Pflege-Einstellungen des offenen Vaults, soweit gesetzt. */
+/** The maintenance settings of the open vault, as far as they're set. */
 export function gardenerSettings(services: Services): Partial<GardenerSettings> | undefined {
   return services.settings.vault()?.gardener;
 }
@@ -80,10 +81,10 @@ function deps(services: Services, signal?: AbortSignal): GardenerDeps {
 }
 
 export interface RunOptions {
-  /** Überschreibt `gardener.useLlm` für diesen Lauf. */
+  /** Overrides `gardener.useLlm` for this run. */
   useLlm?: boolean;
   signal?: AbortSignal;
-  /** Fortschritt melden — im Kanal die Ereignisse, im Autostart nichts. */
+  /** Report progress — the events in the channel, nothing in the autostart. */
   onProgress?: (progress: {
     phase: 'checks' | 'audit' | 'done';
     check: (typeof CHECKS)[number]['kind'] | null;
@@ -93,7 +94,7 @@ export interface RunOptions {
   }) => void;
 }
 
-/** Der Ereignisschleife das Wort geben, damit Fortschritt und Abbruch durchkommen. */
+/** Give the event loop a turn, so progress and cancellation can get through. */
 function tick(): Promise<void> {
   return new Promise((resolve) => setImmediate(resolve));
 }
@@ -103,8 +104,8 @@ function stopIfCancelled(signal?: AbortSignal): void {
 }
 
 /**
- * Ein Lauf mit Fortschritt. Gibt den **rohen** Lauf zurück: alle Befunde, dazu
- * die Größe des Bestands als Bezug der Gesundheit.
+ * A run with progress. Returns the **raw** run: all findings, plus the size of
+ * the content as the reference point for the health status.
  */
 export async function runWithProgress(
   services: Services,
@@ -113,10 +114,10 @@ export async function runWithProgress(
   const settings = services.settings.vault();
   const run = deps(services, options.signal);
   const ctx = buildContext(run, { ...(settings === null ? {} : { settings }) });
-  /* Gewollt ist eine Sache, möglich eine andere: ohne Route für `gardener-audit`
-     gibt es keine Deutungs-Phase — auch keine gemeldete. Ein Fortschritt, der
-     „das Modell deutet die Befunde" sagt, während keins erreichbar ist, wäre
-     genau die Behauptung, die dieser Screen nicht machen darf. */
+  /* What's wanted is one thing, what's possible another: without a route for
+     `gardener-audit` there is no interpretation phase — not even a reported
+     one. Progress that says "the model is interpreting the findings" while
+     none is reachable would be exactly the claim this screen must not make. */
   const wanted = options.useLlm ?? settings?.gardener.useLlm ?? false;
   const useLlm = wanted && run.gateway.isAvailable('gardener-audit');
   const total = CHECKS.length + (useLlm ? 1 : 0);

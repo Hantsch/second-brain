@@ -1,48 +1,48 @@
-/* Deterministischer Provider für Tests und den Demo-Modus. Kein Netz, keine Zeit.
+/* Deterministic provider for tests and demo mode. No network, no timing.
 
-   Benutzung (Kurzfassung — die API bleibt bewusst klein):
+   Usage (short version — the API is deliberately small):
 
      const provider = new FakeProvider({
        replies: { 'title-tags': '{"title":"Test","tags":["a"]}' },
        fallback: (call) => `Antwort auf ${call.task}`,
      });
      provider.setReply('query-answer', 'Steht in [[projects/work/x/project.md]].');
-     provider.fail('wiki-ingest', 'Modell überlastet');   // simulierter Fehler
-     provider.callCount;            // Aufrufe insgesamt
+     provider.fail('wiki-ingest', 'Modell überlastet');   // simulated error
+     provider.callCount;            // total calls
      provider.countFor('title-tags');
      provider.lastCall('title-tags')?.messages;
-     provider.reset();              // Zähler und Aufrufliste leeren
+     provider.reset();              // clear counters and call list
 
-   Streaming zerlegt die Antwort in Stücke von `chunkSize` Zeichen, damit
-   Verbraucher echte Teil-Deltas sehen. `signal` wird respektiert. */
+   Streaming breaks the response into pieces of `chunkSize` characters, so
+   consumers see real partial deltas. `signal` is respected. */
 
 import type { ProviderProbe, TaskKind, Usage } from '@shared/types';
 import { createAbortError, throwIfAborted } from '../abort';
 import type { LlmProvider, ProviderCall, ProviderResult } from '../types';
 
-/** Antwort als fester Text oder als Funktion über den Aufruf. */
+/** Response as fixed text or as a function over the call. */
 export type FakeReply = string | ((call: ProviderCall) => string);
 
 export interface FakeProviderOptions {
-  /** Antwort je Aufgabe. */
+  /** Response per task. */
   replies?: Partial<Record<TaskKind, FakeReply>>;
-  /** Antwort für alle Aufgaben ohne eigenen Eintrag. */
+  /** Response for all tasks without their own entry. */
   fallback?: FakeReply;
-  /** Simulierter Fehler je Aufgabe — wird geworfen statt geantwortet. */
+  /** Simulated error per task — thrown instead of a response. */
   errors?: Partial<Record<TaskKind, string | Error>>;
-  /** Simulierter Fehler für jede Aufgabe. */
+  /** Simulated error for every task. */
   failEverything?: string | Error;
   models?: string[];
-  /** Künstliche Verzögerung je Aufruf in ms (Default 0). */
+  /** Artificial delay per call in ms (default 0). */
   latencyMs?: number;
-  /** Zeichen pro Stream-Delta (Default 8). */
+  /** Characters per stream delta (default 8). */
   chunkSize?: number;
   usage?: Usage;
-  /** Ergebnis von `probe()` (Default: erreichbar). */
+  /** Result of `probe()` (default: reachable). */
   probeOk?: boolean;
 }
 
-/** Ein protokollierter Aufruf. */
+/** A logged call. */
 export interface FakeCall {
   task: TaskKind;
   model: string;
@@ -53,7 +53,7 @@ export interface FakeCall {
 
 export class FakeProvider implements LlmProvider {
   readonly kind = 'fake' as const;
-  /** Alle Aufrufe in Reihenfolge — für Zusicherungen in Tests. */
+  /** All calls in order — for assertions in tests. */
   readonly calls: FakeCall[] = [];
 
   private readonly options: FakeProviderOptions;
@@ -84,7 +84,7 @@ export class FakeProvider implements LlmProvider {
     this.errors.delete(task);
   }
 
-  /** Lässt diese Aufgabe künftig fehlschlagen. */
+  /** Makes this task fail from now on. */
   fail(task: TaskKind, error: string | Error): void {
     this.errors.set(task, error);
   }
@@ -145,8 +145,8 @@ export class FakeProvider implements LlmProvider {
 }
 
 /**
- * Vorgabeantwort ohne Konfiguration: bei Schema ein leeres Objekt (bleibt
- * JSON-parsebar), sonst ein erkennbarer, deterministischer Text.
+ * Default response without configuration: an empty object when there's a
+ * schema (stays JSON-parseable), otherwise a recognizable, deterministic text.
  */
 function defaultReply(call: ProviderCall): string {
   if (call.schema) return '{}';

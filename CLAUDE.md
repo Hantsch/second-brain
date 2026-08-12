@@ -1,163 +1,165 @@
 # Second Brain
 
-Eine Electron-App, die das echte Hirn entlastet. Der Nutzer dumpt Gedanken hinein — Ideen,
-Arbeitsstände, Sorgen, Quellen — und die App legt sie ab, ordnet sie ein und macht sie
-wiederfindbar. Sie ist Wissensbasis, Tagebuch und Worklog in einem.
+An Electron app that offloads the real brain. The user dumps thoughts into it — ideas,
+work states, worries, sources — and the app files them, organizes them, and makes them
+findable again. It's a knowledge base, a journal, and a worklog in one.
 
-Drei Fragen muss sie jederzeit beantworten können:
+It must be able to answer three questions at any time:
 
-- „Woran habe ich zuletzt gearbeitet und wo war ich stehengeblieben?"
-- „Was muss ich noch tun, bis wann, und auf wen warte ich?"
-- „Was weiß ich über X?" — belegt aus den eigenen Notizen, nicht geraten.
+- "What did I last work on, and where did I leave off?"
+- "What do I still need to do, by when, and who am I waiting on?"
+- "What do I know about X?" — backed by my own notes, not guessed.
 
-## Die Dateien sind die Wahrheit
+## The files are the truth
 
-Der Vault ist ein Ordner mit Markdown-Dateien plus YAML-Frontmatter (Format:
-[docs/VAULT-FORMAT.md](docs/VAULT-FORMAT.md)). Daraus folgt:
+The vault is a folder of Markdown files plus YAML frontmatter (format:
+[docs/VAULT-FORMAT.md](docs/VAULT-FORMAT.md)). From that follows:
 
-- **Der Index ist abgeleitet.** `.secondbrain/index/` kann jederzeit gelöscht und aus den
-  Dateien neu gebaut werden. Geht er verloren, ist nichts verloren.
-- **Der Nutzer darf die Dateien direkt editieren** — in Obsidian, VS Code, Notepad. Externe
-  Änderungen werden per Hash erkannt und neu eingelesen. Kein Schreibpfad überschreibt
-  Nutzer-Edits stillschweigend; wer mit veraltetem Hash schreibt, bekommt `conflict`.
-- **Alles bleibt portabel.** Der Vault liegt auf einem USB-Stick oder einer externen Platte
-  und funktioniert dort vollständig. Keine Datenbank, kein Docker, kein Server.
-- **Schlüssel reisen nicht mit.** API-Keys liegen verschlüsselt in `userData` (Electron
-  `safeStorage`), niemals im Vault, niemals im Repo, niemals in Logs.
+- **The index is derived.** `.secondbrain/index/` can be deleted at any time and rebuilt
+  from the files. If it's lost, nothing is lost.
+- **The user may edit the files directly** — in Obsidian, VS Code, Notepad. External
+  changes are detected via hash and re-read. No write path silently overwrites the
+  user's edits; writing with a stale hash gets a `conflict`.
+- **Everything stays portable.** The vault can live on a USB stick or an external drive
+  and works there fully. No database, no Docker, no server.
+- **Keys never travel with it.** API keys live encrypted in `userData` (Electron
+  `safeStorage`), never in the vault, never in the repo, never in logs.
 
-## Tech Stack
+## Tech stack
 
-| Bereich  | Wahl                                                                                   |
-| -------- | -------------------------------------------------------------------------------------- |
+| Area     | Choice                                                                                 |
+| -------- | --------------------------------------------------------------------------------------- |
 | Shell    | Electron 41, electron-vite, TypeScript strict                                          |
 | Renderer | React 19, react-router, TanStack Query, Tailwind 4 + Gaston Design System              |
-| Kern     | Reines TypeScript in `src/core/` — kennt Electron nicht                                |
-| Suche    | MiniSearch über einen aus den Dateien gebauten Index (kein natives Modul)              |
-| LLM      | Eigenes Gateway: Anthropic + OpenAI-kompatibel (Ollama, LM Studio, OpenRouter, OpenAI) |
-| Tests    | Vitest (Kern + Renderer), Playwright `_electron` für Screenshots                       |
+| Core     | Plain TypeScript in `src/core/` — knows nothing about Electron                         |
+| Search   | MiniSearch over an index built from the files (no native module)                       |
+| LLM      | Own gateway: Anthropic + OpenAI-compatible (Ollama, LM Studio, OpenRouter, OpenAI)     |
+| Tests    | Vitest (core + renderer), Playwright `_electron` for screenshots                       |
 
-Kein Postgres, keine Embeddings, kein natives Modul. Volltextsuche plus LLM-Rerank reicht;
-Vektorsuche kommt erst, wenn eine konkrete Anforderung sie braucht.
+No Postgres, no embeddings, no native module. Full-text search plus LLM rerank is
+enough; vector search only arrives once a concrete requirement needs it.
 
-## Nicht verhandelbare Guardrails
+## Non-negotiable guardrails
 
-1. **Die App startet und ist nützlich ohne LLM.** Jede LLM-Aufgabe hat einen ehrlichen
-   Zustand „kein Modell konfiguriert" und, wo möglich, einen heuristischen Fallback.
-   Nie ein toter Screen, nie ein stiller Fehler.
-2. **Die KI schlägt vor, der Mensch bestätigt.** Ablage-Vorschläge, extrahierte Todos,
-   Statuswechsel und Wiki-Änderungen sind Vorschläge mit sichtbarer Begründung, bis der
-   Nutzer sie annimmt. Nichts wird still verschoben oder umgeschrieben.
-3. **Keine Halluzinationen.** Antworten auf Fragen kommen ausschließlich aus dem Vault, mit
-   Zitat und Dateipfad. Gibt es keinen Beleg, sagt die App das — sie rät nicht.
-4. **Interface first.** `LlmGateway`, `VaultStore`, `SourceIngestor` und `SessionReader` sind
-   Interfaces. Konkrete Implementierungen sind austauschbar; kein Code außerhalb dieser
-   Module weiß, welche läuft.
-5. **`src/core/` importiert nie Electron** (per ESLint erzwungen). Der Renderer fasst nie
-   das Dateisystem an — alles über die Kanäle in [src/shared/ipc.ts](src/shared/ipc.ts).
-6. **Privatsphäre ist Substanz.** Tagebuch- und Projektinhalte gehören nie ins Repo, nie in
-   Logs, nie in Fehlermeldungen und nie in einen Request, der nicht dafür bestimmt ist.
-   Sensible Aufgaben (`journal-chat`, `classify-dump`) empfehlen lokale Modelle.
-7. **Zwei Sprachen, getrennt einstellbar.** UI-Sprache und Dokumentsprache sind unabhängig
-   (`languages.ui`, `languages.documents`). Kein deutscher String hartcodiert im Renderer —
-   alles über `t()` aus `src/renderer/i18n/`.
+1. **The app starts and is useful without an LLM.** Every LLM task has an honest
+   "no model configured" state and, where possible, a heuristic fallback. Never a
+   dead screen, never a silent failure.
+2. **The AI proposes, the human confirms.** Filing suggestions, extracted todos,
+   status changes, and wiki edits are proposals with visible reasoning until the
+   user accepts them. Nothing gets moved or rewritten silently.
+3. **No hallucinations.** Answers to questions come exclusively from the vault, with
+   citation and file path. If there's no evidence, the app says so — it doesn't guess.
+4. **Interface first.** `LlmGateway`, `VaultStore`, `SourceIngestor`, and `SessionReader`
+   are interfaces. Concrete implementations are swappable; no code outside those
+   modules knows which one is running.
+5. **`src/core/` never imports Electron** (enforced via ESLint). The renderer never
+   touches the filesystem — everything goes through the channels in
+   [src/shared/ipc.ts](src/shared/ipc.ts).
+6. **Privacy is substance.** Journal and project content never belongs in the repo,
+   in logs, in error messages, or in a request it isn't meant for. Sensitive tasks
+   (`journal-chat`, `classify-dump`) recommend local models.
+7. **Two languages, separately configurable.** UI language and document language are
+   independent (`languages.ui`, `languages.documents`). No German string hardcoded
+   in the renderer — everything goes through `t()` from `src/renderer/i18n/`.
 
-## Verzeichnisse
+## Directories
 
 ```
 src/
-├─ core/        reines TypeScript, ohne Electron — hier liegt die Logik
-│  ├─ vault/      Pfade, Layout, Frontmatter, atomares Schreiben, Watcher
-│  ├─ index/      Index-Aufbau, Suche, Todo-/Projekt-Ableitung
-│  ├─ llm/        Gateway, Provider, Aufgaben-Routing, Prompts
-│  ├─ capture/    Dump → Vorschlag → Ablage
-│  ├─ wiki/       Karpathy-Wiki: Ingest, Seitenpflege, Lint
-│  ├─ ingest/     YouTube, Dateien, URLs → raw/
-│  ├─ journal/    Tageseinträge, Coaching-Modi
-│  ├─ overview/   Projekte, Todos, Erinnerungen, Recent Work
-│  ├─ gardener/   Pflege gegen Knowledge-Rot
-│  └─ claude/     Claude-Code-Sessions aus ~/.claude/projects
-├─ main/        Electron: Fenster, Tray, Hotkey, IPC-Handler, Secrets, Settings
-├─ preload/     die einzige Brücke; lässt nur Kanäle aus IPC_CHANNELS durch
-├─ renderer/    React; reine Ansicht
-│  ├─ atoms/      Gaston-Atome (gs-*-Wrapper) — nie ad-hoc-Markup
-│  ├─ components/ zusammengesetzte Bausteine
-│  ├─ screens/    ein Ordner pro Screen
-│  ├─ i18n/       de.ts / en.ts, flache Keys
-│  └─ lib/        api.ts (typisierter IPC-Client), Hooks, Formatierung
-└─ shared/      Typen und IPC-Vertrag — von beiden Seiten benutzt
+├─ core/        plain TypeScript, no Electron — this is where the logic lives
+│  ├─ vault/      paths, layout, frontmatter, atomic writes, watcher
+│  ├─ index/      index build, search, todo/project derivation
+│  ├─ llm/        gateway, providers, task routing, prompts
+│  ├─ capture/    dump → proposal → filing
+│  ├─ wiki/       Karpathy wiki: ingest, page maintenance, lint
+│  ├─ ingest/     YouTube, files, URLs → raw/
+│  ├─ journal/    daily entries, coaching modes
+│  ├─ overview/   projects, todos, reminders, recent work
+│  ├─ gardener/   maintenance against knowledge rot
+│  └─ claude/     Claude Code sessions from ~/.claude/projects
+├─ main/        Electron: windows, tray, hotkey, IPC handlers, secrets, settings
+├─ preload/     the only bridge; lets through only channels from IPC_CHANNELS
+├─ renderer/    React; pure view
+│  ├─ atoms/      Gaston atoms (gs-* wrappers) — never ad-hoc markup
+│  ├─ components/ composed building blocks
+│  ├─ screens/    one folder per screen
+│  ├─ i18n/       de.ts / en.ts, flat keys
+│  └─ lib/        api.ts (typed IPC client), hooks, formatting
+└─ shared/      types and the IPC contract — used by both sides
 ```
 
-Ergänzend: `docs/` (Konzept, Architektur, Vault-Format), `scripts/` (Seed, Screenshots,
-Launcher), `tests/` (Vitest, Fixtures).
+In addition: `docs/` (concept, architecture, vault format), `scripts/` (seed,
+screenshots, launcher), `tests/` (Vitest, fixtures).
 
-## Design System: Gaston
+## Design system: Gaston
 
-Verbindlich für jede Frontend-Arbeit. Vendored unter
-[src/renderer/styles/gaston/](src/renderer/styles/gaston/) (Tokens + `components.css`) und
-[src/renderer/atoms/](src/renderer/atoms/) (die `gs-*`-Wrapper).
+Mandatory for all frontend work. Vendored under
+[src/renderer/styles/gaston/](src/renderer/styles/gaston/) (tokens + `components.css`)
+and [src/renderer/atoms/](src/renderer/atoms/) (the `gs-*` wrappers).
 
-- Dark-first: Ink-Flächen (`#0A0F16` Seite), Fog-Text, **ein** Teal-Akzent (`#4FD1C5`), der
-  dem Fokuspunkt gehört. Nicht zwei Akzente auf einem Screen.
-- Typo: IBM Plex Sans für UI, IBM Plex Mono für Daten (Zahlen, IDs, Zeitstempel, Overlines).
-- **Sentence case überall. Keine Emoji.**
-- Farben, Abstände, Radien **nur** über Tokens — keine rohe Tailwind-Palette
-  (`bg-slate-800` ist ein Fehler, `bg-[--gs-surface]` bzw. die `gs-*`-Klasse ist richtig).
-- Ton: technisch, präzise, ruhig. Aussagen statt Enthusiasmus („Quelle aufgenommen. 243
-  Abschnitte indiziert." statt „Super! 🎉").
+- Dark-first: ink surfaces (`#0A0F16` page), fog text, **one** teal accent (`#4FD1C5`)
+  that belongs to the focal point. Not two accents on one screen.
+- Type: IBM Plex Sans for UI, IBM Plex Mono for data (numbers, IDs, timestamps, overlines).
+- **Sentence case everywhere. No emoji.**
+- Colors, spacing, radii **only** via tokens — no raw Tailwind palette
+  (`bg-slate-800` is a bug, `bg-[--gs-surface]` or the `gs-*` class is correct).
+- Tone: technical, precise, calm. Statements over enthusiasm ("Source captured. 243
+  sections indexed." instead of "Awesome! 🎉").
 
-Vor jedem neuen Screen oder Component `src/renderer/styles/gaston/README.md` lesen.
+Read `src/renderer/styles/gaston/README.md` before any new screen or component.
 
-## Quality Gates
+## Quality gates
 
-`npm run verify` muss grün sein, bevor eine Arbeit als fertig gilt:
+`npm run verify` must be green before any work counts as done:
 
 ```
 npm run format:check   # prettier
 npm run lint           # eslint
-npm run typecheck      # tsc für Node-Seite und Renderer
+npm run typecheck      # tsc for the Node side and the renderer
 npm test               # vitest
 npm run build          # electron-vite build
 ```
 
-Dazu für jede UI-Arbeit:
+Plus, for every UI change:
 
 ```
-npm run seed           # baut .demo-vault/ mit realistischen Beispielinhalten
-npm run shot           # startet die App über Playwright und legt PNGs in .screenshots/
+npm run seed           # builds .demo-vault/ with realistic sample content
+npm run shot           # starts the app via Playwright and drops PNGs in .screenshots/
 ```
 
-Pflicht-Tests:
+Mandatory tests:
 
-- **Datei-Roundtrip**: schreiben → extern editieren → neu einlesen, ohne Datenverlust.
-- **Konflikt**: Schreiben mit veraltetem Hash schlägt fehl, statt zu überschreiben.
-- **Ohne LLM**: jeder LLM-Pfad hat einen Test mit dem Fake-Provider _und_ einen mit
-  „kein Modell konfiguriert".
-- **Antworten ohne Beleg**: die Antwort sagt ehrlich, dass nichts gefunden wurde.
-- Tests rufen **nie** echte LLM-APIs oder das Netz. Fakes liegen in `tests/fakes/`.
+- **File round-trip**: write → edit externally → re-read, without data loss.
+- **Conflict**: writing with a stale hash fails instead of overwriting.
+- **Without LLM**: every LLM path has a test with the fake provider _and_ one with
+  "no model configured".
+- **Answers without evidence**: the answer honestly says nothing was found.
+- Tests **never** call real LLM APIs or the network. Fakes live in `tests/fakes/`.
 
-## QA-Regeln (nicht verhandelbar)
+## QA rules (non-negotiable)
 
-- Tests nie löschen, überspringen oder abschwächen, um grün zu werden. Schlägt ein Test
-  fehl: Code reparieren, oder erklären, warum der Test falsch ist.
-- Kein `// @ts-expect-error`, `eslint-disable` oder `any` ohne begründenden Kommentar in
-  derselben Zeile.
-- Kein `console.log` im Produktionscode (`no-console` ist an; `warn`/`error` erlaubt).
+- Never delete, skip, or weaken tests to make them pass. If a test fails: fix the
+  code, or explain why the test is wrong.
+- No `// @ts-expect-error`, `eslint-disable`, or `any` without a justifying comment
+  on the same line.
+- No `console.log` in production code (`no-console` is on; `warn`/`error` are allowed).
 
-## Code-Qualität
+## Code quality
 
-- **Soft Limit ~300 Zeilen pro Datei.** Darüber prüfen, ob die Datei mehr als eine
-  Verantwortung hat, und aufteilen.
-- Eine Datei, eine Verantwortung. Keine God-Module.
-- Wiederverwenden statt kopieren. Vor einem neuen Helper prüfen, ob es ihn schon gibt.
-- Lesbarkeit schlägt Cleverness. Kommentare erklären **warum**, nicht was.
-- Kommentare und Dokumentation auf Deutsch, Code-Identifier auf Englisch.
+- **Soft limit of ~300 lines per file.** Above that, check whether the file has more
+  than one responsibility, and split it.
+- One file, one responsibility. No god modules.
+- Reuse instead of copying. Before writing a new helper, check whether one already
+  exists.
+- Readability beats cleverness. Comments explain **why**, not what.
+- Comments, documentation, and code identifiers are all in English.
 
-## Herkunft
+## Provenance
 
-Nachbar-Repos, aus denen bewusst geschöpft wird:
+Neighbor repos this project deliberately draws from:
 
-- `../ai-diary` — Gaston-Atome, LLM-Gateway-Aufbau, Dialog-Ideen, Frontmatter-Denkweise
-- `../ai-assisted-knowledge-tool` — Chat-UI, Zitate, Ingest-Pipeline
-- `../godot-RAG` — das Karpathy-Wiki-Schema (`AGENTS.md`) für die Wissens-Module
-- `../yougrab` — YouTube-Pipeline (yt-dlp + Fallback-Provider, Transcript-Aufbereitung)
-- `../claude-control` — Lesen der Claude-Code-Sessions aus `~/.claude/projects`
+- `../ai-diary` — Gaston atoms, LLM gateway setup, dialog ideas, frontmatter thinking
+- `../ai-assisted-knowledge-tool` — chat UI, citations, ingest pipeline
+- `../godot-RAG` — the Karpathy wiki schema (`AGENTS.md`) for the knowledge modules
+- `../yougrab` — YouTube pipeline (yt-dlp + fallback provider, transcript preparation)
+- `../claude-control` — reading Claude Code sessions from `~/.claude/projects`

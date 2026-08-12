@@ -1,13 +1,13 @@
-/* Die Bauteile der Einstellungen: Felder, Provider-Karten, Routing-Tabelle,
-   Vorschau-Diff, Einstiegskarte. Farben, Abstände und Radien ausschließlich aus
-   den Gaston-Tokens.
+/* The building blocks of settings: fields, provider cards, routing table,
+   preview diff, start card. Colors, spacing, and radii exclusively from the
+   Gaston tokens.
 
-   Ein Rhythmus für alle Tabs: `sb-setting-block` stapelt Felder mit gleichem
-   Abstand, `sb-setting` hält Label, Steuerelement, Beispiel und Hinweis
-   zusammen. Was der Nutzer als Daten liest — Adressen, Pfade, Zahlen, Modelle —
-   steht in Mono. */
+   One rhythm for all tabs: `sb-setting-block` stacks fields with equal
+   spacing, `sb-setting` keeps label, control, example, and hint together.
+   Whatever the user reads as data — addresses, paths, numbers, models —
+   is set in mono. */
 
-/* ── Felder ─────────────────────────────────────────────────────────────── */
+/* ── Fields ─────────────────────────────────────────────────────────────── */
 
 .sb-setting-block {
   display: flex;
@@ -23,12 +23,12 @@
   min-width: 0;
   max-width: 64ch;
 }
-/* Einzelne Knöpfe und Marken sollen nicht auf Blockbreite wachsen. */
+/* Individual buttons and badges should not grow to block width. */
 .sb-setting-block > .gs-btn,
 .sb-setting-block > .gs-badge {
   align-self: flex-start;
 }
-/* Ein Feld direkt im Block folgt derselben Lesebreite wie eines in `sb-setting`. */
+/* A field directly in the block follows the same reading width as one in `sb-setting`. */
 .sb-setting-block > .gs-field {
   max-width: 64ch;
 }
@@ -78,7 +78,90 @@
   font-size: var(--text-sm);
 }
 
-/* ── Schlüssel-Wert-Reihen ──────────────────────────────────────────────── */
+/* ── Customization choices ─────────────────────────────────────────────── */
+
+.sb-customization-fieldset {
+  border: 0;
+  margin: 0;
+  padding: var(--space-3);
+  min-width: 0;
+}
+.sb-customization-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--space-3);
+}
+.sb-customization-grid--icons {
+  grid-template-columns: repeat(auto-fill, minmax(136px, 1fr));
+}
+.sb-image-radio {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  cursor: pointer;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    background var(--duration-fast) var(--ease-out);
+}
+.sb-image-radio:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-hover);
+}
+.sb-image-radio:has(input:checked) {
+  border-color: var(--accent-soft-border);
+  background: var(--accent-soft);
+}
+.sb-image-radio input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+.sb-image-radio:has(input:focus-visible) {
+  box-shadow: var(--focus-ring);
+}
+.sb-image-radio-preview {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--surface-page);
+}
+.sb-customization-grid--icons .sb-image-radio-preview {
+  aspect-ratio: 1;
+}
+.sb-image-radio-preview img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.sb-image-radio-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control-h-md);
+  padding: var(--space-2) var(--space-3);
+}
+.sb-image-radio input:checked ~ .sb-image-radio-label .gs-radio-dot {
+  border-color: var(--accent);
+}
+.sb-image-radio input:checked ~ .sb-image-radio-label .gs-radio-dot::after {
+  transform: scale(1);
+}
+.sb-customization-none {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-faint);
+}
+
+/* ── Key-value rows ─────────────────────────────────────────────────────── */
 
 .sb-kv {
   display: flex;
@@ -102,7 +185,7 @@
   color: var(--text-body);
 }
 
-/* ── Tastenkombination ──────────────────────────────────────────────────── */
+/* ── Keyboard shortcut ──────────────────────────────────────────────────── */
 
 .sb-hotkey {
   display: flex;
@@ -116,7 +199,7 @@
   color: var(--accent);
 }
 
-/* ── Einstiegskarte ─────────────────────────────────────────────────────── */
+/* ── Start card ─────────────────────────────────────────────────────────── */
 
 .sb-start {
   display: flex;
@@ -178,7 +261,7 @@
   color: var(--text-body);
 }
 
-/* ── Provider ───────────────────────────────────────────────────────────── */
+/* ── Providers ──────────────────────────────────────────────────────────── */
 
 .sb-provider-grid {
   display: grid;
@@ -250,7 +333,7 @@
   background: var(--danger);
 }
 
-/* ── Vorlagen im Dialog ─────────────────────────────────────────────────── */
+/* ── Presets in the dialog ──────────────────────────────────────────────── */
 
 .sb-dialog-lead {
   font-size: var(--text-sm);
@@ -299,7 +382,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  /* Gelesen wird in Spalten von etwa 72 Zeichen; über 920 px liest niemand. */
+  /* Reading happens in columns of about 72 characters; nobody reads past 920 px. */
   max-width: 72ch;
   font-size: var(--text-sm);
   color: var(--text-body);
@@ -308,19 +391,20 @@
 .sb-routing {
   table-layout: fixed;
 }
-/* Die erste Spalte trägt drei Zeilen Text (Aufgabe, was sie tut, was ohne Modell
-   geht) und bekommt deshalb den größten Anteil — sonst wird jede Zeile hoch. */
+/* The first column carries three lines of text (task, what it does, what
+   works without a model) and thus gets the largest share — otherwise every
+   row grows tall. */
 .sb-routing th:nth-child(1),
 .sb-routing td:nth-child(1) {
   width: 34%;
 }
-/* Zwei kleine Marken, mehr steht hier nicht. */
+/* Two small badges, nothing more goes here. */
 .sb-routing th:nth-child(2),
 .sb-routing td:nth-child(2) {
   width: 12%;
 }
-/* Die Testspalte braucht nur den Knopf; der Rest gehört der Modell-Auswahl,
-   damit „provider / modell" nicht abgeschnitten wird. */
+/* The test column only needs the button; the rest belongs to the model
+   picker, so "provider / model" doesn't get cut off. */
 .sb-routing th:nth-child(4),
 .sb-routing td:nth-child(4) {
   width: 170px;
@@ -346,9 +430,9 @@
   color: var(--warning);
   line-height: var(--leading-snug);
 }
-/* Was ohne Modell noch geht — in der Zeile der Aufgabe, nicht als Sammelsatz.
-   Ruhig, nicht orange: es ist eine Auskunft, keine Warnung. Das Orange bleibt
-   der Datenschutz-Marke. */
+/* What still works without a model — in the task's row, not as a collective
+   sentence. Calm, not orange: it's information, not a warning. The orange
+   stays reserved for the privacy badge. */
 .sb-routing-fallback {
   display: block;
   margin-top: var(--space-1);
@@ -356,11 +440,11 @@
   color: var(--text-muted);
   line-height: var(--leading-snug);
 }
-/* Klassen-Marke und Datenschutz-Marke stehen untereinander, nicht aneinander. */
+/* Class badge and privacy badge stack below each other, not side by side. */
 .sb-routing td .gs-badge + .gs-badge {
   margin-top: var(--space-1);
 }
-/* Latenz und Beispielantwort stehen untereinander, nicht in einer Zeile. */
+/* Latency and sample answer stack below each other, not in one line. */
 .sb-routing-result {
   display: flex;
   flex-direction: column;
@@ -393,7 +477,7 @@
   gap: var(--space-4);
 }
 
-/* ── Vorschau des Vorschlags ────────────────────────────────────────────── */
+/* ── Proposal preview ───────────────────────────────────────────────────── */
 
 .sb-diff {
   display: flex;
@@ -435,7 +519,7 @@
   color: var(--text-body);
 }
 
-/* Im engen Fenster hat die Tabelle keine vier Spalten mehr — dann rollt sie. */
+/* In a narrow window the table no longer has room for four columns — then it scrolls. */
 @media (max-width: 1100px) {
   .sb-routing {
     display: block;

@@ -1,9 +1,9 @@
-/* Die Brücke zur LLM-Schicht des Kerns.
+/* The bridge to the core's LLM layer.
 
-   Der Bestand an Providern und das Routing liegen in den Vault-Einstellungen,
-   die Schlüssel im Schlüsselspeicher der Maschine. `ProviderRegistry` und
-   `RoutingGateway` werden pro Aufruf frisch aus diesem Zustand gebaut — so gibt
-   es keine zweite Wahrheit, die veralten könnte. */
+   The set of providers and the routing live in the vault settings, the keys
+   in the machine's key store. `ProviderRegistry` and `RoutingGateway` are
+   built fresh from this state on every call — that way there is no second
+   source of truth that could go stale. */
 
 import {
   LlmUnavailableError,
@@ -21,7 +21,7 @@ import { providerKeyId } from './secrets';
 import type { KeyStore } from './secrets';
 import type { Services } from './services';
 
-/** Der Kern erwartet einen synchronen Schlüsselspeicher; das Schreiben läuft im Hintergrund. */
+/** The core expects a synchronous key store; the actual write happens in the background. */
 function coreKeys(keys: KeyStore): CoreKeyStore {
   return {
     get: (providerId) => keys.get(providerKeyId(providerId)),
@@ -39,13 +39,12 @@ function registryOf(services: Services): ProviderRegistry {
 }
 
 /**
- * Das Gateway für eine Aufgabe — die eine Stelle, an der es gebaut wird.
+ * The gateway for a task — the one place where it gets built.
  *
- * Pro Aufruf frisch: Routing, Provider und Schlüssel liegen in den
- * Einstellungen und ändern sich, während die App läuft. Wer hier zwischenspeichert,
- * schickt eine Aufgabe an ein Modell, das der Nutzer gerade abgeschaltet hat.
- * Ohne Vault gibt es kein Routing — dann meldet der Aufruf `llm-unavailable`,
- * statt still nichts zu tun.
+ * Fresh on every call: routing, providers, and keys live in the settings and
+ * change while the app runs. Caching here would risk sending a task to a
+ * model the user just disabled. Without a vault there is no routing — the
+ * call then reports `llm-unavailable` instead of silently doing nothing.
  */
 export function createGateway(services: Services): LlmGateway {
   const settings = services.settings.vault();
@@ -56,7 +55,7 @@ export function createGateway(services: Services): LlmGateway {
   });
 }
 
-/** Schreibt eine geprüfte Provider-Fassung zurück in die Vault-Einstellungen. */
+/** Writes a validated provider version back into the vault settings. */
 async function persist(services: Services, updated: ProviderConfig): Promise<void> {
   const current = services.settings.vault();
   if (!current) return;
@@ -91,7 +90,7 @@ export function createLlmBridge(services: Services): LlmBridge {
   };
 }
 
-/** Ein kurzer, echter Aufruf: läuft die Route, und wie lange dauert sie? */
+/** A short, real call: does the route work, and how long does it take? */
 async function runTestTask(
   services: Services,
   task: TaskKind,

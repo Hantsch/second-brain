@@ -1,9 +1,9 @@
 /**
- * Tageseintraege: ein Tag ist eine Datei (`journal/YYYY/MM/YYYY-MM-DD.md`).
+ * Journal entries: a day is a file (`journal/YYYY/MM/YYYY-MM-DD.md`).
  *
- * Alles hier ist abgeleitet. `turns` zaehlt die Sprecherzeilen im Abschnitt
- * „Gespräch" — zwei Zeilen sind eine Runde; eine angefangene Runde zaehlt mit,
- * damit eine unbeantwortete Frage nicht verschwindet.
+ * Everything here is derived. `turns` counts the speaker lines in the
+ * "Conversation" section — two lines make one turn; a turn that's only
+ * started still counts, so an unanswered question doesn't disappear.
  */
 
 import type { JournalDay } from '@shared/types';
@@ -12,10 +12,10 @@ import { baseName } from '@core/vault/paths';
 import { asDate, asStringList, contentLines } from './text';
 import type { IndexedDoc } from './types';
 
-/** Abschnitt mit dem Coaching-Dialog, klein geschrieben verglichen. */
+/** Section with the coaching dialogue, compared lowercased. */
 const DIALOGUE_SECTIONS = new Set(['gespräch', 'gespraech', 'conversation']);
 
-/** Eine Sprecherzeile: `> **Ich** — 18:40`. */
+/** A speaker line: `> **Ich** — 18:40`. */
 const SPEAKER = /^>\s*\*\*[^*]+\*\*/;
 
 function numberOf(value: unknown): number | null {
@@ -25,7 +25,7 @@ function numberOf(value: unknown): number | null {
   return null;
 }
 
-/** Datum aus dem Frontmatter, sonst aus dem Dateinamen. */
+/** Date from the frontmatter, otherwise from the file name. */
 function dateOf(doc: IndexedDoc): string {
   const declared = asDate(doc.frontmatter['date']);
   if (declared !== null) return declared;
@@ -34,7 +34,7 @@ function dateOf(doc: IndexedDoc): string {
   return match?.[1] ?? '';
 }
 
-/** Sprecherzeilen im Dialogabschnitt → Runden. */
+/** Speaker lines in the dialogue section → turns. */
 export function countTurns(body: string): number {
   let speakers = 0;
   for (const [heading, text] of extractSections(body)) {
@@ -46,7 +46,7 @@ export function countTurns(body: string): number {
   return Math.ceil(speakers / 2);
 }
 
-/** Erster Absatz unter '## Tag', sonst erster Absatz des Rumpfs. */
+/** First paragraph under '## Tag', otherwise the first paragraph of the body. */
 function dayExcerpt(body: string, maxChars = 200): string {
   for (const [heading, text] of extractSections(body)) {
     if (heading.trim().toLowerCase() !== 'tag' && heading.trim().toLowerCase() !== 'day') continue;
@@ -56,7 +56,7 @@ function dayExcerpt(body: string, maxChars = 200): string {
   return excerpt(body, maxChars);
 }
 
-/** Ein indiziertes Dokument als Tageseintrag. */
+/** An indexed document as a journal entry. */
 export function toJournalDay(doc: IndexedDoc): JournalDay {
   return {
     path: doc.path,
@@ -73,7 +73,7 @@ export function toJournalDay(doc: IndexedDoc): JournalDay {
   };
 }
 
-/** Alle Tageseintraege, der jüngste zuerst. */
+/** All journal entries, most recent first. */
 export function deriveJournalDays(docs: readonly IndexedDoc[]): JournalDay[] {
   const days: JournalDay[] = [];
   for (const doc of docs) {

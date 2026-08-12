@@ -135,6 +135,25 @@ const invoke = vi.fn(async (channel: string, payload?: unknown): Promise<unknown
       };
       return state.snapshot;
     }
+    case 'settings:setApp': {
+      const { patch } = payload as {
+        patch: Partial<SettingsSnapshot['app']> & {
+          customization?: Partial<SettingsSnapshot['app']['customization']>;
+        };
+      };
+      state.snapshot = {
+        ...state.snapshot,
+        app: {
+          ...state.snapshot.app,
+          ...patch,
+          customization: {
+            ...state.snapshot.app.customization,
+            ...patch.customization,
+          },
+        },
+      };
+      return state.snapshot;
+    }
     default:
       return (mockBridge.invoke as (c: string, p?: unknown) => Promise<unknown>)(channel, payload);
   }
@@ -191,11 +210,42 @@ describe('Einstellungen: Tabs', () => {
       'Sprachen',
       'Modelle',
       'Verhalten',
+      'Anpassung',
       'Info',
     ]);
     expect(screen.getByRole('tab', { name: 'Vault' }).getAttribute('aria-selected')).toBe('true');
     /* Die Kennzahlen des Index gehören in den Vault-Tab. */
     expect(await screen.findByText('Was im Vault steht')).toBeTruthy();
+  });
+});
+
+describe('Einstellungen: Anpassung', () => {
+  it('wählt Hintergrund und App-Symbol sofort aus', async () => {
+    await openTab('customization');
+
+    await userEvent.click(await screen.findByRole('radio', { name: 'Wissenskonstellation' }));
+    await waitFor(() =>
+      expect(invoke).toHaveBeenCalledWith('settings:setApp', {
+        patch: {
+          customization: { background: 'knowledge-constellation' },
+        },
+      }),
+    );
+
+    await userEvent.click(screen.getByRole('radio', { name: 'Neuronaler Kern' }));
+    await waitFor(() =>
+      expect(invoke).toHaveBeenCalledWith('settings:setApp', {
+        patch: {
+          customization: { appIcon: 'neural-core' },
+        },
+      }),
+    );
+  });
+
+  it('hat keinen A11y-Verstoß', async () => {
+    const { container } = await openTab('customization');
+    await screen.findByRole('radio', { name: 'Neuronaler Kern' });
+    await expectNoViolations(container);
   });
 });
 

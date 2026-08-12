@@ -1,23 +1,24 @@
-/* Eine Frist als Chip. Überfällig rot, heute oder bald amber, sonst ruhig.
+/* A deadline as a chip. Overdue red, today or soon amber, otherwise calm.
 
-   Die Farbe ist Beiwerk: der Chip trägt das Datum in Mono und, wo Platz ist, den
-   Satz dazu („2 Tage überfällig"). Wer die Farbe nicht sieht, liest dasselbe. */
+   The color is decoration: the chip carries the date in mono and, where
+   there's room, the sentence describing it ("2 days overdue"). Anyone who
+   can't see the color reads the same thing. */
 
 import { Icon } from '../atoms/Icon';
 import { useLanguage } from '../i18n';
 import { dayDiff, dueTone, formatDate, formatDue } from '../lib/format';
 
 export interface DeadlineChipProps {
-  /** ISO-Tag oder `null` für „ohne Frist". */
+  /** ISO day or `null` for "no deadline". */
   date: string | null;
   /**
-   * Tage bis zur Frist; negativ ist überfällig. Fehlt der Wert, wird er aus dem
-   * Datum gerechnet — der Index liefert ihn für Todos schon mit.
+   * Days until the deadline; negative is overdue. If the value is missing,
+   * it's computed from the date — the index already supplies it for todos.
    */
   dueInDays?: number | null;
-  /** Den Satz zur Frist mitschreiben, nicht nur das Datum. */
+  /** Also write out the sentence about the deadline, not just the date. */
   relative?: boolean;
-  /** Das „heute" dieser Anzeige. Tests geben eine feste Zeit. */
+  /** The "today" of this display. Tests pass a fixed time. */
   now?: Date;
 }
 

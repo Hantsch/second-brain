@@ -1,13 +1,13 @@
-/* Welches Modul welche Kachel rendert — die einzige Stelle, die das weiß.
+/* Which module renders which tile — the only place that knows this.
 
-   `Record<DashboardModuleId, …>` erzwingt Vollständigkeit: ein neues Modul im
-   Vertrag hat hier eine Kachel, sonst übersetzt der Compiler das nicht. Kein
-   `default`-Fall, der still eine leere Fläche zeigt.
+   `Record<DashboardModuleId, …>` enforces completeness: a new module in the
+   contract has a tile here, otherwise the compiler won't build it. No
+   `default` case that silently shows a blank surface.
 
-   `memo` ist hier kein Zierrat: während eines Zugs rendert das Gitter mit jeder
-   Zeigerbewegung neu. Die Kacheln bekommen keine Eigenschaften, also überspringt
-   React ihren Rumpf — nur der Rahmen zieht nach, weil er den Zustand des Gitters
-   aus dem Kontext liest. Ohne das würden dreizehn Listen pro Bild neu gebaut. */
+   `memo` is not decoration here: during a drag, the grid re-renders on
+   every pointer movement. The tiles receive no props, so React skips their
+   body — only the frame keeps up, because it reads the grid's state from
+   the context. Without this, thirteen lists would be rebuilt per frame. */
 
 import { memo } from 'react';
 import type { ComponentType } from 'react';

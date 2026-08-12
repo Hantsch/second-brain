@@ -1,8 +1,8 @@
-/* Der Kopf des Detail: Titel, Bereich, Status, Frist, Priorität.
+/* The head of the detail view: title, scope, status, deadline, priority.
 
-   Der Statuswechsel schreibt sofort — deshalb steht die Bestätigung direkt
-   darunter (`StatusPicker`). Alles andere hier ist Anzeige; geändert wird es in
-   der Datei oder über die Felder, die dafür da sind. */
+   The status change writes immediately — that's why the confirmation sits
+   right below it (`StatusPicker`). Everything else here is display; it's
+   changed in the file or via the fields meant for that. */
 
 import type { Project } from '@shared/types';
 import { Badge } from '../../atoms/Badge';

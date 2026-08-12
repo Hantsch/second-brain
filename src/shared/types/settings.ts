@@ -13,6 +13,32 @@ export type DocLanguage = 'de' | 'en';
 
 export type ThemeMode = 'dark' | 'light' | 'system';
 
+export const APP_BACKGROUNDS = [
+  'none',
+  'thought-catcher',
+  'knowledge-constellation',
+  'pocket-vault',
+  'thread-of-return',
+  'knowledge-garden',
+] as const;
+
+export type AppBackground = (typeof APP_BACKGROUNDS)[number];
+
+export const APP_ICONS = [
+  'knowledge-garden',
+  'neural-core',
+  'circuit-cortex',
+  'brain-chip',
+  'vault-brain',
+] as const;
+
+export type AppIcon = (typeof APP_ICONS)[number];
+
+export interface CustomizationSettings {
+  background: AppBackground;
+  appIcon: AppIcon;
+}
+
 export interface LanguageSettings {
   /** Sprache der Oberfläche. */
   ui: UiLanguage;
@@ -106,6 +132,7 @@ export interface AppSettings {
   /** Verlauf für die Vault-Auswahl. */
   recentVaults: string[];
   theme: ThemeMode;
+  customization: CustomizationSettings;
   /** UI-Sprache, bevor ein Vault geöffnet ist. */
   uiLanguage: UiLanguage;
   window: WindowBounds;

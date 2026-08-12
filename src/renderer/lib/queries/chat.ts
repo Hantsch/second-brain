@@ -1,10 +1,11 @@
-/* Die Hooks des Fragens: Gespräche, ein Gespräch, fragen, abbrechen, löschen,
-   zurückschreiben.
+/* The hooks for asking: threads, a single thread, ask, abort, delete,
+   file back.
 
-   Der Stream läuft nicht über TanStack Query: jedes Stück kommt als
-   `event:llm-stream` und landet im Puffer aus `lib/llm-stream.ts`. Erst wenn er
-   fertig ist, invalidiert `lib/events.ts` das Gespräch — so flackert nichts und
-   die Antwort steht danach als Datei, nicht als Zustand im Speicher. */
+   The stream doesn't go through TanStack Query: every chunk arrives as
+   `event:llm-stream` and lands in the buffer from `lib/llm-stream.ts`. Only
+   once it's finished does `lib/events.ts` invalidate the thread — this way
+   nothing flickers, and afterward the answer exists as a file, not as
+   in-memory state. */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { QueryClient, UseMutationResult, UseQueryResult } from '@tanstack/react-query';
@@ -15,13 +16,13 @@ import { clearStream } from '../llm-stream';
 import { qk } from './keys';
 import { useVaultReady } from './data';
 
-/** Ab so vielen Zeichen sucht die Verlaufssuche — darunter zählt die Liste. */
+/** From this many characters on, the history search kicks in — below that, the plain list is shown. */
 export const MIN_THREAD_QUERY = 2;
 
 /**
- * Die Gesprächsliste. Ohne Suchbegriff sind es die neuesten; ab
- * `MIN_THREAD_QUERY` Zeichen sucht der Hauptprozess in Titeln und Nachrichten und
- * findet damit auch, was aus der Liste herausgefallen ist.
+ * The thread list. Without a search term these are the most recent ones; from
+ * `MIN_THREAD_QUERY` characters on, the main process searches titles and
+ * messages, which also finds threads that have fallen out of the list.
  */
 export function useThreads(query = ''): UseQueryResult<ChatThread[]> {
   const ready = useVaultReady();
@@ -34,7 +35,7 @@ export function useThreads(query = ''): UseQueryResult<ChatThread[]> {
   });
 }
 
-/** Ein Gespräch mit allen Nachrichten. `null` heißt: keines ausgewählt. */
+/** A thread with all its messages. `null` means: none selected. */
 export function useThread(id: string | null): UseQueryResult<ChatThread | null> {
   return useQuery({
     queryKey: qk.chat.thread(id ?? ''),
@@ -58,8 +59,8 @@ export function useChatMutations(): ChatMutations {
   const client = useQueryClient();
 
   return {
-    /* Die Frage steht sofort als Datei — die Liste holt deshalb gleich nach, statt
-       auf das Ende des Streams zu warten. */
+    /* The question exists as a file immediately — that's why the list
+       refetches right away instead of waiting for the end of the stream. */
     ask: useMutation({ mutationFn: api.chat.ask, onSuccess: () => refreshThreads(client) }),
 
     abort: useMutation({ mutationFn: api.chat.abort }),
@@ -73,8 +74,8 @@ export function useChatMutations(): ChatMutations {
       },
     }),
 
-    /* Zurückschreiben legt eine Wiki-Seite an; der Hauptprozess meldet danach
-       `event:vault-changed`, was Module und Index zentral nachzieht. */
+    /* Filing back creates a wiki page; the main process then emits
+       `event:vault-changed`, which refreshes modules and the index centrally. */
     fileBack: useMutation({ mutationFn: api.chat.fileBack }),
   };
 }

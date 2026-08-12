@@ -1,6 +1,6 @@
-/* Zentrale Ereignis-Verdrahtung: was aus dem Hauptprozess kommt, invalidiert
-   hier genau die betroffenen Query-Keys. Kein Polling, keine verstreuten
-   Listener in Components. */
+/* Central event wiring: whatever comes from the main process invalidates
+   exactly the affected query keys here. No polling, no scattered
+   listeners in components. */
 
 import type { QueryClient } from '@tanstack/react-query';
 import { bridge } from './bridge';
@@ -15,7 +15,7 @@ function invalidateVaultDependent(client: QueryClient): void {
   }
 }
 
-/** Meldet alle Ereignisse an; Rückgabe hängt sie wieder ab. */
+/** Subscribes to all events; the return value unsubscribes them again. */
 export function wireEvents(client: QueryClient): () => void {
   const sb = bridge();
   const unsubscribes: (() => void)[] = [];
@@ -60,11 +60,12 @@ export function wireEvents(client: QueryClient): () => void {
     }),
   );
 
-  /* Ein Pflegelauf endet auch, wenn niemand auf dem Pflege-Screen steht — beim
-     Öffnen des Vaults etwa (`gardener.runOnOpen`). Danach hängt mehr als der
-     Bericht daran: das Dashboard zeigt den Gesundheitswert, die Modulkarten die
-     Befundzahl ihres Moduls. Ohne diese Stelle stünde dort die Zahl von vorher,
-     und zwei Screens sagten Verschiedenes über denselben Lauf. */
+  /* A maintenance run can also finish while nobody is on the maintenance
+     screen — when opening the vault, for instance (`gardener.runOnOpen`). More
+     than the report hangs off this afterward: the dashboard shows the health
+     score, the module cards their module's finding count. Without this spot,
+     the old number would still be showing there, and two screens would say
+     different things about the same run. */
   unsubscribes.push(
     sb.on('event:gardener-progress', ({ phase }) => {
       if (phase !== 'done') return;
@@ -83,7 +84,7 @@ export function wireEvents(client: QueryClient): () => void {
   unsubscribes.push(
     sb.on('event:llm-stream', (chunk) => {
       appendStream(chunk.messageId, chunk);
-      /* Erst am Ende die Query invalidieren — sonst rendert jedes Stück neu. */
+      /* Only invalidate the query at the end — otherwise every chunk re-renders. */
       if (chunk.done) {
         void client.invalidateQueries({ queryKey: qk.chat.thread(chunk.threadId) });
         void client.invalidateQueries({ queryKey: qk.chat.threads() });

@@ -1,34 +1,33 @@
-/* Arbeitsspuren von außen — die Brücke zwischen den Claude-Sessions und dem
-   Index.
+/* External work traces — the bridge between Claude sessions and the index.
 
-   `IndexService.open({ externalTouches })` nimmt eine `ReadonlyMap` und liest sie
-   bei **jedem** Lauf neu. Deshalb ist es dieselbe Karte über die Lebenszeit eines
-   Vaults: der erste Sitzungslauf füllt sie, ein `refresh()` danach schreibt
-   `lastTouch`, `lastTouchSource` und `stale` fort. Zwei Karten wären zwei
-   Wahrheiten — eine im Index, eine im Dashboard.
+   `IndexService.open({ externalTouches })` takes a `ReadonlyMap` and re-reads it
+   on **every** run. That's why it's the same map for the lifetime of a vault:
+   the first session run fills it, a `refresh()` afterward carries `lastTouch`,
+   `lastTouchSource`, and `stale` forward. Two maps would be two truths — one in
+   the index, one in the dashboard.
 
-   Beim Öffnen eines anderen Vaults wird sie geleert: die Slugs des alten Vaults
-   würden dort auf Projekte zeigen, die es nicht gibt. */
+   It's cleared when opening a different vault: the old vault's slugs would
+   otherwise point at projects that don't exist there. */
 
 import type { ExternalTouch } from '@core/index/types';
 
 const touches = new Map<string, ExternalTouch>();
 
-/** Die Karte selbst — nur `core-bridge.ts` gibt sie an den Index. */
+/** The map itself — only `core-bridge.ts` passes it to the index. */
 export function externalTouches(): Map<string, ExternalTouch> {
   return touches;
 }
 
-/** Leert die Karte und gibt sie zurück. Beim Öffnen eines Vaults. */
+/** Clears the map and returns it. Used when opening a vault. */
 export function resetExternalTouches(): Map<string, ExternalTouch> {
   touches.clear();
   return touches;
 }
 
 /**
- * Übernimmt die Spuren eines Sitzungslaufs. Rückgabe: hat sich etwas geändert?
- * Nur dann muss der Index nachziehen — sonst wäre jeder Dashboard-Aufruf ein
- * vollständiger Indexlauf.
+ * Applies the traces from a session run. Return value: did anything change?
+ * Only then does the index need to catch up — otherwise every dashboard call
+ * would be a full index run.
  */
 export function applyExternalTouches(next: ReadonlyMap<string, ExternalTouch>): boolean {
   let changed = false;
@@ -38,8 +37,8 @@ export function applyExternalTouches(next: ReadonlyMap<string, ExternalTouch>): 
     touches.set(slug, touch);
     changed = true;
   }
-  /* Was der Lauf nicht mehr kennt, verschwindet: eine gelöschte Verlaufsdatei
-     darf kein `lastTouch` behaupten, das es nicht mehr gibt. */
+  /* Whatever the run no longer knows about disappears: a deleted history file
+     must not claim a `lastTouch` that no longer exists. */
   for (const slug of [...touches.keys()]) {
     if (next.has(slug)) continue;
     touches.delete(slug);

@@ -1,5 +1,5 @@
-/* Die öffentliche Fläche der LLM-Schicht. Der Main verdrahtet von hier aus;
-   alles andere kennt nur `LlmGateway`. */
+/* The public surface of the LLM layer. Main wires things up from here;
+   everything else only knows `LlmGateway`. */
 
 export type {
   FetchLike,

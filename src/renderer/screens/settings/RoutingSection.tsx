@@ -1,15 +1,15 @@
-/* Das Aufgaben-Routing: Zusammenfassung, Tabelle, Fallback-Kette, Vorschlag.
+/* Task routing: summary, table, fallback chain, proposal.
 
-   Die Zusammenfassungszeile ist der ehrliche Kern des Screens: sie zählt, wie
-   viele Aufgaben ein Modell haben — und sagt im selben Atemzug, was zu tun ist.
-   Was ohne Modell noch geht, steht je Aufgabe in ihrer Tabellenzeile; als
-   Schachtelsatz über der Tabelle hat es niemand gelesen.
+   The summary line is the honest core of the screen: it counts how many
+   tasks have a model — and states in the same breath what needs to be done.
+   What still works without a model is stated per task in its table row; as a
+   nested sentence above the table, nobody ever read it.
 
-   „Automatisch zuordnen" holt einen Vorschlag und zeigt ihn als Vorher/Nachher.
-   Geschrieben wird erst auf Bestätigung, Zeile für Zeile über `llm:setRoute`
-   bzw. `llm:setDefault`. Steht ein Provider mit Modellen, aber keine einzige
-   Zuordnung, ist dieser Vorschlag der Fokuspunkt des Tabs — sonst endet das
-   Einrichten in einem Halbzustand: Provider grün, Routing leer. */
+   "Route automatically" fetches a proposal and shows it as before/after. It's
+   only written on confirmation, row by row, via `llm:setRoute` and
+   `llm:setDefault` respectively. If a provider has models but not a single
+   task is routed, this proposal is the tab's focus point — otherwise setup
+   ends in a half-finished state: provider green, routing empty. */
 
 import { useEffect, useRef, useState } from 'react';
 import type { ModelTier, ProviderConfig, Routing, TaskDefinition, TaskKind } from '@shared/types';
@@ -36,9 +36,9 @@ export interface RoutingSectionProps {
   routing: Routing;
   providers: readonly ProviderConfig[];
   /**
-   * Zählt hoch, wenn woanders ein Provider dazukam und getestet wurde. Dann holt
-   * dieser Abschnitt von selbst einen Vorschlag und klappt die Vorher/Nachher-
-   * Vorschau auf — bestätigt wird sie trotzdem von Hand.
+   * Counts up whenever a provider was added and tested elsewhere. In that
+   * case, this section fetches a proposal on its own and opens the
+   * before/after preview — it's still confirmed by hand regardless.
    */
   proposeSignal?: number;
 }
@@ -91,8 +91,8 @@ export function RoutingSection({
     }
   };
 
-  /* Ohne Abhängigkeitsliste und mit Merker: `propose` hängt an jedem Rendern,
-     ausgelöst werden soll aber nur der Sprung des Signals. */
+  /* No dependency list, with a marker instead: `propose` closes over every
+     render, but only a jump in the signal should trigger it. */
   const seen = useRef(proposeSignal);
   useEffect(() => {
     if (proposeSignal === seen.current) return;
@@ -105,8 +105,8 @@ export function RoutingSection({
   const apply = async (): Promise<void> => {
     setBusy(true);
     try {
-      /* Zeile für Zeile über die Kanäle des Vertrags: jede Änderung ist einzeln
-         nachvollziehbar und einzeln rückgängig zu machen. */
+      /* Row by row through the contract's channels: every change is
+         individually traceable and can be reverted individually. */
       for (const change of changes) {
         if (change.kind === 'task') {
           await setRoute.mutateAsync({ task: change.task, ref: change.after });
@@ -122,8 +122,8 @@ export function RoutingSection({
     }
   };
 
-  /* Ein Provider mit Modellen, aber keine einzige Zuordnung: dann ist das
-     Zuordnen die Aktion, auf die alles wartet — und bekommt das Teal. */
+  /* A provider with models but not a single task routed: in that case,
+     routing is the action everything is waiting on — and gets the teal. */
   const needsRouting = withModels.length > 0 && routed === 0;
 
   return (

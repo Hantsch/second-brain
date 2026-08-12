@@ -1,71 +1,72 @@
-/* Der eine Streaming-Weg des Hauptprozesses.
+/* The main process's single streaming path.
  *
- * Zwei Bereiche antworten stückweise — die Frage an das Archiv (`chat:ask`) und
- * die Coaching-Runde (`journal:coach`). Beide schicken `event:llm-stream` unter
- * einer Nachrichten-Marke und beide brauchen einen Abbruch dazu. Genau deshalb
- * steht die Mechanik hier und nicht zweimal: zwei Fassungen liefen beim ersten
- * Sonderfall auseinander (ein Bereich meldet den Abschluss, der andere nicht —
- * und der Renderer wartet dann für immer).
+ * Two areas answer piece by piece — the question to the archive (`chat:ask`)
+ * and the coaching turn (`journal:coach`). Both send `event:llm-stream`
+ * under a message id and both need an abort to go with it. That's exactly
+ * why the mechanism lives here and not twice: two versions drifted apart at
+ * the first edge case (one area reports completion, the other doesn't — and
+ * the renderer then waits forever).
  *
- * Drei Regeln, die die Mechanik erzwingt:
+ * Three rules the mechanism enforces:
  *
- * - **Jede Runde endet.** `end()` schickt das Abschluss-Ereignis und meldet die
- *   Marke ab. Wer `run()` benutzt, kann es nicht vergessen.
- * - **`abort` kennt nur angemeldete Marken.** Eine fremde oder abgelaufene Marke
- *   ändert nichts — sie ist kein Fehler, nur nichts mehr da.
- * - **Melden wirft nie.** Hört niemand zu (Fenster zu, Renderer neu geladen),
- *   läuft das Ereignis ins Leere. Ein Fehler daraus würde den Schreibvorgang
- *   verlieren, der gerade gelungen ist.
+ * - **Every turn ends.** `end()` sends the completion event and unregisters
+ *   the id. Anyone who uses `run()` can't forget it.
+ * - **`abort` only knows registered ids.** A foreign or expired id changes
+ *   nothing — it's not an error, just nothing left to do.
+ * - **Reporting never throws.** If nobody is listening (window closed,
+ *   renderer reloaded), the event runs into the void. An error from that
+ *   would lose the write that just succeeded.
  */
 
 import type { Citation } from '@shared/types';
 import { toIpcError } from './errors';
 import type { Services } from '../services';
 
-/** Was an einem Abschluss-Ereignis zusätzlich hängen kann. */
+/** What can additionally hang off a completion event. */
 export interface StreamExtra {
   citations?: Citation[];
-  /** `IpcError['code']` oder ein `LlmUnavailable.reason` — der Renderer formuliert. */
+  /** `IpcError['code']` or an `LlmUnavailable.reason` — the renderer formulates the wording. */
   error?: string;
 }
 
-/** Ein Stück melden. `done: true` beendet den Stream für den Renderer. */
+/** Report a chunk. `done: true` ends the stream for the renderer. */
 export type StreamSink = (delta: string, done: boolean, extra?: StreamExtra) => void;
 
-/** Eine angemeldete Runde: Marke, Abbruchsignal, Sink. */
+/** A registered turn: id, abort signal, sink. */
 export interface StreamRun {
   threadId: string;
   messageId: string;
   signal: AbortSignal;
-  /** Ein Zwischenstück. Kürzer als `send(delta, false)` und nicht zu verwechseln. */
+  /** An intermediate chunk. Shorter than `send(delta, false)` and not to be confused with it. */
   delta: (text: string) => void;
-  /** Der Abschluss: meldet das Ereignis und gibt die Marke frei. Zweimal ist ein Nichts. */
+  /** The completion: reports the event and frees the id. Calling twice is a no-op. */
   end: (extra?: StreamExtra, text?: string) => void;
 }
 
 export interface LlmStreams {
-  /** Eine Runde anmelden. Die Marke bestimmt der Aufrufer (sie steht in der Antwort). */
+  /** Register a turn. The caller determines the id (it's in the response). */
   begin: (threadId: string, messageId: string) => StreamRun;
   /**
-   * Eine Runde im Hintergrund laufen lassen. Der Rumpf beendet sie selbst
-   * (`run.end(...)`), weil nur er weiß, was am Abschluss hängt; wirft er, wird der
-   * Fehler ein Abschluss-Ereignis mit `code`. In beiden Fällen ist die Runde danach
-   * beendet und die Marke frei — vergessen kann man es nicht.
+   * Run a turn in the background. The body ends it itself (`run.end(...)`),
+   * because only it knows what hangs off the completion; if it throws, the
+   * error becomes a completion event with `code`. Either way, the turn is
+   * finished afterward and the id is freed — it can't be forgotten.
    *
-   * `onFailure` ist die Gelegenheit, vor dem Fehler-Ereignis aufzuräumen (etwa den
-   * Index nachzuziehen, weil die Nutzerzeile schon in der Datei steht).
+   * `onFailure` is the chance to clean up before the failure event (for
+   * instance, bringing the index up to date because the user's line is
+   * already in the file).
    */
   run: (
     run: StreamRun,
     body: (run: StreamRun) => Promise<void>,
     options?: { onFailure?: (code: string) => Promise<void> | void; label?: string },
   ) => void;
-  /** Laufende Runde abbrechen; unbekannte Marke ändert nichts. */
+  /** Abort a running turn; an unknown id changes nothing. */
   abort: (messageId: string) => void;
 }
 
 export function llmStreams(services: Services): LlmStreams {
-  /** Laufende Antworten je Nachrichten-Marke — `*:abort` greift hier zu. */
+  /** Running responses per message id — `*:abort` reaches in here. */
   const running = new Map<string, AbortController>();
 
   const begin = (threadId: string, messageId: string): StreamRun => {
@@ -100,13 +101,14 @@ export function llmStreams(services: Services): LlmStreams {
       void (async () => {
         try {
           await body(run);
-          /* Falls der Rumpf es nicht selbst getan hat: `end` ist einmalig, ein
-             zweiter Aufruf ist ein Nichts. So endet jede Runde. */
+          /* In case the body didn't do it itself: `end` is one-shot, a
+             second call is a no-op. This way every turn ends. */
           run.end();
         } catch (error) {
           const failure = toIpcError(error);
-          /* Erst aufräumen, dann melden: das Abschluss-Ereignis lädt im Renderer
-             neu, und dann muss dastehen, was schon geschrieben ist. */
+          /* Clean up first, then report: the completion event reloads in
+             the renderer, and by then whatever was already written has to
+             be there. */
           await options.onFailure?.(failure.code);
           run.end({ error: failure.code });
           if (failure.code === 'unknown') {

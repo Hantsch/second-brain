@@ -1,13 +1,12 @@
-/* Alle Todos, getrennt nach Bereich und dann nach Fälligkeit.
+/* All todos, split by scope and then by due date.
 
-   Arbeit und Privat stehen als zwei Module nebeneinander, nicht als ein Stapel
-   mit Etiketten: die Trennung ist der Zweck dieser Ansicht. Innerhalb eines
-   Bereichs entscheidet die Frist — überfällig zuerst, „ohne Frist" zuletzt,
-   aber sichtbar.
+   Work and private stand side by side as two modules, not as one stack with
+   labels: the separation is the point of this view. Within a scope, the
+   deadline decides — overdue first, "no deadline" last, but visible.
 
-   Angelegt wird hier ohne Projekt: das Todo landet im heutigen Tageseintrag.
-   Wer es an ein Projekt hängen will, macht das im Projektdetail — dort ist die
-   Zuordnung eindeutig, statt geraten. */
+   Todos created here have no project: the todo lands in today's journal
+   entry. Anyone who wants to attach it to a project does so in the project
+   detail — there the assignment is unambiguous instead of guessed. */
 
 import { useState } from 'react';
 import type { Todo } from '@shared/types';
@@ -23,7 +22,7 @@ import { groupTodos } from './grouping';
 import { useTodoKeys } from './use-project-keys';
 
 export interface AllTodosProps {
-  /** Fokuspunkt der leeren Ansicht: hier wird ein Projekt angelegt. */
+  /** Focus point of the empty view: this is where a project gets created. */
   onNewProject: () => void;
   now?: Date;
 }

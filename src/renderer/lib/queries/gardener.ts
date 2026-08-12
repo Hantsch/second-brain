@@ -1,19 +1,18 @@
-/* Die Hooks der Pflege: den letzten Bericht lesen, einen Lauf starten und
-   abbrechen, „passt so" setzen und zurücknehmen, einen Fix anwenden und
-   zurückdrehen.
+/* The maintenance hooks: read the last report, start and cancel a run,
+   set and unset "looks fine", apply a fix and revert it.
 
-   Drei Eigenheiten, alle begründet:
+   Three quirks, all justified:
 
-   - **`gardener:report` prüft nicht.** Die Abfrage ist billig (eine Datei) und
-     liefert `null`, solange niemand geprüft hat. Der Screen sagt dann „noch nicht
-     geprüft" — und keine Zahl.
-   - **Der Lauf ist eine Mutation, kein `refetch`.** Er schreibt (den Bericht) und
-     kostet Zeit; als Abfrage würde ihn jeder Mount neu starten.
-   - **Der Fortschritt hängt am Ereignis, nicht am Cache.** `event:gardener-progress`
-     kommt mehrmals pro Sekunde; jedes Stück in den Query-Cache zu schreiben würde
-     den halben Screen neu rendern. Deshalb ein eigener kleiner Speicher, genau wie
-     beim Antwort-Strom (`llm-stream.ts`) — und ein Abonnement, das nur so lange
-     lebt, wie der Screen offen ist. */
+   - **`gardener:report` does not check anything.** The query is cheap (one file)
+     and returns `null` as long as nobody has run a check. The screen then says
+     "not checked yet" — and no number.
+   - **The run is a mutation, not a `refetch`.** It writes (the report) and
+     costs time; as a query, every mount would restart it.
+   - **Progress hangs off the event, not the cache.** `event:gardener-progress`
+     fires several times per second; writing every chunk into the query cache
+     would re-render half the screen. Hence a small dedicated store, exactly
+     like the reply stream (`llm-stream.ts`) — and a subscription that lives
+     only as long as the screen is open. */
 
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -29,7 +28,7 @@ export type GardenerProgress = IpcEvents['event:gardener-progress'];
 export type FixResult = IpcResponse<'gardener:applyFix'>;
 export type UndoFixResult = IpcResponse<'gardener:undoFix'>;
 
-/** Der letzte Bericht. `null` heißt: es gibt keinen — nicht „alles gut". */
+/** The last report. `null` means: there is none — not "all fine". */
 export function useGardenerReport(): UseQueryResult<GardenerReport | null> {
   const ready = useVaultReady();
   return useQuery({
@@ -39,31 +38,31 @@ export function useGardenerReport(): UseQueryResult<GardenerReport | null> {
   });
 }
 
-/** Bericht, Dashboard und Modul-Zählungen hängen am selben Lauf. */
+/** Report, dashboard, and module counts hang off the same run. */
 function refresh(client: QueryClient): void {
   void client.invalidateQueries({ queryKey: qk.gardener.report() });
   void client.invalidateQueries({ queryKey: qk.dashboard.data() });
-  /* Die Modulkarte zeigt die Befunde ihres Moduls (`modules:list`). „Passt so"
-     senkt die Zahl dort mit — sonst widersprächen sich zwei Screens. */
+  /* The module card shows its module's findings (`modules:list`). "Looks fine"
+     lowers the count there too — otherwise two screens would disagree. */
   void client.invalidateQueries({ queryKey: qk.modules.list() });
 }
 
 /**
- * Ein Lauf. `useLlm` überschreibt die Einstellung für diesen Lauf; ohne Angabe
- * entscheidet `gardener.useLlm` im Vault.
+ * A run. `useLlm` overrides the setting for this run; without it,
+ * `gardener.useLlm` in the vault decides.
  */
 export function useGardenerRun(): UseMutationResult<GardenerReport, unknown, boolean | undefined> {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (useLlm?: boolean) => api.gardener.run(useLlm),
-    /* Der Hauptprozess hat den Bericht schon abgelegt; seine Fassung ist die
-       gültige und steht damit ohne zweite Runde im Cache. */
+    /* The main process has already stored the report; its version is the
+       authoritative one and thus goes into the cache without a second round-trip. */
     onSuccess: (report) => {
       client.setQueryData(qk.gardener.report(), report);
       void client.invalidateQueries({ queryKey: qk.dashboard.data() });
       void client.invalidateQueries({ queryKey: qk.modules.list() });
     },
-    /* Ein Lauf ist teuer und wird vom Nutzer ausgelöst: kein stiller Wiederholer. */
+    /* A run is expensive and triggered by the user: no silent retry. */
     retry: false,
   });
 }
@@ -79,7 +78,7 @@ export interface GardenerMutations {
   undoFix: UseMutationResult<UndoFixResult, unknown, string>;
 }
 
-/** Die vier Schreibwege des Screens. Jeder hat seinen Rückweg daneben. */
+/** The screen's four write paths. Each has its undo path alongside it. */
 export function useGardenerMutations(): GardenerMutations {
   const client = useQueryClient();
   const done = (): void => refresh(client);
@@ -92,9 +91,9 @@ export function useGardenerMutations(): GardenerMutations {
 }
 
 /**
- * Der Fortschritt des laufenden Pflegelaufs. `null` heißt: gerade läuft keiner.
- * Das Abonnement lebt so lange wie der Screen — ein Fortschritt, den niemand
- * ansieht, muss niemand einsammeln.
+ * The progress of the running maintenance run. `null` means: none is running
+ * right now. The subscription lives as long as the screen does — progress
+ * that nobody watches doesn't need to be collected.
  */
 export function useGardenerProgress(): GardenerProgress | null {
   const [progress, setProgress] = useState<GardenerProgress | null>(null);

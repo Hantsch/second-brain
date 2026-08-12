@@ -1,9 +1,9 @@
-/* Quellen aufnehmen: Ablagefläche, Eingang, yt-dlp-Zeile, Aufträge.
-   Farben, Abstände und Radien ausschließlich aus den Gaston-Tokens.
-   Die Quellenzeile selbst benutzt `sb-row*` aus content.css — eine Quelle sieht
-   im Modul-Screen genauso aus wie hier. */
+/* Ingesting sources: drop zone, input, yt-dlp row, jobs.
+   Colors, spacing, and radii exclusively from the Gaston tokens.
+   The source row itself uses `sb-row*` from content.css — a source looks the
+   same in the module screen as it does here. */
 
-/* ── Quellen: Eingang ───────────────────────────────────────────────────── */
+/* ── Sources: input ─────────────────────────────────────────────────────── */
 
 .sb-dropzone {
   position: relative;
@@ -101,7 +101,7 @@
   color: var(--text-faint);
 }
 
-/* ── Quellen: Aufträge ──────────────────────────────────────────────────── */
+/* ── Sources: jobs ──────────────────────────────────────────────────────── */
 
 .sb-joblist {
   list-style: none;

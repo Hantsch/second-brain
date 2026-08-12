@@ -1,10 +1,10 @@
-/* Die Nahtstellen zwischen Shell und Kern.
+/* The seams between shell and core.
 
-   Die Shell beschreibt hier nur, *was* sie vom Kern braucht — als schmale
-   Untermengen der Kern-Verträge. `core/vault`'s `VaultStore` und ein Gateway aus
-   `core/llm` erfüllen sie strukturell; eingehängt werden sie über
-   `services.attach*` in `src/main/core-bridge.ts`. Fehlt ein Teil, bleibt die
-   App benutzbar und sagt es ehrlich. */
+   Here the shell describes only *what* it needs from the core — as narrow
+   subsets of the core contracts. `core/vault`'s `VaultStore` and a gateway from
+   `core/llm` fulfill them structurally; they're wired in via `services.attach*`
+   in `src/main/core-bridge.ts`. If a part is missing, the app stays usable and
+   says so honestly. */
 
 import type { IndexStats, WriteRequest } from '@shared/ipc';
 import type {
@@ -26,28 +26,28 @@ import type {
   WriteResult,
 } from '@shared/types';
 
-/** Was die Shell an einem Pfad im Vault weiß, ohne ihn zu lesen. */
+/** What the shell knows about a path in the vault, without reading it. */
 export interface VaultEntry {
   path: string;
   size: number;
   dir: boolean;
 }
 
-/** Untermenge von `core/vault`'s `VaultStore` — nur was die IPC-Kanäle brauchen. */
+/** Subset of `core/vault`'s `VaultStore` — only what the IPC channels need. */
 export interface VaultStoreLike {
   readonly root: string;
   read(path: string): Promise<VaultDoc | null>;
   write(input: WriteRequest): Promise<WriteResult>;
-  /** Neu anlegen; existiert die Datei schon, gibt es einen Konflikt. */
+  /** Create new; if the file already exists, this is a conflict. */
   create(path: string, frontmatter: Record<string, unknown>, body: string): Promise<WriteResult>;
-  /** Rohen Text lesen (Protokolle, JSON); `null`, wenn es die Datei nicht gibt. */
+  /** Read raw text (logs, JSON); `null` if the file doesn't exist. */
   readText(path: string): Promise<string | null>;
-  /** Rohen Text schreiben — für alles, was kein Markdown mit Frontmatter ist. */
+  /** Write raw text — for anything that isn't Markdown with frontmatter. */
   writeText(path: string, content: string): Promise<WriteResult>;
   /**
-   * Unter einer Abschnitts-Überschrift anhängen. Fehlt der Abschnitt, wird er am
-   * Ende angelegt; Frontmatter bleibt unberührt. Das ist der Schreibweg des
-   * Ablegens — ein Dump wandert nie über `write` in eine fremde Datei.
+   * Append under a section heading. If the section is missing, it's created at
+   * the end; frontmatter stays untouched. This is the write path for filing —
+   * a dump never travels into a foreign file via `write`.
    */
   append(
     path: string,
@@ -57,24 +57,24 @@ export interface VaultStoreLike {
   ): Promise<{ path: string; hash: string }>;
   exists(path: string): Promise<boolean>;
   delete(path: string): Promise<{ path: string; undoToken: string }>;
-  /** Nimmt zurück, was unter dieser Marke im Papierkorb liegt. Gibt die Pfade zurück. */
+  /** Restores what's in the trash under this marker. Returns the paths. */
   undo(token: string): Promise<string[]>;
   walk(options?: {
     dir?: string;
-    /** Nur Dateien mit dieser Endung, inklusive Punkt (`.md`). */
+    /** Only files with this extension, including the dot (`.md`). */
     ext?: string;
     recursive?: boolean;
     includeDirs?: boolean;
   }): AsyncIterable<VaultEntry>;
 }
 
-/** Fortschritt eines Indexlaufs. */
+/** Progress of an index run. */
 export type IndexProgress = (done: number, total: number) => void;
 
 /**
- * Die abgeleiteten Listen des Index. Sie sind optional, weil ein Index ohne sie
- * immer noch suchen und zählen kann: fehlen sie, sagen die betroffenen Kanäle
- * ehrlich, dass sie nichts liefern können — statt eine leere Liste zu behaupten.
+ * The derived lists of the index. They're optional because an index without
+ * them can still search and count: if they're missing, the affected channels
+ * honestly say they can't deliver anything — instead of claiming an empty list.
  */
 export interface IndexListsLike {
   projects(): readonly Project[];
@@ -86,23 +86,23 @@ export interface IndexListsLike {
   modules(): readonly KnowledgeModule[];
 }
 
-/** Was die Shell an einem Index benutzt (Untermenge von `core/index`). */
+/** What the shell uses from an index (subset of `core/index`). */
 export interface IndexLike extends Partial<IndexListsLike> {
   stats(): IndexStats | Promise<IndexStats>;
   rebuild(onProgress?: IndexProgress): Promise<IndexStats>;
   search(query: SearchQuery): SearchHit[] | Promise<SearchHit[]>;
   /**
-   * Nach externen Änderungen: betroffene Pfade neu einlesen. Ohne Pfade zieht
-   * der Index in jedem Fall nach — das braucht, wer nicht Dateien geändert hat,
-   * sondern die Rechengrundlage (etwa die Arbeitsspuren von außen).
+   * After external changes: re-read the affected paths. Without paths, the
+   * index catches up regardless — needed by anyone who hasn't changed files
+   * but the computation basis itself (e.g. external work traces).
    */
   refresh?(paths?: readonly string[]): void | Promise<void>;
   dispose?(): void | Promise<void>;
 }
 
-/** Was die Shell an der LLM-Schicht benutzt (Untermenge von `core/llm`). */
+/** What the shell uses from the LLM layer (subset of `core/llm`). */
 export interface LlmBridge {
-  /** Aufgabenkatalog aus `core/llm/tasks`. */
+  /** Task catalog from `core/llm/tasks`. */
   tasks(): readonly TaskDefinition[];
   presets(): readonly ProviderPreset[];
   probe(providerId: string): Promise<ProviderConfig>;
@@ -116,7 +116,7 @@ export interface LlmBridge {
   suggestRouting(): Routing | Promise<Routing>;
 }
 
-/** Beobachtet den Vault (Untermenge von `core/vault/watch`). */
+/** Watches the vault (subset of `core/vault/watch`). */
 export interface VaultWatcherLike {
   dispose(): void | Promise<void>;
 }

@@ -1,8 +1,9 @@
-/* Was der Index über den Vault weiß, in Zahlen: abgeleitet, nachprüfbar, ohne
-   LLM. Es ist Statistik über die Ablage — deshalb steht die Karte in den
-   Einstellungen und nicht auf dem Dashboard, wo der Arbeitsstand hingehört.
+/* What the index knows about the vault, in numbers: derived, verifiable,
+   without an LLM. It's statistics about the filing system — that's why the
+   card lives in settings and not on the dashboard, where the work status
+   belongs.
 
-   Ohne Index (frisch geöffnet, noch am Bauen) rendert sie nichts. */
+   Without an index (freshly opened, still building) it renders nothing. */
 
 import type { IndexStats } from '@shared/ipc';
 import { useLanguage, useT } from '../i18n';
@@ -33,7 +34,7 @@ export function IndexStatsCard() {
         {figures(data).map((figure) => (
           <div className="sb-stat" key={figure.key}>
             <dt className="sb-stat-label">{t(figure.key)}</dt>
-            {/* Zahlen in Mono — sie sollen untereinander stehen. */}
+            {/* Numbers in mono — they should line up underneath each other. */}
             <dd className="sb-stat-value">{formatNumber(figure.value, language)}</dd>
           </div>
         ))}

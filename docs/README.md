@@ -1,25 +1,27 @@
-# Dokumentation
+# Documentation
 
-Vier Dokumente, vier Fragen. Wer etwas baut, liest sie in dieser Reihenfolge.
+Four documents, four questions. Anyone building something reads them in this order.
 
-| Dokument                             | Antwortet auf                                                      |
-| ------------------------------------ | ------------------------------------------------------------------ |
-| [CONCEPT.md](CONCEPT.md)             | Warum die App existiert und was sie tut — Produktsicht, Abgrenzung |
-| [ARCHITECTURE.md](ARCHITECTURE.md)   | Wie sie gebaut ist — Schichten, Interfaces, Screens, Bedienbarkeit |
-| [VAULT-FORMAT.md](VAULT-FORMAT.md)   | Was auf der Platte liegt — verbindliches Dateiformat               |
-| [MODULE-SCHEMA.md](MODULE-SCHEMA.md) | Wie ein Wissens-Modul gepflegt wird — Karpathy-Wiki-Schema         |
+| Document                             | Answers                                                                |
+| ------------------------------------- | ------------------------------------------------------------------------ |
+| [CONCEPT.md](CONCEPT.md)             | Why the app exists and what it does — product view, scope               |
+| [ARCHITECTURE.md](ARCHITECTURE.md)   | How it's built — layers, interfaces, screens, usability                |
+| [VAULT-FORMAT.md](VAULT-FORMAT.md)   | What's on disk — the binding file format                               |
+| [MODULE-SCHEMA.md](MODULE-SCHEMA.md) | How a knowledge module is maintained — Karpathy wiki schema             |
 
-Die Regeln für die Arbeit am Code stehen eine Ebene höher in [../CLAUDE.md](../CLAUDE.md):
-Guardrails, Quality Gates, Design-System-Pflichten, QA-Regeln.
+The rules for working on the code live one level up in
+[../CLAUDE.md](../CLAUDE.md): guardrails, quality gates, design-system
+requirements, QA rules.
 
-Der Vertrag zwischen Renderer und Main ist Code, nicht Prosa:
-[../src/shared/ipc.ts](../src/shared/ipc.ts) und
+The contract between renderer and main is code, not prose:
+[../src/shared/ipc.ts](../src/shared/ipc.ts) and
 [../src/shared/types/](../src/shared/types/).
 
 ## AI Scrum
 
-Prozess- und Status-Tracking für die Weiterentwicklung: [ROADMAP.md](ROADMAP.md) (Stand,
-Meilensteine, Unpriorisiertes), [requirements/](requirements/) (Stories),
-[sprints/](sprints/) (Sprint-Planung/-Review), [concepts/](concepts/) (geplante Systeme),
-[systems/](systems/) (Referenz zu bereits gebauten Systemen). Ablauf in
-[requirements/README.md](requirements/README.md) und [sprints/README.md](sprints/README.md).
+Process and status tracking for ongoing development: [ROADMAP.md](ROADMAP.md)
+(status, milestones, unprioritized items), [requirements/](requirements/)
+(stories), [sprints/](sprints/) (sprint planning/review), [concepts/](concepts/)
+(planned systems), [systems/](systems/) (reference for already-built systems).
+Workflow in [requirements/README.md](requirements/README.md) and
+[sprints/README.md](sprints/README.md).

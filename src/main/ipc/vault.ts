@@ -1,6 +1,6 @@
-/* Kanäle rund um den Vault: öffnen, anlegen, schließen, lesen, schreiben.
-   Gelesen und geschrieben wird ausschließlich über den `VaultStore` des Kerns —
-   der prüft Hashes, mergt Frontmatter und legt Gelöschtes in den Papierkorb. */
+/* Channels around the vault: open, create, close, read, write.
+   Reading and writing happens exclusively through the core's `VaultStore` —
+   it checks hashes, merges frontmatter, and moves deleted items to the trash. */
 
 import { basename } from 'node:path';
 import { dialog } from 'electron';
@@ -9,7 +9,7 @@ import { defineHandlers, fail } from './registry';
 import type { Services } from '../services';
 import { directoryExists, isVault, vaultName } from '../vault-layout';
 
-/** Ordner-Dialog; leerer Rückgabewert heißt abgebrochen. */
+/** Folder dialog; an empty return value means cancelled. */
 async function pickDirectory(services: Services): Promise<string> {
   const parent = services.mainWindow();
   const properties = ['openDirectory', 'createDirectory'] as const;
@@ -31,9 +31,9 @@ export function vaultHandlers(services: Services): HandlerMap {
 
     'vault:open': ({ path }) => services.openVault(path),
 
-    /* Konvention: leerer `path` heißt „frag den Nutzer nach dem Ordner", leerer
-       `name` heißt „nimm den Ordnernamen". So braucht das Onboarding keinen
-       zweiten Kanal, nur um einen Ordner auszuwählen. */
+    /* Convention: an empty `path` means "ask the user for the folder", an empty
+       `name` means "use the folder name". This way onboarding doesn't need a
+       second channel just to pick a folder. */
     'vault:create': async ({ path, name }) => {
       const target = path.trim() || (await pickDirectory(services));
       if (!target) throw fail('cancelled', 'abgebrochen');

@@ -1,8 +1,8 @@
-/* Gegenstück zu `src/preload/ipc-error-wire.ts`.
+/* Counterpart to `src/preload/ipc-error-wire.ts`.
 
-   Über die contextBridge übersteht ein Fehlerobjekt nur seine Message. Der
-   `IpcError` reist deshalb als JSON darin — hier wird er wieder ausgepackt.
-   Beide Seiten müssen dasselbe Präfix benutzen. */
+   Across the contextBridge, an error object only survives as its message.
+   The `IpcError` therefore travels as JSON inside it — here it gets
+   unpacked again. Both sides must use the same prefix. */
 
 import type { IpcError } from '@shared/ipc';
 
@@ -29,12 +29,12 @@ export function isIpcError(value: unknown): value is IpcError {
   );
 }
 
-/** Baut den Fehler, den die Mock-Brücke wirft — gleiche Form wie aus dem Preload. */
+/** Builds the error that the mock bridge throws — same shape as from the preload. */
 export function encodeIpcError(error: IpcError): Error {
   return new Error(`${IPC_ERROR_PREFIX}${JSON.stringify(error)}`);
 }
 
-/** Macht aus allem, was ein Aufruf werfen kann, einen `IpcError`. */
+/** Turns anything a call can throw into an `IpcError`. */
 export function decodeIpcError(error: unknown): IpcError {
   if (isIpcError(error)) return error;
   const message = error instanceof Error ? error.message : String(error);
@@ -44,7 +44,7 @@ export function decodeIpcError(error: unknown): IpcError {
       const parsed: unknown = JSON.parse(message.slice(start + IPC_ERROR_PREFIX.length));
       if (isIpcError(parsed)) return parsed;
     } catch {
-      /* Kaputtes JSON behandeln wir wie einen unbekannten Fehler. */
+      /* We treat broken JSON like an unknown error. */
     }
   }
   return { code: 'unknown', message: 'unerwarteter Fehler' };

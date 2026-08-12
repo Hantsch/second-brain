@@ -1,19 +1,21 @@
 /**
- * „Auf wen warte ich?" — die dritte Frage der App, aus rohem Text gelesen.
+ * "Who am I waiting on?" — the app's third question, read from raw text.
  *
- * Erkannt werden vier Wendungen, die in echten Notizen vorkommen:
- * „warte auf X", „Rueckmeldung von X", „X muss noch Y", „von X fehlt noch Y".
- * Alles andere bleibt liegen: ein erfundener Wartender ist schlimmer als keiner.
+ * Four phrasings that occur in real notes are recognized: "warte auf X"
+ * (waiting on X), "Rueckmeldung von X" (reply from X), "X muss noch Y" (X
+ * still needs to Y), "von X fehlt noch Y" (Y is still missing from X).
+ * Everything else is left alone: an invented person to wait on is worse
+ * than none at all.
  *
- * Die Namenspruefung laeuft ausdruecklich **ohne** `i`-Flag. Die Muster suchen
- * ihre Schluesselwoerter unabhaengig von der Schreibweise — und genau deshalb
- * koennte `[A-ZÄÖÜ]` dort einen Namen nicht von einem Verb unterscheiden.
+ * The name check deliberately runs **without** the `i` flag. The patterns
+ * look for their keywords regardless of case — and that's exactly why
+ * `[A-ZÄÖÜ]` there couldn't distinguish a name from a verb.
  */
 
 import { NOT_A_NAME } from './lexicon';
 import { matchAll, wordRegex } from './words';
 
-/** Ein erkannter Warte-auf-Hinweis: auf wen und worauf. */
+/** A recognized waiting-on hint: on whom, and for what. */
 export interface WaitingHit {
   who: string;
   what: string;
@@ -33,7 +35,7 @@ const MISSING_FROM = wordRegex(
   `von\\s+(${NAME})\\s+(?:fehlt|steht)\\s+(?:noch\\s+)?(.{2,70}?)(?=[.,;!?]|$)`,
 );
 
-/** Der Name am Anfang einer Phrase: hoechstens zwei gross geschriebene Woerter. */
+/** The name at the start of a phrase: at most two capitalized words. */
 function leadingName(phrase: string): string | null {
   const parts: string[] = [];
   for (const token of phrase.trim().split(/\s+/).slice(0, 2)) {
@@ -45,7 +47,7 @@ function leadingName(phrase: string): string | null {
   return parts.length === 0 ? null : parts.join(' ');
 }
 
-/** Person und Sache aus einer Objektphrase: 'Jonas wegen des Fallbacks'. */
+/** Person and thing from an object phrase: 'Jonas wegen des Fallbacks'. */
 function splitPhrase(phrase: string, fallback: string): WaitingHit | null {
   const trimmed = phrase.trim().replace(/\s+/g, ' ');
   if (trimmed.length === 0) return null;
@@ -58,7 +60,7 @@ function splitPhrase(phrase: string, fallback: string): WaitingHit | null {
   return { who, what: rest.length > 0 ? rest : fallback };
 }
 
-/** Alle Warte-auf-Hinweise eines Satzes. Leer, wenn keiner sicher zu deuten ist. */
+/** All waiting-on hints in a sentence. Empty if none can be confidently interpreted. */
 export function findWaitingOn(sentence: string): WaitingHit[] {
   const hits: WaitingHit[] = [];
   const context = sentence.replace(/\s*[.!?]+\s*$/, '').trim();

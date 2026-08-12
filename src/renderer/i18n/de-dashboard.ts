@@ -1,15 +1,15 @@
-/* Deutsche Oberflächentexte des Dashboards: die Zusammenfassung des Tages, das
-   Gitter mit seinen zwei Bedienwegen, die Auswahl der Module und die Kacheln.
+/* German UI text for the dashboard: the day's summary, the grid with its two
+   input methods, the module selection, and the tiles.
 
-   `module.<id>.name` ist zweimal derselbe Text und deshalb nur einmal da: er ist
-   der Titel der Kachel *und* ihr Name in der Auswahl. `module.<id>.purpose` ist
-   der eine Satz, der sagt, wofür das Modul gut ist.
+   `module.<id>.name` is the same text twice, so it's only here once: it's the
+   tile's title *and* its name in the selection. `module.<id>.purpose` is the
+   one sentence that says what the module is good for.
 
-   Flache Keys, sentence case, keine Emoji. `en-dashboard.ts` trägt denselben
-   Key-Satz — ein Test prüft das. */
+   Flat keys, sentence case, no emoji. `en-dashboard.ts` carries the same key
+   set — a test checks that. */
 
 export const deDashboard = {
-  // ── Zusammenfassung des Tages ─────────────────────────────────────────────
+  // ── Day summary ────────────────────────────────────────────────────────
   'dashboard.summary.label': 'Was heute drückt',
   'dashboard.summary.overdue': '{count} überfällig',
   'dashboard.summary.today': '{count} heute fällig',
@@ -18,7 +18,7 @@ export const deDashboard = {
   'dashboard.summary.clear': 'Nichts ist überfällig, nichts ist heute fällig.',
   'dashboard.summary.jump': 'Zu „{module}" springen',
 
-  // ── Das Gitter ───────────────────────────────────────────────────────────
+  // ── The grid ───────────────────────────────────────────────────────────
   'dashboard.tiles.label': 'Module des Dashboards',
   'dashboard.tiles.empty':
     'Alle Module sind ausgeblendet. In der Auswahl steht, was hier stehen kann.',
@@ -44,7 +44,7 @@ export const deDashboard = {
   'dashboard.tile.hiddenWhere': 'Die Kachel steht weiter in der Auswahl unter „Module".',
   'dashboard.layout.saveFailed': 'Die Anordnung ließ sich nicht speichern.',
 
-  // ── Auswahl der Module ───────────────────────────────────────────────────
+  // ── Module selection ───────────────────────────────────────────────────
   'dashboard.catalog.open': 'Module',
   'dashboard.catalog.title': 'Module des Dashboards',
   'dashboard.catalog.body':
@@ -52,7 +52,7 @@ export const deDashboard = {
   'dashboard.catalog.visible': '{count} von {total} sichtbar',
   'dashboard.catalog.reset': 'Anordnung zurücksetzen',
 
-  // ── Namen und Zweck der Module ───────────────────────────────────────────
+  // ── Module names and purpose ──────────────────────────────────────────────
   'module.quick-capture.name': 'Schnell erfassen',
   'module.quick-capture.purpose': 'Ein Feld für den Gedanken, der gerade kommt.',
   'module.ask.name': 'Frage',
@@ -82,7 +82,7 @@ export const deDashboard = {
   'module.gardener.name': 'Pflege',
   'module.gardener.purpose': 'Gesundheitswert und Befunde des letzten Pflegelaufs.',
 
-  // ── Kacheln ──────────────────────────────────────────────────────────────
+  // ── Tiles ──────────────────────────────────────────────────────────────
   'tile.more': '{count} weitere',
   'tile.capture.label': 'Gedanke',
   'tile.capture.placeholder': 'Roh und unsortiert.',
@@ -134,9 +134,9 @@ export const deDashboard = {
   'tile.deadlines.todo': 'Todo',
   'tile.deadlines.snooze': '„{title}" ruhig stellen',
 
-  /* Ruhig stellen heißt: bis zu einem Tag nicht mahnen. Deshalb steht in jeder
-     Auswahl der Tag, an dem wieder gemahnt wird — „für drei Tage" ist eine
-     Rechnung, die der Nutzer im Kopf machen müsste. */
+  /* Snoozing means: don't nag until a given day. That's why every choice
+     states the day the reminder returns — "for three days" is a calculation
+     the user would have to do in their head. */
   'reminder.snooze.title': 'Wieder erinnern',
   'reminder.snooze.today': 'Nicht mehr heute',
   'reminder.snooze.tomorrow': 'Bis morgen',

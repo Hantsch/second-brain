@@ -1,8 +1,9 @@
-/* Tab „Info": was hier läuft, wo es liegt, und wo die Schlüssel liegen.
+/* "About" tab: what's running here, where it lives, and where the keys are
+   stored.
 
-   Der Absatz über die Schlüssel ist keine Beruhigung, sondern eine Auskunft: der
-   Nutzer soll wissen, dass ein API-Schlüssel diese Maschine nicht verlässt und
-   nicht mit dem Vault reist. */
+   The paragraph about the keys isn't reassurance, it's information: the
+   user should know that an API key never leaves this machine and never
+   travels with the vault. */
 
 import { useQuery } from '@tanstack/react-query';
 import { Badge } from '../../atoms/Badge';
@@ -13,7 +14,7 @@ import { useT } from '../../i18n';
 import { api } from '../../lib/api';
 import { qk } from '../../lib/queries/keys';
 
-/** Das Format ist im Vault selbst erklärt: die README schreibt die App beim Anlegen. */
+/** The format is explained in the vault itself: the app writes the README when creating it. */
 const VAULT_README = 'README.md';
 
 export function AboutTab() {

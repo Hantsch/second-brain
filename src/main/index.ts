@@ -1,7 +1,7 @@
-/* App-Start. Reihenfolge: eine Instanz sichern, Einstellungen und Schlüssel
-   laden, IPC registrieren, Fenster öffnen, Hotkey setzen, letzten Vault
-   wiederherstellen. Schlägt der letzte Vault fehl, startet die App im
-   Onboarding statt gar nicht. */
+/* App startup. Order: secure a single instance, load settings and keys,
+   register IPC, open the window, set the hotkey, restore the last vault.
+   If the last vault fails to open, the app starts in onboarding instead
+   of not starting at all. */
 
 import { app, BrowserWindow } from 'electron';
 import { attachCore } from './core-bridge';
@@ -23,8 +23,8 @@ import type { ReminderNotifier } from './reminder-notify';
 let reminderNotifier: ReminderNotifier | null = null;
 let gardenerAutorun: GardenerAutorun | null = null;
 
-/* Nur eine Instanz: der Vault ist eine Datei-Wahrheit, zwei Prozesse darauf
-   wären zwei Schreiber. */
+/* Only one instance: the vault is a file-based source of truth, and two
+   processes on it would mean two writers. */
 const hasSingleInstanceLock = app.requestSingleInstanceLock();
 if (!hasSingleInstanceLock) app.quit();
 
@@ -41,12 +41,13 @@ async function bootstrap(): Promise<Services> {
 }
 
 /**
- * Welcher Vault beim Start geöffnet wird.
+ * Which vault is opened at startup.
  *
- * `SB_VAULT` schlägt die Historie: die Prüfskripte (`npm run shot`,
- * `npm run a11y`) starten die App damit auf dem Demo-Vault, ohne die
- * Einstellungen des Nutzers anzufassen. Fehlt die Variable, gilt der letzte
- * Vault. Passt beides nicht, startet die App im Onboarding — nie gar nicht.
+ * `SB_VAULT` overrides the history: the check scripts (`npm run shot`,
+ * `npm run a11y`) use it to start the app on the demo vault without
+ * touching the user's settings. If the variable is missing, the last
+ * vault applies. If neither fits, the app starts in onboarding — never
+ * not at all.
  */
 async function vaultToRestore(services: Services): Promise<string | null> {
   const forced = process.env['SB_VAULT']?.trim();
@@ -61,7 +62,7 @@ async function vaultToRestore(services: Services): Promise<string | null> {
   return null;
 }
 
-/** Öffnet den Vault aus `SB_VAULT` bzw. den letzten. Fehler bleiben leise. */
+/** Opens the vault from `SB_VAULT` or the last one. Errors stay silent. */
 async function restoreVault(services: Services): Promise<void> {
   const root = await vaultToRestore(services);
   if (!root) return;
@@ -77,7 +78,7 @@ async function start(): Promise<void> {
   const window = createMainWindow(services);
   services.setMainWindow(window);
 
-  /* Das versteckte Schnell-Erfassen-Fenster darf die App nicht am Leben halten. */
+  /* The hidden quick-capture window must not keep the app alive. */
   window.on('closed', () => {
     if (process.platform !== 'darwin') app.quit();
   });
@@ -99,10 +100,10 @@ async function start(): Promise<void> {
   await restoreVault(services);
   syncQuickCaptureHotkey(services);
   watchQuickCaptureHotkey(services);
-  /* Fällige Erinnerungen als Benachrichtigung: beim Öffnen und einmal pro
-     Stunde, höchstens eine Sammelmeldung, nichts zweimal am selben Tag. */
+  /* Due reminders as notifications: on open and once per hour, at most
+     one bundled message, nothing twice on the same day. */
   reminderNotifier = startReminderNotifier(services);
-  /* Pflegelauf beim Öffnen — nur wenn `gardener.runOnOpen` an ist. */
+  /* Maintenance run on open — only if `gardener.runOnOpen` is on. */
   gardenerAutorun = startGardenerAutorun(services);
 }
 

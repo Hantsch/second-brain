@@ -1,21 +1,21 @@
-/* Die Ordnung der Befundliste: filtern, gruppieren, zählen.
+/* The ordering of the findings list: filter, group, count.
 
-   Reine Funktionen ohne React — so ist prüfbar, dass die Zählungen zu der Liste
-   passen, die daneben steht. Die Reihenfolge der Gruppen ist die Reihenfolge des
-   Berichts (der Kern sortiert schwerste zuerst, siehe
-   `core/gardener/report.ts#sortFindings`): eine zweite Sortierung hier wäre eine
-   zweite Wahrheit.
+   Pure functions without React — that way it's testable that the counts match
+   the list shown next to them. The order of the groups is the order of the
+   report (the core sorts most severe first, see
+   `core/gardener/report.ts#sortFindings`): a second sort here would be a
+   second truth.
 
-   Die Zählungen der Auswahllisten werden **vor** dem jeweiligen Filter gerechnet:
-   „Art: Verwaiste Seiten (3)" muss sagen, wie viele es gibt, nicht wie viele nach
-   der eigenen Auswahl übrig sind — sonst steht überall (0), sobald etwas anderes
-   gewählt ist. */
+   The counts in the selection lists are computed **before** their own filter
+   is applied: "Kind: orphaned pages (3)" has to say how many there are, not
+   how many remain after its own selection — otherwise everything would show
+   (0) as soon as something else is selected. */
 
 import type { FindingSeverity, GardenerFinding, GardenerFindingKind } from '@shared/types';
 
 export interface FindingFilterState {
   kind: GardenerFindingKind | 'all';
-  /** Modul-Slug, `'none'` für Befunde ohne Modul, `'all'` für alle. */
+  /** Module slug, `'none'` for findings without a module, `'all'` for all. */
   module: string | 'all' | 'none';
   severity: FindingSeverity | 'all';
 }
@@ -57,7 +57,7 @@ export interface FindingGroup {
   findings: GardenerFinding[];
 }
 
-/** Nach Art gruppiert, in der Reihenfolge des ersten Vorkommens im Bericht. */
+/** Grouped by kind, in the order of first appearance in the report. */
 export function groupByKind(findings: readonly GardenerFinding[]): FindingGroup[] {
   const groups: FindingGroup[] = [];
   for (const finding of findings) {
@@ -68,7 +68,7 @@ export function groupByKind(findings: readonly GardenerFinding[]): FindingGroup[
   return groups;
 }
 
-/** Wie oft kommt jede Art vor — ohne den Art-Filter selbst. */
+/** How often each kind occurs — without applying the kind filter itself. */
 export function kindCounts(
   findings: readonly GardenerFinding[],
   filter: FindingFilterState,
@@ -80,7 +80,7 @@ export function kindCounts(
   return counts;
 }
 
-/** Wie oft kommt jedes Modul vor — ohne den Modul-Filter selbst. */
+/** How often each module occurs — without applying the module filter itself. */
 export function moduleCounts(
   findings: readonly GardenerFinding[],
   filter: FindingFilterState,
@@ -93,7 +93,7 @@ export function moduleCounts(
   return counts;
 }
 
-/** Wie oft kommt jede Schwere vor — ohne den Schwere-Filter selbst. */
+/** How often each severity occurs — without applying the severity filter itself. */
 export function severityCounts(
   findings: readonly GardenerFinding[],
   filter: FindingFilterState,

@@ -1,6 +1,6 @@
-/* Fenstergeometrie auf einen sichtbaren Bildschirm klemmen.
-   Reine Funktionen, damit sie ohne Electron prüfbar sind: der Bildschirm wird
-   als Liste von Arbeitsflächen hereingegeben. */
+/* Clamp window geometry to a visible screen.
+   Pure functions, so they can be tested without Electron: the screen is
+   passed in as a list of work areas. */
 
 import type { WindowBounds } from '@shared/types';
 
@@ -23,10 +23,10 @@ function overlap(a: Rect, b: Rect): number {
 }
 
 /**
- * Sorgt dafür, dass ein gespeichertes Fenster wieder sichtbar aufgeht: es
- * landet auf dem Bildschirm, mit dem es sich am meisten überschneidet, und wird
- * dort auf die Arbeitsfläche geklemmt. Ohne gespeicherte Position bleibt die
- * Position offen — dann zentriert Electron selbst.
+ * Ensures that a saved window reopens visibly: it lands on the screen it
+ * overlaps with the most, and is clamped to that screen's work area there.
+ * Without a saved position, the position is left open — Electron then
+ * centers it itself.
  */
 export function clampBounds(saved: WindowBounds, areas: readonly Rect[], min: Size): WindowBounds {
   const width = Math.max(min.width, Math.round(saved.width));

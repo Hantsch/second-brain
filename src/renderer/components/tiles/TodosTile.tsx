@@ -1,19 +1,19 @@
-/* Todos, nach Fälligkeit gruppiert und direkt in der Kachel abhakbar.
+/* Todos, grouped by due date and checkable directly in the tile.
 
-   Arbeit und Privat sind zwei Kacheln, nicht eine mit Umschalter: die Trennung
-   ist eine Anforderung, und ein Umschalter hätte immer eine der beiden Seiten
-   versteckt. Dieselbe Datei, weil sie sich nur im Bereich unterscheiden — eine
-   Kopie, die sich später auseinanderentwickelt, wäre der schlechtere Weg.
+   Work and private are two tiles, not one with a toggle: the separation is
+   a requirement, and a toggle would always hide one of the two sides. Same
+   file, because they differ only in scope — a copy that later drifts apart
+   would be the worse path.
 
-   Abgehakt wird über `todos:toggle`: das schreibt genau eine Zeile in der Datei
-   und setzt `@done:`. Solange der Schreibvorgang läuft, ist die Checkbox
-   gesperrt — ein Häkchen, das noch nicht in der Datei steht, darf nicht so
-   aussehen, als wäre es dort.
+   Checking off happens via `todos:toggle`: that writes exactly one line in
+   the file and sets `@done:`. While the write is in progress, the checkbox
+   is locked — a checkmark that isn't in the file yet must not look as if it
+   were.
 
-   Gezeigt werden höchstens `LIMIT` Zeilen, dringendste Gruppe zuerst; der Rest
-   steht als Zahl im Fuß. Eine Kachel, die alle Todos zeigt, wird höher als das
-   Fenster — dann liegt jede Kachel darunter unter dem Rand, und das Dashboard
-   beantwortet seine Frage erst nach dem Rollen. */
+   At most `LIMIT` lines are shown, most urgent group first; the rest shows
+   as a number in the footer. A tile that shows all todos would grow taller
+   than the window — then every tile below it would sit past the edge, and
+   the dashboard would only answer its question after scrolling. */
 
 import type { Scope, Todo } from '@shared/types';
 import { useNavigate } from 'react-router-dom';
@@ -23,10 +23,10 @@ import { useTodoMutations } from '../../lib/queries/todos';
 import { TileFrame } from '../TileFrame';
 import { TodoRow } from '../TodoRow';
 
-/** Die Gruppen, in denen ein Todo landet — in dieser Reihenfolge. */
+/** The groups a todo can land in — in this order. */
 const GROUPS = ['overdue', 'today', 'week', 'later', 'none'] as const;
 
-/** So viele Zeilen zeigt die Kachel, über alle Gruppen zusammen. */
+/** How many lines the tile shows, across all groups combined. */
 const LIMIT = 4;
 
 type GroupId = (typeof GROUPS)[number];
@@ -49,8 +49,8 @@ export function TodosTile({ scope }: TodosTileProps) {
   const mutations = useTodoMutations();
 
   const todos = (scope === 'work' ? data?.todos.work : data?.todos.private) ?? [];
-  /* Das Budget wandert von der dringendsten Gruppe nach unten: abgeschnitten
-     wird am Ende der Liste, nicht in der Mitte einer Gruppe. */
+  /* The budget moves from the most urgent group downward: cutting off
+     happens at the end of the list, not in the middle of a group. */
   const grouped: { group: GroupId; rows: Todo[] }[] = [];
   let budget = LIMIT;
   for (const group of GROUPS) {

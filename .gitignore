@@ -16,3 +16,4 @@ vault/
 .env
 .env.*
 .audit
+.tmp*

@@ -8,7 +8,27 @@ const own = {
   'settings.tab.languages': 'Sprachen',
   'settings.tab.models': 'Modelle',
   'settings.tab.behavior': 'Verhalten',
+  'settings.tab.customization': 'Anpassung',
   'settings.tab.about': 'Info',
+
+  'settings.customization.background.title': 'Hintergrund',
+  'settings.customization.background.note':
+    'Das Motiv bleibt zentral und sehr dezent hinter den Inhalten. Die Auswahl wirkt sofort.',
+  'settings.customization.background.none': 'Keiner',
+  'settings.customization.background.none.preview': 'Kein Bild',
+  'settings.customization.background.thought-catcher': 'Gedankenfänger',
+  'settings.customization.background.knowledge-constellation': 'Wissenskonstellation',
+  'settings.customization.background.pocket-vault': 'Taschen-Vault',
+  'settings.customization.background.thread-of-return': 'Faden der Rückkehr',
+  'settings.customization.background.knowledge-garden': 'Wissensgarten',
+  'settings.customization.icon.title': 'App-Symbol',
+  'settings.customization.icon.note':
+    'Das zugeschnittene Symbol erscheint in der Titelzeile und im Betriebssystem.',
+  'settings.customization.icon.knowledge-garden': 'Wissensgarten',
+  'settings.customization.icon.neural-core': 'Neuronaler Kern',
+  'settings.customization.icon.circuit-cortex': 'Schaltkreis-Kortex',
+  'settings.customization.icon.brain-chip': 'Gehirn-Chip',
+  'settings.customization.icon.vault-brain': 'Vault-Gehirn',
 
   'settings.vault.about':
     'Ein Vault ist ein gewöhnlicher Ordner mit Markdown-Dateien. Er ist portabel: kopiere ihn auf einen USB-Stick oder eine externe Platte, dort funktioniert er vollständig weiter.',

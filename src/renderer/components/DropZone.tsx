@@ -1,25 +1,25 @@
-/* Eine Fläche, auf die man Dateien, Links und Text fallen lassen kann.
+/* A surface you can drop files, links, and text onto.
 
-   Was hier passiert und warum es so aussieht: der Renderer bekommt vom
-   Betriebssystem nur den *Inhalt* einer fallengelassenen Datei, nicht ihren Pfad
-   (Electron hat `File.path` entfernt, und diese App gibt dem Renderer keinen
-   Zugang zum Dateisystem). Deshalb:
+   What happens here and why it looks this way: the operating system only
+   gives the renderer the *content* of a dropped file, not its path (Electron
+   removed `File.path`, and this app doesn't give the renderer access to the
+   filesystem). Hence:
 
-   - Text und Links landen sofort im Eingang.
-   - Textdateien werden gelesen und als Text aufgenommen.
-   - Alles andere (PDF, Bilder, Archive) sagt ehrlich, dass es den Dateidialog
-     braucht — nur dort kennt die App den Pfad und kann das Original unverändert
-     nach `raw/` legen.
+   - Text and links land straight in the inbox.
+   - Text files are read and ingested as text.
+   - Everything else (PDF, images, archives) honestly says it needs the file
+     dialog — only there does the app know the path and can copy the original
+     unchanged into `raw/`.
 
-   Der Rahmen ist keine Attrappe: er umschließt seinen Inhalt und lässt jeden
-   Klick durch, solange nichts gezogen wird. */
+   The frame isn't a dummy wrapper: it wraps its content and lets every click
+   through as long as nothing is being dragged. */
 
 import { useRef, useState } from 'react';
 import type { DragEvent, ReactNode } from 'react';
 import { Icon } from '../atoms/Icon';
 import { useT } from '../i18n';
 
-/** Dateiendungen, deren Inhalt als Text durchgeht. */
+/** File extensions whose content passes as text. */
 const TEXT_EXTENSIONS = [
   '.md',
   '.markdown',
@@ -32,20 +32,20 @@ const TEXT_EXTENSIONS = [
   '.yaml',
 ];
 
-/** Eine gelesene Datei: Name und Inhalt. */
+/** A file that was read: name and content. */
 export interface DroppedFile {
   name: string;
   text: string;
 }
 
 export interface DropZoneProps {
-  /** Fallengelassener Text oder Link. */
+  /** Dropped text or link. */
   onText: (text: string) => void;
-  /** Gelesene Textdateien. */
+  /** Text files that were read. */
   onFiles: (files: DroppedFile[]) => void;
   /**
-   * Dateien, die nicht als Text durchgehen (`kind: 'unsupported'`) oder sich
-   * nicht lesen ließen (`kind: 'unreadable'`) — mit ihren Namen.
+   * Files that don't pass as text (`kind: 'unsupported'`) or couldn't be
+   * read (`kind: 'unreadable'`) — with their names.
    */
   onRejected: (kind: 'unsupported' | 'unreadable', names: string[]) => void;
   children: ReactNode;
@@ -60,8 +60,8 @@ function isTextFile(file: File): boolean {
 export function DropZone({ onText, onFiles, onRejected, children }: DropZoneProps) {
   const t = useT();
   const [over, setOver] = useState(false);
-  /* Ein Zähler, kein Umschalter: `dragleave` feuert auch beim Wechsel zwischen
-     Kindelementen — ein Umschalter würde dabei flackern. */
+  /* A counter, not a toggle: `dragleave` also fires when moving between child
+     elements — a toggle would flicker in that case. */
   const depth = useRef(0);
 
   const accept = (event: DragEvent<HTMLDivElement>): boolean =>
@@ -115,7 +115,7 @@ export function DropZone({ onText, onFiles, onRejected, children }: DropZoneProp
       }}
       onDragOver={(event) => {
         if (!accept(event)) return;
-        /* Ohne das öffnet Electron die Datei selbst und der Screen verschwindet. */
+        /* Without this, Electron opens the file itself and the screen disappears. */
         event.preventDefault();
       }}
       onDragLeave={(event) => {

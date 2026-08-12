@@ -1,15 +1,15 @@
-/* Todos: lesen, abhaken, anlegen, ändern.
+/* Todos: read, check off, create, change.
 
-   Ein Todo ist eine Checkbox in einer Datei, die der Nutzer auch in Obsidian
-   bearbeitet. Deshalb gilt hier die härteste Fassung der Schreibregel aus
-   docs/VAULT-FORMAT.md: **genau eine Zeile wird umgeschrieben**, der Rest der
-   Datei geht wortwörtlich zurück auf die Platte (`todo-lines.ts`).
+   A todo is a checkbox in a file the user also edits in Obsidian. That's why
+   the strictest version of the write rule from docs/VAULT-FORMAT.md applies
+   here: **exactly one line gets rewritten**, the rest of the file goes back
+   to disk verbatim (`todo-lines.ts`).
 
-   Was „extern geändert" heißt, entscheidet der Vergleich mit dem Stand, den die
-   Oberfläche gesehen hat: findet sich die Zeile nicht mehr, oder trägt sie
-   inzwischen einen anderen Zustand, eine andere Frist oder eine andere
-   Priorität, wird nicht geschrieben — es gibt einen Konflikt. Ein Häkchen, das
-   die fremde Änderung überschreibt, wäre schlimmer als eine Absage. */
+   What counts as "changed externally" is decided by comparing against the
+   version the UI has seen: if the line can no longer be found, or it now
+   carries a different state, a different due date, or a different priority,
+   nothing is written — there's a conflict. A checkmark that overwrites a
+   change made elsewhere would be worse than a refusal. */
 
 import { SECTION_FACTS, SECTION_TODOS, todoLine } from '@core/capture';
 import { parseTodos, scopeFor } from '@core/index';
@@ -27,7 +27,7 @@ import { settle } from './wiki-bridge';
 import type { VaultStoreLike } from '../contracts';
 import type { Services } from '../services';
 
-/** Tag ohne Frontmatter-Deutung: der Rumpf beginnt bei Zeile 1. */
+/** Day without frontmatter interpretation: the body starts at line 1. */
 const BODY_OFFSET = 1;
 
 function store(services: Services): VaultStoreLike {
@@ -38,7 +38,7 @@ function docLanguage(services: Services): DocLanguage {
   return services.settings.vault()?.languages.documents ?? 'de';
 }
 
-/** Todos einer Datei, wie der Parser sie in dieser Reihenfolge sieht. */
+/** A file's todos, in the order the parser sees them. */
 function todosOf(path: string, doc: VaultDoc, now: Date): Todo[] {
   return parseTodos(doc.body, {
     path,
@@ -48,7 +48,7 @@ function todosOf(path: string, doc: VaultDoc, now: Date): Todo[] {
   });
 }
 
-/** Trägt die Zeile noch das, was die Oberfläche gezeigt hat? */
+/** Does the line still carry what the UI showed? */
 function sameTodo(a: Todo, b: Todo): boolean {
   return (
     a.state === b.state &&
@@ -64,16 +64,16 @@ interface Located {
   todo: Todo;
   doc: VaultDoc;
   lines: string[];
-  /** 0-basierter Index im Rumpf. */
+  /** 0-based index in the body. */
   at: number;
   parts: CheckboxLine;
-  /** Stelle in der Reihenfolge der Todos dieser Datei. */
+  /** Position in the order of this file's todos. */
   ordinal: number;
 }
 
 /**
- * Die Zeile zu einer Todo-Kennung — in der Datei, nicht im Index. Der Index sagt
- * nur, wo gesucht wird; gefunden werden muss es in der Datei selbst.
+ * The line for a todo id — in the file, not in the index. The index only
+ * says where to look; the actual finding has to happen in the file itself.
  */
 async function locate(services: Services, id: string, now: Date): Promise<Located> {
   const wanted = requireLists(services)
@@ -99,7 +99,7 @@ async function locate(services: Services, id: string, now: Date): Promise<Locate
   return { todo: wanted, doc, lines, at, parts, ordinal };
 }
 
-/** Genau eine Zeile ersetzen und die Datei zurückschreiben. */
+/** Replace exactly one line and write the file back. */
 async function writeLine(
   services: Services,
   found: Located,
@@ -117,9 +117,10 @@ async function writeLine(
 }
 
 /**
- * Das Todo, wie es nach dem Schreiben dasteht: aus dem Index, damit Projekttitel
- * und Fristberechnung stimmen. Kennt der Index die Datei noch nicht, kommt die
- * Fassung aus der Datei — sie ist wahr, nur ohne Projekttitel.
+ * The todo as it stands after writing: from the index, so that project title
+ * and due-date calculation are correct. If the index doesn't know the file
+ * yet, the version comes from the file — it's true, just without a project
+ * title.
  */
 async function reread(services: Services, path: string, ordinal: number, now: Date): Promise<Todo> {
   const indexed = (services.index()?.todos?.() ?? []).filter((todo) => todo.path === path);
@@ -132,7 +133,7 @@ async function reread(services: Services, path: string, ordinal: number, now: Da
   return found;
 }
 
-/** Wohin ein neues Todo geht: in die Projektdatei, sonst in den heutigen Tag. */
+/** Where a new todo goes: into the project file, otherwise into today's day. */
 async function targetFor(
   services: Services,
   project: string | null | undefined,
@@ -158,11 +159,12 @@ async function targetFor(
 }
 
 /**
- * Der heutige Tageseintrag — die Heimat eines Todos ohne Projekt. Fehlt die
- * Datei, legt sie **der Tagebuch-Kern** an (`ensureDay`), nicht dieser Bereich:
- * es gab hier eine zweite Fassung des Tagesformats (Titel per `Intl`, Rumpf nur
- * „## Tag"), und zwei Fassungen laufen beim ersten Sprachwechsel auseinander.
- * `ensureDay` ist idempotent — liegt die Datei, wird sie nicht angefasst.
+ * Today's daily entry — home for a todo without a project. If the file is
+ * missing, **the journal core** creates it (`ensureDay`), not this module:
+ * there used to be a second version of the day format here (title via
+ * `Intl`, body just "## Day"), and two versions drift apart at the first
+ * language change. `ensureDay` is idempotent — if the file exists, it's left
+ * untouched.
  */
 async function ensureJournal(services: Services, now: Date): Promise<string> {
   const { path } = await ensureDay(journalStore(services), now, docLanguage(services));
@@ -170,10 +172,10 @@ async function ensureJournal(services: Services, now: Date): Promise<string> {
 }
 
 /**
- * Der Scope eines Todos kommt aus der Datei (VAULT-FORMAT.md). Sagt die Datei
- * schon das Gewünschte, bleibt die Zeile schmucklos; sonst trägt sie den Bereich
- * als Tag. Legt das Frontmatter den Bereich anders fest, wird nicht geschrieben:
- * ein zurückgegebener Scope, den die Datei nicht deckt, wäre eine Behauptung.
+ * A todo's scope comes from the file (VAULT-FORMAT.md). If the file already
+ * says what's wanted, the line stays plain; otherwise it carries the scope as
+ * a tag. If the frontmatter fixes the scope differently, nothing is written:
+ * a returned scope that the file doesn't back up would be a false claim.
  */
 function scopeTag(path: string, frontmatter: Record<string, unknown>, wanted: Scope): string {
   if (scopeFor(path, frontmatter) === wanted) return '';
@@ -197,8 +199,8 @@ export function todoHandlers(services: Services): HandlerMap {
             (dueBefore === undefined || (todo.due !== null && todo.due < dueBefore)),
         ),
 
-    /* Abhaken setzt `@done:` mit dem heutigen Tag, Zurücksetzen entfernt den
-       Marker wieder. Nichts anderes an der Zeile wird angefasst. */
+    /* Checking off sets `@done:` with today's date, unchecking removes the
+       marker again. Nothing else about the line is touched. */
     'todos:toggle': async ({ id }) => {
       const now = new Date();
       const found = await locate(services, id, now);
@@ -244,8 +246,8 @@ export function todoHandlers(services: Services): HandlerMap {
       return reread(services, target.path, ordinal, now);
     },
 
-    /* Text und Frist ändern, alle übrigen Marker behalten — auch die, die die
-       App nicht selbst setzt. */
+    /* Change text and due date, keep all other markers — including the ones
+       the app doesn't set itself. */
     'todos:update': async ({ id, text, due }) => {
       const now = new Date();
       const found = await locate(services, id, now);

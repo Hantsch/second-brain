@@ -177,6 +177,7 @@ function mount(
         lastVault: 'C:/vaults/demo',
         recentVaults: [],
         theme: 'dark' as const,
+        customization: { background: 'none' as const, appIcon: 'knowledge-garden' as const },
         uiLanguage: 'de' as const,
         window: { width: 1440, height: 900 },
         startMinimized: false,

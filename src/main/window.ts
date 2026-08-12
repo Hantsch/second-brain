@@ -2,6 +2,8 @@
    ersten Frame, und erst sichtbar, wenn wirklich etwas zu sehen ist. */
 
 import { BrowserWindow, screen, shell } from 'electron';
+import { join, resolve } from 'node:path';
+import type { AppIcon } from '@shared/types';
 import type { WindowBounds } from '@shared/types';
 import { clampBounds } from './bounds';
 import { WINDOW_MIN } from './settings-defaults';
@@ -11,6 +13,21 @@ import type { Services } from './services';
 /** Seitenhintergrund aus den Gaston-Tokens — verhindert das weiße Aufblitzen. */
 const BACKGROUND = '#0A0F16';
 const SAVE_DEBOUNCE_MS = 400;
+
+const ICON_FILES: Record<AppIcon, string> = {
+  'knowledge-garden': 'knowledge-garden.png',
+  'neural-core': 'neural-core.png',
+  'circuit-cortex': 'circuit-cortex.png',
+  'brain-chip': 'brain-chip.png',
+  'vault-brain': 'vault-brain.png',
+};
+
+function appIconPath(icon: AppIcon): string {
+  const root = isDev()
+    ? resolve('assets', 'app-icons')
+    : join(process.resourcesPath, 'assets/app-icons');
+  return join(root, ICON_FILES[icon]);
+}
 
 function workAreas(): { x: number; y: number; width: number; height: number }[] {
   return screen.getAllDisplays().map((display) => display.workArea);
@@ -29,6 +46,7 @@ export function createMainWindow(services: Services): BrowserWindow {
     show: false,
     frame: false,
     backgroundColor: BACKGROUND,
+    icon: appIconPath(services.settings.app().customization.appIcon),
     title: 'Second Brain',
     autoHideMenuBar: true,
     webPreferences: {
@@ -47,6 +65,10 @@ export function createMainWindow(services: Services): BrowserWindow {
   });
 
   attachBoundsPersistence(window, services);
+  const stopIconSync = services.settings.onChange(({ app: settings }) => {
+    window.setIcon(appIconPath(settings.customization.appIcon));
+  });
+  window.once('closed', stopIconSync);
   attachNavigationGuards(window);
   if (isDev()) attachDevToolsShortcut(window);
 

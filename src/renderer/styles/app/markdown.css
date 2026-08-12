@@ -1,7 +1,8 @@
-/* Markdown im Renderer — eine Fassung für beide Stellen, die Markdown zeigen:
-   die Wiki-Seite (`screens/modules/PageBody`) und die Antwort (`components/Markdown`).
-   Die Klassen kommen aus `components/markdown-render.tsx`; was ein Screen anders
-   braucht, steht dort, wo der Screen steht (`.sb-markdown` in ask.css). */
+/* Markdown in the renderer — one implementation for both places that show
+   Markdown: the wiki page (`screens/modules/PageBody`) and the answer
+   (`components/Markdown`). The classes come from `components/markdown-render.tsx`;
+   whatever a screen needs differently lives where the screen lives
+   (`.sb-markdown` in ask.css). */
 
 .sb-md {
   display: flex;

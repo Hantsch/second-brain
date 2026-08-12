@@ -412,7 +412,7 @@ export interface IpcRoutes {
 
   // ── Einstellungen ────────────────────────────────────────────────────────
   'settings:get': { req: void; res: SettingsSnapshot };
-  'settings:setApp': { req: { patch: Partial<AppSettings> }; res: SettingsSnapshot };
+  'settings:setApp': { req: { patch: DeepPartial<AppSettings> }; res: SettingsSnapshot };
   'settings:setVault': { req: { patch: DeepPartial<VaultSettings> }; res: SettingsSnapshot };
   'settings:setLanguages': {
     req: { ui?: 'de' | 'en'; documents?: DocLanguage; conversation?: 'de' | 'en' };

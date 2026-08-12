@@ -1,20 +1,20 @@
-/* Quellen aufnehmen: YouTube, URL, Datei, Text → `raw/` → Wiki.
+/* Ingest sources: YouTube, URL, file, text → `raw/` → wiki.
 
-   Die Wahrheit über laufende Aufträge liegt in einer `IngestQueue` des Kerns;
-   dieser Bereich hängt sie an den offenen Vault, gibt ihr die Umgebung (fetch,
-   Prozessaufruf, Dateisystem, yt-dlp) und schickt jede Änderung als
-   `event:ingest-progress` an den Renderer.
+   The truth about running jobs lives in a core `IngestQueue`; this module
+   attaches it to the open vault, gives it its environment (fetch, process
+   invocation, file system, yt-dlp), and sends every change as
+   `event:ingest-progress` to the renderer.
 
-   Drei Entscheidungen, die man im Code sonst nicht sieht:
-   - **Der Verdichtungsschritt wird hereingegeben.** Der Ingest-Kern kennt
-     `core/wiki` nicht; hier kommen beide zusammen. Fehlt ein Modell, endet der
-     Auftrag ehrlich als `awaiting-llm` — die Rohquelle liegt trotzdem.
-   - **Ohne Zielmodul wird nicht verdichtet.** „Später einordnen" heißt: die
-     Rohquelle liegt in `raw/`, es entsteht keine Wiki-Seite und der Auftrag
-     trägt keine berührten Seiten. Der Pflegelauf findet sie später als
-     unverdichtete Quelle.
-   - **yt-dlp wird nie von selbst geholt.** `ytdlpStatus` fragt nur; geladen wird
-     ausschließlich über `ytdlpInstall`, also auf Klick. */
+   Three decisions that otherwise aren't visible in the code:
+   - **The condensation step is passed in.** The ingest core doesn't know
+     `core/wiki`; the two come together here. If a model is missing, the job
+     honestly ends as `awaiting-llm` — the raw source is still filed.
+   - **Without a target module, nothing gets condensed.** "File later" means:
+     the raw source sits in `raw/`, no wiki page is created, and the job
+     carries no touched pages. The gardener run later finds it as an
+     uncondensed source.
+   - **yt-dlp is never fetched on its own.** `ytdlpStatus` only checks;
+     downloading happens exclusively via `ytdlpInstall`, i.e. on click. */
 
 import { join } from 'node:path';
 import { dialog } from 'electron';
@@ -38,19 +38,19 @@ import { docLanguage, settle, wikiDeps, wikiStore } from './wiki-bridge';
 import { createGateway } from '../llm-bridge';
 import type { Services } from '../services';
 
-/** So viele Aufträge laufen gleichzeitig. */
+/** This many jobs run concurrently. */
 const CONCURRENCY = 2;
 
-/* Der zuletzt gefundene yt-dlp-Pfad. Ein `resolveYtdlp` je Auftrag würde einen
-   Prozess starten, bevor überhaupt etwas geholt wird; gefragt wird deshalb beim
-   Statusabruf und beim Installieren — und das Ergebnis bleibt hier liegen. */
+/* The most recently found yt-dlp path. A `resolveYtdlp` per job would start a
+   process before anything is even fetched; it's queried instead on status
+   check and on install — and the result is cached here. */
 const ytdlpCache: { path: string | null } = { path: null };
 
-/* Der Ersatzweg ohne Binary. Einmal gebaut: der Client lädt sein Modul beim
-   ersten Gebrauch und behält die Sitzung. */
+/* The fallback path without a binary. Built once: the client loads its
+   module on first use and keeps the session. */
 const innertube = innertubeClient();
 
-/** Die verwaltete yt-dlp-Kopie liegt neben den Einstellungen, nicht im Vault. */
+/** The managed yt-dlp copy lives next to the settings, not in the vault. */
 function binDir(services: Services): string {
   return join(services.userDataDir, 'bin');
 }
@@ -64,7 +64,7 @@ function ytdlpDeps(services: Services) {
   };
 }
 
-/** Der Zustand, wie der Renderer ihn braucht — ohne Innereien der Auflösung. */
+/** The state as the renderer needs it — without the resolution internals. */
 function ytdlpView(status: YtdlpStatus): {
   available: boolean;
   path: string | null;
@@ -74,13 +74,13 @@ function ytdlpView(status: YtdlpStatus): {
 }
 
 /**
- * Umgebung eines Auftrags: alles, was Netz, Prozesse und Dateien außerhalb des
- * Vaults anfasst. Pro Auftrag frisch gelesen — der Nutzer darf yt-dlp
- * einrichten, während schon ein Auftrag läuft.
+ * Environment for a job: everything that touches network, processes, and
+ * files outside the vault. Read freshly per job — the user is allowed to set
+ * up yt-dlp while a job is already running.
  *
- * Die Untertitelsprachen leiten sich aus der Dokumentsprache ab: Original
- * zuerst, dann die Sprache, in der die Seiten geschrieben werden, dann Englisch.
- * Ein eigener `ingest`-Abschnitt in den Vault-Einstellungen gibt es noch nicht.
+ * The subtitle languages are derived from the document language: original
+ * first, then the language pages are written in, then English. There's no
+ * dedicated `ingest` section in the vault settings yet.
  */
 function environment(
   services: Services,
@@ -98,9 +98,9 @@ function environment(
 }
 
 /**
- * Die Warteschlange des offenen Vaults. Wechselt der Vault, wird die alte
- * abgebrochen: ein Auftrag, der in einen geschlossenen Vault schreibt, wäre ein
- * Schreibvorgang ohne Zuhause.
+ * The queue of the open vault. When the vault changes, the old queue is
+ * cancelled: a job writing into a closed vault would be a write with nowhere
+ * to go.
  */
 class QueueHolder {
   private root: string | null = null;
@@ -130,15 +130,16 @@ class QueueHolder {
     });
   }
 
-  /** Rohquelle → Source-Seite, Entitäten, Konzepte, Katalog, Chronik. */
+  /** Raw source → source page, entities, concepts, catalog, chronicle. */
   private async condense(
     job: IngestJob,
     outcome: { rawPath: string; title: string; text: string; origin: string },
     signal: AbortSignal | undefined,
   ): Promise<CondenseResult> {
     const module = job.module;
-    /* „Später einordnen": nichts erfinden. Die Rohquelle liegt, der Katalog
-       bleibt unberührt, und die Quelle taucht als unverdichtet in der Liste auf. */
+    /* "File later": don't invent anything. The raw source is filed, the
+       catalog stays untouched, and the source shows up as uncondensed in the
+       list. */
     if (module === null || module.length === 0) return { pages: [] };
 
     const result = await ingestSource(wikiDeps(this.services, signal), {
@@ -155,14 +156,14 @@ class QueueHolder {
     };
   }
 
-  /** Jede Änderung an den Renderer; am Ende zieht der Index nach. */
+  /** Every change goes to the renderer; the index catches up at the end. */
   private publish(job: IngestJob): void {
     this.services.sendEvent('event:ingest-progress', job);
-    /* Auch ein abgebrochener Lauf kann eine Rohquelle hinterlassen haben — der
-       Index soll sie kennen, statt sie bis zum nächsten Start zu übersehen. */
+    /* Even a cancelled run may have left behind a raw source — the index
+       should know about it, instead of missing it until the next start. */
     if (!TERMINAL_STAGES.has(job.stage)) return;
-    /* Das Protokoll gehört dazu: der Index entscheidet an der Dateiendung, ob ihn
-       ein Pfad betrifft — und eine Rohquelle ist oft ein Ordner ohne Endung. */
+    /* The log belongs too: the index decides by file extension whether a path
+       concerns it — and a raw source is often a folder without an extension. */
     const raw = job.rawPath === null ? [] : [job.rawPath, logPathFor(job.rawPath)];
     void settle(this.services, [...raw, ...job.touchedPages], 'ingest').catch(() => undefined);
   }
@@ -195,17 +196,17 @@ export function ingestHandlers(services: Services): HandlerMap {
 
     'ingest:retry': ({ id }) => holder.current().retry(id),
 
-    /* Fragt nur: den in den Einstellungen genannten Pfad gibt es noch nicht
-       (`VaultSettings` hat keinen `ingest`-Abschnitt), also zählen PATH und die
-       verwaltete Kopie. */
+    /* Only checks: the path named in settings doesn't exist yet
+       (`VaultSettings` has no `ingest` section), so PATH and the managed
+       copy are what counts. */
     'ingest:ytdlpStatus': async () => {
       const status = await resolveYtdlp({ ...ytdlpDeps(services), configuredPath: null });
       ytdlpCache.path = status.path;
       return ytdlpView(status);
     },
 
-    /* Nur auf Klick: ein Download, den niemand angestoßen hat, wäre ein
-       Netzzugriff hinter dem Rücken des Nutzers. */
+    /* Click-triggered only: a download nobody initiated would be network
+       access behind the user's back. */
     'ingest:ytdlpInstall': async () => {
       const status = await installYtdlp({ ...ytdlpDeps(services), fetchImpl: fetch });
       ytdlpCache.path = status.path;

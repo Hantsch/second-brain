@@ -1,6 +1,6 @@
-/* Übersetzung. Kein deutscher String steht hartcodiert im Renderer — alles
-   läuft über `t()`. Die Sprache kommt aus den Einstellungen (`languages.ui`);
-   fehlt ein Vault, gilt die App-Sprache. */
+/* Translation. No German string is hardcoded in the renderer — everything
+   goes through `t()`. The language comes from the settings (`languages.ui`);
+   without a vault, the app language applies. */
 
 import { useSyncExternalStore } from 'react';
 import type { UiLanguage } from '@shared/types';
@@ -40,8 +40,8 @@ function interpolate(template: string, vars?: Vars): string {
 }
 
 /**
- * Übersetzt einen Key. Unbekannte Keys kommen unverändert zurück — so bleibt
- * eine Meldung aus dem Hauptprozess lesbar, auch wenn sie kein Key ist.
+ * Translates a key. Unknown keys come back unchanged — this way a message
+ * from the main process stays readable even when it isn't a key.
  */
 export function t(key: TranslationKey | string, vars?: Vars): string {
   const template = CATALOGS[language][key] ?? (de as Record<string, string>)[key] ?? key;
@@ -53,7 +53,7 @@ function subscribe(notify: () => void): () => void {
   return () => subscribers.delete(notify);
 }
 
-/** Hook-Variante: rendert neu, wenn die Sprache wechselt. */
+/** Hook variant: re-renders when the language changes. */
 export function useLanguage(): UiLanguage {
   return useSyncExternalStore(subscribe, currentLanguage, currentLanguage);
 }

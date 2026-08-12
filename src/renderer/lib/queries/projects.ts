@@ -1,16 +1,17 @@
-/* Die Hooks der Projekte: Liste, ein Projekt mit Datei, die Arbeitsspur — und
-   die vier Schreibwege (anlegen, Frontmatter ändern, anhängen, Warte-auf
-   abhaken) plus den Statusvorschlag.
+/* The project hooks: list, a single project with its file, the work trace —
+   and the four write paths (create, change frontmatter, append, check off a
+   waiting-on entry) plus the status suggestion.
 
-   Zwei Regeln, die man im Code sonst nicht sieht:
+   Two rules that otherwise aren't visible in the code:
 
-   - **Eine Liste, alle Filter.** Gefragt wird einmal mit `includeDone`, gefiltert
-     wird im Renderer. Ein eigener Query-Key je Filterstellung hieße: bei jedem
-     Klick eine leere Liste, bis die Antwort da ist.
-   - **Der Vorschlag ist eine Mutation, keine Query.** Er kostet ein Modell und
-     läuft nur, wenn der Nutzer ihn holt — nicht beim Rendern.
-   - Gefragt wird erst, wenn der Index steht (`useVaultReady`): eine leere Liste
-     während des Indexlaufs sähe aus wie ein leerer Vault. */
+   - **One list, all filters.** The request goes out once with `includeDone`,
+     filtering happens in the renderer. A separate query key per filter
+     setting would mean an empty list on every click until the response
+     arrives.
+   - **The suggestion is a mutation, not a query.** It costs a model call and
+     only runs when the user fetches it — not on render.
+   - The request only fires once the index is ready (`useVaultReady`): an
+     empty list during the index run would look like an empty vault. */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { QueryClient, UseMutationResult, UseQueryResult } from '@tanstack/react-query';
@@ -23,7 +24,7 @@ import { useVaultReady } from './data';
 export type ProjectDetail = NonNullable<IpcResponse<'projects:get'>>;
 export type StatusSuggestion = NonNullable<IpcResponse<'projects:suggestStatus'>>;
 
-/** Alle Projekte, auch erledigte — die Filter des Screens arbeiten darauf. */
+/** All projects, including completed ones — the screen's filters work on this. */
 export function useAllProjects(): UseQueryResult<Project[]> {
   const ready = useVaultReady();
   return useQuery({
@@ -33,7 +34,7 @@ export function useAllProjects(): UseQueryResult<Project[]> {
   });
 }
 
-/** Ein Projekt mit seiner Datei. `null` heißt: keins ausgewählt. */
+/** A project with its file. `null` means: none selected. */
 export function useProject(slug: string | null): UseQueryResult<ProjectDetail | null> {
   return useQuery({
     queryKey: qk.projects.detail(slug ?? ''),
@@ -44,8 +45,9 @@ export function useProject(slug: string | null): UseQueryResult<ProjectDetail | 
 }
 
 /**
- * Die Claude-Sessions zu einem Projekt. Der Kanal darf fehlen — dann sagt die
- * Arbeitsspur das, statt „keine Sessions" zu behaupten (`error.code === 'invalid'`).
+ * The Claude sessions for a project. The channel is allowed to be missing —
+ * in that case the work trace says so, instead of claiming "no sessions"
+ * (`error.code === 'invalid'`).
  */
 export function useProjectSessions(project: Project | null): UseQueryResult<ClaudeSession[]> {
   const ready = useVaultReady();
@@ -58,7 +60,7 @@ export function useProjectSessions(project: Project | null): UseQueryResult<Clau
   });
 }
 
-/** Zuordnung über `vaultProject` oder das Arbeitsverzeichnis aus `repos`. */
+/** Assignment via `vaultProject` or the working directory from `repos`. */
 export function filterSessions(
   sessions: readonly ClaudeSession[],
   project: Project | null,
@@ -72,12 +74,12 @@ export function filterSessions(
   });
 }
 
-/** Ist dieser Fehler das ehrliche „der Kanal steht noch nicht"? */
+/** Is this error the honest "the channel isn't wired up yet"? */
 export function isNotWired(error: unknown): boolean {
   return error instanceof IpcCallError && error.code === 'invalid';
 }
 
-/** Was nach einem Schreibvorgang an einem Projekt nicht mehr stimmt. */
+/** What's no longer accurate about a project after a write. */
 function refresh(client: QueryClient, slug: string | null): void {
   void client.invalidateQueries({ queryKey: ['projects'] });
   void client.invalidateQueries({ queryKey: ['todos'] });
@@ -113,8 +115,8 @@ export function useProjectMutations(): ProjectMutations {
         api.projects.resolveWaiting(slug, index),
       onSuccess: (patched) => refresh(client, patched.slug),
     }),
-    /* Holt nur den Vorschlag. Geschrieben wird er über `patch`, wenn der Nutzer
-       ihn übernimmt (Guardrail 2). */
+    /* Only fetches the suggestion. It's written via `patch` once the user
+       accepts it (guardrail 2). */
     suggest: useMutation({ mutationFn: (slug: string) => api.projects.suggestStatus(slug) }),
   };
 }

@@ -1,11 +1,12 @@
-/* Tagebuch: Tagesliste, Tageseintrag, Stimmung, Gespräch, Tagesabschluss.
-   Farben, Abstände und Radien ausschließlich aus den Gaston-Tokens.
+/* Journal: day list, day entry, mood, talk, day close-out.
+   Colors, spacing, and radii exclusively from the Gaston tokens.
 
-   Zwei Maße tragen den Screen: die Liste links bleibt schmal (240 px — Datum,
-   Punkt, erste Worte), und der Tag rechts liest sich in einer Spalte von 72
-   Zeichen. Tagebuchtext über die ganze Fensterbreite liest niemand. */
+   Two measurements carry the screen: the list on the left stays narrow
+   (240 px — date, dot, first words), and the day on the right reads in a
+   column of 72 characters. Nobody reads journal text across the full
+   window width. */
 
-/* ── Zwei Spalten: Tage, Tag ─────────────────────────────────────────────── */
+/* ── Two columns: days, day ─────────────────────────────────────────────── */
 
 .sb-journal {
   display: grid;
@@ -44,7 +45,7 @@
   padding-right: var(--space-2);
 }
 
-/* ── Tagesliste ──────────────────────────────────────────────────────────── */
+/* ── Day list ────────────────────────────────────────────────────────────── */
 
 .sb-daylist {
   list-style: none;
@@ -75,12 +76,12 @@
 .sb-dayrow:focus-visible {
   box-shadow: var(--focus-ring);
 }
-/* Die Auswahl ist eine Fläche, kein zweites Teal. */
+/* The selection is a surface, not a second teal. */
 .sb-dayrow--active {
   background: var(--surface-raised);
   border-color: var(--border-strong);
 }
-/* „Heute" ist der Einstieg: eine Linie in Teal, kein gefülltes Feld. */
+/* "Today" is the entry point: a line in teal, not a filled field. */
 .sb-dayrow--today {
   border-left: 2px solid var(--accent);
   border-radius: var(--radius-sm) var(--radius-md) var(--radius-md) var(--radius-sm);
@@ -117,7 +118,7 @@
   font-size: var(--text-sm);
   color: var(--text-faint);
 }
-/* Der Stimmungspunkt: eine Stufe, eine Sättigung — die Farbe bleibt der Akzent. */
+/* The mood dot: one level, one saturation — the color stays the accent. */
 .sb-moodmark {
   width: 8px;
   height: 8px;
@@ -149,7 +150,7 @@
   border: 1px solid var(--border-strong);
 }
 
-/* Die Lücke: eine ruhige Zeile, kein erfundener Tag. */
+/* The gap: a quiet line, not an invented day. */
 .sb-daygap {
   display: flex;
   align-items: center;
@@ -166,7 +167,7 @@
   color: var(--text-faint);
 }
 
-/* ── Kopf des Tages ──────────────────────────────────────────────────────── */
+/* ── Day header ──────────────────────────────────────────────────────────── */
 
 .sb-dayentry {
   display: flex;
@@ -207,27 +208,27 @@
   flex-wrap: wrap;
   gap: var(--space-2) var(--space-5);
 }
-/* Ein Chip ohne Klickweg ist keine Fläche, sondern eine Angabe. */
+/* A chip without a click path isn't a surface — it's a statement. */
 .sb-chip--static {
   cursor: default;
   min-height: auto;
   padding: 2px var(--space-2);
 }
 
-/* ── Reiter „Tag" / „Gespräch" (nur im engen Fenster) ───────────────────── */
+/* ── "Day" / "Talk" tabs (narrow window only) ────────────────────────────── */
 
-/* Unsichtbar im breiten Fenster: dort gibt es zwei Spalten, keine Reiter, und
-   diese Zeile darf an der abgenommenen breiten Ansicht nichts ändern.
-   `journal.css` wird nach den Gaston-Komponenten eingebunden (`index.css`) —
-   dieselbe Klassenspezifität wie `.gs-tabs`, aber die spätere Regel gewinnt. */
+/* Invisible in the wide window: there are two columns there, no tabs, and
+   this line must not change anything about the already-approved wide view.
+   `journal.css` is loaded after the Gaston components (`index.css`) — same
+   class specificity as `.gs-tabs`, but the later rule wins. */
 .sb-dayentry-tabs {
   display: none;
 }
-/* Beide Hüllen bleiben im breiten Fenster unsichtbare Rahmen: ihre Kinder
-   liegen dann wieder direkt im Fluss von `.sb-dayentry`, an derselben Stelle
-   und mit demselben `gap`, als gäbe es die Hülle nicht — die bisherige
-   Anordnung bleibt so unverändert. Erst im engen Fenster (unten) werden sie
-   zu echten Rahmen, die je einen Reiter tragen. */
+/* Both wrappers remain invisible frames in the wide window: their children
+   then sit directly in the flow of `.sb-dayentry` again, in the same place
+   and with the same `gap`, as if the wrapper didn't exist — the previous
+   layout thus stays unchanged. Only in the narrow window (below) do they
+   become real frames, each carrying one tab. */
 .sb-dayentry-tagpanel,
 .sb-dayentry-talkpanel {
   display: contents;
@@ -237,17 +238,17 @@
   justify-content: flex-end;
 }
 
-/* ── Stimmung und Energie ────────────────────────────────────────────────── */
+/* ── Mood and energy ─────────────────────────────────────────────────────── */
 
-/* Beschriftung, Stufen und Rückmeldung in einer Zeile: der Kopf des Tages darf
-   nicht die halbe Höhe kosten, sonst liegt das Gespräch unter dem Rand. */
+/* Label, levels, and feedback on one line: the day header must not cost
+   half the height, or the talk would end up below the fold. */
 .sb-mood {
   display: flex;
   align-items: center;
   gap: var(--space-3);
   flex-wrap: wrap;
 }
-/* Feste Breite, damit „Stimmung" und „Energie" untereinander bündig stehen. */
+/* Fixed width, so "Mood" and "Energy" line up with each other. */
 .sb-mood-label {
   min-width: 5.5em;
 }
@@ -297,7 +298,7 @@
   min-height: 14px;
 }
 
-/* ── Abschnitte des Tages ────────────────────────────────────────────────── */
+/* ── Sections of the day ─────────────────────────────────────────────────── */
 
 .sb-daysection,
 .sb-coach,
@@ -315,8 +316,8 @@
   padding-bottom: var(--space-1);
   border-bottom: 1px solid var(--border-subtle);
 }
-/* Wörtlich wie in der Datei: die Marker (`@due:`, `#tag`) bleiben stehen, und
-   eine Checkbox-Zeile wird nicht zu einer Liste umgedeutet, die sie nicht ist. */
+/* Verbatim as in the file: the markers (`@due:`, `#tag`) stay as-is, and a
+   checkbox line isn't reinterpreted as a list it isn't. */
 .sb-dayfacts-text {
   font-size: var(--text-sm);
   color: var(--text-body);
@@ -325,7 +326,7 @@
   user-select: text;
 }
 
-/* ── Tagestext ───────────────────────────────────────────────────────────── */
+/* ── Day text ────────────────────────────────────────────────────────────── */
 
 .sb-daytext {
   display: flex;
@@ -380,7 +381,7 @@
   flex-wrap: wrap;
 }
 
-/* ── Gespräch ────────────────────────────────────────────────────────────── */
+/* ── Talk ────────────────────────────────────────────────────────────────── */
 
 .sb-dialogue {
   display: flex;
@@ -470,22 +471,23 @@
   -webkit-box-orient: vertical;
 }
 
-/* Composer, Haltung und Tagesabschluss: die beiden Aktionen, die den Tag
-   betreffen, stehen am unteren Rand der Detailspalte fest — sie dürfen nie
-   unter den sichtbaren Rand rutschen, egal wie lang Verlauf oder Fakten sind.
-   `bottom: 0` verankert relativ zum nächsten rollenden Vorfahren: das ist im
-   breiten Fenster `.sb-journal-main` selbst, im engen (wo die Spalte nicht
-   mehr eigenständig rollt) `.sb-content`, der Rahmen des ganzen Screens.
-   Dasselbe Muster wie `.sb-proposal-actions` in inbox.css.
+/* Composer, stance, and day close-out: the two actions concerning the day
+   stay fixed at the bottom edge of the detail column — they must never
+   slide below the visible edge, no matter how long the history or facts
+   get. `bottom: 0` anchors relative to the nearest scrolling ancestor:
+   in the wide window that's `.sb-journal-main` itself, in the narrow one
+   (where the column no longer scrolls independently) `.sb-content`, the
+   frame of the entire screen. Same pattern as `.sb-proposal-actions` in
+   inbox.css.
 
-   Wichtig ist die zweite Grenze, die `position: sticky` genauso setzt: der
-   Rahmen, INNERHALB dessen geklebt werden darf, ist der nächste
-   block-bildende Vorfahre — nicht der ganze Rollbereich. Deshalb ist dieses
-   Element ein direkter Nachfahre von `.sb-dayentry` (`CoachComposer.tsx`,
-   gerendert über `DayEntry`s `composer`-Slot) und nicht Teil des
-   „Gespräch"-Abschnitts (`.sb-coach`): als Nachfahre von `.sb-coach` hätte der
-   Klebe-Rahmen nur dessen schmale, tief unten liegende Box umfasst — ohne
-   Spielraum, um bis zum unteren Fensterrand hochgezogen zu werden. */
+   What matters is the second boundary that `position: sticky` sets just as
+   much: the frame WITHIN which sticking is allowed is the nearest
+   block-forming ancestor — not the whole scroll area. That's why this
+   element is a direct descendant of `.sb-dayentry` (`CoachComposer.tsx`,
+   rendered through `DayEntry`'s `composer` slot) and not part of the
+   "Talk" section (`.sb-coach`): as a descendant of `.sb-coach`, the sticky
+   frame would only have covered its narrow, deeply nested box — with no
+   room to be pulled up to the bottom window edge. */
 .sb-journal-footer {
   position: sticky;
   bottom: 0;
@@ -497,9 +499,9 @@
   padding-bottom: var(--space-2);
   background: var(--surface-page);
   border-top: 1px solid var(--border-subtle);
-  /* Deckt ein paar Pixel oberhalb der eigenen Kante ab: klebt die Leiste
-     genau an der Zeile, die davor endet (Fakten, ein Gesprächssatz), reicht
-     der Rahmen selbst sonst nicht, um sie ganz zu verdecken. */
+  /* Covers a few pixels above its own edge: when the bar sticks right at
+     the line that ends before it (facts, a line of dialogue), the frame
+     alone isn't enough to fully cover it. */
   box-shadow: 0 -8px 0 0 var(--surface-page);
 }
 .sb-journal-footer-close {
@@ -507,7 +509,7 @@
   justify-content: flex-end;
 }
 
-/* Die Zeile über dem Feld: eine Tatsache, keine Warnung. */
+/* The line above the field: a fact, not a warning. */
 .sb-privacy {
   display: flex;
   align-items: center;
@@ -518,7 +520,7 @@
   max-width: 72ch;
 }
 
-/* ── Haltung des Coachs ──────────────────────────────────────────────────── */
+/* ── Coach's stance ──────────────────────────────────────────────────────── */
 
 .sb-stance {
   display: flex;
@@ -584,7 +586,7 @@
   line-height: var(--leading-snug);
 }
 
-/* ── Tagesabschluss ──────────────────────────────────────────────────────── */
+/* ── Day close-out ───────────────────────────────────────────────────────── */
 
 .sb-close {
   display: flex;
@@ -596,44 +598,46 @@
   color: var(--text-muted);
 }
 
-/* Im engen Fenster (der Wert prüft `npm run shot` mit 1152 px, deshalb 1200 und
-   nicht 1100 — sonst greift die Regel bei genau der Breite nicht, die geprüft
-   wird) steht der Tag mit Tagestext und Composer zuerst, die Tagesliste wird
-   zu einem knapp gehaltenen Datums-Wähler darunter: der Zweck des Screens ist
-   der Tag, nicht die Liste der Tage.
+/* In the narrow window (the threshold is checked by `npm run shot` at
+   1152 px, hence 1200 and not 1100 — otherwise the rule wouldn't apply at
+   exactly the width being checked), the day with day text and composer
+   comes first, and the day list becomes a tightly kept date picker below
+   it: the purpose of the screen is the day, not the list of days.
 
-   Beide Zeilen bleiben eigene Scroller — `.sb-journal-main` bekommt mit
-   `minmax(0, 1fr)` den Rest der Höhe, `.sb-journal-side` mit `auto` genau so
-   viel, wie ihr knapper Inhalt braucht (`.sb-daylist` deckelt sich selbst).
-   Ohne eigenen Scroller (`overflow-y: visible`) müsste die Zeile ihre volle
-   Inhaltshöhe bekommen — das hätte sie über die zweite Zeile hinweg gelegt,
-   nicht danebengesetzt.
+   Both rows remain their own scrollers — `.sb-journal-main` gets the rest
+   of the height with `minmax(0, 1fr)`, `.sb-journal-side` gets exactly as
+   much as its compact content needs with `auto` (`.sb-daylist` caps itself).
+   Without its own scroller (`overflow-y: visible`), the row would have to
+   take its full content height — that would have laid it over the second
+   row instead of placing it next to it.
 
-   Innerhalb von `.sb-journal-main` steht hier — dritter Anlauf — die
-   vorgegebene Bauform: zwei Reiter (`DayEntry.tsx`), „Tag" und „Gespräch",
-   statt einer einzigen Rollspalte für beides. Zwei frühere Bauformen sind
-   deshalb verworfen, nicht nur eine:
-   - `position: sticky` auf dem Composer klebte ihn von der ersten Bildzeile
-     an über den ganzen Tag — Text, Stimmung, Energie und Chips lagen
-     dahinter, für `elementFromPoint` nicht mehr erreichbar.
-   - Der Composer im normalen Fluss (ohne Klebe-Rahmen) verlagerte das
-     Problem nur in die andere Richtung: er lag selbst hinter dem unteren
-     Bildrand, ungerollt nicht sichtbar — auf dem einzigen Screen, dessen
-     Zweck das Schreiben ist, der schlimmere Fehler.
-   Der Grund für beide Fehlschläge war derselbe: rund 370 px Rollhöhe reichen
-   nicht für Tageseintrag UND Gespräch gleichzeitig. Reiter umgehen die Frage,
-   statt sie neu zu stellen — jeder zeigt nur, wozu er da ist.
+   Within `.sb-journal-main`, here — third attempt — is the chosen design:
+   two tabs (`DayEntry.tsx`), "Day" and "Talk", instead of a single
+   scrolling column for both. Two earlier designs were rejected for this,
+   not just one:
+   - `position: sticky` on the composer stuck it over the whole day from
+     the first screen line onward — text, mood, energy, and chips ended up
+     behind it, no longer reachable for `elementFromPoint`.
+   - The composer in normal flow (without a sticky frame) only shifted the
+     problem the other way: it ended up behind the bottom screen edge
+     itself, not visible without scrolling — on the one screen whose whole
+     purpose is writing, the worse failure.
+   The reason for both failures was the same: roughly 370 px of scroll
+   height isn't enough for the day entry AND the talk at the same time.
+   Tabs sidestep the question instead of asking it again — each shows only
+   what it's there for.
 
-   `.sb-dayentry-tagpanel` läuft dafür weiterhin im Fluss von
-   `.sb-journal-main` mit (dieselbe Knappheit wie zuvor: Stimmung, Energie und
-   Chips stehen ungerollt oben, Fakten und „Tag abschließen" darunter, nötigenfalls
-   gerollt). `.sb-dayentry-talkpanel` bekommt dagegen eine eigene, auf die
-   Fensterhöhe begrenzte Spalte: nur der Verlauf (`.sb-coach`) rollt darin,
-   der Composer bleibt als letztes, nicht wachsendes Element immer im
-   Fenster — ohne `position: sticky`, weil er nichts mehr zu überlappen
-   braucht (im Reiter „Gespräch" steht sonst nichts). Kein zweiter Roller
-   schneidet dabei eine Zeile ab: `.sb-coach` endet an der Zeilenkante, die
-   der Browser selbst wählt, nicht an einer geschätzten Pixelzahl. */
+   `.sb-dayentry-tagpanel`, for its part, keeps running in the flow of
+   `.sb-journal-main` (the same tightness as before: mood, energy, and chips
+   sit unscrolled at the top, facts and "close the day" below, scrolled if
+   needed). `.sb-dayentry-talkpanel`, on the other hand, gets its own
+   column bounded to the window height: only the history (`.sb-coach`)
+   scrolls inside it, the composer stays as the last, non-growing element
+   always within the window — without `position: sticky`, because it no
+   longer needs to overlap anything (nothing else sits in the "Talk" tab).
+   No second scroller cuts off a line in the process: `.sb-coach` ends at
+   the line edge the browser itself chooses, not at an estimated pixel
+   count. */
 @media (max-width: 1200px) {
   .sb-journal {
     grid-template-columns: minmax(0, 1fr);
@@ -650,18 +654,18 @@
     padding-right: 0;
     padding-top: var(--space-3);
   }
-  /* Mindestens eine ganze Zeile der Tagesliste, nicht nur ihr oberer Rand
-     (gemessen: eine Zeile ist rund 93 px hoch). 60 px zeigte keine einzige
-     vollständig. Gilt für beide Reiter — die Liste liegt außerhalb von
-     `.sb-dayentry` und weiß von den Reitern nichts. */
+  /* At least one full row of the day list, not just its top edge
+     (measured: one row is roughly 93 px tall). 60 px didn't show a single
+     one fully. Applies to both tabs — the list sits outside `.sb-dayentry`
+     and knows nothing about the tabs. */
   .sb-daylist {
     max-height: 108px;
   }
-  /* Dieselbe Knappheit gilt zwischen den Abschnitten des Tages. */
+  /* The same tightness applies between the sections of the day. */
   .sb-dayentry {
     gap: var(--space-3);
   }
-  /* Der Reiter selbst — sonst per Grundregel unsichtbar (siehe oben). */
+  /* The tab itself — otherwise invisible by the base rule (see above). */
   .sb-dayentry-tabs {
     display: flex;
   }
@@ -671,35 +675,35 @@
     flex-direction: column;
     gap: var(--space-3);
   }
-  /* Nur die Seite des aktiven Reiters steht im Fenster — `data-tab` trägt
-     `DayEntry.tsx`. Die andere bleibt im Baum (kein Umschalten entfernt
-     etwas, siehe dort), nur unsichtbar: für `elementFromPoint` unerreichbar,
-     genau wie es das Gate verlangt. */
+  /* Only the active tab's side sits in the window — `data-tab` is carried
+     by `DayEntry.tsx`. The other stays in the tree (no switch removes
+     anything, see there), just invisible: unreachable for
+     `elementFromPoint`, exactly as the gate requires. */
   .sb-dayentry[data-tab='day'] .sb-dayentry-talkpanel {
     display: none;
   }
   .sb-dayentry[data-tab='talk'] .sb-dayentry-tagpanel {
     display: none;
   }
-  /* Reiter „Gespräch": eine eigene, auf die Fensterhöhe begrenzte Spalte —
-     nicht mehr der gemeinsame Rollbereich mit dem Tageseintrag. `flex: 1 1
-     auto` auf `.sb-dayentry` selbst zieht sie exakt auf den Rest der Höhe von
-     `.sb-journal-main` (dessen eigenes Rollen dadurch hier ungenutzt bleibt —
-     es gibt nichts mehr, das über sie hinausragt). */
+  /* "Talk" tab: its own column bounded to the window height — no longer the
+     shared scroll area with the day entry. `flex: 1 1 auto` on
+     `.sb-dayentry` itself sizes it to exactly the rest of the height of
+     `.sb-journal-main` (whose own scrolling thus goes unused here — there's
+     nothing left that extends beyond it). */
   .sb-dayentry[data-tab='talk'] {
     flex: 1 1 auto;
     min-height: 0;
     overflow: hidden;
   }
-  /* Der Kopf (Datum, Pfad, Editor-Link) gehört inhaltlich zum Reiter „Tag"
-     (siehe die Aufzählung in der Aufgabe) — und Platz ist hier die knappste
-     Ressource: gemessen bei 1152×720 braucht der Composer allein (Vertraulich-
-     keitszeile, Feld, Haltungswahl, „Sagen") rund 318 px, der Kopf weitere
-     rund 74 px (mit Abstand). Ausgeblendet reicht der Rest gerade für den
-     Composer plus einen schmalen Streifen Verlauf — sichtbar bliebe er sonst
-     nur teilweise, vom `overflow: hidden` oben abgeschnitten (`elementFromPoint`
-     träfe dann die Tagesliste darunter statt „Sagen", genau der Fund, mit dem
-     dieser dritte Anlauf gemessen wurde). */
+  /* The header (date, path, editor link) belongs content-wise to the "Day"
+     tab (see the breakdown in the task) — and space is the scarcest
+     resource here: measured at 1152×720, the composer alone (privacy line,
+     field, stance choice, "Say") needs roughly 318 px, the header another
+     roughly 74 px (with spacing). Hidden, the rest is just enough for the
+     composer plus a narrow strip of history — visible, it would otherwise
+     only be partially shown, cut off by the `overflow: hidden` above
+     (`elementFromPoint` would then hit the day list below instead of
+     "Say", exactly the finding this third attempt was measured against). */
   .sb-dayentry[data-tab='talk'] .sb-dayentry-head {
     display: none;
   }
@@ -707,10 +711,10 @@
     flex: 1 1 auto;
     min-height: 0;
   }
-  /* Nur der Verlauf rollt; der Composer danach ist ein letztes, nicht
-     wachsendes Element und bleibt deshalb immer im Fenster — `flex-shrink: 0`
-     ausdrücklich, weil ein Feld sonst über sein automatisches Mindestmaß
-     hinaus schrumpfen könnte, statt den Verlauf schrumpfen zu lassen. */
+  /* Only the history scrolls; the composer after it is a last, non-growing
+     element and therefore always stays within the window — `flex-shrink: 0`
+     explicit, because a field could otherwise shrink below its automatic
+     minimum size instead of letting the history shrink. */
   .sb-dayentry[data-tab='talk'] .sb-coach {
     flex: 1 1 auto;
     min-height: 0;
@@ -719,28 +723,27 @@
   .sb-dayentry[data-tab='talk'] .sb-journal-footer {
     flex: 0 0 auto;
   }
-  /* Dieselbe Not: die Tagesliste braucht nur ihre eine Pflichtzeile (siehe
-     oben), nicht auch noch die Zählung und den Tastaturhinweis darüber und
-     darunter — im Reiter „Tag" bleiben beide stehen, dort ist genug Raum.
-     `:has()` statt eines eigenen Zustands im Screen: die beiden Spalten
-     (`.sb-journal-main`, `.sb-journal-side`) sind Geschwister, keine
-     Vorfahren-Nachfahren-Beziehung, über die eine gewöhnliche Regel das
-     wüsste. */
+  /* The same scarcity: the day list only needs its one mandatory row (see
+     above), not also the count and keyboard hint above and below it — in
+     the "Day" tab both remain, there's enough room there. `:has()` instead
+     of its own state in the screen: the two columns (`.sb-journal-main`,
+     `.sb-journal-side`) are siblings, not an ancestor-descendant
+     relationship that an ordinary rule would know about. */
   .sb-journal:has(.sb-dayentry[data-tab='talk']) .sb-journal-count,
   .sb-journal:has(.sb-dayentry[data-tab='talk']) .sb-journal-keys {
     display: none;
   }
-  /* 72ch sind hier zwei bis drei Zeilen statt einer — genau der Platz, den
-     der Composer nicht mehr hat, seit er auch Esc erklärt. */
+  /* 72ch is two to three lines here instead of one — exactly the space the
+     composer no longer has now that it also explains Esc. */
   .sb-privacy {
     max-width: none;
   }
-  /* Der Klebe-Rahmen aus der Grundregel gilt hier ausdrücklich nicht: der
-     Composer braucht ihn nicht mehr, seit sein Reiter nichts außer dem
-     Verlauf über ihm zeigt — er ist ohnehin das letzte, nicht wachsende
-     Element seiner eigenen Spalte (siehe oben). `position: static` statt
-     `sticky` reicht; der Schatten gehörte allein zur Klebekante und wäre
-     hier eine Behauptung ohne Funktion. */
+  /* The sticky frame from the base rule explicitly doesn't apply here: the
+     composer no longer needs it since its tab shows nothing above it but
+     the history — it's already the last, non-growing element of its own
+     column anyway (see above). `position: static` instead of `sticky` is
+     enough; the shadow belonged solely to the sticky edge and would be a
+     claim without function here. */
   .sb-journal-footer {
     position: static;
     box-shadow: none;

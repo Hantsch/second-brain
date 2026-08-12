@@ -1,7 +1,7 @@
-/* Filtern, sortieren, trennen — die Logik der Projektliste, ohne React.
+/* Filter, sort, split — the logic of the project list, without React.
 
-   Sie steht hier für sich, damit sie prüfbar ist: welche Zeile oben steht, ist
-   die eigentliche Aussage dieses Screens. */
+   It stands here on its own so that it's testable: which row ends up on
+   top is the actual statement this screen makes. */
 
 import type { Project, ProjectStatus, Scope } from '@shared/types';
 
@@ -9,10 +9,10 @@ export type ProjectSort = 'touch' | 'deadline' | 'priority' | 'name';
 
 export const PROJECT_SORTS: readonly ProjectSort[] = ['touch', 'deadline', 'priority', 'name'];
 
-/** `all` heißt beide Bereiche — nicht „egal", sondern ausdrücklich beide. */
+/** `all` means both scopes — not "doesn't matter", but explicitly both. */
 export type ScopeFilter = Scope | 'all';
 
-/** `open` sind alle, die noch laufen (nicht fertig, nicht verworfen). */
+/** `open` are all that are still running (not done, not dropped). */
 export type StatusFilter = 'open' | ProjectStatus;
 
 export interface ProjectFilter {
@@ -39,7 +39,7 @@ function matches(project: Project, needle: string): boolean {
   return haystack.includes(needle);
 }
 
-/** Nach Bereich, Status und Suchtext. Die Sortierung macht `sortProjects`. */
+/** By scope, status, and search text. Sorting is done by `sortProjects`. */
 export function filterProjects(projects: readonly Project[], filter: ProjectFilter): Project[] {
   const needle = filter.query.trim().toLowerCase();
   return projects.filter(
@@ -50,7 +50,7 @@ export function filterProjects(projects: readonly Project[], filter: ProjectFilt
   );
 }
 
-/** Fehlende Frist steht hinten, nicht vorne — sie ist keine Dringlichkeit. */
+/** A missing deadline sorts to the back, not the front — it isn't urgency. */
 function byDeadline(a: Project, b: Project): number {
   if (a.deadline === null && b.deadline === null) return 0;
   if (a.deadline === null) return 1;
@@ -58,7 +58,7 @@ function byDeadline(a: Project, b: Project): number {
   return a.deadline.localeCompare(b.deadline);
 }
 
-/** Arbeit vor Privat — die Reihenfolge der beiden Bereiche, überall dieselbe. */
+/** Work before private — the order of the two scopes, the same everywhere. */
 const SCOPE_ORDER: readonly Scope[] = ['work', 'private'];
 
 export function scopeRank(scope: Scope): number {
@@ -75,15 +75,15 @@ export function sortProjects(projects: readonly Project[], sort: ProjectSort): P
   if (sort === 'priority') {
     return rows.sort((a, b) => a.priority - b.priority || b.lastTouch.localeCompare(a.lastTouch));
   }
-  /* Jüngste Spur zuerst — die Antwort auf „woran habe ich zuletzt gearbeitet". */
+  /* Most recent trail first — the answer to "what did I last work on". */
   return rows.sort(
     (a, b) => b.lastTouch.localeCompare(a.lastTouch) || a.title.localeCompare(b.title),
   );
 }
 
 /**
- * Stagnierendes steht als eigener Abschnitt am Ende. Es soll sichtbar bleiben,
- * ohne die Liste der laufenden Arbeit zu verstopfen.
+ * Stagnant projects sit as their own section at the end. They should stay
+ * visible without clogging up the list of running work.
  */
 export function splitStalled(projects: readonly Project[]): {
   current: Project[];
@@ -96,14 +96,14 @@ export function splitStalled(projects: readonly Project[]): {
 }
 
 /**
- * Die Liste, wie sie auf dem Screen steht: gefiltert, sortiert, geteilt.
+ * The list as it appears on the screen: filtered, sorted, split.
  *
- * Bei „Alle" stehen die Bereiche **untereinander, nicht durcheinander**: erst
- * Arbeit, dann Privat. Die Trennung der beiden Bereiche ist eine Anforderung
- * (VAULT-FORMAT.md, die zwei Todo-Kacheln) — eine Liste, in der ein Kundenprojekt
- * und ein Hochbeet abwechseln, bricht sie. `grouped` sagt der Oberfläche, dass
- * sie Überschriften setzen soll; die Reihenfolge in `all` ist dieselbe, damit die
- * Tastatur genau der Reihe nach geht, die man sieht.
+ * With "all", the scopes appear **stacked, not interleaved**: work first,
+ * then private. Separating the two scopes is a requirement
+ * (VAULT-FORMAT.md, the two todo tiles) — a list where a client project and
+ * a raised garden bed alternate breaks that. `grouped` tells the UI that it
+ * should render headings; the order in `all` is the same, so the keyboard
+ * follows exactly the sequence you see.
  */
 export function visibleProjects(
   projects: readonly Project[],

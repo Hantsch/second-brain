@@ -1,5 +1,5 @@
-/* Einstellungs- und LLM-Fixtures für die Mock-Brücke.
-   Bewusst eigene Kopien: der Renderer darf `src/main/` nicht importieren. */
+/* Settings and LLM fixtures for the mock bridge.
+   Deliberately separate copies: the renderer must not import `src/main/`. */
 
 import type {
   DashboardLayout,
@@ -73,10 +73,11 @@ export const tasks: TaskDefinition[] = TASK_KINDS.map((kind) => ({
 
 export const settingsSnapshot: SettingsSnapshot = {
   app: {
-    version: 1,
+    version: 2,
     lastVault: 'C:/vaults/demo',
     recentVaults: ['C:/vaults/demo'],
     theme: 'dark',
+    customization: { background: 'none', appIcon: 'knowledge-garden' },
     uiLanguage: 'de',
     window: { width: 1440, height: 900 },
     startMinimized: false,

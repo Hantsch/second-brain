@@ -1,18 +1,18 @@
-/* Wohin ein Befundpfad führt.
+/* Where a finding's path leads.
 
-   Ein Befund nennt Dateien; der Screen soll sie öffnen können, ohne zu raten.
-   Für die vier Orte, an denen die App selbst eine Ansicht hat, führt der Klick
-   dorthin — für alles andere gibt es den Weg über das Betriebssystem, und der
-   Knopf heißt dann auch so.
+   A finding names files; the screen should be able to open them without
+   guessing. For the four places where the app itself has a view, the click
+   leads there — for everything else there's the path through the operating
+   system, and the button is named accordingly.
 
-   Katalog und Chronik (`wiki/index.md`, `wiki/log.md`) sind keine Wiki-Seiten
-   (VAULT-FORMAT.md: sie tragen kein Frontmatter). Die Seitenansicht würde sie
-   nicht laden; die Chronik hat einen eigenen Reiter, der Katalog gar keine
-   Ansicht — also Datei. */
+   The catalog and the log (`wiki/index.md`, `wiki/log.md`) are not wiki pages
+   (VAULT-FORMAT.md: they carry no frontmatter). The page view wouldn't load
+   them; the log has its own tab, the catalog has no view at all — so it's a
+   file. */
 
 export interface RouteTarget {
   kind: 'route';
-  /** Adresse im HashRouter, inklusive Suchteil. */
+  /** Address in the HashRouter, including the query part. */
   to: string;
 }
 
@@ -28,7 +28,7 @@ const WIKI_OVERVIEW = /^modules\/([^/]+)\/wiki\/overview\.md$/;
 const WIKI_LOG = /^modules\/([^/]+)\/wiki\/log\.md$/;
 const PROJECT = /^projects\/(?:work|private)\/([^/]+)\/project\.md$/;
 
-/** Der Ort, an dem dieser Pfad in der App sichtbar ist — sonst die Datei selbst. */
+/** The place where this path is visible in the app — otherwise the file itself. */
 export function targetFor(path: string): PathTarget {
   const page = WIKI_PAGE.exec(path) ?? WIKI_OVERVIEW.exec(path);
   if (page !== null) {
@@ -51,7 +51,7 @@ export function targetFor(path: string): PathTarget {
   return { kind: 'file', path };
 }
 
-/** Der Dateiname ohne Ordner — für Vorschauen und Meldungen. */
+/** The file name without the folder — for previews and messages. */
 export function leafOf(path: string): string {
   return path.split('/').pop() ?? path;
 }

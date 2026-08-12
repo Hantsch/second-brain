@@ -1,11 +1,11 @@
-/* Das Gateway ist die einzige Tür zur LLM-Welt: es löst eine Aufgabe zu einem
-   Modell auf, führt den Aufruf mit Timeout und Retry aus und misst, was er
-   gekostet hat.
+/* The gateway is the only door to the LLM world: it resolves a task to a
+   model, executes the call with timeout and retry, and measures what it
+   cost.
 
-   Zwei Grundsätze:
-   - Es rät nicht. Steht keine Route, kommt ein `LlmUnavailableError` mit Grund —
-     die Oberfläche kann daraus einen ehrlichen Zustand machen.
-   - Es redet nicht. Kein Schlüssel landet je in einer Meldung oder einem Log. */
+   Two principles:
+   - It doesn't guess. If there is no route, an `LlmUnavailableError` with a
+     reason comes back — the UI can turn that into an honest state.
+   - It doesn't talk. No key ever ends up in a message or a log. */
 
 import type {
   CompletionRequest,
@@ -35,9 +35,9 @@ import {
   type ProviderResult,
 } from './types';
 
-/** Nach dieser Zeit gilt ein Aufruf als nicht zustellbar. */
+/** After this time, a call counts as undeliverable. */
 export const DEFAULT_TIMEOUT_MS = 120_000;
-/** Zwei Wiederholungen — mehr verlängert nur die Wartezeit des Nutzers. */
+/** Two retries — more would only extend the user's wait time. */
 export const DEFAULT_RETRIES = 2;
 
 export interface RoutingGatewayOptions {
@@ -48,7 +48,7 @@ export interface RoutingGatewayOptions {
   createProvider?: ProviderFactory;
   timeoutMs?: number;
   retries?: number;
-  /** Wartezeit vor dem Versuch `attempt` (0-basiert). */
+  /** Wait time before attempt `attempt` (0-based). */
   backoffMs?: (attempt: number) => number;
   sleep?: (ms: number) => Promise<void>;
   now?: () => number;
@@ -86,7 +86,7 @@ export class RoutingGateway implements LlmGateway {
     this.now = options.now ?? ((): number => Date.now());
   }
 
-  /** Nach einer Änderung an Einstellungen: neues Routing, neue Provider. */
+  /** After a change to settings: new routing, new providers. */
   update(patch: { routing?: Routing; providers?: readonly ProviderConfig[] }): void {
     if (patch.routing) this.routing = patch.routing;
     if (patch.providers) this.providers = patch.providers;
@@ -114,9 +114,9 @@ export class RoutingGateway implements LlmGateway {
   }
 
   /**
-   * Auflösung in genau dieser Kette: ausdrückliche Route der Aufgabe →
-   * `defaults[empfohlene Klasse]` → nichts. Danach muss der Provider auch
-   * benutzbar sein (vorhanden, eingeschaltet, Schlüssel da).
+   * Resolution in exactly this chain: explicit route for the task →
+   * `defaults[recommended tier]` → nothing. After that, the provider also
+   * has to be usable (present, enabled, key available).
    */
   private resolve(task: TaskKind): Resolved | { error: LlmUnavailable } {
     const ref = this.routing.tasks[task] ?? this.routing.defaults[taskDefinition(task).suggested];
@@ -161,8 +161,8 @@ export class RoutingGateway implements LlmGateway {
 
     const startedAt = this.now();
     for (let attempt = 0; ; attempt += 1) {
-      // Sobald Text beim Aufrufer angekommen ist, verbietet sich ein zweiter Versuch:
-      // er würde den Anfang der Antwort doppelt streamen.
+      // Once text has reached the caller, a second attempt is off the table:
+      // it would stream the beginning of the response twice.
       let emitted = false;
       const wrapped = onDelta
         ? (delta: string): void => {
@@ -189,7 +189,7 @@ export class RoutingGateway implements LlmGateway {
     }
   }
 
-  /** Ein Versuch, mit eigenem Timeout und durchgereichtem Abbruch des Aufrufers. */
+  /** One attempt, with its own timeout and the caller's abort passed through. */
   private async attempt(
     provider: LlmProvider,
     call: ProviderCall,
@@ -211,7 +211,7 @@ export class RoutingGateway implements LlmGateway {
         ? await provider.stream(withSignal, onDelta)
         : await provider.complete(withSignal);
     } catch (error) {
-      // Der Abbruch kam vom Timeout, nicht vom Nutzer: das ist ein Zustand, kein Abbruch.
+      // The abort came from the timeout, not the user: this is a state, not a cancellation.
       if (timedOut && !req.signal?.aborted) {
         throw new LlmUnavailableError({
           reason: 'unreachable',
@@ -226,7 +226,7 @@ export class RoutingGateway implements LlmGateway {
     }
   }
 
-  /** Übersetzt einen Provider-Fehler in einen Zustand — ohne Schlüssel im Text. */
+  /** Translates a provider error into a state — without a key in the text. */
   private toUnavailable(task: TaskKind, error: unknown, key: string | null): LlmUnavailableError {
     const detail = sanitize(describeError(error), key, 200);
     const reason = reasonFor(error);
@@ -243,9 +243,9 @@ export class RoutingGateway implements LlmGateway {
 }
 
 /**
- * Welcher Zustand passt zu diesem Fehler?
- * 401/403 heißt fast immer: der Schlüssel stimmt nicht. 429 und 5xx heißen:
- * der Dienst antwortet gerade nicht. Alles andere ist ein echter Fehler.
+ * Which state fits this error?
+ * 401/403 almost always means: the key is wrong. 429 and 5xx mean: the
+ * service isn't responding right now. Everything else is a genuine error.
  */
 function reasonFor(error: unknown): LlmUnavailable['reason'] {
   if (error instanceof LlmHttpError) {

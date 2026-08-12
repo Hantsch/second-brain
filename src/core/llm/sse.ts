@@ -1,28 +1,27 @@
-/* Server-Sent Events, wie beide Provider sie streamen. Der Dekoder muss mit
-   zerstückelten Chunks umgehen: ein `data:`-Feld kann über zwei TCP-Pakete
-   verteilt ankommen, deshalb wird gepuffert, bis eine Leerzeile das Ereignis
-   abschließt. */
+/* Server-sent events, the way both providers stream them. The decoder has to
+   handle chunks arriving in pieces: a `data:` field can arrive split across
+   two TCP packets, so it buffers until a blank line closes the event. */
 
 export interface SseEvent {
-  /** `event:`-Feld, oder null wenn der Dienst keins schickt (OpenAI schickt keins). */
+  /** `event:` field, or null if the service doesn't send one (OpenAI sends none). */
   event: string | null;
-  /** Alle `data:`-Zeilen des Ereignisses, mit \n verbunden. */
+  /** All `data:` lines of the event, joined with \n. */
   data: string;
 }
 
 /**
- * Zustandsbehafteter Dekoder: `push` je Chunk, am Ende `flush`.
- * Verträgt \n und \r\n, ignoriert Kommentarzeilen (`:` am Anfang) und Feldnamen,
- * die uns nicht interessieren (`id`, `retry`).
+ * Stateful decoder: `push` per chunk, `flush` at the end.
+ * Tolerates \n and \r\n, ignores comment lines (`:` at the start) and field
+ * names we don't care about (`id`, `retry`).
  */
 export class SseDecoder {
   private buffer = '';
 
-  /** Gibt alle Ereignisse zurück, die dieser Chunk vollständig gemacht hat. */
+  /** Returns all events that this chunk completed. */
   push(chunk: string): SseEvent[] {
     this.buffer += chunk;
     const events: SseEvent[] = [];
-    // Ein Ereignis endet an einer Leerzeile; alles danach bleibt im Puffer.
+    // An event ends at a blank line; everything after that stays in the buffer.
     let boundary = this.nextBoundary();
     while (boundary !== null) {
       const raw = this.buffer.slice(0, boundary.start);
@@ -34,7 +33,7 @@ export class SseDecoder {
     return events;
   }
 
-  /** Rest des Puffers als (unvollständiges, aber verwertbares) Ereignis. */
+  /** Remainder of the buffer as an (incomplete but usable) event. */
   flush(): SseEvent[] {
     const rest = this.buffer;
     this.buffer = '';
@@ -58,7 +57,7 @@ function parseRecord(raw: string): SseEvent | null {
     if (line === '' || line.startsWith(':')) continue;
     const colon = line.indexOf(':');
     const field = colon === -1 ? line : line.slice(0, colon);
-    // Nach dem Doppelpunkt darf genau ein Leerzeichen stehen, das nicht zum Wert gehört.
+    // Exactly one space is allowed after the colon that doesn't belong to the value.
     let value = colon === -1 ? '' : line.slice(colon + 1);
     if (value.startsWith(' ')) value = value.slice(1);
     if (field === 'data') dataLines.push(value);
@@ -68,7 +67,7 @@ function parseRecord(raw: string): SseEvent | null {
   return { event, data: dataLines.join('\n') };
 }
 
-/** Ein Byte- oder Textstrom, wie `fetch` ihn liefert — oder ein Fake im Test. */
+/** A byte or text stream, the way `fetch` delivers it — or a fake in a test. */
 export type ByteSource = ReadableStream<Uint8Array> | AsyncIterable<Uint8Array | string>;
 
 function hasGetReader(source: ByteSource): source is ReadableStream<Uint8Array> {
@@ -76,8 +75,8 @@ function hasGetReader(source: ByteSource): source is ReadableStream<Uint8Array> 
 }
 
 /**
- * Liest einen Antwortstrom und ruft `onEvent` je SSE-Ereignis auf.
- * Bricht der Aufrufer ab, wirft der Reader — das reicht als Abbruch.
+ * Reads a response stream and calls `onEvent` per SSE event.
+ * If the caller aborts, the reader throws — that's enough as a cancellation.
  */
 export async function readSseStream(
   source: ByteSource | null,

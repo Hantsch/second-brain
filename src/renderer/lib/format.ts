@@ -1,10 +1,10 @@
-/* Zahlen, Daten und Fristen für die Anzeige. Alles, was der Nutzer liest, kommt
-   aus `t()`; hier wird nur gerechnet und zusammengesetzt.
+/* Numbers, dates, and deadlines for display. Everything the user reads
+   comes from `t()`; this file only computes and assembles.
 
-   Gerechnet wird in Kalendertagen, nicht in 24-Stunden-Blöcken: „morgen fällig"
-   bleibt morgen fällig, egal ob es 8 oder 23 Uhr ist. Der Kern rechnet genauso
-   (`core/index/dates`) — hier steht es nochmal, weil der Renderer den Kern nicht
-   kennt. */
+   Calculations use calendar days, not 24-hour blocks: "due tomorrow" stays
+   due tomorrow no matter whether it's 8am or 11pm. The core computes it the
+   same way (`core/index/dates`) — it's duplicated here because the renderer
+   doesn't know the core. */
 
 import { t } from '../i18n';
 import type { UiLanguage } from '@shared/types';
@@ -15,22 +15,22 @@ function locale(language: UiLanguage): string {
   return language === 'de' ? 'de-DE' : 'en-GB';
 }
 
-/** Mitternacht des Kalendertags in lokaler Zeit. */
+/** Midnight of the calendar day in local time. */
 function startOfDay(value: Date): number {
   return new Date(value.getFullYear(), value.getMonth(), value.getDate()).getTime();
 }
 
-/** Kalendertage zwischen zwei Zeitpunkten. Positiv, wenn `to` später liegt. */
+/** Calendar days between two points in time. Positive if `to` is later. */
 export function dayDiff(from: Date, to: Date): number {
   return Math.round((startOfDay(to) - startOfDay(from)) / MS_PER_DAY);
 }
 
-/** Zahl mit Tausendertrennung der Oberflächensprache. */
+/** Number with thousands separators for the UI language. */
 export function formatNumber(value: number, language: UiLanguage): string {
   return new Intl.NumberFormat(locale(language)).format(value);
 }
 
-/** Datum kurz: '10. Aug. 2026' bzw. '10 Aug 2026'. Leer bei unbrauchbarem Wert. */
+/** Short date: '10. Aug. 2026' or '10 Aug 2026'. Empty for an unusable value. */
 export function formatDate(iso: string | null, language: UiLanguage): string {
   if (iso === null || iso.length === 0) return '';
   const date = new Date(iso);
@@ -43,8 +43,8 @@ export function formatDate(iso: string | null, language: UiLanguage): string {
 }
 
 /**
- * Wie lange etwas her ist: „heute", „gestern", „vor 5 Tagen". Ab einer Woche
- * steht das Datum da — „vor 34 Tagen" muss man nachrechnen.
+ * How long ago something was: "today", "yesterday", "5 days ago". From one
+ * week on, the date is shown instead — "34 days ago" requires doing the math.
  */
 export function formatAge(iso: string | null, language: UiLanguage, now = new Date()): string {
   if (iso === null || iso.length === 0) return '';
@@ -57,7 +57,7 @@ export function formatAge(iso: string | null, language: UiLanguage, now = new Da
   return formatDate(iso, language);
 }
 
-/** Frist als Satz: überfällig, heute, morgen, in N Tagen. */
+/** Deadline as a sentence: overdue, today, tomorrow, in N days. */
 export function formatDue(dueInDays: number | null): string {
   if (dueInDays === null) return t('due.none');
   if (dueInDays < -1) return t('due.overdue', { count: Math.abs(dueInDays) });
@@ -67,14 +67,14 @@ export function formatDue(dueInDays: number | null): string {
   return t('due.inDays', { count: dueInDays });
 }
 
-/** Wie dringend eine Frist ist — steuert nur die Farbe, nie den Text. */
+/** How urgent a deadline is — controls only the color, never the text. */
 export function dueTone(dueInDays: number | null): 'overdue' | 'soon' | 'later' | 'none' {
   if (dueInDays === null) return 'none';
   if (dueInDays < 0) return 'overdue';
   return dueInDays <= 2 ? 'soon' : 'later';
 }
 
-/** Ein- oder Mehrzahl über zwei Keys — Deutsch und Englisch brauchen beide. */
+/** Singular or plural via two keys — German and English both need them. */
 export function plural(count: number, oneKey: string, manyKey: string): string {
   return count === 1 ? t(oneKey) : t(manyKey, { count });
 }

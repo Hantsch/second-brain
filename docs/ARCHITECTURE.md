@@ -1,185 +1,190 @@
-# Architektur
+# Architecture
 
-Drei Schichten, eine Richtung: **Renderer → Preload → Main → Core → Dateien.**
-Der Renderer kennt nur [src/shared/ipc.ts](../src/shared/ipc.ts). Der Core kennt nur
-Dateien und Interfaces. Nur der Main kennt beide Welten.
+Three layers, one direction: **Renderer → Preload → Main → Core → Files.**
+The renderer only knows [src/shared/ipc.ts](../src/shared/ipc.ts). The core only
+knows files and interfaces. Only main knows both worlds.
 
 ```
 ┌────────────── Renderer (React) ──────────────┐
-│ screens/  components/  atoms/  i18n/  lib/   │  keine fs-, keine net-Zugriffe
+│ screens/  components/  atoms/  i18n/  lib/   │  no fs access, no net access
 └───────────────────┬──────────────────────────┘
-                    │ window.sb.invoke(kanal, payload)   ← nur IPC_CHANNELS
+                    │ window.sb.invoke(channel, payload)   ← only IPC_CHANNELS
 ┌───────────────────▼──────────────────────────┐
 │ preload  contextIsolation, sandbox, no node  │
 └───────────────────┬──────────────────────────┘
 ┌───────────────────▼──────────────────────────┐
-│ main   Fenster · Tray · Hotkey · Secrets ·   │
-│        Settings · IPC-Handler · Notifications│
+│ main   window · tray · hotkey · secrets ·    │
+│        settings · IPC handlers · notifications│
 └───────────────────┬──────────────────────────┘
 ┌───────────────────▼──────────────────────────┐
-│ core   vault index llm capture wiki ingest   │  reines TypeScript, testbar
-│        journal overview gardener claude      │  importiert nie 'electron'
+│ core   vault index llm capture wiki ingest   │  plain TypeScript, testable
+│        journal overview gardener claude      │  never imports 'electron'
 └───────────────────┬──────────────────────────┘
-                    ▼  Markdown-Dateien im Vault
+                    ▼  Markdown files in the vault
 ```
 
-## Die vier Interfaces
+## The four interfaces
 
-In `src/core/*/types.ts` definiert, im Main verdrahtet, überall sonst nur als Typ bekannt.
+Defined in `src/core/*/types.ts`, wired in main, known everywhere else only as a type.
 
-| Interface        | Aufgabe                                           | Implementierungen                                                 |
-| ---------------- | ------------------------------------------------- | ----------------------------------------------------------------- |
-| `VaultStore`     | Dateien lesen/schreiben, Hash, Konflikte, Watcher | `FsVaultStore`, `MemoryVaultStore` (Tests)                        |
-| `LlmGateway`     | `complete()` / `stream()` je Aufgabe              | `RoutingGateway` → Anthropic · OpenAI-kompatibel · `FakeProvider` |
-| `SourceIngestor` | Quelle → Ordner unter `raw/`                      | `YoutubeIngestor`, `FileIngestor`, `UrlIngestor`, `TextIngestor`  |
-| `SessionReader`  | Arbeitsspuren einer Agenten-CLI lesen             | `ClaudeSessionReader`                                             |
+| Interface        | Responsibility                                    | Implementations                                                   |
+| ----------------- | -------------------------------------------------- | ------------------------------------------------------------------- |
+| `VaultStore`     | Read/write files, hash, conflicts, watcher        | `FsVaultStore`, `MemoryVaultStore` (tests)                        |
+| `LlmGateway`     | `complete()` / `stream()` per task                | `RoutingGateway` → Anthropic · OpenAI-compatible · `FakeProvider` |
+| `SourceIngestor` | Source → folder under `raw/`                      | `YoutubeIngestor`, `FileIngestor`, `UrlIngestor`, `TextIngestor`   |
+| `SessionReader`  | Read work traces of an agent CLI                  | `ClaudeSessionReader`                                              |
 
-Eingehängt wird jedes davon an genau einer Stelle: Store, Index und Watcher in
-[core-bridge.ts](../src/main/core-bridge.ts), das Gateway in
-[llm-bridge.ts](../src/main/llm-bridge.ts) (`createGateway`, pro Aufruf frisch aus Routing,
-Providern und Schlüsselspeicher — sonst gäbe es eine zweite Wahrheit, die veraltet).
+Each of these is mounted at exactly one place: store, index, and watcher in
+[core-bridge.ts](../src/main/core-bridge.ts), the gateway in
+[llm-bridge.ts](../src/main/llm-bridge.ts) (`createGateway`, rebuilt fresh per call
+from routing, providers, and key storage — otherwise there'd be a second truth
+that goes stale).
 
-## Verantwortungen im Core
+## Responsibilities in core
 
-| Modul       | Verantwortung                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| Module      | Responsibility                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `vault/`    | `paths` (Vault-relative Pfade, Slugs), `layout` (Struktur anlegen/prüfen), `frontmatter` (parsen/mergen/serialisieren, unbekannte Felder erhalten), `store` (atomar schreiben: tmp + rename, sha256, Konflikt), `watch` (chokidar, 250 ms trailing debounce)                                                                                                                                                                                                                                                                                                                                                                                                    |
-| `index/`    | `build` (Vault durchlaufen → Dokumente), `search` (MiniSearch, Snippets), `todos` (Checkboxen + Inline-Marker parsen), `projects` (Frontmatter + Ableitungen: lastTouch, stale, Zählungen), `persist` (`.secondbrain/index/index.json`, Hash-Invalidierung, inkrementell)                                                                                                                                                                                                                                                                                                                                                                                       |
-| `llm/`      | `gateway` (Routing, Retry, Timeout, Abort), `providers/*` (nur HTTP, kein SDK), `registry` (Provider-CRUD, Modell-Liste, Probe), `tasks` (Katalog, Vorschläge, Tier), `prompts/*` (eine Datei pro Aufgabe, Dokumentsprache als Parameter)                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| `capture/`  | `dump` (Text → Inbox-Datei), `context` (Ablageziele, klein gehalten), `heuristic` (Einordnen ohne Modell — die Untergrenze, nicht der Notfall), `classify` (LLM → `FilingProposal`, hart gegen den Kontext geprüft), `actions` (Pfade und Markdown — die einzige Stelle), `apply`/`undo` (ausführen und zurücknehmen, Protokoll im Papierkorb), `tasks` (Todos aus Text)                                                                                                                                                                                                                                                                                        |
-| `wiki/`     | `ingest` (Rohquelle → Source-Seite → Entity-/Concept-Seiten → index.md → log.md), `pages` (lesen/schreiben, Wikilink-Graph), `ask` (Retrieval → Antwort mit Zitaten → optional zurückschreiben)                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| `ingest/`   | Provider-Kette pro Quellenart, schreibt nur nach `raw/`, `.ingest.json` als Protokoll                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| `journal/`  | `day` (Tagesdatei anlegen/lesen/anhängen — `ensureDay` ist der **einzige** Weg, auf dem ein Tageseintrag entsteht; auch `todos:create` geht ihn), `sections` (nimmt die vorhandene Überschrift, legt keine zweite an), `dialog` (Runden als Blockquote parsen und anhängen), `coach` (drei Haltungen; die eigene Runde ist geschrieben, **bevor** ein Modell gefragt wird), `facts`/`close` (Tagesabschluss als Vorschlag — schreibt nichts), `streak` (Serien, Stimmungsverlauf), `labels` über `CloseLabels`                                                                                                                                                  |
-| `overview/` | `reminders` (Fristen, Warte-auf, stagnierend — `waiting-overdue` nur, wenn es wirklich vorbei ist), `recent` (Dateien + Sessions + Journal + Ingest, je Projekt und Tag gruppiert), `dashboard` (alles für einen Rutsch), `status` (Status und nächster Schritt als **Vorschlag**; Heuristik zuerst, `heuristic: true` sagt der Oberfläche, dass kein Modell beteiligt war), `labels` (einsetzbare Beschriftungen — der Kern kennt die UI-Sprache nicht)                                                                                                                                                                                                        |
-| `gardener/` | `checks/*` (neun deterministische Prüfungen, jede synchron und nur über den Index: verwaiste Seite, kaputter Wikilink, Katalog-Drift, angestaubte Seite, liegengebliebener Dump, unverdichtete Quelle, Projekt ohne nächsten Schritt, Beinahe-Dublette, Begriff ohne Seite), `audit` (optionale LLM-Deutung: Widersprüche — nur unter den von Befunden berührten Seiten, höchstens 24), `health` (0–100 **plus `healthKnown`**: ein leerer Vault hat keinen Wert, keine 100), `fixes`/`undo` (Vorschau ist wortwörtlich die geschriebene Zeile; `merge` und `open-*` schreiben nachweislich nichts und heißen deshalb „öffnen"), `labels` über `GardenerLabels` |
-| `claude/`   | `~/.claude/projects/*/**.jsonl` lesen (nur Kopf und Ende, nie ganze Dateien, nur mit `'r'` geöffnet — die mtime ist die Sortiergrundlage), Session → `ClaudeSession`, Zuordnung über `repos` im Projekt-Frontmatter. Der Ordnername ist verlustbehaftet; Wahrheit ist `cwd` aus den Records                                                                                                                                                                                                                                                                                                                                                                     |
+| `vault/`    | `paths` (vault-relative paths, slugs), `layout` (create/check structure), `frontmatter` (parse/merge/serialize, keeps unknown fields), `store` (atomic write: tmp + rename, sha256, conflict), `watch` (chokidar, 250 ms trailing debounce)                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `index/`    | `build` (walk vault → documents), `search` (MiniSearch, snippets), `todos` (parse checkboxes + inline markers), `projects` (frontmatter + derivations: lastTouch, stale, counts), `persist` (`.secondbrain/index/index.json`, hash invalidation, incremental)                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `llm/`      | `gateway` (routing, retry, timeout, abort), `providers/*` (HTTP only, no SDK), `registry` (provider CRUD, model list, probe), `tasks` (catalog, suggestions, tier), `prompts/*` (one file per task, document language as a parameter)                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `capture/`  | `dump` (text → inbox file), `context` (filing targets, kept small), `heuristic` (filing without a model — the floor, not the fallback path), `classify` (LLM → `FilingProposal`, strictly checked against context), `actions` (paths and Markdown — the single place), `apply`/`undo` (execute and revert, log in trash), `tasks` (todos from text)                                                                                                                                                                                                                                                                                                             |
+| `wiki/`     | `ingest` (raw source → source page → entity/concept pages → index.md → log.md), `pages` (read/write, wikilink graph), `ask` (retrieval → answer with citations → optional write-back)                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `ingest/`   | Provider chain per source type, writes only to `raw/`, `.ingest.json` as a log                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `journal/`  | `day` (create/read/append a daily file — `ensureDay` is the **only** path through which a daily entry is created; `todos:create` goes through it too), `sections` (uses the existing heading, never creates a second one), `dialog` (parse and append turns as a blockquote), `coach` (three stances; the user's own turn is written **before** a model is asked), `facts`/`close` (day close as a proposal — writes nothing), `streak` (streaks, mood history), `labels` via `CloseLabels`                                                                                                                                                                    |
+| `overview/` | `reminders` (deadlines, waiting-on, stagnation — `waiting-overdue` only when it's truly overdue), `recent` (files + sessions + journal + ingest, grouped by project and day), `dashboard` (everything in one pass), `status` (status and next step as a **proposal**; heuristic first, `heuristic: true` tells the UI no model was involved), `labels` (displayable labels — the core doesn't know the UI language)                                                                                                                                                                                                                                            |
+| `gardener/` | `checks/*` (nine deterministic checks, each synchronous and index-only: orphaned page, broken wikilink, catalog drift, stale page, stranded dump, undigested source, project without a next step, near-duplicate, term without a page), `audit` (optional LLM interpretation: contradictions — only among pages touched by findings, at most 24), `health` (0–100 **plus `healthKnown`**: an empty vault has no score, not a 100), `fixes`/`undo` (preview is verbatim the line that gets written; `merge` and `open-*` provably write nothing and are therefore called "open"), `labels` via `GardenerLabels`                                              |
+| `claude/`   | Reads `~/.claude/projects/*/**.jsonl` (head and tail only, never whole files, opened only with `'r'` — mtime is the sort basis), session → `ClaudeSession`, matched via `repos` in the project frontmatter. The folder name is lossy; `cwd` from the records is the truth                                                                                                                                                                                                                                                                                                                                                                                       |
 
-## Der Überblick, verdrahtet
+## The overview, wired
 
-Drei Kanalgruppen hängen am selben Bündel und werden deshalb an genau einer Stelle
-verdrahtet ([ipc/overview-deps.ts](../src/main/ipc/overview-deps.ts)): `dashboard:*`,
-`reminders:*` und `claude:*`. Vier Dinge, die dort und nirgends sonst entschieden werden:
+Three channel groups hang off the same bundle and are therefore wired in exactly
+one place ([ipc/overview-deps.ts](../src/main/ipc/overview-deps.ts)): `dashboard:*`,
+`reminders:*`, and `claude:*`. Four things decided there and nowhere else:
 
-- **`externalTouches` ist eine lebende `Map`.** `core-bridge` gibt sie beim
-  `IndexService.open` mit; nach dem Sitzungslauf wird sie gefüllt und der Index zieht
-  **ohne Ereignis** nach — ein `event:vault-changed` würde das Dashboard invalidieren,
-  das gerade fragt. So kennen `lastTouch` und `stale` die Sitzungen.
-- **Sitzungen werden Sekunden gepuffert.** Dashboard, Erinnerungen und die Sessions-Kachel
-  fragen fast gleichzeitig; `~/.claude` dreimal zu lesen wäre Verschwendung. Nach
-  `claude:link` ist der Puffer weg.
-- **Ruhezeiten liegen in `.secondbrain/overview.json`**, nicht in den Einstellungen: eine
-  wachsende Karte gehashter Erinnerungs-IDs ist Bedienzustand, keine Konfiguration. Die
-  Datei darf gelöscht werden — dann mahnt alles wieder, und das ist der ehrliche Verlust.
-- **Der Pflegewert wird nicht erfunden.** Ohne Pflegelauf geht `gardener: null` hinein und
-  `healthKnown: false` heraus.
+- **`externalTouches` is a live `Map`.** `core-bridge` passes it in on
+  `IndexService.open`; after a session run it gets populated and the index catches
+  up **without an event** — an `event:vault-changed` would invalidate the dashboard
+  that's currently asking. That's how `lastTouch` and `stale` know about sessions.
+- **Sessions are buffered for seconds.** Dashboard, reminders, and the sessions
+  tile ask almost simultaneously; reading `~/.claude` three times would be waste.
+  After `claude:link` the buffer is gone.
+- **Quiet periods live in `.secondbrain/overview.json`**, not in settings: a
+  growing map of hashed reminder IDs is operational state, not configuration. The
+  file may be deleted — then everything reminds again, and that's the honest loss.
+- **The health score is never invented.** Without a maintenance run, `gardener: null`
+  goes in and `healthKnown: false` comes out.
 
-`projects:suggestStatus` rechnet in `core/overview/status` — dieselbe Fassung, die auch
-Tageseinträge und Arbeitsspuren mitliest. Geschrieben wird der Vorschlag nie; das tut
-`projects:patch` nach der Bestätigung.
+`projects:suggestStatus` computes in `core/overview/status` — the same routine
+that also reads daily entries and work traces. The suggestion is never written;
+`projects:patch` does that after confirmation.
 
-## Tagebuch und Pflege, verdrahtet
+## Journal and maintenance, wired
 
-Die zwei letzten Bereiche. Fünf Entscheidungen, die man im Code sonst nicht findet:
+The last two areas. Five decisions you won't find elsewhere in the code:
 
-- **Es gibt genau eine Streaming-Mechanik.** `chat:ask` und `journal:coach` gehen beide
-  über [ipc/llm-stream.ts](../src/main/ipc/llm-stream.ts): eine Marke, ein
-  `event:llm-stream`, ein `abort`. Der Wrapper garantiert, dass **jede** Runde endet —
-  auch die, die wirft. Zwei Fassungen liefen beim ersten Sonderfall auseinander, und der
-  Renderer wartet dann für immer.
-- **Der Gesprächsfaden des Tagebuchs ist die Datei**, nicht `.secondbrain/chats/`. Eine
-  Kopie ausgerechnet des Sensibelsten wäre eine zweite Wahrheit; die Stream-Marke ist
-  deshalb `journal-<datum>`, kein Gesprächs-Objekt.
-- **Die eigene Runde steht in der Datei, bevor ein Modell gefragt wird.** Deshalb zieht
-  auch der Fehlerweg den Index nach: der Satz des Menschen ist da, auch wenn die Antwort
-  ausfiel — und ohne Modell wird keine Antwortrunde erfunden.
-- **Der Tagesabschluss schreibt nichts.** `journal:close` liefert einen Vorschlag,
-  `journal:applyClose` führt aus, was bestätigt wurde, und gibt den Rückweg als Liste von
-  `vault:write`-Aufträgen zurück (jeder mit dem Hash des Stands, den er zurückdreht).
-  `capture:apply` taugt hier nicht — es würde den „Dump", hier also den Tageseintrag,
-  am Ende löschen.
-- **Der Pflegebericht liegt roh in `.secondbrain/gardener.json`.** „Passt so" und erledigte
-  Fixes filtern erst beim Lesen und rechnen die Gesundheit neu — deshalb ist beides
-  zurücknehmbar, ohne neu zu prüfen. Ein neuer Lauf leert nur die Erledigt-Liste.
+- **There is exactly one streaming mechanism.** `chat:ask` and `journal:coach`
+  both go through [ipc/llm-stream.ts](../src/main/ipc/llm-stream.ts): one token,
+  one `event:llm-stream`, one `abort`. The wrapper guarantees that **every** turn
+  ends — even the one that throws. Two separate implementations diverged on the
+  first edge case, and then the renderer waits forever.
+- **The journal's conversation thread is the file**, not `.secondbrain/chats/`. A
+  copy of exactly the most sensitive content would be a second truth; the stream
+  token is therefore `journal-<date>`, not a conversation object.
+- **The user's own turn is in the file before a model is asked.** That's why the
+  error path also advances the index: the human's sentence is there even if the
+  reply failed — and without a model, no reply turn is invented.
+- **Day close writes nothing.** `journal:close` returns a proposal,
+  `journal:applyClose` executes what was confirmed, and returns the undo path as a
+  list of `vault:write` jobs (each carrying the hash of the state it reverts).
+  `capture:apply` doesn't fit here — it would delete the "dump," in this case the
+  daily entry, at the end.
+- **The maintenance report lives raw in `.secondbrain/gardener.json`.** "Dismissed"
+  and completed fixes are only filtered on read, and health is recomputed then —
+  which is why both are reversible without re-checking. A new run only clears the
+  completed list.
 
 ## Screens
 
-Ein Ordner pro Screen unter `src/renderer/screens/`. Die Rail links führt in dieser
-Reihenfolge; jeder Screen hat einen Tastaturweg.
+One folder per screen under `src/renderer/screens/`. The rail on the left leads in
+this order; every screen has a keyboard shortcut.
 
-| Screen      | Zweck                                                                    | Hotkey                          |
-| ----------- | ------------------------------------------------------------------------ | ------------------------------- |
-| `dashboard` | Verschiebbare Module: was war, was ansteht, worauf gewartet wird         | `1`                             |
-| `capture`   | Reindumpen. Großes Textfeld, nichts sonst. Auch als eigenes Mini-Fenster | `2` / global `Ctrl+Shift+Space` |
-| `inbox`     | Dumps mit Ablage-Vorschlag: annehmen, ändern, verwerfen                  | `3`                             |
-| `ask`       | Fragen an das Second Brain, Antwort mit Belegen                          | `4`                             |
-| `projects`  | Liste + Detail: Stand, nächster Schritt, Todos, Warte-auf                | `5`                             |
-| `journal`   | Tageseintrag und Coaching-Dialog                                         | `6`                             |
-| `modules`   | Wissens-Module: Seiten, Graph, Quellen                                   | `7`                             |
-| `sources`   | Quellen aufnehmen (YouTube, Datei, URL) und Fortschritt sehen            | `8`                             |
-| `garden`    | Pflege: Befunde, Gesundheit, Ein-Klick-Korrekturen                       | `9`                             |
-| `settings`  | Sprachen, Provider/Modelle, Aufgaben-Routing, Vault, Verhalten           | `0`                             |
+| Screen      | Purpose                                                                   | Hotkey                          |
+| ----------- | -------------------------------------------------------------------------- | -------------------------------- |
+| `dashboard` | Movable modules: what happened, what's coming up, what's being waited on  | `1`                              |
+| `capture`   | Dump back in. Big text field, nothing else. Also its own mini window      | `2` / global `Ctrl+Shift+Space`  |
+| `inbox`     | Dumps with a filing proposal: accept, edit, discard                       | `3`                              |
+| `ask`       | Questions to the Second Brain, answers with evidence                      | `4`                              |
+| `projects`  | List + detail: status, next step, todos, waiting-on                       | `5`                              |
+| `journal`   | Daily entry and coaching dialog                                           | `6`                              |
+| `modules`   | Knowledge modules: pages, graph, sources                                  | `7`                              |
+| `sources`   | Ingest sources (YouTube, file, URL) and watch progress                    | `8`                              |
+| `garden`    | Maintenance: findings, health, one-click fixes                            | `9`                              |
+| `settings`  | Languages, provider/models, task routing, vault, behavior                 | `0`                              |
 
-Dazu: `onboarding` (kein Vault offen), `quick-capture` (eigenes rahmenloses Fenster).
+Plus: `onboarding` (no vault open), `quick-capture` (its own frameless window).
 
-## Zustand im Renderer
+## State in the renderer
 
-- **TanStack Query** für alles, was über IPC kommt. Ein Hook pro Kanal in
-  `src/renderer/lib/queries/`, Keys als Konstanten.
-- **Invalidierung über Events**: `event:vault-changed` und `event:index-progress`
-  invalidieren betroffene Query-Keys zentral in `src/renderer/lib/events.ts`.
-  Kein Polling.
-- **Kein globaler Store.** Was nicht Serverzustand ist (offene Panels, Entwürfe), lebt
-  lokal oder in `localStorage`.
-- **Streams**: `event:llm-stream` schreibt in einen lokalen Puffer pro `messageId`; erst
-  am Ende wird die Query invalidiert. Es gibt **ein** Ereignis und einen Puffer für alle
-  streamenden Aufgaben (`lib/llm-stream.ts`); wer eine neue baut, nimmt denselben Weg.
+- **TanStack Query** for everything that comes over IPC. One hook per channel in
+  `src/renderer/lib/queries/`, keys as constants.
+- **Invalidation via events**: `event:vault-changed` and `event:index-progress`
+  invalidate affected query keys centrally in `src/renderer/lib/events.ts`.
+  No polling.
+- **No global store.** Anything that isn't server state (open panels, drafts)
+  lives locally or in `localStorage`.
+- **Streams**: `event:llm-stream` writes into a local buffer per `messageId`; the
+  query is only invalidated at the end. There is **one** event and one buffer for
+  all streaming tasks (`lib/llm-stream.ts`); anyone building a new one takes the
+  same path.
 
-## Fehler und leere Zustände
+## Errors and empty states
 
-Jeder Screen behandelt vier Zustände ausdrücklich — das ist Teil der Definition of Done:
+Every screen handles four states explicitly — that's part of the definition of done:
 
-1. **Kein Vault offen** → Onboarding-Karte mit einem Knopf.
-2. **Leer** → erklärt, was hier erscheinen wird, plus die Aktion, die es füllt.
-   Nie ein leerer Kasten, nie „keine Daten".
-3. **Kein LLM konfiguriert** → sagt, welche Aufgabe ein Modell bräuchte, und verlinkt
-   direkt in die Routing-Einstellung. Alles, was ohne Modell geht, bleibt benutzbar.
-4. **Fehler** → `IpcError.code` bestimmt die Formulierung; technische Details hinter
-   „Details anzeigen", nie als roher Stacktrace.
+1. **No vault open** → onboarding card with a single button.
+2. **Empty** → explains what will appear here, plus the action that fills it.
+   Never an empty box, never "no data."
+3. **No LLM configured** → says which task would need a model, and links straight
+   into the routing setting. Everything that works without a model stays usable.
+4. **Error** → `IpcError.code` determines the wording; technical details go behind
+   "show details," never as a raw stack trace.
 
-Einen fünften Zustand gab es: „dieser Bereich wird noch gebaut". **Er ist weg**, und er
-darf nicht zurückkommen. Jeder Kanal aus `IPC_CHANNELS` ist echt implementiert; ein Test
-(`tests/main/ipc-coverage.test.ts`) duldet keinen Handler, der nur eine Absage wirft, und
-der Helfer, der solche Absagen gebaut hat, ist gelöscht. Dasselbe gilt für Einstellungen:
-**ein Schalter, den niemand liest, wird entfernt, nicht stillgelegt** — im Verhalten-Tab
-steht neben jedem der Ort, der ihn liest.
+There used to be a fifth state: "this area is still being built." **It's gone**,
+and it must not come back. Every channel in `IPC_CHANNELS` is really implemented;
+a test (`tests/main/ipc-coverage.test.ts`) tolerates no handler that only throws a
+rejection, and the helper that used to build such rejections has been deleted. The
+same applies to settings: **a toggle nobody reads gets removed, not left dormant**
+— the Behavior tab notes, next to each one, the place that reads it.
 
-## Bedienbarkeit (verbindlich)
+## Usability (binding)
 
-- **Tastatur zuerst.** `Ctrl+K` Befehlspalette, `Ctrl+Enter` abschicken, `Esc` schließt,
-  Ziffern wechseln Screens. Jeder Fokus ist sichtbar (`:focus-visible`, Teal-Ring).
-- **Ein Fokuspunkt pro Screen.** Genau eine primäre Aktion in Teal.
-- **Latenz sichtbar machen:** alles über 200 ms bekommt einen Skeleton, alles über 2 s
-  einen Fortschritt mit abbrechbarer Aktion.
-- **Kein Dialog ohne Fluchtweg**, keine Aktion ohne Rückgängig (`undoToken`).
-- **Zahlen und Zeitstempel in Mono**, Text in Sans.
-- A11y: jede interaktive Fläche ≥ 32 px, Kontrast ≥ 4.5:1, `aria-label` an Icon-Buttons,
-  `axe-core` läuft in den Renderer-Tests ohne Verstoß.
+- **Keyboard first.** `Ctrl+K` command palette, `Ctrl+Enter` submits, `Esc` closes,
+  digits switch screens. Every focus is visible (`:focus-visible`, teal ring).
+- **One focal point per screen.** Exactly one primary action in teal.
+- **Make latency visible:** anything over 200 ms gets a skeleton, anything over 2 s
+  gets a progress indicator with a cancelable action.
+- **No dialog without an escape route**, no action without undo (`undoToken`).
+- **Numbers and timestamps in mono**, text in sans.
+- A11y: every interactive area ≥ 32 px, contrast ≥ 4.5:1, `aria-label` on icon
+  buttons, `axe-core` runs in the renderer tests without violations.
 
-## Verifikation der Oberfläche
+## UI verification
 
-`npm run seed` legt `.demo-vault/` mit realistischen deutschen Beispielinhalten an (mehrere
-Projekte in beiden Scopes, Todos mit und ohne Frist, Warte-auf, zwei Module mit
-Wiki-Seiten, Tageseinträge, Inbox-Dumps, Pflege-Befunde) — **plus eine eigene Ablage
-erfundener Claude-Code-Sitzungen** unter `.secondbrain/claude-demo/projects`, auf die
-`overview.claudeProjectsDir` zeigt. Ohne sie läse der Demo-Lauf das echte `~/.claude`, und
-fremde Sitzungstitel landeten in den Aufnahmen.
+`npm run seed` builds `.demo-vault/` with realistic sample content in German
+(several projects in both scopes, todos with and without deadlines, waiting-on,
+two modules with wiki pages, daily entries, inbox dumps, maintenance findings) —
+**plus its own store of invented Claude Code sessions** under
+`.secondbrain/claude-demo/projects`, which `overview.claudeProjectsDir` points to.
+Without it, the demo run would read the real `~/.claude`, and foreign session
+titles would end up in the screenshots.
 
-`npm run shot` startet die App darauf über Playwrights `_electron`, fährt jeden Screen an
-und schreibt PNGs nach `.screenshots/`. Geprüft wird breit (1440×900) **und** eng
-(1152×720), letzteres auch für Zustände hinter der Adresse (`NARROW_DEEP_STATES`), weil ein
-Rail-Screen im Leerlauf nichts über eine Detailspalte verrät. Was höher ist als das
-Fenster, wird zusätzlich bis zum Ende gerollt fotografiert — rollt nichts, entsteht kein
-zweites Bild, statt denselben Ausschnitt zweimal „bis zum Ende" zu nennen.
+`npm run shot` starts the app against it via Playwright's `_electron`, visits
+every screen, and writes PNGs into `.screenshots/`. It's checked both wide
+(1440×900) **and** narrow (1152×720), the latter also for states behind a detail
+address (`NARROW_DEEP_STATES`), because an idle rail screen reveals nothing about
+a detail column. Anything taller than the window also gets an extra screenshot
+scrolled to the end — if there's nothing to scroll, no second image is created,
+instead of naming the same viewport "scrolled to the end" twice.
 
-Damit ist die Oberfläche prüfbar, ohne dass jemand die App von Hand startet — und ohne
-echten Vault-Inhalt.
+This makes the UI verifiable without anyone starting the app by hand — and
+without any real vault content.

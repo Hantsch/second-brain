@@ -1,14 +1,14 @@
-/* Quellen — der Weg von außen in den Vault.
+/* Sources — the path from outside into the vault.
 
-   Von oben nach unten in der Reihenfolge, in der man sie braucht: der Eingang
-   (ein Feld, das selbst erkennt, was hereinkommt), der Zustand von yt-dlp, die
-   Aufträge dieser Sitzung, und darunter der Bestand — was schon aufgenommen ist,
-   mit den unverdichteten hervorgehoben.
+   Top to bottom in the order you need them: the input (a field that detects
+   for itself what's coming in), the state of yt-dlp, this session's jobs,
+   and below that the inventory — what's already been ingested, with the
+   uncondensed ones highlighted.
 
-   Der ganze Screen ist eine Ablagefläche: eine Datei fällt herein und wird
-   aufgenommen (`DropZone` erklärt, was dabei geht und was nicht).
+   The whole screen is a drop zone: a file falls in and gets ingested
+   (`DropZone` explains what works and what doesn't).
 
-   Der eine Teal-Fokuspunkt ist „Aufnehmen". Alles andere bleibt ruhig. */
+   The one teal focus point is "ingest". Everything else stays calm. */
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -45,7 +45,7 @@ export function SourcesScreen() {
     mutations.start.mutate({ kind, input: text, module }, { onSuccess: () => setInput('') });
   };
 
-  /** Ausgewählte Dateien kommen mit ihrem Pfad — das Original wandert nach raw/. */
+  /** Selected files come with their path — the original moves into raw/. */
   const pickFiles = (): void => {
     void api.ingest
       .pickFiles()
@@ -72,8 +72,8 @@ export function SourcesScreen() {
     <DropZone
       onText={(text) => setInput(text)}
       onFiles={(files) => {
-        /* Fallengelassene Dateien kommen als Inhalt herein, nicht als Pfad —
-           deshalb als Text aufgenommen. Der Dateidialog nimmt das Original. */
+        /* Dropped files come in as content, not as a path — that's why
+           they're ingested as text. The file dialog takes the original. */
         for (const file of files) {
           if (file.text.trim().length > 0)
             mutations.start.mutate({ kind: 'text', input: file.text, module });

@@ -1,22 +1,26 @@
-/* Tagebuch und Coaching — der Bereich, in dem die App menschlich sein muss.
+/* Journal and coaching — the area where the app has to be human.
  *
- * Entschieden und geschrieben wird im Kern (`@core/journal`), die Textarbeit an
- * der Datei steht in `journal-day.ts`; hier steht der Ablauf. Vier Entscheidungen,
- * die man im Code sonst nicht sieht:
+ * Deciding and writing happens in the core (`@core/journal`), the text work
+ * on the file lives in `journal-day.ts`; this is where the flow lives. Four
+ * decisions you wouldn't otherwise see in the code:
  *
- * - **Der Renderer parst kein Markdown.** `journal:get` liefert den Tag schon
- *   getrennt (Prosa, Runden, Fakten). Eine zweite Fassung des Dateiformats im
- *   Renderer liefe beim ersten von Hand geschriebenen Tag auseinander.
- * - **Das Gespräch steht im Tageseintrag, nicht in `.secondbrain/chats/`.** Der
- *   Faden ist die Datei (docs/VAULT-FORMAT.md); eine zweite Ablage wäre eine
- *   zweite Wahrheit — und ausgerechnet vom Sensibelsten eine Kopie. Die Marke des
- *   Streams ist deshalb der Tag, nicht ein Gesprächs-Objekt.
- * - **Die eigene Runde ist geschrieben, bevor ein Modell gefragt wird** (im Kern).
- *   Deshalb zieht auch der Fehlerweg den Index nach und weckt den Renderer: der
- *   Satz des Menschen steht da, auch wenn die Antwort ausfiel.
- * - **Ohne Modell wird nichts erfunden.** Das Abschluss-Ereignis trägt dann den
- *   Grund als Code (`LlmUnavailable.reason`) und — im Modus „analysieren" — die
- *   gefundenen früheren Stellen als Belege. Formuliert wird im Renderer.
+ * - **The renderer parses no markdown.** `journal:get` already delivers the
+ *   day pre-split (prose, turns, facts). A second version of the file format
+ *   in the renderer would drift apart the first time someone hand-writes a
+ *   day.
+ * - **The conversation lives in the daily entry, not in
+ *   `.secondbrain/chats/`.** The file is the thread (docs/VAULT-FORMAT.md);
+ *   a second storage location would be a second truth — and a copy of the
+ *   most sensitive thing of all, no less. That's why the stream's identifier
+ *   is the day, not a conversation object.
+ * - **The user's own turn is written before a model is asked** (in the
+ *   core). That's why the error path also brings the index up to date and
+ *   wakes the renderer: the human's sentence is there, even if the answer
+ *   failed.
+ * - **Nothing gets invented without a model.** The completion event then
+ *   carries the reason as a code (`LlmUnavailable.reason`) and — in
+ *   "analyze" mode — the earlier entries found as evidence. Wording happens
+ *   in the renderer.
  */
 
 import { newMessageId } from '@core/chat';
@@ -45,7 +49,7 @@ import { createGateway } from '../llm-bridge';
 import type { IndexLike } from '../contracts';
 import type { Services } from '../services';
 
-/** Was der Tagebuch-Kern am Index braucht — `IndexService` erfüllt es. */
+/** What the journal core needs from the index — `IndexService` satisfies it. */
 const INDEX_METHODS: readonly string[] = ['index', 'search', 'projects', 'modules'];
 
 function knowsJournal(index: IndexLike): index is IndexLike & JournalIndexView {
@@ -53,7 +57,7 @@ function knowsJournal(index: IndexLike): index is IndexLike & JournalIndexView {
   return INDEX_METHODS.every((method) => typeof record[method] === 'function');
 }
 
-/** Der Index als Lesesicht des Kerns. Fehlt eine Ableitung, sagt der Kanal es. */
+/** The index as the core's read view. If a derivation is missing, the channel reports it. */
 function journalIndex(services: Services): JournalIndexView {
   const index = services.requireIndex();
   if (!knowsJournal(index)) throw fail('io', 'der Index liefert keine Tagebuch-Ableitungen');
@@ -62,24 +66,25 @@ function journalIndex(services: Services): JournalIndexView {
 
 // ── Coaching ─────────────────────────────────────────────────────────────────
 
-/** Die Marke des Streams: der Tag ist der Gesprächsfaden. */
+/** The stream's identifier: the day is the conversation thread. */
 function threadOf(date: string): string {
   return `journal-${date}`;
 }
 
 /**
- * Ein früherer Tag als Beleg. `Citation` passt genau: Pfad, wörtlicher Auszug und
- * als Titel der Kalendertag — daraus macht der Renderer „am 22. Juli klang es
- * ähnlich" samt Sprung dorthin. Erfunden ist daran nichts, es steht so in der Datei.
+ * An earlier day as evidence. `Citation` fits exactly: path, verbatim
+ * excerpt, and the calendar day as title — the renderer turns that into
+ * "on July 22 it sounded similar" complete with a jump there. Nothing about
+ * this is invented, it's exactly what's in the file.
  */
 function asCitation(evidence: { date: string; path: string; excerpt: string }): Citation {
   return { path: evidence.path, title: evidence.date, quote: evidence.excerpt, line: null };
 }
 
 /**
- * Die Runde erarbeiten und laufend melden. Beendet den Stream selbst, weil nur
- * hier bekannt ist, was am Abschluss hängt: der Grund eines Ausfalls und, im Modus
- * „analysieren", die gefundenen früheren Tage als Belege.
+ * Work out the turn and report it as it goes. Ends the stream itself,
+ * because only here is it known what hangs off the completion: the reason
+ * for a failure and, in "analyze" mode, the earlier days found as evidence.
  */
 async function runCoach(
   services: Services,
@@ -88,8 +93,8 @@ async function runCoach(
   request: IpcRequest<'journal:coach'>,
 ): Promise<void> {
   const result = await coach(deps, request);
-  /* Erst die Datei, dann das Abschluss-Ereignis: der Renderer lädt den Tag neu,
-     sobald es ankommt — dann muss die Runde schon dort stehen. */
+  /* File first, then the completion event: the renderer reloads the day as
+     soon as it arrives — the turn has to already be there by then. */
   await settle(services, [result.path], 'journal');
   run.end({
     ...(result.noModel ? { error: result.failure?.reason ?? 'error' } : {}),
@@ -98,8 +103,8 @@ async function runCoach(
 }
 
 export function journalHandlers(services: Services): HandlerMap {
-  /* Derselbe Streaming-Weg wie beim Fragen (`ipc/llm-stream.ts`) — eine Mechanik,
-     ein Abschluss-Ereignis, ein Abbruch. */
+  /* The same streaming path as with questions (`ipc/llm-stream.ts`) — one
+     mechanism, one completion event, one abort. */
   const streams = llmStreams(services);
 
   return defineHandlers({
@@ -126,8 +131,8 @@ export function journalHandlers(services: Services): HandlerMap {
     'journal:setDay': async ({ date, text, expectedHash }) => {
       const store = journalStore(services);
       const language = docLanguage(services);
-      /* Auch der erste Satz eines Tages darf hier entstehen — dann gibt es keinen
-         eingefrorenen Hash, weil es noch nichts zu überschreiben gab. */
+      /* Even the first sentence of a day can be created here — then there's
+         no frozen hash, because there was nothing yet to overwrite. */
       const day = await ensureDay(store, date, language);
       const result = await store.write({
         path: day.path,
@@ -140,7 +145,7 @@ export function journalHandlers(services: Services): HandlerMap {
 
     'journal:setMood': async ({ date, mood, energy, expectedHash }) => {
       const store = journalStore(services);
-      /* Eine Stimmung ohne Datei wäre ein Klick, der nichts tut: der Tag entsteht. */
+      /* A mood without a file would be a click that does nothing: the day gets created. */
       await ensureDay(store, date, docLanguage(services));
       const day = await setMood(
         store,
@@ -158,15 +163,16 @@ export function journalHandlers(services: Services): HandlerMap {
     'journal:coach': (request) => {
       const message = (request.message ?? '').trim();
       if (message.length === 0) throw fail('invalid', 'eine Gespraechsrunde ohne Text');
-      /* Die Haltung entscheidet den Prompt: eine unbekannte waere ein Absturz im
-         Hintergrundlauf, und der kaeme als Stream-Fehler zurueck statt als Absage. */
+      /* The mode decides the prompt: an unknown one would be a crash in the
+         background run, and that would come back as a stream error instead
+         of a proper refusal. */
       if (!COACH_MODES.includes(request.mode)) throw fail('invalid', 'diese Haltung gibt es nicht');
-      /* Wirft bei einem Datum, das kein Kalendertag ist — bevor irgendetwas läuft. */
+      /* Throws on a date that isn't a calendar day — before anything runs. */
       const date = dayOf(request.date);
       const messageId = newMessageId(new Date());
       const run = streams.begin(threadOf(date), messageId);
-      /* Store, Index und Gateway hier, nicht im Hintergrundlauf: „kein Vault" und
-         „kein Index" gehören als Fehler an den Aufruf, nicht in einen Stream. */
+      /* Store, index, and gateway here, not in the background run: "no
+         vault" and "no index" belong as errors on the call, not in a stream. */
       const deps: CoachDeps = {
         store: journalStore(services),
         index: journalIndex(services),
@@ -188,16 +194,17 @@ export function journalHandlers(services: Services): HandlerMap {
           }),
         {
           label: 'journal',
-          /* Die eigene Runde steht schon in der Datei (der Kern schreibt sie vor
-             dem Modellaufruf). Der Renderer muss sie sehen, auch im Fehlerfall. */
+          /* The user's own turn is already in the file (the core writes it
+             before calling the model). The renderer has to see it even on
+             failure. */
           onFailure: () => settle(services, [pathFor(date)], 'journal'),
         },
       );
       return { threadId: run.threadId, messageId };
     },
 
-    /* Abgebrochen ist kein Fehler: die eigene Runde bleibt geschrieben, der Stream
-       endet, und der Renderer wartet nicht weiter. */
+    /* Aborted is not an error: the user's own turn stays written, the stream
+       ends, and the renderer stops waiting. */
     'journal:abort': ({ messageId }) => {
       streams.abort(messageId);
     },

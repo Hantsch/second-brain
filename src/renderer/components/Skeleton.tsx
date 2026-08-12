@@ -1,11 +1,11 @@
-/* Platzhalter für Wartezeit. Alles über 200 ms bekommt einen — sichtbare
-   Latenz statt eines eingefrorenen Screens. */
+/* Placeholder for wait time. Anything over 200 ms gets one — visible
+   latency instead of a frozen screen. */
 
 export interface SkeletonProps {
-  /** CSS-Breite, z. B. '100%' oder 120. */
+  /** CSS width, e.g. '100%' or 120. */
   width?: string | number;
   height?: string | number;
-  /** Mehrere Zeilen untereinander. */
+  /** Multiple lines stacked on top of each other. */
   lines?: number;
 }
 

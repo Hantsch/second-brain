@@ -1,5 +1,5 @@
-/* Alle Query-Keys an einem Ort. Wer eine Query anlegt, nimmt einen Key von
-   hier — sonst kann `events.ts` sie nicht gezielt invalidieren. */
+/* All query keys in one place. Anyone creating a query takes a key from
+   here — otherwise `events.ts` can't invalidate it selectively. */
 
 export const qk = {
   vault: {
@@ -24,7 +24,7 @@ export const qk = {
   },
   todos: {
     list: (scope?: string) => ['todos', 'list', scope ?? 'all'] as const,
-    /* Dieselbe Wurzel wie die Liste: eine Dateiänderung trifft beides. */
+    /* Same root as the list: a file change affects both. */
     project: (slug: string) => ['todos', 'project', slug] as const,
   },
   journal: {
@@ -40,8 +40,8 @@ export const qk = {
   },
   chat: {
     threads: (kind?: string) => ['chat', 'threads', kind ?? 'all'] as const,
-    /* Erweitert `threads` um die Suche — damit trifft eine Invalidierung von
-       `threads` auch die gefilterte Liste. */
+    /* Extends `threads` with the search — so invalidating `threads` also hits
+       the filtered list. */
     search: (query: string, kind?: string) => ['chat', 'threads', kind ?? 'all', query] as const,
     thread: (id: string) => ['chat', 'thread', id] as const,
   },
@@ -78,7 +78,7 @@ export const qk = {
   },
 } as const;
 
-/** Wurzeln, die eine Dateiänderung im Vault betrifft. Kein Polling, nur das. */
+/** Roots affected by a file change in the vault. No polling, only this. */
 export const VAULT_DEPENDENT_ROOTS: readonly string[] = [
   'vault',
   'index',
@@ -88,9 +88,9 @@ export const VAULT_DEPENDENT_ROOTS: readonly string[] = [
   'todos',
   'journal',
   'modules',
-  /* Gespräche liegen als Dateien im Vault (`.secondbrain/chats/`): wer eine
-     Antwort ablegt oder ein Gespräch löscht, ändert den Vault — und die Liste
-     muss das mitbekommen, nicht erst beim nächsten Stream. */
+  /* Conversations live as files in the vault (`.secondbrain/chats/`): filing a
+     reply or deleting a conversation changes the vault — and the list needs
+     to pick that up, not only on the next stream. */
   'chat',
   'ingest',
   'dashboard',

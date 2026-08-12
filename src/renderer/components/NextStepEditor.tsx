@@ -1,19 +1,20 @@
-/* Der nächste Schritt — die eine Zeile, die den Wiedereinstieg trägt.
+/* The next step — the one line that carries re-entry into the work.
 
-   Deshalb steht er groß da und ist mit einem Klick editierbar: Enter speichert,
-   Esc bricht ab. Beim Verlassen des Feldes wird nur geschlossen, wenn nichts
-   getippt wurde — getippter Text verschwindet hier nicht.
+   That's why it's shown large and editable with a single click: Enter
+   saves, Esc cancels. Leaving the field only closes it if nothing was
+   typed — typed text never just disappears here.
 
-   Fehlt der Schritt, sagt die Fläche das und bietet an, einen Vorschlag zu
-   holen. Der Vorschlag wird **nie** still eingetragen; er kommt als Karte
-   daneben und braucht eine Bestätigung (Guardrail 2).
+   If the step is missing, the surface says so and offers to fetch a
+   suggestion. The suggestion is **never** entered silently; it arrives as a
+   card alongside and needs confirmation (guardrail 2).
 
-   **Der Stand, auf dem der Entwurf beruht, wird beim Öffnen eingefroren.**
-   Ändert jemand den nächsten Schritt währenddessen von außen, wandert das über
-   den Watcher in `value` — und ohne Hinweis überschriebe das Speichern es
-   stillschweigend. Geprüft wird der Wert, nicht der Hash der Datei: ein
-   abgehaktes Todo im selben Projekt ändert den Hash, aber nicht diese Zeile, und
-   ein Konflikt, der nichts mit der Eingabe zu tun hat, wäre nur im Weg. */
+   **The state the draft is based on is frozen when the field opens.** If
+   someone changes the next step externally in the meantime, that travels
+   through the watcher into `value` — and without a notice, saving would
+   silently overwrite it. What's checked is the value, not the file's hash: a
+   checked-off todo in the same project changes the hash but not this line,
+   and a conflict that has nothing to do with this input would just be in
+   the way. */
 
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '../atoms/Button';
@@ -22,12 +23,12 @@ import { useT } from '../i18n';
 
 export interface NextStepEditorProps {
   value: string | null;
-  /** Der Schreibvorgang läuft. */
+  /** The write is in progress. */
   busy?: boolean;
-  /** Der letzte Stand ist in der Datei angekommen. */
+  /** The latest state has arrived in the file. */
   saved?: boolean;
   onSave: (next: string) => void;
-  /** Vorschlag holen. Ohne Handler gibt es den Knopf nicht. */
+  /** Fetch a suggestion. Without a handler, there is no button. */
   onSuggest?: () => void;
   suggestBusy?: boolean;
 }
@@ -43,9 +44,9 @@ export function NextStepEditor({
   const t = useT();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value ?? '');
-  /** Der Wert, auf dem der Entwurf beruht — eingefroren beim Öffnen. */
+  /** The value the draft is based on — frozen when the field opens. */
   const [base, setBase] = useState<string | null>(null);
-  /** Fremde Fassung, deren Meldung der Nutzer weggeklickt hat. */
+  /** External version whose notice the user has dismissed. */
   const [accepted, setAccepted] = useState<string | null>(null);
   const field = useRef<HTMLInputElement>(null);
 
@@ -79,14 +80,15 @@ export function NextStepEditor({
   if (editing) {
     return (
       <div className="sb-nextstep sb-nextstep--editing">
-        {/* Die Overline bleibt stehen und wird zur Beschriftung des Feldes: ein
-            Eingabefeld, dessen Aufschrift beim Fokussieren verschwindet, ist ein
-            Feld, in das man im Zweifel nicht tippt. */}
+        {/* The overline stays put and becomes the field's label: an input
+            field whose caption disappears on focus is a field people, when
+            in doubt, don't type into. */}
         <label className="gs-overline" htmlFor="sb-nextstep-field">
           {t('project.nextStep.title')}
         </label>
-        {/* Die fremde Änderung kommt über den Watcher an, nicht erst beim
-            Speichern: wer sie kennt, überschreibt sie nicht aus Unwissenheit. */}
+        {/* The external change arrives via the watcher, not only at save
+            time: whoever knows about it won't overwrite it out of
+            ignorance. */}
         {changedOutside ? (
           <div className="sb-nextstep-external" role="alert">
             <p className="sb-nextstep-external-text">
@@ -94,9 +96,9 @@ export function NextStepEditor({
                 ? t('project.nextStep.externalEmpty')
                 : t('project.nextStep.external', { value: current })}
             </p>
-            {/* Beide Wege geben den Fokus zurück ins Feld: die Leiste
-                verschwindet, und ein Fokus, der dabei ins Nichts fällt, macht
-                aus Enter eine Taste ohne Wirkung. */}
+            {/* Both paths give focus back to the field: the bar disappears,
+                and a focus that falls into nothing there would turn Enter
+                into a key with no effect. */}
             <div className="sb-nextstep-external-actions">
               <Button
                 variant="secondary"
@@ -144,7 +146,7 @@ export function NextStepEditor({
             }
           }}
           onBlur={() => {
-            /* Nur schließen, wenn nichts Neues im Feld steht. */
+            /* Only close if there's nothing new in the field. */
             if (draft.replace(/\s+/g, ' ').trim() === current) stop();
           }}
         />

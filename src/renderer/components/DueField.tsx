@@ -1,38 +1,38 @@
-/* Eine Frist wählen, ohne Fremdkörper im dunklen Layout.
+/* Picking a due date without a foreign body in the dark layout.
 
-   Ein rohes `input type="date"` schreibt „dd/mm/yyyy" in die Zeile und öffnet
-   einen hellen Systemkalender — beides gehört nicht in diesen Screen. Fast jede
-   Frist, die beim Einordnen entsteht, ist „heute" oder „morgen"; also stehen die
-   beiden als Chips da, und nur wer ein anderes Datum braucht, klappt das Feld
-   auf. Das gewählte Datum steht daneben in Mono, in der Schreibweise der
-   Oberflächensprache.
+   A raw `input type="date"` writes "dd/mm/yyyy" into the row and opens a
+   light-themed system calendar — neither belongs on this screen. Almost every
+   due date that comes up during filing is "today" or "tomorrow"; so those two
+   sit there as chips, and only someone who needs a different date expands the
+   field. The chosen date is shown next to it in mono, formatted according to
+   the UI language.
 
-   Der Wert bleibt der Vertrag: `YYYY-MM-DD` oder `null`. */
+   The value stays the contract: `YYYY-MM-DD` or `null`. */
 
 import { useState } from 'react';
 import { Button } from '../atoms/Button';
 import { useLanguage, useT } from '../i18n';
 import { formatDate } from '../lib/format';
 
-/** Kalendertag in lokaler Zeit als `YYYY-MM-DD`. */
+/** Calendar day in local time as `YYYY-MM-DD`. */
 function isoDay(value: Date): string {
   const month = String(value.getMonth() + 1).padStart(2, '0');
   const day = String(value.getDate()).padStart(2, '0');
   return `${value.getFullYear()}-${month}-${day}`;
 }
 
-/** Derselbe Tag, um `days` verschoben — gerechnet in Kalendertagen. */
+/** The same day, shifted by `days` — computed in calendar days. */
 function shifted(from: Date, days: number): string {
   return isoDay(new Date(from.getFullYear(), from.getMonth(), from.getDate() + days));
 }
 
 export interface DueFieldProps {
-  /** `YYYY-MM-DD` oder `null` für „ohne Frist". */
+  /** `YYYY-MM-DD` or `null` for "no due date". */
   value: string | null;
-  /** Name des Feldes für Hilfsmittel, bereits übersetzt. */
+  /** Name of the field for assistive tech, already translated. */
   ariaLabel: string;
   onChange: (value: string | null) => void;
-  /** Das „heute" dieser Anzeige. Tests geben eine feste Zeit. */
+  /** This display's notion of "today". Tests pass a fixed time. */
   now?: Date;
 }
 
@@ -41,13 +41,13 @@ export function DueField({ value, ariaLabel, onChange, now = new Date() }: DueFi
   const language = useLanguage();
   const today = isoDay(now);
   const tomorrow = shifted(now, 1);
-  /* Ein Datum, das keiner der beiden Chips trägt — dann steht das Feld offen. */
+  /* A date that neither of the two chips represents — in that case the field stays open. */
   const custom = value !== null && value !== today && value !== tomorrow;
   const [picking, setPicking] = useState(false);
   const open = picking || custom;
 
-  /* Ein Chip, der schon gilt, nimmt die Frist wieder weg. Sonst gäbe es keinen
-     Weg zurück zu „ohne Frist". */
+  /* A chip that's already active removes the due date again. Otherwise there
+     would be no way back to "no due date". */
   const toggle = (day: string): void => {
     setPicking(false);
     onChange(value === day ? null : day);

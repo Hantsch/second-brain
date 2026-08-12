@@ -22,7 +22,17 @@
       "out/**",
       "package.json"
     ],
+    "extraResources": [
+      {
+        "from": "assets/app-icons",
+        "to": "assets/app-icons",
+        "filter": [
+          "*.png"
+        ]
+      }
+    ],
     "win": {
+      "icon": "app-icons/knowledge-garden.png",
       "target": [
         "portable"
       ]

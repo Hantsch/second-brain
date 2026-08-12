@@ -1,23 +1,23 @@
-/* JSON-Dateien im userData-Verzeichnis lesen und schreiben.
-   Geschrieben wird immer atomar (tmp + rename), damit ein Absturz mitten im
-   Schreiben keine halbe Datei hinterlässt — Einstellungen und Schlüssel sind
-   die einzigen Dateien, die die App außerhalb des Vaults besitzt. */
+/* Reading and writing JSON files in the userData directory.
+   Writes always happen atomically (tmp + rename), so a crash mid-write
+   doesn't leave a half-written file — settings and keys are the only files
+   the app owns outside of the vault. */
 
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 
-/** Liest JSON. Fehlt die Datei oder ist sie kaputt, gibt es null statt eines Fehlers. */
+/** Reads JSON. If the file is missing or broken, returns null instead of an error. */
 export async function readJson<T>(file: string): Promise<T | null> {
   try {
     const raw = await readFile(file, 'utf8');
     return JSON.parse(raw) as T;
   } catch {
-    // Fehlend oder unlesbar behandeln wir gleich: die Defaults greifen.
+    // We treat missing and unreadable the same way: the defaults kick in.
     return null;
   }
 }
 
-/** Schreibt JSON atomar: erst in `<datei>.tmp`, dann umbenennen. */
+/** Writes JSON atomically: first to `<file>.tmp`, then renames it. */
 export async function writeJsonAtomic(file: string, value: unknown): Promise<void> {
   await mkdir(dirname(file), { recursive: true });
   const tmp = `${file}.tmp`;
@@ -30,9 +30,9 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * Führt `patch` in `base` zusammen: verschachtelte Objekte werden rekursiv
- * gemergt, Arrays und Primitive ersetzt, `undefined` ignoriert. `base` bleibt
- * unberührt — so bleiben Defaults als Referenz gültig.
+ * Merges `patch` into `base`: nested objects are merged recursively, arrays
+ * and primitives are replaced, `undefined` is ignored. `base` stays
+ * untouched — this way defaults remain valid as a reference.
  */
 export function deepMerge<T>(base: T, patch: unknown): T {
   if (!isPlainObject(patch)) return base;

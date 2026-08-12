@@ -1,21 +1,21 @@
-/* Projekte — der Screen, der „wo war ich stehengeblieben?" beantwortet.
+/* Projects — the screen that answers "where did I leave off?"
 
-   Zwei Spalten: links die Liste, rechts das Detail. Ausgewählt ist beim Öffnen
-   das Projekt mit der jüngsten Spur — die Antwort steht also da, bevor jemand
-   klickt.
+   Two columns: the list on the left, the detail on the right. On open, the
+   project with the most recent trail is selected — so the answer is already
+   there before anyone clicks.
 
-   Zwei Ansichten, ein Screen: „Projekte" und „Alle Todos". Die Todos bekommen
-   keinen eigenen Rail-Platz (die Rail hat zehn feste) und keinen eigenen Screen,
-   weil sie dieselbe Frage aus der anderen Richtung beantworten — und weil man
-   von einem Todo aus regelmäßig ins Projekt springt. Beides in einem Screen hält
-   diesen Sprung bei einem Klick.
+   Two views, one screen: "Projects" and "All todos". The todos get no rail
+   slot of their own (the rail has ten fixed ones) and no screen of their
+   own, because they answer the same question from the other direction — and
+   because you regularly jump from a todo into its project. Having both in
+   one screen keeps that jump to a single click.
 
-   Was ausgewählt und welche Ansicht offen ist, steht in der Adresse
-   (`#/projects?p=<slug>&tab=todos`): so führt ein Verweis von außen — Dashboard,
-   Pflege, Befehlspalette — direkt in ein Projekt.
+   What's selected and which view is open lives in the address
+   (`#/projects?p=<slug>&tab=todos`): that way a link from outside —
+   dashboard, maintenance, command palette — leads straight into a project.
 
-   Tastatur: j/k und Pfeile wählen, Enter öffnet die Datei, n legt ein Projekt
-   an, t öffnet das Feld für ein Todo, x hakt das fokussierte Todo ab. */
+   Keyboard: j/k and arrows select, Enter opens the file, n creates a
+   project, t opens the field for a todo, x checks off the focused todo. */
 
 import { useCallback, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -52,8 +52,8 @@ export function ProjectsScreen() {
   const tab: Tab = params.get('tab') === 'todos' ? 'todos' : 'list';
   const wanted = params.get('p');
   const list = visibleProjects(projects.data ?? [], filter);
-  /* Die Auswahl hängt am Slug. Ist er weggefiltert oder gelöscht, gilt die
-     jüngste Spur — nie ein leeres Detail neben einer gefüllten Liste. */
+  /* The selection hangs off the slug. If it's filtered out or deleted, the
+     most recent trail applies — never an empty detail next to a full list. */
   const selected = list.all.find((project) => project.slug === wanted) ?? list.all[0] ?? null;
   const index = selected === null ? -1 : list.all.indexOf(selected);
   const detail = useProject(selected?.slug ?? null);
@@ -96,9 +96,10 @@ export function ProjectsScreen() {
       overline={t('screen.projects.overline')}
       title={t('screen.projects.title')}
       action={
-        /* Sekundär, immer: der Fokuspunkt dieses Screens ist der nächste Schritt
-           des offenen Projekts — und solange keines offen ist, der Knopf in der
-           Leerzustandskarte. Zwei Teal-Flächen auf einer Fläche gibt es nicht. */
+        /* Secondary, always: the focal point of this screen is the next step
+           of the open project — and as long as none is open, the button in
+           the empty-state card. There is no such thing as two teal surfaces
+           on one screen. */
         <Button variant="secondary" icon="folder-plus" onClick={() => setDialog(true)}>
           {t('projects.new.title')}
         </Button>
@@ -106,7 +107,7 @@ export function ProjectsScreen() {
     />
   );
 
-  /* Nur im offenen Zustand im Baum: so sind die Felder beim Öffnen leer. */
+  /* Only in the tree while open: that way the fields are empty when it opens. */
   const dialogNode = !dialog ? null : (
     <NewProjectDialog
       open={dialog}
@@ -123,8 +124,8 @@ export function ProjectsScreen() {
           {
             onSuccess: (created) => {
               setDialog(false);
-              /* Der erste nächste Schritt ist ein zweiter Schreibvorgang: `create`
-                 legt die Datei an, `patch` trägt das Feld nach. */
+              /* The first next step is a second write: `create` creates the
+                 file, `patch` adds the field afterward. */
               if (input.nextStep !== null) {
                 mutations.patch.mutate({
                   slug: created.slug,

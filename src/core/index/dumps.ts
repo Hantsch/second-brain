@@ -1,9 +1,9 @@
 /**
- * Dumps: die Dateien in `inbox/` als Liste, wie der Inbox-Screen sie braucht.
+ * Dumps: the files in `inbox/` as a list, in the shape the inbox screen needs.
  *
- * Abgeleitet, nichts erfunden: Titel, Zeitpunkt, Herkunft und Status stehen im
- * Frontmatter der Datei (VAULT-FORMAT.md, Abschnitt „Dump"). Fehlt ein Feld,
- * gilt der ehrliche Standard — `status: raw`, Herkunft unbekannt.
+ * Derived, nothing invented: title, timestamp, origin, and status live in
+ * the file's frontmatter (VAULT-FORMAT.md, section "Dump"). If a field is
+ * missing, the honest default applies — `status: raw`, origin unknown.
  */
 
 import type { CaptureOrigin, DumpItem, VaultDoc } from '@shared/types';
@@ -27,11 +27,11 @@ const ORIGINS: readonly CaptureOrigin[] = [
 const STATUSES: readonly DumpItem['status'][] = ['raw', 'proposed', 'filed', 'kept'];
 
 export interface DumpDerivationOptions {
-  /** Das „jetzt", auf das sich `ageDays` bezieht. */
+  /** The "now" that `ageDays` is relative to. */
   now?: DateLike;
 }
 
-/** Dateiname ohne Endung — stabil ueber Neustarts und in der URL brauchbar. */
+/** File name without extension — stable across restarts and usable in a URL. */
 export function dumpId(path: string): string {
   const name = baseName(path);
   const ext = extName(name);
@@ -52,7 +52,7 @@ function statusOf(value: unknown): DumpItem['status'] {
     : 'raw';
 }
 
-/** Ein einzelnes indiziertes Dokument als Dump. */
+/** A single indexed document as a dump. */
 export function toDumpItem(doc: IndexedDoc, options: DumpDerivationOptions = {}): DumpItem {
   const now = options.now ?? new Date();
   const created = asText(doc.frontmatter['created']) ?? doc.updated;
@@ -72,11 +72,11 @@ export function toDumpItem(doc: IndexedDoc, options: DumpDerivationOptions = {})
 }
 
 /**
- * Eine gerade gelesene Datei als Dump — der Weg ohne Index.
+ * A file just read as a dump — the path without the index.
  *
- * Wer einen Dump schreibt, muss ihn sofort zurueckgeben koennen: der Index zieht
- * erst ueber den Watcher nach, und bis dahin wuerde die Oberflaeche den alten
- * Stand zeigen.
+ * Whoever writes a dump must be able to return it immediately: the index
+ * only catches up later via the watcher, and until then the UI would show
+ * the old state.
  */
 export function dumpFromDoc(doc: VaultDoc, options: DumpDerivationOptions = {}): DumpItem {
   const now = options.now ?? new Date();
@@ -98,10 +98,10 @@ export function dumpFromDoc(doc: VaultDoc, options: DumpDerivationOptions = {}):
 }
 
 /**
- * Alle Dumps aus den indizierten Dokumenten, der jüngste zuerst.
+ * All dumps from the indexed documents, most recent first.
  *
- * Gezaehlt wird, was in `inbox/` liegt **oder** `type: dump` traegt: verschiebt
- * der Nutzer einen Dump von Hand, verschwindet er nicht aus der Liste.
+ * What's counted is anything that lives in `inbox/` **or** carries `type:
+ * dump`: if the user moves a dump by hand, it doesn't vanish from the list.
  */
 export function deriveDumps(
   docs: readonly IndexedDoc[],

@@ -1,13 +1,13 @@
-/* Eine Runde des Tagebuch-Gesprächs, so wie sie in der Datei steht:
- * Sprecher, Uhrzeit in Mono, dann der Text.
+/* A round of the journal conversation, as it stands in the file: speaker, time
+ * in mono, then the text.
  *
- * Der eigene Satz bleibt Text mit seinen Umbrüchen — er wird nicht als Markdown
- * gedeutet, weil niemand sein Tagebuch formatiert. Die Antwort des Coachs darf
- * eine Liste sein (Haltung „Tipps"), also läuft sie durch denselben
- * Markdown-Renderer wie jede andere Antwort der App.
+ * The user's own sentence stays text with its line breaks — it's not
+ * interpreted as Markdown, because no one formats their journal. The coach's
+ * response is allowed to be a list (the "Tips" stance), so it runs through the
+ * same Markdown renderer as any other response in the app.
  *
- * Während des Streams steht hier eine ruhige Denk-Anzeige, danach der wachsende
- * Text — kein Platzhalter, der eine fertige Antwort behauptet.
+ * During the stream, a calm thinking indicator shows here, then the growing
+ * text — no placeholder that claims a finished answer.
  */
 
 import type { JournalTurn } from '@shared/ipc';
@@ -17,7 +17,7 @@ import { useT } from '../i18n';
 
 export interface DialogTurnProps {
   turn: JournalTurn;
-  /** Die Antwort wächst noch. */
+  /** The response is still growing. */
   streaming?: boolean;
 }
 
@@ -33,8 +33,8 @@ export function DialogTurn({ turn, streaming = false }: DialogTurnProps) {
       aria-busy={streaming ? 'true' : undefined}
     >
       <header className="sb-dturn-head">
-        {/* Overline als Text, keine Überschrift: das Gespräch ist eine Folge von
-            Runden, keine Gliederung. */}
+        {/* Overline as text, not a heading: the conversation is a sequence of
+            turns, not an outline. */}
         <span className="gs-overline">{speaker}</span>
         {turn.at === null ? null : <span className="sb-mono sb-dturn-time">{turn.at}</span>}
       </header>

@@ -1,10 +1,10 @@
-/* Deutsche Texte des Modelle-Tabs: Einstieg ohne Provider, Erkennung lokaler
-   Runtimes, Provider-Karten und das Aufgaben-Routing.
+/* German strings for the models tab: onboarding without a provider, detection
+   of local runtimes, provider cards, and task routing.
 
-   Zwei Tonlagen, die hier zusammenkommen: der Einstieg erklärt einem Nutzer
-   ohne Modell die drei Wege in je einem Satz, das Routing bleibt technisch und
-   knapp. `settings.fallback.*` sagt je Aufgabe, was ohne Modell noch geht —
-   ehrlich, nicht beschönigend. */
+   Two tones come together here: the onboarding explains the three paths to a
+   user without a model in one sentence each, while the routing stays
+   technical and terse. `settings.fallback.*` states, per task, what still
+   works without a model — honest, not sugar-coated. */
 
 export const deSettingsModels = {
   'settings.models.start.title': 'Noch kein Modell eingerichtet',
@@ -90,8 +90,8 @@ export const deSettingsModels = {
 
   'settings.routing.title': 'Aufgaben-Routing',
   'settings.routing.summary': '{routed} von {total} Aufgaben haben ein Modell.',
-  /* Die Ehrlichkeitsauskunft steht in der Zeile der Aufgabe, nicht als
-     Schachtelsatz über der Tabelle — dort liest sie niemand. */
+  /* The honesty note sits in the task's own row, not as a nested sentence
+     above the table — nobody reads it there. */
   'settings.routing.withoutRow': 'Ohne Modell: {fallback}',
   'settings.routing.callToAction':
     'Ein Provider mit Modellen ist eingerichtet. „Automatisch zuordnen" schlägt zu jeder Aufgabe ein Modell vor; gespeichert wird erst nach deiner Zustimmung.',
@@ -103,7 +103,7 @@ export const deSettingsModels = {
   'settings.routing.col.model': 'Provider und Modell',
   'settings.routing.col.test': 'Test',
   'settings.routing.sensitive': 'Läuft über persönliche Inhalte — lokales Modell empfohlen.',
-  /* In der Tabelle als kleine Marke; der ganze Satz steht im Titel der Marke. */
+  /* Shown as a small badge in the table; the full sentence sits in the badge's title. */
   'settings.routing.sensitiveShort': 'Persönlich',
   'settings.routing.inherit': 'Standard: {model}',
   'settings.routing.noModel': 'ohne Modell',
@@ -112,7 +112,7 @@ export const deSettingsModels = {
   'settings.routing.test': 'Testen',
   'settings.routing.testOk': 'Antwort nach {ms} ms',
   'settings.routing.testFailed': 'Kein Ergebnis',
-  /* Gründe aus `LlmUnavailable.reason` — im Klartext, nicht als Code. */
+  /* Reasons from `LlmUnavailable.reason` — spelled out, not as a code. */
   'settings.routing.reason.no-route': 'Für diese Aufgabe ist kein Modell zugeordnet.',
   'settings.routing.reason.provider-disabled': 'Der zugeordnete Provider ist abgeschaltet.',
   'settings.routing.reason.no-key': 'Für den zugeordneten Provider fehlt der Schlüssel.',

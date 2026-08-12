@@ -1,11 +1,11 @@
-/* Die Hooks des Aufnehmens: Auftragsliste, yt-dlp-Zustand und die vier Aktionen
-   (starten, abbrechen, wiederholen, Binary holen).
+/* The hooks for ingesting: job list, yt-dlp status, and the four actions
+   (start, cancel, retry, fetch the binary).
 
-   Fortschritt kommt als `event:ingest-progress` und wird **in den Zwischenspeicher
-   geschrieben**, nicht als Neuabfrage: ein Auftrag meldet sich dutzende Male, und
-   jede Meldung eine Runde über den Hauptprozess zu schicken wäre Verschwendung.
-   Die Wahrheit bleibt trotzdem dort — `events.ts` frischt die Liste zusätzlich
-   auf, und beides sagt dasselbe. */
+   Progress arrives as `event:ingest-progress` and is **written straight into
+   the query cache**, not refetched: a job reports in dozens of times, and
+   sending every report on a round trip through the main process would be
+   wasteful. The source of truth stays there regardless — `events.ts` also
+   refreshes the list, and both say the same thing. */
 
 import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -18,7 +18,7 @@ import { qk } from './keys';
 
 export type YtdlpStatus = IpcResponse<'ingest:ytdlpStatus'>;
 
-/** Den gemeldeten Auftrag in die Liste einsetzen — vorne, wenn er neu ist. */
+/** Insert the reported job into the list — appended if it's new. */
 function mergeJob(jobs: readonly IngestJob[] | undefined, job: IngestJob): IngestJob[] {
   const list = jobs ?? [];
   const at = list.findIndex((entry) => entry.id === job.id);
@@ -29,8 +29,8 @@ function mergeJob(jobs: readonly IngestJob[] | undefined, job: IngestJob): Inges
 }
 
 /**
- * Alle Aufträge, laufende zuerst gemeldet. Die Liste lebt im Hauptprozess; hier
- * steht nur ihr Abbild.
+ * All jobs, running ones reported first. The list lives in the main process;
+ * here there's only a mirror of it.
  */
 export function useIngestJobs(): UseQueryResult<IngestJob[]> {
   const client = useQueryClient();
@@ -45,13 +45,13 @@ export function useIngestJobs(): UseQueryResult<IngestJob[]> {
   return result;
 }
 
-/** Liegt yt-dlp auf dieser Maschine? Nur gefragt, nie von selbst geholt. */
+/** Is yt-dlp present on this machine? Only asked, never fetched on its own. */
 export function useYtdlpStatus(): UseQueryResult<YtdlpStatus> {
   return useQuery({
     queryKey: qk.ingest.ytdlp(),
     queryFn: api.ingest.ytdlpStatus,
     retry: false,
-    /* Ob das Binary da ist, entscheidet sich außerhalb der App. */
+    /* Whether the binary is present is decided outside the app. */
     staleTime: 0,
   });
 }

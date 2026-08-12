@@ -1,13 +1,14 @@
-/* Erfassen — ein Feld, eine Frage, ein Knopf.
+/* Capture — one field, one question, one button.
 
-   Der Screen ist der Existenzgrund der App: unter zwei Sekunden von „Gedanke" zu
-   „gespeichert". Also liegt der Fokus beim Öffnen im Feld, Ctrl+Enter legt ab,
-   und danach ist das Feld leer, fokussiert und bereit für den nächsten Gedanken —
-   mehrere Dumps hintereinander gehen ohne einen Mausklick.
+   This screen is the app's reason for existing: under two seconds from
+   "thought" to "saved". So focus lands in the field on open, Ctrl+Enter
+   files it, and afterward the field is empty, focused, and ready for the
+   next thought — several dumps in a row go by without a single mouse
+   click.
 
-   Kein Formular: Scope und Tags sind zwei ruhige Angebote in der Fußzeile, keine
-   Pflichtfelder. Wer sie nicht anfasst, verliert nichts — eingeordnet wird
-   später, als Vorschlag, den man bestätigt. */
+   No form: scope and tags are two calm offers in the footer, not required
+   fields. Whoever doesn't touch them loses nothing — filing happens later,
+   as a proposal one confirms. */
 
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -23,10 +24,10 @@ import { api } from '../../lib/api';
 import { useCaptureMutations, useCaptureSettings, useProposal } from '../../lib/queries/capture';
 import { useTaskRouted } from '../../lib/queries/llm';
 
-/** Der Scope bleibt offen, solange niemand ihn setzt. */
+/** The scope stays open as long as nobody sets it. */
 const SCOPES: readonly (Scope | 'open')[] = ['open', 'work', 'private'];
 
-/** Tags werden mit Komma oder Leerzeichen getrennt. */
+/** Tags are separated by comma or whitespace. */
 function parseTags(input: string): string[] {
   return [
     ...new Set(
@@ -54,10 +55,10 @@ export function CaptureScreen() {
   const mutations = useCaptureMutations();
   const settings = useCaptureSettings();
   const modelRouted = useTaskRouted('classify-dump');
-  /* Dieselbe Abfrage wie in der Inbox (`useProposal`), auf denselben Cache —
-     kein zweiter Modellaufruf, nur ein zweiter Zuschauer. Ohne Vorgang (kein
-     gespeicherter Dump, oder die Einstellung steht aus) bleibt sie aus: sonst
-     stieße „Vorschlag erstellen" ausgerechnet dort an, wo es niemand wollte. */
+  /* The same query as in the inbox (`useProposal`), on the same cache — no
+     second model call, just a second observer. Without a trigger (no saved
+     dump, or the setting is off), it stays inactive: otherwise "create
+     proposal" would fire exactly where nobody wanted it. */
   const proposal = useProposal(
     saved !== null && settings?.autoClassify === true ? saved.path : null,
   );
@@ -80,15 +81,15 @@ export function CaptureScreen() {
         onSuccess: (dump) => {
           setText('');
           setSaved(dump);
-          /* Der Fokus bleibt, wo er war — der nächste Gedanke braucht keine Maus. */
+          /* Focus stays where it was — the next thought needs no mouse. */
           field.current?.focus();
         },
       },
     );
   };
 
-  /* Rückgängig heißt hier: die Datei wandert in den Papierkorb und der Gedanke
-     steht wieder im Feld — nicht „irgendwo gespeichert, aber weg". */
+  /* Undo here means: the file moves to trash and the thought sits back in
+     the field — not "saved somewhere, but gone". */
   const undoSave = (): void => {
     if (saved === null) return;
     const dump = saved;
@@ -137,9 +138,9 @@ export function CaptureScreen() {
               save();
               return;
             }
-            /* Esc verließ das Feld vorher nicht — der Fokus blieb stehen, ohne
-               einen Weg zurück außer der Maus. Der Entwurf bleibt stehen, nur
-               der Fokus wandert zum aktiven Rail-Eintrag. */
+            /* Esc used to not leave the field — focus stayed put, with no
+               way back except the mouse. The draft stays as it is, only
+               focus moves to the active rail entry. */
             if (event.key === 'Escape') {
               event.preventDefault();
               event.stopPropagation();
@@ -229,10 +230,11 @@ export function CaptureScreen() {
               {t('capture.toInbox')}
             </button>
           </p>
-          {/* Gebunden an den Vorgang, nicht an die Einstellung: „wird erstellt"
-              stand vorher unverändert da, ob der Vorschlag längst im Cache lag
-              oder noch lief. Bei einem Fehlschlag sagt das der bestehende
-              Toast (`toast.classifyFailed`) — hier kommt nichts doppelt. */}
+          {/* Bound to the process, not the setting: "being created" used to
+              show unchanged whether the proposal was already sitting in
+              the cache or still running. On failure, the existing toast
+              (`toast.classifyFailed`) reports that — nothing is doubled
+              here. */}
           {settings?.autoClassify === true && proposal.error === null ? (
             <p className="sb-capture-strip">
               <Icon name="sparkles" size={14} />

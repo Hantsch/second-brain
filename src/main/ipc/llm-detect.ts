@@ -1,15 +1,17 @@
-/* Erkennung lokaler LLM-Runtimes.
+/* Detection of local LLM runtimes.
 
-   Der Nutzer, der noch kein Modell hat, soll nicht raten müssen, ob auf seinem
-   Rechner schon eines läuft. Deshalb fragt die Einstellung die Adressen der
-   lokalen Vorlagen (Ollama, LM Studio) einmal ab: antwortet `/models`, läuft die
-   Runtime — und die Oberfläche kann konkret werden („3 Modelle gefunden").
+   A user who doesn't have a model yet shouldn't have to guess whether one
+   is already running on their machine. So the settings screen queries the
+   addresses of the local presets (Ollama, LM Studio) once: if `/models`
+   answers, the runtime is running — and the UI can get concrete ("3 models
+   found").
 
-   Bewusst keine Nebenwirkung: hier wird nichts angelegt und nichts gespeichert.
-   Das Übernehmen als Provider bleibt ein eigener, bestätigter Schritt.
+   Deliberately no side effect: nothing gets created or saved here. Adopting
+   it as a provider remains its own, confirmed step.
 
-   Ein kurzer Zeitrahmen ist Teil der Sache: ein geschlossener Port antwortet
-   sofort, ein stiller Host würde die Einstellung sonst sekundenlang aufhalten. */
+   A short timeout is part of the design: a closed port answers instantly,
+   while a silent host would otherwise stall the settings screen for
+   seconds. */
 
 import { OpenAiCompatibleProvider, PROVIDER_PRESETS } from '@core/llm';
 import type { FetchLike } from '@core/llm';
@@ -18,30 +20,31 @@ import type { ProviderConfig } from '@shared/types';
 
 export type LocalRuntime = IpcResponse<'llm:detectLocal'>[number];
 
-/** Länger warten wäre für einen Einstiegshinweis nicht angemessen. */
+/** Waiting longer wouldn't be appropriate for an onboarding hint. */
 export const DETECT_TIMEOUT_MS = 1500;
 
 export interface DetectOptions {
-  /** Injizierbar, damit Tests nie ins Netz gehen. */
+  /** Injectable, so tests never hit the network. */
   fetchImpl?: FetchLike;
   timeoutMs?: number;
 }
 
-/** `fetch` mit Zeitgrenze — ohne sie hängt ein stiller Host die Abfrage auf. */
+/** `fetch` with a timeout — without it, a silent host would hang the request. */
 function timedFetch(timeoutMs: number): FetchLike {
   return (url, init) =>
     fetch(url, { ...init, signal: init?.signal ?? AbortSignal.timeout(timeoutMs) });
 }
 
-/** Adressvergleich ohne Schrägstrich am Ende und ohne Groß-/Kleinschreibung. */
+/** Address comparison ignoring a trailing slash and case. */
 function sameEndpoint(one: string, other: string): boolean {
   const normalize = (value: string): string => value.trim().replace(/\/+$/, '').toLowerCase();
   return normalize(one) === normalize(other);
 }
 
 /**
- * Prüft jede lokale Vorlage. Antwortet eine Adresse nicht, ist das kein Fehler,
- * sondern die Antwort „läuft hier nicht" — die Oberfläche leitet dann an.
+ * Checks every local preset. If an address doesn't answer, that's not an
+ * error but the answer "not running here" — the UI then directs the user
+ * onward.
  */
 export async function detectLocalRuntimes(
   providers: readonly ProviderConfig[],
@@ -59,8 +62,8 @@ export async function detectLocalRuntimes(
         models = await runtime.listModels();
         running = true;
       } catch {
-        /* Geschlossener Port, Zeitüberschreitung, fremde Antwort: alles heißt
-           hier dasselbe — auf dieser Adresse läuft nichts, was wir benutzen. */
+        /* Closed port, timeout, unexpected response: they all mean the same
+           thing here — nothing we can use is running at this address. */
       }
       return {
         presetId: preset.id,

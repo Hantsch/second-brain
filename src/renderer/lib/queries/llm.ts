@@ -1,12 +1,12 @@
-/* Die Hooks der LLM-Verwaltung: Provider, Vorlagen, Aufgaben, Routing — und die
-   Frage, die jeder LLM-gestützte Screen stellt: liegt für diese Aufgabe
-   überhaupt ein Modell? Die Antwort entscheidet zwischen Arbeitsfläche und dem
-   ehrlichen Zustand „kein Modell konfiguriert".
+/* The hooks for LLM management: providers, presets, tasks, routing — and
+   the question every LLM-powered screen asks: is there even a model for
+   this task? The answer decides between the working surface and the honest
+   "no model configured" state.
 
-   Provider und Routing liegen in den Vault-Einstellungen. Sie ändern sich nur
-   durch Aktionen dieser Oberfläche, nicht durch Dateiänderungen im Vault —
-   deshalb invalidieren die Mutationen hier gezielt, statt an
-   `event:vault-changed` zu hängen. */
+   Providers and routing live in the vault settings. They only change
+   through actions in this UI, not through file changes in the vault —
+   that's why the mutations here invalidate deliberately, instead of
+   hooking into `event:vault-changed`. */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { UseMutationResult, UseQueryResult } from '@tanstack/react-query';
@@ -27,9 +27,9 @@ export type LocalRuntime = IpcResponse<'llm:detectLocal'>[number];
 export type TaskTestResult = IpcResponse<'llm:testTask'>;
 
 /**
- * Route einer Aufgabe: eigener Eintrag, sonst der Standard ihrer
- * Leistungsklasse. Dieselbe Kette wie `RoutingGateway.routeFor` im Kern — hier
- * nur, um die Oberfläche vorher schon ehrlich zu machen.
+ * A task's route: its own entry, otherwise the default of its performance
+ * tier. The same chain as `RoutingGateway.routeFor` in the core — here only
+ * to make the UI honest ahead of time.
  */
 export function resolveRoute(
   routing: Routing,
@@ -63,7 +63,7 @@ export function useRouting(): UseQueryResult<Routing> {
   return useQuery({ queryKey: qk.llm.routing(), queryFn: api.llm.routing, retry: false });
 }
 
-/** `undefined` heißt „noch unbekannt" — solange wird nichts behauptet. */
+/** `undefined` means "still unknown" — until then, nothing is asserted. */
 export function useTaskRouted(task: TaskKind): boolean | undefined {
   const routing = useRouting();
   const tasks = useTasks();
@@ -73,9 +73,9 @@ export function useTaskRouted(task: TaskKind): boolean | undefined {
 }
 
 /**
- * Läuft auf diesem Rechner schon eine lokale Runtime? Wird nur gefragt, wenn
- * `enabled` — die Abfrage geht ans Netz (localhost) und gehört deshalb nicht in
- * jeden Screen.
+ * Is a local runtime already running on this machine? Only queried when
+ * `enabled` — the request goes over the network (localhost) and therefore
+ * doesn't belong in every screen.
  */
 export function useLocalRuntimes(enabled: boolean): UseQueryResult<LocalRuntime[]> {
   return useQuery({
@@ -83,14 +83,14 @@ export function useLocalRuntimes(enabled: boolean): UseQueryResult<LocalRuntime[
     queryFn: api.llm.detectLocal,
     enabled,
     retry: false,
-    /* Ob Ollama läuft, ändert sich außerhalb der App. Beim Wiederbetreten des
-       Tabs wird deshalb frisch gefragt. */
+    /* Whether Ollama is running changes outside the app. That's why
+       re-entering the tab triggers a fresh query. */
     staleTime: 0,
     gcTime: 0,
   });
 }
 
-/** Was nach einer Provider-Änderung nicht mehr stimmt. */
+/** What's no longer accurate after a provider change. */
 function invalidateProviders(client: ReturnType<typeof useQueryClient>): void {
   void client.invalidateQueries({ queryKey: qk.llm.providers() });
   void client.invalidateQueries({ queryKey: qk.llm.routing() });
@@ -106,7 +106,7 @@ export interface ProviderMutations {
   models: UseMutationResult<string[], unknown, string>;
 }
 
-/** Provider anlegen, ändern, entfernen, testen — jede Änderung frischt den Bestand auf. */
+/** Add, edit, remove, test a provider — every change refreshes the set. */
 export function useProviderMutations(): ProviderMutations {
   const client = useQueryClient();
   const done = (): void => invalidateProviders(client);

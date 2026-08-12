@@ -1,25 +1,25 @@
-/* Der Tastaturweg des Tagebuchs.
+/* The journal's keyboard path.
  *
- * Zwei Entscheidungen, und beide sind Konflikte, die aufgelöst werden müssen:
+ * Two decisions, and both are conflicts that need resolving:
  *
- * - **Pfeile und j/k wechseln den Tag** — aber nicht, während jemand schreibt. In
- *   einem Textfeld gehören sie dem Text (Zeilenwechsel, Cursor), sonst könnte man
- *   im Tagestext nicht nach oben.
- * - **Die Haltung wechselt mit Ctrl+1 bis Ctrl+3, nicht mit 1/2/3.** Die nackten
- *   Ziffern gehören der Rail (Screenwechsel, `use-shell-hotkeys.ts`), und im
- *   Schreibfeld sind sie Zeichen — genau dort braucht man den Wechsel aber. Mit
- *   Strg greift er überall: die Hülle lässt Tastendrücke mit Modifikator liegen,
- *   und ein Textfeld schreibt sie nicht. Der Hinweis dazu steht am Segment
- *   (`CoachModeSwitch`), damit niemand raten muss.
+ * - **Arrows and j/k switch the day** — but not while someone is typing. In a
+ *   text field they belong to the text (line breaks, cursor), otherwise you
+ *   couldn't move up within the day's text.
+ * - **The stance switches with Ctrl+1 through Ctrl+3, not with 1/2/3.** The
+ *   bare digits belong to the rail (screen switching, `use-shell-hotkeys.ts`),
+ *   and in the writing field they're characters — but that's exactly where the
+ *   switch is needed. With Ctrl it works everywhere: the shell leaves keypresses
+ *   with a modifier alone, and a text field doesn't type them. The hint for it
+ *   sits on the segment (`CoachModeSwitch`), so no one has to guess.
  *
- * Ein offener Dialog behält seine Tasten (Prüfung auf `.gs-scrim`).
+ * An open dialog keeps its keys (checked via `.gs-scrim`).
  */
 
 import { useEffect } from 'react';
 import type { CoachMode } from '@shared/types';
 import { COACH_MODE_ORDER } from '../../lib/queries/journal';
 
-/* Im Feld tippt der Nutzer — dieselbe Regel wie in der Hülle. */
+/* The user is typing in the field — same rule as in the shell. */
 function isTyping(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
   if (target.isContentEditable) return true;
@@ -27,11 +27,11 @@ function isTyping(target: EventTarget | null): boolean {
 }
 
 export interface JournalKeysOptions {
-  /** Die auswählbaren Tage, jüngster zuerst. */
+  /** The selectable days, most recent first. */
   dates: readonly string[];
-  /** Der gerade offene Tag. */
+  /** The day that's currently open. */
   current: string;
-  /** Tag wählen; `focus` zieht den Tastaturfokus auf die Zeile. */
+  /** Select a day; `focus` moves keyboard focus to the row. */
   select: (date: string, focus?: boolean) => void;
   onMode: (mode: CoachMode) => void;
 }

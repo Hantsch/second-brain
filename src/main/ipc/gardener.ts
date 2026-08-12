@@ -1,23 +1,24 @@
-/* Pflege: der letzte Bericht, ein neuer Lauf, „passt so" und die Ein-Klick-Fixes.
+/* Maintenance: the latest report, a new run, "looks fine" and the one-click
+   fixes.
 
-   Gerechnet wird in `@core/gardener`, verdrahtet in `gardener-deps.ts`, gemerkt
-   in `.secondbrain/gardener.json` (`gardener-state.ts`). Der Kanal selbst hält
-   vier Zusagen ein:
+   Computed in `@core/gardener`, wired up in `gardener-deps.ts`, persisted in
+   `.secondbrain/gardener.json` (`gardener-state.ts`). The channel itself keeps
+   four promises:
 
-   - **`gardener:report` prüft nicht.** Er liest den letzten Lauf. Gibt es keinen,
-     ist die Antwort `null` — der Screen sagt dann „noch nicht geprüft" statt eine
-     Gesundheit zu erfinden.
-   - **`gardener:run` ist abbrechbar und meldet Fortschritt.** Ein Lauf je Vault;
-     ein zweiter Aufruf während eines Laufs ist ein Fehler, kein zweiter Lauf.
-     `useLlm` entscheidet der Aufrufer, sonst die Einstellung — ein Lauf, der
-     unbemerkt ein Modell fragt, wäre eine Überraschung mit Kosten.
-   - **„Passt so" ist eine Entscheidung über eine Sache, nicht über einen Lauf.**
-     Sie wird persistiert, überlebt jeden weiteren Lauf, und `gardener:undismiss`
-     nimmt sie zurück.
-   - **Ein Fix schreibt nur, was er ankündigt.** Der Kern liest die Datei beim
-     Klick frisch, prüft die Voraussetzung neu und schreibt mit dem gerade
-     gelesenen Hash (`core/gardener/fixes.ts`). Danach wird der Befund
-     ausgeblendet statt gelöscht — `gardener:undoFix` dreht beides zurück. */
+   - **`gardener:report` does not check anything.** It reads the last run. If
+     there is none, the answer is `null` — the screen then says "not checked
+     yet" instead of inventing a health status.
+   - **`gardener:run` is cancellable and reports progress.** One run per vault;
+     a second call during a run is an error, not a second run. The caller
+     decides `useLlm`, otherwise the setting does — a run that quietly queries
+     a model would be a surprise with a cost.
+   - **"Looks fine" is a decision about one thing, not about a run.** It's
+     persisted, survives every further run, and `gardener:undismiss` reverses
+     it.
+   - **A fix writes only what it announces.** The core reads the file fresh on
+     click, re-checks the precondition, and writes with the hash just read
+     (`core/gardener/fixes.ts`). Afterward the finding is hidden rather than
+     deleted — `gardener:undoFix` reverses both. */
 
 import { applyFix, undoFix } from '@core/gardener';
 import type { GardenerFinding } from '@shared/types';
@@ -28,23 +29,23 @@ import { docLanguage, settle, wikiStore } from './wiki-bridge';
 import { GARDENER_STATE_FILE } from '../gardener-state';
 import type { Services } from '../services';
 
-/* Ein Lauf je Prozess. Mehr braucht es nicht: es gibt einen offenen Vault, und
-   zwei gleichzeitige Läufe über denselben Bestand ergeben denselben Bericht
-   zweimal — mit doppelten Kosten, wenn ein Modell beteiligt ist. */
+/* One run per process. That's all that's needed: there's one open vault, and
+   two simultaneous runs over the same content would produce the same report
+   twice — at double the cost, if a model is involved. */
 let running: AbortController | null = null;
 
-/** Bricht einen laufenden Pflegelauf ab — beim Schließen des Vaults und beim Beenden. */
+/** Cancels a running maintenance run — on closing the vault and on quitting. */
 export function cancelGardenerRun(): void {
   running?.abort();
   running = null;
 }
 
-/** Läuft gerade ein Pflegelauf? */
+/** Is a maintenance run currently in progress? */
 export function gardenerRunning(): boolean {
   return running !== null;
 }
 
-/** Der Bericht hat sich geändert: dieselbe Weckung wie bei den Erinnerungen. */
+/** The report has changed: same wake-up as with the reminders. */
 function wake(services: Services): void {
   services.sendEvent('event:vault-changed', {
     paths: [GARDENER_STATE_FILE],
@@ -67,9 +68,9 @@ export function gardenerHandlers(services: Services): HandlerMap {
 
     'gardener:run': async ({ useLlm }) => {
       if (running !== null) throw fail('invalid', 'es läuft schon ein Pflegelauf');
-      /* Die Marke wird **vor** dem ersten `await` gesetzt: sonst kämen zwei
-         Aufrufe aus demselben Tastendruck beide durch und schrieben denselben
-         Bericht zweimal. */
+      /* The marker is set **before** the first `await`: otherwise two calls
+         from the same keypress would both go through and write the same
+         report twice. */
       const controller = new AbortController();
       running = controller;
       try {
@@ -85,8 +86,8 @@ export function gardenerHandlers(services: Services): HandlerMap {
         return report;
       } finally {
         running = null;
-        /* Auch ein abgebrochener Lauf endet sichtbar: sonst dreht die Anzeige
-           weiter, obwohl niemand mehr rechnet. */
+        /* Even a cancelled run ends visibly: otherwise the indicator keeps
+           spinning even though nothing is computing anymore. */
         services.sendEvent('event:gardener-progress', {
           phase: 'done',
           check: null,
@@ -103,8 +104,9 @@ export function gardenerHandlers(services: Services): HandlerMap {
 
     'gardener:dismiss': async ({ id }) => {
       const state = await gardenerStateFor(services);
-      /* Einen Befund auszublenden, den kein Lauf kennt, wäre ein Knopf, der
-         Erfolg meldet und nichts tut — dieselbe Haltung wie `reminders:snooze`. */
+      /* Hiding a finding that no run knows about would be a button that
+         reports success and does nothing — the same stance as
+         `reminders:snooze`. */
       if (!(await state.dismiss(id))) throw fail('not-found', 'diesen Befund gibt es nicht');
       wake(services);
     },
@@ -125,8 +127,8 @@ export function gardenerHandlers(services: Services): HandlerMap {
         checked,
       );
       if (result.written.length > 0) {
-        /* Erst der Index, dann der Zustand: `present()` rechnet die Gesundheit
-           neu, und der Weckruf danach lässt den Screen beides frisch holen. */
+        /* Index first, then state: `present()` recomputes the health status,
+           and the wake-up call after it lets the screen fetch both fresh. */
         await settle(services, result.written, 'gardener');
         if (result.undoToken !== null) await state.markFixed(checked.id, result.undoToken);
         wake(services);

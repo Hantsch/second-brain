@@ -1,10 +1,10 @@
-/* Eine Liste von Todos, optional mit einem Feld zum Anlegen.
+/* A list of todos, optionally with a field for creating one.
 
-   Der Leerzustand erklärt die Inline-Marker: der Nutzer tippt sie auch in
-   Obsidian, und eine Liste, die nur „keine Todos" sagt, verschweigt genau das.
+   The empty state explains the inline markers: the user also types them in
+   Obsidian, and a list that just says "no todos" conceals exactly that.
 
-   Angelegt wird mit Enter. Die Frist kommt über dieselben Chips wie überall
-   sonst (heute, morgen, Datum) — sie ist freiwillig. */
+   Creation happens with Enter. The deadline comes via the same chips as
+   everywhere else (today, tomorrow, date) — it's optional. */
 
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '../atoms/Button';
@@ -15,7 +15,7 @@ import { TodoRow } from './TodoRow';
 
 export interface TodoListProps {
   todos: readonly Todo[];
-  /** Was steht da, wenn nichts da ist. Bereits übersetzt. */
+  /** What's shown when there's nothing there. Already translated. */
   emptyText: string;
   activeId?: string | null;
   busyId?: string | null;
@@ -24,15 +24,15 @@ export interface TodoListProps {
   onDue?: (todo: Todo, day: string | null) => void;
   onFocusTodo?: (todo: Todo) => void;
   /**
-   * Neues Todo anlegen. Ohne Handler gibt es kein Feld.
+   * Create a new todo. Without a handler, there is no field.
    *
-   * Gibt der Aufrufer ein Versprechen zurück (`mutateAsync`), wird das Feld erst
-   * geleert, wenn das Todo wirklich in der Datei steht — ein Feld, das sich beim
-   * Fehlschlag leert, hätte den Text verschluckt.
+   * If the caller returns a promise (`mutateAsync`), the field is only cleared
+   * once the todo actually stands in the file — a field that clears on
+   * failure would have swallowed the text.
    */
   onCreate?: (text: string, due: string | null) => void | Promise<unknown>;
   createBusy?: boolean;
-  /** Das Feld beim Rendern öffnen — der Weg der Taste `t`. */
+  /** Open the field on render — the path taken by the `t` key. */
   composerOpen?: boolean;
   onComposerChange?: (open: boolean) => void;
   now?: Date;
@@ -59,8 +59,8 @@ export function TodoList({
   const [due, setDue] = useState<string | null>(null);
   const field = useRef<HTMLInputElement>(null);
 
-  /* Offen ist offen — egal ob der Klick von hier kam oder die Taste `t` von
-     außen. Zwei Quellen, ein abgeleiteter Zustand statt eines Effekts. */
+  /* Open is open — regardless of whether the click came from here or the `t`
+     key from outside. Two sources, one derived state instead of an effect. */
   const open = local || composerOpen;
 
   useEffect(() => {
@@ -86,14 +86,14 @@ export function TodoList({
       clear();
       return;
     }
-    /* Der Fehler steht als Karte beim Aufrufer; hier bleibt nur der Text stehen. */
+    /* The error is displayed as a card by the caller; here only the text stays. */
     void running.then(clear, () => undefined);
   };
 
   return (
     <div className="sb-todolist">
       {todos.length === 0 ? (
-        /* Ein leerer Text heißt „hier steht nur das Feld" — kein leerer Kasten. */
+        /* An empty text means "only the field belongs here" — not an empty box. */
         emptyText.length === 0 ? null : (
           <p className="sb-panel-empty">{emptyText}</p>
         )

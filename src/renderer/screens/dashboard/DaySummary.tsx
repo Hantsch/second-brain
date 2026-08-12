@@ -1,13 +1,13 @@
-/* Eine Zeile, die den Tag zusammenfasst: „2 überfällig · 3 heute fällig ·
-   1 Antwort ausstehend".
+/* A line that summarizes the day: "2 overdue - 3 due today - 1 reply
+   pending".
 
-   Gezählt wird aus den Erinnerungen, nicht geschätzt. Jede Zahl ist ein Knopf,
-   der zu der Kachel springt, die die Sachen dahinter zeigt — und zwar nur dann,
-   wenn diese Kachel sichtbar ist. Ein Knopf, der ins Nichts führt, weil das Modul
-   ausgeblendet ist, wäre ein Knopf, der etwas behauptet.
+   Counted from the reminders, not estimated. Every number is a button that
+   jumps to the tile showing the items behind it — but only if that tile is
+   visible. A button that leads nowhere because the module is hidden would
+   be a button making a false claim.
 
-   Ist nichts überfällig und nichts heute fällig, steht genau das da. Eine leere
-   Zeile wäre keine Antwort. */
+   If nothing is overdue and nothing is due today, that's exactly what it
+   says. An empty line would not be an answer. */
 
 import type { DashboardModuleId, Reminder } from '@shared/types';
 import { useT } from '../../i18n';
@@ -15,7 +15,7 @@ import { plural } from '../../lib/format';
 
 export interface DaySummaryProps {
   reminders: readonly Reminder[];
-  /** Welche Module stehen im Gitter? Nur dorthin wird gesprungen. */
+  /** Which modules are in the grid? Only those are jumped to. */
   visible: ReadonlySet<DashboardModuleId>;
   onJump: (id: DashboardModuleId) => void;
 }
@@ -24,7 +24,7 @@ interface Part {
   key: string;
   text: string;
   target: DashboardModuleId;
-  /** Der Ton der Nachricht — überfällig ist rot, nicht teal. */
+  /** The tone of the message — overdue is red, not teal. */
   tone: 'danger' | 'warning' | 'muted';
 }
 
@@ -34,11 +34,11 @@ export function DaySummary({ reminders, visible, onJump }: DaySummaryProps) {
   const today = reminders.filter((reminder) => reminder.urgency === 'today');
   const waiting = reminders.filter((reminder) => reminder.source === 'waiting-overdue');
 
-  /* Die Farbe kommt aus der Sache, nicht aus der Klickbarkeit: „überfällig" ist
-     `--danger`, „heute fällig" `--warning`, der Rest ruhig. Dieselbe Zuordnung wie
-     in der Kachel „Steht an" — eine Kopfzeile, die ihrer eigenen Kachel
-     widerspricht, ist schlimmer als keine. Dass man klicken kann, zeigt der
-     Unterstrich unter dem Zeiger und der Fokusring. */
+  /* The color comes from the fact itself, not from clickability: "overdue"
+     is `--danger`, "due today" is `--warning`, the rest is calm. Same
+     mapping as in the "Upcoming" tile — a headline that contradicts its own
+     tile is worse than none at all. That it's clickable is shown by the
+     underline on hover and the focus ring. */
   const parts: Part[] = [];
   if (overdue.length > 0) {
     parts.push({
@@ -65,9 +65,9 @@ export function DaySummary({ reminders, visible, onJump }: DaySummaryProps) {
     });
   }
 
-  /* Die Überschrift der Zeile steht als versteckter Text darin, nicht als
-     `aria-label`: ein Absatz ist ein generisches Element, und ein Name daran
-     wird von manchen Hilfsmitteln stillschweigend verworfen. */
+  /* The line's heading is included as hidden text, not as an `aria-label`:
+     a paragraph is a generic element, and a name attached to it is silently
+     dropped by some assistive technologies. */
   return (
     <p className="sb-daysummary">
       <span className="sb-visually-hidden">{`${t('dashboard.summary.label')}: `}</span>

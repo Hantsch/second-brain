@@ -1,11 +1,12 @@
-/* Deutsche Oberflächentexte, Teil 2: die Screens, das Onboarding und das
-   Schnell-Erfassen-Fenster.
+/* German UI texts, part 2: the screens, onboarding, and the quick-capture
+   window.
 
-   Zwei Sorten Text pro Screen, die nie vermischt werden dürfen:
-   - `empty.*` gilt nur, wenn die Abfrage geladen hat UND nichts gefunden wurde.
-     Leer heißt leer.
-   - `pending.*` gilt, solange die Ansicht noch gebaut wird. Diese Texte treffen
-     keine Aussage über den Vault; die Zahl daneben kommt aus dem Index. */
+   Two kinds of text per screen that must never be mixed up:
+   - `empty.*` applies only once the query has loaded AND nothing was found.
+     Empty means empty.
+   - `pending.*` applies while the view is still being built. These texts
+     make no claim about the vault; the number next to them comes from the
+     index. */
 
 export const deScreens = {
   'screen.dashboard.overline': 'Überblick',

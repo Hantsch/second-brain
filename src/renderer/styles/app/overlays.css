@@ -1,5 +1,5 @@
-/* Alles, was über dem Gerüst liegt: Meldungen, Befehlspalette, Onboarding und
-   das Schnell-Erfassen-Fenster. */
+/* Everything that sits above the shell: toasts, command palette, onboarding,
+   and the quick-capture window. */
 
 /* ── Overlays ───────────────────────────────────────────────────────────── */
 
@@ -13,18 +13,18 @@
   gap: var(--space-3);
 }
 
-/* „Rückgängig" ist die wichtigste Fläche der App: sie steht sechs Sekunden und
-   nimmt einen Schreibvorgang zurück. Gaston gibt dem Textknopf einer Meldung mit
-   `all: unset` gar keine Höhe (gemessen: 19 px) — das reißt `--sb-hit: 32px`, und
-   kein a11y-Lauf sieht es, weil kein Schritt eine Meldung öffnet. Überschrieben
-   hier statt im vendorierten Gaston-Stand, damit ein neuer Stand ohne Konflikt
-   einziehen kann. */
+/* "Undo" is the app's most important surface: it stands for six seconds and
+   reverts a write. Gaston, via `all: unset`, gives a toast's text button no
+   height at all (measured: 19 px) — that violates `--sb-hit: 32px`, and no
+   a11y run catches it because no test step opens a toast. Overridden here
+   instead of in the vendored Gaston baseline, so a new baseline can land
+   without a conflict. */
 .sb-toasts .gs-toast-action {
   min-height: var(--sb-hit);
   display: inline-flex;
   align-items: center;
-  /* Der negative Rand hält die Schrift dort, wo sie vorher stand: die Fläche
-     wächst nach oben und unten, die Zeile bleibt an ihrem Platz. */
+  /* The negative margin keeps the text where it was before: the surface
+     grows up and down, the line stays in place. */
   margin-top: 0;
   padding: 0;
 }
@@ -33,7 +33,7 @@
   min-height: var(--sb-hit);
   align-items: center;
   justify-content: center;
-  /* Ohne negativen Ausgleich schöbe die größere Fläche die Meldung auseinander. */
+  /* Without a negative offset, the bigger surface would push the toast apart. */
   margin: calc(-1 * var(--space-2)) calc(-1 * var(--space-2)) auto auto;
 }
 
@@ -81,8 +81,8 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* Der Pfad eines Treffers: Daten gehören in Mono. Er darf höchstens die Hälfte
-   der Zeile nehmen — der Titel ist die Antwort, der Pfad nur der Beleg. */
+/* A result's path: data belongs in mono. It may take up at most half the
+   line — the title is the answer, the path is just the evidence. */
 .sb-palette-hint {
   margin-left: auto;
   min-width: 0;
@@ -123,8 +123,8 @@
 }
 .sb-recent-item {
   all: unset;
-  /* `all: unset` nimmt die Unterstreichung nicht zurück, wenn ein Vorfahre sie
-     setzt — hier ausdrücklich, damit die Zeile nie nach Link aussieht. */
+  /* `all: unset` does not undo the underline if an ancestor sets it — this is
+     explicit here so the line never looks like a link. */
   text-decoration: none;
   box-sizing: border-box;
   display: flex;
@@ -147,7 +147,7 @@
   color: var(--text-disabled);
 }
 
-/* ── Schnell-Erfassen-Fenster ───────────────────────────────────────────── */
+/* ── Quick-capture window ───────────────────────────────────────────────── */
 
 .sb-quick {
   display: grid;

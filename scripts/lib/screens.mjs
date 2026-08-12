@@ -83,6 +83,7 @@ export const DEEP_STATES = [
   { id: 'settings-languages', hash: '/settings?tab=languages', wait: '.sb-panel' },
   { id: 'settings-models', hash: '/settings?tab=models', wait: '.sb-panel' },
   { id: 'settings-behavior', hash: '/settings?tab=behavior', wait: '.sb-panel' },
+  { id: 'settings-customization', hash: '/settings?tab=customization', wait: '.sb-image-radio' },
   { id: 'settings-about', hash: '/settings?tab=about', wait: '.sb-panel' },
 ];
 

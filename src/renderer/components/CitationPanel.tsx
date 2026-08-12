@@ -1,11 +1,12 @@
-/* Ein Beleg im Kontext.
+/* A citation in context.
 
-   Ein Zitat allein lässt offen, ob es passt. Also zeigt dieses Panel die Stelle
-   samt Umgebung, mit echten Zeilennummern in Mono — und den Weg in die Datei.
+   A quote alone leaves it open whether it still fits. So this panel shows the
+   spot along with its surroundings, with real line numbers in mono — and a link
+   to the file.
 
-   Gesucht wird die Stelle im Rumpf der Datei, nicht über die Zeilennummer allein:
-   der Nutzer darf seine Dateien jederzeit selbst ändern. Findet sich das Zitat
-   nicht mehr, sagt das Panel genau das, statt eine falsche Umgebung zu zeigen. */
+   The spot is located within the file's body, not by the line number alone:
+   the user is free to edit their files at any time. If the quote can no longer
+   be found, the panel says exactly that instead of showing a wrong context. */
 
 import { useQuery } from '@tanstack/react-query';
 import type { Citation } from '@shared/types';
@@ -16,9 +17,9 @@ import { useT } from '../i18n';
 import { api } from '../lib/api';
 import { qk } from '../lib/queries/keys';
 
-/** So viele Zeilen stehen über und unter der Fundstelle. */
+/** This many lines are shown above and below the match. */
 const RADIUS = 4;
-/** So viel Zitat wird zum Wiederfinden benutzt. */
+/** This much of the quote is used to relocate it. */
 const ANCHOR_CHARS = 40;
 
 interface ContextLine {
@@ -32,17 +33,17 @@ function collapse(value: string): string {
 }
 
 /**
- * Die Umgebung der Fundstelle. `null` heißt: das Zitat steht so nicht mehr in der
- * Datei — dann wird nichts behauptet.
+ * The surroundings of the match. `null` means: the quote no longer appears in
+ * the file as-is — in that case nothing is asserted.
  */
 export function contextOf(body: string, citation: Citation): ContextLine[] | null {
   const anchor = collapse(citation.quote).slice(0, ANCHOR_CHARS);
   if (anchor.length === 0) return null;
   const lines = body.replace(/\r\n/g, '\n').split('\n');
-  /* Ein Zitat darf über Umbrüche laufen, deshalb wird in einem Fenster gesucht.
-     Genommen wird das späteste Fenster, das den Anfang noch enthält — sonst zeigte
-     die Fundstelle auf die Leerzeile davor und alle Zeilennummern wären um eins
-     verschoben (dieselbe Regel wie `lineOfQuote` in `core/wiki/citations`). */
+  /* A quote may span line breaks, so the search uses a sliding window. The
+     latest window that still contains the start is kept — otherwise the match
+     would point at the blank line before it and all line numbers would be off
+     by one (same rule as `lineOfQuote` in `core/wiki/citations`). */
   let found: number | null = null;
   for (let index = 0; index < lines.length; index += 1) {
     if (collapse(lines.slice(index, index + 4).join(' ')).includes(anchor)) found = index;
@@ -61,9 +62,9 @@ export function contextOf(body: string, citation: Citation): ContextLine[] | nul
 }
 
 export interface CitationPanelProps {
-  /** Der Beleg, oder null — dann ist das Panel zu. */
+  /** The citation, or null — in which case the panel is closed. */
   citation: Citation | null;
-  /** Nummer des Belegs in der Antwort, 1-basiert. */
+  /** Number of the citation within the answer, 1-based. */
   index: number | null;
   onClose: () => void;
 }

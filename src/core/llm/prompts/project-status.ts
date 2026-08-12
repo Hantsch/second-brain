@@ -1,27 +1,28 @@
-/* Status und nächsten Schritt eines Projekts aus seiner Geschichte ableiten.
+/* Derive a project's status and next step from its history.
 
-   Das Ergebnis ist ein **Vorschlag**: der Nutzer bestätigt ihn, sonst passiert
-   nichts (Guardrail 2). Deshalb ist `reason` Pflicht — ein Statuswechsel ohne
-   sichtbaren Grund wäre eine Behauptung, die niemand prüfen kann.
+   The result is a **suggestion**: the user confirms it, otherwise nothing
+   happens (guardrail 2). That's why `reason` is mandatory — a status change
+   without a visible reason would be a claim nobody could verify.
 
-   Grundsatz wie überall: nichts erfinden. Der nächste Schritt muss aus dem
-   stehen, was mitgeschickt wurde — offene Todos, Warte-auf, Stand, Tageseinträge,
-   Arbeitsspuren. Steht dort keiner, sagt das Modell das, statt einen zu dichten. */
+   Principle as everywhere: don't invent anything. The next step has to come
+   from what was sent along — open todos, waiting-on entries, state, journal
+   entries, work traces. If none is there, the model says so instead of
+   making one up. */
 
 import type { ChatTurn, DocLanguage, ProjectStatus } from '@shared/types';
 import { clamp, documentLanguageRule, turns } from './shared';
 
-/** Eine Erwähnung des Projekts in einem Tageseintrag. */
+/** A mention of the project in a journal entry. */
 export interface ProjectStatusMention {
-  /** Kalendertag des Eintrags. */
+  /** Calendar day of the entry. */
   date: string;
   text: string;
 }
 
-/** Eine Arbeitsspur aus einer Claude-Code-Sitzung. */
+/** A work trace from a Claude Code session. */
 export interface ProjectStatusTrace {
   at: string;
-  /** Erste Nutzer-Nachricht bzw. Zusammenfassung der Sitzung. */
+  /** First user message, or the session summary. */
   text: string;
   branch: string | null;
 }
@@ -29,26 +30,26 @@ export interface ProjectStatusTrace {
 export interface ProjectStatusInput {
   title: string;
   slug: string;
-  /** Heutiges Datum als YYYY-MM-DD — Grundlage für „seit", „überfällig". */
+  /** Today's date as YYYY-MM-DD — basis for "since", "overdue". */
   today: string;
   currentStatus: ProjectStatus;
-  /** Zulässige Werte. Alles andere ist erfunden. */
+  /** Allowed values. Anything else is invented. */
   statuses: readonly ProjectStatus[];
   deadline: string | null;
   nextStep: string | null;
-  /** Der Wiedereinstiegspunkt aus dem Abschnitt „Stand". */
+  /** The re-entry point from the "Stand" section. */
   state: string;
   openTodos: readonly { text: string; due: string | null }[];
   waitingOn: readonly { who: string; what: string; since: string; due?: string }[];
-  /** Jüngste Spur, ISO — Dateiänderung, Sitzung oder Tageseintrag. */
+  /** Most recent trace, ISO — file change, session, or journal entry. */
   lastTouch: string | null;
-  /** Tage seit der jüngsten Spur. */
+  /** Days since the most recent trace. */
   ageDays: number;
   journal: readonly ProjectStatusMention[];
   sessions: readonly ProjectStatusTrace[];
 }
 
-/** Erwartete Antwortform. Wird als `schema` mitgeschickt. */
+/** Expected response shape. Sent along as `schema`. */
 export const PROJECT_STATUS_SCHEMA: Record<string, unknown> = {
   type: 'object',
   additionalProperties: false,

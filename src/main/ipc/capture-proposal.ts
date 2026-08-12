@@ -1,19 +1,21 @@
-/* Vorschläge in die Form bringen, in der die Oberfläche mit ihnen arbeitet — und
-   zurück in die Form, in der der Kern sie ausführt.
+/* Bring proposals into the shape the UI works with — and back into the shape
+   the core executes.
 
-   Zwei Aufgaben, beide aus demselben Grund hier und nicht im Renderer: der
-   Renderer darf keine Vault-Pfade und keine Markdown-Zeilen bauen, sonst steht
-   das Dateiformat an zwei Stellen (docs/VAULT-FORMAT.md).
+   Two tasks, both living here rather than in the renderer for the same
+   reason: the renderer must never build vault paths or markdown lines, or
+   the file format would end up defined in two places (docs/VAULT-FORMAT.md).
 
-   1. `withAllTargets` hängt an den Vorschlag jedes erreichbare Ziel — offenes
-      Projekt, Bereich, Modul, Tageseintrag, „bleibt liegen" — mit fertigem Pfad
-      und fertigem Text. Damit ist „anderes Ziel" eine Auswahl, keine Eingabe.
-   2. `normalize` nimmt den bearbeiteten Vorschlag zurück und setzt die
-      Todo-Blöcke neu: der Nutzer entscheidet, *welche* Todos mit welcher Frist
-      mitkommen, wie eine Checkbox-Zeile aussieht, weiß nur der Kern.
+   1. `withAllTargets` attaches every reachable target to the proposal — open
+      project, area, module, journal entry, "stays put" — each with a
+      finished path and finished text. That makes "other target" a
+      selection, not an input.
+   2. `normalize` takes the edited proposal back and rebuilds the todo
+      blocks: the user decides *which* todos come along with what deadline;
+      only the core knows what a checkbox line looks like.
 
-   Gebaut wird beides mit den Helfern des Kerns (`filingAction`, `todoActions`) —
-   eine zweite Fassung davon wäre eine zweite Fassung des Dateiformats. */
+   Both are built with the core's helpers (`filingAction`, `todoActions`) —
+   a second implementation of this would be a second implementation of the
+   file format. */
 
 import {
   SECTION_DAY,
@@ -28,13 +30,13 @@ import type { DateLike } from '@core/vault/paths';
 import type { FilingAction, FilingProposal, Project } from '@shared/types';
 import { fail } from './errors';
 
-/** So viele Ziele reichen zur freien Wahl; gesucht wird darin in der Oberfläche. */
+/** This many targets are enough for free choice; the UI lets the user search within them. */
 const MAX_TARGETS = 48;
 
 /**
- * Der Vorschlag mit allen erreichbaren Zielen in `alternatives`. Die Reihenfolge
- * ist Absicht: was der Kern vorgeschlagen hat, steht vorn — danach die
- * thematisch nächsten Projekte, dann Module, Bereiche, Tageseintrag, Inbox.
+ * The proposal with all reachable targets in `alternatives`. The order is
+ * intentional: what the core suggested comes first — then the thematically
+ * closest projects, then modules, areas, journal entry, inbox.
  */
 export function withAllTargets(
   proposal: FilingProposal,
@@ -69,8 +71,8 @@ export function withAllTargets(
 }
 
 /**
- * Den Vorschlag nehmen, wie er aus der Oberfläche kommt — nur die Todo-Blöcke
- * werden neu gesetzt. Kommt kein Todo mit, gilt, was mitgeschickt wurde.
+ * Take the proposal as it comes from the UI — only the todo blocks get
+ * rebuilt. If no todo comes along, whatever was submitted stands.
  */
 export function normalize(proposal: FilingProposal, projects: readonly Project[]): FilingProposal {
   if (typeof proposal?.dumpPath !== 'string' || proposal.dumpPath.length === 0) {

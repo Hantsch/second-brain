@@ -1,19 +1,20 @@
-/* Der Composer: das Feld, in dem eine Frage entsteht.
+/* The composer: the field where a question takes shape.
 
-   Enter stellt die Frage, Shift+Enter macht einen Umbruch — und genau das steht
-   als Hinweis darunter, damit niemand es ausprobieren muss. Ctrl+Enter geht
-   ebenfalls, weil es in der ganzen App abschickt.
+   Enter asks the question, Shift+Enter makes a line break — and exactly
+   that is stated as a hint below, so nobody has to try it out. Ctrl+Enter
+   also works, because it submits everywhere in the app.
 
-   Die zwei Filter (Modul, Bereich) sind dezente Chips, keine Formularfelder: sie
-   sind ein Angebot, nicht eine Pflicht. Der eine Teal-Fokuspunkt des Screens ist
-   „Frage stellen"; während der Antwort wird daraus „Abbrechen" — ein Stream, den
-   man nicht anhalten kann, ist eine Geiselnahme.
+   The two filters (module, scope) are subtle chips, not form fields: they
+   are an offer, not a requirement. This screen's one teal focus point is
+   "ask question"; during the answer it becomes "cancel" — a stream you
+   can't stop is a hostage situation.
 
-   Dasselbe Feld trägt das Coaching-Gespräch des Tagebuchs. Deshalb sind die Filter
-   und die Beschriftungen **auswählbar**: ohne `onScope` bzw. `onModule` gibt es den
-   Chip-Satz nicht — ein Schalter, der dort nichts filtert, wäre eine Behauptung.
-   `extra` nimmt auf, was in dieser Fußzeile sonst noch hingehört (im Tagebuch die
-   Haltung des Coachs, direkt neben dem Knopf, der abschickt). */
+   The same field also carries the journal's coaching conversation. That's
+   why the filters and labels are **selectable**: without `onScope` or
+   `onModule` the chip set doesn't exist — a toggle that filters nothing
+   there would be a false claim. `extra` accommodates whatever else belongs
+   in this footer (in the journal, the coach's stance, right next to the
+   submit button). */
 
 import type { KeyboardEvent, ReactNode, RefObject } from 'react';
 import type { KnowledgeModule, Scope } from '@shared/types';
@@ -22,7 +23,7 @@ import { Icon } from '../atoms/Icon';
 import { Kbd } from '../atoms/Kbd';
 import { useT } from '../i18n';
 
-/** Bereiche als Chips: alles, Arbeit, Privat. */
+/** Scopes as chips: all, work, private. */
 const SCOPES: readonly (Scope | 'all')[] = ['all', 'work', 'private'];
 
 interface ChipProps {
@@ -44,11 +45,11 @@ function Chip({ active, label, onClick }: ChipProps) {
   );
 }
 
-/** Beschriftungen. Fehlt eine, gilt die des Fragen-Screens. */
+/** Labels. If one is missing, the ask screen's default applies. */
 export interface ComposerTexts {
   label?: string;
   placeholder?: string;
-  /** Was `Enter` tut — steht im Tastaturhinweis. */
+  /** What `Enter` does — shown in the keyboard hint. */
   hintSend?: string;
   send?: string;
   cancel?: string;
@@ -58,22 +59,22 @@ export interface ChatComposerProps {
   value: string;
   onChange: (value: string) => void;
   onSubmit: () => void;
-  /** Laufende Antwort abbrechen. */
+  /** Cancel a running answer. */
   onCancel: () => void;
-  /** Läuft gerade eine Antwort? */
+  /** Is an answer currently running? */
   busy: boolean;
   modules?: readonly KnowledgeModule[];
-  /** Modul-Slug, auf den eingeschränkt wird. */
+  /** Module slug to restrict to. */
   module?: string | null;
-  /** Fehlt der Rückruf, gibt es die Modul-Chips nicht. */
+  /** If the callback is missing, the module chips don't exist. */
   onModule?: (module: string | null) => void;
   scope?: Scope | null;
-  /** Fehlt der Rückruf, gibt es die Bereich-Chips nicht. */
+  /** If the callback is missing, the scope chips don't exist. */
   onScope?: (scope: Scope | null) => void;
   texts?: ComposerTexts;
-  /** Weitere Bedienelemente in der Fußzeile, vor dem Knopf. */
+  /** Additional controls in this footer, before the button. */
   extra?: ReactNode;
-  /** Kennung des Feldes — nur nötig, wenn zwei Composer im selben Baum stehen. */
+  /** Field identifier — only needed when two composers sit in the same tree. */
   fieldId?: string;
   fieldRef?: RefObject<HTMLTextAreaElement | null>;
 }
@@ -102,10 +103,10 @@ export function ChatComposer({
       onSubmit();
       return;
     }
-    /* Esc verließ das Feld vorher gar nicht — der Fokus blieb in der
-       Textarea stehen, ohne einen Weg zurück außer der Maus. Blur reicht:
-       der Entwurf bleibt stehen, nur der Fokus wandert zum aktiven
-       Rail-Eintrag, von dem aus die Ziffern-Tasten wieder greifen. */
+    /* Esc used to not leave the field at all — focus stayed in the
+       textarea, with no way back except the mouse. Blur is enough: the
+       draft stays as it is, only focus moves to the active rail entry,
+       from where the digit keys work again. */
     if (event.key === 'Escape') {
       event.preventDefault();
       event.stopPropagation();
@@ -117,8 +118,9 @@ export function ChatComposer({
 
   return (
     <div className="sb-composer">
-      {/* Der Tastaturhinweis steht oben neben der Beschriftung: unten würde er in
-          einem flachen Fenster eine ganze Zeile vom Verlauf wegnehmen. */}
+      {/* The keyboard hint sits at the top next to the label: at the
+          bottom it would take a whole line away from the history in a
+          short window. */}
       <div className="sb-composer-head">
         <label className="sb-composer-label" htmlFor={fieldId}>
           {texts.label ?? t('ask.field.label')}

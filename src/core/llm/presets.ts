@@ -1,10 +1,10 @@
-/* Vorlagen, mit denen ein Provider in zwei Klicks steht. `hint` ist ein
-   i18n-Key; der deutsche Text steht als Kommentar daneben, damit
-   `src/renderer/i18n/de.ts` ihn übernehmen kann, ohne dass der Kern Texte kennt. */
+/* Presets that get a provider set up in two clicks. `hint` is an i18n key;
+   the German text sits next to it as a comment, so `src/renderer/i18n/de.ts`
+   can adopt it verbatim without the core knowing any UI text. */
 
 import type { ProviderPreset } from '@shared/types';
 
-/** Kennung der Vorlage „beliebige OpenAI-kompatible URL". */
+/** ID of the "any OpenAI-compatible URL" preset. */
 export const CUSTOM_PRESET_ID = 'custom-openai';
 
 export const PROVIDER_PRESETS: readonly ProviderPreset[] = [
@@ -76,14 +76,14 @@ export const PROVIDER_PRESETS: readonly ProviderPreset[] = [
   },
 ];
 
-/** Vorlage zu einer Kennung, oder null. */
+/** Preset for an ID, or null. */
 export function findPreset(id: string): ProviderPreset | null {
   return PROVIDER_PRESETS.find((preset) => preset.id === id) ?? null;
 }
 
 /**
- * Braucht dieser Zugang einen Schlüssel? Lokale Runtimes nicht, Cloud immer.
- * Wird an zwei Stellen gebraucht (Registry und Gateway) und darf nicht auseinanderlaufen.
+ * Does this connection need a key? Local runtimes never, cloud always.
+ * Needed in two places (registry and gateway) and must not drift apart.
  */
 export function needsApiKey(provider: { kind: ProviderPreset['kind']; local: boolean }): boolean {
   if (provider.kind === 'fake') return false;

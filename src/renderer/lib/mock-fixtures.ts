@@ -1,6 +1,6 @@
-/* Fixture-Daten für die Mock-Brücke. Ein kleiner, in sich stimmiger
-   Beispiel-Vault, damit die Oberfläche ohne Electron etwas zu zeigen hat.
-   Nur Ansichtsdaten — nichts hiervon berührt eine Datei. */
+/* Fixture data for the mock bridge. A small, internally consistent
+   example vault so the UI has something to show without Electron.
+   View data only — none of this touches a file. */
 
 import type {
   ChatThread,
@@ -259,10 +259,11 @@ export const claudeSession: ClaudeSession = {
   files: ['main.tf', 'roles.tf'],
 };
 
-/* Der Bericht der Attrappe trägt drei Arten von Befund, weil der Pflege-Screen
-   drei Wege zeigt: einen ohne Fix, einen mit geschriebener Zeile (samt Vorschau)
-   und einen Widerspruch mit seiner eigenen Darstellung. Ohne den dritten wäre der
-   wichtigste Befundtyp im Browser nie zu sehen. */
+/* The mock report carries three kinds of findings, because the maintenance
+   screen shows three paths: one without a fix, one with a written line
+   (including preview), and a contradiction with its own presentation.
+   Without the third, the most important finding type would never show
+   up in the browser. */
 export const gardenerReport: GardenerReport = {
   ranAt: NOW,
   usedLlm: false,

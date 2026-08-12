@@ -1,16 +1,16 @@
-/* Tastatur des Projekt-Screens. Zwei Hooks, weil zwei Bereiche handeln:
-   die Liste (j/k, Pfeile, Enter, n) und das Detail (t, x).
+/* Keyboard handling for the projects screen. Two hooks, because two areas
+   act: the list (j/k, arrows, Enter, n) and the detail (t, x).
 
-   Beide ignorieren Tastendrücke aus Eingabefeldern — sonst hakt „x" beim
-   Schreiben eines Todos ein anderes ab. Ziffern bleiben der Rail (die Hülle
-   fängt sie), deshalb wird hier nichts mit Modifikatoren angefasst. */
+   Both ignore keystrokes from input fields — otherwise "x" while typing a
+   todo would check off a different one. Digits stay with the rail (the shell
+   catches them), so nothing here touches modifier keys. */
 
 import { useEffect } from 'react';
 
 /**
- * Steht der Fokus in einem Feld, gehört die Taste dem Feld. Kästchen und
- * Auswahlknöpfe sind keine Felder in diesem Sinne: dort **muss** `x` greifen,
- * weil genau das die fokussierte Zeile ist.
+ * If focus is in a field, the key belongs to the field. Checkboxes and
+ * radio buttons aren't fields in this sense: there `x` **must** take effect,
+ * because that's exactly the focused row.
  */
 function inField(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
@@ -27,17 +27,17 @@ function plain(event: KeyboardEvent): boolean {
 }
 
 export interface ListKeysOptions {
-  /** Wie viele Zeilen die Liste hat. */
+  /** How many rows the list has. */
   count: number;
-  /** Stelle der aktuellen Auswahl. */
+  /** Position of the current selection. */
   index: number;
-  /** Auswahl bewegen; `focus` setzt zusätzlich den Fokus auf die Zeile. */
+  /** Move the selection; `focus` additionally sets focus on the row. */
   select: (next: number, focus?: boolean) => void;
-  /** Enter: die Auswahl öffnen (Datei im Editor). */
+  /** Enter: open the selection (file in editor). */
   open: () => void;
-  /** n: neues Projekt. */
+  /** n: new project. */
   create: () => void;
-  /** Aus, solange ein Dialog offen ist. */
+  /** Off while a dialog is open. */
   enabled?: boolean;
 }
 
@@ -82,9 +82,9 @@ export function useListKeys({
 }
 
 export interface TodoKeysOptions {
-  /** t: das Feld für ein neues Todo öffnen. */
+  /** t: open the field for a new todo. */
   compose: () => void;
-  /** x: das Todo abhaken, auf dem der Fokus liegt. */
+  /** x: check off the todo that has focus. */
   toggle: () => void;
   enabled?: boolean;
 }

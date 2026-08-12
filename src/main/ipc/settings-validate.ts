@@ -1,15 +1,15 @@
-/* Einstellungen kommen aus dem Renderer und sind damit ungeprüfte Nutzlast.
-   Hier wird daraus eine Änderung, die in die Datei darf: bekannte Felder,
-   richtiger Typ, sinnvoller Bereich. Alles andere fällt weg.
+/* Settings come from the renderer and are thus unvalidated payload.
+   Here that becomes a change allowed into the file: known fields,
+   correct type, sensible range. Everything else is dropped.
 
-   Zwei Absichten:
-   - Eine kaputte oder erfundene Zahl darf die App nicht in einen Zustand
-     bringen, aus dem der Nutzer ohne Texteditor nicht mehr herauskommt
-     (`staleAfterDays: 0` hielte jedes Projekt für stagnierend).
-   - `providers` läuft ausschließlich über `llm:*`. Über diesen Weg käme sonst
-     ein selbst gesetztes `hasKey` in die Vault-Datei. */
+   Two intentions:
+   - A broken or made-up number must not push the app into a state the
+     user can no longer escape without a text editor (`staleAfterDays: 0`
+     would consider every project stagnant).
+   - `providers` runs exclusively through `llm:*`. Otherwise, this path
+     would let a self-set `hasKey` slip into the vault file. */
 
-import { COACH_MODES } from '@shared/types';
+import { APP_BACKGROUNDS, APP_ICONS, COACH_MODES } from '@shared/types';
 import type { AppSettings, CoachMode, DocLanguage, UiLanguage, VaultSettings } from '@shared/types';
 import type { DeepPartial } from '@shared/ipc';
 import { fail } from './errors';
@@ -17,7 +17,7 @@ import { fail } from './errors';
 const UI_LANGUAGES: readonly UiLanguage[] = ['de', 'en'];
 const THEMES: readonly AppSettings['theme'][] = ['dark', 'light', 'system'];
 
-/** Grenzen der Zahlenfelder. Außerhalb wird geklemmt, nicht abgelehnt. */
+/** Bounds of the number fields. Out of range gets clamped, not rejected. */
 const RANGES = {
   staleAfterDays: { min: 1, max: 365 },
   deadlineHorizonDays: { min: 1, max: 365 },
@@ -152,9 +152,9 @@ function preferredTags(value: unknown): string[] {
 }
 
 /**
- * Macht aus der Nutzlast eine Änderung an den Vault-Einstellungen.
- * Unbekannte Abschnitte fallen weg; `providers` wird ausdrücklich abgewiesen,
- * damit Schlüssel-Zustand nur über `llm:*` entsteht.
+ * Turns the payload into a change to the vault settings.
+ * Unknown sections are dropped; `providers` is explicitly rejected so
+ * key state can only originate from `llm:*`.
  */
 export function sanitizeVaultPatch(patch: unknown): DeepPartial<VaultSettings> {
   const source = bag(patch, 'patch') ?? {};
@@ -183,11 +183,26 @@ export function sanitizeVaultPatch(patch: unknown): DeepPartial<VaultSettings> {
   return out;
 }
 
-/** Nur Felder, die die Oberfläche wirklich setzen darf. Fenstergröße bleibt im Main. */
-export function sanitizeAppPatch(patch: unknown): Partial<AppSettings> {
+/** Only fields the UI is actually allowed to set. Window size stays in the main process. */
+export function sanitizeAppPatch(patch: unknown): DeepPartial<AppSettings> {
   const source = bag(patch, 'patch') ?? {};
-  const out: Partial<AppSettings> = {};
+  const out: DeepPartial<AppSettings> = {};
   if (source.theme !== undefined) out.theme = oneOf(source.theme, 'theme', THEMES);
+  const customization = bag(source.customization, 'customization');
+  if (customization) {
+    const value: Partial<AppSettings['customization']> = {};
+    if (customization.background !== undefined) {
+      value.background = oneOf(
+        customization.background,
+        'customization.background',
+        APP_BACKGROUNDS,
+      );
+    }
+    if (customization.appIcon !== undefined) {
+      value.appIcon = oneOf(customization.appIcon, 'customization.appIcon', APP_ICONS);
+    }
+    if (Object.keys(value).length > 0) out.customization = value;
+  }
   if (source.uiLanguage !== undefined) {
     out.uiLanguage = oneOf(source.uiLanguage, 'uiLanguage', UI_LANGUAGES);
   }
@@ -207,7 +222,7 @@ export interface LanguageChange {
   conversation?: UiLanguage;
 }
 
-/** Die drei Sprachen sind getrennt einstellbar — jede für sich geprüft. */
+/** The three languages are configurable separately — each validated on its own. */
 export function sanitizeLanguages(next: unknown): LanguageChange {
   const source = bag(next, 'languages') ?? {};
   const out: LanguageChange = {};

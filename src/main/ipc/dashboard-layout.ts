@@ -1,14 +1,14 @@
-/* Die Anordnung der Dashboard-Module, geprüft.
+/* The dashboard module layout, validated.
 
-   Sie kommt aus zwei ungeprüften Quellen: vom Renderer über `dashboard:setLayout`
-   und aus `settings.json`, die der Nutzer selbst editieren darf. Beide Wege
-   laufen hier durch — damit ein Tippfehler in der Datei kein leeres Dashboard
-   ergibt und ein erfundener Baustein nicht gespeichert wird.
+   It comes from two unvalidated sources: from the renderer via
+   `dashboard:setLayout`, and from `settings.json`, which the user is allowed to
+   edit directly. Both paths run through here — so a typo in the file doesn't
+   result in an empty dashboard, and a made-up module isn't saved.
 
-   Grundsatz: **jedes Modul kommt genau einmal vor.** Was fehlt, wird hinten
-   angehängt und ausgeblendet; wer ein Modul später in der Auswahl anhakt, findet
-   es dort wieder. Ein Modul stillschweigend zu verlieren wäre der schlimmere
-   Fehler — es gäbe dann keinen Weg zurück. */
+   Principle: **every module appears exactly once.** Whatever is missing gets
+   appended at the end and hidden; anyone who later checks a module in the
+   selector finds it there again. Silently losing a module would be the worse
+   mistake — there would be no way back. */
 
 import { DASHBOARD_MODULES, MODULE_SIZES } from '@shared/types';
 import type { DashboardLayout, DashboardModuleId, DashboardTile, ModuleSize } from '@shared/types';
@@ -30,7 +30,7 @@ function readTile(value: unknown): DashboardTile | null {
   if (!isModuleId(source['id'])) return null;
   const tile: DashboardTile = { id: source['id'], size: readSize(source['size']) };
   if (source['hidden'] === true) tile.hidden = true;
-  /* Modul-Einstellungen bleiben erhalten, auch wenn diese Fassung sie nicht kennt. */
+  /* Module settings are preserved, even if this version doesn't recognize them. */
   const options = source['options'];
   if (typeof options === 'object' && options !== null && !Array.isArray(options)) {
     tile.options = options as Record<string, unknown>;
@@ -39,8 +39,8 @@ function readTile(value: unknown): DashboardTile | null {
 }
 
 /**
- * Eine belastbare Anordnung aus allem, was hereinkommt: bekannte Module in der
- * gegebenen Reihenfolge, jedes einmal, fehlende hinten und ausgeblendet.
+ * A resilient layout built from whatever comes in: known modules in the given
+ * order, each once, missing ones appended at the end and hidden.
  */
 export function normalizeLayout(input: unknown, now: string): DashboardLayout {
   const source =

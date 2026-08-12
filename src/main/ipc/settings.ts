@@ -1,10 +1,10 @@
-/* Einstellungs-Kanäle. Jede Änderung schreibt sofort und schickt
-   `event:settings` an alle Fenster (der Service-Container hängt daran) — der
-   Renderer hält keinen eigenen Zustand.
+/* Settings channels. Every change writes immediately and sends
+   `event:settings` to all windows (the service container is hooked up to
+   this) — the renderer keeps no state of its own.
 
-   Die Nutzlast wird vorher geprüft: `settings-validate.ts` lässt nur bekannte
-   Felder durch, klemmt Zahlen in sinnvolle Bereiche und weist Unsinn mit
-   `invalid` ab, statt ihn in die Datei zu schreiben. */
+   The payload is validated beforehand: `settings-validate.ts` only lets
+   known fields through, clamps numbers to sensible ranges, and rejects
+   nonsense with `invalid` instead of writing it to the file. */
 
 import type { HandlerMap } from './registry';
 import { defineHandlers, fail } from './registry';
@@ -22,15 +22,15 @@ export function settingsHandlers(services: Services): HandlerMap {
 
     'settings:setVault': async ({ patch }) => {
       if (!services.settings.vault()) throw fail('no-vault', 'kein Vault geöffnet');
-      /* Erst prüfen, dann schreiben: eine abgewiesene Änderung darf die Datei
-         nicht anfassen. */
+      /* Validate first, then write: a rejected change must not touch the
+         file. */
       await services.settings.patchVault(sanitizeVaultPatch(patch));
       return services.settings.snapshot();
     },
 
-    /* Die Sprachen sitzen im Vault, solange einer offen ist; die UI-Sprache
-       zusätzlich in den App-Einstellungen, damit sie schon vor dem ersten Vault
-       gilt. Beides macht `SettingsService.setLanguages`. */
+    /* Languages live in the vault as long as one is open; the UI language
+       additionally lives in the app settings, so it already applies before
+       the first vault. `SettingsService.setLanguages` handles both. */
     'settings:setLanguages': (next) => services.settings.setLanguages(sanitizeLanguages(next)),
   });
 }

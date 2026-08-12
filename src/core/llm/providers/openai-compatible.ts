@@ -1,9 +1,9 @@
-/* Alles, was `/chat/completions` spricht: OpenAI, OpenRouter, Ollama, LM Studio,
-   vLLM, llama.cpp. Kein SDK — nur `fetch`, injizierbar.
+/* Everything that speaks `/chat/completions`: OpenAI, OpenRouter, Ollama, LM
+   Studio, vLLM, llama.cpp. No SDK — just `fetch`, injectable.
 
-   Streaming läuft über SSE (`data:`-Zeilen bis `[DONE]`), strukturierte Ausgabe
-   über `response_format: json_schema` mit Prompt-Fallback für Runtimes, die das
-   nicht kennen. */
+   Streaming runs over SSE (`data:` lines until `[DONE]`), structured output
+   over `response_format: json_schema` with a prompt fallback for runtimes
+   that don't know it. */
 
 import type { ProviderProbe, Usage } from '@shared/types';
 import { normalizeJsonText } from '../json';
@@ -28,9 +28,9 @@ export interface OpenAiCompatibleConfig {
   baseUrl: string;
   apiKey?: string | null;
   fetchImpl?: FetchLike;
-  /** Zusatz-Header, etwa `HTTP-Referer`/`X-Title` für OpenRouter. */
+  /** Extra headers, e.g. `HTTP-Referer`/`X-Title` for OpenRouter. */
   headers?: Record<string, string>;
-  /** 'auto' probiert `json_schema` einmal aus, 'prompt' nimmt direkt den Fallback. */
+  /** 'auto' tries `json_schema` once, 'prompt' goes straight to the fallback. */
   schemaSupport?: SchemaSupport;
 }
 
@@ -146,9 +146,9 @@ export class OpenAiCompatibleProvider implements LlmProvider {
   }
 
   /**
-   * Versucht den nativen Schema-Weg und weicht bei einer Ablehnung auf den
-   * Prompt-Fallback aus. Die Entscheidung wird gemerkt, damit nicht jeder
-   * Aufruf denselben Fehlschlag bezahlt.
+   * Tries the native schema path and falls back to the prompt fallback on
+   * rejection. The decision is remembered so not every call pays for the
+   * same failure.
    */
   private async withSchemaFallback(
     call: ProviderCall,
@@ -228,13 +228,13 @@ function parseChunk(data: string): ChatResponse | null {
   try {
     return JSON.parse(data) as ChatResponse;
   } catch {
-    // Ein halber Chunk ist kein Fehler: der Dekoder liefert nur vollständige Ereignisse,
-    // aber manche Runtimes schicken Kommentar- oder Keep-alive-Zeilen als data.
+    // A half chunk isn't an error: the decoder only delivers complete events,
+    // but some runtimes send comment or keep-alive lines as data.
     return null;
   }
 }
 
-/** Manche Runtimes liefern `content` als Array von Teilen statt als String. */
+/** Some runtimes deliver `content` as an array of parts instead of a string. */
 function contentOf(content: unknown): string {
   if (typeof content === 'string') return content;
   if (Array.isArray(content)) {

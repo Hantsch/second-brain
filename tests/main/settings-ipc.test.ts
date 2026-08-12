@@ -11,7 +11,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { VAULT_SETTINGS_FILE } from '@shared/types';
-import type { VaultSettings } from '@shared/types';
+import type { AppSettings, VaultSettings } from '@shared/types';
 import type { IpcChannel, IpcRequest, IpcResponse } from '@shared/ipc';
 import { createTempVault } from '../helpers/vault';
 import type { TempVault } from '../helpers/vault';
@@ -77,6 +77,32 @@ describe('Einstellungs-Kanäle im Main', () => {
 
   const stored = async (): Promise<VaultSettings> =>
     JSON.parse(await readFile(join(vault.root, VAULT_SETTINGS_FILE), 'utf8')) as VaultSettings;
+  const storedApp = async (): Promise<AppSettings> =>
+    JSON.parse(await readFile(join(userDataDir, 'settings.json'), 'utf8')) as AppSettings;
+
+  it('speichert Hintergrund und App-Symbol in den Maschinen-Einstellungen', async () => {
+    const snapshot = await harness.call('settings:setApp', {
+      patch: {
+        customization: { background: 'thread-of-return', appIcon: 'circuit-cortex' },
+      },
+    });
+
+    expect(snapshot.app.customization).toEqual({
+      background: 'thread-of-return',
+      appIcon: 'circuit-cortex',
+    });
+    expect((await storedApp()).customization).toEqual(snapshot.app.customization);
+  });
+
+  it('weist unbekannte Anpassungen ab', async () => {
+    await expect(
+      harness.call('settings:setApp', {
+        patch: {
+          customization: { background: 'laut', appIcon: 'knowledge-garden' },
+        } as unknown as IpcRequest<'settings:setApp'>['patch'],
+      }),
+    ).rejects.toMatchObject({ code: 'invalid' });
+  });
 
   it('mergt tief und lässt den Rest des Abschnitts stehen', async () => {
     const snapshot = await harness.call('settings:setVault', {

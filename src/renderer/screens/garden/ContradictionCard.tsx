@@ -1,24 +1,24 @@
-/* Der wichtigste Befundtyp: zwei Seiten, die Widersprüchliches behaupten.
+/* The most important finding type: two pages that claim contradictory things.
 
-   Er bekommt eine eigene Darstellung, weil er die einzige Art ist, bei der man
-   **beides** lesen muss, um zu entscheiden: die zwei Seiten stehen nebeneinander,
-   jede mit ihrer Stelle und ihrem Stand.
+   It gets its own presentation because it's the only kind where you need to
+   read **both** to decide: the two sides sit next to each other, each with its
+   passage and its version.
 
-   Und er hat drei Wege — keiner davon löst auf (docs/MODULE-SCHEMA.md,
-   „Widersprüche"):
+   And it has three paths — none of them resolve the contradiction
+   (docs/MODULE-SCHEMA.md, "Contradictions"):
 
-   1. **Beide behalten und benennen.** Das ist der Fix des Kerns: eine Zeile in den
-      Abschnitt „Widersprüche" der ersten Seite, wortwörtlich die Vorschau.
-   2. **Die ältere als überholt markieren.** Trägt den Slug der älteren Seite in
-      `supersedes` der neueren ein — ein Frontmatter-Feld, das der Kern selbst
-      liest (`core/gardener/relations.ts`): der Konflikt gilt danach als benannt.
-      Geschrieben wird mit dem Hash, der beim Laden dieser Karte gelesen wurde;
-      hat jemand die Datei seither angefasst, kommt ein Konflikt zurück und steht
-      sichtbar da, statt eine fremde Änderung zu überschreiben.
-   3. **Passt so.** Der Befund wird ausgeblendet, mit Rückgängig.
+   1. **Keep both and name it.** This is the core's fix: a line in the
+      "Contradictions" section of the first page, verbatim the preview.
+   2. **Mark the older one as superseded.** Enters the older page's slug into
+      the newer page's `supersedes` — a frontmatter field the core itself reads
+      (`core/gardener/relations.ts`): the conflict then counts as named. It's
+      written with the hash read when this card was loaded; if someone has
+      touched the file since, a conflict comes back and shows visibly, instead
+      of overwriting someone else's change.
+   3. **Looks fine.** The finding is hidden, with undo.
 
-   Was die Karte **nicht** tut: einen der beiden Texte ändern, eine Seite löschen
-   oder entscheiden, welche recht hat. */
+   What the card does **not** do: change either of the two texts, delete a
+   page, or decide which one is right. */
 
 import type { GardenerFinding, VaultDoc, WikiPage } from '@shared/types';
 import { Button } from '../../atoms/Button';
@@ -28,17 +28,17 @@ import { formatDate } from '../../lib/format';
 import { useModulePage } from '../../lib/queries/modules';
 import { contradictionPassage } from './sections';
 
-/** Feldname aus docs/MODULE-SCHEMA.md: die neuere Seite überholt die ältere. */
+/** Field name from docs/MODULE-SCHEMA.md: the newer page supersedes the older one. */
 const SUPERSEDES = 'supersedes';
 
 export interface SupersedeWrite {
   path: string;
-  /** Der ganze neue Wert des Feldes — Listen werden ersetzt, nicht gemergt. */
+  /** The whole new value of the field — lists are replaced, not merged. */
   supersedes: string[];
   expectedHash: string;
-  /** Für die Rücknahme: der Wert, der vorher dort stand. */
+  /** For undo: the value that stood there before. */
   before: string[];
-  /** Die Zeile, die im Frontmatter landet — zugleich die Vorschau. */
+  /** The line that lands in the frontmatter — also the preview. */
   line: string;
 }
 
@@ -49,7 +49,7 @@ export interface ContradictionCardProps {
   onDismiss: (finding: GardenerFinding) => void;
   onOpenPath: (path: string) => void;
   onOpenFile: (path: string) => void;
-  /** Trägt die Überholt-Beziehung ein. Der Aufrufer schreibt und meldet. */
+  /** Records the supersede relationship. The caller writes and reports it. */
   onSupersede: (write: SupersedeWrite) => void;
 }
 
@@ -60,7 +60,7 @@ function stringList(value: unknown): string[] {
   return typeof value === 'string' ? [value] : [];
 }
 
-/** Welche Seite ist die neuere? `null`, wenn beide dasselbe Datum tragen. */
+/** Which page is the newer one? `null` if both carry the same date. */
 function newerOf(a: { page: WikiPage } | null, b: { page: WikiPage } | null): 'a' | 'b' | null {
   if (a === null || b === null) return null;
   const left = a.page.updated;

@@ -1,18 +1,20 @@
-/* Die drei Haltungen des Coachs als Segment — direkt neben dem Feld, in dem man
- * schreibt.
+/* The coach's three stances as a segment — right next to the field where you
+ * write.
  *
- * Warum sie hier steht und nicht in einer Einstellung: man muss wissen, mit wem
- * man spricht, **während** man tippt. Die Grundhaltung kommt aus den Einstellungen
- * (`journal.mode`), gilt aber nur als Vorgabe; umgeschaltet wird pro Gespräch.
+ * Why it sits here and not in a setting: you need to know who you're talking
+ * to **while** you're typing. The base stance comes from the settings
+ * (`journal.mode`), but only serves as a default; switching happens per
+ * conversation.
  *
- * Jede Haltung trägt ihren Satz — im Tooltip am Knopf und als Hilfszeile unter dem
- * Segment für die gewählte. Der Satz ist die Zusage: „Zuhören: ich spiegle und
- * frage nach, ohne Ratschläge" ist genau das, was der Prompt dieser Haltung
- * verbietet und erlaubt (`core/llm/prompts/journal-chat.ts`).
+ * Each stance carries its own sentence — in the tooltip on the button and as a
+ * hint line under the segment for the selected one. The sentence is the
+ * promise: "Listen: I reflect and ask follow-up questions, without advice" is
+ * exactly what this stance's prompt forbids and allows
+ * (`core/llm/prompts/journal-chat.ts`).
  *
- * Tastatur: Ctrl+1 bis Ctrl+3. Nicht die nackten Ziffern — die gehören der Rail
- * (Screenwechsel), und im Schreibfeld sind sie Zeichen. Mit Strg greifen sie
- * überall, auch mitten im Satz.
+ * Keyboard: Ctrl+1 through Ctrl+3. Not the bare digits — those belong to the
+ * rail (screen switching), and in the writing field they're characters. With
+ * Ctrl they work everywhere, even mid-sentence.
  */
 
 import type { CoachMode } from '@shared/types';
@@ -20,13 +22,13 @@ import { Kbd } from '../atoms/Kbd';
 import { Tooltip } from '../atoms/Tooltip';
 import { useT } from '../i18n';
 
-/** Die Reihenfolge im Segment: zuhören zuerst — die zurückhaltendste Haltung. */
+/** The order in the segment: listen first — the most restrained stance. */
 const MODES: readonly CoachMode[] = ['listen', 'tips', 'analyze'];
 
 export interface CoachModeSwitchProps {
   value: CoachMode;
   onChange: (mode: CoachMode) => void;
-  /** Aus, solange eine Antwort läuft: sie würde die Haltung mitten im Satz wechseln. */
+  /** Off while a response is running: it would switch the stance mid-sentence. */
   disabled?: boolean;
 }
 
@@ -62,8 +64,8 @@ export function CoachModeSwitch({ value, onChange, disabled = false }: CoachMode
           <span>{t('journal.mode.keys')}</span>
         </span>
       </div>
-      {/* Die Zusage der gewählten Haltung, immer sichtbar — ein Tooltip allein
-          erreicht nur die Maus. */}
+      {/* The selected stance's promise, always visible — a tooltip alone only
+          reaches the mouse. */}
       <p className="sb-stance-hint">{t(`journal.mode.${value}.hint`)}</p>
     </div>
   );

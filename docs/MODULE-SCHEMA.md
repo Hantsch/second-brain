@@ -1,123 +1,131 @@
-# Wissens-Modul: Schema
+# Knowledge module: schema
 
-Ein Wissens-Modul ist ein eigenständiges kleines Wiki unter `modules/<slug>/`, gepflegt nach
-Andrej Karpathys LLM-Wiki-Muster. Übernommen und angepasst aus `../godot-RAG/AGENTS.md`.
+A knowledge module is a self-contained small wiki under `modules/<slug>/`,
+maintained following Andrej Karpathy's LLM-wiki pattern. Adopted and adapted from
+`../godot-RAG/AGENTS.md`.
 
-Dieses Dokument wird beim Anlegen eines Moduls als `modules/<slug>/AGENTS.md` **in den Vault
-kopiert** (mit eingesetztem Modulnamen). Damit kann jedes LLM — Claude Code, Copilot, ein
-lokales Modell, die App selbst — das Modul pflegen, ohne diese App zu brauchen. Der Vault
-bleibt selbsterklärend.
+This document gets **copied into the vault** as `modules/<slug>/AGENTS.md` when a
+module is created (with the module name filled in). That way any LLM — Claude
+Code, Copilot, a local model, the app itself — can maintain the module without
+needing this app. The vault stays self-explanatory.
 
-## Die drei Schichten
+## The three layers
 
-1. **`raw/` (im Vault-Wurzelordner) — Rohquellen, unveränderlich.**
-   Was hier liegt, wird gelesen, nie geändert. Es ist der Fixpunkt, den jedes Zitat belegt.
-   Ändert sich der Inhalt einer Quelle, kommt ein **neuer, datierter Ordner** dazu; der alte
-   bleibt (er war damals wahr).
-2. **`modules/<slug>/wiki/` — das Wiki, LLM-geführt.**
-   Verdichtete Seiten: Quellen-Zusammenfassungen, Entitäten, Konzepte, Synthese, `index.md`,
-   `log.md`. Diese Schicht darf die App umschreiben — mit sichtbarem Vorschlag.
-3. **`modules/<slug>/AGENTS.md` — dieses Schema.**
-   Konventionen und Abläufe. Mensch und LLM entwickeln es gemeinsam weiter.
+1. **`raw/` (at the vault root) — raw sources, immutable.**
+   What's here is read, never changed. It's the fixed point every citation is
+   backed by. If a source's content changes, a **new, dated folder** is added; the
+   old one stays (it was true at the time).
+2. **`modules/<slug>/wiki/` — the wiki, LLM-maintained.**
+   Digested pages: source summaries, entities, concepts, synthesis, `index.md`,
+   `log.md`. The app is allowed to rewrite this layer — with a visible proposal.
+3. **`modules/<slug>/AGENTS.md` — this schema.**
+   Conventions and workflows. Human and LLM develop it together over time.
 
-## Aufbau
+## Structure
 
 ```
 modules/<slug>/
-  AGENTS.md          dieses Schema, mit eingesetztem Modulnamen
-  module.md          Titel, Zweck, Abgrenzung, verknüpfte Projekte
+  AGENTS.md          this schema, with the module name filled in
+  module.md          title, purpose, scope, linked projects
   wiki/
-    index.md         Katalog jeder Seite mit Einzeiler
-    log.md           append-only Chronik (ingest | query | lint)
-    overview.md      Synthese über das ganze Modul
-    sources/         s-YYYY-MM-DD-<slug>.md — eine Seite je aufgenommener Quelle
-    entities/        Personen, Firmen, Produkte, Systeme, Werkzeuge, Projekte
-    concepts/        Muster, Verfahren, Begriffe, Techniken
+    index.md         catalog of every page with a one-liner
+    log.md           append-only chronicle (ingest | query | lint)
+    overview.md       synthesis across the whole module
+    sources/         s-YYYY-MM-DD-<slug>.md — one page per ingested source
+    entities/        people, companies, products, systems, tools, projects
+    concepts/        patterns, procedures, terms, techniques
 ```
 
-## Seiten-Konventionen
+## Page conventions
 
-- **Dateinamen** klein, mit Bindestrichen, sprechend: `auth0.md`,
-  `rollenbasierte-zugriffskontrolle.md`.
-- **Wikilinks** `[[seiten-slug]]`, über Modulgrenzen `[[modul/seiten-slug]]`. Großzügig
-  verlinken — die Verbindungen sind so wertvoll wie die Seiten.
-- **Frontmatter** nach [VAULT-FORMAT.md](VAULT-FORMAT.md), immer mit `type`, `title`,
-  `module`, `created`, `updated`, `tags`, `sources`.
-- **Zitate:** jede nicht-triviale Aussage nennt ihre Quelle:
-  `(source: [[s-2026-08-10-auth0-rbac-guide]])`. Vertrauen wird aus Zitaten rekonstruiert,
-  nicht behauptet.
-- **Version und Kontext festhalten**, wo sie die Aussage tragen (Produktversion, Datum,
-  Umgebung). Eine versionsspezifische Technik nicht zu allgemeingültigem Rat verallgemeinern.
-- **Belegtes von Empfehlung trennen.** Gemessenes, Zitiertes und Erfahrenes sind
-  unterschiedliche Dinge; die Bedingungen der Quelle bleiben stehen.
-- **Sprache:** die Dokumentsprache aus den Einstellungen (`languages.documents`). Quellen
-  dürfen in jeder Sprache sein; beim Verdichten wird der Inhalt in die Dokumentsprache
-  übertragen. Ein Originalzitat bleibt im Original, wenn der Wortlaut zählt (Eigenname,
-  definierter Begriff, Vertragsklausel) — mit Übersetzung daneben.
-- **Source-Seiten** heißen `s-YYYY-MM-DD-<slug>` und verlinken auf den Ordner unter `raw/`.
+- **Filenames** lowercase, hyphenated, descriptive: `auth0.md`,
+  `role-based-access-control.md`.
+- **Wikilinks** `[[page-slug]]`, across module boundaries `[[module/page-slug]]`.
+  Link generously — the connections are as valuable as the pages.
+- **Frontmatter** per [VAULT-FORMAT.md](VAULT-FORMAT.md), always with `type`,
+  `title`, `module`, `created`, `updated`, `tags`, `sources`.
+- **Citations:** every non-trivial statement names its source:
+  `(source: [[s-2026-08-10-auth0-rbac-guide]])`. Trust is reconstructed from
+  citations, not asserted.
+- **Record version and context** wherever they carry the statement (product
+  version, date, environment). Don't generalize a version-specific technique into
+  universal advice.
+- **Separate what's backed by evidence from recommendation.** Measured, cited, and
+  experienced are different things; the source's conditions stay attached.
+- **Language:** the document language from settings (`languages.documents`).
+  Sources may be in any language; when digesting, content gets carried over into
+  the document language. A verbatim quote stays in the original when the exact
+  wording matters (proper noun, defined term, contract clause) — with a
+  translation alongside it.
+- **Source pages** are named `s-YYYY-MM-DD-<slug>` and link to the folder under
+  `raw/`.
 
-## Abläufe
+## Workflows
 
-### Ingest (eine Quelle kommt herein)
+### Ingest (a source comes in)
 
-1. Rohquelle liegt in `raw/` und ist unverändert.
-2. Source-Seite in `wiki/sources/` anlegen: worum es geht, die tragenden Aussagen, was neu
-   ist gegenüber dem Bestand, wo es dem Bestand widerspricht.
-3. Entitäten und Konzepte anlegen oder ergänzen. Eine Quelle berührt typisch 5–15 Seiten.
-   Für jede: Neues einarbeiten, Querverweise setzen, Widersprüche und Überholtes benennen.
-4. `wiki/index.md` aktualisieren (berührte Einträge neu schreiben).
-5. Einen Eintrag an `wiki/log.md` anhängen.
-6. `wiki/overview.md` nachziehen, wenn sich die Synthese wirklich geändert hat.
+1. The raw source sits in `raw/` and is unchanged.
+2. Create a source page in `wiki/sources/`: what it's about, the key claims,
+   what's new relative to existing content, where it contradicts existing content.
+3. Create or extend entities and concepts. A source typically touches 5–15 pages.
+   For each: work in what's new, add cross-references, name contradictions and
+   anything superseded.
+4. Update `wiki/index.md` (rewrite touched entries).
+5. Append an entry to `wiki/log.md`.
+6. Update `wiki/overview.md` if the synthesis has genuinely changed.
 
-**Vor jeder neuen Seite im Wiki suchen.** Eine bestehende Seite ergänzen ist fast immer
-besser als eine Beinahe-Dublette anzulegen.
+**Always search before adding a new page to the wiki.** Extending an existing page
+is almost always better than creating a near-duplicate.
 
-### Query (eine Frage kommt)
+### Query (a question comes in)
 
-1. `wiki/index.md` zuerst lesen, dann in die passenden Seiten.
-2. Antwort mit Zitaten auf Wiki-Seiten und Rohquellen.
-3. War die Antwort wertvoll, wird sie als Seite abgelegt — sonst verschwindet die Erkundung
-   im Chatverlauf. Die App bietet das mit einem Klick an.
+1. Read `wiki/index.md` first, then follow into the relevant pages.
+2. Answer with citations to wiki pages and raw sources.
+3. If the answer was valuable, file it as a page — otherwise the exploration
+   disappears in the chat history. The app offers this with one click.
 
-### Pflege (regelmäßig, siehe Screen „Pflege")
+### Maintenance (regularly, see the "Garden" screen)
 
-Erst die maschinellen Checks, dann das Urteil: verwaiste Seiten, kaputte Wikilinks,
-Index-Drift, überholte Aussagen, häufig genannte Begriffe ohne eigene Seite, fehlende
-Querverweise, unverdichtete Quellen. Befunde werden **gemeldet, nicht still korrigiert**.
+Machine checks first, then judgment: orphaned pages, broken wikilinks, index
+drift, outdated statements, frequently mentioned terms without their own page,
+missing cross-references, undigested sources. Findings are **reported, not
+silently corrected.**
 
-## Widersprüche
+## Contradictions
 
-Ein Widerspruch ist kein Defekt, der weggebügelt wird. Wenn zwei Quellen uneins sind:
+A contradiction is not a defect to be smoothed away. When two sources disagree:
 
-- Beide Aussagen bleiben, jede mit ihrem Zitat.
-- Eine kurze Notiz beschreibt die Art des Konflikts: `contradicts`, `supersedes`, `extends`.
-- Bei sachlichen Aussagen, die eine neuere Quelle überholt: die alte als `superseded`
-  markieren und datieren — nicht löschen.
+- Both statements stay, each with its citation.
+- A short note describes the kind of conflict: `contradicts`, `supersedes`,
+  `extends`.
+- For factual statements superseded by a newer source: mark the old one as
+  `superseded` and date it — don't delete it.
 
-## Log-Format
+## Log format
 
-`wiki/log.md` ist append-only. Jeder Eintrag beginnt mit demselben Präfix, damit er
-greppbar bleibt (`grep "^## \[" wiki/log.md | tail -5`):
+`wiki/log.md` is append-only. Every entry starts with the same prefix so it stays
+greppable (`grep "^## \[" wiki/log.md | tail -5`):
 
 ```
 ## [2026-08-10] ingest | Auth0 RBAC Guide
 - summary: wiki/sources/s-2026-08-10-auth0-rbac-guide.md
-- touched: [[auth0]], [[rollenbasierte-zugriffskontrolle]], index.md
-- notes: widerspricht [[altes-rollenkonzept]] bei der Vererbung von Rollen
+- touched: [[auth0]], [[role-based-access-control]], index.md
+- notes: contradicts [[old-role-concept]] on role inheritance
 
-## [2026-08-10] query | Wie erben Rollen in Auth0?
-- answered from: [[auth0]], [[rollenbasierte-zugriffskontrolle]]
-- filed back: wiki/concepts/rollenvererbung.md
+## [2026-08-10] query | How do roles inherit in Auth0?
+- answered from: [[auth0]], [[role-based-access-control]]
+- filed back: wiki/concepts/role-inheritance.md
 
 ## [2026-08-11] lint
-- findings: 2 verwaiste Seiten, 1 kaputter Link, index.md fehlt 1 Eintrag
+- findings: 2 orphaned pages, 1 broken link, index.md missing 1 entry
 ```
 
-## Grundsätze
+## Principles
 
-- Der Mensch kuratiert und fragt; das LLM macht die Buchhaltung.
-- Wissen wird **einmal beim Ingest verdichtet** und dann aktuell gehalten — nicht bei jeder
-  Frage neu abgeleitet.
-- Alles zitieren, Herkunft erhalten.
-- Großzügig verlinken, aber bestehende Seiten ergänzen statt Dubletten anzulegen.
-- Ein Wiki, das nur wächst und nie gepflegt wird, verrottet. Pflege ist Teil der Arbeit.
+- The human curates and asks; the LLM does the bookkeeping.
+- Knowledge is **digested once at ingest** and then kept current — not re-derived
+  on every question.
+- Cite everything, preserve provenance.
+- Link generously, but extend existing pages instead of creating duplicates.
+- A wiki that only grows and is never maintained rots. Maintenance is part of the
+  work.

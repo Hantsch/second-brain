@@ -1,12 +1,12 @@
-/* Eine Projektzeile in der Liste: Bereich, Titel, Status, offene Todos, Frist,
-   Alter.
+/* A project row in the list: scope, title, status, open todos, deadline,
+   age.
 
-   Der nächste Schritt steht hier bewusst **nicht**: er ist die große Zeile im
-   Detail. In der Liste wäre er zweimal derselbe Satz und nähme den Platz weg,
-   den die Zahlen brauchen.
+   The next step is deliberately **not** shown here: it's the large line in
+   the detail view. In the list it would be the same sentence twice and
+   would take up the space the numbers need.
 
-   Der Statuspunkt ist Farbe **und** Wort. Wer die Farbe nicht unterscheidet,
-   liest den Status trotzdem. */
+   The status dot is color **and** word. Whoever can't distinguish the
+   color still reads the status. */
 
 import type { Project } from '@shared/types';
 import { Icon } from '../atoms/Icon';
@@ -14,7 +14,7 @@ import { useLanguage, useT } from '../i18n';
 import { formatAge } from '../lib/format';
 import { DeadlineChip } from './DeadlineChip';
 
-/* Der Punkt benutzt die geteilten Töne aus shell.css; ohne Ton bleibt er grau. */
+/* The dot uses the shared tones from shell.css; without a tone it stays gray. */
 const DOT_TONE: Record<Project['status'], string> = {
   idea: '',
   active: 'sb-dot--ok',
@@ -28,7 +28,7 @@ export interface ProjectCardProps {
   project: Project;
   active: boolean;
   onSelect: () => void;
-  /** Für den Tastaturweg: die Zeile muss den Fokus annehmen können. */
+  /** For the keyboard path: the row must be able to accept focus. */
   buttonRef?: (element: HTMLButtonElement | null) => void;
   now?: Date;
 }
@@ -55,9 +55,10 @@ export function ProjectCard({ project, active, onSelect, buttonRef, now }: Proje
           </span>
         </span>
         <span className="sb-projectitem-meta">
-          {/* Der Bereich steht an der Zeile, nicht nur in der Überschrift darüber:
-              wer eine einzelne Karte ansieht (Suche, Sprung von außen), soll ohne
-              Rollen wissen, ob das Arbeit oder Privat ist. Ruhig, kein Farbakzent. */}
+          {/* The scope is shown on the row, not only in the heading above
+              it: whoever looks at a single card (search, jump from outside)
+              should know without scrolling whether it's work or private.
+              Calm, no color accent. */}
           <span className="sb-projectitem-scope">{t(`scope.${project.scope}`)}</span>
           <span className="sb-projectitem-status">{t(`project.status.${project.status}`)}</span>
           <DeadlineChip date={project.deadline} {...(now === undefined ? {} : { now })} />

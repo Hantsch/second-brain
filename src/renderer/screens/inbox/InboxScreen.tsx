@@ -1,21 +1,21 @@
-/* Inbox — die Arbeitsfläche des Einordnens.
+/* Inbox — the workspace for filing.
 
-   Zwei Spalten statt aufklappender Karten: auf 1440 px bleibt die Liste stehen,
-   während rechts der Vorschlag mit Textfeld, Todos und vier Aktionen liegt. Eine
-   Karte, die all das aufklappt, schiebt die Liste weg — und genau die braucht
-   man, um mit j/k zum nächsten Dump zu gehen.
+   Two columns instead of expanding cards: at 1440 px the list stays put
+   while the proposal sits on the right with text field, todos, and four
+   actions. A card that expands all of that would push the list away — and
+   that list is exactly what's needed to move to the next dump with j/k.
 
-   Tastatur: j/k oder Pfeile bewegen, Enter springt in den Vorschlag, e in den
-   Text, Ctrl+Enter legt ab, Esc zurück in die Liste.
+   Keyboard: j/k or arrows move, Enter jumps into the proposal, e into the
+   text, Ctrl+Enter files it, Esc back to the list.
 
-   Jede Aktion sagt danach, was geschehen ist, und trägt zehn Sekunden lang
-   „Rückgängig": auch „liegen lassen" schreibt `status: kept` in den Dump, und
-   genau das lässt sich zurücknehmen (`keepDump` in `core/capture/undo.ts`).
+   Every action states afterward what happened, and carries "Undo" for ten
+   seconds: even "leave it" writes `status: kept` to the dump, and that's
+   exactly what can be undone (`keepDump` in `core/capture/undo.ts`).
 
-   Die Auswahl hängt am Pfad, nicht an der Stelle: ein Dump, der als „bleibt
-   liegen" markiert wird, rutscht in der Liste nach hinten — die Auswahl darf ihm
-   folgen und nicht auf einen fremden Dump springen. Verschwindet er ganz
-   (abgelegt, verworfen), rückt der nächste an seine Stelle. */
+   The selection hangs off the path, not the position: a dump marked "stays
+   put" slides further down the list — the selection is allowed to follow
+   it and must not jump to an unrelated dump. If it disappears entirely
+   (filed, discarded), the next one takes its place. */
 
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -39,19 +39,19 @@ import { UndoStrip } from './UndoStrip';
 import type { UndoOffer } from './UndoStrip';
 import { useInboxKeys } from './use-inbox-keys';
 
-/** So lange bleibt „Rückgängig" stehen. */
+/** How long "Undo" stays visible. */
 const UNDO_VISIBLE_MS = 10_000;
 
-/** Woran die Auswahl hängt: am Pfad, mit der Stelle als Rückfallposition. */
+/** What the selection hangs off: the path, with the position as fallback. */
 interface Anchor {
   path: string;
   at: number;
 }
 
 /**
- * Die Stelle des gewählten Dumps. Der Pfad zählt zuerst: sortiert die Liste sich
- * neu, folgt die Auswahl demselben Dump. Ist er weg, gilt die alte Stelle — dort
- * steht jetzt der nächste.
+ * The position of the selected dump. The path counts first: if the list
+ * re-sorts, the selection follows the same dump. If it's gone, the old
+ * position applies — the next one now sits there.
  */
 function pickIndex(dumps: readonly DumpItem[], anchor: Anchor | null): number {
   if (dumps.length === 0 || anchor === null) return 0;
@@ -80,9 +80,9 @@ export function InboxScreen() {
   const dumps: DumpItem[] = data ?? [];
   const index = pickIndex(dumps, anchor);
   const current = dumps[index] ?? null;
-  /* Auch die erste Auswahl — die niemand geklickt hat — hängt am Pfad. Beim
-     Rendern nachgezogen, nicht in einem Effekt: sonst zeigte das erste Bild eine
-     andere Auswahl als das zweite. */
+  /* Even the first selection — which nobody clicked — hangs off the path.
+     Applied during render, not in an effect: otherwise the first frame
+     would show a different selection than the second. */
   if (current !== null && anchor?.path !== current.path) {
     setAnchor({ path: current.path, at: index });
   }
@@ -100,7 +100,7 @@ export function InboxScreen() {
     const dump = dumps[next];
     if (dump === undefined) return;
     setAnchor({ path: dump.path, at: next });
-    /* Alle Zeilen stehen im DOM — der Fokus braucht kein Warten auf ein Rendern. */
+    /* All rows are in the DOM — focus doesn't need to wait for a render. */
     if (focus) rows.current.get(dump.path)?.focus();
   };
 
@@ -108,8 +108,9 @@ export function InboxScreen() {
     if (current === null || proposal.data === undefined || edit === null) return;
     if (mutations.apply.isPending) return;
     mutations.apply.mutate(applied(proposal.data, edit), {
-      /* Was die Bestätigung sagt, entscheidet das Ergebnis: ohne geschriebene
-         Datei und ohne Marke ist der Dump liegengeblieben, nicht abgelegt. */
+      /* What the confirmation says is decided by the result: without a
+         written file and without a marker, the dump was left as-is, not
+         filed. */
       onSuccess: (result) =>
         setUndoOffer({
           kind: result.undoToken === null || result.written.length === 0 ? 'kept' : 'filed',
@@ -122,18 +123,18 @@ export function InboxScreen() {
   const keep = (): void => {
     if (current === null) return;
     mutations.keep.mutate(current.path, {
-      /* Anders als der Name vermuten lässt, schreibt „Liegen lassen" wirklich
-         etwas (`status: kept`) — und bekommt deshalb denselben Rückweg wie
-         Ablegen und Verwerfen, nicht nur eine Feststellung ohne Knopf. */
+      /* Contrary to what the name suggests, "Leave it" really does write
+         something (`status: kept`) — and therefore gets the same undo path
+         as filing and discarding, not just a statement without a button. */
       onSuccess: ({ undoToken }) => setUndoOffer({ kind: 'kept', paths: [], undoToken }),
     });
   };
 
-  /* Lautet der Vorschlag „Bleibt in der Inbox", ist der Primärknopf der Karte
-     „Liegen lassen" und der geht über `keep` (`capture:keep`, mit Rückweg) —
-     nicht über `file` (`capture:apply`, das für `target: 'inbox'` denselben
-     Status ohne Marke schriebe). Ctrl+Enter muss dieselbe Aktion auslösen wie
-     der Knopf, den das Auge sieht. */
+  /* If the proposal reads "Stays in the inbox", the card's primary button is
+     "Leave it" and that goes through `keep` (`capture:keep`, with an undo
+     path) — not through `file` (`capture:apply`, which would write the same
+     status without a marker for `target: 'inbox'`). Ctrl+Enter must trigger
+     the same action as the button the eye sees. */
   const stays = edit?.action.target === 'inbox';
   const primary = (): void => (stays ? keep() : file());
 
@@ -164,7 +165,7 @@ export function InboxScreen() {
       overline={t('screen.inbox.overline')}
       title={t('screen.inbox.title')}
       action={
-        /* Sekundär: der eine Teal-Fokuspunkt dieses Screens ist „Ablegen". */
+        /* Secondary: this screen's one teal focus point is "File". */
         <Button variant="secondary" icon="zap" onClick={() => void navigate('/capture')}>
           {t('screen.inbox.empty.action')}
         </Button>
@@ -177,8 +178,8 @@ export function InboxScreen() {
       <UndoStrip offer={undoOffer} busy={mutations.undo.isPending} onUndo={() => undo(undoOffer)} />
     );
 
-  /* Kein stiller Fehler: was beim Ablegen, Liegenlassen, Verwerfen oder
-     Zurücknehmen schiefgeht, steht als Karte da — der erste Fehler zählt. */
+  /* No silent error: whatever goes wrong while filing, leaving, discarding,
+     or undoing shows up as a card — the first error counts. */
   const failed =
     mutations.apply.error ??
     mutations.keep.error ??
@@ -230,7 +231,7 @@ export function InboxScreen() {
       {header}
       {strip}
       {failed === null ? null : (
-        /* Sekundär: das eine Teal des Screens gehört der Aktion in der Karte. */
+        /* Secondary: this screen's one teal belongs to the action in the card. */
         <ErrorState
           error={failed}
           variant="secondary"

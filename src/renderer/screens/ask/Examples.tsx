@@ -1,22 +1,23 @@
-/* Der Leerzustand des Fragens: drei Fragen, die zu diesem Vault passen.
+/* The empty state of asking: three questions that fit this vault.
 
-   Nicht hartcodiert — sie entstehen aus dem, was im Vault liegt: ein Modul, ein
-   Projekt, ein Warte-auf. Eine Beispielfrage über ein Modul, das es nicht gibt,
-   wäre eine Enttäuschung mit einem Klick Abstand.
+   Not hardcoded — they're derived from what's actually in the vault: a
+   knowledge module, a project, a waiting-on. An example question about a
+   module that doesn't exist would be a disappointment one click away.
 
-   Ist der Vault noch leer, gibt es keine Beispiele, sondern den Weg, ihn zu
-   füllen — dafür sorgt der Screen. */
+   If the vault is still empty, there are no examples, only a path to fill it —
+   the screen takes care of that. */
 
 import type { KnowledgeModule, Project } from '@shared/types';
 import { Icon } from '../../atoms/Icon';
 import { t as translate, useT } from '../../i18n';
 
-/** So viele Beispiele stehen da. Mehr sind eine Liste, keine Anregung. */
+/** This many examples are shown. More would be a list, not a nudge. */
 const MAX_EXAMPLES = 3;
 
 /**
- * Fragen aus dem Bestand. Reihenfolge nach Nutzen: Wissen zuerst (dafür ist der
- * Screen da), dann der Wiedereinstieg, dann das Warten.
+ * Questions drawn from what's on hand. Ordered by usefulness: knowledge first
+ * (that's what this screen is for), then getting back into a project, then
+ * waiting-on.
  */
 export function exampleQuestions(
   projects: readonly Project[],

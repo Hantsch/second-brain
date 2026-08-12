@@ -1,9 +1,9 @@
-/* Projekte: zwei Spalten, Liste und Detail. Farben, Abstände und Radien
-   ausschließlich aus den Gaston-Tokens.
+/* Projects: two columns, list and detail. Colors, spacing, and radii
+   exclusively from the Gaston tokens.
 
-   Wie bei der Inbox füllt der Screen den Inhaltsbereich genau und gescrollt wird
-   in den Spalten — sonst liegt die Aktionsleiste des Details auf 1152×720 unter
-   dem Fensterrand. */
+   As with the inbox, the screen fills the content area exactly and
+   scrolling happens within the columns — otherwise the detail's action bar
+   would sit below the window edge at 1152x720. */
 
 .sb-projects {
   display: grid;
@@ -13,14 +13,14 @@
   flex: 1 1 auto;
   min-height: 0;
 }
-/* Im engen Fenster untereinander: zwei Spalten würden beide unlesbar. */
+/* Stacked in a narrow window: two columns would make both unreadable. */
 @media (max-width: 1000px) {
   .sb-projects {
     grid-template-columns: minmax(0, 1fr);
   }
 }
 
-/* ── Liste ──────────────────────────────────────────────────────────────── */
+/* ── List ───────────────────────────────────────────────────────────────── */
 
 .sb-plist {
   display: flex;
@@ -94,7 +94,7 @@
 .sb-projectitem:focus-visible {
   box-shadow: var(--focus-ring);
 }
-/* Die Auswahl ist eine Fläche, kein zweites Teal: der Akzent gehört dem Knopf. */
+/* The selection is a surface, not a second teal: the accent belongs to the button. */
 .sb-projectitem--active {
   background: var(--surface-raised);
   border-color: var(--border-strong);
@@ -131,8 +131,8 @@
   text-transform: uppercase;
   letter-spacing: var(--tracking-caps);
 }
-/* Der Bereich als Mono-Overline, wie die Gruppen der Todo-Kacheln — kein zweiter
-   Farbakzent, nur eine Kante, die Arbeit und Privat auseinanderhält. */
+/* The scope as a mono overline, like the groups in the todo tiles — no
+   second color accent, just an edge that separates work from private. */
 .sb-projectitem-scope {
   padding-right: var(--space-2);
   border-right: 1px solid var(--border-subtle);
@@ -142,7 +142,7 @@
   color: var(--text-muted);
 }
 
-/* Die Überschrift eines Bereichs in der Liste. */
+/* The heading of a scope group in the list. */
 .sb-pgroup-title {
   list-style: none;
   padding: var(--space-1) var(--space-3) 0;
@@ -165,9 +165,9 @@
   color: var(--warning);
 }
 
-/* Der Statuspunkt ist der geteilte `.sb-dot` aus shell.css — hier kommt nur der
-   Ton dazu, den es dort noch nicht gab. Farbe ist ohnehin Beiwerk: das Wort
-   steht daneben. */
+/* The status dot is the shared `.sb-dot` from shell.css — only the tone that
+   didn't exist there yet is added here. Color is decoration anyway: the
+   word stands right next to it. */
 .sb-dot--warn {
   background: var(--warning);
 }
@@ -245,12 +245,12 @@
   color: var(--success);
 }
 
-/* ── Nächster Schritt: die eine große Zeile ─────────────────────────────── */
+/* ── Next step: the one large line ───────────────────────────────────────── */
 
-/* Die wichtigste Zeile des Screens darf nicht aussehen wie die zweitwichtigste:
-   eigene Fläche, eigene Kante. Die 2 px in `--accent` sind der Fokuspunkt dieses
-   Screens — keine zweite primäre Aktion, sondern die Stelle, an der der Blick
-   landen soll. */
+/* The most important line of the screen must not look like the second most
+   important one: its own surface, its own edge. The 2px in `--accent` is
+   this screen's focal point — not a second primary action, but the spot
+   where the eye is meant to land. */
 .sb-nextstep {
   display: flex;
   flex-direction: column;
@@ -284,8 +284,8 @@
 .sb-nextstep-line:focus-visible {
   box-shadow: var(--focus-ring);
 }
-/* Der Stift ist der einzige Hinweis, dass die Zeile ein Feld ist — auf
-   `--text-disabled` (2,4:1) war er praktisch unsichtbar. */
+/* The pencil is the only hint that the line is a field — at
+   `--text-disabled` (2.4:1) it was practically invisible. */
 .sb-nextstep-pen {
   color: var(--text-muted);
   flex-shrink: 0;
@@ -313,8 +313,8 @@
   min-height: 1em;
   color: var(--success);
 }
-/* Fremde Änderung an genau dieser Zeile, während das Feld offen ist. Warnfarbe,
-   kein zweites Teal: die Meldung ist kein Fokuspunkt, sondern eine Aussage. */
+/* An external change to exactly this line while the field is open. Warning
+   color, not a second teal: the notice is not a focal point but a statement. */
 .sb-nextstep-external {
   display: flex;
   flex-direction: column;
@@ -335,7 +335,7 @@
   flex-wrap: wrap;
 }
 
-/* ── Vorschlag ──────────────────────────────────────────────────────────── */
+/* ── Suggestion ─────────────────────────────────────────────────────────── */
 
 .sb-suggest {
   border-color: var(--accent-soft-border);
@@ -375,7 +375,7 @@
   padding-top: var(--space-2);
 }
 
-/* ── Warte auf ──────────────────────────────────────────────────────────── */
+/* ── Waiting-on ─────────────────────────────────────────────────────────── */
 
 .sb-waitlist {
   list-style: none;
@@ -453,10 +453,10 @@
 .sb-todorow--active {
   background: var(--surface-raised);
 }
-/* Die häufigste Aktion der App braucht die größte Sorgfalt: das Kästchen bleibt
-   16 px, die Trefferfläche ist 32 × 32. Die negativen Ränder lassen das Kästchen
-   dort stehen, wo es vorher stand, und die Fläche wächst nach außen — bis in die
-   Innenkante der Zeile. */
+/* The app's most frequent action needs the greatest care: the checkbox
+   stays 16px, the hit area is 32x32. The negative margins keep the checkbox
+   where it stood before, and the hit area grows outward — up to the inner
+   edge of the row. */
 .sb-todorow-box {
   display: grid;
   place-items: center;
@@ -523,10 +523,10 @@
   color: var(--text-faint);
 }
 
-/* ── Fristen-Chip ───────────────────────────────────────────────────────── */
+/* ── Deadline chip ──────────────────────────────────────────────────────── */
 
-/* Eigener Name, nicht `sb-chip`: das sind die Filter-Chips des Fragen-Screens,
-   und die sind Knöpfe. Zwei Dinge mit einem Namen wären zwei Fehler. */
+/* Its own name, not `sb-chip`: those are the filter chips of the ask
+   screen, and those are buttons. Two things with one name would be two bugs. */
 .sb-deadline {
   display: inline-flex;
   align-items: center;
@@ -556,7 +556,7 @@
   color: var(--warning);
 }
 
-/* ── Alle Todos ─────────────────────────────────────────────────────────── */
+/* ── All todos ──────────────────────────────────────────────────────────── */
 
 .sb-alltodos {
   display: flex;
@@ -595,7 +595,7 @@
   color: var(--warning);
 }
 
-/* ── Arbeitsspur ────────────────────────────────────────────────────────── */
+/* ── Work trail ─────────────────────────────────────────────────────────── */
 
 .sb-trace {
   display: flex;
@@ -623,7 +623,7 @@
   gap: var(--space-1);
 }
 
-/* ── Neues Projekt ──────────────────────────────────────────────────────── */
+/* ── New project ────────────────────────────────────────────────────────── */
 
 .sb-newproject {
   display: flex;

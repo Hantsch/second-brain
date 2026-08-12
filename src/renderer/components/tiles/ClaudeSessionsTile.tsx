@@ -1,19 +1,19 @@
-/* Die Arbeitsspuren der Agenten-CLI: Projekt, Branch, wann, und woran.
+/* The agent CLI's work trails: project, branch, when, and what.
 
-   Drei Zustände, alle ausdrücklich:
-   - **Aus**: der Schalter im Verhalten-Tab ist zu. Dann steht das da, mit dem Weg
-     dorthin — nicht „keine Sitzungen".
-   - **Leer**: es gibt keine Sitzung in der Nähe. Auch das ist eine Aussage.
-   - **Nicht zugeordnet**: die Sitzung liegt in einem Verzeichnis, das kein
-     Projekt kennt. Dann steht dort „Projekt zuordnen" — und die Zuordnung
-     schreibt den Pfad in `repos` der Projektdatei, wo er hingehört.
+   Three states, all made explicit:
+   - **Off**: the toggle in the Behavior tab is switched off. Then that's
+     what's shown, with the path to get there — not "no sessions".
+   - **Empty**: there's no session nearby. That too is a statement.
+   - **Unlinked**: the session sits in a directory that no project knows
+     about. Then it shows "link project" — and linking writes the path into
+     `repos` of the project file, where it belongs.
 
-   Nach der Zuordnung sagt eine Meldung, in welches Projekt der Pfad geschrieben
-   wurde, und nimmt sie auf Wunsch zurück: `repos` bekommt wieder genau die Liste,
-   die vorher in der Datei stand. Ohne diesen Weg müsste man bei einem Fehlgriff
-   die Markdown-Datei von Hand aufräumen.
+   After linking, a toast says which project the path was written to, and
+   offers to undo it: `repos` gets back exactly the list that was in the
+   file before. Without this path, a mistaken link would require cleaning up
+   the Markdown file by hand.
 
-   Der Branch steht in Mono: er ist Daten, kein Fließtext. */
+   The branch is shown in mono: it's data, not prose. */
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -45,8 +45,8 @@ export function ClaudeSessionsTile() {
   const off = overview !== undefined && !overview.useClaudeSessions;
   const rows: ClaudeSession[] = off ? [] : (sessions.data ?? []).slice(0, LIMIT);
 
-  /* Der Stand von `repos` **vor** dem Schreiben ist das Rückgängig. Er wird hier
-     festgehalten, bevor die Abfragen neu laufen. */
+  /* The state of `repos` **before** the write is the undo. It's captured
+     here before the queries re-run. */
   const linkTo = (session: ClaudeSession, slug: string): void => {
     const target = (projects.data ?? []).find((project) => project.slug === slug);
     const before = target?.repos ?? [];
