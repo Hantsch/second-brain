@@ -15,3 +15,11 @@ Guardrails, Quality Gates, Design-System-Pflichten, QA-Regeln.
 Der Vertrag zwischen Renderer und Main ist Code, nicht Prosa:
 [../src/shared/ipc.ts](../src/shared/ipc.ts) und
 [../src/shared/types/](../src/shared/types/).
+
+## AI Scrum
+
+Prozess- und Status-Tracking für die Weiterentwicklung: [ROADMAP.md](ROADMAP.md) (Stand,
+Meilensteine, Unpriorisiertes), [requirements/](requirements/) (Stories),
+[sprints/](sprints/) (Sprint-Planung/-Review), [concepts/](concepts/) (geplante Systeme),
+[systems/](systems/) (Referenz zu bereits gebauten Systemen). Ablauf in
+[requirements/README.md](requirements/README.md) und [sprints/README.md](sprints/README.md).
