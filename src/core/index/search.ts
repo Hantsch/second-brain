@@ -1,16 +1,17 @@
 /**
- * Volltextsuche mit MiniSearch — kein natives Modul, kein Server, keine Embeddings.
+ * Full-text search with MiniSearch — no native module, no server, no embeddings.
  *
- * Drei Entscheidungen bestimmen die Trefferqualitaet:
- * 1. **Gefaltete Begriffe.** Dokument und Anfrage werden auf eine ASCII-Form
- *    gebracht ('Rückmeldung' → 'rueckmeldung'). Beide Schreibweisen treffen sich.
- * 2. **Praefix und Fuzzy.** 'dokum' findet 'dokumentieren', ein Tippfehler kostet
- *    keinen Treffer (fuzzy 0.2). Erst wird mit UND gesucht, dann mit ODER.
- * 3. **Teilwort als Notausgang.** Deutsche Komposita ('Rollenkonzept') findet kein
- *    Praefix, wenn der Nutzer die zweite Haelfte tippt. Bleibt die Trefferliste
- *    dann duenn, wird zusaetzlich im Text gesucht — mit sichtbar kleinerem Wert.
+ * Three decisions determine hit quality:
+ * 1. **Folded terms.** Document and query are both brought into an ASCII form
+ *    ('Rückmeldung' → 'rueckmeldung'). Both spellings meet in the middle.
+ * 2. **Prefix and fuzzy.** 'dokum' finds 'dokumentieren'; a typo doesn't cost
+ *    a hit (fuzzy 0.2). Search runs with AND first, then with OR.
+ * 3. **Substring as a fallback.** German compound words ('Rollenkonzept')
+ *    won't be found by prefix matching if the user types the second half. If
+ *    the hit list stays thin, the text is also searched directly — with a
+ *    visibly lower score.
  *
- * Leere Anfrage ist kein Fehler, sondern die Frage „was war zuletzt?".
+ * An empty query isn't an error, it's the question "what happened recently?".
  */
 
 import MiniSearch from 'minisearch';
@@ -21,7 +22,7 @@ import { fold } from './text';
 import { DEFAULT_SEARCH_LIMIT } from './types';
 import type { IndexedDoc, SerializedSearch } from './types';
 
-/** Was MiniSearch von einem Dokument sieht. */
+/** What MiniSearch sees of a document. */
 interface SearchDoc {
   path: string;
   title: string;
@@ -29,15 +30,15 @@ interface SearchDoc {
   text: string;
 }
 
-/** Der Titel wiegt schwer: wer ihn trifft, meint das Dokument. */
+/** The title carries a lot of weight: whoever matches it means the document. */
 const BOOST = { title: 6, tags: 3, text: 1 };
 const FUZZY = 0.2;
 
-/** Volltreffer liegen ab hier, Teilworttreffer darunter — sichtbar zweite Wahl. */
+/** Full matches sit at this floor and above; substring matches below it — visibly second choice. */
 const FULL_HIT_FLOOR = 0.4;
 const SUBSTRING_SCORE = 0.3;
 
-/** Kuerzere Bruchstuecke wuerden alles treffen und nichts sagen. */
+/** Shorter fragments would match everything and say nothing. */
 const MIN_SUBSTRING_LENGTH = 3;
 
 export type DocLookup = ReadonlyMap<string, IndexedDoc>;
@@ -46,8 +47,8 @@ function searchOptions(): Options<SearchDoc> {
   return {
     fields: ['title', 'tags', 'text'],
     idField: 'path',
-    /* Eine kanonische Form fuer beide Seiten — sonst treffen 'Rückmeldung' und
-       'Rueckmeldung' einander nie. */
+    /* One canonical form for both sides — otherwise 'Rückmeldung' and
+       'Rueckmeldung' would never match each other. */
     processTerm: (term: string) => {
       const folded = fold(term);
       return folded.length > 0 ? folded : null;
@@ -59,7 +60,7 @@ function toSearchDoc(doc: IndexedDoc): SearchDoc {
   return { path: doc.path, title: doc.title, tags: doc.tags.join(' '), text: doc.text };
 }
 
-/** Anfragebegriffe, wie der Nutzer sie getippt hat — Grundlage der Markierung. */
+/** Query terms as the user typed them — the basis for highlighting. */
 function queryTerms(text: string): string[] {
   return text
     .split(/[^\p{L}\p{N}_]+/u)
@@ -77,7 +78,7 @@ function matchesTypes(doc: IndexedDoc, types: readonly DocType[] | undefined): b
   return types === undefined || types.length === 0 || types.includes(doc.docType);
 }
 
-/** Alle Filter der Anfrage als ein Praedikat. */
+/** All of the query's filters as one predicate. */
 function filterFor(query: SearchQuery): (doc: IndexedDoc | undefined) => boolean {
   const tags = query.tags ?? [];
   return (doc) => {
@@ -108,8 +109,8 @@ function byUpdatedDesc(a: IndexedDoc, b: IndexedDoc): number {
 }
 
 /**
- * Der Suchindex. Haelt nur den invertierten Index; Titel, Tags und Rumpf bleiben
- * im `VaultIndex` und werden beim Suchen nachgeschlagen — nichts doppelt.
+ * The search index. Holds only the inverted index; title, tags, and body stay
+ * in `VaultIndex` and are looked up when searching — nothing is duplicated.
  */
 export class SearchEngine {
   private readonly mini: MiniSearch<SearchDoc>;
@@ -118,12 +119,12 @@ export class SearchEngine {
     this.mini = mini;
   }
 
-  /** Leerer Suchindex. */
+  /** Empty search index. */
   static create(): SearchEngine {
     return new SearchEngine(new MiniSearch<SearchDoc>(searchOptions()));
   }
 
-  /** Aus Dokumenten aufbauen. */
+  /** Build from documents. */
   static from(docs: Iterable<IndexedDoc>): SearchEngine {
     const engine = SearchEngine.create();
     engine.addAll(docs);
@@ -131,8 +132,8 @@ export class SearchEngine {
   }
 
   /**
-   * Gespeicherten Zustand laden. `null`, wenn er nicht passt (andere
-   * MiniSearch-Fassung, beschaedigte Datei) — dann baut der Aufrufer neu.
+   * Load saved state. `null` if it doesn't fit (different MiniSearch version,
+   * corrupted file) — the caller then rebuilds from scratch.
    */
   static restore(state: SerializedSearch | null): SearchEngine | null {
     if (state === null) return null;
@@ -155,7 +156,7 @@ export class SearchEngine {
     this.mini.addAll([...docs].map(toSearchDoc));
   }
 
-  /** Hinzufuegen oder ersetzen — beides derselbe Vorgang fuer den Aufrufer. */
+  /** Add or replace — both the same operation from the caller's perspective. */
   replace(doc: IndexedDoc): void {
     if (this.mini.has(doc.path)) this.mini.discard(doc.path);
     this.mini.add(toSearchDoc(doc));
@@ -169,7 +170,7 @@ export class SearchEngine {
     return this.mini.toJSON();
   }
 
-  /** Treffer zur Anfrage, absteigend nach Wert. Wirft nie. */
+  /** Hits for the query, descending by score. Never throws. */
   search(query: SearchQuery, docs: DocLookup): SearchHit[] {
     const limit = Math.max(1, query.limit ?? DEFAULT_SEARCH_LIMIT);
     const keep = filterFor(query);
@@ -201,7 +202,7 @@ export class SearchEngine {
     return hits;
   }
 
-  /** MiniSearch zweimal fragen: erst UND, dann ODER — nie mit leeren Haenden. */
+  /** Query MiniSearch twice: AND first, then OR — never come back empty-handed. */
   private matched(
     text: string,
     keep: (doc: IndexedDoc | undefined) => boolean,
@@ -217,7 +218,7 @@ export class SearchEngine {
       .filter((result) => keep(docs.get(String(result.id))));
   }
 
-  /** Notausgang fuer Komposita: alle Begriffe muessen im Text vorkommen. */
+  /** Fallback for compound words: every term must appear in the text. */
   private substringHits(
     terms: readonly string[],
     docs: DocLookup,
@@ -239,7 +240,7 @@ export class SearchEngine {
     return found.slice(0, room);
   }
 
-  /** Leere Anfrage: die juengsten Dokumente. Ohne Wert, weil ohne Relevanz. */
+  /** Empty query: the most recent documents. No score, because no relevance. */
   private recent(
     docs: DocLookup,
     keep: (doc: IndexedDoc | undefined) => boolean,

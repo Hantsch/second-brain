@@ -1,19 +1,18 @@
-/* Schnell erfassen: ein Feld, eine Statuszeile. Nichts sonst.
+/* Quick capture: one field, one status line. Nothing else.
 
-   Ctrl+Enter speichert, Esc fragt nach, solange Text im Feld steht. Der Text
-   übersteht alles: er liegt als Entwurf in `localStorage`, bis er geschrieben
-   ist. Auch wenn kein Vault offen ist — dann sagt das Fenster, was fehlt, statt
-   den Gedanken zu verlieren.
+   Ctrl+Enter saves, Esc asks for confirmation as long as there's text in the
+   field. The text survives everything: it lives as a draft in `localStorage`
+   until it's written. Even when no vault is open — then the window says
+   what's missing instead of losing the thought.
 
-   Nach dem Speichern bleibt die Bestätigung stehen, bis man sie gelesen hat: der
-   Pfad, unter dem der Gedanke liegt, und der Rückweg. Erst danach schließt das
-   Fenster — und nur, wenn die Einstellung „Fenster nach dem Ablegen schließen"
-   das sagt (`capture.closeAfterCapture`). Eine Bestätigung, die niemand zu sehen
-   bekommt, ist keine.
+   After saving, the confirmation stays visible until it's been read: the path
+   the thought was filed under, and the way back. Only then does the window
+   close — and only if the "close window after filing" setting says so
+   (`capture.closeAfterCapture`). A confirmation nobody gets to see isn't one.
 
-   Esc gehört diesem Screen, nicht dem Rahmen: nur hier ist bekannt, ob noch
-   etwas im Feld steht. Der Rahmen hört deshalb nicht mit
-   (`src/main/quick-capture.ts`) — geschlossen wird über `capture:window`. */
+   Esc belongs to this screen, not the shell: only here is it known whether
+   there's still something in the field. The shell therefore doesn't listen
+   for it (`src/main/quick-capture.ts`) — closing happens via `capture:window`. */
 
 import { useEffect, useRef, useState } from 'react';
 import type { DumpItem } from '@shared/types';
@@ -27,17 +26,17 @@ import { bridge } from '../../lib/bridge';
 import { decodeIpcError } from '../../lib/ipc-error';
 import { useCaptureSettings } from '../../lib/queries/capture';
 
-/** Wo der Entwurf liegt, bis er geschrieben ist. */
+/** Where the draft lives until it's written. */
 const DRAFT_KEY = 'sb.quickCapture.draft';
 
-/** So lange steht die Bestätigung, bevor sich das Fenster schließt. */
+/** How long the confirmation stays visible before the window closes. */
 export const CONFIRM_MS = 800;
 
 function readDraft(): string {
   try {
     return window.localStorage.getItem(DRAFT_KEY) ?? '';
   } catch {
-    /* Ohne Speicher ist der Entwurf flüchtig — das Feld funktioniert trotzdem. */
+    /* Without storage the draft is ephemeral — the field still works either way. */
     return '';
   }
 }
@@ -64,11 +63,11 @@ export function QuickCapture() {
   const closing = useRef<ReturnType<typeof setTimeout> | null>(null);
   const settings = useCaptureSettings();
 
-  /* Der Hotkey öffnet das Fenster erneut — dann muss der Fokus zurück ins Feld. */
+  /* The hotkey reopens the window — then focus needs to go back into the field. */
   useEffect(() => {
     const unsubscribe = bridge().on('event:capture-focus', (payload) => {
-      /* Das Fenster wird versteckt, nicht zerstört: ohne dieses Zurücksetzen
-         stünde beim nächsten Öffnen die Bestätigung des vorigen Gedanken da. */
+      /* The window is hidden, not destroyed: without this reset, the next time
+         it opens it would still show the previous thought's confirmation. */
       setSaved(null);
       setStatus('idle');
       if (payload.text) setText(payload.text);
@@ -78,8 +77,8 @@ export function QuickCapture() {
     return unsubscribe;
   }, []);
 
-  /* Ein Timer, der nach dem Verschwinden des Fensters noch feuert, würde ein
-     frisch geöffnetes Fenster wieder zuklappen. */
+  /* A timer that still fires after the window has disappeared would close a
+     freshly opened window right back down. */
   useEffect(
     () => () => {
       if (closing.current !== null) clearTimeout(closing.current);
@@ -89,7 +88,7 @@ export function QuickCapture() {
 
   const close = (): void => void api.capture.window(false).catch(() => undefined);
 
-  /** Den geplanten Selbstschluss abbestellen — der Nutzer ist noch da. */
+  /** Cancel the scheduled auto-close — the user is still here. */
   const stayOpen = (): void => {
     if (closing.current === null) return;
     clearTimeout(closing.current);
@@ -116,8 +115,8 @@ export function QuickCapture() {
       writeDraft('');
       setSaved(dump);
       setStatus('saved');
-      /* Die Einstellung wird hier wirklich gelesen. Wer sie abschaltet, behält
-         das Fenster und kann den nächsten Gedanken hinterherschieben. */
+      /* This is where the setting is actually read. Whoever turns it off keeps
+         the window open and can immediately add the next thought. */
       if (settings?.closeAfterCapture !== false) {
         closing.current = setTimeout(() => {
           closing.current = null;
@@ -130,7 +129,7 @@ export function QuickCapture() {
     }
   };
 
-  /** Rückgängig: der Dump wandert in den Papierkorb, der Text zurück ins Feld. */
+  /** Undo: the dump moves to the trash, the text goes back into the field. */
   const undo = (): void => {
     if (saved === null) return;
     const dump = saved;
@@ -157,11 +156,13 @@ export function QuickCapture() {
     close();
   };
 
-  /* Am Fenster, nicht am Feld: Esc muss auch wirken, wenn der Fokus auf dem
-     Schließen-Knopf oder in der Rückfrage steht. Die Rückfrage selbst hat mit Esc
-     ihren eigenen Fluchtweg — sonst wäre sie ein Dialog ohne Ausgang.
-     Ohne Abhängigkeitsliste, weil der Horcher den aktuellen Text und die offene
-     Rückfrage kennen muss; An- und Abmelden kostet nichts. */
+  /* On the window, not the field: Esc must also work when focus is on the
+     close button or in the confirmation prompt. The confirmation prompt itself
+     has its own escape route via Esc — otherwise it would be a dialog with no
+     way out.
+     No dependency array, because the listener needs to know the current text
+     and whether the confirmation is open; subscribing and unsubscribing costs
+     nothing. */
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
       if (event.key !== 'Escape' || event.defaultPrevented) return;
@@ -173,7 +174,7 @@ export function QuickCapture() {
     return () => window.removeEventListener('keydown', onKeyDown);
   });
 
-  /** Zurück in die App: erst das Hauptfenster nach vorn, dann dieses schließen. */
+  /** Back into the app: bring the main window forward first, then close this one. */
   const toMain = (): void => {
     void api.window
       .show()

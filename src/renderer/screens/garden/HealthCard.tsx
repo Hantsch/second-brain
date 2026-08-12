@@ -1,17 +1,19 @@
-/* Der Kopf der Pflege: der Wert, seine Begründung, der Zeitpunkt — und der Rat.
+/* The head of the maintenance screen: the score, its justification, the
+   timestamp — and the advice.
 
-   Nie eine nackte Zahl. Neben dem Balken steht, **woraus** sie entsteht: die
-   Beiträge je Kategorie aus dem Kern („12 kaputte Links, 3 verwaiste Seiten,
-   1 unverdichtete Quelle"), jeder mit seinen Punkten. Die Punkte summieren sich
-   auf `100 − Gesundheit`; der Kern rundet so, dass die Rechnung aufgeht
+   Never a bare number. Next to the bar is **what it's made of**: the
+   contributions per category from the core ("12 broken links, 3 orphaned
+   pages, 1 uncondensed source"), each with its points. The points add up to
+   `100 − health`; the core rounds so the math works out
    (`core/gardener/health.ts`).
 
-   Darunter zwei Angaben, die man sonst raten müsste: wann geprüft wurde (in Mono,
-   es ist ein Zeitstempel) und **ob ein Modell beteiligt war**. Ein Bericht ohne
-   Deutung ist kein schlechterer Bericht — aber ein anderer, und das muss dastehen.
+   Below that, two pieces of information you'd otherwise have to guess: when
+   it was checked (in mono, since it's a timestamp) and **whether a model was
+   involved**. A report without interpretation isn't a worse report — but a
+   different one, and that has to be stated.
 
-   Der Rat darunter kommt aus dem Bericht, wenn ein Modell ihn gegeben hat; sonst
-   aus der Aufschlüsselung, mit dem Vermerk, dass er so entstanden ist
+   The advice below comes from the report if a model produced it; otherwise
+   from the breakdown, with a note that it was derived that way
    (`advice.ts`). */
 
 import type { GardenerReport } from '@shared/types';
@@ -21,7 +23,7 @@ import { useLanguage, useT } from '../../i18n';
 import { formatDate, plural } from '../../lib/format';
 import { adviceFor } from './advice';
 
-/** Zeitpunkt in Mono: Datum plus Uhrzeit, ohne Sekunden. */
+/** Timestamp in mono: date plus time, without seconds. */
 function stamp(iso: string, language: 'de' | 'en'): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return iso;

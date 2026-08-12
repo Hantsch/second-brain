@@ -1,18 +1,19 @@
-/* Typisierte Registrierung der IPC-Handler.
+/* Typed registration of the IPC handlers.
 
-   Jeder Handler wird eingepackt: er bekommt seine Nutzlast, gibt seinen
-   Rückgabewert — und jeder geworfene Fehler kommt als `IpcError` zurück.
-   Über die Grenze geht immer ein Umschlag (`ok`/`error`), weil Electron
-   Fehlerobjekte sonst auf ihre Message reduziert. Das Preload packt ihn aus. */
+   Every handler gets wrapped: it receives its payload, returns its result —
+   and any thrown error comes back as an `IpcError`. What crosses the
+   boundary is always an envelope (`ok`/`error`), because Electron otherwise
+   reduces error objects to their message. The preload unwraps it. */
 
 import { ipcMain } from 'electron';
 import { IPC_CHANNELS } from '@shared/ipc';
 import type { IpcChannel, IpcError, IpcRequest, IpcResponse } from '@shared/ipc';
 import { toIpcError } from './errors';
 
-/* Es gibt hier bewusst keinen Helfer mehr, der eine Absage „dieser Bereich fehlt
-   noch" baut: jeder Kanal aus `IPC_CHANNELS` ist echt (Test: „kein Kanal ist ein
-   Platzhalter"). Ein solcher Helfer wäre der kürzeste Weg zurück. */
+/* There is deliberately no longer a helper here that builds a "this area
+   doesn't exist yet" refusal: every channel from `IPC_CHANNELS` is real
+   (test: "no channel is a placeholder"). Such a helper would be the
+   shortest path back to that state. */
 export { fail, IpcFailure, noVault, toIpcError } from './errors';
 
 export type IpcHandler<K extends IpcChannel> = (
@@ -21,16 +22,16 @@ export type IpcHandler<K extends IpcChannel> = (
 
 export type HandlerMap = Partial<{ [K in IpcChannel]: IpcHandler<K> }>;
 
-/** Der Umschlag, in dem jede Antwort über die Grenze geht. */
+/** The envelope in which every response crosses the boundary. */
 export type IpcEnvelope<K extends IpcChannel> =
   { ok: true; value: IpcResponse<K> } | { ok: false; error: IpcError };
 
-/** Nur zum Typisieren beim Schreiben eines Bereichs — zur Laufzeit die Identität. */
+/** Only for typing while writing a handler map — the identity at runtime. */
 export function defineHandlers<M extends HandlerMap>(map: M): M {
   return map;
 }
 
-/** Setzt alle Handler auf `ipcMain`. Doppelte Kanäle ersetzen den Vorgänger. */
+/** Registers all handlers on `ipcMain`. Duplicate channels replace the previous one. */
 export function register(map: HandlerMap): void {
   for (const channel of Object.keys(map) as IpcChannel[]) {
     const handler = map[channel];
@@ -38,8 +39,8 @@ export function register(map: HandlerMap): void {
     ipcMain.removeHandler(channel);
     ipcMain.handle(channel, async (_event, payload: unknown) => {
       try {
-        /* Die Nutzlast kommt aus dem Renderer und ist zur Laufzeit ungeprüft;
-           die Typisierung des Kanals ist der Vertrag, den das Preload wahrt. */
+        /* The payload comes from the renderer and is unchecked at runtime;
+           the channel's typing is the contract that the preload upholds. */
         const value = await (handler as IpcHandler<IpcChannel>)(payload as IpcRequest<IpcChannel>);
         return { ok: true, value };
       } catch (error) {
@@ -51,7 +52,7 @@ export function register(map: HandlerMap): void {
   }
 }
 
-/** Kanäle aus `IPC_CHANNELS`, für die die Karte keinen Handler hat. */
+/** Channels from `IPC_CHANNELS` for which the map has no handler. */
 export function missingChannels(map: HandlerMap): IpcChannel[] {
   return IPC_CHANNELS.filter((channel) => typeof map[channel] !== 'function');
 }

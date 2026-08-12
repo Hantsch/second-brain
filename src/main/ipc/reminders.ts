@@ -1,13 +1,13 @@
-/* Erinnerungen: Fristen, überfällige Antworten, stagnierende Projekte.
+/* Reminders: deadlines, overdue replies, stagnating projects.
 
-   Gerechnet wird in `core/overview/reminders`. Der Kanal gibt zwei Dinge dazu,
-   die der Kern nicht kennt: die Sitzungen (sonst gilt ein Projekt als
-   stagnierend, an dem gestern im Terminal gearbeitet wurde) und den Ruhezustand
-   aus `.secondbrain/overview.json`.
+   The calculation happens in `core/overview/reminders`. The channel adds two
+   things the core doesn't know about: the sessions (otherwise a project
+   worked on yesterday in the terminal would count as stagnating) and the
+   snooze state from `.secondbrain/overview.json`.
 
-   `reminders:snooze` prüft, dass es die Erinnerung wirklich gibt. Eine Marke
-   ruhig zu stellen, die niemand kennt, wäre ein Knopf, der Erfolg meldet und
-   nichts tut. */
+   `reminders:snooze` checks that the reminder actually exists. Snoozing a
+   marker nobody knows about would be a button that reports success and does
+   nothing. */
 
 import { reminders } from '@core/overview';
 import { isoDay } from '@core/vault/paths';
@@ -17,7 +17,7 @@ import { claudeSessions, overviewIndex, overviewSettings, overviewStateFor } fro
 import { OVERVIEW_STATE_FILE } from '../overview-state';
 import type { Services } from '../services';
 
-/** Länger als ein Jahr ruhig zu stellen heißt: vergessen. Das ist kein Ruhen. */
+/** Snoozing for longer than a year means: forgetting. That's not snoozing. */
 const MAX_SNOOZE_DAYS = 365;
 
 function shiftDay(day: string, offset: number): string {
@@ -55,17 +55,17 @@ export function reminderHandlers(services: Services): HandlerMap {
         throw fail('not-found', 'diese Erinnerung gibt es nicht');
       }
       await state.snooze(id, shiftDay(today, count));
-      /* Die Datei hat sich geändert — damit lädt das Dashboard die Liste neu. */
+      /* The file has changed — this makes the dashboard reload the list. */
       services.sendEvent('event:vault-changed', {
         paths: [OVERVIEW_STATE_FILE],
         external: false,
       });
     },
 
-    /* Der Rückweg. Eine Ruhezeit auf „heute" zu setzen wäre keiner: gemahnt wird
-       erst wieder, wenn sie abgelaufen ist. Also wird der Eintrag entfernt.
-       Ist keiner da, hat der Aufrufer nichts zurückzunehmen — das ist ein
-       Fehler, nicht ein stiller Erfolg. */
+    /* The reverse path. Setting a snooze to "today" wouldn't be one: it only
+       nags again once it has expired. So the entry is removed instead.
+       If there's none, the caller has nothing to undo — that's an
+       error, not a silent success. */
     'reminders:unsnooze': async ({ id }) => {
       const state = await overviewStateFor(services, isoDay(new Date()));
       if (state.snoozedUntil(id) === null) {

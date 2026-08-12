@@ -1,5 +1,5 @@
-/* Befehlspalette (Ctrl+K): Screens wechseln, erfassen, suchen.
-   Weitere Befehle kommen über `registerCommand` dazu. Esc schließt. */
+/* Command palette (Ctrl+K): switch screens, capture, search.
+   More commands are added via `registerCommand`. Esc closes it. */
 
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -12,8 +12,8 @@ import { useRegisteredCommands } from '../lib/commands';
 import { qk } from '../lib/queries/keys';
 import { SCREENS } from '../lib/screens';
 
-/* Ab zwei Zeichen wird gesucht: bei einem Buchstaben trifft alles, und die
-   Liste wäre Rauschen statt Antwort. */
+/* Search starts at two characters: with a single letter everything matches, and
+   the list would be noise instead of an answer. */
 const MIN_QUERY = 2;
 const MAX_HITS = 6;
 
@@ -28,8 +28,8 @@ export interface CommandPaletteProps {
 }
 
 /**
- * Wird nur gerendert, solange die Palette offen ist — so startet sie jedes Mal
- * leer, ohne dass ein Effekt Zustand zurücksetzen müsste.
+ * Only rendered while the palette is open — this way it starts empty every
+ * time, without an effect having to reset state.
  */
 export function CommandPalette({ onClose }: CommandPaletteProps) {
   const t = useT();
@@ -58,8 +58,8 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
     return [...screens, ...actions, ...registered];
   }, [navigate, registered]);
 
-  /* Echte Volltextsuche über den Index — dieselbe, die `search:query` bedient.
-     Ohne Index kommt eine leere Liste zurück, kein Fehler. */
+  /* Real full-text search over the index — the same one that serves
+     `search:query`. Without an index an empty list comes back, not an error. */
   const needle = query.trim();
   const { data: hits } = useQuery({
     queryKey: qk.search.query(needle),
@@ -79,8 +79,8 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
       labelKey: hit.title,
       hint: hit.path,
       icon: 'file-text',
-      /* Die Dateien sind die Wahrheit: ein Treffer öffnet sie im Standardeditor,
-         solange die App keine eigene Leseansicht hat. */
+      /* The files are the truth: a hit opens it in the default editor, as long
+         as the app doesn't have its own reading view. */
       run: () => void api.shell.openPath(hit.path).catch(() => undefined),
     }));
     return [...matching, ...found];
@@ -133,15 +133,15 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
         aria-label={t('palette.title')}
         onKeyDown={onKeyDown}
       >
-        {/* Rohes gs-Markup, weil das Input-Atom keine Referenz nach außen gibt. */}
+        {/* Raw gs markup, because the Input atom doesn't expose a ref. */}
         <div className="sb-palette-input">
           <div className="gs-inputwrap">
             <span className="gs-input-icon">
               <Icon name="search" size={15} />
             </span>
             <input
-              /* Die Palette geht ausschließlich zum Tippen auf — der Fokus gehört
-                 sofort ins Feld, sonst tippt der Nutzer ins Leere. */
+              /* The palette only opens to be typed into — focus belongs in the
+                 field immediately, otherwise the user types into nothing. */
               autoFocus
               className="gs-input gs-input--withicon"
               placeholder={t('palette.placeholder')}

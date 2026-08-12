@@ -1,11 +1,11 @@
-/* Reindumpen und Einordnen. Grundsatz: Die KI schlägt vor, der Mensch bestätigt. */
+/* Dumping and filing. Principle: the AI proposes, the human confirms. */
 
 import type { Scope } from './vault';
 import type { CoachMode, WaitingOn } from './domain';
 
 export type CaptureOrigin = 'window' | 'quick-capture' | 'chat' | 'clipboard' | 'drop' | 'cli';
 
-/** Ein Dump: unsortierter Text, der als Datei in `inbox/` landet. */
+/** A dump: unsorted text that lands as a file in `inbox/`. */
 export interface DumpItem {
   path: string;
   id: string;
@@ -13,66 +13,66 @@ export interface DumpItem {
   text: string;
   created: string;
   origin: CaptureOrigin;
-  /** Vorschlag liegt vor, aber noch nicht bestätigt. */
+  /** A proposal exists, but hasn't been confirmed yet. */
   status: 'raw' | 'proposed' | 'filed' | 'kept';
-  /** Wie lange der Dump schon liegt, in Tagen. */
+  /** How long the dump has been sitting there, in days. */
   ageDays: number;
   wordCount: number;
-  /** Vom Nutzer beim Erfassen gesetzte Tags. */
+  /** Tags set by the user while capturing. */
   tags: string[];
-  /** Scope, wenn beim Erfassen schon klar. */
+  /** Scope, if already clear at capture time. */
   scope: Scope | null;
 }
 
-/** Wohin ein Dump wandert. */
+/** Where a dump ends up. */
 export type FilingTarget =
-  /** In eine Projektdatei, Abschnitt „Notizen" bzw. „Todos". */
+  /** Into a project file, "Notes" or "Todos" section. */
   | 'project'
-  /** In den Tageseintrag. */
+  /** Into the journal entry. */
   | 'journal'
-  /** Als eigenständige Notiz in einen Bereich. */
+  /** As a standalone note in an area. */
   | 'area'
-  /** Als Rohquelle plus Wiki-Verdichtung in ein Modul. */
+  /** As a raw source plus wiki distillation into a module. */
   | 'module'
-  /** Neues Projekt anlegen. */
+  /** Create a new project. */
   | 'new-project'
-  /** Bleibt bewusst in der Inbox. */
+  /** Deliberately stays in the inbox. */
   | 'inbox';
 
 export interface FilingAction {
   target: FilingTarget;
-  /** Zieldatei relativ zur Vault-Wurzel. Bei `new-project` der geplante Pfad. */
+  /** Target file relative to the vault root. For `new-project`, the planned path. */
   path: string;
-  /** Abschnitt in der Zieldatei, unter dem angehängt wird. */
+  /** Section in the target file to append under. */
   section: string | null;
-  /** Was tatsächlich geschrieben wird — der Nutzer kann es vor dem Bestätigen ändern. */
+  /** What actually gets written — the user can change it before confirming. */
   content: string;
 }
 
-/** Ein vollständiger Ablage-Vorschlag zu einem Dump. */
+/** A complete filing proposal for a dump. */
 export interface FilingProposal {
   dumpPath: string;
-  /** Vorgeschlagener Titel des Inhalts. */
+  /** Proposed title of the content. */
   title: string;
   scope: Scope;
   tags: string[];
-  /** Der Hauptvorschlag. */
+  /** The main proposal. */
   primary: FilingAction;
-  /** Weitere Schreibvorgänge, die dazugehören (z. B. Todo in Projektdatei). */
+  /** Additional write operations that belong with it (e.g. a todo in a project file). */
   extras: FilingAction[];
-  /** Andere sinnvolle Ziele, ein Klick entfernt. */
+  /** Other reasonable targets, one click away. */
   alternatives: FilingAction[];
-  /** 0..1 — wie sicher die Einordnung ist. */
+  /** 0..1 — how confident the classification is. */
   confidence: number;
-  /** Ein Satz, warum dieses Ziel. Immer sichtbar, nie versteckt. */
+  /** One sentence on why this target. Always visible, never hidden. */
   reason: string;
-  /** Erkannte Todos mit Fristen. */
+  /** Detected todos with deadlines. */
   todos: ProposedTodo[];
-  /** Erkannte Warte-auf-Einträge. */
+  /** Detected "waiting on" entries. */
   waitingOn: WaitingOn[];
-  /** Erkannte Personen, Orte, Begriffe — Kandidaten für Wiki-Entitäten. */
+  /** Detected people, places, terms — candidates for wiki entities. */
   entities: string[];
-  /** Ohne LLM erzeugt (Heuristik), damit die App auch ohne Modell arbeitet. */
+  /** Produced without an LLM (heuristic), so the app also works without a model. */
   heuristic: boolean;
   createdAt: string;
 }
@@ -83,27 +83,27 @@ export interface ProposedTodo {
   due: string | null;
   waitingFor: string | null;
   priority: number;
-  /** Projekt-Slug, in dessen Datei das Todo soll. */
+  /** Project slug into whose file the todo should go. */
   project: string | null;
 }
 
-/** Ergebnis des Ausführens eines Vorschlags. */
+/** Result of executing a proposal. */
 export interface FilingResult {
   dumpPath: string;
-  /** Geschriebene bzw. geänderte Dateien. */
+  /** Files written or changed. */
   written: string[];
-  /** Wohin der Dump selbst verschoben wurde, oder null wenn er in der Inbox blieb. */
+  /** Where the dump itself was moved to, or null if it stayed in the inbox. */
   movedTo: string | null;
-  /** Rückgängig-Marke: Kopie unter `.secondbrain/trash/`. */
+  /** Undo marker: a copy under `.secondbrain/trash/`. */
   undoToken: string | null;
 }
 
-/** Was der Coach im Journal-Dialog tun soll — pro Gespräch übersteuerbar. */
+/** What the coach should do in the journal dialog — overridable per conversation. */
 export interface CoachRequest {
   mode: CoachMode;
-  /** Datum des Tageseintrags, auf den sich das Gespräch bezieht. */
+  /** Date of the journal entry the conversation relates to. */
   date: string;
   message: string;
-  /** Frühere Einträge als Kontext heranziehen (nur bei `analyze`). */
+  /** Pull in earlier entries as context (only for `analyze`). */
   useHistory: boolean;
 }

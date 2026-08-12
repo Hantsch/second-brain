@@ -1,17 +1,17 @@
-/* Die rechte Spalte: alles zu einem Projekt, in der Reihenfolge, in der man es
-   nach einer Pause braucht.
+/* The right column: everything about a project, in the order you need it
+   after a break.
 
-   Kopf, dann der nächste Schritt (die eine Zeile, die den Wiedereinstieg trägt),
-   dann was hängt: Warte-auf, Todos. Danach der Stand als Prosa, die
-   eingeordneten Notizen und die Arbeitsspur.
+   Head, then the next step (the one line that carries the re-entry), then
+   what's pending: waiting-on, todos. After that the status as prose, the
+   filed notes, and the work trace.
 
-   Dieses Component besitzt die Schreibwege des Projekts — Status, nächster
-   Schritt, Warte-auf, Todos. Der Screen darüber kümmert sich um Auswahl und
-   Filter; so gibt es keine Kette von Rückrufen durch drei Ebenen.
+   This component owns the project's write paths — status, next step,
+   waiting-on, todos. The screen above it handles selection and filtering;
+   this way there's no chain of callbacks running through three layers.
 
-   Der Screen gibt diesem Component den Projekt-Slug als `key`: beim Wechsel
-   entsteht es neu, und damit ist von selbst weg, was zum vorigen Projekt gehörte
-   — Vorschlag, Bestätigung, fokussierte Zeile. */
+   The screen gives this component the project slug as `key`: on a switch it
+   is recreated, which automatically clears out whatever belonged to the
+   previous project — suggestion, confirmation, focused row. */
 
 import { useState } from 'react';
 import type { Project, ProjectStatus, Todo, VaultDoc, WaitingOn } from '@shared/types';
@@ -43,10 +43,11 @@ function openFile(path: string): void {
 }
 
 /**
- * Die `waiting_on`-Liste, wie sie in der Datei steht — samt Feldern, die die App
- * nicht deutet. Genau diese Fassung geht beim Rückgängig zurück: `project.waitingOn`
- * kennt nur die vier bekannten Felder, und ein Rückgängig, das Nutzerinhalt kostet,
- * ist keins. Geprüft wird jeder Eintrag im Hauptprozess (`checkProjectPatch`).
+ * The `waiting_on` list as it stands in the file — including fields the app
+ * doesn't interpret. This exact version is what an undo restores:
+ * `project.waitingOn` only knows the four recognized fields, and an undo
+ * that costs user content isn't an undo. Every entry is validated in the
+ * main process (`checkProjectPatch`).
  */
 function rawWaiting(doc: VaultDoc, fallback: readonly WaitingOn[]): WaitingOn[] {
   const raw = doc.frontmatter['waiting_on'];
@@ -56,7 +57,7 @@ function rawWaiting(doc: VaultDoc, fallback: readonly WaitingOn[]): WaitingOn[] 
 export interface ProjectDetailProps {
   project: Project;
   doc: VaultDoc;
-  /** Aus der Tastatur: `t` öffnet das Feld für ein neues Todo. */
+  /** From the keyboard: `t` opens the field for a new todo. */
   now?: Date;
 }
 
@@ -68,10 +69,10 @@ export function ProjectDetail({ project, doc, now }: ProjectDetailProps) {
   const modelRouted = useTaskRouted('project-status');
 
   const [suggestion, setSuggestion] = useState<StatusSuggestion | null | undefined>(undefined);
-  /* Der Stand, aus dem der Vorschlag gerechnet wurde. Er wird beim Eintreffen
-     eingefroren, nicht beim Klick gelesen: ein Vorschlag über eine Datei, die
-     sich seither geändert hat, ist veraltet, und ihn mit dem neuen Hash zu
-     schreiben hieße, eine fremde Änderung still zu überschreiben. */
+  /* The state the suggestion was computed from. It's frozen when the
+     suggestion arrives, not read at click time: a suggestion about a file
+     that has since changed is stale, and writing it with the new hash would
+     mean silently overwriting a change made elsewhere. */
   const [suggestBase, setSuggestBase] = useState<string | null>(null);
   const [savedStatus, setSavedStatus] = useState<ProjectStatus | null>(null);
   const [stepSaved, setStepSaved] = useState(false);
@@ -99,8 +100,8 @@ export function ProjectDetail({ project, doc, now }: ProjectDetailProps) {
     );
   };
 
-  /* Der Vorschlag verschwindet erst, wenn er in der Datei steht: schlägt das
-     Schreiben fehl, bleibt er stehen und daneben der Fehler. */
+  /* The suggestion only disappears once it's in the file: if the write
+     fails, it stays visible alongside the error. */
   const accept = (what: 'both' | 'step'): void => {
     if (suggestion === undefined || suggestion === null) return;
     mutations.patch.mutate(
@@ -121,9 +122,10 @@ export function ProjectDetail({ project, doc, now }: ProjectDetailProps) {
     );
   };
 
-  /* „Erledigt" schreibt `resolved: true`, der Eintrag verschwindet aus der Liste
-     — ohne Meldung sähe das aus wie Löschen. Also sagt die Meldung, was in der
-     Datei steht, und nimmt es auf Wunsch zurück (Muster des Ausblenden-Toasts). */
+  /* "Resolved" writes `resolved: true`, the entry disappears from the list —
+     without a message that would look like deletion. So the message says
+     what's now in the file, and takes it back on request (same pattern as
+     the dismiss toast). */
   const resolveWaiting = (index: number): void => {
     const who = project.waitingOn[index]?.who ?? '';
     const before = rawWaiting(doc, project.waitingOn);
@@ -146,8 +148,9 @@ export function ProjectDetail({ project, doc, now }: ProjectDetailProps) {
     );
   };
 
-  /* Nur die Zeile, auf der der Fokus liegt. Ohne Fokus passiert nichts: ein `x`,
-     das irgendein Todo abhakt, wäre schlimmer als ein `x`, das nichts tut. */
+  /* Only the row that currently has focus. Without focus, nothing happens:
+     an `x` that checks off some random todo would be worse than an `x` that
+     does nothing. */
   const toggleFocused = (): void => {
     if (focused === null) return;
     todoMutations.toggle.mutate(focused.id);
@@ -183,8 +186,8 @@ export function ProjectDetail({ project, doc, now }: ProjectDetailProps) {
   };
 
   return (
-    /* `section` mit Namen, nicht ein `div` mit `aria-label`: an einem Element
-       ohne Rolle ist der Name unzulässig — und für Hilfsmittel unsichtbar. */
+    /* A named `section`, not a `div` with `aria-label`: on an element without
+       a role, the name is invalid — and invisible to assistive tech. */
     <section className="sb-pdetail" aria-label={t('project.detail.aria')}>
       <ProjectHead
         project={project}

@@ -1,5 +1,6 @@
-/* Die Rail links: zehn Screens in der Reihenfolge aus docs/ARCHITECTURE.md,
-   jeder mit Icon, Label, Tastaturweg und aktivem Zustand. Unten der Vault. */
+/* The rail on the left: ten screens in the order from docs/ARCHITECTURE.md,
+   each with icon, label, keyboard shortcut, and active state. The vault at
+   the bottom. */
 
 import { NavLink } from 'react-router-dom';
 import { Icon } from '../atoms/Icon';
@@ -7,9 +8,10 @@ import { useT } from '../i18n';
 import { SCREENS } from '../lib/screens';
 import { VaultIndicator } from './VaultIndicator';
 
-/* Kein Tooltip an den Rail-Einträgen: Label und Taste stehen sichtbar daneben,
-   ein Tooltip würde sie nur wiederholen — und weil er absolut nach rechts
-   ausklappt, erzwingt er in der scrollbaren Rail einen Querbalken. */
+/* No tooltip on the rail entries: the label and key are already visibly next
+   to them, a tooltip would only repeat them — and because it expands
+   absolutely to the right, it would force a horizontal scrollbar in the
+   scrollable rail. */
 export function Rail() {
   const t = useT();
   return (

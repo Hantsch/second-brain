@@ -1,4 +1,4 @@
-/* Auskunft über die laufende App. Landet in „Über" und in Fehlerberichten. */
+/* Information about the running app. Used in "About" and in error reports. */
 
 import { app } from 'electron';
 import type { HandlerMap } from './registry';
@@ -6,9 +6,9 @@ import { defineHandlers } from './registry';
 import type { Services } from '../services';
 
 /**
- * Demo-Modus: entweder hat der Starter `SB_DEMO` gesetzt (Prüfskripte), oder der
- * offene Vault ist der geseedete Beispielordner. Die Oberfläche darf das
- * kennzeichnen, damit niemand Beispielinhalte für echte hält.
+ * Demo mode: either the launcher set `SB_DEMO` (test scripts), or the open
+ * vault is the seeded example folder. The UI is allowed to flag this so
+ * nobody mistakes example content for real content.
  */
 function isDemoVault(root: string | null): boolean {
   if (process.env['SB_DEMO'] === '1') return true;

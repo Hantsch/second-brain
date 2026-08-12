@@ -246,8 +246,8 @@ export const deScreens = {
     'Die Prüfung findet verwaiste Seiten, kaputte Links, unverdichtete Quellen und Projekte ohne nächsten Schritt.',
   'screen.garden.empty.action': 'Prüfung starten',
 
-  /* Nicht „Verhalten": das ist einer der Tabs — als Überzeile gelesen sähe der
-     Screen aus, als wäre dieser Tab offen. */
+  /* Not "Behavior": that's one of the tabs — read as an overline, the screen
+     would look as if that tab were already open. */
   'screen.settings.overline': 'Einrichten',
   'screen.settings.title': 'Einstellungen',
   'screen.settings.empty.title': 'Einstellungen folgen',

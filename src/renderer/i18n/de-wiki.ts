@@ -1,14 +1,14 @@
-/* Deutsche Oberflächentexte der Wissens-Screens: Module und Quellen.
+/* German UI texts for the knowledge screens: modules and sources.
 
-   Eigene Datei, damit `de-screens.ts` nicht über den Zeilenrahmen wächst — und
-   damit die Texte dort liegen, wo die Screens liegen.
+   Its own file so `de-screens.ts` doesn't grow past the line limit — and so
+   the texts live where the screens live.
 
-   Die Kategorienamen sind dieselben, die der Kern in `wiki/index.md` schreibt
-   (`core/wiki/text.ts`): wer in der Oberfläche „Konzepte" liest, findet im Vault
-   dieselbe Überschrift. */
+   The category names are the same ones the core writes in `wiki/index.md`
+   (`core/wiki/text.ts`): whoever reads "Konzepte" in the UI finds the same
+   heading in the vault. */
 
 export const deWiki = {
-  // ── Module: Übersicht ──────────────────────────────────────────────────────
+  // ── Modules: overview ──────────────────────────────────────────────────────
   'modules.count': '{count} Module',
   'modules.countOne': 'ein Modul',
   'modules.counts': '{sources} Quellen · {entities} Entitäten · {concepts} Konzepte',
@@ -147,7 +147,7 @@ export const deWiki = {
   'sources.ytdlp.install': 'Automatisch holen',
   'sources.ytdlp.installing': 'Wird geholt',
 
-  // ── Quellen: Aufträge ─────────────────────────────────────────────────────
+  // ── Sources: jobs ──────────────────────────────────────────────────────────
   'sources.jobs.title': 'Aufträge',
   'sources.jobs.count': '{count} Aufträge',
   'sources.jobs.countOne': 'ein Auftrag',

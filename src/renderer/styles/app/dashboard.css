@@ -1,11 +1,11 @@
-/* Das Dashboard: Zusammenfassung des Tages, das Gitter, die Kacheln.
+/* The dashboard: day summary, the grid, the tiles.
 
-   Das Gitter hat vier Spalten; eine Kachel belegt 1 bis 4 davon (sm … xl). Ab
-   1152 px Fensterbreite sind es zwei Spalten — dort zerreißen drei Spalten die
-   Zeilen —, unter 900 px eine. Alle Farben, Abstände und Radien aus den
-   Gaston-Tokens. */
+   The grid has four columns; a tile spans 1 to 4 of them (sm … xl). From
+   1152 px window width down it's two columns — at that width, three columns
+   tear the rows apart — below 900 px, one. All colors, spacing and radii come
+   from the Gaston tokens. */
 
-/* ── Zusammenfassung des Tages ─────────────────────────────────────────────── */
+/* ── Day summary ────────────────────────────────────────────────────────── */
 
 .sb-daysummary {
   display: flex;
@@ -24,9 +24,9 @@
 .sb-daysummary-dot {
   color: var(--text-faint);
 }
-/* Schlechte Nachrichten tragen ihre eigene Farbe, nicht die Akzentfarbe: das
-   Teal gehört dem Fokuspunkt („Gedanken erfassen"). Geklickt werden kann
-   trotzdem — das zeigt der Unterstrich, nicht die Farbe. */
+/* Bad news carries its own color, not the accent color: the teal belongs to
+   the focal point ("capture a thought"). It's still clickable — that's shown
+   by the underline, not the color. */
 .sb-daysummary-link--danger,
 .sb-daysummary-link--danger:hover,
 .sb-daysummary-link--danger:focus-visible {
@@ -51,7 +51,7 @@
   color: var(--text-faint);
 }
 
-/* ── Das Gitter ───────────────────────────────────────────────────────────── */
+/* ── The grid ───────────────────────────────────────────────────────────── */
 
 .sb-tiles {
   display: grid;
@@ -80,8 +80,8 @@
   grid-column: span 4;
 }
 
-/* Die gezogene Kachel liegt fest am Zeiger: sie fällt aus dem Raster, deshalb
-   springt sie nicht, wenn die Lücke wandert. */
+/* The dragged tile stays fixed to the pointer: it's taken out of the grid
+   flow, so it doesn't jump when the gap moves. */
 .sb-tile--dragging {
   z-index: 40;
   pointer-events: none;
@@ -97,8 +97,9 @@
   box-shadow: var(--focus-ring);
 }
 
-/* Die Leiste des Verschiebemodus: ruhig, am unteren Rand des Gitters, sichtbar.
-   Ein Modus, den nur die Ansage kennt, ist für sehende Tastaturnutzer nicht da. */
+/* The move-mode bar: calm, at the bottom edge of the grid, visible. A mode
+   that only the screen reader announcement knows about doesn't exist for
+   sighted keyboard users. */
 .sb-movebar {
   position: sticky;
   bottom: 0;
@@ -109,9 +110,9 @@
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--accent-soft-border);
   border-radius: var(--radius-md);
-  /* Deckende Fläche, keine Tönung: die Leiste liegt über dem Gitter, und durch
-     `--accent-soft` (12 % Teal) las man die Kachelzeile darunter mit — zwei
-     Zeilen übereinander, von denen keine mehr stimmte. */
+  /* An opaque surface, not a tint: the bar sits above the grid, and with
+     `--accent-soft` (12% teal) the tile row underneath bled through — two
+     rows overlapping, neither of which read correctly anymore. */
   background: var(--surface-raised);
   box-shadow: var(--shadow-2);
   font-family: var(--font-mono);
@@ -126,7 +127,7 @@
   background: var(--accent);
 }
 
-/* Die Lücke: wo die Kachel landet, in ihrer Breite. */
+/* The gap: where the tile will land, at its width. */
 .sb-tile-gap {
   min-height: 96px;
   border: 1px dashed var(--accent);
@@ -134,9 +135,10 @@
   background: var(--accent-soft);
 }
 
-/* Zwei Spalten statt vier — und die Breiten halbiert: „mittel" bleibt eine halbe
-   Zeile, „breit" wird die ganze. Würde `md` weiter zwei Spalten belegen, stünde
-   ab hier jede Kachel allein, und aus zwei Spalten wäre eine geworden. */
+/* Two columns instead of four — and the widths halved: "medium" stays half a
+   row, "large" becomes the whole row. If `md` kept spanning two columns,
+   every tile would stand alone from here on, turning two columns into
+   effectively one. */
 @media (max-width: 1152px) {
   .sb-tiles {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -164,7 +166,7 @@
   }
 }
 
-/* ── Der Rahmen einer Kachel ──────────────────────────────────────────────── */
+/* ── A tile's frame ─────────────────────────────────────────────────────── */
 
 .sb-tile-card {
   display: flex;
@@ -211,7 +213,7 @@
   border-top: 1px solid var(--border-subtle);
   font-size: var(--text-xs);
 }
-/* Was nicht in die Kachel passte — eine Zahl, keine Entschuldigung. */
+/* What didn't fit in the tile — a number, not an apology. */
 .sb-tile-rest {
   font-size: var(--text-2xs);
   color: var(--text-faint);
@@ -241,7 +243,7 @@
   color: var(--text-faint);
 }
 
-/* ── Griff und Kartenmenü ─────────────────────────────────────────────────── */
+/* ── Handle and card menu ───────────────────────────────────────────────── */
 
 .sb-tile-handle {
   all: unset;
@@ -322,7 +324,7 @@
   color: var(--accent);
 }
 
-/* ── Zeilen in den Kacheln ────────────────────────────────────────────────── */
+/* ── Rows inside tiles ──────────────────────────────────────────────────── */
 
 .sb-line-icon {
   display: grid;
@@ -331,15 +333,16 @@
   flex-shrink: 0;
   color: var(--text-faint);
 }
-/* Eine ganze Zeile als Ziel: der Titel ist der Knopf, nicht ein Icon daneben.
-   32 px hoch, sonst ist die häufigste Zeile des Dashboards ein Präzisionsspiel. */
+/* A whole row as the target: the title is the button, not some icon next to
+   it. 32 px tall, otherwise the dashboard's most common row becomes a game of
+   precision. */
 .sb-line-open {
   all: unset;
   cursor: pointer;
-  /* `inline-block`, nicht `inline-flex`: an einem Flex-Container greift
-     `text-overflow` nicht — der Titel wurde hart abgeschnitten, obwohl die Regel
-     darunter Auslassungspunkte versprach. Die Höhe kommt jetzt aus der
-     Zeilenhöhe, die Trefferfläche bleibt dieselbe. */
+  /* `inline-block`, not `inline-flex`: `text-overflow` doesn't apply on a
+     flex container — the title was cut off hard even though the rule below
+     promised an ellipsis. The height now comes from the line height, the hit
+     area stays the same. */
   display: inline-block;
   line-height: var(--sb-hit);
   min-height: var(--sb-hit);
@@ -348,8 +351,8 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  /* Der Titel gibt nach, bevor die Zeile überläuft: er hat ein Ende mit
-     Auslassungspunkten, die Frist rechts hat keins. */
+  /* The title yields before the row overflows: it has an ellipsis end, the
+     deadline on the right doesn't. */
   flex: 0 1 auto;
   min-width: 6ch;
   max-width: 46%;
@@ -361,14 +364,14 @@
 .sb-line-open:focus-visible {
   box-shadow: var(--focus-ring);
 }
-/* Höhere Spezifität als `.sb-line-open`: eine Zeile ohne zweite Spalte darf die
-   ganze Breite haben. */
+/* Higher specificity than `.sb-line-open`: a row without a second column may
+   take the full width. */
 .sb-line-open.sb-line-name--full {
   max-width: none;
   flex: 1;
 }
-/* Alles, was rechts steht, bleibt rechts: Kennzahl und Aktion in einer Gruppe,
-   damit die Aktionen eine Spalte bilden statt eine Treppe. */
+/* Everything on the right stays on the right: metric and action in one
+   group, so the actions form a column instead of a staircase. */
 .sb-line-right {
   display: inline-flex;
   align-items: center;
@@ -380,8 +383,8 @@
   margin-left: 0;
 }
 
-/* Ein Fokuspunkt pro Screen: der gehört „Gedanken erfassen". Die Wege in den
-   zuständigen Screen bleiben ruhig und färben sich erst unter dem Zeiger. */
+/* One focal point per screen: it belongs to "capture a thought". Links into
+   the relevant screen stay calm and only take on color under the pointer. */
 .sb-tile-card .sb-textlink {
   color: var(--text-muted);
 }
@@ -419,7 +422,8 @@
 .sb-line-picker {
   max-width: 20ch;
 }
-/* Suchfeld plus Auswahl: ab acht Projekten steht beides untereinander. */
+/* Search field plus selection: from eight projects on, the two stack
+   vertically. */
 .sb-line-link {
   display: inline-flex;
   align-items: flex-end;
@@ -445,7 +449,7 @@
   white-space: nowrap;
 }
 
-/* ── Kacheln mit eigenem Innenleben ───────────────────────────────────────── */
+/* ── Tiles with their own inner workings ────────────────────────────────── */
 
 .sb-tilecapture,
 .sb-tileask {
@@ -519,9 +523,9 @@
 .sb-tiletodos-group .gs-overline {
   padding-left: var(--space-1);
 }
-/* In der Kachel steht ein Todo einzeilig: umbrechender Text macht die Kachel
-   höher als das Fenster, und dann ist alles darunter unerreichbar. Der ganze Satz
-   steht im Titel und in der Todo-Ansicht. */
+/* In the tile, a todo is single-line: wrapping text makes the tile taller
+   than the window, putting everything below it out of reach. The full
+   sentence lives in the title and in the todo view. */
 .sb-tiletodos .sb-todorow-text {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -579,7 +583,7 @@
   color: var(--text-muted);
 }
 
-/* ── Die Auswahl der Module ───────────────────────────────────────────────── */
+/* ── Module selection ───────────────────────────────────────────────────── */
 
 .sb-catalog {
   display: grid;
@@ -621,7 +625,7 @@
   color: var(--text-faint);
 }
 
-/* Für Ansagen und Hinweise, die nur der Screenreader braucht. */
+/* For announcements and hints that only the screen reader needs. */
 .sb-visually-hidden {
   position: absolute;
   width: 1px;

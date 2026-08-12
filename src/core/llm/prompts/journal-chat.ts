@@ -1,45 +1,46 @@
-/* Das Tagebuch-Gespräch — der empfindlichste Prompt der App.
+/* The journal conversation — the app's most sensitive prompt.
 
-   Der Nutzer hat den Grund dafür selbst gesagt: „manchmal will man als Mensch
-   nicht immer eine Lösung haben, manchmal braucht man einfach nur jemanden der
-   einem zuhört und versteht."
+   The user stated the reason themself: "sometimes as a human you don't
+   always want a solution, sometimes you just need someone who listens and
+   understands."
 
-   Deshalb sind die drei Haltungen keine Nuancen desselben Textes, sondern drei
-   verschiedene Aufträge:
+   That's why the three stances aren't nuances of the same text but three
+   different assignments:
 
-   - `listen`  spiegelt und bestätigt. **Kein** Ratschlag, keine Umdeutung ins
-               Positive, keine „hast du schon versucht"-Frage. Das ist der Zweck
-               des Modus, nicht seine Feinheit.
-   - `tips`    hört zuerst zu, dann höchstens drei kleine, heute machbare Schritte.
-   - `analyze` verbindet heute mit früheren Einträgen — mit Datum, ohne Diagnose.
+   - `listen`  mirrors and affirms. **No** advice, no reframing toward the
+               positive, no "have you tried" question. That's the purpose of
+               the mode, not a refinement of it.
+   - `tips`    listens first, then at most three small steps doable today.
+   - `analyze` connects today with earlier entries — with dates, without
+               diagnosis.
 
-   Was in `listen` verboten ist, steht als Liste im Prompt und wird von den Tests
-   Wendung für Wendung geprüft: `LISTEN_FORBIDDEN`. */
+   What's forbidden in `listen` is listed in the prompt and checked phrase by
+   phrase by the tests: `LISTEN_FORBIDDEN`. */
 
 import type { ChatTurn, CoachMode, DocLanguage, UiLanguage } from '@shared/types';
 import { clamp, documentLanguageRule, replyLanguageRule, turns } from './shared';
 
-/** So viel Tageseintrag bzw. Nachricht geht in einen Prompt. */
+/** How much journal entry or message content goes into a prompt. */
 const MAX_CHARS = 4000;
 
 export interface JournalChatInput {
   mode: CoachMode;
-  /** Was der Nutzer gerade geschrieben hat. */
+  /** What the user just wrote. */
   message: string;
-  /** Datum des Tageseintrags (YYYY-MM-DD). */
+  /** Date of the journal entry (YYYY-MM-DD). */
   date: string;
-  /** Der bisherige Tageseintrag, falls vorhanden. */
+  /** The entry so far, if there is one. */
   entry?: string;
-  /** Frühere Runden dieses Gesprächs, älteste zuerst. */
+  /** Earlier turns of this conversation, oldest first. */
   history?: readonly { role: 'user' | 'assistant'; content: string }[];
-  /** Auszüge früherer Tage — nur im Modus `analyze` sinnvoll. */
+  /** Excerpts from earlier days — only meaningful in `analyze` mode. */
   earlierDays?: readonly { date: string; excerpt: string }[];
 }
 
 /**
- * Wendungen, die der Modus `listen` ausdrücklich verbietet. Sie stehen wörtlich
- * im Prompt, damit das Modell sie erkennt, und sie sind zugleich die Prüfliste
- * der Tests — so ist das Verbot nachweisbar, ohne ein Modell zu fragen.
+ * Phrases that the `listen` mode explicitly forbids. They appear verbatim in
+ * the prompt so the model recognizes them, and they double as the tests'
+ * checklist — that way the prohibition is verifiable without asking a model.
  */
 export const LISTEN_FORBIDDEN: readonly string[] = [
   'hast du schon versucht',
@@ -55,7 +56,7 @@ export const LISTEN_FORBIDDEN: readonly string[] = [
   'kopf hoch',
 ];
 
-/** Was in jeder Haltung gilt. */
+/** What applies in every stance. */
 function common(docLanguage: DocLanguage, replyLanguage: UiLanguage): string[] {
   return [
     'Du bist der Gesprächspartner in einem privaten Tagebuch. Der Inhalt ist vertraulich und verlässt dieses Gespräch nicht.',
@@ -97,7 +98,7 @@ const STANCE: Record<CoachMode, readonly string[]> = {
   ],
 };
 
-/** Der System-Prompt einer Haltung. Öffentlich, damit die Verbote prüfbar sind. */
+/** The system prompt of a stance. Exported so the prohibitions are testable. */
 export function journalChatSystemPrompt(
   mode: CoachMode,
   docLanguage: DocLanguage,
@@ -111,8 +112,8 @@ export function journalChatPrompt(
   docLanguage: DocLanguage,
   replyLanguage: UiLanguage = docLanguage,
 ): ChatTurn[] {
-  /* Frühere Tage sind Belege für Muster. In `listen` und `tips` haben sie keinen
-     Auftrag — dort würden sie nur zum Vergleichen verführen. */
+  /* Earlier days are evidence for patterns. In `listen` and `tips` they have
+     no purpose — there they'd only tempt comparisons. */
   const earlier = input.mode === 'analyze' ? (input.earlierDays ?? []) : [];
   const base = turns(
     [journalChatSystemPrompt(input.mode, docLanguage, replyLanguage)],

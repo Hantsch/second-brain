@@ -27,14 +27,14 @@ The vault is a folder of Markdown files plus YAML frontmatter (format:
 
 ## Tech stack
 
-| Area     | Choice                                                                                 |
-| -------- | --------------------------------------------------------------------------------------- |
-| Shell    | Electron 41, electron-vite, TypeScript strict                                          |
-| Renderer | React 19, react-router, TanStack Query, Tailwind 4 + Gaston Design System              |
-| Core     | Plain TypeScript in `src/core/` — knows nothing about Electron                         |
-| Search   | MiniSearch over an index built from the files (no native module)                       |
-| LLM      | Own gateway: Anthropic + OpenAI-compatible (Ollama, LM Studio, OpenRouter, OpenAI)     |
-| Tests    | Vitest (core + renderer), Playwright `_electron` for screenshots                       |
+| Area     | Choice                                                                             |
+| -------- | ---------------------------------------------------------------------------------- |
+| Shell    | Electron 41, electron-vite, TypeScript strict                                      |
+| Renderer | React 19, react-router, TanStack Query, Tailwind 4 + Gaston Design System          |
+| Core     | Plain TypeScript in `src/core/` — knows nothing about Electron                     |
+| Search   | MiniSearch over an index built from the files (no native module)                   |
+| LLM      | Own gateway: Anthropic + OpenAI-compatible (Ollama, LM Studio, OpenRouter, OpenAI) |
+| Tests    | Vitest (core + renderer), Playwright `_electron` for screenshots                   |
 
 No Postgres, no embeddings, no native module. Full-text search plus LLM rerank is
 enough; vector search only arrives once a concrete requirement needs it.

@@ -1,12 +1,13 @@
-/* Module — das Wissen, sichtbar gemacht.
+/* Modules — the knowledge, made visible.
 
-   Zwei Ansichten in einem Screen: die Übersicht mit einer Karte je Modul und das
-   Detail mit Seiten, Graph, Quellen und Chronik. Welche gilt, steht in der
-   Adresse (`#/modules?m=<slug>`), damit ein Verweis von außen — aus einem Beleg,
-   aus der Pflege, aus der Befehlspalette — direkt in eine Seite führen kann.
+   Two views in one screen: the overview with one card per module, and the
+   detail view with pages, graph, sources, and log. Which one applies is
+   held in the address (`#/modules?m=<slug>`), so a reference from outside —
+   from a citation, from maintenance, from the command palette — can lead
+   directly into a page.
 
-   Der Fokuspunkt der Übersicht ist „Modul anlegen": ohne Modul gibt es hier
-   nichts zu lesen. Im Detail gehört das Teal dem Speichern einer Seite. */
+   The overview's focal point is "create module": without a module there's
+   nothing to read here. In the detail view, the teal belongs to saving a page. */
 
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -41,7 +42,7 @@ export function ModulesScreen() {
   const modules = data ?? [];
   const current = wanted === null ? null : (modules.find((entry) => entry.slug === wanted) ?? null);
 
-  /** Die Adresse ist der Zustand: ein Ziel, das nicht existiert, wird nicht erfunden. */
+  /** The address is the state: a target that doesn't exist is never invented. */
   const go = (next: { m?: string | null; tab?: ModuleTab; p?: string | null }): void => {
     const merged = new URLSearchParams();
     const slug = next.m === undefined ? wanted : next.m;
@@ -59,10 +60,11 @@ export function ModulesScreen() {
       title={current === null ? t('screen.modules.title') : current.title}
       action={
         current === null ? (
-          /* Sekundär: eine Anlegen-Aktion in der Kopfzeile ist nie der eine
-             Teal-Fokuspunkt des Screens — der gehört hier den Modul-Kacheln
-             selbst (dieselbe Zeile wie bei „Gedanken erfassen" im Dashboard,
-             „Speichern" im Erfassen-Screen, „Neu prüfen" in der Pflege). */
+          /* Secondary: a create action in the header is never the one teal
+             focal point of the screen — that belongs to the module tiles
+             themselves here (the same reasoning as "capture a thought" on
+             the dashboard, "save" on the capture screen, "check again" in
+             maintenance). */
           <Button variant="secondary" icon="plus" onClick={() => setDialog(true)}>
             {t('modules.create.action')}
           </Button>
@@ -151,9 +153,9 @@ export function ModulesScreen() {
   return (
     <div className="sb-screen sb-screen--wide">
       {header}
-      {/* Kein zweiter Rahmen mit dem Titel „Module": der steht schon in der
-          Kopfzeile. Der Zähler steht als Mono-Zahl hier, wie „5 Dumps" in der
-          Inbox oder „9 Projekte" bei den Projekten. */}
+      {/* No second frame titled "modules": that already sits in the header.
+          The counter appears here as a mono number, like "5 dumps" in the
+          inbox or "9 projects" in projects. */}
       <p className="sb-modules-count sb-mono">
         {plural(modules.length, 'modules.countOne', 'modules.count')}
       </p>

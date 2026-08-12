@@ -1,22 +1,22 @@
-/* Die Tage als schmale Liste: Datum, Wochentag, Stimmungspunkt, erste Worte,
- * Wortzahl.
+/* The days as a narrow list: date, weekday, mood dot, first words,
+ * word count.
  *
- * Zwei Entscheidungen, die die Liste ehrlich halten:
+ * Two decisions that keep the list honest:
  *
- * - **Lücken werden benannt, nicht gefüllt.** Ein Tag ohne Datei bekommt keine
- *   Zeile — sonst stünden dort Tage, die es nicht gibt. Stattdessen liegt zwischen
- *   zwei Einträgen eine ruhige Zeile: „3 Tage ohne Eintrag". Niemand schreibt
- *   jeden Tag, und das darf man sehen.
- * - **„Heute" ist immer der erste Eintrag**, auch ohne Datei. Es ist der Weg
- *   hinein: ein Tagebuch, in dem man den heutigen Tag suchen muss, wird nicht
- *   geführt.
+ * - **Gaps are named, not filled.** A day without a file gets no
+ *   row — otherwise it would show days that don't exist. Instead, a quiet
+ *   row sits between two entries: "3 days without an entry". Nobody writes
+ *   every day, and that should be visible.
+ * - **"Today" is always the first entry**, even without a file. It's the way
+ *   in: a journal where you have to search for today's entry isn't being
+ *   kept.
  */
 
 import type { JournalDay } from '@shared/types';
 import { useLanguage, useT } from '../i18n';
 import { plural } from '../lib/format';
 
-/** Eine Zeile der Liste: ein Tag mit Datei, oder eine benannte Lücke. */
+/** One row of the list: a day with a file, or a named gap. */
 export type DayRow =
   | { kind: 'day'; date: string; day: JournalDay | null; today: boolean }
   | { kind: 'gap'; days: number; key: string };
@@ -24,18 +24,18 @@ export type DayRow =
 const MS_PER_DAY = 86_400_000;
 
 /**
- * Kalendertag als lokales Datum — nie über `new Date('YYYY-MM-DD')`: das ist UTC
- * und macht westlich von Greenwich aus dem 10. den 9.
+ * Calendar day as a local date — never via `new Date('YYYY-MM-DD')`: that's UTC
+ * and turns the 10th into the 9th west of Greenwich.
  *
- * Öffentlich, weil der Tagebuch-Screen dieselbe Rechnung braucht. Zwei Fassungen
- * davon wären zwei Vorstellungen davon, welcher Tag heute ist.
+ * Exported because the journal screen needs the same calculation. Two versions
+ * of it would mean two different ideas of what day today is.
  */
 export function dateOf(iso: string): Date {
   const [year, month, day] = iso.split('-').map(Number);
   return new Date(year ?? 1970, (month ?? 1) - 1, day ?? 1);
 }
 
-/** Der heutige Kalendertag in Ortszeit, als 'YYYY-MM-DD'. */
+/** Today's calendar day in local time, as 'YYYY-MM-DD'. */
 export function todayIso(now = new Date()): string {
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const day = String(now.getDate()).padStart(2, '0');
@@ -47,8 +47,8 @@ function daysBetween(newer: string, older: string): number {
 }
 
 /**
- * Die Zeilen der Liste, jüngste zuerst: „Heute" (mit Eintrag, wenn es einen gibt),
- * dann die übrigen Tage mit Lückenzeilen dazwischen.
+ * The rows of the list, newest first: "Today" (with an entry if there is one),
+ * then the remaining days with gap rows in between.
  */
 export function dayRows(days: readonly JournalDay[], today: string): DayRow[] {
   const sorted = [...days]
@@ -61,8 +61,8 @@ export function dayRows(days: readonly JournalDay[], today: string): DayRow[] {
   let previous = today;
   for (const day of sorted) {
     if (day.date === today) continue;
-    /* Nur echte Lücken: aufeinanderfolgende Tage brauchen keine Zeile, und ein
-       Tag in der Zukunft (nachgetragen) auch keine. */
+    /* Only genuine gaps: consecutive days need no row, and neither does a
+       day in the future (backfilled). */
     const missing = daysBetween(previous, day.date) - 1;
     if (missing > 0) rows.push({ kind: 'gap', days: missing, key: `${previous}-${day.date}` });
     rows.push({ kind: 'day', date: day.date, day, today: false });
@@ -71,7 +71,7 @@ export function dayRows(days: readonly JournalDay[], today: string): DayRow[] {
   return rows;
 }
 
-/** Die Tage, die sich auswählen lassen — die Grundlage der Pfeiltasten. */
+/** The days that can be selected — the basis for the arrow keys. */
 export function selectableDates(rows: readonly DayRow[]): string[] {
   return rows
     .filter((row): row is Extract<DayRow, { kind: 'day' }> => row.kind === 'day')
@@ -80,10 +80,10 @@ export function selectableDates(rows: readonly DayRow[]): string[] {
 
 export interface DayListProps {
   rows: readonly DayRow[];
-  /** Der ausgewählte Kalendertag. */
+  /** The selected calendar day. */
   selected: string;
   onSelect: (date: string) => void;
-  /** Zeilen für die Tastatur greifbar halten. */
+  /** Keep rows reachable for the keyboard. */
   rowRef?: (date: string, element: HTMLButtonElement | null) => void;
 }
 

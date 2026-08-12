@@ -1,7 +1,7 @@
-/* Mock-Brücke: dieselbe API wie `window.sb`, aber mit Fixture-Daten.
-   Sie greift, wenn der Renderer ohne Electron läuft — im Browser und in Tests.
-   Für JEDEN Kanal aus `IPC_CHANNELS` gibt es eine Antwort; der Typ unten
-   erzwingt das beim Übersetzen. */
+/* Mock bridge: the same API as `window.sb`, but with fixture data.
+   It takes over when the renderer runs without Electron — in the browser
+   and in tests. There is a response for EVERY channel in `IPC_CHANNELS`;
+   the type below enforces that at compile time. */
 
 import type { IpcChannel, IpcRequest, IpcResponse } from '@shared/ipc';
 import type { RawSource, WriteResult } from '@shared/types';
@@ -69,8 +69,8 @@ const RESPONSES: MockResponses = {
     status: 'active',
     nextStep: fx.project.nextStep ?? '',
     reason: 'Seit der Freigabe ist wieder Bewegung im Projekt.',
-    /* Die Attrappe hat ein Modell — sonst behauptete der Screenshot einen
-       gedeuteten Vorschlag, den niemand gedeutet hat. */
+    /* The mock has a model — otherwise the screenshot would claim an
+       interpreted suggestion that no one actually interpreted. */
     heuristic: false,
   }),
   'projects:resolveWaiting': () => ({ ...fx.project, waitingOn: [] }),
@@ -82,8 +82,8 @@ const RESPONSES: MockResponses = {
   'todos:reorder': () => [fx.todo],
 
   'journal:list': () => [fx.journalDay],
-  /* Der Tag kommt in Abschnitten — so zeigt die Ansicht im Browser-Modus
-     Tagestext, zwei Runden Gespräch und eine Fakten-Zeile. */
+  /* The day comes in sections — this way the browser-mode view shows day
+     text, two rounds of conversation, and one facts line. */
   'journal:get': () => ({
     day: fx.journalDay,
     doc: { ...fx.doc, path: fx.journalDay.path },
@@ -121,8 +121,8 @@ const RESPONSES: MockResponses = {
   'modules:list': () => [fx.knowledgeModule],
   'modules:create': ({ title, description }) => ({ ...fx.knowledgeModule, title, description }),
   'modules:pages': () => [fx.wikiPage],
-  /* Ein Rumpf mit einem gültigen und einem kaputten Wikilink — so zeigt die
-     Ansicht im Browser-Modus beide Fälle. */
+  /* A body with one valid and one broken wikilink — this way the browser-mode
+     view shows both cases. */
   'modules:page': () => ({
     page: fx.wikiPage,
     doc: {
@@ -133,7 +133,7 @@ const RESPONSES: MockResponses = {
   }),
   'modules:savePage': () => ({ ...writeResult, path: fx.wikiPage.path }),
   'modules:sources': () => [rawSource],
-  /* Kennungen sind `modul/slug` — dieselbe Form wie `outbound`/`inbound`. */
+  /* IDs are `module/slug` — the same form as `outbound`/`inbound`. */
   'modules:graph': () => ({
     nodes: [
       {
@@ -146,9 +146,9 @@ const RESPONSES: MockResponses = {
     edges: [[`${fx.wikiPage.module}/${fx.wikiPage.slug}`, `${fx.wikiPage.module}/auth0`]],
   }),
 
-  /* Die Marke der Antwort, die im Fixture-Gespräch schon steht: ohne Ereignisse
-     (die Mock-Brücke schickt keine) wäre eine neue Marke ein Stream, der nie
-     endet — und ein Screen, der ewig „Abbrechen" anbietet. */
+  /* The message ID already present in the fixture conversation: without
+     events (the mock bridge sends none) a new ID would be a stream that
+     never ends — and a screen that offers "cancel" forever. */
   'chat:ask': () => ({ threadId: fx.chatThread.id, messageId: 'm-2' }),
   'chat:threads': () => [fx.chatThread],
   'chat:thread': () => fx.chatThread,
@@ -260,9 +260,9 @@ const RESPONSES: MockResponses = {
     journal: { streak: 3, lastEntry: fx.TODAY, moodTrend: [3, 4, 3] },
     health: fx.gardenerReport.health,
     findingCount: fx.gardenerReport.findings.length,
-    /* In der Attrappe gibt es einen Pflegebericht (`gardener:report`), also darf
-       die Kachel den Wert zeigen. Ohne dieses Feld sagt sie „noch nicht
-       geprüft" — und genau das tut die echte App, solange der Pflegelauf fehlt. */
+    /* The mock has a maintenance report (`gardener:report`), so the tile may
+       show the value. Without this field it says "not checked yet" — which
+       is exactly what the real app does while a maintenance run is missing. */
     healthKnown: true,
     sessions: [fx.claudeSession],
   }),
@@ -278,7 +278,7 @@ const RESPONSES: MockResponses = {
   'gardener:cancel': () => undefined,
   'gardener:dismiss': () => undefined,
   'gardener:undismiss': () => undefined,
-  /* Die Attrappe schreibt nichts — sie gibt zurück, was ein Fix zurückgäbe. */
+  /* The mock writes nothing — it returns what a fix would return. */
   'gardener:applyFix': ({ finding }) => ({
     written: finding.fix === null ? [] : [finding.paths[0] ?? fx.wikiPage.path],
     undoToken: 'demo-undo',
@@ -311,9 +311,9 @@ export const mockBridge: SbBridge = {
     if (!handler) {
       throw encodeIpcError({ code: 'invalid', message: `unbekannter Kanal: ${channel}` });
     }
-    /* Der Zusammenhang zwischen Kanal, Anfrage und Antwort ist über
-       `MockResponses` geprüft; die generische Signatur kann TypeScript hier
-       nicht mehr nachvollziehen. */
+    /* The relationship between channel, request, and response is checked via
+       `MockResponses`; the generic signature here is beyond what TypeScript
+       can still follow. */
     const respond = handler as (request: unknown) => unknown;
     return respond(payload) as Awaited<ReturnType<SbBridge['invoke']>>;
   },

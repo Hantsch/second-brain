@@ -1,17 +1,15 @@
-/* Wissens-Module: Karten, Seitenliste, Seitenansicht, Wikilinks, Markdown,
-   Graph und Chronik. Farben, Abstände und Radien ausschließlich aus den
-   Gaston-Tokens.
+/* Knowledge modules: cards, page list, page view, wikilinks, markdown, graph,
+   and log. Colors, spacing, and radii exclusively from the Gaston tokens.
 
-   Der Graph ist der einzige Ort mit eigener Geometrie: eine Fläche in Prozent,
-   Linien im SVG darunter, Knöpfe darüber. Alles andere folgt den Rhythmen aus
-   content.css. Der Quellen-Screen hat seine eigene Datei (sources.css).
+   The graph is the only place with its own geometry: a plane in percent,
+   lines in the SVG beneath it, buttons on top. Everything else follows the
+   rhythms from content.css. The sources screen has its own file (sources.css).
 */
 
-/* ── Module: Übersicht ──────────────────────────────────────────────────── */
+/* ── Modules: overview ──────────────────────────────────────────────────── */
 
-/* Derselbe Zähler wie „5 Dumps" in der Inbox oder „9 Projekte" bei den
-   Projekten — keine zweite Rahmenkarte mit dem Titel „Module" nur für eine
-   Zahl. */
+/* The same counter as "5 dumps" in the inbox or "9 projects" in projects —
+   no second framed card titled "modules" just for a number. */
 .sb-modules-count {
   padding: 0 var(--space-2);
   letter-spacing: var(--tracking-caps);
@@ -82,7 +80,7 @@
   resize: vertical;
 }
 
-/* ── Module: Detail ─────────────────────────────────────────────────────── */
+/* ── Modules: detail ────────────────────────────────────────────────────── */
 
 .sb-moduledetail {
   display: flex;
@@ -102,8 +100,8 @@
   gap: var(--space-2);
   min-width: 0;
 }
-/* Zählungen, letzter Ingest und Befunde in einer Zeile — mit Luft dazwischen,
-   sonst liest man „6 Konzepte zuletzt verdichtet" als einen Satz. */
+/* Counts, last ingest, and findings on one line — with room between them,
+   otherwise "6 concepts last condensed" reads as a single sentence. */
 .sb-moduledetail-meta {
   display: flex;
   align-items: center;
@@ -136,7 +134,7 @@
   background: var(--surface-card);
 }
 
-/* ── Seitenliste ────────────────────────────────────────────────────────── */
+/* ── Page list ──────────────────────────────────────────────────────────── */
 
 .sb-pagelist {
   display: flex;
@@ -214,7 +212,7 @@
   display: block;
 }
 
-/* ── Seitenansicht ──────────────────────────────────────────────────────── */
+/* ── Page view ──────────────────────────────────────────────────────────── */
 
 .sb-pageview {
   display: flex;
@@ -302,8 +300,9 @@
   flex-direction: column;
   gap: var(--space-2);
 }
-/* Mit `textarea` davor: `textarea.gs-input` in components.css setzt 76 px, und
-   ohne dieselbe Spezifität bliebe das Feld eine Zeile hoch. */
+/* With `textarea` in front: `textarea.gs-input` in components.css sets
+   76 px, and without matching that specificity the field would stay one
+   line tall. */
 textarea.sb-pageedit-field {
   min-height: 380px;
   font-family: var(--font-mono);
@@ -318,8 +317,8 @@ textarea.sb-pageedit-field {
   gap: var(--space-3);
   flex-wrap: wrap;
 }
-/* Die Zeile neben „Speichern", wenn nichts geschrieben wurde. Warnfarbe, kein
-   zweites Teal: sie ist eine Aussage, kein Fokuspunkt. */
+/* The line next to "save" when nothing was written. Warning color, no
+   second teal: it's a statement, not a focal point. */
 .sb-pageedit-warn {
   font-size: var(--text-sm);
   line-height: var(--leading-snug);
@@ -341,7 +340,7 @@ textarea.sb-pageedit-field {
   flex-wrap: wrap;
 }
 
-/* ── Wikilinks und Markdown ─────────────────────────────────────────────── */
+/* ── Wikilinks and markdown ─────────────────────────────────────────────── */
 
 .sb-wikilink {
   all: unset;
@@ -358,7 +357,7 @@ textarea.sb-pageedit-field {
 .sb-wikilink:focus-visible {
   box-shadow: var(--focus-ring);
 }
-/* Ein kaputter Wikilink darf nicht aussehen wie ein guter. */
+/* A broken wikilink must not look like a good one. */
 .sb-wikilink--missing {
   color: var(--warning);
   text-decoration: line-through;
@@ -456,7 +455,7 @@ textarea.sb-pageedit-field {
 .sb-graph-node--dim {
   opacity: 0.35;
 }
-/* Die Kategorie färbt den Rand dezent — sie steht schon als Spaltenkopf da. */
+/* The category tints the border subtly — it already appears as a column header. */
 .sb-graph-node--source {
   border-left: 3px solid var(--fog-500);
 }
@@ -470,7 +469,7 @@ textarea.sb-pageedit-field {
   border-left: 3px solid var(--accent);
 }
 
-/* ── Chronik ────────────────────────────────────────────────────────────── */
+/* ── Log ────────────────────────────────────────────────────────────────── */
 
 .sb-log {
   display: flex;

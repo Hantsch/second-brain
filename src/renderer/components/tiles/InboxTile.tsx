@@ -1,8 +1,8 @@
-/* Was noch unsortiert liegt: die Zahl, und die drei ältesten Dumps.
+/* What's still unfiled: the count, and the three oldest dumps.
 
-   Die Zahl kommt aus `dashboard:data` (dort zählt der Kern die offenen Dumps),
-   die Titel aus der Inbox-Liste. Ältester zuerst — was am längsten liegt, ist am
-   ehesten vergessen. */
+   The count comes from `dashboard:data` (the core counts the open dumps
+   there), the titles from the inbox list. Oldest first — what's been sitting
+   longest is most likely forgotten. */
 
 import { useNavigate } from 'react-router-dom';
 import { useT } from '../../i18n';

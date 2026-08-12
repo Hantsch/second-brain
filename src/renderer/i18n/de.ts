@@ -88,9 +88,9 @@ export const de = {
   'error.code.io': 'Der Dateizugriff ist fehlgeschlagen.',
   'error.code.cancelled': 'Abgebrochen.',
   'error.code.unknown': 'Unerwarteter Fehler.',
-  /* Dieselben Fälle mit Gegenstand. Ein Fehler ohne Objekt lässt den Nutzer
-     raten, was gemeint war — „Der Vault „kaputter-vault" ließ sich nicht
-     öffnen" sagt es. Der Aufrufer gibt den Gegenstand mit, wenn er ihn kennt. */
+  /* The same cases with a subject. An error without an object leaves the user
+     guessing what was meant — "Couldn't open the vault 'broken-vault'" says
+     it. The caller passes the subject along when it knows it. */
   'error.about.no-vault': 'Für „{subject}" ist kein Vault geöffnet.',
   'error.about.not-found': '„{subject}" gibt es nicht (mehr).',
   'error.about.conflict':

@@ -1,16 +1,16 @@
-/* Deutsche Oberflächentexte der Pflege: Gesundheit mit Begründung, Rat, Befunde
-   mit Filter, die Widerspruchs-Karte und der Lauf mit Fortschritt.
+/* German UI texts for maintenance: health with reasoning, advice, findings
+   with filters, the contradiction card, and the run with progress.
 
-   Zwei Regeln stecken in den Formulierungen:
-   - **Nichts behaupten.** „Noch nicht geprüft" statt einer erfundenen 100, „öffnet
-     nur" bei jeder Aktion, die nichts schreibt, „aus der Zahl und Schwere
-     abgeleitet" beim Rat ohne Modell.
-   - **Ein Befund sagt, warum er einer ist.** Titel und Erklärung kommen aus dem
-     Kern (fertige Sätze im IPC-Vertrag); hier stehen die Beschriftungen um sie
-     herum — Arten, Zählungen, Knöpfe.
+   Two rules are baked into the wording:
+   - **Never claim something that isn't true.** "Not checked yet" instead of
+     a made-up 100, "only opens" for every action that writes nothing,
+     "derived from count and severity" for advice given without a model.
+   - **A finding says why it is one.** Title and explanation come from the
+     core (finished sentences in the IPC contract); what sits around them
+     here are the labels — kinds, counts, buttons.
 
-   Flache Keys, sentence case, keine Emoji. `en-garden.ts` trägt denselben
-   Key-Satz — ein Test prüft das. */
+   Flat keys, sentence case, no emoji. `en-garden.ts` carries the same key
+   set — a test checks that. */
 
 export const deGarden = {
   // ── Lauf ──────────────────────────────────────────────────────────────────

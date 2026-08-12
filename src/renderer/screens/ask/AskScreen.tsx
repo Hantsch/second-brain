@@ -1,21 +1,21 @@
-/* Fragen — der Screen, an dem sich entscheidet, ob das Archiv etwas wert ist.
+/* Ask — the screen that decides whether the archive is worth anything.
 
-   Aufbau: links die Gespräche, rechts eine schmale Spalte mit dem Verlauf und
-   unten der Composer. Fließtext bleibt bei etwa 72 Zeichen — eine Antwort über die
-   ganze Fensterbreite liest niemand.
+   Layout: conversations on the left, a narrow column with the history on the
+   right, and the composer at the bottom. Body text stays around 72 characters —
+   nobody wants to read an answer across the full window width.
 
-   Die vier Zustände aus ARCHITECTURE.md, alle ausdrücklich:
-   - **Leer**: drei Beispielfragen, die aus dem Bestand dieses Vaults entstehen.
-   - **Kein Modell**: der Screen bleibt voll benutzbar. Gefragt wird trotzdem; die
-     Antwort sind dann die Fundstellen, mit einer ehrlichen Zeile darüber und dem
-     Weg in die Modell-Einstellung.
-   - **Fehler**: was beim Fragen, Löschen oder Ablegen schiefgeht, steht als Karte
-     da — nie stumm.
-   - **Kein Vault**: dafür sorgt die Hülle (`App.tsx`).
+   The four states from ARCHITECTURE.md, all explicit:
+   - **Empty**: three example questions drawn from this vault's contents.
+   - **No model**: the screen stays fully usable. Questions can still be asked;
+     the answer is then just the matching passages, with an honest note above
+     it and a link to the model settings.
+   - **Error**: whatever goes wrong while asking, deleting, or filing shows up
+     as a card — never silently.
+   - **No vault**: handled by the shell (`App.tsx`).
 
-   Der Stream läuft nicht über TanStack Query: die Stücke landen im Puffer aus
-   `lib/llm-stream.ts`, und erst am Ende invalidiert `lib/events.ts` das Gespräch.
-   Dann steht die Antwort als Datei — mit geprüften Belegen. */
+   The stream doesn't run over TanStack Query: the chunks land in the buffer from
+   `lib/llm-stream.ts`, and only at the end does `lib/events.ts` invalidate the
+   conversation. Then the answer exists as a file — with verified citations. */
 
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -41,7 +41,7 @@ import { Examples } from './Examples';
 import { FileBackDialog } from './FileBackDialog';
 import { ThreadList } from './ThreadList';
 
-/** Frage und Antwort einer Runde teilen die Marke; die Frage trägt `-q`. */
+/** A question and its answer share the marker for a round; the question carries `-q`. */
 const QUESTION_SUFFIX = '-q';
 
 interface Pending {
@@ -56,9 +56,9 @@ export function AskScreen() {
   const field = useRef<HTMLTextAreaElement>(null);
 
   const [threadId, setThreadId] = useState<string | null>(null);
-  /* Eine Frage, die von woanders kommt (Dashboard-Kachel: `/ask?q=…`), ist der
-     Anfangswert des Feldes — nicht mehr. Abgeschickt wird sie hier, vom Nutzer:
-     eine Adresse, die selbst ein Modell anwirft, wäre eine Aktion ohne Griff. */
+  /* A question coming from elsewhere (dashboard tile: `/ask?q=…`) is only the
+     field's initial value — nothing more. It gets submitted here, by the user:
+     a URL that triggers a model call by itself would be an action without a handle. */
   const [draft, setDraft] = useState(params.get('q') ?? '');
   const [module, setModule] = useState<string | null>(null);
   const [scope, setScope] = useState<Scope | null>(null);
@@ -78,9 +78,9 @@ export function AskScreen() {
   const stream = useLlmStream(pending?.messageId ?? null);
 
   const messages = thread.data?.messages ?? [];
-  /* Beschäftigt, solange der Stream läuft. Liegt die Antwort schon als Nachricht
-     vor, ist er fertig — auch wenn das Abschluss-Ereignis nie ankam (Fenster neu
-     geladen, Ereignis verpasst). Sonst stünde hier für immer „Abbrechen". */
+  /* Busy for as long as the stream is running. If the answer already exists as a
+     message, it's done — even if the completion event never arrived (window
+     reloaded, event missed). Otherwise this would say "Cancel" forever. */
   const answered = pending !== null && messages.some((message) => message.id === pending.messageId);
   const busy = pending !== null && !stream.done && !answered;
 
@@ -91,7 +91,7 @@ export function AskScreen() {
   const ask = (question: string): void => {
     const text = question.trim();
     if (text.length === 0 || mutations.ask.isPending) return;
-    /* Der Puffer der letzten Antwort wird nicht mehr gebraucht. */
+    /* The buffer from the last answer is no longer needed. */
     if (pending !== null) clearStream(pending.messageId);
     mutations.ask.mutate(
       {
@@ -106,14 +106,14 @@ export function AskScreen() {
           setThreadId(answer.threadId);
           setPending(answer);
           setActive(null);
-          /* Die Frage liegt schon als Datei — nachladen, damit sie sofort steht. */
+          /* The question already exists as a file — reload so it shows up immediately. */
           void client.invalidateQueries({ queryKey: qk.chat.thread(answer.threadId) });
         },
       },
     );
   };
 
-  /** Zum Beleg springen und ihn hervorheben. */
+  /** Jump to the citation and highlight it. */
   const showCitation = (messageId: string, index: number): void => {
     setActive({ messageId, index });
     const source =
@@ -161,7 +161,7 @@ export function AskScreen() {
         overline={t('screen.ask.overline')}
         title={t('screen.ask.title')}
         action={
-          /* Sekundär: der eine Teal-Fokuspunkt ist „Frage stellen" im Composer. */
+          /* Secondary: the one teal focal point is "ask a question" in the composer. */
           <Button variant="secondary" icon="plus" onClick={newThread}>
             {t('ask.action.new')}
           </Button>

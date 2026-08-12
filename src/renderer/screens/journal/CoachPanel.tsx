@@ -1,21 +1,21 @@
-/* Der Abschnitt „Gespräch": die Runden bis hierher — Feld, Haltung und
- * Tagesabschluss stehen separat in `CoachComposer`, verankert am unteren Rand
- * der Detailspalte, nicht hier. Getrennt, weil ein direkter Nachfahre von
- * `.sb-dayentry` sein muss, was am Bildschirmrand kleben soll: verschachtelt
- * unter „Gespräch" wäre sein eigener Klebe-Rahmen nur der schmale Rest dieses
- * Abschnitts, nicht die ganze Detailspalte (siehe Kommentar in
- * `styles/app/journal.css`, Abschnitt „Composer, Haltung und Tagesabschluss").
+/* The "Conversation" section: the turns so far — the input field, coaching
+ * stance, and day-close live separately in `CoachComposer`, anchored to the
+ * bottom edge of the detail column, not here. Kept separate because whatever
+ * sticks to the screen edge must be a direct descendant of `.sb-dayentry`:
+ * nested under "Conversation", its own sticky frame would only span the
+ * narrow remainder of this section, not the whole detail column (see the
+ * comment in `styles/app/journal.css`, section "Composer, stance and
+ * day-close").
  *
- * Drei Zustände, alle ausdrücklich:
+ * Three states, all explicit:
  *
- * - **Läuft.** Die eigene Runde steht sofort da (sie ist geschrieben, bevor
- *   irgendein Modell gefragt wird), darunter wächst die Antwort.
- * - **Fertig.** Beide Runden kommen aus der Datei — der Puffer wird nicht mehr
- *   gebraucht.
- * - **Ohne Antwort.** Eine Feststellung mit Grund, kein simuliertes Mitgefühl. Im
- *   Modus „analysieren" darunter die früheren Stellen, die wirklich gefunden
- *   wurden, mit Sprung dorthin.
- * - **Leer.** Ein Satz, was hier entsteht.
+ * - **Running.** The user's own turn appears immediately (it is written
+ *   before any model is asked), and the answer grows below it.
+ * - **Done.** Both turns come from the file — the buffer is no longer needed.
+ * - **No answer.** A statement with a reason, no simulated empathy. In
+ *   "analyze" mode, the earlier passages that were actually found appear
+ *   below it, with a jump to each.
+ * - **Empty.** A sentence about what forms here.
  */
 
 import { useNavigate } from 'react-router-dom';
@@ -24,7 +24,7 @@ import type { JournalTurn } from '@shared/ipc';
 import { DialogTurn } from '../../components/DialogTurn';
 import { useT } from '../../i18n';
 
-/** Gründe, für die es einen eigenen Satz gibt (`LlmUnavailable.reason` plus Abbruch). */
+/** Reasons that have their own sentence (`LlmUnavailable.reason` plus cancellation). */
 const KNOWN_FAILURES: readonly string[] = [
   'no-route',
   'provider-disabled',
@@ -34,26 +34,26 @@ const KNOWN_FAILURES: readonly string[] = [
   'cancelled',
 ];
 
-/** Der Weg in die Routing-Einstellung — dieselbe Adresse wie in `LlmMissing`. */
+/** The path to the routing setting — the same address as in `LlmMissing`. */
 const ROUTING_ROUTE = '/settings?tab=models';
 
 export interface CoachLive {
-  /** Die eigene Runde dieser Fahrt, wörtlich wie abgeschickt. */
+  /** This run's own turn, verbatim as sent. */
   message: string;
-  /** Der Text, der bisher angekommen ist. */
+  /** The text that has arrived so far. */
   text: string;
   done: boolean;
-  /** Grund, wenn keine Antwort kam. */
+  /** Reason, if no answer came. */
   error: string | null;
-  /** Frühere Stellen als Belege (Modus „analysieren"). */
+  /** Earlier passages as citations ("analyze" mode). */
   citations: readonly Citation[];
 }
 
 export interface CoachPanelProps {
-  /** Die Runden aus der Datei, älteste zuerst. */
+  /** The turns from the file, oldest first. */
   turns: readonly JournalTurn[];
   live: CoachLive | null;
-  /** Sprung zu einem früheren Tag. */
+  /** Jump to an earlier day. */
   onOpenDay: (date: string) => void;
 }
 
@@ -61,8 +61,8 @@ export function CoachPanel({ turns, live, onOpenDay }: CoachPanelProps) {
   const t = useT();
   const navigate = useNavigate();
 
-  /* Die eigene Runde steht schon in der Datei, sobald der Tag neu geladen ist —
-     bis dahin zeigt sie der Puffer. Zweimal wäre einmal zu viel. */
+  /* The user's own turn is already in the file once the day has reloaded —
+     until then, the buffer shows it. Twice would be once too many. */
   const pendingUser =
     live === null || turns.some((turn) => turn.role === 'user' && turn.text === live.message)
       ? null

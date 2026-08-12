@@ -1,22 +1,21 @@
-/* Eine Wiki-Seite: die Fakten aus dem Frontmatter, der Text, wer hierher
-   verlinkt — und der Weg, sie zu ändern.
+/* A wiki page: the facts from the frontmatter, the text, who links here —
+   and the way to change it.
 
-   Der Konfliktschutz ist der Kern dieser Datei, und er hängt an einem Detail:
-   **der Hash wird beim Öffnen des Editors eingefroren, nicht beim Klick auf
-   Speichern gelesen.** Der Watcher erneuert die Doc-Abfrage, sobald jemand
-   außerhalb schreibt; würde erst beim Speichern `doc.hash` gelesen, ginge der
-   alte Text mit dem neuen Hash raus — und der Hauptprozess nähme ihn an. Genau
-   das ist der stille Verlust, den CLAUDE.md ausschließt.
+   Conflict protection is the core of this file, and it hinges on one detail:
+   **the hash is frozen when the editor opens, not read when save is
+   clicked.** The watcher refreshes the doc query as soon as someone writes
+   from outside; if `doc.hash` were only read on save, the old text would go
+   out with the new hash — and the main process would accept it. That's
+   exactly the silent loss CLAUDE.md rules out.
 
-   Deshalb steht in `base` die Fassung, auf der der Entwurf beruht. Läuft
-   währenddessen eine fremde Änderung ein (`doc.hash !== base.hash`), sagt das
-   eine Leiste am Feld, mit zwei Wegen: neu laden oder die eigene Fassung
-   behalten. Wer behält, bekommt beim Speichern `conflict` — und dort erst den
-   ausdrücklichen Weg zum Überschreiben. Der Entwurf bleibt stehen, bis der
-   Nutzer entscheidet.
+   That's why `base` holds the version the draft is based on. If an outside
+   change comes in meanwhile (`doc.hash !== base.hash`), a bar on the field
+   says so, with two paths: reload or keep your own version. Whoever keeps it
+   gets `conflict` on save — and only there the explicit path to overwriting.
+   The draft stays put until the user decides.
 
-   Das Feld samt Meldungen liegt in `PageEdit.tsx`; hier steht, was daraus folgt:
-   welcher Hash mitgeht und wann der Editor zugeht. */
+   The field itself, with its messages, lives in `PageEdit.tsx`; this is what
+   follows from it: which hash travels along and when the editor closes. */
 
 import { useState } from 'react';
 import type { VaultDoc, WikiPage } from '@shared/types';
@@ -33,21 +32,21 @@ import { WikiRef } from './WikiRef';
 export interface PageViewProps {
   page: WikiPage;
   doc: VaultDoc;
-  /** Alle Seiten des Moduls — daraus wird jeder Verweis aufgelöst. */
+  /** All pages of the module — every reference resolves against these. */
   pages: readonly WikiPage[];
-  /** Ein Wikilink oder Beleg wurde geklickt (`slug` oder `modul/slug`). */
+  /** A wikilink or source was clicked (`slug` or `module/slug`). */
   onOpenTarget: (target: string) => void;
-  /** Der Nutzer will den fremden Stand sehen. */
+  /** The user wants to see the outside version. */
   onReload: () => void;
 }
 
-/** Frontmatter-Feld als Text, sonst null. */
+/** Frontmatter field as text, else null. */
 function field(doc: VaultDoc, name: string): string | null {
   const value = doc.frontmatter[name];
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 }
 
-/** Titel einer Seite im selben Modul; `null`, wenn es sie nicht gibt. */
+/** Title of a page in the same module; `null` if it doesn't exist. */
 function titleOf(pages: readonly WikiPage[], module: string, target: string): string | null {
   const slug = target.includes('/') ? (target.split('/').pop() ?? target) : target;
   const scope = target.includes('/') ? target.slice(0, target.lastIndexOf('/')) : module;
@@ -59,15 +58,15 @@ export function PageView({ page, doc, pages, onOpenTarget, onReload }: PageViewP
   const mutations = useModuleMutations(page.module);
   const save = mutations.savePage;
   const [draft, setDraft] = useState<string | null>(null);
-  /** Die Fassung, auf der der Entwurf beruht — eingefroren beim Öffnen. */
+  /** The version the draft is based on — frozen when opened. */
   const [base, setBase] = useState<{ body: string; hash: string } | null>(null);
-  /** Fremde Fassung, deren Meldung der Nutzer weggeklickt hat. */
+  /** Outside version whose notice the user has dismissed. */
   const [accepted, setAccepted] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
   const conflict = save.error !== null && decodeIpcError(save.error).code === 'conflict';
   const editing = draft !== null;
-  /* Außerhalb geschrieben, während der Editor offen ist. */
+  /* Written from outside while the editor is open. */
   const changedOutside = base !== null && doc.hash !== base.hash && accepted !== doc.hash;
 
   const stopEditing = (): void => {
@@ -108,7 +107,7 @@ export function PageView({ page, doc, pages, onOpenTarget, onReload }: PageViewP
           <span className="sb-mono">{page.path}</span>
         </div>
         <div className="sb-pageview-actions">
-          {/* Im Bearbeiten gehört das Teal dem Speichern — ein Fokuspunkt. */}
+          {/* While editing, teal belongs to save — one focal point. */}
           <Button
             variant={editing ? 'secondary' : 'primary'}
             size="sm"
@@ -120,7 +119,7 @@ export function PageView({ page, doc, pages, onOpenTarget, onReload }: PageViewP
                 stopEditing();
                 return;
               }
-              /* Text und Hash zusammen — sie gehören zur selben Fassung. */
+              /* Text and hash together — they belong to the same version. */
               setBase({ body: doc.body, hash: doc.hash });
               setDraft(doc.body);
             }}
@@ -167,8 +166,9 @@ export function PageView({ page, doc, pages, onOpenTarget, onReload }: PageViewP
         </div>
       </dl>
 
-      {/* Nur der Rückfall: jeder Weg aus dem Editor setzt die Mutation zurück,
-          also steht hier im Betrieb nichts. Ein Fehler ohne Ort wäre schlimmer. */}
+      {/* Only the fallback: every way out of the editor resets the mutation,
+          so nothing shows here in normal operation. An error with no place to
+          go would be worse. */}
       {!editing && save.error !== null ? (
         <ErrorState error={save.error} variant="secondary" subject={page.path} scrollIntoView />
       ) : null}
@@ -184,8 +184,8 @@ export function PageView({ page, doc, pages, onOpenTarget, onReload }: PageViewP
           busy={save.isPending}
           attemptedAt={save.submittedAt}
           subject={page.path}
-          /* Der eingefrorene Hash, nicht der aktuelle: sonst wäre der
-             Konfliktschutz genau in dem Moment aus, in dem er zählt. */
+          /* The frozen hash, not the current one: otherwise conflict
+             protection would be off at exactly the moment it matters. */
           onSave={() => {
             if (base !== null) write(base.hash);
           }}

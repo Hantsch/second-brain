@@ -1,34 +1,35 @@
-/* Der Tagesabschluss, zweiter Teil: was der Tag über Personen, Projekte und
-   Stimmung sagt.
+/* The day close, second part: what the day says about people, projects, and
+   mood.
 
-   Die Aufgaben zieht `extract-tasks` (eigene Datei, auch vom Einordnen benutzt) —
-   hier geht es nur um die Felder, die im Frontmatter des Tageseintrags stehen:
-   `people`, `projects`, `mood`, `energy`, `tags`.
+   Todos are pulled by `extract-tasks` (its own file, also used by filing) —
+   this is only about the fields that live in the journal entry's
+   frontmatter: `people`, `projects`, `mood`, `energy`, `tags`.
 
-   Zwei harte Regeln, weil daraus ein Vorschlag am Tagebuch des Nutzers wird:
+   Two hard rules, because this becomes a suggestion against the user's
+   journal:
 
-   - **Nur was dasteht.** Keine Person, die nicht genannt ist; kein Projekt außer
-     denen aus der Liste; keine Stimmung, die der Text nicht hergibt (dann null).
-   - **Keine Deutung.** Die Zahl beschreibt, was der Nutzer geschrieben hat, nicht
-     wie es ihm nach Meinung des Modells geht. */
+   - **Only what's there.** No person who isn't mentioned; no project outside
+     the given list; no mood the text doesn't support (then null).
+   - **No interpretation.** The number describes what the user wrote, not how
+     they're doing according to the model's opinion. */
 
 import type { ChatTurn, DocLanguage } from '@shared/types';
 import { clamp, documentLanguageRule, turns } from './shared';
 
 export interface JournalCloseInput {
-  /** Der Tageseintrag — nur was der Mensch selbst geschrieben hat. */
+  /** The journal entry — only what the human themself wrote. */
   text: string;
-  /** Kalendertag des Eintrags (YYYY-MM-DD). */
+  /** Calendar day of the entry (YYYY-MM-DD). */
   date: string;
-  /** Projekt-Slugs, die zugeordnet werden dürfen. Alles andere ist erfunden. */
+  /** Project slugs that may be assigned. Anything else is made up. */
   projects?: readonly { slug: string; title: string }[];
-  /** Personen, die im Vault schon vorkommen — damit die Schreibweise gleich bleibt. */
+  /** People already appearing in the vault — so spelling stays consistent. */
   people?: readonly string[];
-  /** Tags, die im Vault gebräuchlich sind. */
+  /** Tags in common use in the vault. */
   tags?: readonly string[];
 }
 
-/** Erwartete Antwortform. Wird als `schema` mitgeschickt. */
+/** Expected response shape. Sent along as `schema`. */
 export const JOURNAL_CLOSE_SCHEMA: Record<string, unknown> = {
   type: 'object',
   additionalProperties: false,

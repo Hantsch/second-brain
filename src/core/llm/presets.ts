@@ -16,7 +16,7 @@ export const PROVIDER_PRESETS: readonly ProviderPreset[] = [
     needsKey: false,
     local: true,
     canListModels: true,
-    // „Läuft auf dieser Maschine. Kein Schlüssel nötig, erste Wahl für Tagebuch und Dumps."
+    // "Runs on this machine. No key needed, first choice for journal and dumps."
     hint: 'llm.preset.ollama.hint',
   },
   {
@@ -27,7 +27,7 @@ export const PROVIDER_PRESETS: readonly ProviderPreset[] = [
     needsKey: false,
     local: true,
     canListModels: true,
-    // „Lokaler Server von LM Studio. Das geladene Modell muss dort aktiv sein."
+    // "Local server from LM Studio. The loaded model must be active there."
     hint: 'llm.preset.lmstudio.hint',
   },
   {
@@ -38,7 +38,7 @@ export const PROVIDER_PRESETS: readonly ProviderPreset[] = [
     needsKey: true,
     local: false,
     canListModels: true,
-    // „Cloud. Schlüssel bleibt verschlüsselt auf dieser Maschine, Inhalte verlassen sie."
+    // "Cloud. The key stays encrypted on this machine, the content leaves it."
     hint: 'llm.preset.openai.hint',
   },
   {
@@ -49,7 +49,7 @@ export const PROVIDER_PRESETS: readonly ProviderPreset[] = [
     needsKey: true,
     local: false,
     canListModels: true,
-    // „Ein Schlüssel für viele Modelle. Gut, um Modelle zu vergleichen."
+    // "One key for many models. Good for comparing models."
     hint: 'llm.preset.openrouter.hint',
   },
   {
@@ -60,7 +60,7 @@ export const PROVIDER_PRESETS: readonly ProviderPreset[] = [
     needsKey: true,
     local: false,
     canListModels: true,
-    // „Claude-Modelle über die Messages-API. Stark beim Verdichten und Verknüpfen."
+    // "Claude models via the Messages API. Strong at condensing and linking."
     hint: 'llm.preset.anthropic.hint',
   },
   {
@@ -71,7 +71,7 @@ export const PROVIDER_PRESETS: readonly ProviderPreset[] = [
     needsKey: false,
     local: false,
     canListModels: true,
-    // „Für vLLM, llama.cpp, Azure oder jeden anderen Dienst mit /chat/completions."
+    // "For vLLM, llama.cpp, Azure, or any other service with /chat/completions."
     hint: 'llm.preset.custom-openai.hint',
   },
 ];

@@ -1,8 +1,8 @@
-/* Der Service-Container: hält den aktuellen Vault-Zustand, die Einstellungen,
-   den Schlüsselspeicher und die Nahtstellen zum Kern. Alle IPC-Handler bekommen
-   ihn hereingegeben — er ist die einzige veränderliche Stelle im Main.
+/* The service container: holds the current vault state, the settings, the key
+   store, and the seams to the core. Every IPC handler receives it — it is the
+   only mutable spot in the main process.
 
-   Für spätere Arbeitsschritte ist nur diese API stabil:
+   For later work, only this API is stable:
      services.status() / openVault() / createVault() / closeVault()
      services.sendEvent(name, payload)
      services.attachVaultStore() / attachIndex() / attachWatcher() / attachLlm()
@@ -60,7 +60,7 @@ export class Services {
     this.settings.onChange((snapshot) => this.sendEvent('event:settings', snapshot));
   }
 
-  // ── Fenster ───────────────────────────────────────────────────────────────
+  // ── Window ────────────────────────────────────────────────────────────────
 
   setMainWindow(window: BrowserWindow | null): void {
     this.main = window;
@@ -70,14 +70,14 @@ export class Services {
     return this.main && !this.main.isDestroyed() ? this.main : null;
   }
 
-  /** Schickt ein Ereignis an alle offenen Fenster. Typisiert über `IpcEvents`. */
+  /** Sends an event to all open windows. Typed via `IpcEvents`. */
   sendEvent<E extends IpcEventName>(name: E, payload: IpcEvents[E]): void {
     for (const window of BrowserWindow.getAllWindows()) {
       if (!window.isDestroyed()) window.webContents.send(name, payload);
     }
   }
 
-  // ── Vault-Zustand ─────────────────────────────────────────────────────────
+  // ── Vault state ───────────────────────────────────────────────────────────
 
   vaultRoot(): string | null {
     return this.open?.root ?? null;
@@ -109,9 +109,9 @@ export class Services {
     await this.settings.openVault(root);
     const store = this.storeFactory ? await this.storeFactory(root) : null;
 
-    /* Der Vault gilt ab hier als offen, obwohl der Index noch fehlt: sonst
-       stünde die Oberfläche im Onboarding, während im Hintergrund indiziert
-       wird. `indexing` sagt, dass die Zahlen noch nicht endgültig sind. */
+    /* The vault counts as open from here on, even though the index is still
+       missing: otherwise the UI would sit in onboarding while indexing runs
+       in the background. `indexing` signals that the numbers aren't final yet. */
     const session: OpenVault = { root, name: layout.name, store, index: null, watcher: null };
     this.open = session;
     this.indexState = { docCount: 0, indexedAt: null, indexing: true };
@@ -121,12 +121,12 @@ export class Services {
     if (this.indexFactory && store) {
       try {
         const index = await this.indexFactory(root, store);
-        /* Wurde zwischenzeitlich ein anderer Vault geöffnet, gehört der Index
-           nicht mehr hierher — dann wieder abräumen. */
+        /* If a different vault was opened in the meantime, the index no
+           longer belongs here — clean it back up in that case. */
         if (this.open === session) session.index = index;
         else await index.dispose?.();
       } catch (error) {
-        /* Der Index ist abgeleitet: sein Ausfall darf den Vault nicht kosten. */
+        /* The index is derived: its failure must not cost the vault. */
         console.warn('[vault] Index ließ sich nicht aufbauen:', error);
       }
     }
@@ -162,7 +162,7 @@ export class Services {
     return this.status();
   }
 
-  // ── Nahtstellen zum Kern ──────────────────────────────────────────────────
+  // ── Seams to the core ─────────────────────────────────────────────────────
 
   attachVaultStore(factory: VaultStoreFactory | null): void {
     this.storeFactory = factory;
@@ -209,16 +209,16 @@ export class Services {
     return this.llmBridge;
   }
 
-  // ── Index-Zustand ─────────────────────────────────────────────────────────
+  // ── Index state ───────────────────────────────────────────────────────────
 
-  /** Meldet Fortschritt eines Indexlaufs an alle Fenster. */
+  /** Reports the progress of an index run to all windows. */
   reportIndexProgress(done: number, total: number, indexing: boolean): void {
     this.indexState.indexing = indexing;
     this.sendEvent('event:index-progress', { done, total, indexing });
     if (!indexing) this.broadcastStatus();
   }
 
-  /** Liest die Kennzahlen des Index neu ein, falls einer hängt. */
+  /** Re-reads the index's metrics, if one is attached. */
   async refreshIndexState(): Promise<void> {
     const index = this.index();
     if (!index) return;
@@ -235,8 +235,8 @@ export class Services {
     this.sendEvent('event:vault-status', this.status());
   }
 
-  /* Der Watcher meldet; der Index zieht nach und erst dann geht die Nachricht
-     an den Renderer — so findet die nachgeladene Query den neuen Stand vor. */
+  /* The watcher reports; the index catches up, and only then does the message
+     go to the renderer — this way the reloaded query finds the new state. */
   private handleVaultChange(paths: string[], external: boolean): void {
     const index = this.index();
     if (!index?.refresh) {
@@ -255,7 +255,7 @@ export class Services {
   }
 }
 
-/** Baut den Container. Getrennt vom Konstruktor, damit der Start lesbar bleibt. */
+/** Builds the container. Kept separate from the constructor so startup stays readable. */
 export function createServices(
   settings: SettingsService,
   keys: KeyStore,

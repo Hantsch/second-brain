@@ -1,26 +1,26 @@
-/* LLM-Schicht: Provider, Modelle, Aufgaben-Kategorien und deren Zuordnung.
-   Kein Aufrufer außerhalb von `core/llm` weiß, welcher Provider läuft. */
+/* LLM layer: providers, models, task categories, and their assignment.
+   No caller outside `core/llm` knows which provider is running. */
 
-/** Wie mit einem Provider gesprochen wird. */
+/** How to talk to a provider. */
 export type ProviderKind =
   /** Anthropic Messages API. */
   | 'anthropic'
-  /** Alles OpenAI-kompatible: OpenAI, OpenRouter, Ollama, LM Studio, vLLM, Azure. */
+  /** Anything OpenAI-compatible: OpenAI, OpenRouter, Ollama, LM Studio, vLLM, Azure. */
   | 'openai-compatible'
-  /** Deterministischer Antwortgeber für Tests und den Demo-Modus. */
+  /** Deterministic responder for tests and demo mode. */
   | 'fake';
 
-/** Vorlage, mit der ein Provider in zwei Klicks angelegt ist. */
+/** Template that gets a provider set up in two clicks. */
 export interface ProviderPreset {
   id: string;
   label: string;
   kind: ProviderKind;
   baseUrl: string;
-  /** Braucht dieser Provider einen API-Key? Lokale Runtimes nicht. */
+  /** Does this provider need an API key? Local runtimes don't. */
   needsKey: boolean;
-  /** Läuft auf dieser Maschine — darf für sensible Aufgaben empfohlen werden. */
+  /** Runs on this machine — may be recommended for sensitive tasks. */
   local: boolean;
-  /** Kann die Modell-Liste live abgefragt werden? */
+  /** Can the model list be queried live? */
   canListModels: boolean;
   hint?: string;
 }
@@ -30,13 +30,13 @@ export interface ProviderConfig {
   label: string;
   kind: ProviderKind;
   baseUrl: string;
-  /** Nur ein Marker: der Key selbst liegt verschlüsselt in userData, nie im Vault. */
+  /** Just a marker: the key itself lives encrypted in userData, never in the vault. */
   hasKey: boolean;
   local: boolean;
   enabled: boolean;
-  /** Zuletzt bekannte Modelle (aus `canListModels` oder manuell gepflegt). */
+  /** Last known models (from `canListModels` or maintained manually). */
   models: string[];
-  /** Ergebnis des letzten Verbindungstests. */
+  /** Result of the last connectivity test. */
   probe?: ProviderProbe;
   createdAt: string;
 }
@@ -49,63 +49,63 @@ export interface ProviderProbe {
   modelCount?: number;
 }
 
-/** Grobe Leistungsklasse. Steuert die Vorschläge, nicht die Technik. */
+/** Rough performance class. Steers the suggestions, not the mechanics. */
 export type ModelTier = 'cheap' | 'balanced' | 'strong';
 
 export const MODEL_TIERS: readonly ModelTier[] = ['cheap', 'balanced', 'strong'];
 
 /**
- * Jede LLM-gestützte Aufgabe der App ist eine dieser Kategorien. Der Nutzer
- * ordnet jeder Kategorie Provider + Modell zu — Querien darf ein kleines
- * Modell erledigen, das Verdichten von Wissen ein großes.
+ * Every LLM-backed task in the app is one of these categories. The user
+ * assigns a provider + model to each category — a small model may handle
+ * queries, a large one condensing knowledge.
  */
 export type TaskKind =
-  /** Dump lesen und einen Ablage-Vorschlag machen. */
+  /** Read a dump and produce a filing proposal. */
   | 'classify-dump'
-  /** Titel, Slug und Tags vorschlagen. Billigste Aufgabe der App. */
+  /** Suggest title, slug, and tags. The app's cheapest task. */
   | 'title-tags'
-  /** Todos, Deadlines, Warte-auf-Einträge aus Text ziehen. */
+  /** Extract todos, deadlines, "waiting on" entries from text. */
   | 'extract-tasks'
-  /** Eine Quelle zu einer Wiki-Source-Seite verdichten. */
+  /** Condense a source into a wiki source page. */
   | 'summarize-source'
-  /** Entity-/Concept-Seiten schreiben und verknüpfen. */
+  /** Write and link entity/concept pages. */
   | 'wiki-ingest'
-  /** Frage gegen das Second Brain beantworten, mit Zitaten. */
+  /** Answer a question against the Second Brain, with citations. */
   | 'query-answer'
-  /** Suchtreffer für eine Frage sortieren/filtern. */
+  /** Sort/filter search hits for a question. */
   | 'query-rerank'
-  /** Tagebuch-/Coaching-Dialog. */
+  /** Journal/coaching dialogue. */
   | 'journal-chat'
-  /** Projekt-Status, nächster Schritt, Stagnations-Diagnose. */
+  /** Project status, next step, stagnation diagnosis. */
   | 'project-status'
-  /** Pflegelauf: Widersprüche, veraltete Claims, Lücken finden. */
+  /** Maintenance run: find contradictions, stale claims, gaps. */
   | 'gardener-audit';
 
 export interface TaskDefinition {
   kind: TaskKind;
-  /** i18n-Key für den Namen. */
+  /** i18n key for the name. */
   labelKey: string;
-  /** i18n-Key für die Erklärung, warum diese Aufgabe welches Modell braucht. */
+  /** i18n key for the explanation of why this task needs which model. */
   hintKey: string;
-  /** Empfohlene Leistungsklasse. */
+  /** Recommended tier. */
   suggested: ModelTier;
-  /** Läuft über sensible, persönliche Inhalte — lokales Modell bevorzugen. */
+  /** Operates on sensitive, personal content — prefer a local model. */
   sensitive: boolean;
-  /** Antwortet streamend (Chat-Charakter). */
+  /** Responds with streaming (chat-like). */
   streams: boolean;
-  /** Erwartet strukturiertes JSON zurück. */
+  /** Expects structured JSON back. */
   structured: boolean;
 }
 
-/** Ein konkretes Ziel: Provider + Modell. */
+/** A concrete target: provider + model. */
 export interface ModelRef {
   providerId: string;
   model: string;
 }
 
 /**
- * Zuordnung Aufgabe → Modell. Fehlt ein Eintrag, greift `defaults[tier]`;
- * fehlt auch der, ist die Aufgabe ohne LLM — die App bleibt benutzbar.
+ * Mapping task → model. If an entry is missing, `defaults[tier]` applies;
+ * if that's missing too, the task runs without an LLM — the app stays usable.
  */
 export interface Routing {
   tasks: Partial<Record<TaskKind, ModelRef>>;
@@ -122,7 +122,7 @@ export interface CompletionRequest {
   messages: ChatTurn[];
   maxTokens?: number;
   temperature?: number;
-  /** JSON-Schema, wenn strukturiert geantwortet werden soll. */
+  /** JSON schema, if the response should be structured. */
   schema?: Record<string, unknown>;
   signal?: AbortSignal;
 }
@@ -139,7 +139,7 @@ export interface CompletionResult {
   latencyMs: number;
 }
 
-/** Warum eine LLM-Aufgabe nicht laufen konnte — als Zustand, nicht als Absturz. */
+/** Why an LLM task couldn't run — as a state, not a crash. */
 export interface LlmUnavailable {
   reason: 'no-route' | 'provider-disabled' | 'no-key' | 'unreachable' | 'error';
   task: TaskKind;

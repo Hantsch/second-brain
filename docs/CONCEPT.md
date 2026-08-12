@@ -111,16 +111,16 @@ Three commitments that make the difference:
 Every LLM task in the app is a category (`TaskKind`). The user assigns a provider
 and a model to each category — in the admin screen, with a suggestion per category:
 
-| Task                      | Recommendation | Why                                                    |
-| ------------------------- | -------------- | ------------------------------------------------------- |
-| Title and tags            | small/local    | One sentence of output. A large model would be wasteful|
-| File a dump                | small/local    | Personal content, a simple decision                     |
-| Extract todos and deadlines| small/local    | Structured extraction                                   |
-| Answer a question          | medium         | Must correctly merge evidence                            |
-| Digest a source            | medium         | Longer, but straightforward                              |
-| Write wiki pages           | large          | Linking, spotting contradictions, changing content       |
-| Interpret a maintenance run| large          | Judgment over the whole content                          |
-| Journal conversation       | local          | The most sensitive thing here                            |
+| Task                        | Recommendation | Why                                                     |
+| --------------------------- | -------------- | ------------------------------------------------------- |
+| Title and tags              | small/local    | One sentence of output. A large model would be wasteful |
+| File a dump                 | small/local    | Personal content, a simple decision                     |
+| Extract todos and deadlines | small/local    | Structured extraction                                   |
+| Answer a question           | medium         | Must correctly merge evidence                           |
+| Digest a source             | medium         | Longer, but straightforward                             |
+| Write wiki pages            | large          | Linking, spotting contradictions, changing content      |
+| Interpret a maintenance run | large          | Judgment over the whole content                         |
+| Journal conversation        | local          | The most sensitive thing here                           |
 
 Providers are set up in the admin screen (Anthropic, OpenAI, OpenRouter, Ollama,
 LM Studio, any OpenAI-compatible URL), with a connection test and model list.

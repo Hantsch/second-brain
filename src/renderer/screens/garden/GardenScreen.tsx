@@ -1,23 +1,24 @@
-/* Pflege — hier wird sichtbar, ob das Second Brain gesund ist.
+/* Maintenance — this is where it becomes visible whether the Second Brain is
+   healthy.
 
-   Von oben nach unten in der Reihenfolge, in der man es braucht: der Wert mit
-   seiner Begründung, der Rat, dann die Befunde nach Art gruppiert und filterbar.
+   Top to bottom in the order you need it: the score with its reasoning, the
+   advice, then the findings grouped by kind and filterable.
 
-   Vier Zustände, alle ausdrücklich:
-   - **Kein Bericht** → „noch nicht geprüft" plus der eine Fokuspunkt „jetzt
-     prüfen". Keine erfundene 100.
-   - **Keine Befunde** → eine ruhige Feststellung mit dem Zeitpunkt und dem, was
-     geprüft wurde. Kein Konfetti.
-   - **Kein Modell** → die maschinellen Befunde stehen vollständig da, und eine
-     Zeile sagt, was ein Modell zusätzlich fände, mit dem Weg in die Einstellung.
-     Der Screen ist ohne Modell voll brauchbar; das ist der Normalfall.
-   - **Fehler** → als Karte an der Stelle der Aktion, mit Details dahinter.
+   Four states, all explicit:
+   - **No report** → "not checked yet" plus the one focal point "check now".
+     No invented 100.
+   - **No findings** → a calm statement with the timestamp and what was
+     checked. No confetti.
+   - **No model** → the mechanical findings appear in full, and one line says
+     what a model would additionally find, with the path into the setting.
+     The screen is fully usable without a model; that's the normal case.
+   - **Error** → as a card in the action's place, with details behind it.
 
-   Ein Fokuspunkt: „Jetzt prüfen" oben rechts. Alles in den Karten bleibt ruhig.
+   One focal point: "Check now" top right. Everything in the cards stays calm.
 
-   Nichts hier löst einen Widerspruch auf, und keine Aktion tut mehr, als sie
-   ankündigt: die Vorschau zeigt die Zeile, die geschrieben wird, „passt so"
-   blendet aus (mit Rückweg), und was nur öffnet, sagt das. */
+   Nothing here resolves a contradiction on its own, and no action does more
+   than it announces: the preview shows the line that will be written, "looks
+   fine" hides it (with a way back), and whatever merely opens says so. */
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -66,7 +67,7 @@ export function GardenScreen() {
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  /* Ein Pfad führt dorthin, wo die Datei in der App steht — sonst zur Datei. */
+  /* A path leads to where the file lives in the app — otherwise to the file. */
   const openPath = (path: string): void => {
     const target = targetFor(path);
     if (target.kind === 'route') void navigate(target.to);
@@ -90,8 +91,9 @@ export function GardenScreen() {
     setBusyId(finding.id);
     mutations.fix.mutate(finding, {
       onSettled: () => setBusyId(null),
-      /* Was die Bestätigung sagt, entscheidet das Ergebnis: ohne geschriebene
-         Datei ist nichts geschrieben, auch wenn der Knopf danach klang. */
+      /* What the confirmation says is decided by the result: without a
+         written file, nothing was written, even if the button sounded
+         like it. */
       onSuccess: (result) => {
         const opened = result.open ?? [];
         if (result.written.length === 0) {
@@ -118,8 +120,8 @@ export function GardenScreen() {
     });
   };
 
-  /* Der Wert und der Hash wurden beim Laden der Karte eingefroren; hat jemand die
-     Datei seither angefasst, kommt `conflict` zurück und steht als Karte da. */
+  /* The value and the hash were frozen when the card loaded; if someone has
+     touched the file since, `conflict` comes back and appears as a card. */
   const supersede = (write: SupersedeWrite): void => {
     pages.savePage.mutate(
       {
@@ -128,7 +130,7 @@ export function GardenScreen() {
         expectedHash: write.expectedHash,
       },
       {
-        /* Der Rückweg braucht den Stand von vorher und den Hash von jetzt. */
+        /* The way back needs the earlier state and the current hash. */
         onSuccess: (written) =>
           setOutcome({
             kind: 'superseded',
@@ -153,9 +155,9 @@ export function GardenScreen() {
       return;
     }
     if (outcome.kind === 'superseded') {
-      /* Zurück auf den Stand von vorher. War das Feld leer, bleibt eine leere
-         Liste stehen: über den Merge lässt sich ein Feld nicht entfernen, und
-         `supersedes: []` sagt dasselbe wie „überholt nichts". */
+      /* Back to the earlier state. If the field was empty, an empty list
+         remains: a field can't be removed via the merge, and
+         `supersedes: []` says the same thing as "supersedes nothing". */
       pages.savePage.mutate(
         {
           path: outcome.file,

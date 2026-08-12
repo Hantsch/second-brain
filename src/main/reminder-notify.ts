@@ -1,20 +1,20 @@
-/* Erinnerungen als Windows-Benachrichtigung.
+/* Reminders as Windows notifications.
 
-   Vier Regeln, damit das nicht zum Spam wird:
-   - **Nur wenn `overview.notifications` an ist.** Sonst passiert nichts, und der
-     Schalter im Verhalten-Tab sagt die Wahrheit.
-   - **Nur was wirklich fällig ist:** überfällig oder heute fällig. „In drei
-     Tagen" ist keine Benachrichtigung wert.
-   - **Höchstens eine Sammelbenachrichtigung** je Lauf, nie eine je Sache.
-   - **Dieselbe Sache nicht zweimal am selben Tag.** Der Zustand liegt in
-     `.secondbrain/overview.json` und überlebt einen Neustart — sonst würde jeder
-     Start der App die Meldung wiederholen.
+   Four rules so this doesn't turn into spam:
+   - **Only when `overview.notifications` is on.** Otherwise nothing happens, and the
+     toggle in the Behavior tab tells the truth.
+   - **Only what's actually due:** overdue or due today. "In three
+     days" isn't worth a notification.
+   - **At most one collected notification** per run, never one per item.
+   - **The same item never twice on the same day.** The state lives in
+     `.secondbrain/overview.json` and survives a restart — otherwise every
+     app start would repeat the notification.
 
-   Geprüft wird beim Öffnen eines Vaults und danach einmal pro Stunde. Der Klick
-   holt das Hauptfenster nach vorn und stellt es auf das Dashboard.
+   Checked when a vault is opened and once per hour after that. Clicking
+   brings the main window forward and switches it to the dashboard.
 
-   Die Benachrichtigung selbst steckt hinter `Notifier`: im Test wird eine
-   Attrappe eingesetzt, damit kein Lauf eine echte Windows-Meldung erzeugt. */
+   The notification itself sits behind `Notifier`: in tests a stand-in
+   is used so no run produces a real Windows notification. */
 
 import { Notification } from 'electron';
 import { reminders } from '@core/overview';
@@ -29,19 +29,19 @@ import {
 import { dueBody, dueSummary } from './messages';
 import type { Services } from './services';
 
-/** Prüfabstand: einmal pro Stunde. */
+/** Check interval: once per hour. */
 export const CHECK_INTERVAL_MS = 60 * 60 * 1000;
 
-/** So lange nach dem Öffnen wird das erste Mal geprüft — der Index braucht kurz. */
+/** How long after opening the first check runs — the index needs a moment. */
 export const FIRST_CHECK_DELAY_MS = 4000;
 
-/** So oft wird auf den Index gewartet, bevor der Lauf ausfällt. */
+/** How many times to wait for the index before the run gives up. */
 const INDEX_RETRIES = 8;
 
-/** So viele Titel stehen im Rumpf der Meldung. */
+/** How many titles appear in the body of the notification. */
 const MAX_TITLES = 3;
 
-/** Was ein Lauf getan hat — der Test liest daran ab, dass nichts erfunden wurde. */
+/** What a run did — the test reads this to confirm nothing was made up. */
 export type CheckResult = 'sent' | 'nothing-due' | 'already-announced' | 'off' | 'no-index';
 
 export interface NotifyInput {
@@ -50,7 +50,7 @@ export interface NotifyInput {
   onClick: () => void;
 }
 
-/** Die Nahtstelle zur Benachrichtigung. Genau eine Zeile Electron. */
+/** The seam to the notification. Exactly one line of Electron. */
 export interface Notifier {
   show(input: NotifyInput): void;
 }
@@ -66,7 +66,7 @@ export function electronNotifier(): Notifier {
   };
 }
 
-/** Fällig heißt: überfällig oder heute. Alles andere mahnt die Oberfläche. */
+/** Due means: overdue or today. Everything else is nudged by the UI instead. */
 function isDue(reminder: Reminder): boolean {
   return reminder.urgency === 'overdue' || reminder.urgency === 'today';
 }
@@ -97,10 +97,10 @@ export class ReminderNotifier {
   }
 
   /**
-   * Startet die Prüfung. Ein Vaultwechsel wird an `app.lastVault` erkannt: die
-   * Einstellungen melden jede Änderung, und das Öffnen eines Vaults schreibt
-   * immer diesen Eintrag. So braucht der Melder keinen zweiten Haken im
-   * Service-Container.
+   * Starts the check. A vault switch is detected via `app.lastVault`: the
+   * settings report every change, and opening a vault always writes this
+   * entry. This way the notifier doesn't need a second hook into the
+   * service container.
    */
   start(): void {
     this.lastVault = this.services.settings.app().lastVault;
@@ -130,7 +130,7 @@ export class ReminderNotifier {
     }, FIRST_CHECK_DELAY_MS);
   }
 
-  /** Wartet, bis der Index steht — beim Öffnen baut er noch. */
+  /** Waits until the index is ready — it's still building right after opening. */
   private async checkWhenReady(attempt = 0): Promise<CheckResult> {
     const result = await this.check();
     if (result !== 'no-index' || attempt >= INDEX_RETRIES) return result;
@@ -140,9 +140,9 @@ export class ReminderNotifier {
   }
 
   /**
-   * Ein Lauf. Meldet höchstens eine Sammelbenachrichtigung und schreibt fort,
-   * was gemeldet wurde. Zwei Läufe am selben Tag über dieselben Sachen ergeben
-   * genau eine Meldung.
+   * A single run. Reports at most one collected notification and records
+   * what was reported. Two runs on the same day over the same items result
+   * in exactly one notification.
    */
   async check(): Promise<CheckResult> {
     if (this.running) return 'nothing-due';
@@ -150,7 +150,7 @@ export class ReminderNotifier {
     try {
       return await this.run();
     } catch (error) {
-      /* Eine Benachrichtigung darf die App nicht kosten. */
+      /* A notification must never cost the app its stability. */
       console.warn('[reminder] Prüfung fehlgeschlagen:', error);
       return 'no-index';
     } finally {
@@ -197,8 +197,8 @@ export class ReminderNotifier {
     return 'sent';
   }
 
-  /** Fenster nach vorn und auf das Dashboard. Kein neuer Kanal nötig: die
-      Oberfläche routet über den Hash. */
+  /** Window forward and to the dashboard. No new channel needed: the
+      UI routes via the hash. */
   private openDashboard(): void {
     const window = this.services.mainWindow();
     if (window === null) return;
@@ -211,7 +211,7 @@ export class ReminderNotifier {
   }
 }
 
-/** Baut den Melder und startet ihn. Rückgabe hält ihn wieder an. */
+/** Builds the notifier and starts it. The return value stops it again. */
 export function startReminderNotifier(
   services: Services,
   options: NotifierOptions = {},

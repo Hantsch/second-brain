@@ -1,13 +1,12 @@
-/* Was gerade passiert ist — und der Weg zurück.
+/* What just happened — and the way back.
 
-   Dieselbe Haltung wie in der Inbox: die Bestätigung steht im Screen und nicht als
-   Meldung, weil eine Meldung nach sechs Sekunden verschwindet und keinen Knopf
-   trägt. „Keine Aktion ohne Rückgängig" heißt, dass der Rückweg sichtbar dasteht.
+   The same stance as in the inbox: the confirmation stands in the screen and
+   not as a toast, because a toast disappears after six seconds and carries
+   no button. "No action without undo" means the way back stays visible.
 
-   Und sie behauptet nur, was wirklich geschehen ist: ohne geschriebene Datei
-   steht hier kein „geschrieben". Ein Fix, der nur öffnet, sagt „geöffnet"; ein
-   Rückweg, der eine seither bearbeitete Datei nicht angefasst hat, sagt auch das
-   (`kept`). */
+   And it only claims what actually happened: without a written file, no
+   "written" appears here. A fix that only opens says "opened"; an undo that
+   didn't touch a file edited since then also says so (`kept`). */
 
 import { Button } from '../../atoms/Button';
 import { Icon } from '../../atoms/Icon';
@@ -15,25 +14,25 @@ import { useT } from '../../i18n';
 import { plural } from '../../lib/format';
 
 export type Outcome =
-  /** Ein Fix hat geschrieben. Ohne Marke gibt es keinen Rückweg. */
+  /** A fix has written. Without a token there is no way back. */
   | { kind: 'fixed'; files: string[]; undoToken: string | null }
-  /** „Passt so" — der Befund ist ausgeblendet. */
+  /** "Looks fine" — the finding is hidden. */
   | { kind: 'dismissed'; id: string }
-  /** Die Überholt-Beziehung steht im Frontmatter. */
+  /** The supersedes relationship is in the frontmatter. */
   | { kind: 'superseded'; file: string; before: string[]; hash: string }
-  /** Ein Fix wurde zurückgedreht; `kept` blieb unberührt. */
+  /** A fix was reverted; `kept` was left untouched. */
   | { kind: 'undone'; kept: string[] }
-  /** Ein Lauf wurde abgebrochen. */
+  /** A run was cancelled. */
   | { kind: 'cancelled' }
-  /** Eine Aktion, die nichts schreibt: die zweite Datei bleibt als Weg. */
+  /** An action that writes nothing: the second file remains as a path. */
   | { kind: 'opened'; paths: string[] };
 
 export interface OutcomeStripProps {
   outcome: Outcome;
   busy: boolean;
-  /** Der Rückweg, wenn es einen gibt. */
+  /** The way back, if there is one. */
   onUndo?: () => void;
-  /** Der zweite Pfad einer „nur öffnen"-Aktion. */
+  /** The second path of an "open only" action. */
   onOpenSecond?: (path: string) => void;
 }
 
@@ -50,7 +49,7 @@ function sentence(outcome: Outcome): { key: string; values?: Record<string, stri
   return { key: 'garden.card.opened', values: { path: outcome.paths[0] ?? '' } };
 }
 
-/** Beschriftung des Rückwegs — „wieder anzeigen" ist kein „rückgängig". */
+/** Label of the way back — "show again" is not "undo". */
 function undoLabel(outcome: Outcome): string {
   return outcome.kind === 'dismissed' ? 'garden.card.undismiss' : 'garden.card.undo';
 }

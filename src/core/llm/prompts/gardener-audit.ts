@@ -1,23 +1,23 @@
-/* Den Pflegelauf deuten: Widersprüche benennen, unscharfe Kandidaten bestätigen
-   oder verwerfen, höchstens drei Sätze Rat geben.
+/* Interpret the maintenance run: name contradictions, confirm or reject
+   uncertain candidates, give at most three sentences of advice.
 
-   Das Modell bekommt **nur**, was deterministisch schon aufgefallen ist — die
-   Befunde und die Ausschnitte der betroffenen Seiten. Es sucht nicht im Vault, es
-   urteilt über eine Vorlage. Was es nennt, wird danach hart gegen den Index
-   geprüft (`core/gardener/audit.ts`): ein Pfad, den es nicht gibt, wird verworfen,
-   nicht angezeigt.
+   The model gets **only** what was already spotted deterministically — the
+   findings and the excerpts of the affected pages. It doesn't search the
+   vault, it judges a template. What it names is then checked hard against the
+   index afterward (`core/gardener/audit.ts`): a path that doesn't exist is
+   discarded, not shown.
 
-   Zwei Sprachen, getrennt: `note` wandert als benannte Notiz in eine Vault-Datei
-   und steht deshalb in der Dokumentsprache; `advice` liest der Nutzer im Screen
-   und steht in der Antwortsprache.
+   Two languages, kept separate: `note` travels as a named note into a vault
+   file and is therefore in the document language; `advice` is read by the
+   user in the screen and is in the reply language.
 
-   Ein Widerspruch wird nie aufgelöst. Er wird benannt, beide Fassungen bleiben
-   stehen (docs/MODULE-SCHEMA.md, „Widersprüche"). */
+   A contradiction is never resolved. It's named, both versions remain
+   standing (docs/MODULE-SCHEMA.md, "contradictions"). */
 
 import type { ChatTurn, DocLanguage, GardenerFindingKind, UiLanguage } from '@shared/types';
 import { clamp, documentLanguageRule, replyLanguageRule, turns } from './shared';
 
-/** Ein deterministischer Befund, so knapp wie er gedeutet werden kann. */
+/** A deterministic finding, as terse as it can be while still being judgeable. */
 export interface AuditFindingInput {
   id: string;
   kind: GardenerFindingKind;
@@ -25,14 +25,14 @@ export interface AuditFindingInput {
   paths: readonly string[];
 }
 
-/** Eine betroffene Seite mit dem Ausschnitt, über den geurteilt wird. */
+/** An affected page with the excerpt the judgment is based on. */
 export interface AuditPageInput {
-  /** Vault-relativer Pfad — genau so muss er in der Antwort stehen. */
+  /** Vault-relative path — must appear in the response exactly like this. */
   path: string;
   title: string;
-  /** Wortwörtlicher Anfang der Seite. */
+  /** Verbatim beginning of the page. */
   excerpt: string;
-  /** Seiten, die im Frontmatter schon als Widerspruch benannt sind. */
+  /** Pages already named as a contradiction in the frontmatter. */
   named?: readonly string[];
 }
 
@@ -40,14 +40,14 @@ export interface GardenerAuditInput {
   today: string;
   findings: readonly AuditFindingInput[];
   pages: readonly AuditPageInput[];
-  /** Befund-Kennungen, die bestätigt oder verworfen werden dürfen. */
+  /** Finding IDs that may be confirmed or rejected. */
   candidateIds: readonly string[];
 }
 
-/** Höchstlänge eines Seitenausschnitts im Prompt. */
+/** Maximum length of a page excerpt in the prompt. */
 export const MAX_EXCERPT_CHARS = 700;
 
-/** Höchstzahl an Ratschlägen. Mehr als drei liest niemand. */
+/** Maximum number of advice items. Nobody reads more than three. */
 export const MAX_ADVICE = 3;
 
 export const GARDENER_AUDIT_SCHEMA: Record<string, unknown> = {

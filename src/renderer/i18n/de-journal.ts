@@ -71,7 +71,7 @@ export const deJournal = {
   'journal.day.conflict.reload': 'Stand holen',
   'journal.day.conflict.overwrite': 'Trotzdem speichern',
 
-  // ── Gespräch ──────────────────────────────────────────────────────────────
+  // ── Conversation ───────────────────────────────────────────────────────────
   'journal.dialogue.title': 'Gespräch',
   'journal.dialogue.empty': 'Was du hier schreibst, steht wörtlich im Tageseintrag — und nur dort.',
   'journal.turn.user': 'Ich',

@@ -1,18 +1,18 @@
-/* Der Tagesabschluss als Vorschlag — dieselbe Machart wie die Karte der Inbox:
- * Ziel, Begründung, abwählbare Todos, Fristen zum Ändern.
+/* The day close as a suggestion — the same approach as the inbox card:
+ * target, reasoning, deselectable todos, editable due dates.
  *
- * Er steht in einem Dialog und nicht im Screen, weil er den zweiten Teal-Knopf
- * braucht: der Fokuspunkt des Screens ist das Gespräch. Im Dialog gehört das Teal
- * dem „Übernehmen" — und der Weg heraus ist immer da (Esc, X, Abbrechen).
+ * It lives in a dialog rather than the screen because it needs the second
+ * teal button: the screen's focal point is the conversation. In the dialog,
+ * teal belongs to "apply" — and the way out is always there (Esc, X, cancel).
  *
- * Zwei Zusagen:
+ * Two guarantees:
  *
- * - **Erst „Übernehmen" schreibt.** Vorher ist alles hier nur Text. Was abgewählt
- *   ist, wird nicht geschrieben — deshalb geht genau die bearbeitete Fassung über
- *   den Kanal, nicht der ursprüngliche Vorschlag.
- * - **Jedes Ziel steht dabei.** Ein Todo, das ein Projekt nennt, landet in dessen
- *   Datei; das ist ein Schreibvorgang in eine Datei, die niemand angeklickt hat, und
- *   unsichtbar wäre er ein Verstoß gegen Guardrail 2.
+ * - **Only "apply" writes.** Before that, everything here is just text.
+ *   Whatever is deselected doesn't get written — that's why exactly the
+ *   edited version travels over the channel, not the original suggestion.
+ * - **Every target is shown.** A todo that names a project ends up in that
+ *   project's file; that's a write to a file nobody clicked on, and leaving
+ *   it invisible would violate guardrail 2.
  */
 
 import { useState } from 'react';
@@ -27,7 +27,7 @@ import { DueField } from '../../components/DueField';
 import { ErrorState } from '../../components/ErrorState';
 import { useT } from '../../i18n';
 
-/** Ein Warte-auf wird als Todo mit `@wait:` notiert — das kennt jeder Editor. */
+/** A waiting-on is noted as a todo with `@wait:` — every editor recognizes that. */
 function asTodo(entry: WaitingOn, scope: ProposedTodo['scope']): ProposedTodo {
   return {
     text: entry.what.trim().length === 0 ? entry.who : entry.what,
@@ -42,7 +42,7 @@ function asTodo(entry: WaitingOn, scope: ProposedTodo['scope']): ProposedTodo {
 interface Row {
   todo: ProposedTodo;
   keep: boolean;
-  /** Aus einem Warte-auf entstanden — die Karte sagt das. */
+  /** Arose from a waiting-on — the card says so. */
   waiting: boolean;
 }
 
@@ -60,7 +60,7 @@ function initialRows(suggestion: JournalCloseSuggestion): Row[] {
 export interface CloseDialogProps {
   open: boolean;
   suggestion: JournalCloseSuggestion | null;
-  /** Für die Auskunft, in welche Projektdatei ein Todo geht. */
+  /** For reporting which project file a todo goes into. */
   projects: readonly Project[];
   busy: boolean;
   error: unknown;
@@ -108,8 +108,8 @@ export function CloseDialog({
     energy: keeps('energy') ? suggestion.frontmatter.energy : null,
   };
   const chosen = current.filter((row) => row.keep).map((row) => row.todo);
-  /* Ein Knopf, der nichts schreibt, sagt es vorher — statt eine Bestätigung für
-     einen Schreibvorgang zu behaupten, den es nicht gab. */
+  /* A button that writes nothing says so beforehand — instead of implying a
+     confirmation for a write that never happened. */
   const writes =
     chosen.length > 0 ||
     frontmatter.people.length > 0 ||
@@ -118,7 +118,7 @@ export function CloseDialog({
     frontmatter.mood !== null ||
     frontmatter.energy !== null;
 
-  /* Eine Überschrift über einer leeren Liste behauptet, es gäbe dort etwas. */
+  /* A heading over an empty list implies there's something there. */
   const hasFields =
     suggestion.frontmatter.people.length > 0 ||
     suggestion.frontmatter.projects.length > 0 ||

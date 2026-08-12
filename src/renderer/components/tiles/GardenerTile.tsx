@@ -1,17 +1,18 @@
-/* Der Pflegewert — oder die ehrliche Auskunft, dass es noch keinen gibt.
+/* The maintenance score — or the honest word that there isn't one yet.
 
-   `DashboardData.healthKnown` sagt, ob ein Pflegelauf vorliegt. Ist er `false`
-   oder fehlt er, steht hier „noch nicht geprüft" und **keine Zahl**. Eine 100 zu
-   zeigen, weil niemand nachgesehen hat, wäre die Sorte Lüge, an der ein Dashboard
-   stirbt: der Nutzer glaubt es, und dann stimmt es nicht.
+   `DashboardData.healthKnown` says whether a maintenance run has happened. If
+   it's `false` or missing, this shows "not checked yet" and **no number**.
+   Showing a 100 because nobody looked would be the kind of lie a dashboard
+   dies from: the user believes it, and then it isn't true.
 
-   Liegt ein Lauf vor, zeigt die Kachel drei Dinge: den Wert als Balken (mit
-   Textalternative), die Zahl der Befunde und die zwei dringendsten Kategorien —
-   damit sie nicht nur eine Note verkündet, sondern sagt, was drückt. Die
-   Reihenfolge kommt aus dem Bericht (`healthContributions`, schwerste zuerst).
+   If a run exists, the tile shows three things: the score as a bar (with a
+   text alternative), the number of findings, and the two most urgent
+   categories — so it doesn't just announce a grade but says what's weighing
+   it down. The order comes from the report (`healthContributions`, worst
+   first).
 
-   Beide Wege führen in den Pflege-Screen: mit Lauf „zur Pflege", ohne Lauf
-   „jetzt prüfen" — dort steht der Knopf, der prüft. */
+   Both paths lead into the maintenance screen: with a run "go to maintenance",
+   without one "check now" — that's where the button that checks lives. */
 
 import { useNavigate } from 'react-router-dom';
 import { useT } from '../../i18n';
@@ -21,15 +22,15 @@ import { useGardenerReport } from '../../lib/queries/gardener';
 import { HealthMeter } from '../HealthMeter';
 import { TileFrame } from '../TileFrame';
 
-/** So viele Kategorien nennt die Kachel — die dringendsten. */
+/** This many categories the tile names — the most urgent ones. */
 const WORST = 2;
 
 export function GardenerTile() {
   const t = useT();
   const navigate = useNavigate();
   const { data, isPending, error, refetch } = useDashboardData();
-  /* Die Aufschlüsselung steht nur im Bericht, nicht im Dashboard-Bündel. Sie ist
-     eine Datei und schon geladen, wenn der Pflege-Screen offen war. */
+  /* The breakdown lives only in the report, not in the dashboard bundle. It's
+     a file, and already loaded if the maintenance screen was open. */
   const report = useGardenerReport();
   const known = data?.healthKnown === true;
   const worst = (report.data?.healthContributions ?? []).slice(0, WORST);
@@ -64,9 +65,9 @@ export function GardenerTile() {
             <ul className="sb-lines">
               {worst.map((entry) => (
                 <li key={entry.kind} className="sb-line">
-                  {/* Der ganze Satz als Titel: in der schmalen Kachel bricht die
-                      Zeile ab, und ein abgeschnittener Befund darf nicht die
-                      einzige Auskunft sein. */}
+                  {/* The full sentence as the title: in the narrow tile the
+                      line truncates, and a cut-off finding must not be the
+                      only information given. */}
                   <span className="sb-line-detail" title={t(`garden.kind.${entry.kind}`)}>
                     {plural(
                       entry.count,

@@ -1,16 +1,16 @@
-/* Die einzigen Nutzertexte des Hauptprozesses. Zwei Stellen, beide begründet:
+/* The main process's only user-facing text. Two spots, both justified:
 
-   1. **Die Windows-Benachrichtigung.** Sie entsteht im Main, auch wenn kein
-      Fenster offen ist — der Renderer kann sie nicht formulieren. Ein Text, den
-      nur `t()` kennt, wäre hier nicht erreichbar.
-   2. **`RecentWorkItem.detail`.** Der IPC-Vertrag trägt an dieser Stelle einen
-      fertigen Satz, keinen Code (anders als `IngestNoteCode`, wo der Renderer
-      übersetzt). Der Kern lässt die Beschriftungen einsetzen
-      (`core/overview/labels`) und stellt Deutsch als Vorgabe; das englische
-      Gegenstück steht hier, weil `src/core/` keine Sprache wählt.
+   1. **The Windows notification.** It's created in the main process, even
+      when no window is open — the renderer can't compose it. A string that
+      only `t()` knows would be unreachable here.
+   2. **`RecentWorkItem.detail`.** At this point the IPC contract carries a
+      finished sentence, not a code (unlike `IngestNoteCode`, where the
+      renderer translates). The core lets the labels be injected
+      (`core/overview/labels`) and defaults to German; the English
+      counterpart lives here, because `src/core/` never chooses a language.
 
-   Beides folgt `settings.uiLanguage()`. Sentence case, keine Emoji, Aussagen
-   statt Ausrufe — dieselbe Tonlage wie die Oberfläche. */
+   Both follow `settings.uiLanguage()`. Sentence case, no emoji, statements
+   instead of exclamations — the same tone as the UI. */
 
 import { GERMAN_RECENT_LABELS } from '@core/overview';
 import type { RecentWorkLabels } from '@core/overview';
@@ -50,12 +50,12 @@ const ENGLISH_RECENT_LABELS: RecentWorkLabels = {
   },
 };
 
-/** Beschriftungen für „zuletzt gearbeitet" in der Sprache der Oberfläche. */
+/** Labels for "recently worked on" in the UI's language. */
 export function recentWorkLabels(language: UiLanguage): RecentWorkLabels {
   return language === 'en' ? ENGLISH_RECENT_LABELS : GERMAN_RECENT_LABELS;
 }
 
-/** Zusammenfassung einer Sammelbenachrichtigung: was ist überfällig, was heute fällig? */
+/** Summary of a collected notification: what's overdue, what's due today? */
 export function dueSummary(language: UiLanguage, overdue: number, today: number): string {
   if (language === 'en') {
     const parts: string[] = [];
@@ -72,7 +72,7 @@ export function dueSummary(language: UiLanguage, overdue: number, today: number)
   return parts.join(', ');
 }
 
-/** Der Rumpf der Benachrichtigung: die Titel, plus wie viele nicht draufstehen. */
+/** The notification's body: the titles, plus how many more aren't listed. */
 export function dueBody(language: UiLanguage, titles: readonly string[], rest: number): string {
   const listed = titles.join(' · ');
   if (rest <= 0) return listed;

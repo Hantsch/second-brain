@@ -1,6 +1,6 @@
-/* Einstellungen. Zwei Ebenen, bewusst getrennt:
-   - App-Settings liegen in userData (maschinengebunden: Fenster, Vault-Historie, Schlüssel)
-   - Vault-Settings liegen in `<vault>/.secondbrain/settings.json` (reisen mit dem Vault) */
+/* Settings. Two levels, deliberately separated:
+   - App settings live in userData (machine-bound: window, vault history, keys)
+   - Vault settings live in `<vault>/.secondbrain/settings.json` (travel with the vault) */
 
 import type { CoachMode } from './domain';
 import type { ProviderConfig, Routing } from './llm';
@@ -8,7 +8,7 @@ import type { DashboardLayout } from './overview';
 
 export type UiLanguage = 'de' | 'en';
 
-/** Sprache, in der Dokumente im Vault geschrieben werden. */
+/** Language documents in the vault are written in. */
 export type DocLanguage = 'de' | 'en';
 
 export type ThemeMode = 'dark' | 'light' | 'system';
@@ -40,67 +40,68 @@ export interface CustomizationSettings {
 }
 
 export interface LanguageSettings {
-  /** Sprache der Oberfläche. */
+  /** Language of the UI. */
   ui: UiLanguage;
-  /** Sprache, in der das LLM Notizen, Wiki-Seiten und Zusammenfassungen schreibt. */
+  /** Language the LLM writes notes, wiki pages, and summaries in. */
   documents: DocLanguage;
-  /** Sprache, in der geantwortet wird (Chat, Coaching). */
+  /** Language responses are given in (chat, coaching). */
   conversation: UiLanguage;
-  /** Fremdsprachige Quellen beim Verdichten in die Dokumentsprache übersetzen. */
+  /** Translate foreign-language sources into the document language while condensing. */
   translateSources: boolean;
 }
 
 /*
- * Es gab hier eine Schwelle, ab der ein Ablage-Vorschlag ohne Rückfrage
- * ausgeführt worden wäre. Sie ist weg: Guardrail 2 lässt sie nicht zu (nichts
- * wird geschrieben, was niemand bestätigt hat), also konnte sie niemand lesen —
- * und ein Schieber in den Einstellungen, den niemand liest, ist eine Behauptung.
+ * There used to be a threshold above which a filing suggestion would be
+ * carried out without asking. It's gone: guardrail 2 doesn't allow it
+ * (nothing gets written that nobody confirmed), so nobody could ever read
+ * it — and a slider in settings that nobody reads is a false claim.
  */
 export interface CaptureSettings {
-  /** Globaler Hotkey für das Schnell-Erfassen-Fenster. */
+  /** Global hotkey for the quick-capture window. */
   quickCaptureShortcut: string;
-  /** Dumps nach dem Speichern sofort vom LLM einordnen lassen. */
+  /** Have the LLM classify dumps immediately after saving. */
   autoClassify: boolean;
-  /** Nach dem Speichern das Fenster schließen. */
+  /** Close the window after saving. */
   closeAfterCapture: boolean;
 }
 
 export interface OverviewSettings {
-  /** Ab wie vielen Tagen ohne Spur ein Projekt als stagnierend gilt. */
+  /** After how many days without activity a project counts as stagnant. */
   staleAfterDays: number;
-  /** Wie viele Tage im Voraus Deadlines auftauchen. */
+  /** How many days ahead deadlines show up. */
   deadlineHorizonDays: number;
-  /** Warte-auf ohne Frist nach so vielen Tagen anmahnen. */
+  /** Nudge about waiting-on entries without a due date after this many days. */
   waitingNudgeDays: number;
-  /** Claude-Sessions als Arbeitsspur mitlesen. */
+  /** Read Claude sessions in as part of the work trace. */
   useClaudeSessions: boolean;
-  /** Wurzel der Claude-Projekte; leer = `~/.claude/projects`. */
+  /** Root of the Claude projects; empty = `~/.claude/projects`. */
   claudeProjectsDir: string;
-  /** Windows-Benachrichtigungen für fällige Erinnerungen. */
+  /** Windows notifications for due reminders. */
   notifications: boolean;
 }
 
 /*
- * Auch hier standen zwei Schalter zu viel (`askMood`, `extractFacts`). Der
- * Tagesabschluss schlägt vor, was im Text steht, und der Mensch hakt an — es gibt
- * nichts vorab abzuschalten, ohne ihm einen Vorschlag zu verschweigen, den er
- * ohnehin ablehnen kann. Niemand hat sie gelesen; jetzt gibt es sie nicht mehr.
+ * Here too there were two switches too many (`askMood`, `extractFacts`).
+ * The day close-out suggests what's in the text, and the human checks it
+ * off — there's nothing to disable up front without withholding a
+ * suggestion the human could just as easily reject anyway. Nobody read
+ * them; now they no longer exist.
  */
 export interface JournalSettings {
-  /** Grundhaltung des Coachs — die Vorgabe des Segments auf dem Tagebuch-Screen. */
+  /** The coach's base stance — the default for the segmented control on the journal screen. */
   mode: CoachMode;
 }
 
 export interface GardenerSettings {
-  /** Pflegelauf beim Öffnen des Vaults automatisch starten. */
+  /** Start a maintenance run automatically when the vault opens. */
   runOnOpen: boolean;
-  /** Seiten, die länger als das nicht überprüft wurden, gelten als angestaubt. */
+  /** Pages that haven't been reviewed for longer than this count as stale. */
   reviewAfterDays: number;
-  /** Deutet ein LLM die Befunde (Widersprüche, fehlende Seiten)? */
+  /** Does an LLM interpret the findings (contradictions, missing pages)? */
   useLlm: boolean;
 }
 
-/** Was mit dem Vault reist. */
+/** What travels with the vault. */
 export interface VaultSettings {
   version: number;
   languages: LanguageSettings;
@@ -108,11 +109,11 @@ export interface VaultSettings {
   overview: OverviewSettings;
   journal: JournalSettings;
   gardener: GardenerSettings;
-  /** Provider ohne Schlüssel — die Schlüssel bleiben auf der Maschine. */
+  /** Providers without keys — the keys stay on the machine. */
   providers: ProviderConfig[];
   routing: Routing;
   dashboard: DashboardLayout;
-  /** Zusätzliche Tags, die bei der Einordnung bevorzugt werden. */
+  /** Additional tags preferred during filing. */
   preferredTags: string[];
 }
 
@@ -124,26 +125,26 @@ export interface WindowBounds {
   maximized?: boolean;
 }
 
-/** Was an der Maschine hängt. */
+/** What's tied to the machine. */
 export interface AppSettings {
   version: number;
-  /** Zuletzt geöffneter Vault. */
+  /** Most recently opened vault. */
   lastVault: string | null;
-  /** Verlauf für die Vault-Auswahl. */
+  /** History for the vault picker. */
   recentVaults: string[];
   theme: ThemeMode;
   customization: CustomizationSettings;
-  /** UI-Sprache, bevor ein Vault geöffnet ist. */
+  /** UI language before a vault is opened. */
   uiLanguage: UiLanguage;
   window: WindowBounds;
-  /** Beim Start minimiert in den Tray. */
+  /** Start minimized to the tray. */
   startMinimized: boolean;
-  /** Onboarding schon durchlaufen. */
+  /** Onboarding already completed. */
   onboarded: boolean;
 }
 
 export interface SettingsSnapshot {
   app: AppSettings;
-  /** null, solange kein Vault offen ist. */
+  /** null while no vault is open. */
   vault: VaultSettings | null;
 }

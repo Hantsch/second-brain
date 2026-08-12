@@ -1,13 +1,14 @@
-/* Der Editor einer Wiki-Seite: Feld, Meldungen, Fußzeile.
-   Herausgelöst aus PageView.tsx — Anzeigen und Ändern sind zwei Aufgaben.
+/* The editor for a wiki page: field, messages, footer.
+   Split out of PageView.tsx — viewing and editing are two separate jobs.
 
-   Die Reihenfolge im Markup ist der Kern dieser Datei: **die Meldung steht
-   zwischen Feld und Fußzeile, nicht über dem Feld.** Das Feld ist 380 px hoch;
-   eine Karte darüber lag nach dem Klick auf „Speichern" außerhalb des Sichtfelds
-   (gemessen: 182 px hoch bei `top = -136` — zwei Pixel sichtbar). Wer unten
-   klickt und oben eine Antwort bekommt, sieht keine und hält den Entwurf für
-   gespeichert. Dazu: `role="alert"`, `scrollIntoView` beim Erscheinen und eine
-   Zeile neben dem Knopf, die ausspricht, dass nichts geschrieben wurde. */
+   The order in the markup is the point of this file: **the message sits
+   between the field and the footer, not above the field.** The field is
+   380 px tall; a card placed above it ended up outside the viewport after
+   clicking "save" (measured: 182 px tall at `top = -136` — two pixels
+   visible). Someone who clicks at the bottom and gets a response at the top
+   never sees it and assumes the draft was saved. To fix that: `role="alert"`,
+   `scrollIntoView` on appearance, and a line next to the button that states
+   plainly that nothing was written. */
 
 import { useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
@@ -17,30 +18,30 @@ import { ErrorState } from '../../components/ErrorState';
 import { useT } from '../../i18n';
 
 export interface PageEditProps {
-  /** Der Entwurf, wie er im Feld steht. */
+  /** The draft as it stands in the field. */
   draft: string;
   onDraft: (next: string) => void;
-  /** Der Hauptprozess hat mit `conflict` abgelehnt. */
+  /** The main process rejected the write with `conflict`. */
   conflict: boolean;
-  /** Ein anderer Fehler des Schreibwegs; `null`, wenn keiner ansteht. */
+  /** Some other error from the write path; `null` when there is none. */
   error: unknown;
-  /** Die Datei hat sich geändert, seit der Editor geöffnet wurde. */
+  /** The file has changed since the editor was opened. */
   changedOutside: boolean;
-  /** Hash der Fassung, die gerade in der Datei steht — der Anlass der Meldung. */
+  /** Hash of the version currently in the file — the reason for the message. */
   docHash: string;
-  /** Der Schreibvorgang läuft. */
+  /** The write is in progress. */
   busy: boolean;
-  /** Zeitpunkt des letzten Versuchs — dieselbe Karte, neuer Anlass. */
+  /** Timestamp of the last attempt — same card, new reason. */
   attemptedAt: number;
-  /** Pfad der Seite, für die Fehlerkarte. */
+  /** Path of the page, for the error card. */
   subject: string;
-  /** Speichern mit dem eingefrorenen Hash. */
+  /** Save with the frozen hash. */
   onSave: () => void;
-  /** Ausdrückliches Überschreiben, ohne Hash. */
+  /** Explicit overwrite, without a hash. */
   onOverwrite: () => void;
-  /** Entwurf verwerfen und den fremden Stand holen. */
+  /** Discard the draft and fetch the version written elsewhere. */
   onReload: () => void;
-  /** Die eigene Fassung behalten, trotz fremder Änderung. */
+  /** Keep the local version despite the outside change. */
   onKeep: () => void;
   onCancel: () => void;
 }
@@ -81,11 +82,11 @@ export function PageEdit({
           body={t('page.conflict.body')}
           nonce={attemptedAt}
         >
-          {/* Sekundär: der Fokuspunkt gehört jetzt der Entscheidung in dieser
-              Karte, nicht dem Fußzeilen-„Speichern" — das kann in diesem
-              Zustand nur dieselbe Ablehnung erzeugen. „Überschreiben" bleibt
-              die einzige Aktion mit Gewicht, weil sie die einzige ist, die
-              wirklich etwas ändert. */}
+          {/* Secondary: the focal point now belongs to the decision in this
+              card, not the footer's "save" — in this state that could only
+              produce the same rejection again. "Overwrite" remains the only
+              action with weight, because it's the only one that actually
+              changes anything. */}
           <Button variant="secondary" size="sm" icon="refresh-cw" onClick={onReload}>
             {t('page.conflict.reload')}
           </Button>
@@ -97,8 +98,8 @@ export function PageEdit({
         <ErrorState error={error} variant="secondary" subject={subject} scrollIntoView />
       )}
 
-      {/* Die fremde Änderung kommt über den Watcher an, nicht erst beim Speichern:
-          wer sie kennt, verliert seinen Text nicht aus Unwissenheit. */}
+      {/* The outside change arrives via the watcher, not only at save time:
+          knowing about it means never losing your text out of ignorance. */}
       {changedOutside && !conflict ? (
         <AlertCard title={t('page.external.title')} body={t('page.external.body')} nonce={docHash}>
           <Button variant="secondary" size="sm" icon="refresh-cw" onClick={onReload}>
@@ -111,9 +112,9 @@ export function PageEdit({
       ) : null}
 
       <div className="sb-pageedit-foot">
-        {/* Während eine Karte oben steht, kann dieser Knopf nur dieselbe
-            Ablehnung erzeugen — sekundär, damit nicht zwei Teal-Flächen
-            gleichzeitig um die Aufmerksamkeit konkurrieren. */}
+        {/* While a card is showing above, this button can only produce the
+            same rejection again — secondary, so two teal surfaces don't
+            compete for attention at the same time. */}
         <Button
           variant={conflict || changedOutside ? 'secondary' : 'primary'}
           icon="check"
@@ -125,9 +126,9 @@ export function PageEdit({
         <Button variant="ghost" onClick={onCancel}>
           {t('page.cancel')}
         </Button>
-        {/* Ohne diese Zeile hätte der Klick auf „Speichern" keine Antwort am Knopf
-            selbst. Keine eigene Live-Region: die Karte darüber ist die Ansage,
-            zweimal wäre einmal zu viel. */}
+        {/* Without this line, clicking "save" would produce no response at
+            the button itself. No live region of its own: the card above is
+            the announcement, twice would be once too many. */}
         {conflict ? (
           <span className="sb-pageedit-warn">{t('page.unsaved')}</span>
         ) : (
@@ -139,12 +140,13 @@ export function PageEdit({
 }
 
 /**
- * Eine Meldung, die man nicht verpassen darf: sie rollt beim Erscheinen in den
- * Blick und meldet sich als `alert` an.
+ * A message that must not be missed: it scrolls into view when it appears
+ * and announces itself as `alert`.
  *
- * `nonce` ist der Anlass. Bleibt die Karte stehen und wird nur erneut ausgelöst
- * (zweiter Klick auf „Speichern", zweite Ablehnung), ändert sich der Wert — und
- * die Karte rollt wieder in den Blick, statt still dieselbe zu bleiben.
+ * `nonce` is the reason it appeared. If the card stays in place and only
+ * gets triggered again (second click on "save", second rejection), the
+ * value changes — and the card scrolls into view again instead of quietly
+ * staying the same.
  */
 function AlertCard({
   title,
@@ -158,8 +160,8 @@ function AlertCard({
   children: ReactNode;
 }) {
   const box = useRef<HTMLDivElement>(null);
-  /* Optional gerufen: eine Umgebung ohne Layout (jsdom) kennt `scrollIntoView`
-     nicht — geprüft wird dort die Meldung, nicht das Rollen. */
+  /* Called optionally: an environment without layout (jsdom) doesn't know
+     `scrollIntoView` — what's tested there is the message, not the scroll. */
   useEffect(() => {
     box.current?.scrollIntoView?.({ block: 'nearest' });
   }, [nonce]);

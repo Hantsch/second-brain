@@ -1,12 +1,14 @@
 /**
- * Der IPC-Vertrag. Einzige Quelle der Wahrheit für die Grenze zwischen Renderer
- * und Main.
+ * The IPC contract. The single source of truth for the boundary between
+ * renderer and main.
  *
- * Regeln:
- * - Der Renderer fasst niemals das Dateisystem an. Alles läuft über diese Kanäle.
- * - Ein Kanal wird hier eingetragen, im Main registriert und im Renderer über
- *   `src/renderer/lib/api.ts` benutzt. Das Preload kennt nur diese Liste.
- * - Kanäle sind `bereich:aktion`. Events sind `event:...` und fließen nur Main → Renderer.
+ * Rules:
+ * - The renderer never touches the file system directly. Everything runs
+ *   through these channels.
+ * - A channel is entered here, registered in main, and used in the renderer
+ *   via `src/renderer/lib/api.ts`. The preload only knows this list.
+ * - Channels are `area:action`. Events are `event:...` and flow only
+ *   main → renderer.
  */
 
 import type {
@@ -54,7 +56,7 @@ import type {
   SourceDetail,
 } from './types';
 
-/** Antwort auf eine Frage an das Second Brain. */
+/** Answer to a question asked of the Second Brain. */
 export interface AskAnswer {
   threadId: string;
   messageId: string;
@@ -76,11 +78,11 @@ export interface AppInfo {
   platform: string;
   electron: string;
   userData: string;
-  /** Läuft die App im Demo-Modus auf einem Beispiel-Vault? */
+  /** Is the app running in demo mode on a sample vault? */
   demo: boolean;
 }
 
-/** Ein Schreibvorgang mit Konfliktschutz: `expectedHash` = was der Client gelesen hat. */
+/** A write with conflict protection: `expectedHash` = what the client read. */
 export interface WriteRequest {
   path: string;
   frontmatter?: Record<string, unknown>;
@@ -88,38 +90,39 @@ export interface WriteRequest {
   expectedHash?: string;
 }
 
-/** Eine Runde des Coaching-Dialogs, wie sie im Tageseintrag steht. */
+/** One round of the coaching dialogue, as it appears in the journal entry. */
 export interface JournalTurn {
   role: 'user' | 'assistant';
   text: string;
-  /** Uhrzeit 'HH:MM' aus der Sprecherzeile; `null`, wenn keine dransteht. */
+  /** Time 'HH:MM' from the speaker line; `null` when there is none. */
   at: string | null;
 }
 
 /**
- * Ein Tageseintrag für die Anzeige: die Datei plus ihre drei Abschnitte, schon
- * getrennt. Der Renderer parst kein Markdown — sonst gäbe es eine zweite Fassung
- * des Dateiformats, die beim ersten von Hand geschriebenen Tag auseinanderläuft.
+ * A journal day for display: the file plus its three sections, already
+ * split apart. The renderer never parses markdown itself — otherwise there
+ * would be a second version of the file format that drifts apart the moment
+ * someone writes a day entry by hand.
  */
 export interface JournalDayView {
   day: JournalDay;
   doc: VaultDoc;
-  /** Prosa des Abschnitts „Tag" — was der Mensch selbst geschrieben hat. */
+  /** Prose of the "Day" section — what the human wrote themselves. */
   text: string;
-  /** Runden des Abschnitts „Gespräch", älteste zuerst. */
+  /** Rounds of the "Conversation" section, oldest first. */
   turns: JournalTurn[];
-  /** Der Abschnitt „Fakten", wörtlich wie in der Datei. */
+  /** The "Facts" section, verbatim as it is in the file. */
   facts: string;
 }
 
 /**
- * Die Frontmatter-Felder eines Tageseintrags, wie der Tagesabschluss sie
- * vorschlägt und wie der Nutzer sie bestätigt. `null` bei Stimmung und Energie
- * heißt „nicht gefunden" bzw. „nicht schreiben" — nie „auf null setzen".
+ * The frontmatter fields of a journal day, as the day close-out suggests
+ * them and as the user confirms them. `null` for mood and energy means "not
+ * found" resp. "do not write" — never "set to null".
  */
 export interface JournalFrontmatterFields {
   people: string[];
-  /** Projekt-Slugs. */
+  /** Project slugs. */
   projects: string[];
   mood: number | null;
   energy: number | null;
@@ -127,27 +130,27 @@ export interface JournalFrontmatterFields {
 }
 
 /**
- * Der Vorschlag des Tagesabschlusses. Geschrieben ist davon nichts: die Karte
- * zeigt ihn, `journal:applyClose` führt aus, was bestätigt wurde.
+ * The day close-out's suggestion. Nothing from it is written yet: the card
+ * shows it, `journal:applyClose` carries out what was confirmed.
  */
 export interface JournalCloseSuggestion {
   date: string;
   path: string;
-  /** Dieselbe Form wie in der Inbox — dieselbe Karte, dieselben Knöpfe. */
+  /** Same shape as in the inbox — the same card, the same buttons. */
   proposal: FilingProposal;
   frontmatter: JournalFrontmatterFields;
-  /** Vollständig ohne Modell entstanden. */
+  /** Produced entirely without a model. */
   heuristic: boolean;
 }
 
 /**
- * Alle Kanäle: Kanalname → Anfrage/Antwort.
- * `void` heißt: kein Argument bzw. kein Rückgabewert.
+ * All channels: channel name → request/response.
+ * `void` means: no argument resp. no return value.
  */
 export interface IpcRoutes {
   // ── Vault ────────────────────────────────────────────────────────────────
   'vault:status': { req: void; res: VaultStatus };
-  /** Ordner-Dialog öffnen und Vault laden. null = abgebrochen. */
+  /** Open the folder dialog and load the vault. null = cancelled. */
   'vault:choose': { req: void; res: VaultStatus | null };
   'vault:open': { req: { path: string }; res: VaultStatus };
   'vault:create': { req: { path: string; name: string }; res: VaultStatus };
@@ -158,12 +161,12 @@ export interface IpcRoutes {
   'vault:delete': { req: { path: string }; res: { undoToken: string } };
   'vault:tree': { req: { dir?: string }; res: { path: string; dir: boolean; size: number }[] };
 
-  // ── Index & Suche ────────────────────────────────────────────────────────
+  // ── Index & search ───────────────────────────────────────────────────────
   'index:stats': { req: void; res: IndexStats };
   'index:rebuild': { req: void; res: IndexStats };
   'search:query': { req: SearchQuery; res: SearchHit[] };
 
-  // ── Erfassen & Einordnen ─────────────────────────────────────────────────
+  // ── Capture & filing ─────────────────────────────────────────────────────
   'capture:dump': {
     req: { text: string; origin: DumpItem['origin']; tags?: string[]; scope?: Scope | null };
     res: DumpItem;
@@ -171,14 +174,14 @@ export interface IpcRoutes {
   'capture:inbox': { req: void; res: DumpItem[] };
   'capture:classify': { req: { path: string }; res: FilingProposal };
   'capture:apply': { req: { proposal: FilingProposal }; res: FilingResult };
-  /** „Liegen lassen" — mit Rückgängig: `undoToken` schreibt den vorigen Status zurück. */
+  /** "Leave it" — with undo: `undoToken` writes the previous status back. */
   'capture:keep': { req: { path: string }; res: { dump: DumpItem; undoToken: string } };
   'capture:discard': { req: { path: string }; res: { undoToken: string } };
   'capture:undo': { req: { undoToken: string }; res: void };
-  /** Schnell-Erfassen-Fenster öffnen/schließen. */
+  /** Open/close the quick-capture window. */
   'capture:window': { req: { show: boolean }; res: void };
 
-  // ── Projekte ─────────────────────────────────────────────────────────────
+  // ── Projects ─────────────────────────────────────────────────────────────
   'projects:list': { req: { scope?: Scope; includeDone?: boolean }; res: Project[] };
   'projects:get': { req: { slug: string }; res: { project: Project; doc: VaultDoc } | null };
   'projects:create': {
@@ -193,7 +196,7 @@ export interface IpcRoutes {
     req: { slug: string; section: string; content: string };
     res: WriteResult;
   };
-  /** LLM leitet Status und nächsten Schritt aus der Projekthistorie ab (Vorschlag). */
+  /** LLM derives status and next step from the project history (a suggestion). */
   'projects:suggestStatus': {
     req: { slug: string };
     res: {
@@ -201,9 +204,10 @@ export interface IpcRoutes {
       nextStep: string;
       reason: string;
       /**
-       * Ohne Modell erzeugt — aus Regeln über den Bestand. Steht ein Modell,
-       * fällt der Kanal darauf zurück, wenn es ausfällt oder Unsinn liefert;
-       * dann sagt dieses Feld es, statt eine Deutung zu behaupten.
+       * Produced without a model — from rules over the existing data. If a
+       * model is configured, the channel falls back to this when the model
+       * fails or returns nonsense; this field then says so instead of
+       * claiming an interpretation that didn't happen.
        */
       heuristic?: boolean;
     } | null;
@@ -234,16 +238,16 @@ export interface IpcRoutes {
   /** Reorder every checkbox in one project file by stable todo id. */
   'todos:reorder': { req: { ids: string[] }; res: Todo[] };
 
-  // ── Journal & Coaching ───────────────────────────────────────────────────
+  // ── Journal & coaching ───────────────────────────────────────────────────
   'journal:list': { req: { limit?: number }; res: JournalDay[] };
-  /** Der Tageseintrag samt seinen drei Abschnitten — der Renderer parst kein Markdown. */
+  /** The journal day with its three sections — the renderer never parses markdown. */
   'journal:get': { req: { date: string }; res: JournalDayView | null };
-  /** Prosa an den Abschnitt „Tag" anhängen; fehlt die Datei, wird sie angelegt. */
+  /** Append prose to the "Day" section; if the file doesn't exist, it is created. */
   'journal:append': { req: { date: string; text: string }; res: WriteResult };
   /**
-   * Den Abschnitt „Tag" ersetzen — der Schreibweg des Editors. `expectedHash` ist
-   * der Hash, den der Editor beim Öffnen gelesen hat: ohne ihn überschriebe das
-   * Speichern eine fremde Änderung stillschweigend.
+   * Replace the "Day" section — the editor's write path. `expectedHash` is
+   * the hash the editor read when opening: without it, saving would silently
+   * overwrite a change made elsewhere.
    */
   'journal:setDay': {
     req: { date: string; text: string; expectedHash?: string };
@@ -253,17 +257,17 @@ export interface IpcRoutes {
     req: { date: string; mood?: number; energy?: number; expectedHash?: string };
     res: JournalDay;
   };
-  /** Coaching-Antwort; streamt über `event:llm-stream`. */
+  /** Coaching response; streams over `event:llm-stream`. */
   'journal:coach': { req: CoachRequest; res: { threadId: string; messageId: string } };
-  /** Laufende Coaching-Antwort abbrechen. Die eigene Runde bleibt geschrieben. */
+  /** Abort a running coaching response. The user's own turn stays written. */
   'journal:abort': { req: { messageId: string }; res: void };
-  /** Tagesabschluss: Fakten, Todos und Stimmung als Vorschläge extrahieren. */
+  /** Day close-out: extract facts, todos, and mood as suggestions. */
   'journal:close': { req: { date: string }; res: JournalCloseSuggestion | null };
   /**
-   * Den bestätigten Tagesabschluss schreiben: Todos als Checkboxen (unter „Fakten"
-   * bzw. in der Projektdatei, die das Todo nennt) und die Frontmatter-Felder des
-   * Tages. `undo` ist der Rückweg — jeder Eintrag ist ein `vault:write`, das den
-   * Stand von vorher wiederherstellt.
+   * Write the confirmed day close-out: todos as checkboxes (under "Facts"
+   * resp. in the project file the todo names) and the day's frontmatter
+   * fields. `undo` is the way back — each entry is a `vault:write` that
+   * restores the previous state.
    */
   'journal:applyClose': {
     req: {
@@ -275,29 +279,29 @@ export interface IpcRoutes {
     res: { written: string[]; undo: WriteRequest[] };
   };
 
-  // ── Wissens-Module ───────────────────────────────────────────────────────
+  // ── Knowledge modules ────────────────────────────────────────────────────
   'modules:list': { req: void; res: KnowledgeModule[] };
   'modules:create': { req: { title: string; description: string }; res: KnowledgeModule };
   'modules:pages': { req: { module: string; type?: WikiPage['type'] }; res: WikiPage[] };
   'modules:page': { req: { path: string }; res: { page: WikiPage; doc: VaultDoc } | null };
   'modules:savePage': { req: WriteRequest; res: WriteResult };
   'modules:sources': { req: { module?: string }; res: RawSource[] };
-  /** Graph für die Modul-Ansicht. */
+  /** Graph for the module view. */
   'modules:graph': {
     req: { module: string };
     res: { nodes: { id: string; title: string; type: string }[]; edges: [string, string][] };
   };
 
-  // ── Fragen stellen ───────────────────────────────────────────────────────
-  /** Frage an das Second Brain; Antwort streamt über `event:llm-stream`. */
+  // ── Asking questions ─────────────────────────────────────────────────────
+  /** Question to the Second Brain; answer streams over `event:llm-stream`. */
   'chat:ask': {
     req: { question: string; threadId?: string; module?: string | null; scope?: Scope | null };
     res: AskAnswer;
   };
   /**
-   * Die neuesten Gespräche. `query` sucht in Titel und Nachrichten — damit bleibt
-   * auch erreichbar, was aus der Liste herausgefallen ist, statt ein Sammelsurium
-   * zu zeigen.
+   * The most recent conversations. `query` searches title and messages — so
+   * that what fell out of the list is still reachable, instead of showing a
+   * random assortment.
    */
   'chat:threads': {
     req: { kind?: ChatThread['kind']; query?: string; limit?: number };
@@ -306,13 +310,13 @@ export interface IpcRoutes {
   'chat:thread': { req: { id: string }; res: ChatThread | null };
   'chat:delete': { req: { id: string }; res: void };
   'chat:abort': { req: { messageId: string }; res: void };
-  /** Antwort als Wiki-Seite ablegen, damit die Erkundung nicht im Chat verschwindet. */
+  /** File the answer as a wiki page, so the exploration doesn't vanish in the chat. */
   'chat:fileBack': {
     req: { threadId: string; messageId: string; module: string; title: string };
     res: WriteResult;
   };
 
-  // ── Quellen aufnehmen ────────────────────────────────────────────────────
+  // ── Ingesting sources ────────────────────────────────────────────────────
   'ingest:start': {
     req: { kind: IngestKind; input: string; module?: string | null };
     res: IngestJob;
@@ -328,9 +332,9 @@ export interface IpcRoutes {
   'ingest:analyzeResources': { req: { path: string }; res: SourceDetail };
   /** Pick files and copy them below the YouTube source's `sources/` folder. */
   'ingest:attachFiles': { req: { path: string }; res: SourceDetail };
-  /** Dateien per Dialog auswählen. */
+  /** Pick files via dialog. */
   'ingest:pickFiles': { req: void; res: string[] };
-  /** Status des yt-dlp-Binaries. */
+  /** Status of the yt-dlp binary. */
   'ingest:ytdlpStatus': {
     req: void;
     res: { available: boolean; path: string | null; version: string | null };
@@ -340,7 +344,7 @@ export interface IpcRoutes {
     res: { available: boolean; path: string | null; version: string | null };
   };
 
-  // ── LLM-Verwaltung ───────────────────────────────────────────────────────
+  // ── LLM management ───────────────────────────────────────────────────────
   'llm:presets': { req: void; res: ProviderPreset[] };
   'llm:providers': { req: void; res: ProviderConfig[] };
   'llm:addProvider': {
@@ -355,23 +359,24 @@ export interface IpcRoutes {
   'llm:probe': { req: { id: string }; res: ProviderConfig };
   'llm:models': { req: { id: string }; res: string[] };
   /**
-   * Läuft auf diesem Rechner schon eine lokale Runtime? Prüft die Adressen der
-   * Vorlagen mit `local: true` (Ollama, LM Studio) und meldet, was antwortet.
-   * Damit kann die Einstellung konkret anleiten statt allgemein zu raten; sie
-   * legt dabei nichts an — das Übernehmen bleibt ein eigener Schritt.
+   * Is a local runtime already running on this machine? Checks the addresses
+   * of the presets with `local: true` (Ollama, LM Studio) and reports what
+   * answers. This lets the settings screen give concrete guidance instead of
+   * guessing in general terms; it sets nothing up itself — adopting it stays
+   * a separate step.
    */
   'llm:detectLocal': {
     req: void;
     res: {
-      /** Kennung der Vorlage aus `core/llm/presets`. */
+      /** ID of the preset from `core/llm/presets`. */
       presetId: string;
       label: string;
       baseUrl: string;
-      /** Hat die Adresse geantwortet? */
+      /** Did the address respond? */
       running: boolean;
-      /** Was dort geladen ist — leer, wenn nichts antwortete. */
+      /** What's loaded there — empty if nothing answered. */
       models: string[];
-      /** Ist für diese Adresse schon ein Provider eingerichtet? */
+      /** Is a provider already configured for this address? */
       configured: boolean;
     }[];
   };
@@ -383,9 +388,8 @@ export interface IpcRoutes {
     res: Routing;
   };
   /**
-   * Vorschlag, welches vorhandene Modell zu welcher Aufgabe passt. Nur ein
-   * Vorschlag: übernommen wird er über `llm:setRoute`/`llm:setDefault`, wenn der
-   * Nutzer ihn bestätigt.
+   * Suggestion for which existing model fits which task. Only a suggestion:
+   * it's adopted via `llm:setRoute`/`llm:setDefault` once the user confirms it.
    */
   'llm:suggestRouting': { req: void; res: Routing };
   'llm:testTask': {
@@ -393,45 +397,45 @@ export interface IpcRoutes {
     res: { ok: boolean; latencyMs: number; sample: string; error?: string };
   };
 
-  // ── Dashboard, Erinnerungen, Pflege ──────────────────────────────────────
+  // ── Dashboard, reminders, maintenance ────────────────────────────────────
   'dashboard:data': { req: void; res: DashboardData };
   'dashboard:layout': { req: void; res: DashboardLayout };
   'dashboard:setLayout': { req: { layout: DashboardLayout }; res: DashboardLayout };
   'reminders:list': { req: void; res: Reminder[] };
   'reminders:snooze': { req: { id: string; days: number }; res: void };
-  /** Ruhe aufheben — der Rückweg zu `reminders:snooze`, sonst gäbe es keinen. */
+  /** Lift a snooze — the way back to `reminders:snooze`, otherwise there would be none. */
   'reminders:unsnooze': { req: { id: string }; res: void };
   'gardener:report': { req: void; res: GardenerReport | null };
   'gardener:run': { req: { useLlm?: boolean }; res: GardenerReport };
-  /** Bricht einen laufenden Pflegelauf ab; ohne Lauf passiert nichts. */
+  /** Cancels a running maintenance pass; without a running pass, nothing happens. */
   'gardener:cancel': { req: void; res: void };
   'gardener:dismiss': { req: { id: string }; res: void };
-  /** „Passt so" zurücknehmen: der Befund zählt wieder — und wieder gegen die Gesundheit. */
+  /** Undo "looks fine": the finding counts again — and again against health. */
   'gardener:undismiss': { req: { id: string }; res: void };
   /**
-   * `written` sind die geänderten Dateien, `open` die, die der Screen aufmachen
-   * soll (bei `merge` und den `open-*`-Aktionen die einzige Wirkung — sie
-   * schreiben nichts). `undoToken` fehlt genau dann, wenn nichts geschrieben wurde.
+   * `written` are the changed files, `open` are the ones the screen should
+   * open (for `merge` and the `open-*` actions, this is the only effect —
+   * they write nothing). `undoToken` is absent exactly when nothing was written.
    */
   'gardener:applyFix': {
     req: { finding: GardenerFinding };
     res: { written: string[]; open?: string[]; undoToken?: string };
   };
   /**
-   * Einen Fix zurückdrehen. `restored` sind die Dateien, die wieder auf dem Stand
-   * von vorher sind; `kept` die, die der Nutzer seither selbst bearbeitet hat —
-   * die bleiben, wie sie sind. Eine unbekannte Marke ändert nichts.
+   * Revert a fix. `restored` are the files that are back to their previous
+   * state; `kept` are the ones the user has since edited themselves — those
+   * stay as they are. An unknown token changes nothing.
    */
   'gardener:undoFix': {
     req: { undoToken: string };
     res: { restored: string[]; kept: string[] };
   };
 
-  // ── Claude-Sessions ──────────────────────────────────────────────────────
+  // ── Claude sessions ──────────────────────────────────────────────────────
   'claude:sessions': { req: { limit?: number }; res: ClaudeSession[] };
   'claude:link': { req: { sessionId: string; project: string }; res: void };
 
-  // ── Einstellungen ────────────────────────────────────────────────────────
+  // ── Settings ──────────────────────────────────────────────────────────────
   'settings:get': { req: void; res: SettingsSnapshot };
   'settings:setApp': { req: { patch: DeepPartial<AppSettings> }; res: SettingsSnapshot };
   'settings:setVault': { req: { patch: DeepPartial<VaultSettings> }; res: SettingsSnapshot };
@@ -440,15 +444,15 @@ export interface IpcRoutes {
     res: SettingsSnapshot;
   };
 
-  // ── Fenster & System ─────────────────────────────────────────────────────
+  // ── Window & system ──────────────────────────────────────────────────────
   'window:minimize': { req: void; res: void };
   'window:toggleMaximize': { req: void; res: { maximized: boolean } };
   'window:close': { req: void; res: void };
   'window:isMaximized': { req: void; res: boolean };
   /**
-   * Holt das Hauptfenster nach vorn (aus dem Symbol, aus dem Hintergrund) und
-   * gibt ihm den Fokus. Das Schnell-Erfassen braucht es: „Hauptfenster zeigen"
-   * ist sonst ein Knopf, der nur sich selbst schließt.
+   * Brings the main window to the front (from the tray icon, from the
+   * background) and gives it focus. Quick-capture needs this: "show main
+   * window" would otherwise be a button that only closes itself.
    */
   'window:show': { req: void; res: void };
   'shell:openPath': { req: { path: string }; res: void };
@@ -461,7 +465,7 @@ export type IpcChannel = keyof IpcRoutes;
 export type IpcRequest<K extends IpcChannel> = IpcRoutes[K]['req'];
 export type IpcResponse<K extends IpcChannel> = IpcRoutes[K]['res'];
 
-/** Alle Kanalnamen zur Laufzeit — das Preload lässt nur diese durch. */
+/** All channel names at runtime — the preload lets only these through. */
 export const IPC_CHANNELS: readonly IpcChannel[] = [
   'vault:status',
   'vault:choose',
@@ -573,13 +577,13 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'app:info',
 ];
 
-/** Ereignisse, die der Main dem Renderer schickt. */
+/** Events that main sends to the renderer. */
 export interface IpcEvents {
-  /** Eine Datei im Vault hat sich geändert (auch von außen). */
+  /** A file in the vault has changed (including from outside the app). */
   'event:vault-changed': { paths: string[]; external: boolean };
   'event:index-progress': { done: number; total: number; indexing: boolean };
   'event:ingest-progress': IngestJob;
-  /** Ein Stück einer streamenden LLM-Antwort. */
+  /** A chunk of a streaming LLM response. */
   'event:llm-stream': {
     messageId: string;
     threadId: string;
@@ -589,10 +593,10 @@ export interface IpcEvents {
     error?: string;
   };
   /**
-   * Fortschritt eines Pflegelaufs. `check` ist die Prüfung, die gerade läuft;
-   * `null` heißt: die Deutung durch ein Modell (`phase: 'audit'`) oder das Ende.
-   * Der Lauf ist über `gardener:cancel` abbrechbar — deshalb ist Fortschritt hier
-   * keine Zierde, sondern die Grundlage der Entscheidung, abzubrechen.
+   * Progress of a maintenance run. `check` is the check currently running;
+   * `null` means either the model interpretation (`phase: 'audit'`) or the
+   * end. The run can be cancelled via `gardener:cancel` — so progress here
+   * isn't decoration, it's the basis for deciding whether to cancel.
    */
   'event:gardener-progress': {
     phase: 'checks' | 'audit' | 'done';
@@ -603,7 +607,7 @@ export interface IpcEvents {
   };
   'event:reminder': Reminder;
   'event:toast': { kind: 'info' | 'success' | 'warn' | 'error'; message: string };
-  /** Der Nutzer hat den Quick-Capture-Hotkey gedrückt. */
+  /** The user pressed the quick-capture hotkey. */
   'event:capture-focus': { text?: string };
   'event:vault-status': VaultStatus;
   'event:settings': SettingsSnapshot;
@@ -624,7 +628,7 @@ export const IPC_EVENTS: readonly IpcEventName[] = [
   'event:settings',
 ];
 
-/** Fehler, die über IPC zurückkommen, tragen diese Form. */
+/** Errors that come back over IPC carry this shape. */
 export interface IpcError {
   code:
     | 'no-vault'

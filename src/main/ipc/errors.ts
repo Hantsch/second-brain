@@ -1,7 +1,7 @@
-/* Fehler, die über IPC gehen, tragen immer die Form `IpcError`.
-   Grundsatz: der Renderer formuliert aus dem `code`, nicht aus der Message.
-   Unbekannte Fehler bekommen deshalb eine feste, inhaltsfreie Message — kein
-   Stacktrace, kein Dateiinhalt, kein Schlüssel verlässt den Main-Prozess. */
+/* Errors that cross IPC always take the shape `IpcError`.
+   Principle: the renderer builds its wording from the `code`, not from the
+   message. Unknown errors therefore get a fixed, content-free message — no
+   stack trace, no file content, no key ever leaves the main process. */
 
 import type { IpcError } from '@shared/ipc';
 
@@ -16,7 +16,7 @@ const CODES: readonly IpcError['code'][] = [
   'unknown',
 ];
 
-/** Ein Fehler mit IPC-Code. Handler werfen ausschließlich diesen Typ. */
+/** An error with an IPC code. Handlers throw exclusively this type. */
 export class IpcFailure extends Error implements IpcError {
   readonly code: IpcError['code'];
   readonly detail?: unknown;
@@ -43,7 +43,7 @@ function errnoToCode(code: string): IpcError['code'] | null {
   return null;
 }
 
-/** Übersetzt alles, was ein Handler wirft, in einen `IpcError`. */
+/** Translates whatever a handler throws into an `IpcError`. */
 export function toIpcError(error: unknown): IpcError {
   if (error instanceof IpcFailure) {
     return error.detail === undefined
