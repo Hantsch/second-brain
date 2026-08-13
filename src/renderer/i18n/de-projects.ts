@@ -11,6 +11,7 @@ export const deProjects = {
   'projects.scope.all': 'Alle',
   'projects.filter.scope': 'Bereich',
   'projects.filter.status': 'Nach Status',
+  'projects.filter.statusAll': 'Alle',
   'projects.filter.statusOpen': 'Nur laufende',
   'projects.filter.sort': 'Sortierung',
   'projects.sort.touch': 'Zuletzt berührt',

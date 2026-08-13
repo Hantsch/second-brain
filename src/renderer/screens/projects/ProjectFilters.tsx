@@ -54,6 +54,7 @@ export function ProjectFilters({ filter, onChange }: ProjectFiltersProps) {
           label={t('projects.filter.status')}
           value={filter.status}
           options={[
+            { value: 'all', label: t('projects.filter.statusAll') },
             { value: 'open', label: t('projects.filter.statusOpen') },
             ...PROJECT_STATUSES.map((status) => ({
               value: status,

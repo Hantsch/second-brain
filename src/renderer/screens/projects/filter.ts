@@ -12,8 +12,8 @@ export const PROJECT_SORTS: readonly ProjectSort[] = ['touch', 'deadline', 'prio
 /** `all` means both scopes — not "doesn't matter", but explicitly both. */
 export type ScopeFilter = Scope | 'all';
 
-/** `open` are all that are still running (not done, not dropped). */
-export type StatusFilter = 'open' | ProjectStatus;
+/** `open` are all that are still running (not done, not dropped); `all` applies no status filter. */
+export type StatusFilter = 'all' | 'open' | ProjectStatus;
 
 export interface ProjectFilter {
   scope: ScopeFilter;
@@ -24,7 +24,7 @@ export interface ProjectFilter {
 
 export const DEFAULT_FILTER: ProjectFilter = {
   scope: 'all',
-  status: 'open',
+  status: 'all',
   sort: 'touch',
   query: '',
 };
@@ -45,7 +45,11 @@ export function filterProjects(projects: readonly Project[], filter: ProjectFilt
   return projects.filter(
     (project) =>
       (filter.scope === 'all' || project.scope === filter.scope) &&
-      (filter.status === 'open' ? isRunning(project) : project.status === filter.status) &&
+      (filter.status === 'all'
+        ? true
+        : filter.status === 'open'
+          ? isRunning(project)
+          : project.status === filter.status) &&
       matches(project, needle),
   );
 }

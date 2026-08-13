@@ -8,6 +8,7 @@ export const enProjects = {
   'projects.scope.all': 'All',
   'projects.filter.scope': 'Area',
   'projects.filter.status': 'By status',
+  'projects.filter.statusAll': 'All',
   'projects.filter.statusOpen': 'Running only',
   'projects.filter.sort': 'Sort by',
   'projects.sort.touch': 'Last touched',
