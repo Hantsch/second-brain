@@ -191,6 +191,8 @@ export const de = {
   'ingest.note.content-truncated': 'Die Quelle war größer als 5 MB und wurde abgeschnitten.',
   'ingest.note.unsupported-content': 'Diese Adresse liefert keinen Text.',
   'ingest.note.awaiting-llm': 'Rohquelle liegt. Die Verdichtung braucht ein Modell.',
+  'ingest.note.already-condensed':
+    'Diese Quelle ist schon verdichtet. Ein zweiter Lauf würde eine zweite Source-Seite zum selben Inhalt anlegen — deshalb ist er hier zu Ende.',
 
   ...deScreens,
   ...deAgents,

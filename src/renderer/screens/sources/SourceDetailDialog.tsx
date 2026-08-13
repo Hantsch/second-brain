@@ -9,16 +9,8 @@ import { Skeleton } from '../../components/Skeleton';
 import { useLanguage, useT } from '../../i18n';
 import { api } from '../../lib/api';
 import { formatBytes, formatDate } from '../../lib/format';
+import { runningJobFor } from '../../lib/jobs';
 import { useIngestMutations, useSourceDetail } from '../../lib/queries/ingest';
-
-const RUNNING: readonly IngestJob['stage'][] = [
-  'queued',
-  'fetching',
-  'writing-raw',
-  'summarizing',
-  'wiki-update',
-  'indexing',
-];
 
 export interface SourceDetailDialogProps {
   path: string | null;
@@ -46,12 +38,7 @@ export function SourceDetailDialog({
   const source = detail.data?.source;
   const module = chosenModule ?? source?.modules[0] ?? '';
 
-  const running =
-    source === undefined
-      ? null
-      : ([...jobs]
-          .reverse()
-          .find((job) => job.rawPath === source.path && RUNNING.includes(job.stage)) ?? null);
+  const running = source === undefined ? null : runningJobFor(jobs, source.path);
   const condensed = source?.sourcePage !== null;
   const report = detail.data?.resourceReport ?? null;
   const attachments = detail.data?.attachments ?? [];

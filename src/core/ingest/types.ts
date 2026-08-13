@@ -54,7 +54,9 @@ export type IngestNoteCode =
   /** Die Antwort war kein Text (Bild, Archiv) — nichts zu verdichten. */
   | 'unsupported-content'
   /** Rohquelle liegt, die Verdichtung braucht ein Modell. */
-  | 'awaiting-llm';
+  | 'awaiting-llm'
+  /** Diese Quelle ist schon verdichtet — ein zweiter Lauf wurde gestoppt. */
+  | 'already-condensed';
 
 export interface IngestNote {
   code: IngestNoteCode;

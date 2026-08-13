@@ -174,6 +174,7 @@ export const enWiki = {
   'sources.duplicate.title': 'Source already in the vault',
   'sources.duplicate.body':
     'The existing entry was opened. If condensation is still pending, use “Condense” there.',
+  'sources.duplicate.condensedTitle': 'Source is already condensed',
 
   // ── Sources: what is already in ───────────────────────────────────────────
   'sources.list.title': 'Sources taken in',

@@ -16,12 +16,10 @@ import type { IngestJob } from '@shared/types';
 import { Badge } from '../../atoms/Badge';
 import { Button } from '../../atoms/Button';
 import { useT } from '../../i18n';
+import { isJobRunning } from '../../lib/jobs';
 
 /** The models tab: the route for "condense source" is set there. */
 const ROUTING_ROUTE = '/settings?tab=models';
-
-/** Stages where nothing is running anymore — same as `TERMINAL_STAGES` in the core. */
-const TERMINAL: readonly IngestJob['stage'][] = ['done', 'error', 'duplicate', 'awaiting-llm'];
 
 /* `job.message` either carries an `IngestNoteCode` — in which case there's a
    sentence for it — or a technical detail. Passing a detail through as a key
@@ -35,6 +33,7 @@ const NOTE_CODES: readonly string[] = [
   'content-truncated',
   'unsupported-content',
   'awaiting-llm',
+  'already-condensed',
 ];
 
 export interface JobListProps {
@@ -69,9 +68,14 @@ function JobRow({
     NOTE_CODES.includes(message) ? t(`ingest.note.${message}`) : message;
   const navigate = useNavigate();
   const [details, setDetails] = useState(false);
-  const running = !TERMINAL.includes(job.stage);
+  const running = isJobRunning(job);
   const page = firstPage(job);
   const unfiled = job.stage === 'done' && job.module === null && job.touchedPages.length === 0;
+  const condensedTwice = job.message === 'already-condensed';
+  /* Repeating a finished run would condense the same source a second time — the
+     queue stops that, so the button isn't offered here either. Only a run that
+     didn't get there can be repeated. */
+  const retryable = job.stage === 'error' || job.stage === 'awaiting-llm';
 
   return (
     <li className="sb-job">
@@ -162,8 +166,12 @@ function JobRow({
 
       {job.stage === 'duplicate' ? (
         <div className="sb-job-note">
-          <strong className="sb-job-notetitle">{t('sources.duplicate.title')}</strong>
-          <span>{t('sources.duplicate.body')}</span>
+          <strong className="sb-job-notetitle">
+            {t(condensedTwice ? 'sources.duplicate.condensedTitle' : 'sources.duplicate.title')}
+          </strong>
+          <span>
+            {condensedTwice ? t('ingest.note.already-condensed') : t('sources.duplicate.body')}
+          </span>
           {job.duplicateOf === null || job.duplicateOf === undefined ? null : (
             <span className="sb-mono">{job.duplicateOf}</span>
           )}
@@ -175,11 +183,11 @@ function JobRow({
           <Button variant="ghost" size="sm" icon="x" onClick={() => onCancel(job.id)}>
             {t('sources.job.cancel')}
           </Button>
-        ) : job.stage === 'duplicate' ? null : (
+        ) : retryable ? (
           <Button variant="ghost" size="sm" icon="refresh-cw" onClick={() => onRetry(job.id)}>
             {t('sources.job.retry')}
           </Button>
-        )}
+        ) : null}
         {job.rawPath === null || job.stage === 'awaiting-llm' ? null : (
           <Button
             variant="ghost"

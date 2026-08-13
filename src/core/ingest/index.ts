@@ -46,7 +46,7 @@ export {
   type IngestLogRecord,
 } from './raw';
 
-export { legacyFingerprint, sourceFingerprint } from './fingerprint';
+export { legacyFingerprint, logFingerprint, sourceFingerprint } from './fingerprint';
 export { loadExistingOutcome } from './existing';
 
 export {

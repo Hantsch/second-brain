@@ -27,6 +27,7 @@ import {
   installYtdlp,
   logPathFor,
   loadExistingOutcome,
+  logFingerprint,
   nodeFileSystem,
   nodeProcessRunner,
   resolveYtdlp,
@@ -34,7 +35,13 @@ import {
   readIngestLog,
   sourceFingerprint,
 } from '@core/ingest';
-import type { CondenseResult, IngestContext, IngestOutcome, YtdlpStatus } from '@core/ingest';
+import type {
+  CondenseResult,
+  IngestContext,
+  IngestLogRecord,
+  IngestOutcome,
+  YtdlpStatus,
+} from '@core/ingest';
 import { ingestSource } from '@core/wiki';
 import { assertSafeVaultPath } from '@core/vault/paths';
 import type { IngestJob } from '@shared/types';
@@ -43,6 +50,7 @@ import { defineHandlers, fail } from './registry';
 import {
   analyzeResourceDetail,
   attachSourceFiles,
+  findCondensedTwin,
   findDuplicate,
   sourceDetail,
 } from './source-detail';
@@ -191,6 +199,26 @@ class QueueHolder {
   }
 }
 
+/**
+ * The job that is already working on this raw source, or null. Matched by path
+ * and by identity: the same video under a second path would write the same page.
+ */
+function jobWorkingOn(queue: IngestQueue, rawPath: string, log: IngestLogRecord): IngestJob | null {
+  const fingerprint = logFingerprint(log);
+  return (
+    queue.jobs().find((job) => {
+      if (TERMINAL_STAGES.has(job.stage)) return false;
+      if (job.rawPath === rawPath) return true;
+      /* Without a target module a job never condenses — it doesn't get in the way. */
+      return (
+        job.module !== null &&
+        fingerprint !== null &&
+        sourceFingerprint(job.kind, job.input) === fingerprint
+      );
+    }) ?? null
+  );
+}
+
 export function ingestHandlers(services: Services): HandlerMap {
   const holder = new QueueHolder(services);
 
@@ -245,10 +273,19 @@ export function ingestHandlers(services: Services): HandlerMap {
       if (typeof log.sourcePage === 'string' && log.sourcePage.length > 0) {
         throw fail('conflict', 'Quelle ist bereits verdichtet');
       }
+      const queue = holder.current();
+      /* A second click while the first run is still going: hand back the running
+         job instead of condensing the same source twice. */
+      const working = jobWorkingOn(queue, rawPath, log);
+      if (working !== null) return working;
+      /* The same source under a second raw path: it gets condensed once. */
+      const twin = await findCondensedTwin(services, rawPath, logFingerprint(log));
+      if (twin !== null) throw fail('conflict', `bereits verdichtet: ${twin}`);
       const outcome = await loadExistingOutcome(store, rawPath);
-      return holder
-        .current()
-        .addExisting({ kind: outcome.kind, input: outcome.origin, module: target }, outcome);
+      return queue.addExisting(
+        { kind: outcome.kind, input: outcome.origin, module: target },
+        outcome,
+      );
     },
 
     'ingest:detail': ({ path }) => sourceDetail(services, path),

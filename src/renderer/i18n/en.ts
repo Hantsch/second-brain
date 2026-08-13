@@ -183,6 +183,8 @@ export const en: Record<TranslationKey, string> = {
   'ingest.note.content-truncated': 'The source was larger than 5 MB and was truncated.',
   'ingest.note.unsupported-content': 'This address returns no text.',
   'ingest.note.awaiting-llm': 'The raw source is stored. Distilling needs a model.',
+  'ingest.note.already-condensed':
+    'This source is already condensed. A second run would add a second source page for the same content — so it ends here.',
 
   ...enScreens,
   ...enAgents,

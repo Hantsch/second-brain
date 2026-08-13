@@ -181,6 +181,7 @@ export const deWiki = {
   'sources.duplicate.title': 'Quelle bereits im Vault',
   'sources.duplicate.body':
     'Der vorhandene Eintrag wurde geöffnet. Für eine offene Verdichtung dient dort die Aktion „Verdichten“.',
+  'sources.duplicate.condensedTitle': 'Quelle ist bereits verdichtet',
 
   // ── Quellen: Bestand ──────────────────────────────────────────────────────
   'sources.list.title': 'Aufgenommene Quellen',

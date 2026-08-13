@@ -12,11 +12,14 @@
  *   Rohquelle liegt, die Verdichtung ist offen — und niemand behauptet etwas anderes.
  * - **Wiederholen legt keine zweite Rohquelle an.** Das Ergebnis des ersten Laufs
  *   bleibt am Auftrag haengen; ein `retry` setzt hinter der Rohquelle wieder an.
+ * - **Verdichtet wird einmal pro Rohquelle.** Zwei Auftraege zur selben Quelle
+ *   legten zwei Source-Seiten zum selben Inhalt an; der zweite endet daher als
+ *   `duplicate` mit dem Hinweis `already-condensed`.
  */
 
 import { copyJob, createJob, describeFailure, TERMINAL_STAGES } from './job';
 import type { AddJobInput } from './job';
-import { patchIngestLog } from './raw';
+import { patchIngestLog, readIngestLog } from './raw';
 import { IngestError, throwIfCancelled } from './types';
 import type {
   IngestContext,
@@ -25,11 +28,18 @@ import type {
   IngestStore,
   SourceIngestor,
 } from './types';
-import type { IngestJob, IngestKind } from '@shared/types';
+import type { IngestJob, IngestKind, IngestStage } from '@shared/types';
 
 export type { AddJobInput };
 
 export const DEFAULT_CONCURRENCY = 2;
+
+/** Stufen, in denen ein Auftrag gerade verdichtet — kein zweiter darf daneben. */
+const CONDENSING_STAGES: ReadonlySet<IngestStage> = new Set<IngestStage>([
+  'summarizing',
+  'wiki-update',
+  'indexing',
+]);
 
 export interface CondenseInput {
   job: IngestJob;
@@ -273,7 +283,21 @@ export class IngestQueue {
       return;
     }
 
+    /* Zweimal auf „Verdichten" geklickt, oder ein Wiederholen hinter einem
+       fertigen Lauf: ein zweiter Durchgang legte eine zweite Source-Seite zum
+       selben Inhalt an. Die Pruefung steht vor dem Anspruch auf die Stufe —
+       erst fragen, dann `summarizing` belegen, damit kein Dritter dazwischen
+       rutscht. */
+    if (this.condensingElsewhere(entry, outcome.rawPath)) {
+      this.markCondensedTwice(entry, outcome.rawPath);
+      return;
+    }
     this.update(entry, { stage: 'summarizing', progress: 0.85, message: null });
+    if (await this.alreadyCondensed(outcome.rawPath)) {
+      this.markCondensedTwice(entry, outcome.rawPath);
+      return;
+    }
+
     const result = await step({
       job: copyJob(entry.job),
       outcome,
@@ -294,6 +318,36 @@ export class IngestQueue {
       progress: 1,
       message: null,
       finishedAt: this.stamp(),
+    });
+  }
+
+  /** Laeuft fuer dieselbe Rohquelle schon eine Verdichtung? */
+  private condensingElsewhere(entry: Entry, rawPath: string): boolean {
+    return this.entries.some(
+      (other) =>
+        other !== entry && other.job.rawPath === rawPath && CONDENSING_STAGES.has(other.job.stage),
+    );
+  }
+
+  /** Traegt das Protokoll eine Source-Seite, ist diese Quelle schon verdichtet. */
+  private async alreadyCondensed(rawPath: string): Promise<boolean> {
+    const log = await readIngestLog(this.deps.store, rawPath).catch(() => null);
+    return typeof log?.sourcePage === 'string' && log.sourcePage.length > 0;
+  }
+
+  /**
+   * Ein zweiter Verdichtungslauf ist kein Fehler, sondern ein Duplikat: die
+   * Rohquelle liegt, die Seite steht — es gibt nichts mehr zu tun.
+   */
+  private markCondensedTwice(entry: Entry, rawPath: string): void {
+    this.update(entry, {
+      stage: 'duplicate',
+      progress: 1,
+      message: 'already-condensed',
+      error: null,
+      finishedAt: this.stamp(),
+      rawPath,
+      duplicateOf: rawPath,
     });
   }
 

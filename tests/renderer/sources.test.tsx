@@ -426,6 +426,49 @@ describe('Quellen: Bestand', () => {
     );
   });
 
+  it('sperrt „Verdichten", solange der Auftrag zu dieser Quelle läuft', async () => {
+    const { sb } = renderScreen({
+      'ingest:jobs': () => [
+        job({
+          kind: 'url',
+          rawPath: raw.path,
+          module: MODULE,
+          stage: 'summarizing',
+          progress: 0.85,
+        }),
+      ],
+      'ingest:condense': ({ path, module }) =>
+        job({ kind: 'url', rawPath: path, module, stage: 'queued', progress: 0 }),
+    });
+
+    await screen.findByText('Digital Gardening: ein Überblick');
+    const button = await screen.findByRole('button', { name: 'Wird verdichtet' });
+
+    expect((button as HTMLButtonElement).disabled).toBe(true);
+    await userEvent.click(button);
+    expect(sb.calls.some((call) => call.channel === 'ingest:condense')).toBe(false);
+  });
+
+  it('sagt beim zweiten Verdichtungslauf, dass die Quelle schon verdichtet ist', async () => {
+    renderScreen({
+      'ingest:jobs': () => [
+        job({
+          stage: 'duplicate',
+          progress: 1,
+          message: 'already-condensed',
+          rawPath: condensed.path,
+          duplicateOf: condensed.path,
+          finishedAt: NOW,
+        }),
+      ],
+    });
+
+    expect(await screen.findByText('Quelle ist bereits verdichtet')).toBeTruthy();
+    expect(screen.getByText(/zweite Source-Seite/)).toBeTruthy();
+    /* Kein „Wiederholen": das versuchte genau den Lauf, der gerade gestoppt wurde. */
+    expect(screen.queryByRole('button', { name: 'Wiederholen' })).toBeNull();
+  });
+
   it('verdichtet direkt aus der Liste, ohne die Details zu öffnen', async () => {
     const { sb } = renderScreen({
       'ingest:condense': ({ path, module }) =>

@@ -199,8 +199,10 @@ describe('Quellen- und Modul-Kanäle im Main', () => {
   /**
    * Ein Modell, das über gefälschtes `fetch` antwortet. Die Verdichtung bekommt
    * Markdown, der Wiki-Schritt (er verlangt ein JSON-Schema) bekommt JSON.
+   *
+   * `hold` hält jede Antwort auf, solange der Test einen laufenden Auftrag braucht.
    */
-  async function routeToFakeModel(): Promise<void> {
+  async function routeToFakeModel(hold?: Promise<void>): Promise<void> {
     await harness.settings.setVaultSection('providers', [
       {
         id: 'local-1',
@@ -221,7 +223,8 @@ describe('Quellen- und Modul-Kanäle im Main', () => {
       },
       defaults: {},
     });
-    const fake = createFetchFake((call) => {
+    const fake = createFetchFake(async (call) => {
+      if (hold !== undefined) await hold;
       const structured = call.body?.['response_format'] !== undefined;
       const content = structured
         ? JSON.stringify({ suggestions: [], overviewChange: null })
@@ -341,6 +344,54 @@ describe('Quellen- und Modul-Kanäle im Main', () => {
     expect(condensed.rawPath).toBe(first.rawPath);
     const protocol = JSON.parse((await vault.read(`${first.rawPath}/.ingest.json`)) ?? '{}');
     expect(protocol.sourcePage).toMatch(/^s-/);
+  });
+
+  it('verdichtet eine Bestandsquelle auch bei zwei Klicks nur einmal', async () => {
+    const first = await settled(
+      (
+        await harness.call('ingest:start', {
+          kind: 'text',
+          input: '# Einmal verdichten\n\nZweimal geklickt, einmal verdichtet.',
+          module: null,
+        })
+      ).id,
+    );
+    await vi.waitFor(async () => {
+      expect(
+        (await harness.call('modules:sources', {})).some((source) => source.path === first.rawPath),
+      ).toBe(true);
+    });
+
+    /* Das Modell antwortet erst auf Freigabe — sonst wäre der erste Lauf schon
+       durch, bevor der zweite Klick kommt, und es gäbe nichts zu prüfen. */
+    const gate = { release: (): void => {}, promise: Promise.resolve() };
+    gate.promise = new Promise<void>((resolve) => {
+      gate.release = resolve;
+    });
+    await routeToFakeModel(gate.promise);
+
+    const started = await harness.call('ingest:condense', {
+      path: first.rawPath ?? '',
+      module: MODULE,
+    });
+    const again = await harness.call('ingest:condense', {
+      path: first.rawPath ?? '',
+      module: MODULE,
+    });
+    /* Derselbe Auftrag, kein zweiter: ein Klick zuviel legt keine zweite Seite an. */
+    expect(again.id).toBe(started.id);
+
+    gate.release();
+    const condensed = await settled(started.id);
+    expect(condensed.stage).toBe('done');
+    expect(condensed.touchedPages.filter((path) => path.includes('/wiki/sources/'))).toHaveLength(
+      1,
+    );
+
+    /* Und danach ist Schluss: die Quelle trägt ihre Seite. */
+    await expect(
+      harness.call('ingest:condense', { path: first.rawPath ?? '', module: MODULE }),
+    ).rejects.toMatchObject({ code: 'conflict' });
   });
 
   it('kopiert nachgereichte Dateien kollisionsfrei in den sources-Ordner des Videos', async () => {

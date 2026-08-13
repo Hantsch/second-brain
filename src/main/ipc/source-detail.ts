@@ -5,7 +5,7 @@ import { copyFile, stat } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import {
   analyzeYoutubeResources,
-  legacyFingerprint,
+  logFingerprint,
   patchIngestLog,
   readIngestLog,
   sourceFingerprint,
@@ -134,6 +134,40 @@ export async function analyzeResourceDetail(
   return sourceDetail(services, source.path);
 }
 
+interface RawLogEntry {
+  rawPath: string;
+  fingerprint: string | null;
+  /** The wiki page this source was condensed into, or null while it is open. */
+  sourcePage: string | null;
+}
+
+/** Every protocol under `raw/`, legacy ones included, reduced to its identity. */
+async function* rawLogs(services: Services): AsyncGenerator<RawLogEntry> {
+  const store = services.requireStore();
+  for await (const entry of store.walk({ dir: 'raw' })) {
+    const rawPath = rawPathFromLog(entry.path);
+    if (rawPath === null) continue;
+    const text = await store.readText(entry.path);
+    if (text === null) continue;
+    let record: Record<string, unknown> | null = null;
+    try {
+      const parsed: unknown = JSON.parse(text);
+      if (parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        record = parsed as Record<string, unknown>;
+      }
+    } catch {
+      // A broken protocol remains visible in the index, but cannot prove a duplicate.
+    }
+    if (record === null) continue;
+    const page = record['sourcePage'];
+    yield {
+      rawPath,
+      fingerprint: logFingerprint(record),
+      sourcePage: typeof page === 'string' && page.length > 0 ? page : null,
+    };
+  }
+}
+
 /** Scan protocols, including legacy ones, before a new queue entry can write anything. */
 export async function findDuplicate(
   services: Services,
@@ -141,23 +175,26 @@ export async function findDuplicate(
   input: string,
 ): Promise<string | null> {
   const wanted = sourceFingerprint(kind, input);
-  const store = services.requireStore();
-  for await (const entry of store.walk({ dir: 'raw' })) {
-    const rawPath = rawPathFromLog(entry.path);
-    if (rawPath === null) continue;
-    const text = await store.readText(entry.path);
-    if (text === null) continue;
-    try {
-      const parsed: unknown = JSON.parse(text);
-      if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) continue;
-      const record = parsed as Record<string, unknown>;
-      const fingerprint =
-        typeof record['fingerprint'] === 'string'
-          ? record['fingerprint']
-          : legacyFingerprint(record['kind'], record['origin']);
-      if (fingerprint === wanted) return rawPath;
-    } catch {
-      // A broken protocol remains visible in the index, but cannot prove a duplicate.
+  for await (const log of rawLogs(services)) {
+    if (log.fingerprint === wanted) return log.rawPath;
+  }
+  return null;
+}
+
+/**
+ * The same source under a second raw path that already carries a wiki page.
+ * Condensing runs once per source — a re-download may exist twice, a source page
+ * may not.
+ */
+export async function findCondensedTwin(
+  services: Services,
+  rawPath: string,
+  fingerprint: string | null,
+): Promise<string | null> {
+  if (fingerprint === null) return null;
+  for await (const log of rawLogs(services)) {
+    if (log.rawPath !== rawPath && log.fingerprint === fingerprint && log.sourcePage !== null) {
+      return log.rawPath;
     }
   }
   return null;

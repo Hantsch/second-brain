@@ -233,6 +233,92 @@ describe('IngestQueue', () => {
     expect(runs).toBe(1);
   });
 
+  /** Ein Protokoll, wie es unter der Rohquelle liegt — noch unverdichtet. */
+  async function writeLog(store: ReturnType<typeof memoryStore>, path: string): Promise<void> {
+    await store.writeText(
+      `${path}/.ingest.json`,
+      JSON.stringify({
+        kind: 'text',
+        origin: 'paste',
+        ingestedAt: '2026-08-10T14:32:00+02:00',
+        title: 'quelle',
+        sourcePage: null,
+        modules: [],
+        provenance: { content: 'paste' },
+      }),
+    );
+  }
+
+  const RAW_PATH = 'raw/files/2026-08-10-quelle';
+
+  const existingOutcome: IngestOutcome = {
+    kind: 'text',
+    rawPath: RAW_PATH,
+    title: 'quelle',
+    text: 'Inhalt der Quelle.',
+    origin: 'paste',
+    provenance: { content: 'paste' },
+    notes: [],
+  };
+
+  it('verdichtet dieselbe Rohquelle nicht zweimal parallel', async () => {
+    const gate = deferred();
+    let runs = 0;
+    const store = memoryStore();
+    await writeLog(store, RAW_PATH);
+    const queue = new IngestQueue({
+      store,
+      ingestors: [fakeIngestor()],
+      condense: async () => {
+        runs += 1;
+        await gate.promise;
+        return { pages: ['modules/m/wiki/sources/s-1.md'], sourcePage: 's-1', modules: ['m'] };
+      },
+      llmAvailable: () => true,
+      concurrency: () => 2,
+    });
+
+    const first = queue.addExisting({ kind: 'text', input: 'paste', module: 'm' }, existingOutcome);
+    const second = queue.addExisting(
+      { kind: 'text', input: 'paste', module: 'm' },
+      existingOutcome,
+    );
+
+    await vi.waitFor(() => expect(queue.job(second.id)?.stage).toBe('duplicate'));
+    /* Der zweite Auftrag ist kein Fehler — er sagt, dass es nichts zu tun gibt. */
+    expect(queue.job(second.id)?.message).toBe('already-condensed');
+    expect(queue.job(second.id)?.duplicateOf).toBe(RAW_PATH);
+
+    gate.resolve();
+    await vi.waitFor(() => expect(queue.job(first.id)?.stage).toBe('done'));
+    /* Ein Lauf, eine Source-Seite — obwohl zwei Auftraege in der Schlange standen. */
+    expect(runs).toBe(1);
+  });
+
+  it('verdichtet eine schon verdichtete Rohquelle beim Wiederholen nicht erneut', async () => {
+    let runs = 0;
+    const store = memoryStore();
+    await writeLog(store, RAW_PATH);
+    const queue = new IngestQueue({
+      store,
+      ingestors: [fakeIngestor()],
+      condense: async () => {
+        runs += 1;
+        return { pages: ['modules/m/wiki/sources/s-1.md'], sourcePage: 's-1', modules: ['m'] };
+      },
+      llmAvailable: () => true,
+    });
+
+    const job = queue.addExisting({ kind: 'text', input: 'paste', module: 'm' }, existingOutcome);
+    await vi.waitFor(() => expect(queue.job(job.id)?.stage).toBe('done'));
+
+    queue.retry(job.id);
+
+    /* Das Protokoll trägt die Source-Seite — ein zweiter Lauf legte eine zweite an. */
+    await vi.waitFor(() => expect(queue.job(job.id)?.stage).toBe('duplicate'));
+    expect(runs).toBe(1);
+  });
+
   it('meldet ohne Text den Hinweis der Quelle statt einer Verdichtung', async () => {
     const queue = new IngestQueue({
       store: memoryStore(),

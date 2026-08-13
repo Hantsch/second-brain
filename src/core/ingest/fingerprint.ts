@@ -46,3 +46,10 @@ export function legacyFingerprint(kind: unknown, origin: unknown): string | null
   if (kind !== 'youtube' && kind !== 'url' && kind !== 'file') return null;
   return sourceFingerprint(kind, origin);
 }
+
+/** Identity of a raw source as its protocol records it, legacy logs included. */
+export function logFingerprint(log: Record<string, unknown>): string | null {
+  const stored = log['fingerprint'];
+  if (typeof stored === 'string' && stored.length > 0) return stored;
+  return legacyFingerprint(log['kind'], log['origin']);
+}

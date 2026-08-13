@@ -23,6 +23,7 @@ import { Skeleton } from '../../components/Skeleton';
 import { useT } from '../../i18n';
 import { api } from '../../lib/api';
 import { plural } from '../../lib/format';
+import { runningJobFor } from '../../lib/jobs';
 import { useModules, useSources } from '../../lib/queries/data';
 import { useIngestJobs, useIngestMutations, useYtdlpStatus } from '../../lib/queries/ingest';
 import { pushToast } from '../../lib/toast';
@@ -203,9 +204,13 @@ export function SourcesScreen() {
                     onCondense={(path, targetModule) =>
                       mutations.condense.mutate({ path, module: targetModule })
                     }
+                    /* The button stays locked until the run is through — the
+                       mutation is done as soon as the job is queued, and a
+                       second click would condense the same source twice. */
                     condensing={
-                      mutations.condense.isPending &&
-                      mutations.condense.variables?.path === source.path
+                      (mutations.condense.isPending &&
+                        mutations.condense.variables?.path === source.path) ||
+                      runningJobFor(jobs.data ?? [], source.path) !== null
                     }
                   />
                 ))}
