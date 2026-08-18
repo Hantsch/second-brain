@@ -87,7 +87,11 @@ export function ClaudeSessionsTile() {
           : { body: t('tile.claude.empty') }
       }
       foot={
-        <button type="button" className="sb-textlink" onClick={() => void navigate('/agents')}>
+        <button
+          type="button"
+          className="sb-textlink"
+          onClick={() => void navigate('/projects/sessions')}
+        >
           {t('tile.claude.openBrowser')}
         </button>
       }

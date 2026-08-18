@@ -17,6 +17,9 @@
 }
 .sb-agentcard {
   height: 100%;
+  /* Anchor for the dismiss control, which sits beside the card button
+     rather than inside it (nested buttons are an accessibility defect). */
+  position: relative;
 }
 .sb-agentcard-button {
   all: unset;
@@ -69,6 +72,38 @@
   display: block;
   font-size: var(--text-2xs);
   color: var(--text-muted);
+}
+
+/* ── Dismissing an unmapped project (story 008) ─────────────────────────── */
+
+/* The control overlaps the card button, so the title needs room to end
+   before it — only on the cards that actually carry one. */
+.sb-agentcard--dismissable .sb-agentcard-head {
+  padding-inline-end: var(--space-6);
+}
+.sb-agentcard-dismiss {
+  position: absolute;
+  inset-block-start: var(--space-2);
+  inset-inline-end: var(--space-2);
+}
+/* Only visible while "show all" is on: says why this card is here at all. */
+.sb-agentcard-marker {
+  display: block;
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+}
+/* The count of what is held back, plus the way to look at it. Quiet: this
+   is a statement about the list, not a second focal point beside it. */
+.sb-agentdismissed {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: 0 var(--space-2) var(--space-2);
+  color: var(--text-faint);
+}
+.sb-agentdismissed-text {
+  font-size: var(--text-2xs);
 }
 
 /* ── Project detail (D13) ───────────────────────────────────────────────── */

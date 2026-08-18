@@ -95,13 +95,27 @@ export const DEEP_STATES = [
   { id: 'settings-behavior', hash: '/settings?tab=behavior', wait: '.sb-panel' },
   { id: 'settings-customization', hash: '/settings?tab=customization', wait: '.sb-image-radio' },
   { id: 'settings-about', hash: '/settings?tab=about', wait: '.sb-panel' },
-  /* Story 001: the agent session browser has no rail digit (hotkey optional,
-     see src/renderer/lib/screens.ts) and is otherwise reachable only by click
-     or the command palette — same reasoning as the module tabs above. `.gs-tabs`
-     is the Claude/Codex switch, present in every state (loading, off, empty,
-     list), so the wait proves the screen rendered regardless of which state
-     the reading machine's real `~/.claude`/`~/.codex` happen to be in. */
-  { id: 'agents', hash: '/agents', wait: '.gs-tabs' },
+  /* Story 008: Der Sitzungsbrowser ist kein eigener Screen mehr, sondern hängt
+     unter Projekte (`/projects/sessions`) — ohne Rail-Ziffer, erreichbar über
+     die Kachel auf dem Dashboard und die Befehlspalette. `.gs-tabs` ist die
+     Claude/Codex-Umschaltung und steht in jedem Zustand (lädt, aus, leer,
+     Liste); der Beleg hält also unabhängig davon, was auf der aufnehmenden
+     Maschine wirklich in `~/.claude`/`~/.codex` liegt. */
+  { id: 'agents', hash: '/projects/sessions', wait: '.gs-tabs' },
+  {
+    /* Story 008: derselbe Stoff je Projekt — der Sitzungen-Reiter im
+       Projektdetail. `orbit-sso-migration` führt in `repos`
+       `C:/development/demo/orbit-sso-infra`, wofür scripts/seed/claude.mjs
+       echte Sitzungen anlegt: der Reiter wird also angeboten und ist nicht leer.
+       `.sb-trace` ist die Arbeitsspur oben im Reiter — sie steht in jedem
+       Zustand (lädt, Fehler, aus, ohne Verknüpfung, Liste, Transkript), weil
+       sie aus dem Index kommt und kein Sitzungs-Lesen sie kippen kann. Ein
+       Selektor aus der Liste würde nur den Glücksfall belegen; `.gs-tabs`
+       wäre kein Beleg, weil schon die Reiterleiste des Projekts so heißt. */
+    id: 'project-sessions',
+    hash: '/projects?p=orbit-sso-migration&tab=sessions',
+    wait: '.sb-trace',
+  },
 ];
 
 /**
@@ -319,9 +333,10 @@ export function checkScreenList(log = console.warn) {
   const source = readFileSync(file, 'utf8');
   const ids = [...source.matchAll(/\n\s*(?:\{\s*)?id:\s*'([a-z-]+)'/g)].map((match) => match[1]);
   /* Geprüft ist ein Screen auch dann, wenn er nicht über die Rail angefahren
-     wird: `agents` hat keine Ziffer und steht deshalb als Tiefzustand in
-     DEEP_STATES. Ihn hier zusätzlich in SCREENS zu führen hieße, ihn zweimal zu
-     fotografieren — die Vereinigung beider Listen ist die ehrliche Messlatte. */
+     wird: der Quellen-Reiter (`knowledge-sources`) hat keine eigene Kachel und
+     steht deshalb als Tiefzustand in DEEP_STATES. Ihn hier zusätzlich in
+     SCREENS zu führen hieße, ihn zweimal zu fotografieren — die Vereinigung
+     beider Listen ist die ehrliche Messlatte. */
   const covered = new Set([...SCREENS, ...DEEP_STATES.map((state) => state.id)]);
   const missing = ids.filter((id) => !covered.has(id));
   const extra = SCREENS.filter((id) => !ids.includes(id));

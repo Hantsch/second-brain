@@ -233,9 +233,12 @@ export const enScreens = {
   'screen.garden.empty.action': 'Start check',
 
   /* The texts of the screen itself (switch, empty and off states) live in
-     `en-agents.ts` — the header pair sits here, like every other screen. */
-  'screen.agents.overline': 'Agent work trails',
-  'screen.agents.title': 'Agents',
+     `en-agents.ts` — the header pair sits here, like every other screen.
+     The view hangs under Projects since story 008, so the header says where
+     you are: "Projects · Agent sessions". The key names stay `screen.agents.*`
+     — only the rail entry went, the family kept its name. */
+  'screen.agents.overline': 'Projects',
+  'screen.agents.title': 'Agent sessions',
 
   /* Not “Behaviour”: that is one of the tabs — as an overline it would read as if
      that tab were open. */

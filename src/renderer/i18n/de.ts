@@ -45,7 +45,6 @@ export const de = {
   'rail.journal': 'Tagebuch',
   'rail.knowledge': 'Wissen',
   'rail.garden': 'Pflege',
-  'rail.agents': 'Agents',
   'rail.settings': 'Einstellungen',
 
   'time.today': 'heute',
@@ -80,6 +79,7 @@ export const de = {
   'palette.group.actions': 'Aktionen',
   'palette.group.search': 'Suche',
   'palette.screen.sources': 'Quellen',
+  'palette.screen.agentSessions': 'Agent-Sitzungen',
   'palette.action.capture': 'Gedanken erfassen',
   'palette.action.captureWindow': 'Erfassen-Fenster',
   'palette.action.ask': 'Frage stellen',

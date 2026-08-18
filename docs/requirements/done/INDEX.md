@@ -17,3 +17,8 @@ second roadmap.
   overlays: capture from a title-bar button, ask from `Ctrl+K`'s second mode with the scope
   prefilled from the current module or project; `#/capture` and `#/ask?q=…` survive as opener
   routes and `chat:ask` gained a real `project` filter.
+- 008 — Agent sessions move inside projects · S01 · The agents rail entry is gone: the
+  all-sessions view moved to `#/projects/sessions` (with a query-preserving `#/agents`
+  redirect) and every project detail gained an `Overview | Sessions` tab that absorbed the
+  work trace and now reads both CLIs, with dismissable unmapped directories and a global
+  "show empty tab" switch — both persisted through the existing `settings:setVault`.

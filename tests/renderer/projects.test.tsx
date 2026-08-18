@@ -8,13 +8,22 @@
  */
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import axe from 'axe-core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { IpcChannel, IpcRequest, IpcResponse } from '@shared/ipc';
-import type { Project, Todo, VaultDoc } from '@shared/types';
+import type {
+  AgentKind,
+  AgentProject,
+  AgentSessionSummary,
+  OverviewSettings,
+  Project,
+  SettingsSnapshot,
+  Todo,
+  VaultDoc,
+} from '@shared/types';
 import { ProjectsScreen } from '@renderer/screens/projects/ProjectsScreen';
 import { ToastHost } from '@renderer/components/ToastHost';
 import { setLanguage } from '@renderer/i18n';
@@ -48,6 +57,18 @@ function installSbMock(handlers: SbHandlers): SbMock {
   });
   window.sb = { invoke, on: () => () => undefined, off: () => undefined } as unknown as SbBridge;
   return { calls };
+}
+
+/** Die Adresse als Text — der einzige Weg zu sehen, was `go` wirklich baut. */
+function Location() {
+  const location = useLocation();
+  return <span data-testid="location">{`${location.pathname}${location.search}`}</span>;
+}
+
+/** Die Abfrage der Adresse als Objekt: der Inhalt zaehlt, nicht die Reihenfolge. */
+function query(): Record<string, string> {
+  const search = screen.getByTestId('location').textContent?.split('?')[1] ?? '';
+  return Object.fromEntries(new URLSearchParams(search));
 }
 
 async function expectNoA11yViolations(container: Element): Promise<void> {
@@ -125,6 +146,109 @@ const hochbeet = project({
 });
 
 const PROJECTS: Project[] = [portal, legacy, hochbeet];
+
+/* Die Agent-Projekte: Arbeitsverzeichnisse, wie sie die CLIs melden. Das
+   Kundenportal hat zwei davon (`repos` darf mehrere nennen) — genau darum
+   fuehrt der Sitzungen-Tab zusammen, statt eines davon zu zeigen. */
+function agentProject(
+  patch: Partial<AgentProject> & { key: string; name: string; agent: AgentKind },
+): AgentProject {
+  return {
+    path: patch.key,
+    sessionCount: 1,
+    firstActivity: '2026-08-01T09:00:00+02:00',
+    lastActivity: NOW,
+    vaultProject: null,
+    ...patch,
+  };
+}
+
+function agentSession(
+  patch: Partial<AgentSessionSummary> & { id: string; title: string; projectKey: string } & {
+    agent: AgentKind;
+  },
+): AgentSessionSummary {
+  return {
+    startedAt: '2026-08-10T09:00:00+02:00',
+    lastActivity: NOW,
+    durationMs: 1_800_000,
+    messageCount: 12,
+    gitBranch: 'main',
+    model: 'claude-sonnet-4',
+    subagents: [],
+    contextTokens: 42_000,
+    vaultProject: portal.slug,
+    ...patch,
+  };
+}
+
+const WEB_KEY = 'c:/development/demo/kundenportal-web';
+const API_KEY = 'c:/development/demo/kundenportal-api';
+const FOREIGN_KEY = 'c:/development/demo/fremdes-verzeichnis';
+
+const AGENT_PROJECTS: Record<AgentKind, AgentProject[]> = {
+  claude: [
+    agentProject({
+      key: WEB_KEY,
+      name: 'kundenportal-web',
+      agent: 'claude',
+      vaultProject: portal.slug,
+    }),
+    agentProject({
+      key: API_KEY,
+      name: 'kundenportal-api',
+      agent: 'claude',
+      vaultProject: portal.slug,
+    }),
+    agentProject({ key: FOREIGN_KEY, name: 'fremdes-verzeichnis', agent: 'claude' }),
+  ],
+  codex: [
+    agentProject({
+      key: WEB_KEY,
+      name: 'kundenportal-web',
+      agent: 'codex',
+      vaultProject: portal.slug,
+    }),
+  ],
+};
+
+const AGENT_SESSIONS: Record<string, AgentSessionSummary[]> = {
+  [`claude:${WEB_KEY}`]: [
+    agentSession({
+      id: 's-web',
+      title: 'Sitzung im Web-Repo',
+      projectKey: WEB_KEY,
+      agent: 'claude',
+      lastActivity: '2026-08-10T12:00:00+02:00',
+    }),
+  ],
+  [`claude:${API_KEY}`]: [
+    agentSession({
+      id: 's-api',
+      title: 'Sitzung im API-Repo',
+      projectKey: API_KEY,
+      agent: 'claude',
+      lastActivity: '2026-08-10T13:00:00+02:00',
+    }),
+  ],
+  [`claude:${FOREIGN_KEY}`]: [
+    agentSession({
+      id: 's-fremd',
+      title: 'Sitzung in fremdem Verzeichnis',
+      projectKey: FOREIGN_KEY,
+      agent: 'claude',
+      vaultProject: null,
+    }),
+  ],
+  [`codex:${WEB_KEY}`]: [
+    agentSession({
+      id: 's-codex',
+      title: 'Sitzung mit Codex',
+      projectKey: WEB_KEY,
+      agent: 'codex',
+    }),
+  ],
+};
 
 function todo(patch: Partial<Todo> & { id: string; text: string }): Todo {
   return {
@@ -235,10 +359,61 @@ function doc(path: string): VaultDoc {
 
 // ── Attrappe ─────────────────────────────────────────────────────────────────
 
+/* Die Einstellungen, wie sie `settings:get` liefert. Der Screen liest daraus
+   `overview.showEmptySessionsTab` — den Schalter, der den Sitzungen-Tab auch
+   ohne zugeordnetes Verzeichnis zeigt. */
+function snapshot(overview: Partial<OverviewSettings> = {}): SettingsSnapshot {
+  return {
+    app: {
+      version: 1,
+      lastVault: 'C:/vaults/demo',
+      recentVaults: [],
+      theme: 'dark',
+      customization: { background: 'none', appIcon: 'knowledge-garden' },
+      uiLanguage: 'de',
+      window: { width: 1440, height: 900 },
+      startMinimized: false,
+      onboarded: true,
+    },
+    vault: {
+      version: 1,
+      languages: { ui: 'de', documents: 'de', conversation: 'de', translateSources: true },
+      capture: {
+        quickCaptureShortcut: 'Control+Shift+Space',
+        autoClassify: true,
+        closeAfterCapture: true,
+      },
+      overview: {
+        staleAfterDays: 14,
+        deadlineHorizonDays: 14,
+        waitingNudgeDays: 5,
+        useClaudeSessions: true,
+        claudeProjectsDir: '',
+        useCodexSessions: true,
+        codexSessionsDir: '',
+        notifications: true,
+        dismissedAgentProjects: [],
+        showEmptySessionsTab: false,
+        ...overview,
+      },
+      journal: { mode: 'tips' },
+      gardener: { runOnOpen: true, reviewAfterDays: 120, useLlm: true },
+      providers: [],
+      routing: { tasks: {}, defaults: {} },
+      dashboard: { tiles: [], updated: NOW },
+      preferredTags: [],
+    },
+  };
+}
+
 interface Options {
   projects?: Project[];
   todos?: Todo[];
   extra?: SbHandlers;
+  /** Was in den Vault-Einstellungen steht — sonst die Vorgaben. */
+  overview?: Partial<OverviewSettings>;
+  /** Die Startadresse — fuer die Tieflinks in den Sitzungen-Tab. */
+  at?: string;
 }
 
 interface Mounted {
@@ -268,7 +443,9 @@ function mount(options: Options = {}): Mounted {
       todos.filter((entry) => request.project === undefined || entry.project === request.project),
     'llm:routing': () => ({ tasks: {}, defaults: {} }),
     'llm:tasks': () => [],
-    'claude:sessions': () => [],
+    'settings:get': () => snapshot(options.overview),
+    'agents:projects': ({ agent }) => AGENT_PROJECTS[agent],
+    'agents:sessions': ({ agent, projectKey }) => AGENT_SESSIONS[`${agent}:${projectKey}`] ?? [],
     'shell:openPath': () => undefined,
     ...options.extra,
   };
@@ -278,10 +455,11 @@ function mount(options: Options = {}): Mounted {
      Verstoß, der im echten Screen nicht existiert. */
   const rendered = render(
     <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={['/projects']}>
+      <MemoryRouter initialEntries={[options.at ?? '/projects']}>
         <main>
           <ProjectsScreen />
         </main>
+        <Location />
         {/* Wie in der Hülle: Meldungen mit Rückgängig gehören zum Screen, nicht
             in ein eigenes Testgerüst. Ohne Meldung rendert er nichts. */}
         <ToastHost />
@@ -604,19 +782,368 @@ describe('Projektdetail', () => {
     expect(screen.getByText('Testlauf mit Miriam lief durch.')).toBeTruthy();
   });
 
-  it('zeigt die Arbeitsspur ehrlich, wenn der Kanal noch fehlt', async () => {
+  it('zeigt Ueberblick und Sitzungen und laesst den Ueberblick ohne Sitzungsdaten', async () => {
+    mount();
+    await detailReady();
+
+    expect(screen.getByRole('tab', { name: 'Überblick' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+    expect(screen.getByRole('tab', { name: 'Sitzungen' })).toBeTruthy();
+
+    /* Die Arbeitsspur ist mit Story 008 in den Tab gezogen: im Ueberblick
+       steht keine Sitzung mehr — weder die Spur noch eine Liste. */
+    expect(screen.queryByText('Arbeitsspur')).toBeNull();
+    expect(screen.queryByText(/Letzte Spur/)).toBeNull();
+    expect(screen.queryByText('Sitzung im Web-Repo')).toBeNull();
+  });
+});
+
+// ── Sitzungen im Projekt ─────────────────────────────────────────────────────
+
+/** Oeffnet das Detail und darin den Sitzungen-Tab. */
+async function sessionsTab(): Promise<void> {
+  await detailReady();
+  await userEvent.click(screen.getByRole('tab', { name: 'Sitzungen' }));
+}
+
+describe('Sitzungen im Projekt', () => {
+  it('zeigt Spur, Repos und die Sitzungen aller zugeordneten Verzeichnisse', async () => {
+    mount();
+    await sessionsTab();
+
+    /* Die Dateispur kennt der Index — sie steht ueber allem anderen. */
+    expect(await screen.findByText(/Letzte Spur/)).toBeTruthy();
+    expect(screen.getByText('C:/development/demo/kundenportal-web')).toBeTruthy();
+
+    /* Beide Arbeitsverzeichnisse des Projekts, in einer Liste, juengste zuerst. */
+    const api = await screen.findByText('Sitzung im API-Repo');
+    const web = screen.getByText('Sitzung im Web-Repo');
+    expect(api.compareDocumentPosition(web) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    /* Und nur die: ein fremdes Verzeichnis gehoert nicht zu diesem Projekt. */
+    expect(screen.queryByText('Sitzung in fremdem Verzeichnis')).toBeNull();
+  });
+
+  it('zeigt nach dem Umschalten die Codex-Sitzungen', async () => {
+    mount();
+    await sessionsTab();
+    await screen.findByText('Sitzung im Web-Repo');
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Codex' }));
+
+    expect(await screen.findByText('Sitzung mit Codex')).toBeTruthy();
+    expect(screen.queryByText('Sitzung im Web-Repo')).toBeNull();
+    await waitFor(() => expect(query()['a']).toBe('codex'));
+  });
+
+  /* Der Pruefstein fuer `go`: die Adresse dieses Screens kannte bisher nur
+     `p` und `tab`. Faellt `s` (oder `a`) beim Bauen unter den Tisch, oeffnet
+     kein Klick mehr ein Transkript — still, mit gruener Liste. */
+  it('nimmt a und s in die Adresse auf und oeffnet das Transkript', async () => {
     mount({
+      at: '/projects?p=kundenportal-relaunch&tab=sessions&a=codex',
       extra: {
-        'claude:sessions': () => {
-          throw Object.assign(new Error('noch nicht implementiert'), { code: 'invalid' });
+        'agents:transcript': () => ({
+          entries: [
+            {
+              id: 'e1',
+              kind: 'assistant' as const,
+              at: NOW,
+              text: 'Der Verlauf dieser Sitzung',
+              toolName: null,
+              toolTarget: null,
+              raw: null,
+            },
+          ],
+          nextCursor: null,
+          totalKnown: true,
+        }),
+      },
+    });
+    await detailReady();
+
+    await userEvent.click(await screen.findByRole('button', { name: /Sitzung mit Codex öffnen/ }));
+
+    await waitFor(() =>
+      expect(query()).toEqual({
+        p: portal.slug,
+        tab: 'sessions',
+        a: 'codex',
+        s: 's-codex',
+      }),
+    );
+    expect(await screen.findByText('Der Verlauf dieser Sitzung')).toBeTruthy();
+
+    /* Und zurueck: `s` faellt weg, die Wahl der CLI bleibt. */
+    await userEvent.click(screen.getByRole('button', { name: 'Zurück zu den Sitzungen' }));
+    await waitFor(() => expect(query()).toEqual({ p: portal.slug, tab: 'sessions', a: 'codex' }));
+    expect(await screen.findByText('Sitzung mit Codex')).toBeTruthy();
+  });
+
+  /* Eine offene Sitzung gehoert zu genau einem Projekt. Beim Wechsel muss sie
+     aus der Adresse fallen — sonst zeigte das neue Projekt ein Transkript,
+     das gar nicht zu ihm gehoert. Der Tab bleibt, die Sitzung geht. */
+  it('laesst die offene Sitzung beim Projektwechsel fallen', async () => {
+    mount({ at: '/projects?p=kundenportal-relaunch&tab=sessions&s=s-web' });
+    await detailReady();
+
+    await userEvent.click(await screen.findByRole('button', { name: /Hochbeet für den Balkon/ }));
+
+    await waitFor(() => expect(query()).toEqual({ p: hochbeet.slug, tab: 'sessions' }));
+  });
+
+  it('sagt ehrlich, wenn die Sitzung aus der Adresse nicht in der Liste steht', async () => {
+    mount({ at: '/projects?p=kundenportal-relaunch&tab=sessions&s=gibt-es-nicht' });
+    await detailReady();
+
+    expect(await screen.findByText('Sitzung nicht gefunden')).toBeTruthy();
+  });
+
+  it('zeigt einen Ladezustand, solange die Verzeichnisse fehlen', async () => {
+    const { container } = mount({
+      at: '/projects?p=kundenportal-relaunch&tab=sessions',
+      /* Nie beantwortet: der Tab muss warten, nicht „nichts gefunden" sagen. */
+      extra: { 'agents:projects': () => new Promise(() => undefined) },
+    });
+    await detailReady();
+
+    expect(await screen.findByText(/Letzte Spur/)).toBeTruthy();
+    await waitFor(() => expect(container.querySelector('.sb-skeleton')).toBeTruthy());
+    expect(screen.queryByText(/Kein Arbeitsverzeichnis/)).toBeNull();
+  });
+
+  it('bietet nach einem Fehler einen neuen Versuch an', async () => {
+    let calls = 0;
+    mount({
+      at: '/projects?p=kundenportal-relaunch&tab=sessions',
+      extra: {
+        'agents:projects': ({ agent }) => {
+          calls += 1;
+          if (calls === 1) throw Object.assign(new Error('kaputt'), { code: 'io' });
+          return AGENT_PROJECTS[agent];
         },
       },
     });
     await detailReady();
 
-    expect(await screen.findByText(/Claude-Sessions sind noch nicht angeschlossen/)).toBeTruthy();
-    /* Die Dateispur kennt der Index trotzdem. */
-    expect(screen.getByText(/Letzte Spur/)).toBeTruthy();
+    await screen.findByRole('alert');
+    await userEvent.click(screen.getByRole('button', { name: 'Erneut versuchen' }));
+
+    expect(await screen.findByText('Sitzung im Web-Repo')).toBeTruthy();
+  });
+
+  /* Ein eingestelltes Verzeichnis, das es nicht gibt, ist etwas anderes als
+     „nichts gefunden": nur der Nutzer kann es richten, also steht der Pfad da
+     — und der Weg dorthin. */
+  it('nennt das fehlende Verzeichnis und den Weg in die Einstellungen', async () => {
+    mount({
+      at: '/projects?p=kundenportal-relaunch&tab=sessions',
+      extra: {
+        'agents:projects': () => {
+          throw Object.assign(new Error('gibt es nicht: C:/falsch/pfad'), {
+            code: 'not-found',
+            detail: { missingDir: 'C:/falsch/pfad' },
+          });
+        },
+      },
+    });
+    await detailReady();
+
+    expect(await screen.findByText('Verzeichnis nicht gefunden')).toBeTruthy();
+    expect(screen.getByText(/C:\/falsch\/pfad/)).toBeTruthy();
+    expect(screen.queryByRole('alert')).toBeNull();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Einstellungen öffnen' }));
+    expect(screen.getByTestId('location').textContent).toBe('/settings?tab=behavior');
+  });
+
+  it('unterscheidet „kein Verzeichnis zugeordnet" von „keine Sitzung"', async () => {
+    mount({
+      at: '/projects?p=kundenportal-relaunch&tab=sessions',
+      /* Ohne zugeordnetes Verzeichnis bietet das Detail den Tab gar nicht erst
+         an — der Schalter holt ihn hervor, und darin steht dieser Zustand. */
+      overview: { showEmptySessionsTab: true },
+      extra: { 'agents:projects': () => [] },
+    });
+    await detailReady();
+
+    expect(
+      await screen.findByText(/Kein Arbeitsverzeichnis von Claude Code gehört zu diesem Projekt/),
+    ).toBeTruthy();
+    expect(screen.queryByText(/Keine Sitzung von/)).toBeNull();
+  });
+
+  it('sagt, wenn ein zugeordnetes Verzeichnis keine Sitzung hat', async () => {
+    mount({
+      at: '/projects?p=kundenportal-relaunch&tab=sessions',
+      extra: { 'agents:sessions': () => [] },
+    });
+    await detailReady();
+
+    expect(
+      await screen.findByText('Keine Sitzung von Claude Code in diesem Projekt aufgezeichnet.'),
+    ).toBeTruthy();
+  });
+
+  /* Guardrail 1: der Tab liest Dateien, mehr nicht. Ohne Modell ist er
+     vollstaendig — und er fragt gar nicht erst nach einem. */
+  it('kommt ohne eingerichtetes Modell aus', async () => {
+    const { sb } = mount({
+      at: '/projects?p=kundenportal-relaunch&tab=sessions',
+      extra: {
+        'llm:routing': () => {
+          throw Object.assign(new Error('kein Modell'), { code: 'llm-unavailable' });
+        },
+        'llm:tasks': () => {
+          throw Object.assign(new Error('kein Modell'), { code: 'llm-unavailable' });
+        },
+      },
+    });
+    await detailReady();
+
+    expect(await screen.findByText('Sitzung im Web-Repo')).toBeTruthy();
+    expect(sb.calls.filter((call) => call.channel.startsWith('llm:'))).toEqual([]);
+  });
+});
+
+// ── Sitzungen-Tab: verbergen und hervorholen ─────────────────────────────────
+
+/* Ein Tab, in dem nichts steht, ist kein Angebot: ohne zugeordnetes
+   Arbeitsverzeichnis bietet das Detail ihn gar nicht erst an. Wer ihn trotzdem
+   sehen will, schaltet ihn in der Filterleiste ein — einmal fuer alle Projekte
+   und ueber `settings:setVault`, also auch nach einem Neustart noch. Das
+   Hochbeet ist der Fall ohne Zuordnung: kein repo, kein Arbeitsverzeichnis
+   einer CLI. */
+describe('Sitzungen-Tab: verbergen und hervorholen', () => {
+  const HOCHBEET = '/projects?p=hochbeet-bauen';
+
+  it('bietet den Tab nicht an, wenn kein Verzeichnis zugeordnet ist', async () => {
+    const { sb } = mount({ at: HOCHBEET });
+    await detailReady();
+
+    expect(screen.queryByRole('tab', { name: 'Sitzungen' })).toBeNull();
+
+    /* Auch nicht, nachdem beide CLIs geantwortet haben: der Tab darf nicht
+       aufblitzen — weder auftauchen noch wieder verschwinden. */
+    await waitFor(() => expect(callsTo(sb, 'agents:projects')).toHaveLength(2));
+    expect(await screen.findByRole('tab', { name: 'Überblick' })).toBeTruthy();
+    expect(screen.queryByRole('tab', { name: 'Sitzungen' })).toBeNull();
+  });
+
+  it('bietet den Tab nicht an, wenn weder repo noch CLI das Projekt kennt', async () => {
+    const { sb } = mount({
+      /* Ohne `repos` erklaert das Projekt selbst keine Zuordnung — und die
+         CLIs melden keine, die auf es zeigt. Das ist der Fall, in dem der Tab
+         wirklich leer bliebe. */
+      projects: [{ ...portal, repos: [] }, legacy, hochbeet],
+      extra: { 'agents:projects': () => [] },
+    });
+    await detailReady();
+
+    await waitFor(() => expect(callsTo(sb, 'agents:projects')).toHaveLength(2));
+    expect(screen.queryByRole('tab', { name: 'Sitzungen' })).toBeNull();
+  });
+
+  it('bietet den Tab bei zugeordnetem Verzeichnis auch ohne Schalter an', async () => {
+    mount({ overview: { showEmptySessionsTab: false } });
+    await detailReady();
+
+    expect(screen.getByRole('tab', { name: 'Sitzungen' })).toBeTruthy();
+  });
+
+  /* Guardrail 1: ausgeschaltetes Mitlesen laesst `agents:projects` ehrlich
+     leer zurueckkommen. Wuerde das Detail daraus „nicht zugeordnet" lesen,
+     verschwaende der Tab genau dann, wenn der Nutzer den Zustand braucht, der
+     die abgeschaltete Einstellung benennt — still, ohne ein Wort. */
+  it('behaelt den Tab bei ausgeschaltetem Mitlesen und sagt darin, warum', async () => {
+    const { sb } = mount({
+      at: '/projects?p=kundenportal-relaunch&tab=sessions',
+      overview: { useClaudeSessions: false, useCodexSessions: false },
+      /* So antwortet der Hauptprozess bei ausgeschaltetem Mitlesen. */
+      extra: { 'agents:projects': () => [] },
+    });
+    await detailReady();
+
+    /* Erst wenn beide CLIs geantwortet haben, ist die Aussage geprueft: bis
+       dahin stuende der Tab auch dann noch da, wenn er gleich verschwaende. */
+    await waitFor(() => expect(callsTo(sb, 'agents:projects')).toHaveLength(2));
+    expect(await screen.findByText('Mitlesen ist ausgeschaltet')).toBeTruthy();
+
+    /* Das Kundenportal nennt ein repo — die Zuordnung steht in der Datei,
+       unabhaengig davon, ob eine CLI gelesen werden darf. */
+    expect(screen.getByRole('tab', { name: 'Sitzungen' })).toBeTruthy();
+    /* Und keine der beiden Luegen: weder „nichts gefunden" noch „nichts
+       zugeordnet". */
+    expect(screen.queryByText(/Keine Sitzung von/)).toBeNull();
+    expect(screen.queryByText('Kein Arbeitsverzeichnis zugeordnet')).toBeNull();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Einschalten' }));
+    expect(screen.getByTestId('location').textContent).toBe('/settings?tab=behavior');
+  });
+
+  it('holt den leeren Tab per Schalter hervor und fuehrt zum Zuordnen', async () => {
+    mount({ at: HOCHBEET, overview: { showEmptySessionsTab: true } });
+    await detailReady();
+
+    await userEvent.click(await screen.findByRole('tab', { name: 'Sitzungen' }));
+
+    /* Der Tab sagt, was fehlt — und wo es behoben wird. */
+    expect(await screen.findByText('Kein Arbeitsverzeichnis zugeordnet')).toBeTruthy();
+    expect(screen.getByText(/Unter „Alle Sitzungen" ordnest du diesem Projekt/)).toBeTruthy();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Verzeichnis zuordnen' }));
+    expect(screen.getByTestId('location').textContent).toBe('/projects/sessions');
+  });
+
+  it('schreibt den Schalter in die Vault-Einstellungen und wirkt sofort', async () => {
+    const { sb } = mount({
+      at: HOCHBEET,
+      extra: {
+        'settings:setVault': ({ patch }) =>
+          snapshot({ showEmptySessionsTab: patch.overview?.showEmptySessionsTab === true }),
+      },
+    });
+    await detailReady();
+
+    const toggle = screen.getByLabelText('Sitzungen-Tab immer zeigen');
+    await waitFor(() => expect((toggle as HTMLInputElement).disabled).toBe(false));
+    await userEvent.click(toggle);
+
+    /* Genau dieser Nutzinhalt macht „ueberlebt den Neustart" wahr: die
+       Einstellung geht in die Vault-Datei, ueber den vorhandenen Kanal. */
+    await waitFor(() =>
+      expect(callsTo(sb, 'settings:setVault')).toEqual([
+        { patch: { overview: { showEmptySessionsTab: true } } },
+      ]),
+    );
+    expect(await screen.findByRole('tab', { name: 'Sitzungen' })).toBeTruthy();
+  });
+
+  it('zeigt den gespeicherten Schalter schon beim ersten Rendern', async () => {
+    mount({ at: HOCHBEET, overview: { showEmptySessionsTab: true } });
+    await detailReady();
+
+    await waitFor(() =>
+      expect(
+        (screen.getByLabelText('Sitzungen-Tab immer zeigen') as HTMLInputElement).checked,
+      ).toBe(true),
+    );
+    expect(screen.getByRole('tab', { name: 'Sitzungen' })).toBeTruthy();
+  });
+
+  it('faellt bei tab=sessions ohne angebotenen Tab auf den Ueberblick zurueck', async () => {
+    mount({ at: '/projects?p=hochbeet-bauen&tab=sessions' });
+    await detailReady();
+
+    expect(screen.getByRole('tab', { name: 'Überblick' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+    expect(screen.queryByRole('tab', { name: 'Sitzungen' })).toBeNull();
+    expect(screen.queryByText('Arbeitsspur')).toBeNull();
+    /* Die Adresse bleibt, wie sie ist — sie gehoert dem Screen, und mit dem
+       Schalter fuehrt derselbe Link wieder in den Tab. */
+    expect(query()).toEqual({ p: hochbeet.slug, tab: 'sessions' });
   });
 });
 
@@ -1022,6 +1549,13 @@ describe('A11y', () => {
     await screen.findByRole('list', { name: 'Projekte' });
     await userEvent.click(screen.getByRole('tab', { name: 'Alle Todos' }));
     await screen.findByRole('heading', { name: 'Arbeit' });
+    await expectNoA11yViolations(container);
+  });
+
+  it('hat keinen Verstoß im Sitzungen-Tab', async () => {
+    const { container } = mount();
+    await sessionsTab();
+    await screen.findByText('Sitzung im Web-Repo');
     await expectNoA11yViolations(container);
   });
 

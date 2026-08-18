@@ -130,6 +130,8 @@ function vaultSettings(overview: Partial<OverviewSettings>): VaultSettings {
       useCodexSessions: true,
       codexSessionsDir: '',
       notifications: true,
+      dismissedAgentProjects: [],
+      showEmptySessionsTab: false,
       ...overview,
     },
     journal: { mode: 'tips' },
@@ -761,6 +763,26 @@ describe('Kacheln', () => {
       await screen.findByText('Das Mitlesen der Claude-Sessions ist ausgeschaltet.'),
     ).toBeTruthy();
     expect(screen.queryByText(/Keine Sitzung/)).toBeNull();
+  });
+
+  /* Der Fuß der Kachel ist der sichtbare Weg von den letzten Sitzungen in die
+     ganze Liste. Sie ist seit Story 008 kein eigener Screen mehr, sondern hängt
+     unter Projekte — zeigte der Link weiter auf `/agents`, liefe der Nutzer in
+     die Umleitung statt in den Screen. */
+  it('führt vom Fuß der Sessions-Kachel auf die Sitzungen unter Projekte', async () => {
+    mount();
+    wrap(
+      <>
+        <ClaudeSessionsTile />
+        <Location />
+      </>,
+    );
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Alle Agent-Sitzungen öffnen' }),
+    );
+
+    expect(screen.getByTestId('location').textContent).toBe('/projects/sessions');
   });
 
   it('ordnet eine Sitzung einem Projekt zu', async () => {

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 /* `ProjectDetail` (story 001, D13): the session rows a project's detail view
- * shows once `AgentsScreen` (D11) drills into a project (`ProjectList`,
+ * shows once `AllSessionsScreen` (D11) drills into a project (`ProjectList`,
  * D12). Two levels of coverage:
  *
  * - `ProjectDetail` in isolation: the session facts it renders (start, last
@@ -9,7 +9,7 @@
  *   ("the format doesn't record this") reads as unknown while
  *   `subagents: []` ("recorded as zero") reads as an explicit, different
  *   zero-count state. Neither ever collapses into the other.
- * - `AgentsScreen` end to end: a click on a project card writes `p` into
+ * - `AllSessionsScreen` end to end: a click on a project card writes `p` into
  *   the address and swaps the list for the detail view; the back control
  *   returns to the list with the Claude/Codex switch untouched; a stale
  *   `p` from a hand-edited URL is an honest "not found", not a crash.
@@ -32,7 +32,7 @@ import type {
   Project,
   VaultSettings,
 } from '@shared/types';
-import { AgentsScreen } from '@renderer/screens/agents/AgentsScreen';
+import { AllSessionsScreen } from '@renderer/screens/projects/AllSessionsScreen';
 import { ProjectDetail } from '@renderer/screens/agents/ProjectDetail';
 import { setLanguage } from '@renderer/i18n';
 import type { SbBridge } from '@renderer/lib/bridge';
@@ -315,7 +315,7 @@ describe('ProjectDetail', () => {
   });
 });
 
-/* ── End to end through AgentsScreen ──────────────────────────────────────── */
+/* ── End to end through AllSessionsScreen ─────────────────────────────────── */
 
 type Handlers = Partial<{
   [K in IpcChannel]: (payload: IpcRequest<K>) => IpcResponse<K>;
@@ -355,6 +355,8 @@ function overviewOf(overview: Partial<OverviewSettings> = {}): VaultSettings {
       useCodexSessions: true,
       codexSessionsDir: '',
       notifications: true,
+      dismissedAgentProjects: [],
+      showEmptySessionsTab: false,
       ...overview,
     },
     journal: { mode: 'tips' },
@@ -431,12 +433,12 @@ function mount(options: { overview?: Partial<OverviewSettings>; extra?: Handlers
   return { links };
 }
 
-function renderScreen(at = '/agents') {
+function renderScreen(at = '/projects/sessions') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[at]}>
-        <AgentsScreen />
+        <AllSessionsScreen />
         <Location />
       </MemoryRouter>
     </QueryClientProvider>,
@@ -447,7 +449,7 @@ afterEach(() => {
   delete window.sb;
 });
 
-describe('AgentsScreen: into the project detail and back', () => {
+describe('AllSessionsScreen: into the project detail and back', () => {
   it('opens the project detail on click, with the project key in the URL', async () => {
     mount();
     renderScreen();
@@ -473,7 +475,9 @@ describe('AgentsScreen: into the project detail and back', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'All projects' }));
 
-    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('/agents?a=codex'));
+    await waitFor(() =>
+      expect(screen.getByTestId('location').textContent).toBe('/projects/sessions?a=codex'),
+    );
     expect(screen.getByRole('tab', { name: 'Codex' }).getAttribute('aria-selected')).toBe('true');
     await screen.findByText('godot-rag');
     expect(screen.queryByText('second-brain')).toBeNull();
@@ -481,7 +485,7 @@ describe('AgentsScreen: into the project detail and back', () => {
 
   it('says a stale project key is not found instead of crashing', async () => {
     mount();
-    renderScreen('/agents?p=c%3A%2Frepos%2Fghost');
+    renderScreen('/projects/sessions?p=c%3A%2Frepos%2Fghost');
 
     expect(await screen.findByText('Project not found')).toBeTruthy();
     expect(screen.queryByText('second-brain')).toBeNull();
@@ -490,10 +494,10 @@ describe('AgentsScreen: into the project detail and back', () => {
 
 /* ── AC8: linking a project to a vault project ────────────────────────────── */
 
-describe('AgentsScreen: linking a project', () => {
+describe('AllSessionsScreen: linking a project', () => {
   it('links the open project with its own key and agent', async () => {
     const harness = mount();
-    renderScreen('/agents?p=c%3A%2Frepos%2Fsecond-brain');
+    renderScreen('/projects/sessions?p=c%3A%2Frepos%2Fsecond-brain');
 
     await userEvent.click(await screen.findByRole('button', { name: 'Link a vault project' }));
     await userEvent.selectOptions(
@@ -511,7 +515,7 @@ describe('AgentsScreen: linking a project', () => {
 
   it('carries the agent of the switched-to CLI, not always Claude', async () => {
     const harness = mount();
-    renderScreen('/agents?a=codex&p=c%3A%2Frepos%2Fgodot-rag');
+    renderScreen('/projects/sessions?a=codex&p=c%3A%2Frepos%2Fgodot-rag');
 
     await userEvent.click(await screen.findByRole('button', { name: 'Link a vault project' }));
     await userEvent.selectOptions(
@@ -530,7 +534,7 @@ describe('AgentsScreen: linking a project', () => {
         'agents:projects': () => [{ ...claudeProject(), vaultProject: 'kundenportal-relaunch' }],
       },
     });
-    renderScreen('/agents?p=c%3A%2Frepos%2Fsecond-brain');
+    renderScreen('/projects/sessions?p=c%3A%2Frepos%2Fsecond-brain');
 
     expect(await screen.findByText('linked to kundenportal-relaunch')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Link a vault project' })).toBeNull();

@@ -247,10 +247,13 @@ export const deScreens = {
     'Die Prüfung findet verwaiste Seiten, kaputte Links, unverdichtete Quellen und Projekte ohne nächsten Schritt.',
   'screen.garden.empty.action': 'Prüfung starten',
 
-  /* Die Texte des Screens selbst (Umschalter, Leer- und Aus-Zustände) liegen
-     in `de-agents.ts` — das Kopfpaar steht hier, wie bei jedem anderen Screen. */
-  'screen.agents.overline': 'Arbeitsspur der Agenten',
-  'screen.agents.title': 'Agents',
+  /* The screen's own texts (switch, empty and off states) live in
+     `de-agents.ts` — the header pair sits here, like every other screen.
+     The view hangs under Projects since story 008, so the header says where
+     you are: "Projekte · Agent-Sitzungen". The key names stay `screen.agents.*`
+     — only the rail entry went, the family kept its name. */
+  'screen.agents.overline': 'Projekte',
+  'screen.agents.title': 'Agent-Sitzungen',
 
   /* Not "Behavior": that's one of the tabs — read as an overline, the screen
      would look as if that tab were already open. */

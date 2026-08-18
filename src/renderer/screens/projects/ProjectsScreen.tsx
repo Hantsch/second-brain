@@ -14,11 +14,19 @@
    (`#/projects?p=<slug>&tab=todos`): that way a link from outside —
    dashboard, maintenance, command palette — leads straight into a project.
 
+   The detail has tabs of its own (Overview | Sessions), and they use the same
+   `tab` parameter: `tab=sessions` is still this list-plus-detail layout, only
+   with the detail's second tab open. Its state — the chosen CLI (`a`) and the
+   open session (`s`) — hangs in the address too, because this screen owns the
+   address; `go` carries all four parameters, and a `go` that dropped `s`
+   would strand every link into a transcript.
+
    Keyboard: j/k and arrows select, Enter opens the file, n creates a
    project, t opens the field for a todo, x checks off the focused todo. */
 
 import { useCallback, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import type { AgentKind } from '@shared/types';
 import { Button } from '../../atoms/Button';
 import { Tabs } from '../../atoms/Tabs';
 import { EmptyState } from '../../components/EmptyState';
@@ -36,7 +44,27 @@ import { DEFAULT_FILTER, visibleProjects } from './filter';
 import type { ProjectFilter } from './filter';
 import { useListKeys } from './use-project-keys';
 
-type Tab = 'list' | 'todos';
+/* `sessions` is the detail's second tab, not a third layout: it falls into
+   the same list-plus-detail branch as `list`, and the screen's own tab bar
+   shows `list` as the selected one. */
+type Tab = 'list' | 'todos' | 'sessions';
+
+/** What `go` may change; an omitted field keeps its current value. */
+interface Nav {
+  p?: string | null | undefined;
+  tab?: Tab | undefined;
+  a?: AgentKind | undefined;
+  s?: string | null | undefined;
+}
+
+function tabOf(value: string | null): Tab {
+  if (value === 'todos') return 'todos';
+  return value === 'sessions' ? 'sessions' : 'list';
+}
+
+function agentOf(value: string | null): AgentKind {
+  return value === 'codex' ? 'codex' : 'claude';
+}
 
 export function ProjectsScreen() {
   const t = useT();
@@ -49,7 +77,9 @@ export function ProjectsScreen() {
   const [dialog, setDialog] = useState(false);
   const rows = useRef(new Map<string, HTMLButtonElement>());
 
-  const tab: Tab = params.get('tab') === 'todos' ? 'todos' : 'list';
+  const tab: Tab = tabOf(params.get('tab'));
+  const agent = agentOf(params.get('a'));
+  const sessionId = params.get('s');
   const wanted = params.get('p');
   const list = visibleProjects(projects.data ?? [], filter);
   /* The selection hangs off the slug. If it's filtered out or deleted, the
@@ -59,15 +89,21 @@ export function ProjectsScreen() {
   const detail = useProject(selected?.slug ?? null);
 
   const go = useCallback(
-    (next: { p?: string | null; tab?: Tab }) => {
+    (next: Nav) => {
       const merged = new URLSearchParams();
       const slug = next.p === undefined ? wanted : next.p;
       const view = next.tab ?? tab;
+      const kind = next.a ?? agent;
+      /* The open session belongs to one project on one tab: a different
+         project or another tab drops it, everything else carries it. */
+      const session = next.s !== undefined ? next.s : slug === wanted ? sessionId : null;
       if (slug !== null && slug.length > 0) merged.set('p', slug);
-      if (view === 'todos') merged.set('tab', view);
+      if (view !== 'list') merged.set('tab', view);
+      if (kind !== 'claude') merged.set('a', kind);
+      if (view === 'sessions' && session !== null && session.length > 0) merged.set('s', session);
       setParams(merged, { replace: true });
     },
-    [setParams, tab, wanted],
+    [agent, sessionId, setParams, tab, wanted],
   );
 
   const select = useCallback(
@@ -147,7 +183,9 @@ export function ProjectsScreen() {
         { id: 'list', label: t('projects.tab.list'), icon: 'folder' },
         { id: 'todos', label: t('projects.tab.todos'), icon: 'circle-check-big' },
       ]}
-      value={tab}
+      /* `sessions` is a tab of the detail — here the list stays lit, because
+         that is what the layout below shows. */
+      value={tab === 'todos' ? 'todos' : 'list'}
       onChange={(next) => go({ tab: next as Tab })}
     />
   );
@@ -233,6 +271,22 @@ export function ProjectsScreen() {
               key={selected.slug}
               project={detail.data.project}
               doc={detail.data.doc}
+              view={{
+                tab: tab === 'sessions' ? 'sessions' : 'overview',
+                agent,
+                sessionId,
+                go: (next) =>
+                  go({
+                    tab:
+                      next.tab === undefined
+                        ? undefined
+                        : next.tab === 'sessions'
+                          ? 'sessions'
+                          : 'list',
+                    a: next.a,
+                    s: next.s,
+                  }),
+              }}
             />
           )}
         </div>

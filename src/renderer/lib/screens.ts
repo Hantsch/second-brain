@@ -2,7 +2,7 @@
    Befehlspalette. Reihenfolge und Tasten stehen in docs/ARCHITECTURE.md. */
 
 export type ScreenId =
-  'dashboard' | 'inbox' | 'projects' | 'journal' | 'knowledge' | 'garden' | 'agents' | 'settings';
+  'dashboard' | 'inbox' | 'projects' | 'journal' | 'knowledge' | 'garden' | 'settings';
 
 export interface ScreenDef {
   id: ScreenId;
@@ -12,7 +12,7 @@ export interface ScreenDef {
   icon: string;
   labelKey: string;
   /** Digit that opens this screen. Without one the screen is reachable by
-   *  click and command palette only (e.g. "agents"). */
+   *  click and command palette only. */
   hotkey?: string;
 }
 
@@ -34,9 +34,9 @@ export const SCREENS: readonly ScreenDef[] = [
      unassigned: sources became a tab under knowledge, capture and ask became
      shell overlays — the rail gets renumbered wholesale by the later
      navigation stories, so no interim churn here.
-     No hotkey for "agents": reachable by click and command palette only
-     (story 001, resolved Open Questions). */
-  { id: 'agents', path: '/agents', icon: 'workflow', labelKey: 'rail.agents' },
+     No entry for the agent sessions: they hang under projects since story
+     008 (`/projects/sessions`), so the rail keeps one entry for the place,
+     not two for the same subject. */
 ];
 
 export function screenByHotkey(key: string): ScreenDef | undefined {

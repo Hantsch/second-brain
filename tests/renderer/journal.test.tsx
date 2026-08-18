@@ -293,6 +293,8 @@ const settings: SettingsSnapshot = {
       useCodexSessions: false,
       codexSessionsDir: '',
       notifications: false,
+      dismissedAgentProjects: [],
+      showEmptySessionsTab: false,
     },
     journal: { mode: 'listen' },
     gardener: { runOnOpen: false, reviewAfterDays: 120, useLlm: false },

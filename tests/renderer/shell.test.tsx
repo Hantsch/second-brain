@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-/* Die Hülle muss stehen, bevor irgendein Screen ausgebaut wird: acht Ziele in
+/* Die Hülle muss stehen, bevor irgendein Screen ausgebaut wird: sieben Ziele in
    der Rail, Tastaturwege, die Adressen von Erfassen und Fragen, und keine
    A11y-Verstöße. */
 
@@ -18,7 +18,7 @@ import { DashboardScreen } from '@renderer/screens/dashboard/DashboardScreen';
 import type { SbBridge } from '@renderer/lib/bridge';
 import { mockBridge } from '@renderer/lib/mock-bridge';
 import { SCREENS, screenByHotkey } from '@renderer/lib/screens';
-import { setLanguage } from '@renderer/i18n';
+import { setLanguage, t } from '@renderer/i18n';
 
 /* `window.sb` wird ausdrücklich gemockt: die Oberfläche darf im Test nichts
    Echtes anfassen. Die Antworten kommen aus den Fixtures der Mock-Brücke. */
@@ -152,26 +152,33 @@ describe('AppShell', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Dashboard' })).toBeTruthy();
   });
 
-  it('führt in acht Screens, jeder mit aria-label', async () => {
+  it('führt in sieben Screens, jeder mit aria-label', async () => {
     renderApp();
     const nav = await screen.findByRole('navigation', { name: 'Hauptnavigation' });
     const links = nav.querySelectorAll('a');
     expect(links.length).toBe(SCREENS.length);
-    /* Sieben Screens mit Ziffer (1, 3, 5, 6, 7, 9, 0), dazu „Agents" ohne —
-       story 001. Frei sind die 8 („Quellen" ist ein Tab unter „Wissen") sowie
-       die 2 und die 4 (Erfassen und Fragen sind Overlays, keine Screens). */
-    expect(SCREENS.length).toBe(8);
+    /* Sieben Screens, jeder mit Ziffer (1, 3, 5, 6, 7, 9, 0). Frei sind die 8
+       („Quellen" ist ein Tab unter „Wissen") sowie die 2 und die 4 (Erfassen
+       und Fragen sind Overlays, keine Screens). „Agents" ist seit story 008
+       kein Rail-Eintrag mehr: die Sitzungen hängen unter „Projekte". */
+    expect(SCREENS.length).toBe(7);
     for (const link of links) {
       expect(link.getAttribute('aria-label')?.length ?? 0).toBeGreaterThan(0);
     }
   });
 
-  it('hat für „Agents" keine Ziffer, aber trotzdem ein Ziel', async () => {
+  /* Solange jeder Eintrag eine Ziffer trägt, muss sie auch an ihm stehen —
+     sonst ist die Tastenbedienung da, aber unsichtbar. */
+  it('zeigt an jedem Rail-Eintrag seine Ziffer, sichtbar und für Hilfsmittel', async () => {
     renderApp();
     const nav = await screen.findByRole('navigation', { name: 'Hauptnavigation' });
-    const agents = within(nav).getByRole('link', { name: 'Agents' });
-    expect(agents.getAttribute('aria-keyshortcuts')).toBeNull();
-    expect(agents.querySelector('.sb-rail-key')).toBeNull();
+
+    for (const definition of SCREENS) {
+      const link = within(nav).getByRole('link', { name: t(definition.labelKey) });
+      expect(definition.hotkey, `Rail-Eintrag ${definition.id}`).toBeDefined();
+      expect(link.getAttribute('aria-keyshortcuts')).toBe(definition.hotkey);
+      expect(link.querySelector('.sb-rail-key')?.textContent).toBe(definition.hotkey);
+    }
   });
 
   it('wechselt den Screen über die Ziffern', async () => {

@@ -1,4 +1,4 @@
-/* D14: the transcript itself — the level `AgentsScreen` (D11) drops into
+/* D14: the transcript itself — the level `AllSessionsScreen` drops into
    once `ProjectDetail` (D13) hands it a `sessionId`. Backed by
    `readTranscriptPage` (`@core/agents/transcript.ts`, D8), which guarantees
    the *backend* never reads more than one 128 KB window per call, no matter

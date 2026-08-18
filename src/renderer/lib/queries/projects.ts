@@ -1,6 +1,10 @@
-/* The project hooks: list, a single project with its file, the work trace —
-   and the four write paths (create, change frontmatter, append, check off a
-   waiting-on entry) plus the status suggestion.
+/* The project hooks: list, a single project with its file — and the four
+   write paths (create, change frontmatter, append, check off a waiting-on
+   entry) plus the status suggestion.
+
+   The sessions of a project are not here: since story 008 they come from
+   `agents:projects`/`agents:sessions` per CLI (`useMergedAgentSessions` in
+   `queries/agents.ts`), not from a filtered `claude:sessions`.
 
    Two rules that otherwise aren't visible in the code:
 
@@ -16,8 +20,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { QueryClient, UseMutationResult, UseQueryResult } from '@tanstack/react-query';
 import type { IpcRequest, IpcResponse } from '@shared/ipc';
-import type { ClaudeSession, Project, WriteResult } from '@shared/types';
-import { api, IpcCallError } from '../api';
+import type { Project, WriteResult } from '@shared/types';
+import { api } from '../api';
 import { qk } from './keys';
 import { useVaultReady } from './data';
 
@@ -42,41 +46,6 @@ export function useProject(slug: string | null): UseQueryResult<ProjectDetail | 
     enabled: slug !== null && slug.length > 0,
     retry: false,
   });
-}
-
-/**
- * The Claude sessions for a project. The channel is allowed to be missing —
- * in that case the work trace says so, instead of claiming "no sessions"
- * (`error.code === 'invalid'`).
- */
-export function useProjectSessions(project: Project | null): UseQueryResult<ClaudeSession[]> {
-  const ready = useVaultReady();
-  return useQuery({
-    queryKey: qk.claude.sessions(),
-    queryFn: () => api.claude.sessions(),
-    enabled: ready,
-    retry: false,
-    select: (sessions) => filterSessions(sessions, project),
-  });
-}
-
-/** Assignment via `vaultProject` or the working directory from `repos`. */
-export function filterSessions(
-  sessions: readonly ClaudeSession[],
-  project: Project | null,
-): ClaudeSession[] {
-  if (project === null) return [];
-  const repos = project.repos.map((repo) => repo.replace(/\\/g, '/').toLowerCase());
-  return sessions.filter((session) => {
-    if (session.vaultProject === project.slug) return true;
-    const cwd = session.cwd.replace(/\\/g, '/').toLowerCase();
-    return repos.some((repo) => cwd === repo || cwd.startsWith(`${repo}/`));
-  });
-}
-
-/** Is this error the honest "the channel isn't wired up yet"? */
-export function isNotWired(error: unknown): boolean {
-  return error instanceof IpcCallError && error.code === 'invalid';
 }
 
 /** What's no longer accurate about a project after a write. */

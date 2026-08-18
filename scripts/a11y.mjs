@@ -194,8 +194,9 @@ async function measureDialogClose(page, open) {
 
 /* Zu welchem Rail-Screen ein Tiefzustand gehört. Das Präfix der Kennung nennt
    ihn, aber nicht immer unter seinem Namen: `module-*` steht seit Story 002 unter
-   „knowledge". Ein Präfix ohne Rail-Screen (`agents` hat keine Kennung in SCREENS)
-   wird immer geprüft — lieber einmal zu viel als still ausgelassen. */
+   „knowledge". Ein Präfix ohne Rail-Screen (`agents` steht seit Story 008 unter
+   `/projects/sessions`, hat aber keine Kennung in SCREENS) wird immer geprüft —
+   lieber einmal zu viel als still ausgelassen. */
 const DEEP_STATE_SCREENS = {
   project: 'projects',
   module: 'knowledge',

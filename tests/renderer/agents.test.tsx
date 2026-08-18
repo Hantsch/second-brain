@@ -1,25 +1,35 @@
 // @vitest-environment jsdom
-/* The agent session browser's shell (story 001, D11): the rail entry without
- * a digit, the Claude/Codex switch held in the URL, and the four honest
- * states — loading, error, off, empty. These tests use the project's name
- * as the signal that real data (not the D11 placeholder) rendered; the
- * project cards themselves — all six facts, sort order, click behaviour —
- * are covered in `tests/renderer/agents-project-list.test.tsx` (D12). */
+/* The agent session browser's shell: the Claude/Codex switch held in the URL
+ * and the four honest states — loading, error, off, empty. These tests use
+ * the project's name as the signal that real data rendered; the project
+ * cards themselves — all six facts, sort order, click behaviour — are
+ * covered in `tests/renderer/agents-project-list.test.tsx` (D12).
+ *
+ * Since story 008 the view lives under Projects (`#/projects/sessions`) and
+ * has no rail entry of its own. The two blocks below therefore guard what
+ * replaced it: the Projects entry lights up here, and the old `#/agents`
+ * address still lands — with its whole query string. */
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StrictMode } from 'react';
 import { HashRouter, MemoryRouter, useLocation } from 'react-router-dom';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import axe from 'axe-core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { IpcChannel, IpcRequest, IpcResponse } from '@shared/ipc';
-import type { AgentKind, AgentProject, OverviewSettings, VaultSettings } from '@shared/types';
+import type {
+  AgentKind,
+  AgentProject,
+  OverviewSettings,
+  TranscriptEntry,
+  TranscriptPage,
+  VaultSettings,
+} from '@shared/types';
 import { App } from '@renderer/App';
-import { AgentsScreen } from '@renderer/screens/agents/AgentsScreen';
+import { AllSessionsScreen } from '@renderer/screens/projects/AllSessionsScreen';
 import { setLanguage } from '@renderer/i18n';
 import type { SbBridge } from '@renderer/lib/bridge';
-import { SCREENS } from '@renderer/lib/screens';
 
 type Handlers = Partial<{
   [K in IpcChannel]: (payload: IpcRequest<K>) => IpcResponse<K>;
@@ -77,6 +87,10 @@ function codexProject(): AgentProject {
   };
 }
 
+function transcriptEntry(id: string, text: string): TranscriptEntry {
+  return { id, kind: 'assistant', at: NOW, text, toolName: null, toolTarget: null, raw: null };
+}
+
 function overviewOf(overview: Partial<OverviewSettings> = {}): VaultSettings {
   return {
     version: 1,
@@ -95,6 +109,8 @@ function overviewOf(overview: Partial<OverviewSettings> = {}): VaultSettings {
       useCodexSessions: true,
       codexSessionsDir: '',
       notifications: true,
+      dismissedAgentProjects: [],
+      showEmptySessionsTab: false,
       ...overview,
     },
     journal: { mode: 'tips' },
@@ -140,12 +156,12 @@ function mount(options: { overview?: Partial<OverviewSettings>; extra?: Handlers
   return { ...mock, projectsRequested };
 }
 
-function renderScreen(at = '/agents') {
+function renderScreen(at = '/projects/sessions') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[at]}>
-        <AgentsScreen />
+        <AllSessionsScreen />
         <Location />
       </MemoryRouter>
     </QueryClientProvider>,
@@ -161,32 +177,105 @@ afterEach(() => {
   delete window.sb;
 });
 
-describe('Rail-Eintrag „Agents"', () => {
-  it('steht ohne Ziffer in der Rail und öffnet den Screen per Klick', async () => {
+/** Rendert die ganze App im `HashRouter` an `hash` — der einzige Weg zu
+    sehen, was eine echte Adresse tut: Rail, Routen und Umleitung sind Sache
+    der Hülle, nicht eines einzelnen Screens. */
+function renderApp(hash: string) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  window.location.hash = hash;
+  return render(
+    <StrictMode>
+      <QueryClientProvider client={client}>
+        <HashRouter>
+          <App />
+        </HashRouter>
+      </QueryClientProvider>
+    </StrictMode>,
+  );
+}
+
+/** Die aktuelle Adresse, zerlegt. Die Abfrage als Objekt, damit die
+    Reihenfolge der Parameter nicht mitgeprüft wird, ihr Inhalt aber schon. */
+function address(): { path: string; query: Record<string, string> } {
+  const [path = '', search = ''] = window.location.hash.replace(/^#/, '').split('?');
+  return { path, query: Object.fromEntries(new URLSearchParams(search)) };
+}
+
+describe('Agent-Sitzungen unter „Projekte"', () => {
+  it('hat keinen eigenen Rail-Eintrag mehr', async () => {
     mount();
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    window.location.hash = '#/dashboard';
-    render(
-      <StrictMode>
-        <QueryClientProvider client={client}>
-          <HashRouter>
-            <App />
-          </HashRouter>
-        </QueryClientProvider>
-      </StrictMode>,
-    );
+    renderApp('#/dashboard');
     await screen.findByRole('heading', { level: 1, name: 'Dashboard' });
 
-    const def = SCREENS.find((screen) => screen.id === 'agents');
-    expect(def?.hotkey).toBeUndefined();
+    const nav = screen.getByRole('navigation', { name: 'Hauptnavigation' });
+    expect(within(nav).queryByRole('link', { name: 'Agents' })).toBeNull();
+    expect(within(nav).queryByRole('link', { name: /Sitzungen/ })).toBeNull();
+  });
 
-    const link = screen.getByRole('link', { name: 'Agents' });
-    expect(link.getAttribute('aria-keyshortcuts')).toBeNull();
-    expect(link.querySelector('.sb-rail-key')).toBeNull();
+  /* Der Screen hängt unter „Projekte", damit genau das hier gilt: wer in den
+     Sitzungen steht, sieht in der Rail, wo er ist. Sonst wäre der Umzug nur
+     eine andere Adresse, und der Nutzer stünde nirgends. */
+  it('lässt „Projekte" leuchten, während die Sitzungen offen sind', async () => {
+    mount();
+    renderApp('#/projects/sessions');
+    await screen.findByRole('heading', { level: 1, name: 'Agent-Sitzungen' });
 
-    await userEvent.click(link);
-    await screen.findByRole('heading', { level: 1, name: 'Agents' });
-    expect(link.getAttribute('aria-current')).toBe('page');
+    const nav = screen.getByRole('navigation', { name: 'Hauptnavigation' });
+    expect(within(nav).getByRole('link', { name: 'Projekte' }).getAttribute('aria-current')).toBe(
+      'page',
+    );
+  });
+
+  it('führt über den Kopf zurück auf die Projekte', async () => {
+    mount();
+    renderApp('#/projects/sessions');
+    await screen.findByRole('heading', { level: 1, name: 'Agent-Sitzungen' });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Zurück zu den Projekten' }));
+
+    await waitFor(() => expect(address().path).toBe('/projects'));
+  });
+});
+
+/* Die alte Adresse steht in Lesezeichen, in der Dashboard-Kachel und in jedem
+   bisher weitergegebenen Link auf ein Transkript. Ein bloßes
+   `<Navigate to="/projects/sessions" />` würfe ihre Abfrage weg: der Tieflink
+   käme ohne a/p/s an und landete auf der leeren Projektliste statt auf dem
+   benannten Transkript — still, mit grünen Tests. Deshalb wird hier nicht
+   bloß der Pfad geprüft, sondern jeder einzelne Parameter. */
+describe('Alte Adresse #/agents', () => {
+  it('leitet ohne Abfrage auf #/projects/sessions um', async () => {
+    mount();
+    renderApp('#/agents');
+
+    await screen.findByRole('heading', { level: 1, name: 'Agent-Sitzungen' });
+    expect(address()).toEqual({ path: '/projects/sessions', query: {} });
+    /* Nicht nur die Adresse: die Projektliste steht auch wirklich da. */
+    expect(await screen.findByText('second-brain')).toBeTruthy();
+  });
+
+  it('nimmt a, p und s vollständig mit und landet auf demselben Transkript', async () => {
+    const key = 'c:/repos/godot-rag';
+    mount({
+      extra: {
+        'agents:sessions': () => [],
+        'agents:transcript': (): TranscriptPage => ({
+          entries: [transcriptEntry('e1', 'Der Verlauf dieser Sitzung')],
+          nextCursor: null,
+          totalKnown: true,
+        }),
+      },
+    });
+    renderApp(`#/agents?a=codex&p=${encodeURIComponent(key)}&s=sitzung-7`);
+
+    await screen.findByRole('heading', { level: 1, name: 'Agent-Sitzungen' });
+    await waitFor(() => expect(address().path).toBe('/projects/sessions'));
+    expect(address().query).toEqual({ a: 'codex', p: key, s: 'sitzung-7' });
+
+    /* Und zwar wirklich auf dem Transkript, nicht auf der Liste dahinter. */
+    expect(await screen.findByText('Der Verlauf dieser Sitzung')).toBeTruthy();
+    expect(screen.getByText('Sitzung sitzung-7')).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Codex' }).getAttribute('aria-selected')).toBe('true');
   });
 });
 
@@ -206,7 +295,9 @@ describe('Agents-Screen: Umschalter und Zustände', () => {
 
     await userEvent.click(screen.getByRole('tab', { name: 'Codex' }));
 
-    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('/agents?a=codex'));
+    await waitFor(() =>
+      expect(screen.getByTestId('location').textContent).toBe('/projects/sessions?a=codex'),
+    );
     await waitFor(() => expect(harness.projectsRequested).toContain('codex'));
     expect(screen.getByRole('tab', { name: 'Codex' }).getAttribute('aria-selected')).toBe('true');
     await screen.findByText('godot-rag');
@@ -218,10 +309,14 @@ describe('Agents-Screen: Umschalter und Zustände', () => {
     await screen.findByText('second-brain');
 
     await userEvent.click(screen.getByRole('tab', { name: 'Codex' }));
-    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('/agents?a=codex'));
+    await waitFor(() =>
+      expect(screen.getByTestId('location').textContent).toBe('/projects/sessions?a=codex'),
+    );
 
     await userEvent.click(screen.getByRole('tab', { name: 'Claude Code' }));
-    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('/agents'));
+    await waitFor(() =>
+      expect(screen.getByTestId('location').textContent).toBe('/projects/sessions'),
+    );
     expect(screen.getByRole('tab', { name: 'Claude Code' }).getAttribute('aria-selected')).toBe(
       'true',
     );
@@ -244,7 +339,7 @@ describe('Agents-Screen: Umschalter und Zustände', () => {
     mount({
       extra: { 'agents:projects': () => [] },
     });
-    renderScreen('/agents?a=codex');
+    renderScreen('/projects/sessions?a=codex');
 
     expect(await screen.findByText('Noch keine Sitzung von Codex')).toBeTruthy();
     expect(screen.queryByText('Mitlesen ist ausgeschaltet')).toBeNull();
@@ -252,7 +347,7 @@ describe('Agents-Screen: Umschalter und Zustände', () => {
 
   it('bietet aus dem Aus-Zustand den Weg zu den Einstellungen', async () => {
     mount({ overview: { useCodexSessions: false } });
-    renderScreen('/agents?a=codex');
+    renderScreen('/projects/sessions?a=codex');
     await screen.findByText('Mitlesen ist ausgeschaltet');
 
     await userEvent.click(screen.getByRole('button', { name: 'Einschalten' }));

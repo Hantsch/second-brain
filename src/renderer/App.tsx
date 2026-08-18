@@ -14,13 +14,13 @@ import { backgroundImage } from './lib/customization-assets';
 import { qk } from './lib/queries/keys';
 import type { ShellOverlay } from './lib/shell-overlays';
 import { useShellOverlays } from './lib/shell-overlays';
-import { AgentsScreen } from './screens/agents/AgentsScreen';
 import { DashboardScreen } from './screens/dashboard/DashboardScreen';
 import { GardenScreen } from './screens/garden/GardenScreen';
 import { InboxScreen } from './screens/inbox/InboxScreen';
 import { JournalScreen } from './screens/journal/JournalScreen';
 import { ModulesScreen } from './screens/modules/ModulesScreen';
 import { OnboardingScreen } from './screens/onboarding/OnboardingScreen';
+import { AllSessionsScreen } from './screens/projects/AllSessionsScreen';
 import { ProjectsScreen } from './screens/projects/ProjectsScreen';
 import { SettingsScreen } from './screens/settings/SettingsScreen';
 
@@ -46,6 +46,21 @@ function KnowledgeRedirect({ tab }: { tab?: string }) {
   const params = new URLSearchParams(search);
   params.set('tab', tab);
   return <Navigate to={`/knowledge?${params.toString()}`} replace />;
+}
+
+/** Redirect off the old all-sessions address that keeps the query string.
+
+    The view moved under Projects (story 008), but `#/agents?a=codex&p=<key>&s=<id>`
+    lives on in bookmarks, in the dashboard tile and in every transcript link
+    handed around so far. `<Navigate to="/projects/sessions" />` would drop
+    `search`, so those links would arrive without `a`/`p`/`s` and land on the
+    bare project list instead of the transcript they name — a silent
+    regression, not a visible error. So `search` is read here, while this
+    route still is the location, and appended verbatim: nothing is rebuilt,
+    nothing can go missing. */
+function AgentsRedirect() {
+  const { search } = useLocation();
+  return <Navigate to={`/projects/sessions${search}`} replace />;
 }
 
 /** Route that opens a shell overlay and hands the address back.
@@ -129,6 +144,9 @@ export function App() {
         <Route path="/dashboard" element={<DashboardScreen />} />
         <Route path="/inbox" element={<InboxScreen />} />
         <Route path="/projects" element={<ProjectsScreen />} />
+        {/* Nested under Projects on purpose: the rail entry stays lit through
+            the `NavLink` prefix match. */}
+        <Route path="/projects/sessions" element={<AllSessionsScreen />} />
         <Route path="/journal" element={<JournalScreen />} />
         <Route path="/knowledge" element={<ModulesScreen />} />
         {/* Capture and ask live as overlays inside the shell; these addresses
@@ -139,7 +157,7 @@ export function App() {
         <Route path="/modules" element={<KnowledgeRedirect />} />
         <Route path="/sources" element={<KnowledgeRedirect tab="sources" />} />
         <Route path="/garden" element={<GardenScreen />} />
-        <Route path="/agents" element={<AgentsScreen />} />
+        <Route path="/agents" element={<AgentsRedirect />} />
         <Route path="/settings" element={<SettingsScreen />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>

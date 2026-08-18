@@ -368,6 +368,20 @@ describe('Einstieg in die Befehlspalette', () => {
     expect(screen.getByRole('tab', { name: 'Quellen' }).getAttribute('aria-selected')).toBe('true');
   });
 
+  /* Seit Story 008 sind die Agent-Sitzungen ebenfalls kein eigener Screen mehr,
+     sondern hängen unter Projekte. Ohne festen Eintrag wären sie aus der Palette
+     verschwunden — und der Eintrag muss auf `/projects/sessions` landen, nicht
+     bloß auf der Projektliste. */
+  it('führt „sitz" auf die Agent-Sitzungen unter Projekte', async () => {
+    await openScreen('#/dashboard', 'Dashboard');
+    const dialog = await openPalette('sitz');
+
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Agent-Sitzungen' }));
+
+    await screen.findByRole('heading', { level: 1, name: 'Agent-Sitzungen' });
+    expect(window.location.hash).toBe('#/projects/sessions');
+  });
+
   it('führt „wissen" per Enter auf den Modul-Tab von Wissen', async () => {
     await openScreen('#/dashboard', 'Dashboard');
     const dialog = await openPalette('wissen');
@@ -399,6 +413,19 @@ describe('Einstieg in die Befehlspalette', () => {
     await screen.findByRole('heading', { level: 1, name: 'Knowledge' });
     expect(window.location.hash).toBe('#/knowledge?tab=sources');
     expect(screen.getByRole('tab', { name: 'Sources' }).getAttribute('aria-selected')).toBe('true');
+  });
+
+  it('findet auf Englisch „sess" als Agent-Sitzungen', async () => {
+    uiLanguage = 'en';
+    setLanguage('en');
+    document.documentElement.lang = 'en';
+    await openScreen('#/dashboard', 'Dashboard');
+
+    const dialog = await openPalette('sess', /Open the command palette/);
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Agent sessions' }));
+
+    await screen.findByRole('heading', { level: 1, name: 'Agent sessions' });
+    expect(window.location.hash).toBe('#/projects/sessions');
   });
 
   /* Die Palette filtert über die übersetzte Beschriftung. Beide Erfassen-Wege

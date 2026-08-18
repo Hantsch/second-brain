@@ -82,6 +82,13 @@ export interface OverviewSettings {
   codexSessionsDir: string;
   /** Windows notifications for due reminders. */
   notifications: boolean;
+  /**
+   * Agent projects the user dismissed from the all-sessions list.
+   * Key format is `<agent kind>:<project key>`, e.g. `claude:-home-me-repo`.
+   */
+  dismissedAgentProjects: string[];
+  /** Show the per-project "Sessions" tab even for projects without a linked agent project. */
+  showEmptySessionsTab: boolean;
 }
 
 /*

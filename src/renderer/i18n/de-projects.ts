@@ -14,6 +14,8 @@ export const deProjects = {
   'projects.filter.statusAll': 'Alle',
   'projects.filter.statusOpen': 'Nur laufende',
   'projects.filter.sort': 'Sortierung',
+  'projects.filter.showEmptySessions': 'Sitzungen-Tab immer zeigen',
+  'projects.filter.showEmptySessionsFailed': 'Die Einstellung ließ sich nicht speichern.',
   'projects.sort.touch': 'Zuletzt berührt',
   'projects.sort.deadline': 'Frist',
   'projects.sort.priority': 'Priorität',
@@ -98,18 +100,26 @@ export const deProjects = {
   'project.notes.show': 'Notizen zeigen',
   'project.notes.hide': 'Notizen verbergen',
 
+  'project.tab.label': 'Projektansicht wählen',
+  'project.tab.overview': 'Überblick',
+  'project.tab.sessions': 'Sitzungen',
+
   'project.trace.title': 'Arbeitsspur',
   'project.trace.lastTouch': 'Letzte Spur {age}',
   'project.trace.source.file': 'Dateiänderung im Projektordner',
   'project.trace.source.claude-session': 'Claude-Session',
   'project.trace.source.journal': 'Tageseintrag',
-  'project.trace.sessions': 'Claude-Sessions',
-  'project.trace.noSessions': 'Keine Claude-Session zu diesem Projekt.',
   'project.trace.noRepos':
     'Ohne das Feld repos im Frontmatter lässt sich keine Session zuordnen. Zugeordnet wird über das Arbeitsverzeichnis.',
-  'project.trace.pending':
-    'Die Claude-Sessions sind noch nicht angeschlossen. Diese Sektion füllt sich, sobald der Kanal steht.',
-  'project.trace.messages': '{count} Nachrichten',
+
+  'project.sessions.noneLinked':
+    'Kein Arbeitsverzeichnis von {agent} gehört zu diesem Projekt. Zugeordnet wird über das Arbeitsverzeichnis aus repos.',
+  'project.sessions.empty': 'Keine Sitzung von {agent} in diesem Projekt aufgezeichnet.',
+  'project.sessions.notFound.title': 'Sitzung nicht gefunden',
+  'project.sessions.unlinked.title': 'Kein Arbeitsverzeichnis zugeordnet',
+  'project.sessions.unlinked.where':
+    'Unter „Alle Sitzungen" ordnest du diesem Projekt ein Arbeitsverzeichnis zu.',
+  'project.sessions.unlinked.action': 'Verzeichnis zuordnen',
 
   // ── Todos ────────────────────────────────────────────────────────────────
   'todos.group.overdue': 'Überfällig',

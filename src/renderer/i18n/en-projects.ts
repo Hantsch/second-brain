@@ -11,6 +11,8 @@ export const enProjects = {
   'projects.filter.statusAll': 'All',
   'projects.filter.statusOpen': 'Running only',
   'projects.filter.sort': 'Sort by',
+  'projects.filter.showEmptySessions': 'Always show the sessions tab',
+  'projects.filter.showEmptySessionsFailed': 'The setting could not be saved.',
   'projects.sort.touch': 'Last touched',
   'projects.sort.deadline': 'Deadline',
   'projects.sort.priority': 'Priority',
@@ -95,18 +97,26 @@ export const enProjects = {
   'project.notes.show': 'Show notes',
   'project.notes.hide': 'Hide notes',
 
+  'project.tab.label': 'Choose project view',
+  'project.tab.overview': 'Overview',
+  'project.tab.sessions': 'Sessions',
+
   'project.trace.title': 'Work trace',
   'project.trace.lastTouch': 'Last trace {age}',
   'project.trace.source.file': 'File change in the project folder',
   'project.trace.source.claude-session': 'Claude session',
   'project.trace.source.journal': 'Journal entry',
-  'project.trace.sessions': 'Claude sessions',
-  'project.trace.noSessions': 'No Claude session for this project.',
   'project.trace.noRepos':
     'Without the repos field in the frontmatter no session can be matched. Matching goes by working directory.',
-  'project.trace.pending':
-    'Claude sessions are not wired up yet. This section fills up as soon as the channel is there.',
-  'project.trace.messages': '{count} messages',
+
+  'project.sessions.noneLinked':
+    'No {agent} working directory belongs to this project. Matching goes by the working directory from repos.',
+  'project.sessions.empty': 'No session from {agent} recorded for this project.',
+  'project.sessions.notFound.title': 'Session not found',
+  'project.sessions.unlinked.title': 'No working directory linked',
+  'project.sessions.unlinked.where':
+    'Under “All sessions” you assign a working directory to this project.',
+  'project.sessions.unlinked.action': 'Link a working directory',
 
   // ── Todos ────────────────────────────────────────────────────────────────
   'todos.group.overdue': 'Overdue',

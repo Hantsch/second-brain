@@ -15,6 +15,7 @@ import type {
   DashboardLayout,
   OverviewSettings,
   Reminder,
+  SettingsSnapshot,
 } from '@shared/types';
 import { api } from '../api';
 import { pushToast } from '../toast';
@@ -60,6 +61,31 @@ export function useDashboardLayout(): UseQueryResult<DashboardLayout> {
 export function useOverviewSettings(): OverviewSettings | undefined {
   const { data } = useQuery({ queryKey: qk.settings.snapshot(), queryFn: api.settings.get });
   return data?.vault?.overview;
+}
+
+/**
+ * Write a slice of the overview settings back through `settings:setVault`.
+ *
+ * Same shape as the mutation in `settings/BehaviorTab.tsx`: the main process
+ * validates and clamps, and its snapshot — not the value we sent — is what
+ * lands in the cache. There is no separate channel for a single preference;
+ * the settings file is the one place these live, which is also why they
+ * survive a restart.
+ *
+ * Caveat for array fields: `deepMerge` in the main process replaces arrays
+ * wholesale, so callers hand over the complete next array, never a delta.
+ */
+export function useSaveOverview(): UseMutationResult<
+  SettingsSnapshot,
+  unknown,
+  Partial<OverviewSettings>
+> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (overview: Partial<OverviewSettings>) => api.settings.setVault({ overview }),
+    onSuccess: (snapshot: SettingsSnapshot) =>
+      client.setQueryData(qk.settings.snapshot(), snapshot),
+  });
 }
 
 interface LayoutContext {

@@ -127,6 +127,8 @@ function snapshot(autoClassify: boolean): SettingsSnapshot {
         useCodexSessions: true,
         codexSessionsDir: '',
         notifications: true,
+        dismissedAgentProjects: [],
+        showEmptySessionsTab: false,
       },
       journal: { mode: 'tips' },
       gardener: { runOnOpen: true, reviewAfterDays: 120, useLlm: true },

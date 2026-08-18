@@ -35,6 +35,24 @@ export const deAgents = {
   'agents.projects.firstActivity': 'seit {date}',
   'agents.projects.vaultProject': 'verknüpft mit {project}',
 
+  /* Story 008: ein Agent-Projekt ausblenden, das im Vault nichts entspricht.
+     Nur unverknüpfte Projekte lassen sich ausblenden — für ein verknüpftes
+     gibt es hier deshalb keinen Text, es bekommt nie einen Knopf. */
+  'agents.dismiss.action': 'Projekt {name} ausblenden',
+  'agents.dismiss.undo': 'Projekt {name} wieder einblenden',
+  'agents.dismiss.marker': 'ausgeblendet',
+  'agents.dismiss.hidden': '{count} Projekte ausgeblendet',
+  'agents.dismiss.hiddenOne': 'ein Projekt ausgeblendet',
+  'agents.dismiss.allHidden': 'Alle Projekte dieses Agents sind ausgeblendet.',
+  'agents.dismiss.showAll': 'Alle anzeigen',
+  'agents.dismiss.hideAgain': 'Ausgeblendete wieder verbergen',
+  'agents.dismiss.failed': 'Die ausgeblendeten Projekte konnten nicht gespeichert werden.',
+
+  /* Story 008: the view hangs under Projects, so it needs a way back up.
+     "Alle Projekte" below is the panel's own way back inside the agent's
+     project list — a different destination, hence a different text. */
+  'agents.sessions.backToProjects': 'Zurück zu den Projekten',
+
   // D13: Projektdetail — die Sitzungen eines Projekts.
   'agents.detail.back': 'Alle Projekte',
   'agents.detail.notFound.title': 'Projekt nicht gefunden',

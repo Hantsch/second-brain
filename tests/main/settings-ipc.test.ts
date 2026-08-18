@@ -157,6 +157,83 @@ describe('Einstellungs-Kanäle im Main', () => {
     expect((await stored()).capture.autoClassify).toBe(false);
   });
 
+  it('merkt verworfene Agenten-Projekte und den Schalter für leere Sitzungs-Reiter', async () => {
+    /* Frisches Vault: beide Vorgaben sind der leise Zustand. */
+    const before = await harness.call('settings:get', undefined);
+    expect(before.vault?.overview.dismissedAgentProjects).toEqual([]);
+    expect(before.vault?.overview.showEmptySessionsTab).toBe(false);
+
+    const snapshot = await harness.call('settings:setVault', {
+      patch: {
+        overview: {
+          /* Leerraum, Dubletten und Leereinträge fallen weg — Groß-/Kleinschreibung nicht:
+             der Projektschlüssel kommt aus einem Pfad. */
+          dismissedAgentProjects: [
+            '  claude:-home-me-Repo  ',
+            'claude:-home-me-Repo',
+            '',
+            'codex:-home-me-other',
+          ],
+          showEmptySessionsTab: true,
+          erfunden: 1,
+        },
+      } as unknown as IpcRequest<'settings:setVault'>['patch'],
+    });
+
+    expect(snapshot.vault?.overview.dismissedAgentProjects).toEqual([
+      'claude:-home-me-Repo',
+      'codex:-home-me-other',
+    ]);
+    expect(snapshot.vault?.overview.showEmptySessionsTab).toBe(true);
+    const file = await readFile(join(vault.root, VAULT_SETTINGS_FILE), 'utf8');
+    expect(file).not.toContain('erfunden');
+  });
+
+  it('hält die verworfenen Agenten-Projekte über ein Neuladen des Vaults', async () => {
+    await harness.call('settings:setVault', {
+      patch: {
+        overview: { dismissedAgentProjects: ['claude:-home-me-repo'], showEmptySessionsTab: true },
+      },
+    });
+
+    await harness.services.closeVault();
+    await harness.services.openVault(vault.root);
+
+    const snapshot = await harness.call('settings:get', undefined);
+    expect(snapshot.vault?.overview.dismissedAgentProjects).toEqual(['claude:-home-me-repo']);
+    expect(snapshot.vault?.overview.showEmptySessionsTab).toBe(true);
+  });
+
+  it('weist falsche Typen für die beiden neuen Felder ab', async () => {
+    await expect(
+      harness.call('settings:setVault', {
+        patch: {
+          overview: { dismissedAgentProjects: 'claude:-home-me-repo' },
+        } as unknown as IpcRequest<'settings:setVault'>['patch'],
+      }),
+    ).rejects.toMatchObject({ code: 'invalid' });
+
+    await expect(
+      harness.call('settings:setVault', {
+        patch: {
+          overview: { dismissedAgentProjects: [42] },
+        } as unknown as IpcRequest<'settings:setVault'>['patch'],
+      }),
+    ).rejects.toMatchObject({ code: 'invalid' });
+
+    await expect(
+      harness.call('settings:setVault', {
+        patch: {
+          overview: { showEmptySessionsTab: 'ja' },
+        } as unknown as IpcRequest<'settings:setVault'>['patch'],
+      }),
+    ).rejects.toMatchObject({ code: 'invalid' });
+
+    const file = await stored();
+    expect(file.overview.dismissedAgentProjects).toEqual([]);
+    expect(file.overview.showEmptySessionsTab).toBe(false);
+  });
+
   it('setzt die drei Sprachen getrennt und merkt die UI-Sprache auch in der App', async () => {
     const snapshot = await harness.call('settings:setLanguages', {
       ui: 'en',

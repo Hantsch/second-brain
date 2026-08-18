@@ -4,7 +4,7 @@
    it exists; building an infinite-query abstraction here ahead of that
    screen would be scope no one has asked for yet. */
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { UseMutationResult, UseQueryResult } from '@tanstack/react-query';
 import type { AgentKind, AgentProject, AgentSessionSummary, TranscriptPage } from '@shared/types';
 import { api } from '../api';
@@ -36,6 +36,66 @@ export function useAgentSessions(
     queryFn: () => api.agents.sessions(agent, projectKey),
     enabled: ready && projectKey.length > 0,
   });
+}
+
+/** The merged sessions of several working directories of one CLI. */
+export interface MergedAgentSessions {
+  /** Undefined as long as one of the reads has no answer yet. */
+  data: AgentSessionSummary[] | undefined;
+  isPending: boolean;
+  /** The first read that failed, or null. */
+  error: unknown;
+  refetch: () => void;
+}
+
+/**
+ * The sessions of several working directories of one CLI in one list, newest
+ * activity first — what a vault project needs, because a project may list
+ * several `repos` and each of them is its own agent project.
+ *
+ * `useQueries` and not a loop of `useAgentSessions`: the number of working
+ * directories is data, and a hook called in a loop breaks the moment that
+ * number changes. The per-directory query keys stay the same ones
+ * `useAgentSessions` uses, so both views share one cache entry per directory
+ * instead of asking twice.
+ *
+ * With no directories at all there is nothing to read: the result is an empty
+ * list, not a pending one — otherwise a project without a linked working
+ * directory would show a skeleton forever.
+ */
+export function useMergedAgentSessions(
+  agent: AgentKind,
+  projectKeys: readonly string[],
+): MergedAgentSessions {
+  const ready = useVaultReady();
+  const results = useQueries({
+    queries: projectKeys.map((key) => ({
+      queryKey: qk.agents.sessions(agent, key),
+      queryFn: () => api.agents.sessions(agent, key),
+      enabled: ready && key.length > 0,
+    })),
+  });
+
+  const failed = results.find((result) => result.error !== null && result.error !== undefined);
+  const isPending = results.some((result) => result.isPending);
+  const complete = results.every((result) => result.data !== undefined);
+
+  return {
+    /* Sorted by the timestamp, not by string: the trails carry local offsets,
+       and two directories worked on in different zones would otherwise
+       interleave wrongly. */
+    data:
+      failed === undefined && complete
+        ? results
+            .flatMap((result) => result.data ?? [])
+            .sort((left, right) => Date.parse(right.lastActivity) - Date.parse(left.lastActivity))
+        : undefined,
+    isPending,
+    error: failed?.error ?? null,
+    refetch: () => {
+      for (const result of results) void result.refetch();
+    },
+  };
 }
 
 /**

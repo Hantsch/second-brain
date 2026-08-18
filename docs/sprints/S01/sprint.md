@@ -20,7 +20,7 @@ function it has today, and no existing deep link, hotkey or palette entry lands 
 
 - [x] 002 — Knowledge absorbs sources
 - [x] 007 — Capture and ask become actions, not places
-- [ ] 008 — Agent sessions move inside projects
+- [x] 008 — Agent sessions move inside projects
 
 ## Notes
 

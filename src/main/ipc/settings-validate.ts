@@ -122,7 +122,37 @@ function overview(source: Bag): Partial<VaultSettings['overview']> {
   if (source.notifications !== undefined) {
     out.notifications = boolean(source.notifications, 'overview.notifications');
   }
+  if (source.dismissedAgentProjects !== undefined) {
+    out.dismissedAgentProjects = dismissedAgentProjects(source.dismissedAgentProjects);
+  }
+  if (source.showEmptySessionsTab !== undefined) {
+    out.showEmptySessionsTab = boolean(
+      source.showEmptySessionsTab,
+      'overview.showEmptySessionsTab',
+    );
+  }
   return out;
+}
+
+/*
+ * Same shape as `preferredTags`, but without lowercasing: an entry is
+ * `<agent kind>:<project key>` (e.g. `claude:-home-me-repo`), and the project
+ * key is derived from a path — case decides whether the dismissal still
+ * matches. The caps hold a machine full of repos (256) with room for long
+ * paths (300 chars) and still bound what a broken renderer can grow in the
+ * vault file.
+ */
+const DISMISSED_MAX_ENTRIES = 256;
+const DISMISSED_MAX_LENGTH = 300;
+
+function dismissedAgentProjects(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    throw fail('invalid', 'overview.dismissedAgentProjects muss eine Liste sein');
+  }
+  const keys = value
+    .map((entry) => text(entry, 'overview.dismissedAgentProjects', DISMISSED_MAX_LENGTH))
+    .filter((entry) => entry.length > 0);
+  return [...new Set(keys)].slice(0, DISMISSED_MAX_ENTRIES);
 }
 
 function journal(source: Bag): Partial<VaultSettings['journal']> {

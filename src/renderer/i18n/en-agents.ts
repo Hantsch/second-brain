@@ -27,6 +27,24 @@ export const enAgents = {
   'agents.projects.firstActivity': 'since {date}',
   'agents.projects.vaultProject': 'linked to {project}',
 
+  /* Story 008: dismissing an agent project that maps to nothing in the vault.
+     Only unlinked projects can be dismissed, so there is no text here for a
+     linked one — it never gets a control. */
+  'agents.dismiss.action': 'Dismiss project {name}',
+  'agents.dismiss.undo': 'Show project {name} again',
+  'agents.dismiss.marker': 'dismissed',
+  'agents.dismiss.hidden': '{count} projects hidden',
+  'agents.dismiss.hiddenOne': 'one project hidden',
+  'agents.dismiss.allHidden': 'Every project of this agent is dismissed.',
+  'agents.dismiss.showAll': 'Show all',
+  'agents.dismiss.hideAgain': 'Hide dismissed again',
+  'agents.dismiss.failed': 'The dismissed projects could not be saved.',
+
+  /* Story 008: the view hangs under Projects, so it needs a way back up.
+     "All projects" below is the panel's own way back inside the agent's
+     project list — a different destination, hence a different text. */
+  'agents.sessions.backToProjects': 'Back to projects',
+
   // D13: project detail — the sessions of one project.
   'agents.detail.back': 'All projects',
   'agents.detail.notFound.title': 'Project not found',

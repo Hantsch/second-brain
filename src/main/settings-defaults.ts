@@ -51,6 +51,8 @@ export function defaultVaultSettings(now = new Date().toISOString()): VaultSetti
       useCodexSessions: true,
       codexSessionsDir: '',
       notifications: true,
+      dismissedAgentProjects: [],
+      showEmptySessionsTab: false,
     },
     journal: { mode: 'tips' },
     gardener: { runOnOpen: true, reviewAfterDays: 120, useLlm: true },

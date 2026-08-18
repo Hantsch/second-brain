@@ -32,7 +32,7 @@ import type {
   TranscriptPage,
   VaultSettings,
 } from '@shared/types';
-import { AgentsScreen } from '@renderer/screens/agents/AgentsScreen';
+import { AllSessionsScreen } from '@renderer/screens/projects/AllSessionsScreen';
 import { Transcript } from '@renderer/screens/agents/Transcript';
 import { setLanguage } from '@renderer/i18n';
 import type { SbBridge } from '@renderer/lib/bridge';
@@ -235,7 +235,7 @@ describe('Transcript', () => {
   });
 });
 
-/* ── Back path through `AgentsScreen`, D13's URL-assertion pattern ─────────── */
+/* ── Back path through `AllSessionsScreen`, D13's URL-assertion pattern ────── */
 
 type Handlers = Partial<{
   [K in IpcChannel]: (payload: IpcRequest<K>) => IpcResponse<K>;
@@ -275,6 +275,8 @@ function overviewOf(overview: Partial<OverviewSettings> = {}): VaultSettings {
       useCodexSessions: true,
       codexSessionsDir: '',
       notifications: true,
+      dismissedAgentProjects: [],
+      showEmptySessionsTab: false,
       ...overview,
     },
     journal: { mode: 'tips' },
@@ -352,17 +354,17 @@ function renderScreen(at: string) {
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[at]}>
-        <AgentsScreen />
+        <AllSessionsScreen />
         <Location />
       </MemoryRouter>
     </QueryClientProvider>,
   );
 }
 
-describe('AgentsScreen: into the transcript and back', () => {
+describe('AllSessionsScreen: into the transcript and back', () => {
   it('opens the transcript on session click, with the session id in the URL', async () => {
     mountScreen();
-    renderScreen('/agents?p=c%3A%2Frepos%2Fsecond-brain');
+    renderScreen('/projects/sessions?p=c%3A%2Frepos%2Fsecond-brain');
 
     await userEvent.click(await screen.findByRole('button', { name: /Open session/ }));
 
@@ -372,7 +374,7 @@ describe('AgentsScreen: into the transcript and back', () => {
 
   it('returns to the session list on back, clearing only the session id from the URL', async () => {
     mountScreen();
-    renderScreen('/agents?p=c%3A%2Frepos%2Fsecond-brain&s=session-full');
+    renderScreen('/projects/sessions?p=c%3A%2Frepos%2Fsecond-brain&s=session-full');
 
     await screen.findByText('Session content');
 
@@ -380,7 +382,7 @@ describe('AgentsScreen: into the transcript and back', () => {
 
     await waitFor(() =>
       expect(screen.getByTestId('location').textContent).toBe(
-        '/agents?p=c%3A%2Frepos%2Fsecond-brain',
+        '/projects/sessions?p=c%3A%2Frepos%2Fsecond-brain',
       ),
     );
     await screen.findByRole('button', { name: /Open session/ });

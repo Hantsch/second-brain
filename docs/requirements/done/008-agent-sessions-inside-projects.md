@@ -1,7 +1,7 @@
 ---
 id: 008
 title: Agent sessions move inside projects
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-08-12
 ---
 
@@ -25,21 +25,21 @@ Target picture: [concepts/navigation.md](../concepts/navigation.md).
 
 ## Acceptance Criteria
 
-- [ ] The rail entry "Agents" is gone.
-- [ ] A project has a "Sessions" tab showing its agent sessions, with the transcript
+- [x] The rail entry "Agents" is gone.
+- [x] A project has a "Sessions" tab showing its agent sessions, with the transcript
       view reachable from there.
-- [ ] Projects reaches an all-sessions view that lists agent projects across both
+- [x] Projects reaches an all-sessions view that lists agent projects across both
       CLIs (Claude, Codex), including ones not linked to a vault project.
-- [ ] Linking an agent project to a vault project is possible from there, and the
+- [x] Linking an agent project to a vault project is possible from there, and the
       sessions then appear in that project's tab.
-- [ ] The existing work trace and the new tab are one thing, not two views of the
+- [x] The existing work trace and the new tab are one thing, not two views of the
       same data side by side.
-- [ ] Deep links keep working: `#/agents`, `#/agents?a=codex&p=<key>&s=<id>` and
+- [x] Deep links keep working: `#/agents`, `#/agents?a=codex&p=<key>&s=<id>` and
       everything in between land on the equivalent place.
-- [ ] The four honest states survive the move: loading, error, "not configured"
+- [x] The four honest states survive the move: loading, error, "not configured"
       (with the missing directory named), and empty.
-- [ ] The switch between Claude and Codex stays available in both views.
-- [ ] Works without a configured model — reading sessions needs no LLM.
+- [x] The switch between Claude and Codex stays available in both views.
+- [x] Works without a configured model — reading sessions needs no LLM.
 
 ## Open Questions
 
@@ -323,4 +323,114 @@ param is a dead screen that a green test run will not catch.
 
 ## Done
 
-<Filled by `/ai-scrum:build 008`.>
+Agent sessions stopped being a place beside projects and became part of them. The rail
+entry is gone; the all-sessions view now hangs under Projects at `#/projects/sessions`,
+and every project detail carries an `Overview | Sessions` tab bar where the old work
+trace used to sit at the bottom of the overview. `#/agents` and its whole query string
+redirect onto the new path. Renderer-only apart from two persisted preferences that ride
+the existing `settings:setVault` channel — no new IPC channel.
+
+**Commit message**
+
+```
+008: agent sessions move inside projects
+```
+
+### Decisions taken during implementation
+
+- **The tab bar of the project detail reuses the screen's `tab` param.** `tab` now means
+  `list | todos | sessions`; `sessions` still renders the list+detail layout, and the
+  screen-level tab bar shows it as "Projects" selected. A second param for the same
+  question would have been a second source of truth.
+- **`ProjectsScreen.go()` carries `a` and `s`.** It rebuilt a fresh `URLSearchParams` and
+  knew only `p`/`tab`, so it silently dropped everything else. `s` is dropped on a project
+  switch and outside the sessions tab; a test goes red if either is lost.
+- **The transcript's agent project key is derived, not carried in the URL.** The URL keeps
+  the `s` the plan specified; the key comes from the merged session list
+  (`session.projectKey`). An id that is not in the list gets an honest "not found", not a
+  blank.
+- **`useMergedAgentSessions` via `useQueries`.** A vault project can link several agent
+  working directories, so the tab merges N session queries into one list, newest first —
+  same per-directory query keys as `useAgentSessions`, so nothing is fetched twice.
+- **The honest states live once.** `AgentStates.tsx` (the state ladder plus `missingDirOf`)
+  and `SessionList.tsx` (the session card) are shared by the all-sessions panel and the
+  per-project tab. Two copies of that state machine is the bug this story set out to remove.
+- **"Has a linked agent working directory" is answered from `repos` OR a matched agent
+  project, never from a CLI's silence.** `agents:projects` answers with an empty list when
+  session reading is off or the configured directory is gone; reading that as "not linked"
+  would have taken the Sessions tab away from every project exactly when the user needs the
+  state that names the broken setting. `repos` comes from the index in the first frame, so
+  the tab also never flashes in or out. (This replaced a pending-state heuristic that the
+  code review found flashing — see below.)
+- **The "show empty" toggle reads and writes the setting itself** in `ProjectFilters`,
+  instead of being threaded through `ProjectsScreen` and `ProjectList`, which neither of
+  them uses. It is a persisted preference, not transient `ProjectFilter` state.
+- **Dismissals are guarded against a lost update.** Two dismissals in quick succession would
+  both have built on the last settled snapshot, and `deepMerge` replaces arrays wholesale —
+  a ref holds the in-flight list so the second click builds on the first.
+- **German comments in files that are German.** `ProjectFilters.tsx`,
+  `scripts/lib/screens.mjs` and `tests/renderer/projects.test.tsx` are German today; new
+  comments there follow the file rather than `CLAUDE.md`'s English rule. Translating them
+  wholesale is the separate migration the project profile already names.
+- **`screen.agents.*` kept its key names, changed its values** (now "Projects / Agent
+  sessions"), per the decision that the `agents.*` i18n family keeps its names. Only
+  `rail.agents` went, plus the four `project.trace.*` keys that described the deleted
+  `claude:sessions` path and would now be saying something false.
+
+### Verification
+
+- `npm run lint` — clean.
+- `npm run typecheck` / `npm run build` — clean.
+- `npm test` — **1832 passed, 1 failed**. The one failure is `tests/core/wiki/module.test.ts`
+  (char-for-char drift between `MODULE_SCHEMA_TEMPLATE` and `docs/MODULE-SCHEMA.md`), a known
+  pre-existing failure that predates this sprint and was verified red on a clean tree. It was
+  not touched. Baseline before this story: 1792 passed, same one failing.
+- `npm run format:check` — 43 offenders, all pre-existing; none introduced here. The one
+  edited doc (`docs/ARCHITECTURE.md`) was re-checked and is clean.
+- **Live smoke** (`npm run seed && npm run shot`, Playwright `_electron`): 54 screenshots, no
+  console errors. Both new surfaces were shot and looked at: `.screenshots/32-agents.png` (the
+  all-sessions view under Projects, Projects lit in the rail, Claude/Codex switch, dismiss
+  control only on the unlinked directory) and `.screenshots/33-project-sessions.png` (project
+  detail with `Overview | Sessions`, the work trail, the CLI switch and the session cards).
+  Re-run after the review fixes, still green.
+- **Code review** by a clean `story-review-hard` agent: **PASS**, all nine acceptance criteria
+  PASS, no weakened or deleted tests, no scope creep, no new IPC channel (`src/shared/ipc.ts`
+  and `src/preload/` untouched). It confirmed the three sprint-level risks did not materialise:
+  the redirect preserves the query string verbatim and is mutation-tested, `go()` carries
+  `a`/`s`, and no project that previously showed sessions can now show none (the deleted
+  `filterSessions` cwd-prefix branch is subsumed by `repoMatch` in `src/core/claude/link.ts`,
+  which is what fills `vaultProject` in the first place).
+
+### Findings from the review, and what happened to them
+
+Fixed:
+
+- The Sessions tab vanished from every project when session reading was switched off, taking
+  the honest "switched off" state with it (guardrail 1). Fixed by the `repos`-or-match rule
+  above; covered by a new test that fails against the old rule.
+- The same derivation flashed the tab in and out for a project with `repos` but no matching
+  agent project, and could undo a click made in that window. Gone with the same fix.
+- One CLI's failed read hid the other CLI's data. Gone with the same fix.
+- A failed dismissal write passed silently. Now an error toast, mirroring the sibling write in
+  `ProjectFilters`.
+- Two fast dismissals could lose one. Now guarded by the in-flight ref.
+- A doc comment left over from the split described the wrong field in `ProjectOverviewTab`.
+
+Deliberately not fixed:
+
+- `ProjectOverviewTab.tsx` is 312 lines, just over the ~300 soft limit. It is a verbatim lift
+  of the previous detail body with one responsibility (the overview's write paths); splitting
+  it further would be churn beyond this story. `ProjectDetail.tsx` itself went 347 → 163.
+- German comments in German files (see Decisions).
+- Two coverage gaps stay manual: the end-to-end hop "link an agent project → its sessions
+  appear in that project's tab" (test plan step 6; the invalidation chain is verified by code)
+  and the restart-persistence of the two preferences (covered at the settings level in
+  `tests/main/settings-ipc.test.ts`, and as test plan step 7).
+
+### Observation for later (not part of this story)
+
+`scripts/seed/internal.mjs` writes `claudeProjectsDir` into the demo vault so screenshot runs
+never read the real `~/.claude`, but it sets nothing for Codex — so `useCodexSessions` defaults
+to `true` with an empty `codexSessionsDir`, i.e. the real `~/.codex/sessions`. That predates
+this story (it came in with 001's agents screen), but the new deep states make it reachable in
+two more places. Worth a one-line fix in the seed at some point.

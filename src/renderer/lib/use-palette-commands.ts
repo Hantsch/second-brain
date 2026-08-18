@@ -37,6 +37,17 @@ export function usePaletteCommands({ onAsk }: PaletteHandlers): CommandDef[] {
       icon: 'download',
       run: () => void navigate('/knowledge?tab=sources'),
     };
+    /* Same story for the agent sessions since story 008: they stopped being a
+       screen of their own and hang under projects (`/projects/sessions`), so
+       they are not in SCREENS either. Still a destination — hence the
+       "screens" group, listed right below the screen that now hosts them. */
+    const agentSessions: CommandDef = {
+      id: 'screen:project-sessions',
+      group: 'screens',
+      labelKey: 'palette.screen.agentSessions',
+      icon: 'workflow',
+      run: () => void navigate('/projects/sessions'),
+    };
     const screens: CommandDef[] = SCREENS.flatMap((screen) => {
       const entry: CommandDef = {
         id: `screen:${screen.id}`,
@@ -45,7 +56,9 @@ export function usePaletteCommands({ onAsk }: PaletteHandlers): CommandDef[] {
         icon: screen.icon,
         run: () => void navigate(screen.path),
       };
-      return screen.id === 'knowledge' ? [entry, sources] : [entry];
+      if (screen.id === 'knowledge') return [entry, sources];
+      if (screen.id === 'projects') return [entry, agentSessions];
+      return [entry];
     });
     const actions: CommandDef[] = [
       {

@@ -106,14 +106,15 @@ The last two areas. Five decisions you won't find elsewhere in the code:
 ## Screens
 
 One folder per screen under `src/renderer/screens/`. The rail on the left leads in
-this order. Most screens have a digit shortcut, but not all: `agents` is reachable
-by click and command palette only.
+this order. The agent sessions are no rail entry of their own: they live under
+projects — `/projects/sessions` for all of them, `?p=<slug>&tab=sessions` for one
+project's — reachable from the dashboard tile and the command palette.
 
 | Screen      | Purpose                                                                  | Hotkey |
 | ----------- | ------------------------------------------------------------------------ | ------ |
 | `dashboard` | Movable modules: what happened, what's coming up, what's being waited on | `1`    |
 | `inbox`     | Dumps with a filing proposal: accept, edit, discard                      | `3`    |
-| `projects`  | List + detail: status, next step, todos, waiting-on                      | `5`    |
+| `projects`  | List + detail: status, next step, todos, waiting-on, agent sessions      | `5`    |
 | `journal`   | Daily entry and coaching dialog                                          | `6`    |
 | `knowledge` | Knowledge modules (pages, graph) and the sources tab (ingest, progress)  | `7`    |
 | `garden`    | Maintenance: findings, health, one-click fixes                           | `9`    |
