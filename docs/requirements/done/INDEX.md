@@ -22,3 +22,9 @@ second roadmap.
   redirect) and every project detail gained an `Overview | Sessions` tab that absorbed the
   work trace and now reads both CLIs, with dismissable unmapped directories and a global
   "show empty tab" switch — both persisted through the existing `settings:setVault`.
+- 005 — Notes, a home for the areas · S02 · New rail entry "Notizen"/"Notes" (hotkey `4`)
+  reads `areas/` as collapsible sections with dated notes and area-scoped todos; an
+  always-visible composer files a note with no target chosen (default `areas/notes.md`,
+  created on first use), a header action creates an area, and a per-note action moves it
+  between areas — five new hash-guarded IPC channels, the move rolling back on a failed
+  target write; search hits and citations for `areas/*` route in-app to `#/notes?a=<slug>`.

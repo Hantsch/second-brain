@@ -19,6 +19,7 @@ import { titleFor, wordCount } from '@core/vault/doc';
 import { baseName, dirName, extName, isInside } from '@core/vault/paths';
 import type { DateLike } from '@core/vault/paths';
 import type { VaultStat, VaultStore } from '@core/vault/types';
+import { deriveAreas } from './areas';
 import { derivePages, deriveSources, moduleOfPath } from './pages';
 import type { IngestEntry } from './pages';
 import { deriveProjects, projectTitles } from './projects';
@@ -159,6 +160,7 @@ export function deriveIndex(docs: IndexedDoc[], options: DerivationOptions = {})
     docs,
     todos,
     projects,
+    areas: deriveAreas(docs, todos),
     pages: graph.pages,
     sources: options.sources ?? [],
     counts: withModuleCounts(docs, graph.counts),

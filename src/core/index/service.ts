@@ -10,6 +10,7 @@
  */
 
 import type {
+  Area,
   DumpItem,
   JournalDay,
   KnowledgeModule,
@@ -119,6 +120,10 @@ export class IndexService {
 
   todos(): readonly Todo[] {
     return this.current.todos;
+  }
+
+  areas(): readonly Area[] {
+    return this.current.areas;
   }
 
   pages(): readonly WikiPage[] {

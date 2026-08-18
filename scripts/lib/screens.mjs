@@ -17,6 +17,7 @@ export const SCREENS = [
   'dashboard',
   'inbox',
   'projects',
+  'notes',
   'journal',
   'knowledge',
   'garden',
@@ -31,6 +32,12 @@ export const NARROW_SCREENS = [
   'dashboard',
   'inbox',
   'projects',
+  /* Die Fußzeile des Composers (Zielauswahl, Tastenhinweis, Speichern-Knopf)
+     steht in einer Flex-Zeile mit `flex-wrap: wrap` (`sb-notecompose-foot` in
+     notes.css) — bei 1152 px ist zu prüfen, dass sie sauber umbricht statt
+     etwas zu überlappen, und dass der Regelsatz (`sb-notes-rule`) darüber
+     nicht ausbricht. */
+  'notes',
   /* Zwei Spalten mit Detailspalte: bei 1152 px steht der Tag über der
      Tagesliste, und Composer samt Abschluss-Knopf sind am unteren Rand der
      Detailspalte verankert (`measureJournalNarrow` in shot.mjs misst das —

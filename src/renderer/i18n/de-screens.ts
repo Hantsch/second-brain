@@ -228,6 +228,14 @@ export const deScreens = {
   'screen.journal.empty.action': 'Tag beginnen',
   /* Die Texte des Screens selbst liegen in `de-journal.ts`. */
 
+  'screen.notes.overline': 'Eigenständige Gedanken',
+  'screen.notes.title': 'Notizen',
+  'screen.notes.empty.title': 'Noch keine Notiz im Vault',
+  'screen.notes.empty.body':
+    'Eine Notiz ist ein Gedanke, der für sich steht — ohne Bereich, ohne Projekt. Schreib den ersten, ein Bereich entsteht dabei automatisch.',
+  'screen.notes.empty.action': 'Erste Notiz schreiben',
+  /* Die Texte des Screens selbst liegen in `de-notes.ts`. */
+
   'screen.knowledge.overline': 'Module und Quellen',
   'screen.knowledge.title': 'Wissen',
   'screen.knowledge.empty.title': 'Noch kein Wissens-Modul im Vault',

@@ -10,7 +10,7 @@
  * ganzen Vault neu tokenisieren.
  */
 
-import type { Project, RawSource, Todo, WikiPage } from '@shared/types';
+import type { Area, Project, RawSource, Todo, WikiPage } from '@shared/types';
 import { indexPath } from '@core/vault/paths';
 import type { VaultStore } from '@core/vault/types';
 import type {
@@ -23,8 +23,14 @@ import type {
   VaultIndex,
 } from './types';
 
-/** Erhoehen, sobald sich die Form aendert. Aeltere Dateien werden verworfen. */
-export const INDEX_SCHEMA_VERSION = 1;
+/**
+ * Erhoehen, sobald sich die Form aendert. Aeltere Dateien werden verworfen.
+ *
+ * 2: `areas` kam hinzu. Ein Index aus Fassung 1 wuesste nichts von Bereichen und
+ * wuerde einen leeren Notizen-Schirm zeigen — verwerfen und neu bauen kostet
+ * einen Lauf, halb zu vertrauen kostet Inhalt.
+ */
+export const INDEX_SCHEMA_VERSION = 2;
 
 /** Neutraler Inhalt fuer `clear()`: wird beim Laden als „nichts da" gedeutet. */
 const CLEARED = '{"schema":0}\n';
@@ -39,6 +45,7 @@ interface PersistedIndex {
   docs: PersistedDoc[];
   todos: Todo[];
   projects: Project[];
+  areas: Area[];
   pages: WikiPage[];
   sources: RawSource[];
   counts: [string, ModulePageCounts][];
@@ -87,6 +94,7 @@ function toPersisted(index: VaultIndex, search: SerializedSearch | null): Persis
     docs: index.docs.map(({ text: _text, ...rest }) => rest),
     todos: index.todos,
     projects: index.projects,
+    areas: index.areas,
     pages: index.pages,
     sources: index.sources,
     counts: [...index.counts],
@@ -131,6 +139,7 @@ export class VaultIndexStore implements IndexStore {
       docs,
       todos: asArray<Todo>(parsed['todos']),
       projects: asArray<Project>(parsed['projects']),
+      areas: asArray<Area>(parsed['areas']),
       pages: asArray<WikiPage>(parsed['pages']),
       sources: asArray<RawSource>(parsed['sources']),
       counts: reviveCounts(parsed['counts']),

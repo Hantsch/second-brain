@@ -258,6 +258,7 @@ function todo(patch: Partial<Todo> & { id: string; text: string }): Todo {
     line: 20,
     project: portal.slug,
     projectTitle: portal.title,
+    area: null,
     due: null,
     waitingFor: null,
     neededBy: null,

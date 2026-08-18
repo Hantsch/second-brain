@@ -467,6 +467,104 @@ describe('Projekt- und Todo-Kanäle im Main', () => {
     expect(await vault.read(created.path)).toContain('- [ ] Zahnarzttermin verschieben');
   });
 
+  // ── Todos in Areas ─────────────────────────────────────────────────────────
+
+  const AREA = 'areas/gesundheit.md';
+
+  it('filtert die Todo-Liste nach Bereich', async () => {
+    const todos = await harness.call('todos:list', { area: 'gesundheit' });
+
+    expect(todos.map((todo) => todo.text).sort()).toEqual([
+      'Schlafzeiten zwei Wochen mitgeschrieben',
+      'Termin beim Physiotherapeuten machen',
+    ]);
+    expect(todos.every((todo) => todo.area === 'gesundheit')).toBe(true);
+  });
+
+  it('legt ein Todo im Todos-Abschnitt des Bereichs an, nicht im Tageseintrag', async () => {
+    const created = await harness.call('todos:create', {
+      text: 'Rückenschule buchen',
+      scope: 'private',
+      area: 'gesundheit',
+    });
+
+    expect(created.area).toBe('gesundheit');
+    expect(created.project).toBeNull();
+    expect(created.path).toBe(AREA);
+    const raw = (await vault.read(AREA)) ?? '';
+    expect(raw).toContain('- [ ] Rückenschule buchen');
+    expect(raw.indexOf('Rückenschule buchen')).toBeGreaterThan(raw.indexOf('## Todos'));
+    expect(raw.indexOf('Rückenschule buchen')).toBeLessThan(raw.indexOf('## Notizen'));
+    /* Nicht im heutigen Tageseintrag gelandet. */
+    const journalPath = `journal/2026/08/${TODAY}.md`;
+    expect((await vault.read(journalPath)) ?? '').not.toContain('Rückenschule buchen');
+  });
+
+  it('verweigert das Anlegen, wenn Projekt und Bereich beide angegeben sind', async () => {
+    await expect(
+      harness.call('todos:create', {
+        text: 'Doppelt zugeordnet',
+        scope: 'private',
+        project: 'hochbeet-bauen',
+        area: 'gesundheit',
+      }),
+    ).rejects.toMatchObject({ code: 'invalid' });
+  });
+
+  it('meldet einen unbekannten Bereich als not-found', async () => {
+    await expect(
+      harness.call('todos:create', {
+        text: 'Irgendwas',
+        scope: 'private',
+        area: 'nicht-vorhanden',
+      }),
+    ).rejects.toMatchObject({ code: 'not-found' });
+  });
+
+  it('hakt ein Bereichs-Todo ab und liest den neuen Hash mit', async () => {
+    const created = await harness.call('todos:create', {
+      text: 'Wasserflasche auffüllen',
+      scope: 'private',
+      area: 'gesundheit',
+    });
+
+    const toggled = await harness.call('todos:toggle', { id: created.id });
+
+    expect(toggled.state).toBe('done');
+    expect(toggled.doneAt).toBe(TODAY);
+    expect((await vault.read(AREA)) ?? '').toContain(
+      `- [x] Wasserflasche auffüllen !! @done:${TODAY}`,
+    );
+  });
+
+  it('ändert Text eines Bereichs-Todos', async () => {
+    const created = await harness.call('todos:create', {
+      text: 'Vitamin D testen lassen',
+      scope: 'private',
+      area: 'gesundheit',
+    });
+
+    const updated = await harness.call('todos:update', {
+      id: created.id,
+      text: 'Vitamin-D-Spiegel testen lassen',
+    });
+
+    expect(updated.text).toBe('Vitamin-D-Spiegel testen lassen');
+    expect((await vault.read(AREA)) ?? '').toContain('- [ ] Vitamin-D-Spiegel testen lassen');
+  });
+
+  it('verweigert das Umsortieren eines Bereichs-Todos', async () => {
+    const created = await harness.call('todos:create', {
+      text: 'Ergonomischen Stuhl bestellen',
+      scope: 'private',
+      area: 'gesundheit',
+    });
+
+    await expect(harness.call('todos:reorder', { ids: [created.id] })).rejects.toMatchObject({
+      code: 'invalid',
+    });
+  });
+
   it('ändert die Frist inline und behält alle übrigen Marker', async () => {
     const todo = await openTodo('Fallback für abgelaufene Sitzungen bauen');
 

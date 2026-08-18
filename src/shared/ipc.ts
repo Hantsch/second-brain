@@ -16,6 +16,8 @@ import type {
   AgentProject,
   AgentSessionSummary,
   AppSettings,
+  Area,
+  AreaNote,
   ChatThread,
   Citation,
   ClaudeSession,
@@ -218,9 +220,42 @@ export interface IpcRoutes {
   };
   'projects:resolveWaiting': { req: { slug: string; index: number }; res: Project };
 
+  // ── Areas ────────────────────────────────────────────────────────────────
+  'areas:list': { req: void; res: Area[] };
+  /**
+   * The notes of one area, read from the file — not from the index.
+   *
+   * `AreaNote.excerpt` carries the **full** entry here, character for character
+   * as it stands in the file. The list from `areas:list` carries the preview;
+   * the index deliberately doesn't hold note bodies (it would become a copy of
+   * the vault), so the text of an expanded section comes from here.
+   */
+  'areas:notes': { req: { slug: string }; res: AreaNote[] };
+  /**
+   * A note into an area's notes section. Without `area` it lands in the default
+   * area `areas/notes.md`, which is created on first use.
+   *
+   * `expectedHash` is the hash the client read; without it the file's current
+   * hash is used — the write is guarded either way, never unguarded.
+   */
+  'areas:createNote': {
+    req: { text: string; area?: string | null; expectedHash?: string };
+    res: WriteResult;
+  };
+  'areas:create': { req: { title: string }; res: Area };
+  /**
+   * Move one note from one area to another: `line` is the `AreaNote.line` of the
+   * entry, `expectedHash` guards the source file. Either both files change or
+   * neither does — a note is never in two files, and never in none.
+   */
+  'areas:moveNote': {
+    req: { from: string; to: string; line: number; expectedHash: string };
+    res: { from: WriteResult; to: WriteResult };
+  };
+
   // ── Todos ────────────────────────────────────────────────────────────────
   'todos:list': {
-    req: { scope?: Scope; project?: string; open?: boolean; dueBefore?: string };
+    req: { scope?: Scope; project?: string; area?: string; open?: boolean; dueBefore?: string };
     res: Todo[];
   };
   'todos:toggle': { req: { id: string }; res: Todo };
@@ -229,6 +264,8 @@ export interface IpcRoutes {
       text: string;
       scope: Scope;
       project?: string | null;
+      /** Exclusive with `project`: a new todo lands in a project or an area, not both. */
+      area?: string | null;
       due?: string | null;
       /** 1 = low, 2 = medium, 3 = high. Medium is the default. */
       priority?: 1 | 2 | 3;
@@ -521,6 +558,11 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'projects:append',
   'projects:suggestStatus',
   'projects:resolveWaiting',
+  'areas:list',
+  'areas:notes',
+  'areas:createNote',
+  'areas:create',
+  'areas:moveNote',
   'todos:list',
   'todos:toggle',
   'todos:create',

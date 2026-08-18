@@ -133,6 +133,41 @@ Text of the filed dump.
 `repos` connects the project to Claude Code sessions: if a session lives in this
 directory, it counts as a work trace for the project.
 
+## Area (`areas/<slug>.md`)
+
+```markdown
+---
+type: area
+title: Gesundheit
+scope: private
+created: 2026-02-11
+updated: 2026-08-04
+tags: [routine]
+lang: de
+---
+
+## Todos
+
+- [ ] Termin beim Physiotherapeuten machen @due:2026-08-14
+- [x] Schlafzeiten zwei Wochen mitgeschrieben @done:2026-08-04
+
+## Notizen
+
+### 2026-07-28
+
+Der Rücken meldet sich vor allem bei langen Sitzungen. Kurze Pausen alle 45
+Minuten haben mehr gebracht als jede neue Übung.
+```
+
+An area is an ongoing responsibility with no end — health, a relationship, a
+recurring chore — as opposed to a project, which can finish. `scope`: `work` ·
+`private`. The notes section accepts either heading, "Notizen" or "Notes":
+reading is tolerant of both spellings so a document-language switch never
+orphans notes already filed under the other one, and if a file somehow carries
+both, the one that's already there is the one new notes append to. A note
+dropped with no chosen target lands in the default area, `areas/notes.md`,
+created on first use.
+
 ## Todos
 
 A todo is a GFM checkbox in any vault file — no dedicated format, so Obsidian and

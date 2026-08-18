@@ -119,6 +119,16 @@ const AREA = [
   '- [ ] Zahnarzttermin holen #privat',
   '- [ ] Arbeitsplatz höher stellen #work',
   '',
+  '## Notizen',
+  '',
+  '### 2026-07-28',
+  '',
+  'Der Rücken meldet sich vor allem bei langen Sitzungen.',
+  '',
+  '### 2026-08-04',
+  '',
+  'Zwei Wochen Schlafprotokoll: vor Mitternacht ins Bett wirkt mehr.',
+  '',
 ].join('\n');
 
 const DUMP = [

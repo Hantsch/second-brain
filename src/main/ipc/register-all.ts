@@ -7,6 +7,7 @@ import { register } from './registry';
 import type { Services } from '../services';
 import { agentHandlers } from './agents';
 import { appHandlers } from './app';
+import { areaHandlers } from './areas';
 import { captureHandlers } from './capture';
 import { chatHandlers } from './chat';
 import { claudeHandlers } from './claude';
@@ -33,6 +34,7 @@ export function buildHandlers(services: Services): HandlerMap {
     ...searchHandlers(services),
     ...captureHandlers(services),
     ...projectHandlers(services),
+    ...areaHandlers(services),
     ...todoHandlers(services),
     ...journalHandlers(services),
     ...moduleHandlers(services),

@@ -75,6 +75,16 @@ const RESPONSES: MockResponses = {
   }),
   'projects:resolveWaiting': () => ({ ...fx.project, waitingOn: [] }),
 
+  'areas:list': () => [fx.area],
+  /* The full entry, not the preview — that is what this channel is for. */
+  'areas:notes': () => fx.area.notes,
+  'areas:createNote': () => ({ ...writeResult, path: fx.area.path }),
+  'areas:create': ({ title }) => ({ ...fx.area, title, slug: 'neuer-bereich', notes: [] }),
+  'areas:moveNote': () => ({
+    from: { ...writeResult, path: fx.area.path },
+    to: { ...writeResult, path: 'areas/haus.md' },
+  }),
+
   'todos:list': () => [fx.todo],
   'todos:toggle': () => ({ ...fx.todo, state: 'done', doneAt: fx.NOW }),
   'todos:create': ({ text, scope }) => ({ ...fx.todo, text, scope }),

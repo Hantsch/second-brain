@@ -9,6 +9,7 @@ import { enAgents } from './en-agents';
 import { enDashboard } from './en-dashboard';
 import { enGarden } from './en-garden';
 import { enJournal } from './en-journal';
+import { enNotes } from './en-notes';
 import { enProjects } from './en-projects';
 import { enScreens } from './en-screens';
 import { enSettings } from './en-settings';
@@ -43,6 +44,7 @@ export const en: Record<TranslationKey, string> = {
   'rail.inbox': 'Inbox',
   'rail.projects': 'Projects',
   'rail.journal': 'Journal',
+  'rail.notes': 'Notes',
   'rail.knowledge': 'Knowledge',
   'rail.garden': 'Care',
   'rail.settings': 'Settings',
@@ -198,6 +200,7 @@ export const en: Record<TranslationKey, string> = {
   ...enDashboard,
   ...enGarden,
   ...enJournal,
+  ...enNotes,
   ...enProjects,
   ...enSettings,
   ...enWiki,

@@ -10,6 +10,7 @@ import { fail } from './errors';
 
 const LIST_METHODS: readonly (keyof IndexListsLike)[] = [
   'projects',
+  'areas',
   'todos',
   'pages',
   'sources',

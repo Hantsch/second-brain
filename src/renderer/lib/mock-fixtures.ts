@@ -3,6 +3,7 @@
    View data only — none of this touches a file. */
 
 import type {
+  Area,
   ChatThread,
   ClaudeSession,
   DumpItem,
@@ -89,6 +90,33 @@ export const project: Project = {
   excerpt: 'Rollenkonzept liegt bei Stefan zur Freigabe.',
 };
 
+/* One area with two entries — enough for a list, a section and a move target.
+   `excerpt` is the preview here, exactly as `areas:list` delivers it; the full
+   text of an entry comes from `areas:notes`. */
+export const area: Area = {
+  path: 'areas/gesundheit.md',
+  slug: 'gesundheit',
+  title: 'Gesundheit',
+  scope: 'private',
+  hash: 'demo-hash',
+  noteCount: 2,
+  openTodoCount: 1,
+  notes: [
+    {
+      day: '2026-08-04',
+      heading: '2026-08-04',
+      line: 22,
+      excerpt: 'Zwei Wochen Schlafprotokoll: vor Mitternacht ins Bett zu gehen wirkt mehr.',
+    },
+    {
+      day: '2026-07-28',
+      heading: '2026-07-28',
+      line: 12,
+      excerpt: 'Kurze Pausen alle 45 Minuten haben mehr gebracht als jede neue Übung.',
+    },
+  ],
+};
+
 export const todo: Todo = {
   id: 'todo-1',
   text: 'Rollen-Mapping dokumentieren',
@@ -98,6 +126,7 @@ export const todo: Todo = {
   line: 24,
   project: project.slug,
   projectTitle: project.title,
+  area: null,
   due: '2026-08-15',
   waitingFor: null,
   neededBy: null,

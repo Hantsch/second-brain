@@ -8,6 +8,7 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { Icon } from '../atoms/Icon';
 import { useT } from '../i18n';
 import { api } from '../lib/api';
@@ -37,6 +38,13 @@ const GROUP_LABELS: Record<CommandGroup, string> = {
 /** Only the text field toggles the mode with `Tab`; buttons keep tabbing. */
 function isTextField(target: EventTarget | null): boolean {
   return target instanceof HTMLElement && target.tagName === 'INPUT';
+}
+
+/** `areas/<slug>.md` → `<slug>`, else null — the one path shape search routes
+    in-app (mirrors `areaOfPath` in `core/index/todos.ts`). */
+function areaSlugOf(path: string): string | null {
+  const match = /^areas\/([^/]+)\.md$/.exec(path);
+  return match?.[1] ?? null;
 }
 
 interface ModeChipProps {
@@ -72,6 +80,7 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
   /* Outside a provider this hands back no-ops, so the palette still renders
      standalone in a test that has no overlay host. */
   const overlays = useShellOverlays();
+  const navigate = useNavigate();
   const [mode, setMode] = useState<PaletteMode>('palette');
   const [query, setQuery] = useState('');
   const [question, setQuestion] = useState('');
@@ -96,18 +105,28 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
     const matching = lower
       ? commands.filter((command) => t(command.labelKey).toLowerCase().includes(lower))
       : commands;
-    const found: CommandDef[] = (hits ?? []).map((hit) => ({
-      id: `doc:${hit.path}`,
-      group: 'search',
-      labelKey: hit.title,
-      hint: hit.path,
-      icon: 'file-text',
-      /* The files are the truth: a hit opens it in the default editor, as long
-         as the app doesn't have its own reading view. */
-      run: () => void api.shell.openPath(hit.path).catch(() => undefined),
-    }));
+    const found: CommandDef[] = (hits ?? []).map((hit) => {
+      /* An area note has a real home in-app (the Notes screen, deep-linked to
+         its section) — that hit navigates there instead of leaving the app.
+         `docType` is the robust check; the path shape only supplies the slug
+         the route needs. */
+      const areaSlug = hit.docType === 'area' ? areaSlugOf(hit.path) : null;
+      return {
+        id: `doc:${hit.path}`,
+        group: 'search',
+        labelKey: hit.title,
+        hint: hit.path,
+        icon: 'file-text',
+        /* Everything else: the files are the truth, so a hit opens it in the
+           default editor, as long as the app doesn't have its own reading view. */
+        run:
+          areaSlug !== null
+            ? () => navigate(`/notes?a=${areaSlug}`)
+            : () => void api.shell.openPath(hit.path).catch(() => undefined),
+      };
+    });
     return [...matching, ...found];
-  }, [commands, hits, needle, t]);
+  }, [commands, hits, needle, navigate, t]);
 
   const runCommand = (command: CommandDef): void => {
     if (!KEEP_OPEN.has(command.id)) onClose();

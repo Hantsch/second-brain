@@ -9,6 +9,7 @@ import { deAgents } from './de-agents';
 import { deDashboard } from './de-dashboard';
 import { deGarden } from './de-garden';
 import { deJournal } from './de-journal';
+import { deNotes } from './de-notes';
 import { deProjects } from './de-projects';
 import { deScreens } from './de-screens';
 import { deSettings } from './de-settings';
@@ -43,6 +44,7 @@ export const de = {
   'rail.inbox': 'Inbox',
   'rail.projects': 'Projekte',
   'rail.journal': 'Tagebuch',
+  'rail.notes': 'Notizen',
   'rail.knowledge': 'Wissen',
   'rail.garden': 'Pflege',
   'rail.settings': 'Einstellungen',
@@ -206,6 +208,7 @@ export const de = {
   ...deDashboard,
   ...deGarden,
   ...deJournal,
+  ...deNotes,
   ...deProjects,
   ...deSettings,
   ...deWiki,

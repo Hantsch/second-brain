@@ -88,6 +88,13 @@ const QUESTION = 'Wie lange leben Access-Token?';
 const VERBATIM = 'Aktueller Stand: Access-Token 15 Minuten, Refresh-Token 8 Stunden';
 const ANSWER = `Access-Token leben 15 Minuten [[${TOKEN_PAGE}]].`;
 
+/* An area note (story 005): the citation panel resolves any path the same
+   way, with no branching on `docType` — this is the fixture that proves it
+   for `areas/`. */
+const AREA_PATH = 'areas/gesundheit.md';
+const AREA_QUOTE = 'Zwei Wochen Schlafprotokoll: vor Mitternacht ins Bett wirkt mehr.';
+const AREA_ANSWER = `Vor Mitternacht ins Bett wirkt mehr [[${AREA_PATH}]].`;
+
 const citation: Citation = {
   path: TOKEN_PAGE,
   title: 'Token-Lebensdauer',
@@ -136,6 +143,24 @@ const doc: VaultDoc = {
   hash: 'hash-1',
   modified: NOW,
   size: 320,
+};
+
+/* Line 5 (1-indexed) is where `AREA_QUOTE` actually sits — the citation
+   below must agree, otherwise `contextOf` cannot relocate it. */
+const areaDoc: VaultDoc = {
+  path: AREA_PATH,
+  frontmatter: { type: 'area', title: 'Gesundheit', created: '2026-07-01' },
+  body: ['## Notizen', '', '### 2026-08-04', '', AREA_QUOTE, ''].join('\n'),
+  hash: 'hash-area',
+  modified: NOW,
+  size: 180,
+};
+
+const areaCitation: Citation = {
+  path: AREA_PATH,
+  title: 'Gesundheit',
+  quote: AREA_QUOTE,
+  line: 5,
 };
 
 const ROUTED: Routing = {
@@ -406,6 +431,42 @@ describe('Fragen: eine Antwort entsteht', () => {
     const panel = await screen.findByRole('dialog', { name: 'Token-Lebensdauer' });
     const hit = within(panel).getByText(VERBATIM).closest('li');
     expect(hit?.textContent?.startsWith('13')).toBe(true);
+    expect(hit?.className).toContain('sb-context-line--hit');
+    expect(within(panel).getByRole('button', { name: 'Datei öffnen' })).toBeTruthy();
+  });
+
+  /* Story 005: notes live under `areas/`, a document type the panel has never
+     special-cased. This is the proof — the same citation panel, the same
+     `contextOf` relocation, only the path and doc type differ. */
+  it('öffnet den Beleg für eine Notiz in einem Bereich genauso, ohne Sonderfall', async () => {
+    const state = {
+      thread: thread([
+        userMessage(`${messageId}-q`),
+        {
+          id: messageId,
+          role: 'assistant',
+          content: AREA_ANSWER,
+          at: NOW,
+          citations: [areaCitation],
+          model: 'qwen2.5:14b',
+        },
+      ]),
+    };
+    open({
+      ...handlers(state),
+      'chat:threads': () => [state.thread],
+      'vault:read': ({ path }) => (path === AREA_PATH ? areaDoc : doc),
+    });
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: `Gespräch „${QUESTION}" öffnen` }),
+    );
+    const mark = await screen.findByRole('button', { name: 'Beleg 1 anzeigen' });
+    await userEvent.click(mark);
+
+    const panel = await screen.findByRole('dialog', { name: 'Gesundheit' });
+    const hit = within(panel).getByText(AREA_QUOTE).closest('li');
+    expect(hit?.textContent?.startsWith('5')).toBe(true);
     expect(hit?.className).toContain('sb-context-line--hit');
     expect(within(panel).getByRole('button', { name: 'Datei öffnen' })).toBeTruthy();
   });

@@ -153,6 +153,33 @@ Sitzungs-Fallback im Kundenportal allein, ich schaue nur das Ergebnis an.`;
   );
   seeder.bump('areas');
   countTodos(seeder, team);
+
+  /* Eine dritte, gerade erst angelegte Fläche ohne eine einzige Notiz — sonst
+     zeigt keine Aufnahme, wie der Leerlauf einer aufgeklappten Sektion
+     aussieht (`notes.area.empty`). Bewusst ohne "Worum es geht": eine Fläche,
+     die noch nichts als ihre Todos trägt. */
+  const finanzen = `## Todos
+
+- [ ] Kontoauszüge der letzten drei Monate sortieren @due:${day(10)}
+
+## Notizen
+`;
+  seeder.doc(
+    'areas/finanzen.md',
+    {
+      type: 'area',
+      title: 'Finanzen',
+      scope: 'private',
+      created: day(-3),
+      updated: day(-3),
+      tags: [],
+      lang: 'de',
+    },
+    finanzen,
+    clock.date(-3, '19:40'),
+  );
+  seeder.bump('areas');
+  countTodos(seeder, finanzen);
 }
 
 export function seedProjects(seeder, clock) {

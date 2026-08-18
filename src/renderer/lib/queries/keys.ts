@@ -26,6 +26,11 @@ export const qk = {
     list: (scope?: string) => ['todos', 'list', scope ?? 'all'] as const,
     /* Same root as the list: a file change affects both. */
     project: (slug: string) => ['todos', 'project', slug] as const,
+    area: (slug: string) => ['todos', 'area', slug] as const,
+  },
+  areas: {
+    list: () => ['areas', 'list'] as const,
+    notes: (slug: string) => ['areas', 'notes', slug] as const,
   },
   journal: {
     list: () => ['journal', 'list'] as const,
@@ -94,6 +99,7 @@ export const VAULT_DEPENDENT_ROOTS: readonly string[] = [
   'capture',
   'projects',
   'todos',
+  'areas',
   'journal',
   'modules',
   /* Conversations live as files in the vault (`.secondbrain/chats/`): filing a

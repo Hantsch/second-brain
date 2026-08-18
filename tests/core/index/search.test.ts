@@ -55,6 +55,20 @@ describe('SearchEngine: deutsche Woerter', () => {
   });
 });
 
+describe('SearchEngine: Bereiche', () => {
+  /* Areas (`areas/<slug>.md`, `docType: 'area'`) are indexed like every other
+     document — `SearchEngine.from` never branches on `docType`. This proves
+     it: a phrase that only occurs in the area fixture (`areas/gesundheit.md`)
+     is findable, and the hit carries `docType: 'area'` so the palette can
+     route it to the Notes screen (story 005, D10). */
+  it('findet eine Notiz in einem Bereich wie jedes andere Dokument', () => {
+    const hits = find({ text: 'Schlafprotokoll' });
+    const hit = hits.find((candidate) => candidate.path === 'areas/gesundheit.md');
+    expect(hit).toBeDefined();
+    expect(hit?.docType).toBe('area');
+  });
+});
+
 describe('SearchEngine: Snippet', () => {
   it('markiert die Fundstelle mit ** und bleibt in der Laenge', () => {
     const hit = find({ text: 'konzept' }).find(

@@ -19,6 +19,7 @@ import { GardenScreen } from './screens/garden/GardenScreen';
 import { InboxScreen } from './screens/inbox/InboxScreen';
 import { JournalScreen } from './screens/journal/JournalScreen';
 import { ModulesScreen } from './screens/modules/ModulesScreen';
+import { NotesScreen } from './screens/notes/NotesScreen';
 import { OnboardingScreen } from './screens/onboarding/OnboardingScreen';
 import { AllSessionsScreen } from './screens/projects/AllSessionsScreen';
 import { ProjectsScreen } from './screens/projects/ProjectsScreen';
@@ -147,6 +148,7 @@ export function App() {
         {/* Nested under Projects on purpose: the rail entry stays lit through
             the `NavLink` prefix match. */}
         <Route path="/projects/sessions" element={<AllSessionsScreen />} />
+        <Route path="/notes" element={<NotesScreen />} />
         <Route path="/journal" element={<JournalScreen />} />
         <Route path="/knowledge" element={<ModulesScreen />} />
         {/* Capture and ask live as overlays inside the shell; these addresses

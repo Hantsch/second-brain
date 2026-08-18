@@ -11,6 +11,7 @@
    nothing is written — there's a conflict. A checkmark that overwrites a
    change made elsewhere would be worse than a refusal. */
 
+import { areaSectionIn } from '@core/areas/sections';
 import { SECTION_FACTS, SECTION_TODOS, todoLine } from '@core/capture';
 import { parseTodos, scopeFor } from '@core/index';
 import { ensureDay } from '@core/journal';
@@ -139,16 +140,28 @@ async function reread(services: Services, path: string, ordinal: number, now: Da
   return found;
 }
 
-/** Where a new todo goes: into the project file, otherwise into today's day. */
+/**
+ * Where a new todo goes: into the project file, into the area file, or —
+ * without either — into today's day. `project` and `area` are exclusive
+ * destinations for one new line; naming both is a caller error, not a
+ * silent pick of one.
+ */
 async function targetFor(
   services: Services,
   project: string | null | undefined,
+  area: string | null | undefined,
   scope: Scope,
   now: Date,
 ): Promise<{ path: string; section: string }> {
-  const slug = typeof project === 'string' ? project.trim() : '';
-  if (slug.length > 0) {
-    const known = (services.index()?.projects?.() ?? []).find((entry) => entry.slug === slug);
+  const projectSlug = typeof project === 'string' ? project.trim() : '';
+  const areaSlug = typeof area === 'string' ? area.trim() : '';
+  if (projectSlug.length > 0 && areaSlug.length > 0) {
+    throw fail('invalid', 'project und area schließen sich aus: ein Todo hat nur ein Zuhause');
+  }
+  if (projectSlug.length > 0) {
+    const known = (services.index()?.projects?.() ?? []).find(
+      (entry) => entry.slug === projectSlug,
+    );
     if (known !== undefined) {
       if (known.scope !== scope) {
         throw fail('invalid', `dieses Projekt liegt im Bereich ${known.scope}`);
@@ -156,10 +169,19 @@ async function targetFor(
       return { path: known.path, section: SECTION_TODOS };
     }
     for (const where of SCOPES) {
-      const path = projectPath(where, slug);
+      const path = projectPath(where, projectSlug);
       if (await store(services).exists(path)) return { path, section: SECTION_TODOS };
     }
-    throw fail('not-found', `dieses Projekt gibt es nicht: ${slug}`);
+    throw fail('not-found', `dieses Projekt gibt es nicht: ${projectSlug}`);
+  }
+  if (areaSlug.length > 0) {
+    const known = requireLists(services)
+      .areas()
+      .find((entry) => entry.slug === areaSlug);
+    if (known === undefined) throw fail('not-found', `diesen Bereich gibt es nicht: ${areaSlug}`);
+    const doc = await store(services).read(known.path);
+    if (doc === null) throw fail('not-found', `diese Datei gibt es nicht: ${known.path}`);
+    return { path: known.path, section: areaSectionIn(doc.body, 'todos', docLanguage(services)) };
   }
   return { path: await ensureJournal(services, now), section: SECTION_FACTS };
 }
@@ -194,13 +216,14 @@ function scopeTag(path: string, frontmatter: Record<string, unknown>, wanted: Sc
 
 export function todoHandlers(services: Services): HandlerMap {
   return defineHandlers({
-    'todos:list': ({ scope, project, open, dueBefore }) =>
+    'todos:list': ({ scope, project, area, open, dueBefore }) =>
       requireLists(services)
         .todos()
         .filter(
           (todo) =>
             (scope === undefined || todo.scope === scope) &&
             (project === undefined || todo.project === project) &&
+            (area === undefined || todo.area === area) &&
             (open === undefined || (open ? todo.state === 'open' : todo.state === 'done')) &&
             (dueBefore === undefined || (todo.due !== null && todo.due < dueBefore)),
         ),
@@ -216,7 +239,7 @@ export function todoHandlers(services: Services): HandlerMap {
       return reread(services, found.todo.path, found.ordinal, now);
     },
 
-    'todos:create': async ({ text, scope, project, due, priority = 2 }) => {
+    'todos:create': async ({ text, scope, project, area, due, priority = 2 }) => {
       const body = typeof text === 'string' ? text.replace(/\s+/g, ' ').trim() : '';
       if (body.length === 0) throw fail('invalid', 'text: darf nicht leer sein');
       if (scope !== 'work' && scope !== 'private') {
@@ -230,7 +253,7 @@ export function todoHandlers(services: Services): HandlerMap {
         throw fail('invalid', 'priority: erwartet 1, 2 oder 3');
       }
       const now = new Date();
-      const target = await targetFor(services, project, scope, now);
+      const target = await targetFor(services, project, area, scope, now);
       const doc = await store(services).read(target.path);
       if (doc === null) throw fail('not-found', `diese Datei gibt es nicht: ${target.path}`);
       const tag = scopeTag(target.path, doc.frontmatter, scope);

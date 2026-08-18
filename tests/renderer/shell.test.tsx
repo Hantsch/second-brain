@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-/* Die Hülle muss stehen, bevor irgendein Screen ausgebaut wird: sieben Ziele in
+/* Die Hülle muss stehen, bevor irgendein Screen ausgebaut wird: acht Ziele in
    der Rail, Tastaturwege, die Adressen von Erfassen und Fragen, und keine
    A11y-Verstöße. */
 
@@ -152,16 +152,16 @@ describe('AppShell', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Dashboard' })).toBeTruthy();
   });
 
-  it('führt in sieben Screens, jeder mit aria-label', async () => {
+  it('führt in acht Screens, jeder mit aria-label', async () => {
     renderApp();
     const nav = await screen.findByRole('navigation', { name: 'Hauptnavigation' });
     const links = nav.querySelectorAll('a');
     expect(links.length).toBe(SCREENS.length);
-    /* Sieben Screens, jeder mit Ziffer (1, 3, 5, 6, 7, 9, 0). Frei sind die 8
-       („Quellen" ist ein Tab unter „Wissen") sowie die 2 und die 4 (Erfassen
-       und Fragen sind Overlays, keine Screens). „Agents" ist seit story 008
-       kein Rail-Eintrag mehr: die Sitzungen hängen unter „Projekte". */
-    expect(SCREENS.length).toBe(7);
+    /* Acht Screens, jeder mit Ziffer (1, 3, 4, 5, 6, 7, 9, 0). Frei sind die 8
+       („Quellen" ist ein Tab unter „Wissen") sowie die 2 (Erfassen ist ein
+       Overlay, kein Screen). „Agents" ist seit story 008 kein Rail-Eintrag
+       mehr: die Sitzungen hängen unter „Projekte". */
+    expect(SCREENS.length).toBe(8);
     for (const link of links) {
       expect(link.getAttribute('aria-label')?.length ?? 0).toBeGreaterThan(0);
     }
@@ -192,13 +192,14 @@ describe('AppShell', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Einstellungen' })).toBeTruthy();
   });
 
-  /* Die 2 und die 4 gehörten Erfassen und Fragen. Sie bleiben unbelegt, statt
+  /* Die 2 gehörte Erfassen, jetzt ein Overlay statt eines Screens; die 8 ist
+     „Quellen", ein Tab unter „Wissen". Beide bleiben unbelegt, statt
      nachzurücken: umnummeriert wird die Rail später im Stück, nicht hier.
      Eine Ziffer, die „irgendwohin" springt, wäre schlimmer als eine tote. */
-  it('lässt die 2, die 4 und die 8 unbelegt, statt irgendwohin zu springen', async () => {
+  it('lässt die 2 und die 8 unbelegt, statt irgendwohin zu springen', async () => {
     renderApp();
     await screen.findByRole('heading', { level: 1, name: 'Dashboard' });
-    for (const digit of ['2', '4', '8']) {
+    for (const digit of ['2', '8']) {
       expect(screenByHotkey(digit), `Ziffer ${digit}`).toBeUndefined();
       await userEvent.keyboard(digit);
       expect(screen.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeTruthy();

@@ -33,6 +33,20 @@ export function useProjectTodos(slug: string | null): UseQueryResult<Todo[]> {
   });
 }
 
+/**
+ * An area's todos, in file order. `slug` is `null` while the area's
+ * collapsible section is closed — same gate as `useAreaNotes`, so a
+ * collapsed section never fetches anything for it.
+ */
+export function useAreaTodos(slug: string | null): UseQueryResult<Todo[]> {
+  const ready = useVaultReady();
+  return useQuery({
+    queryKey: qk.todos.area(slug ?? ''),
+    queryFn: () => api.todos.list({ area: slug ?? '' }),
+    enabled: ready && slug !== null && slug.length > 0,
+  });
+}
+
 function refresh(client: QueryClient): void {
   void client.invalidateQueries({ queryKey: ['todos'] });
   /* Project counts and `lastTouch` depend on the todos. */

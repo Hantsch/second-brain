@@ -213,6 +213,14 @@ export const enScreens = {
   'screen.journal.empty.action': 'Start the day',
   /* The texts of the screen itself live in `en-journal.ts`. */
 
+  'screen.notes.overline': 'Thoughts on their own',
+  'screen.notes.title': 'Notes',
+  'screen.notes.empty.title': 'No note in the vault yet',
+  'screen.notes.empty.body':
+    'A note is a thought that stands on its own — no area, no project needed first. Write the first one and an area appears automatically.',
+  'screen.notes.empty.action': 'Write your first note',
+  /* The texts of the screen itself live in `en-notes.ts`. */
+
   'screen.knowledge.overline': 'Modules and sources',
   'screen.knowledge.title': 'Knowledge',
   'screen.knowledge.empty.title': 'No knowledge module in the vault yet',

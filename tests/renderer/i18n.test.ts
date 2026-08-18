@@ -91,6 +91,7 @@ describe('i18n', () => {
       'ask',
       'projects',
       'journal',
+      'notes',
       'knowledge',
       'sources',
       'garden',

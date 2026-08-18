@@ -1,0 +1,7 @@
+# These two directories are read by string logic that assumes bare `\n`
+# newlines (frontmatter splitting, section/heading regexes with `$` anchors).
+# Without this, `core.autocrlf=true` on Windows silently reintroduces CRLF the
+# next time git touches them and a batch of core/journal/wiki tests goes red
+# for a reason that has nothing to do with the code under test (story 005).
+tests/core/vault/** text eol=lf
+tests/fixtures/vault/** text eol=lf

@@ -8,6 +8,7 @@
 
 import type { IndexStats, WriteRequest } from '@shared/ipc';
 import type {
+  Area,
   DumpItem,
   JournalDay,
   KnowledgeModule,
@@ -78,6 +79,7 @@ export type IndexProgress = (done: number, total: number) => void;
  */
 export interface IndexListsLike {
   projects(): readonly Project[];
+  areas(): readonly Area[];
   todos(): readonly Todo[];
   pages(): readonly WikiPage[];
   sources(): readonly RawSource[];

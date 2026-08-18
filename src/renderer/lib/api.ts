@@ -80,6 +80,13 @@ export const api = {
     update: (request: IpcRequest<'todos:update'>) => call('todos:update', request),
     reorder: (request: IpcRequest<'todos:reorder'>) => call('todos:reorder', request),
   },
+  areas: {
+    list: () => call('areas:list'),
+    notes: (slug: string) => call('areas:notes', { slug }),
+    createNote: (request: IpcRequest<'areas:createNote'>) => call('areas:createNote', request),
+    create: (title: string) => call('areas:create', { title }),
+    moveNote: (request: IpcRequest<'areas:moveNote'>) => call('areas:moveNote', request),
+  },
   journal: {
     list: (limit?: number) => call('journal:list', limit === undefined ? {} : { limit }),
     get: (date: string) => call('journal:get', { date }),

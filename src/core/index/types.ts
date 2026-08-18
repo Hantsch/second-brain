@@ -7,7 +7,7 @@
  */
 
 import type { AsPlainObject } from 'minisearch';
-import type { DocType, Project, RawSource, Scope, Todo, WikiPage } from '@shared/types';
+import type { Area, DocType, Project, RawSource, Scope, Todo, WikiPage } from '@shared/types';
 
 /**
  * Eine indizierte Markdown-Datei.
@@ -73,6 +73,7 @@ export interface VaultIndex {
   docs: IndexedDoc[];
   todos: Todo[];
   projects: Project[];
+  areas: Area[];
   pages: WikiPage[];
   sources: RawSource[];
   /** Modul-Slug → Seitenzahlen. */
@@ -134,6 +135,7 @@ export function emptyIndex(builtAt = new Date().toISOString()): VaultIndex {
     docs: [],
     todos: [],
     projects: [],
+    areas: [],
     pages: [],
     sources: [],
     counts: new Map(),

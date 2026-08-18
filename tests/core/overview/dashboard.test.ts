@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { dashboardData, journalStreak, moodTrend, staleProjects } from '@core/overview';
 import { deriveJournalDays } from '@core/index/journal';
+import { makeDoc } from '../index/fixtures';
 import {
   NOW,
   TODAY,
@@ -84,6 +85,21 @@ describe('dashboardData — Todos', () => {
     ]);
     const data = dashboardData(index, [], LIMITS, TODAY, undefined, { todoLimit: 2 });
     expect(data.todos.work).toHaveLength(2);
+  });
+
+  it('zaehlt auch die Todos eines Bereichs mit — kein Projekt, aber ein Slug', () => {
+    const areaDoc = makeDoc({
+      path: 'areas/gesundheit.md',
+      docType: 'area',
+      title: 'Gesundheit',
+      frontmatter: { type: 'area', title: 'Gesundheit', scope: 'work' },
+      body: todoBody('- [ ] Zahnarzttermin holen'),
+    });
+    const index = indexFrom([areaDoc]);
+    const data = dashboardData(index, [], LIMITS, TODAY);
+
+    expect(data.todos.work.map((todo) => todo.text)).toEqual(['Zahnarzttermin holen']);
+    expect(data.todos.work[0]).toMatchObject({ area: 'gesundheit', project: null });
   });
 });
 

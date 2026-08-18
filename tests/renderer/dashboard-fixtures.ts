@@ -89,6 +89,7 @@ function todo(overrides: Partial<Todo> & Pick<Todo, 'id' | 'text' | 'scope'>): T
     line: 12,
     project: 'nyota-auth0-migration',
     projectTitle: 'Nyota Auth0 Migration',
+    area: null,
     due: null,
     waitingFor: null,
     neededBy: null,

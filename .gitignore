@@ -12,6 +12,10 @@ coverage/
 
 # Nie ins Repo: echte Second-Brain-Inhalte und Schlüssel
 vault/
+# Aber die beiden Test-Bestände heissen selbst "vault" und muessen mit ins Repo,
+# sonst fehlen sie jedem frischen Checkout (siehe story 005, Decisions).
+!tests/core/vault/
+!tests/fixtures/vault/
 *.local
 .env
 .env.*

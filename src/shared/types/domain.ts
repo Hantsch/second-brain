@@ -91,6 +91,8 @@ export interface Todo {
   /** Projekt-Slug, wenn das Todo in einer Projektdatei steht. */
   project: string | null;
   projectTitle: string | null;
+  /** Bereichs-Slug, wenn das Todo in einer `areas/<slug>.md`-Datei steht. */
+  area: string | null;
   due: string | null;
   /** Auf wen gewartet wird, falls `@wait:` gesetzt ist. */
   waitingFor: string | null;
@@ -103,6 +105,58 @@ export interface Todo {
   doneAt: string | null;
   /** Fällig in Tagen; negativ = überfällig; null = ohne Datum. */
   dueInDays: number | null;
+}
+
+/**
+ * One entry under the notes section of an area file, as it stands there:
+ * `### YYYY-MM-DD` plus the text below it.
+ *
+ * The index carries the entry, not its body — `.secondbrain/index/index.json`
+ * must not grow into a copy of the vault. The full text comes from reading the
+ * file when a section is opened.
+ */
+export interface AreaNote {
+  /** Date from the `###` heading; null when the heading names no date. */
+  day: string | null;
+  /**
+   * The heading as it stands in the file, null for text that sits directly under
+   * the notes section without one. Kept so that a hand-written heading isn't
+   * lost on the way to the screen.
+   */
+  heading: string | null;
+  /**
+   * 1-based line in the file: the entry's heading, or its first line of text.
+   * Also what names the entry when it is moved (`areas:moveNote`).
+   */
+  line: number;
+  /**
+   * First paragraph of the entry, for lists and cards.
+   *
+   * Two channels fill this field, and they mean different things by it:
+   * `areas:list` puts the preview here (folded to one line, markup dropped,
+   * shortened), `areas:notes` the entry itself — character for character as it
+   * stands in the file, because that is where the text of an expanded section
+   * comes from.
+   */
+  excerpt: string;
+}
+
+/**
+ * An area (`areas/<slug>.md`): an ongoing responsibility with no end — the home
+ * for thoughts that belong to neither a project nor a day.
+ */
+export interface Area {
+  path: string;
+  /** File name without extension, the same slug `areaPath()` builds from. */
+  slug: string;
+  title: string;
+  scope: Scope;
+  /** sha256 of the file — what a write into this area is guarded against. */
+  hash: string;
+  noteCount: number;
+  openTodoCount: number;
+  /** Newest first; entries without a parsable date keep file order at the end. */
+  notes: AreaNote[];
 }
 
 export type CoachMode =
