@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { de } from '@renderer/i18n/de';
 import { en } from '@renderer/i18n/en';
 import { setLanguage, t } from '@renderer/i18n';
+import { SCREENS } from '@renderer/lib/screens';
 
 const deKeys = Object.keys(de).sort();
 const enKeys = Object.keys(en).sort();
@@ -68,7 +69,18 @@ describe('i18n', () => {
     }
   });
 
-  it('deckt alle zehn Screens der Rail ab', () => {
+  /* Seit „Quellen" ein Tab unter „Wissen" ist, fallen die beiden Mengen
+     auseinander: die Rail führt nicht mehr zu den Quellen, deren Kopfpaar
+     `screen.sources.*` braucht der Tab aber weiter. */
+  it('deckt jeden Eintrag der Rail ab', () => {
+    for (const screen of SCREENS) {
+      expect(deKeys, `Rail-Eintrag ${screen.id}`).toContain(screen.labelKey);
+    }
+    expect(deKeys).not.toContain('rail.modules');
+    expect(deKeys).not.toContain('rail.sources');
+  });
+
+  it('deckt das Kopfpaar und den Leerzustand jedes Screens ab', () => {
     for (const screen of [
       'dashboard',
       'capture',
@@ -76,7 +88,7 @@ describe('i18n', () => {
       'ask',
       'projects',
       'journal',
-      'modules',
+      'knowledge',
       'sources',
       'garden',
       'settings',
@@ -84,7 +96,6 @@ describe('i18n', () => {
       for (const suffix of ['overline', 'title', 'empty.title', 'empty.body', 'empty.action']) {
         expect(deKeys).toContain(`screen.${screen}.${suffix}`);
       }
-      expect(deKeys).toContain(`rail.${screen}`);
     }
   });
 

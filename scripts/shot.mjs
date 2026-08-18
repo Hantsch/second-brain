@@ -61,6 +61,12 @@ const NARROW = { width: 1152, height: 720 };
  */
 const MAX_DASHBOARD_SCREENS = 2;
 
+/* Die Quellen haben seit Story 002 keine eigene Rail-Kachel mehr: die Werkbank
+   ist ein Reiter von Wissen und deshalb nur über die Adresse erreichbar.
+   `.sb-sourceinput` belegt, dass der Reiter stand und nicht nur der Rahmen. */
+const SOURCES_HASH = '/knowledge?tab=sources';
+const SOURCES_WAIT = '.sb-sourceinput';
+
 /* Die Frage, die im Demo-Vault schon beantwortet ist (`scripts/seed/chats.mjs`).
    Der Titel ist der Griff, mit dem die Aufnahme genau diese Runde findet. */
 const SEEDED_QUESTION = 'Wie lange leben unsere Access-Token?';
@@ -350,7 +356,7 @@ function createBrokenVault(dir) {
   return dir;
 }
 
-/** Die zehn Rail-Screens, breit — der Kern des Durchlaufs. */
+/** Die Rail-Screens, breit — der Kern des Durchlaufs. */
 async function shootScreens(session, shooter, screens, log) {
   const rows = [];
   for (const [position, screen] of screens.entries()) {
@@ -737,7 +743,7 @@ async function shootSourceJobs(session, shooter, log, skipped) {
   let running = null;
 
   try {
-    await gotoScreen(session.page, 'sources');
+    await gotoHash(session.page, SOURCES_HASH, { wait: SOURCES_WAIT });
     const waiting = await session.page.evaluate(() =>
       window.sb?.invoke('ingest:start', {
         kind: 'text',
@@ -782,7 +788,12 @@ async function shootSourceJobs(session, shooter, log, skipped) {
 /** Die offene Rohquelle ist der wichtigste Quellen-Zustand: Von hier muss die
     Verdichtung erreichbar sein, auch nachdem die App neu gestartet wurde. */
 async function shootSourceDetail(session, shooter, log, skipped) {
-  await gotoScreen(session.page, 'sources');
+  const ready = await gotoHash(session.page, SOURCES_HASH, { wait: SOURCES_WAIT });
+  if (!ready) {
+    /* Sonst hieße der Befund „Seed-Quelle fehlt", obwohl der Reiter gar nicht stand. */
+    skipped.push(`Quellendetail: ${SOURCES_WAIT} erschien nicht — der Reiter blieb aus`);
+    return;
+  }
   const row = session.page.getByRole('button', {
     name: /Details der Quelle Digital Gardening: ein Überblick öffnen/,
   });
@@ -815,7 +826,7 @@ async function shootSourceDetail(session, shooter, log, skipped) {
   await session.page.keyboard.press('Escape');
 }
 
-/** Zustände, die in der Adresse stehen: Modul-Detail und die Einstellungen-Tabs. */
+/** Zustände, die in der Adresse stehen: Modul-Detail, Quellen, Einstellungen-Tabs. */
 async function shootDeepStates(session, shooter, log, skipped) {
   for (const state of DEEP_STATES) {
     const ready = await gotoHash(session.page, state.hash, { wait: state.wait });
@@ -883,7 +894,7 @@ async function shootPageConflict(session, shooter, log, skipped) {
     return;
   }
   try {
-    await gotoHash(page, `/modules?m=identity-management&p=${CONFLICT_PAGE}`, { wait: '.sb-md' });
+    await gotoHash(page, `/knowledge?m=identity-management&p=${CONFLICT_PAGE}`, { wait: '.sb-md' });
     await page.getByRole('button', { name: 'Bearbeiten' }).click();
     await page.locator('#sb-page-draft').waitFor({ state: 'visible', timeout: 4000 });
     await page.locator('#sb-page-draft').click();
@@ -1098,7 +1109,7 @@ async function main() {
     await shootSourceDetail(session, shooter, log, skipped);
     await shootSourceJobs(session, shooter, log, skipped);
     await shootDeepStates(session, shooter, log, skipped);
-    if (options.screens.includes('modules')) {
+    if (options.screens.includes('knowledge')) {
       await shootPageConflict(session, shooter, log, skipped);
     }
     await shootRailFocus(session, shooter, log, skipped);

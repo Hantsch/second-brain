@@ -43,8 +43,7 @@ export const de = {
   'rail.ask': 'Fragen',
   'rail.projects': 'Projekte',
   'rail.journal': 'Tagebuch',
-  'rail.modules': 'Module',
-  'rail.sources': 'Quellen',
+  'rail.knowledge': 'Wissen',
   'rail.garden': 'Pflege',
   'rail.agents': 'Agents',
   'rail.settings': 'Einstellungen',
@@ -75,6 +74,7 @@ export const de = {
   'palette.group.screens': 'Bereiche',
   'palette.group.actions': 'Aktionen',
   'palette.group.search': 'Suche',
+  'palette.screen.sources': 'Quellen',
   'palette.action.capture': 'Gedanken erfassen',
   'palette.hint': 'Pfeiltasten wählen, Enter öffnet, Esc schließt',
 

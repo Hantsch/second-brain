@@ -342,10 +342,10 @@ describe('Ordnung der Befunde', () => {
   it('führt Pfade dorthin, wo sie in der App stehen', () => {
     expect(targetFor(PAGE_A)).toEqual({
       kind: 'route',
-      to: `/modules?m=${MODULE}&p=${encodeURIComponent(PAGE_A)}`,
+      to: `/knowledge?m=${MODULE}&p=${encodeURIComponent(PAGE_A)}`,
     });
     expect(targetFor('inbox/x.md')).toEqual({ kind: 'route', to: '/inbox' });
-    expect(targetFor('raw/web/x.md')).toEqual({ kind: 'route', to: '/sources' });
+    expect(targetFor('raw/web/x.md')).toEqual({ kind: 'route', to: '/knowledge?tab=sources' });
     /* Katalog und Chronik sind keine Wiki-Seiten: die Seitenansicht lüde sie nicht. */
     expect(targetFor(CATALOG)).toEqual({ kind: 'file', path: CATALOG });
   });

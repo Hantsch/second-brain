@@ -2,6 +2,10 @@
    Same key set as `de-wiki.ts` — a test compares both. */
 
 export const enWiki = {
+  // ── Knowledge: the screen's own tabs ──────────────────────────────────────
+  'knowledge.tab.modules': 'Modules',
+  'knowledge.tab.sources': 'Sources',
+
   // ── Modules: overview ─────────────────────────────────────────────────────
   'modules.count': '{count} modules',
   'modules.countOne': 'one module',
@@ -110,6 +114,7 @@ export const enWiki = {
 
   'modules.sourcesTab.empty':
     'No raw source condensed into this module yet. Sources come in through the “Sources” screen.',
+  'modules.sourcesTab.ingest': 'Take in a source for this module',
 
   // ── Sources: input ────────────────────────────────────────────────────────
   'sources.input.title': 'Take in a source',

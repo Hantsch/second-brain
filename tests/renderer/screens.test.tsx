@@ -8,19 +8,37 @@
 import { StrictMode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { HashRouter } from 'react-router-dom';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import axe from 'axe-core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { SettingsSnapshot, UiLanguage } from '@shared/types';
 import { App } from '@renderer/App';
 import type { SbBridge } from '@renderer/lib/bridge';
 import { mockBridge } from '@renderer/lib/mock-bridge';
 import * as fx from '@renderer/lib/mock-fixtures';
 import { setLanguage } from '@renderer/i18n';
 
-const invoke = vi.fn((channel: string, payload?: unknown) =>
-  (mockBridge.invoke as (c: string, p?: unknown) => Promise<unknown>)(channel, payload),
-);
+/* Die Oberfläche zieht ihre Sprache aus den Einstellungen: `App` überschreibt
+   beim Start, was `setLanguage` gesetzt hat. Ein Test, der auf Englisch prüft,
+   dreht deshalb hier — an der Quelle, die die Hülle wirklich liest. */
+let uiLanguage: UiLanguage = 'de';
+
+const invoke = vi.fn(async (channel: string, payload?: unknown) => {
+  const result = await (mockBridge.invoke as (c: string, p?: unknown) => Promise<unknown>)(
+    channel,
+    payload,
+  );
+  if (channel !== 'settings:get') return result;
+  const snapshot = result as SettingsSnapshot;
+  return {
+    ...snapshot,
+    app: { ...snapshot.app, uiLanguage },
+    vault: snapshot.vault
+      ? { ...snapshot.vault, languages: { ...snapshot.vault.languages, ui: uiLanguage } }
+      : null,
+  } satisfies SettingsSnapshot;
+});
 
 function renderAt(hash: string) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -49,6 +67,7 @@ async function expectNoViolations(container: HTMLElement): Promise<void> {
 }
 
 beforeEach(() => {
+  uiLanguage = 'de';
   setLanguage('de');
   document.documentElement.lang = 'de';
   invoke.mockClear();
@@ -221,10 +240,12 @@ describe('Tagebuch', () => {
   });
 });
 
-/* Module und Quellen sind gebaut: sie zeigen den Bestand, keinen Platzhalter. */
+/* Module und Quellen sind gebaut: sie zeigen den Bestand, keinen Platzhalter.
+   Beide hängen jetzt unter einem Screen — „Wissen" ist die Überschrift, die
+   Tabs sind der Weg. */
 describe('Wissen', () => {
   it('zeigt bei Modulen die Karte mit Zählungen statt eines Platzhalters', async () => {
-    await openScreen('#/modules', 'Module');
+    await openScreen('#/knowledge', 'Wissen');
     expect(await screen.findByText(fx.knowledgeModule.title)).toBeTruthy();
     expect(screen.getByText('3 Quellen · 4 Entitäten · 5 Konzepte')).toBeTruthy();
     expect(screen.queryByText('Noch nicht gebaut')).toBeNull();
@@ -232,13 +253,59 @@ describe('Wissen', () => {
   });
 
   it('zeigt bei Quellen den Bestand aus raw/', async () => {
-    await openScreen('#/sources', 'Quellen');
+    await openScreen('#/knowledge?tab=sources', 'Wissen');
     const sourceButtonName = 'Details der Quelle Your AI second brain is slowly rotting öffnen';
     expect(screen.queryByRole('button', { name: sourceButtonName })).toBeNull();
     await userEvent.click(await screen.findByLabelText('Erfolgreiche ausblenden'));
     expect(await screen.findByRole('button', { name: sourceButtonName })).toBeTruthy();
     expect(screen.queryByText('Noch nicht gebaut')).toBeNull();
     expect(screen.queryByText('Noch keine Rohquelle im Vault')).toBeNull();
+  });
+});
+
+/** Die Abfrage der aktuellen Adresse — als Objekt, damit die Reihenfolge der
+    Parameter nicht mitgeprüft wird, ihr Inhalt aber schon. */
+function addressQuery(): Record<string, string> {
+  return Object.fromEntries(new URLSearchParams(window.location.hash.split('?')[1] ?? ''));
+}
+
+/* Die alten Adressen stehen in Lesezeichen, in der Pflege und in Zitaten. Sie
+   müssen weiter ankommen — und zwar mit ihrer Abfrage: ein bloßes
+   `<Navigate to="/knowledge" />` würde sie wegwerfen, und jeder Tieflink in ein
+   Modul landete still in der Übersicht. */
+describe('Wissen: alte Adressen', () => {
+  it('leitet #/modules ohne Abfrage auf #/knowledge um', async () => {
+    await openScreen('#/modules', 'Wissen');
+    expect(window.location.hash).toBe('#/knowledge');
+    expect(await screen.findByText(fx.knowledgeModule.title)).toBeTruthy();
+  });
+
+  it('nimmt bei #/modules die ganze Abfrage mit', async () => {
+    const slug = fx.knowledgeModule.slug;
+    const page = fx.wikiPage.path;
+    await openScreen(
+      `#/modules?m=${slug}&tab=log&p=${encodeURIComponent(page)}`,
+      fx.knowledgeModule.title,
+    );
+
+    expect(window.location.hash.split('?')[0]).toBe('#/knowledge');
+    expect(addressQuery()).toEqual({ m: slug, tab: 'log', p: page });
+    /* Nicht nur die Adresse: das Protokoll des Moduls steht auch wirklich da. */
+    expect(screen.getByRole('tab', { name: 'Protokoll' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+  });
+
+  it('leitet #/sources auf den Quellen-Tab von Wissen um', async () => {
+    await openScreen('#/sources', 'Wissen');
+    expect(window.location.hash).toBe('#/knowledge?tab=sources');
+    expect(screen.getByRole('tab', { name: 'Quellen' }).getAttribute('aria-selected')).toBe('true');
+  });
+
+  it('behält bei #/sources eine mitgegebene Abfrage', async () => {
+    await openScreen('#/sources?into=identity-management', 'Wissen');
+    expect(window.location.hash.split('?')[0]).toBe('#/knowledge');
+    expect(addressQuery()).toEqual({ into: 'identity-management', tab: 'sources' });
   });
 });
 
@@ -250,6 +317,16 @@ describe('Einstellungen', () => {
   });
 });
 
+/** Öffnet die Palette über die Titelzeile und tippt die Suche ein. Gibt den
+    Dialog zurück, damit die Treffer darin gesucht werden — der Screen dahinter
+    ist weiter im Baum. */
+async function openPalette(query: string, trigger = /Befehlspalette öffnen/) {
+  await userEvent.click(screen.getByRole('button', { name: trigger }));
+  const dialog = await screen.findByRole('dialog');
+  await userEvent.type(within(dialog).getByRole('textbox'), query);
+  return dialog;
+}
+
 describe('Einstieg in die Befehlspalette', () => {
   it('steht sichtbar in der Titelzeile und öffnet sie per Klick', async () => {
     await openScreen('#/dashboard', 'Dashboard');
@@ -259,5 +336,52 @@ describe('Einstieg in die Befehlspalette', () => {
     expect(trigger.textContent).toContain('Springen, erfassen, suchen');
     await userEvent.click(trigger);
     expect(await screen.findByRole('dialog', { name: 'Befehle' })).toBeTruthy();
+  });
+
+  /* Quellen sind kein eigener Screen mehr, stehen also nicht mehr in SCREENS.
+     Ohne einen festen Eintrag wären sie aus der Palette verschwunden — und der
+     Eintrag muss auf dem Tab landen, nicht bloß auf dem Screen. */
+  it('führt „quel" auf den Quellen-Tab von Wissen', async () => {
+    await openScreen('#/dashboard', 'Dashboard');
+    const dialog = await openPalette('quel');
+
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Quellen' }));
+
+    await screen.findByRole('heading', { level: 1, name: 'Wissen' });
+    expect(window.location.hash).toBe('#/knowledge?tab=sources');
+    expect(screen.getByRole('tab', { name: 'Quellen' }).getAttribute('aria-selected')).toBe('true');
+  });
+
+  it('führt „wissen" per Enter auf den Modul-Tab von Wissen', async () => {
+    await openScreen('#/dashboard', 'Dashboard');
+    const dialog = await openPalette('wissen');
+
+    expect(within(dialog).getByRole('button', { name: 'Wissen' })).toBeTruthy();
+    await userEvent.keyboard('{Enter}');
+
+    await screen.findByRole('heading', { level: 1, name: 'Wissen' });
+    expect(window.location.hash).toBe('#/knowledge');
+    expect(screen.getByRole('tab', { name: 'Module' }).getAttribute('aria-selected')).toBe('true');
+  });
+
+  /* Dieselbe Suche auf Englisch: „know" und „sour" sind die Wörter, mit denen
+     die Bereiche dort gefunden werden. `beforeEach` setzt die Sprache für den
+     nächsten Test wieder auf Deutsch. */
+  it('findet auf Englisch „sour" als Quellen-Tab', async () => {
+    uiLanguage = 'en';
+    setLanguage('en');
+    document.documentElement.lang = 'en';
+    await openScreen('#/dashboard', 'Dashboard');
+
+    const knowledge = await openPalette('know', /Open the command palette/);
+    expect(within(knowledge).getByRole('button', { name: 'Knowledge' })).toBeTruthy();
+    await userEvent.keyboard('{Escape}');
+
+    const dialog = await openPalette('sour', /Open the command palette/);
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Sources' }));
+
+    await screen.findByRole('heading', { level: 1, name: 'Knowledge' });
+    expect(window.location.hash).toBe('#/knowledge?tab=sources');
+    expect(screen.getByRole('tab', { name: 'Sources' }).getAttribute('aria-selected')).toBe('true');
   });
 });

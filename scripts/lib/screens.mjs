@@ -18,8 +18,7 @@ export const SCREENS = [
   'ask',
   'projects',
   'journal',
-  'modules',
-  'sources',
+  'knowledge',
   'garden',
   'settings',
 ];
@@ -54,8 +53,9 @@ export const NARROW_DEEP_STATES = ['project-detail', 'project-todos'];
 
 /**
  * Zustände, die in der Adresse stehen und deshalb ohne Klickweg erreichbar sind:
- * Modul-Detail und die Tabs der Einstellungen. Sie waren bisher in keiner
- * Aufnahme und in keinem axe-Lauf — ein halber Screen ist ein ungeprüfter Screen.
+ * Modul-Detail, der Quellen-Reiter und die Tabs der Einstellungen. Sie waren
+ * bisher in keiner Aufnahme und in keinem axe-Lauf — ein halber Screen ist ein
+ * ungeprüfter Screen.
  *
  * `wait` ist ein Selektor, der belegt, dass der Zustand wirklich stand: sonst
  * fotografiert das Skript den Skelettzustand und nennt ihn Ergebnis.
@@ -75,11 +75,20 @@ export const DEEP_STATES = [
   { id: 'project-todos', hash: '/projects?tab=todos', wait: '.sb-todogroup' },
   {
     id: 'module-page',
-    hash: '/modules?m=identity-management&p=modules/identity-management/wiki/concepts/token-lebensdauer.md',
+    hash: '/knowledge?m=identity-management&p=modules/identity-management/wiki/concepts/token-lebensdauer.md',
     wait: '.sb-md',
   },
-  { id: 'module-graph', hash: '/modules?m=identity-management&tab=graph', wait: '.sb-graph' },
-  { id: 'module-log', hash: '/modules?m=identity-management&tab=log', wait: '.sb-log-entry' },
+  { id: 'module-graph', hash: '/knowledge?m=identity-management&tab=graph', wait: '.sb-graph' },
+  { id: 'module-log', hash: '/knowledge?m=identity-management&tab=log', wait: '.sb-log-entry' },
+  {
+    /* Story 002: Die Quellen sind ein Reiter von Wissen und haben keine eigene
+       Rail-Kachel mehr — ohne diesen Zustand wäre die Werkbank in keinem Bild.
+       `.sb-sourceinput` steht in jedem Zustand des Reiters (Liste leer, Liste
+       voll, Fehler) und belegt damit, dass der Reiter wirklich stand. */
+    id: 'knowledge-sources',
+    hash: '/knowledge?tab=sources',
+    wait: '.sb-sourceinput',
+  },
   { id: 'settings-languages', hash: '/settings?tab=languages', wait: '.sb-panel' },
   { id: 'settings-models', hash: '/settings?tab=models', wait: '.sb-panel' },
   { id: 'settings-behavior', hash: '/settings?tab=behavior', wait: '.sb-panel' },

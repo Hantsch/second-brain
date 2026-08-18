@@ -227,12 +227,12 @@ export const deScreens = {
   'screen.journal.empty.action': 'Tag beginnen',
   /* Die Texte des Screens selbst liegen in `de-journal.ts`. */
 
-  'screen.modules.overline': 'Wissen',
-  'screen.modules.title': 'Module',
-  'screen.modules.empty.title': 'Noch kein Wissens-Modul im Vault',
-  'screen.modules.empty.body':
+  'screen.knowledge.overline': 'Module und Quellen',
+  'screen.knowledge.title': 'Wissen',
+  'screen.knowledge.empty.title': 'Noch kein Wissens-Modul im Vault',
+  'screen.knowledge.empty.body':
     'Ein Modul ist ein kleines Wiki: Quellen, Begriffe und Zusammenhänge zu einem Thema, jede Aussage mit Beleg.',
-  'screen.modules.empty.action': 'Modul anlegen',
+  'screen.knowledge.empty.action': 'Modul anlegen',
   'screen.sources.overline': 'Aufnehmen',
   'screen.sources.title': 'Quellen',
   'screen.sources.empty.title': 'Noch keine Rohquelle im Vault',

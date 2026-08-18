@@ -190,6 +190,21 @@ async function measureDialogClose(page, open) {
   };
 }
 
+/* Zu welchem Rail-Screen ein Tiefzustand gehört. Das Präfix der Kennung nennt
+   ihn, aber nicht immer unter seinem Namen: `module-*` steht seit Story 002 unter
+   „knowledge". Ein Präfix ohne Rail-Screen (`agents` hat keine Kennung in SCREENS)
+   wird immer geprüft — lieber einmal zu viel als still ausgelassen. */
+const DEEP_STATE_SCREENS = {
+  project: 'projects',
+  module: 'knowledge',
+  knowledge: 'knowledge',
+  settings: 'settings',
+};
+
+function deepStateScreen(id) {
+  return DEEP_STATE_SCREENS[id.split('-')[0]] ?? null;
+}
+
 /**
  * Drei stellvertretende Dialoge — genug, weil die Fläche überall dieselbe
  * Klasse trägt: kommt sie zurück, betrifft der Fund alle gleichzeitig, nicht
@@ -286,12 +301,13 @@ async function main() {
       console.log(`  ${screen.padEnd(10)} ${summary}`);
     }
 
-    /* Zustände hinter einer Adresse: Modul-Detail und die Einstellungen-Tabs.
-       Ein Screen, dessen Hälfte nie geprüft wurde, ist nicht geprüft. Bei
-       eingeschränkter Auswahl bleiben sie weg. */
+    /* Zustände hinter einer Adresse: Modul-Detail, Quellen-Reiter und die
+       Einstellungen-Tabs. Ein Screen, dessen Hälfte nie geprüft wurde, ist nicht
+       geprüft. Bei eingeschränkter Auswahl bleiben sie weg. */
     const wanted = new Set(options.screens);
     for (const state of DEEP_STATES) {
-      if (!wanted.has(state.id.split('-')[0] === 'module' ? 'modules' : 'settings')) continue;
+      const owner = deepStateScreen(state.id);
+      if (owner !== null && !wanted.has(owner)) continue;
       const ready = await gotoHash(session.page, state.hash, { wait: state.wait });
       await injectAxe(session.page);
       const result = await runAxe(session.page);

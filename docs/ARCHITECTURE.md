@@ -106,7 +106,8 @@ The last two areas. Five decisions you won't find elsewhere in the code:
 ## Screens
 
 One folder per screen under `src/renderer/screens/`. The rail on the left leads in
-this order; every screen has a keyboard shortcut.
+this order. Most screens have a digit shortcut, but not all: `agents` is reachable
+by click and command palette only.
 
 | Screen      | Purpose                                                                  | Hotkey                          |
 | ----------- | ------------------------------------------------------------------------ | ------------------------------- |
@@ -116,10 +117,13 @@ this order; every screen has a keyboard shortcut.
 | `ask`       | Questions to the Second Brain, answers with evidence                     | `4`                             |
 | `projects`  | List + detail: status, next step, todos, waiting-on                      | `5`                             |
 | `journal`   | Daily entry and coaching dialog                                          | `6`                             |
-| `modules`   | Knowledge modules: pages, graph, sources                                 | `7`                             |
-| `sources`   | Ingest sources (YouTube, file, URL) and watch progress                   | `8`                             |
+| `knowledge` | Knowledge modules (pages, graph) and the sources tab (ingest, progress)  | `7`                             |
 | `garden`    | Maintenance: findings, health, one-click fixes                           | `9`                             |
 | `settings`  | Languages, provider/models, task routing, vault, behavior                | `0`                             |
+
+`8` is currently unassigned: sources became a tab under `knowledge`. The rail gets
+renumbered wholesale by the later navigation stories, so there is no interim churn
+here.
 
 Plus: `onboarding` (no vault open), `quick-capture` (its own frameless window).
 

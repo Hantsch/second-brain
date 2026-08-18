@@ -110,6 +110,17 @@
   min-width: 0;
 }
 
+/* The sources tab of a module: list (or empty state) and, below it, the way
+   to the workbench. `align-items` keeps the button at its own width instead
+   of stretching it across the column. */
+.sb-modulesources {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
 .sb-modulepages {
   display: grid;
   grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);

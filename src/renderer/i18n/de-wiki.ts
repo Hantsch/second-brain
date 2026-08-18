@@ -8,6 +8,10 @@
    heading in the vault. */
 
 export const deWiki = {
+  // ── Knowledge: the screen's own tabs ───────────────────────────────────────
+  'knowledge.tab.modules': 'Module',
+  'knowledge.tab.sources': 'Quellen',
+
   // ── Modules: overview ──────────────────────────────────────────────────────
   'modules.count': '{count} Module',
   'modules.countOne': 'ein Modul',
@@ -116,6 +120,7 @@ export const deWiki = {
 
   'modules.sourcesTab.empty':
     'Für dieses Modul ist noch keine Rohquelle verdichtet. Quellen kommen über den Screen „Quellen" herein.',
+  'modules.sourcesTab.ingest': 'Quelle in dieses Modul aufnehmen',
 
   // ── Quellen: Eingang ──────────────────────────────────────────────────────
   'sources.input.title': 'Quelle aufnehmen',

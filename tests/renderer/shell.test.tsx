@@ -12,7 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from '@renderer/App';
 import type { SbBridge } from '@renderer/lib/bridge';
 import { mockBridge } from '@renderer/lib/mock-bridge';
-import { SCREENS } from '@renderer/lib/screens';
+import { SCREENS, screenByHotkey } from '@renderer/lib/screens';
 import { setLanguage } from '@renderer/i18n';
 
 /* `window.sb` wird ausdrücklich gemockt: die Oberfläche darf im Test nichts
@@ -58,13 +58,14 @@ describe('AppShell', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Dashboard' })).toBeTruthy();
   });
 
-  it('führt in elf Screens, jeder mit aria-label', async () => {
+  it('führt in zehn Screens, jeder mit aria-label', async () => {
     renderApp();
     const nav = await screen.findByRole('navigation', { name: 'Hauptnavigation' });
     const links = nav.querySelectorAll('a');
     expect(links.length).toBe(SCREENS.length);
-    /* Zehn Screens mit Ziffer 1–0, dazu „Agents" ohne — story 001. */
-    expect(SCREENS.length).toBe(11);
+    /* Neun Screens mit Ziffer (1–7, 9, 0), dazu „Agents" ohne — story 001. Die
+       8 ist frei, seit „Quellen" ein Tab unter „Wissen" ist. */
+    expect(SCREENS.length).toBe(10);
     for (const link of links) {
       expect(link.getAttribute('aria-label')?.length ?? 0).toBeGreaterThan(0);
     }
@@ -83,8 +84,18 @@ describe('AppShell', () => {
     await screen.findByRole('heading', { level: 1, name: 'Dashboard' });
     await userEvent.keyboard('5');
     expect(await screen.findByRole('heading', { level: 1, name: 'Projekte' })).toBeTruthy();
+    await userEvent.keyboard('7');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Wissen' })).toBeTruthy();
     await userEvent.keyboard('0');
     expect(await screen.findByRole('heading', { level: 1, name: 'Einstellungen' })).toBeTruthy();
+  });
+
+  it('lässt die 8 unbelegt, statt irgendwohin zu springen', async () => {
+    renderApp();
+    await screen.findByRole('heading', { level: 1, name: 'Dashboard' });
+    expect(screenByHotkey('8')).toBeUndefined();
+    await userEvent.keyboard('8');
+    expect(screen.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeTruthy();
   });
 
   it('öffnet die Befehlspalette mit Ctrl+K und schließt sie mit Esc', async () => {

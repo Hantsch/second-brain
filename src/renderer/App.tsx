@@ -23,7 +23,6 @@ import { ModulesScreen } from './screens/modules/ModulesScreen';
 import { OnboardingScreen } from './screens/onboarding/OnboardingScreen';
 import { ProjectsScreen } from './screens/projects/ProjectsScreen';
 import { SettingsScreen } from './screens/settings/SettingsScreen';
-import { SourcesScreen } from './screens/sources/SourcesScreen';
 
 /** Hält die Oberflächensprache an den Einstellungen. */
 function useSettings() {
@@ -33,6 +32,20 @@ function useSettings() {
     setLanguage(data.vault?.languages.ui ?? data.app.uiLanguage);
   }, [data]);
   return data;
+}
+
+/** Redirect onto the knowledge screen that keeps the query string.
+
+    `<Navigate to="/knowledge" />` would drop it, and every deep link into a
+    module (`#/modules?m=…&tab=log&p=…`) would silently land on the overview.
+    Without `tab` the search is carried over verbatim; with it the old
+    `/sources` route is merged into the knowledge screen's sources tab. */
+function KnowledgeRedirect({ tab }: { tab?: string }) {
+  const { search } = useLocation();
+  if (tab === undefined) return <Navigate to={`/knowledge${search}`} replace />;
+  const params = new URLSearchParams(search);
+  params.set('tab', tab);
+  return <Navigate to={`/knowledge?${params.toString()}`} replace />;
 }
 
 export function App() {
@@ -84,8 +97,10 @@ export function App() {
         <Route path="/ask" element={<AskScreen />} />
         <Route path="/projects" element={<ProjectsScreen />} />
         <Route path="/journal" element={<JournalScreen />} />
-        <Route path="/modules" element={<ModulesScreen />} />
-        <Route path="/sources" element={<SourcesScreen />} />
+        <Route path="/knowledge" element={<ModulesScreen />} />
+        {/* Old routes, kept so existing deep links and bookmarks still land. */}
+        <Route path="/modules" element={<KnowledgeRedirect />} />
+        <Route path="/sources" element={<KnowledgeRedirect tab="sources" />} />
         <Route path="/garden" element={<GardenScreen />} />
         <Route path="/agents" element={<AgentsScreen />} />
         <Route path="/settings" element={<SettingsScreen />} />

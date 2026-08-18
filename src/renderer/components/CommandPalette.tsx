@@ -39,13 +39,27 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
   const [active, setActive] = useState(0);
 
   const commands = useMemo<CommandDef[]>(() => {
-    const screens: CommandDef[] = SCREENS.map((screen) => ({
-      id: `screen:${screen.id}`,
+    /* Sources stopped being a screen of its own and became a tab under
+       knowledge, so it is no longer in SCREENS. It is still a destination, not
+       an action — hence the "screens" group, listed right below the screen that
+       now hosts it. */
+    const sources: CommandDef = {
+      id: 'screen:knowledge-sources',
       group: 'screens',
-      labelKey: screen.labelKey,
-      icon: screen.icon,
-      run: () => void navigate(screen.path),
-    }));
+      labelKey: 'palette.screen.sources',
+      icon: 'download',
+      run: () => void navigate('/knowledge?tab=sources'),
+    };
+    const screens: CommandDef[] = SCREENS.flatMap((screen) => {
+      const entry: CommandDef = {
+        id: `screen:${screen.id}`,
+        group: 'screens',
+        labelKey: screen.labelKey,
+        icon: screen.icon,
+        run: () => void navigate(screen.path),
+      };
+      return screen.id === 'knowledge' ? [entry, sources] : [entry];
+    });
     const actions: CommandDef[] = [
       {
         id: 'action:capture',

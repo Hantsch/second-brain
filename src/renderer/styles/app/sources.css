@@ -5,9 +5,25 @@
 
 /* ── Sources: input ─────────────────────────────────────────────────────── */
 
+/* The zone is the body of the sources tab, not a bare wrapper: it sits in the
+   screen column and stacks the panels itself, with the same gap the screen
+   column uses. Without that, the panels below the header would collapse
+   against each other.
+
+   It also has to reach the bottom of the window. As a flex item it would
+   otherwise end with its last panel, and a file dropped into the empty space
+   below — the obvious place to aim at in a fresh vault — would land nowhere.
+   Only a screen that actually carries a zone is stretched; every other screen
+   keeps its content height. */
+.sb-screen:has(> .sb-dropzone) {
+  min-height: 100%;
+}
 .sb-dropzone {
   position: relative;
-  min-height: 100%;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
 }
 .sb-dropzone-veil {
   position: absolute;

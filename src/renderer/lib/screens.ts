@@ -8,8 +8,7 @@ export type ScreenId =
   | 'ask'
   | 'projects'
   | 'journal'
-  | 'modules'
-  | 'sources'
+  | 'knowledge'
   | 'garden'
   | 'agents'
   | 'settings';
@@ -21,9 +20,8 @@ export interface ScreenDef {
   /** Kebab-case-Name für das Icon-Atom. */
   icon: string;
   labelKey: string;
-  /** Ziffer, die diesen Screen öffnet. Fehlt sie, ist der Screen nur per
-   *  Klick und Befehlspalette erreichbar (z. B. "agents" — die Ziffern 1–0
-   *  sind an die zehn ursprünglichen Screens vergeben). */
+  /** Digit that opens this screen. Without one the screen is reachable by
+   *  click and command palette only (e.g. "agents"). */
   hotkey?: string;
 }
 
@@ -40,12 +38,14 @@ export const SCREENS: readonly ScreenDef[] = [
   { id: 'ask', path: '/ask', icon: 'message-square', labelKey: 'rail.ask', hotkey: '4' },
   { id: 'projects', path: '/projects', icon: 'folder', labelKey: 'rail.projects', hotkey: '5' },
   { id: 'journal', path: '/journal', icon: 'notebook-pen', labelKey: 'rail.journal', hotkey: '6' },
-  { id: 'modules', path: '/modules', icon: 'network', labelKey: 'rail.modules', hotkey: '7' },
-  { id: 'sources', path: '/sources', icon: 'download', labelKey: 'rail.sources', hotkey: '8' },
+  { id: 'knowledge', path: '/knowledge', icon: 'network', labelKey: 'rail.knowledge', hotkey: '7' },
   { id: 'garden', path: '/garden', icon: 'sprout', labelKey: 'rail.garden', hotkey: '9' },
   { id: 'settings', path: '/settings', icon: 'settings', labelKey: 'rail.settings', hotkey: '0' },
-  /* No hotkey: 1–0 are taken by the ten screens above. Reachable by click
-     and command palette only (story 001, resolved Open Questions). */
+  /* Digits in use: 1–7, 9, 0. `8` is deliberately unassigned since sources
+     became a tab under knowledge — the rail gets renumbered wholesale by the
+     later navigation stories, so no interim churn here.
+     No hotkey for "agents": reachable by click and command palette only
+     (story 001, resolved Open Questions). */
   { id: 'agents', path: '/agents', icon: 'workflow', labelKey: 'rail.agents' },
 ];
 

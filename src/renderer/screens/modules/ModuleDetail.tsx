@@ -1,6 +1,6 @@
 /* Ein Modul von innen: Seiten, Graph, Quellen, Chronik.
 
-   Der Zustand steht in der Adresse (`#/modules?m=<slug>&p=<pfad>&tab=graph`).
+   Der Zustand steht in der Adresse (`#/knowledge?m=<slug>&p=<pfad>&tab=graph`).
    Damit ist jede Seite verlinkbar — aus dem Graphen, aus der Chronik, aus einem
    Beleg —, und der Rückweg des Browsers funktioniert.
 
@@ -9,6 +9,7 @@
    der Anzeige als fehlend markiert und der Klick tut nichts. */
 
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { KnowledgeModule, WikiPage, WikiPageType } from '@shared/types';
 import { Badge } from '../../atoms/Badge';
 import { Button } from '../../atoms/Button';
@@ -72,6 +73,7 @@ function countOf(pages: readonly WikiPage[], type: WikiPageType): number {
 export function ModuleDetail({ module, tab, page, onTab, onPage, onBack }: ModuleDetailProps) {
   const t = useT();
   const language = useLanguage();
+  const navigate = useNavigate();
   const pages = useModulePages(module.slug);
   const graph = useModuleGraph(tab === 'graph' ? module.slug : null);
   const sources = useModuleSources(tab === 'sources' ? module.slug : null);
@@ -100,6 +102,13 @@ export function ModuleDetail({ module, tab, page, onTab, onPage, onBack }: Modul
   const openTarget = (target: string): void => {
     const path = pathOf(known, module.slug, target);
     if (path !== null) onPage(path);
+  };
+
+  /* The shortest way from "a source is missing here" to the workbench:
+     `into` preseeds the target module there. No state of its own — the
+     address carries it. */
+  const takeInSource = (): void => {
+    void navigate(`/knowledge?tab=sources&into=${encodeURIComponent(module.slug)}`);
   };
 
   const items = MODULE_TABS.map((id) => ({
@@ -215,19 +224,29 @@ export function ModuleDetail({ module, tab, page, onTab, onPage, onBack }: Modul
           <ErrorState error={sources.error} onRetry={() => void sources.refetch()} />
         ) : sources.isPending || sources.data === undefined ? (
           <Skeleton lines={3} height={40} />
-        ) : sources.data.length === 0 ? (
-          <p className="sb-panel-empty">{t('modules.sourcesTab.empty')}</p>
         ) : (
-          <ul className="sb-rows">
-            {sources.data.map((source) => (
-              <SourceRow
-                key={source.path}
-                source={source}
-                onOpen={setSelectedSource}
-                onOpenPage={openTarget}
-              />
-            ))}
-          </ul>
+          <div className="sb-modulesources">
+            {sources.data.length === 0 ? (
+              <p className="sb-panel-empty">{t('modules.sourcesTab.empty')}</p>
+            ) : (
+              <ul className="sb-rows">
+                {sources.data.map((source) => (
+                  <SourceRow
+                    key={source.path}
+                    source={source}
+                    onOpen={setSelectedSource}
+                    onOpenPage={openTarget}
+                  />
+                ))}
+              </ul>
+            )}
+            {/* Visible in both states — most urgently in the empty one.
+                Secondary: the teal belongs to the source rows here and to
+                "take in" over there, not to this shortcut. */}
+            <Button variant="secondary" icon="download" onClick={takeInSource}>
+              {t('modules.sourcesTab.ingest')}
+            </Button>
+          </div>
         )
       ) : null}
 

@@ -10,3 +10,6 @@ second roadmap.
   → sessions/transcript) reading both Claude Code and Codex CLI session trails, read-only, with
   project linking and honest empty/off/misconfigured states; passed clean-agent review after one
   fix cycle.
+- 002 — Knowledge absorbs sources · S01 · Modules screen became Knowledge (`#/knowledge`), Sources
+  left the rail and moved in as its input tab with an `into=` module prefill; old `#/modules` and
+  `#/sources` deep links redirect with the query string intact.

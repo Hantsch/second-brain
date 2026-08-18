@@ -43,8 +43,7 @@ export const en: Record<TranslationKey, string> = {
   'rail.ask': 'Ask',
   'rail.projects': 'Projects',
   'rail.journal': 'Journal',
-  'rail.modules': 'Modules',
-  'rail.sources': 'Sources',
+  'rail.knowledge': 'Knowledge',
   'rail.garden': 'Care',
   'rail.agents': 'Agents',
   'rail.settings': 'Settings',
@@ -75,6 +74,7 @@ export const en: Record<TranslationKey, string> = {
   'palette.group.screens': 'Places',
   'palette.group.actions': 'Actions',
   'palette.group.search': 'Search',
+  'palette.screen.sources': 'Sources',
   'palette.action.capture': 'Capture a thought',
   'palette.hint': 'Arrows select, Enter opens, Esc closes',
 

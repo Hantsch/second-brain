@@ -35,19 +35,19 @@ export function targetFor(path: string): PathTarget {
     const module = page[1] ?? '';
     return {
       kind: 'route',
-      to: `/modules?m=${encodeURIComponent(module)}&p=${encodeURIComponent(path)}`,
+      to: `/knowledge?m=${encodeURIComponent(module)}&p=${encodeURIComponent(path)}`,
     };
   }
   const log = WIKI_LOG.exec(path);
   if (log !== null) {
-    return { kind: 'route', to: `/modules?m=${encodeURIComponent(log[1] ?? '')}&tab=log` };
+    return { kind: 'route', to: `/knowledge?m=${encodeURIComponent(log[1] ?? '')}&tab=log` };
   }
   const project = PROJECT.exec(path);
   if (project !== null) {
     return { kind: 'route', to: `/projects?p=${encodeURIComponent(project[1] ?? '')}` };
   }
   if (path.startsWith('inbox/')) return { kind: 'route', to: '/inbox' };
-  if (path.startsWith('raw/')) return { kind: 'route', to: '/sources' };
+  if (path.startsWith('raw/')) return { kind: 'route', to: '/knowledge?tab=sources' };
   return { kind: 'file', path };
 }
 

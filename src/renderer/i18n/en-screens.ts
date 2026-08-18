@@ -212,12 +212,12 @@ export const enScreens = {
   'screen.journal.empty.action': 'Start the day',
   /* The texts of the screen itself live in `en-journal.ts`. */
 
-  'screen.modules.overline': 'Knowledge',
-  'screen.modules.title': 'Modules',
-  'screen.modules.empty.title': 'No knowledge module in the vault yet',
-  'screen.modules.empty.body':
+  'screen.knowledge.overline': 'Modules and sources',
+  'screen.knowledge.title': 'Knowledge',
+  'screen.knowledge.empty.title': 'No knowledge module in the vault yet',
+  'screen.knowledge.empty.body':
     'A module is a small wiki: sources, terms and connections on one topic, every claim with evidence.',
-  'screen.modules.empty.action': 'New module',
+  'screen.knowledge.empty.action': 'New module',
   'screen.sources.overline': 'Ingest',
   'screen.sources.title': 'Sources',
   'screen.sources.empty.title': 'No raw source in the vault yet',

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-/* Der Quellen-Screen: neue Quellen hineinbekommen.
+/* Der Quellen-Tab unter „Wissen": neue Quellen hineinbekommen.
  *
  * Drei Zusagen werden hier geprüft:
  * - Der Eingang **erkennt selbst**, was hereinkommt, sagt es sichtbar, und
@@ -18,7 +18,7 @@ import axe from 'axe-core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { IpcChannel, IpcEventName, IpcEvents, IpcRequest, IpcResponse } from '@shared/ipc';
 import type { IngestJob, KnowledgeModule, RawSource, SourceDetail } from '@shared/types';
-import { SourcesScreen } from '@renderer/screens/sources/SourcesScreen';
+import { SourcesTab } from '@renderer/screens/sources/SourcesTab';
 import { detectKind } from '@renderer/screens/sources/detect';
 import { setLanguage } from '@renderer/i18n';
 import type { SbBridge } from '@renderer/lib/bridge';
@@ -148,8 +148,8 @@ function renderScreen(extra: Handlers = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const { container } = render(
     <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={['/sources']}>
-        <SourcesScreen />
+      <MemoryRouter initialEntries={['/knowledge?tab=sources']}>
+        <SourcesTab />
       </MemoryRouter>
     </QueryClientProvider>,
   );

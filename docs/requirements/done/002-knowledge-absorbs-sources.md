@@ -1,7 +1,7 @@
 ---
 id: 002
 title: Knowledge absorbs sources
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-08-12
 ---
 
@@ -24,23 +24,23 @@ would break existing vaults for a label.
 
 ## Acceptance Criteria
 
-- [ ] The rail entry reads "Knowledge" (de: "Wissen"), in both languages, via `t()`.
-- [ ] The rail entry "Sources" is gone; the screen is reachable as a tab inside
+- [x] The rail entry reads "Knowledge" (de: "Wissen"), in both languages, via `t()`.
+- [x] The rail entry "Sources" is gone; the screen is reachable as a tab inside
       Knowledge, alongside the existing module views.
-- [ ] The sources screen keeps every function it has today: the detecting input
+- [x] The sources screen keeps every function it has today: the detecting input
       field, drop zone, yt-dlp status, job list, inventory, detail dialog.
-- [ ] Ingesting a source from inside Knowledge still lets me pick the target module,
+- [x] Ingesting a source from inside Knowledge still lets me pick the target module,
       and the picker is prefilled when I came from a module.
-- [ ] `#/sources` and every existing deep link into it still arrive at the right
+- [x] `#/sources` and every existing deep link into it still arrive at the right
       place (redirect, not a 404 or a blank screen).
-- [ ] The command palette finds both "Knowledge" and "Sources" and lands correctly.
-- [ ] Hotkeys stay consistent: no key points at a screen that no longer exists, and
+- [x] The command palette finds both "Knowledge" and "Sources" and lands correctly.
+- [x] Hotkeys stay consistent: no key points at a screen that no longer exists, and
       the freed key is either reassigned deliberately or left unassigned.
-- [ ] `#/modules?m=<slug>&tab=…` deep links from citations, maintenance findings, and
+- [x] `#/modules?m=<slug>&tab=…` deep links from citations, maintenance findings, and
       the palette keep working — the route moves to `#/knowledge`, so old links land
       via a redirect that preserves the whole query string, with the same result.
-- [ ] No vault path, frontmatter key, type name, or IPC channel is renamed.
-- [ ] The screen is usable without a configured model, as before.
+- [x] No vault path, frontmatter key, type name, or IPC channel is renamed.
+- [x] The screen is usable without a configured model, as before.
 
 ## Open Questions
 
@@ -228,4 +228,103 @@ dead screen that a green test run will not catch.
 
 ## Done
 
-<Filled by `/ai-scrum:build 002`.>
+Sources is no longer a sibling of Knowledge but its input tab. `ModulesScreen` became the
+Knowledge root with a top-level `Module | Quellen` tab bar, the sources body moved into a
+reusable `SourcesTab`, the route moved from `#/modules` to `#/knowledge`, and `#/modules` /
+`#/sources` stayed alive as query-preserving redirects. The rail is down to ten entries, digit
+`8` is deliberately unassigned. Nothing outside `src/renderer/` and the screenshot scripts
+changed — no vault path, frontmatter key, type name or IPC channel was renamed.
+
+**Commit message**
+
+```
+002: knowledge absorbs sources
+```
+
+### Decisions
+
+Made during the build (the sprint ran without a reachable user), each checked against the plan,
+the acceptance criteria and CLAUDE.md:
+
+- **`go()` got a separate `screenTab` field instead of overloading `tab`.** `sources` is a legal
+  value in both namespaces, so a single field could not be disambiguated by value. Both readings
+  are derived separately and each is gated on `m`, which is what keeps `#/knowledge?m=…&tab=log`
+  and `#/knowledge?tab=sources` from ever being read as each other.
+- **The early returns moved into `ModulesTab`.** `ModulesScreen` used to return early on error,
+  loading and "no modules". Those states belong to the modules tab, not to the screen — otherwise
+  a fresh vault would answer `#/knowledge?tab=sources` with "create your first module", which is
+  the opposite of what someone opening the sources tab wants.
+- **`SourcesTab` owns the `DropZone`.** A drop feeds exactly the state the tab owns (input, target
+  module, ingest mutations); hoisting the zone into the screen would have hoisted that state with
+  it. The zone is stretched to the bottom of the screen column via
+  `.sb-screen:has(> .sb-dropzone)`, so the droppable area stays what it was before the split.
+- **`into=` is a seed, not state.** It survives only on the Knowledge root's sources tab, never in
+  a module address. An unknown or deleted slug falls back to "file later" instead of inventing a
+  target. The seed is applied through a `key`-based remount rather than an effect, so a choice
+  made inside the picker is never overwritten. While the index is still being built the workbench
+  renders unseeded rather than waiting behind a skeleton — `useModules` is disabled during a build
+  and the list would never arrive.
+- **`screen.knowledge.overline` is new wording.** The old overline literally was "Wissen", which
+  would have duplicated the new title; it now reads "Module und Quellen" / "Modules and sources",
+  following the overline-is-a-category convention of the neighbouring screens.
+- **The English button label reads "Take in a source for this module", not "Ingest into …".** The
+  existing English strings translate *aufnehmen* as "take in" throughout; a second vocabulary for
+  the same act would have been the more expensive choice.
+- **`scripts/a11y.mjs` got a deep-state → screen lookup table.** The old ternary mapped anything
+  not starting with `module` to `settings`, so the new `knowledge-sources` state could not be
+  bolted on without also fixing the mapping. As a side effect the `project-*` states are now
+  checked under `projects` instead of `settings`.
+
+### Verification
+
+- `npm run build` green · `npm run lint` green · `npm run typecheck` green.
+- `npm test`: 1743 passed, 1 failed. The failure is `tests/core/wiki/module.test.ts`
+  ("bleibt Zeichen fuer Zeichen die Vorlage aus docs/MODULE-SCHEMA.md") and is **pre-existing and
+  unrelated**: `MODULE_SCHEMA_TEMPLATE` in `src/core/wiki/` has drifted from the German
+  `docs/MODULE-SCHEMA.md`, and neither file is in this story's diff
+  (`git diff --stat HEAD -- src/core src/main src/shared` is empty).
+- `npm run format:check`: 15 offenders, all pre-existing markdown under `docs/` and `.claude/`,
+  none introduced here. Every touched source, test and doc file is prettier-clean.
+- **Live smoke (P2), passed.** `npm run seed && npm run shot` produced 53 screenshots with no
+  console errors, including the new `knowledge-sources` deep state. On top of that the built app
+  was driven through all eight steps of the test plan below via the Playwright `_electron`
+  harness — 18 assertions, all green, zero console errors: rail reads "Wissen" with digit 7 and
+  no "Quellen" entry; `7` opens Knowledge and `8` does nothing; the sources tab has input,
+  YouTube detection, module picker, drop zone, yt-dlp row, inventory and detail dialog; the
+  module detail's "Quelle in dieses Modul aufnehmen" lands on
+  `#/knowledge?tab=sources&into=identity-management` with the picker preselected; `#/sources`,
+  `#/modules?m=…&tab=log` and `#/modules?m=…&p=…` all redirect with the query string intact;
+  `Ctrl+K` finds "Quellen" and "Wissen"; a `raw/` maintenance finding opens the sources tab. The
+  demo vault has no LLM provider configured, so the whole run was in the "no model" state.
+- **Code review by a clean agent (`story-review-hard`): PASS**, all ten acceptance criteria PASS,
+  no blockers, no weakened tests, no scope creep.
+
+### Findings from the review
+
+Fixed:
+
+- The `into=` seed waited on `useModules`, which is disabled while the index is being built — the
+  workbench sat behind a skeleton that had nothing to wait for. Now gated on `indexing`, with a
+  test that pins it (`tests/renderer/modules.test.tsx`).
+- `.sb-dropzone` lost its full-height drop area when it became a flex item of `.sb-screen`, so a
+  file dropped below the last panel landed nowhere. Restored via
+  `.sb-screen:has(> .sb-dropzone) { min-height: 100% }`.
+
+Deliberately not fixed (all graded "nit", none of them acceptance-relevant):
+
+- A new `into` remounts `SourcesTab`, so typed input would be discarded if the seeded module were
+  deleted externally mid-edit. Fixing it means an effect, which is exactly what the plan warned
+  against; the trade is worse than the case.
+- A stale `into=` and an `m=` naming no module both stay in the address. The screen falls through
+  correctly in both cases; rewriting the URL behind the user's back is the worse habit.
+- `screen.sources.overline` / `.title` lost their consumer when `SourcesScreen`'s header was
+  deleted, and `tests/renderer/i18n.test.ts` still requires the whole family. Left for the
+  follow-up navigation stories, which touch these keys anyway.
+- `tests/renderer/modules.test.tsx` still uses `/modules…` as its `MemoryRouter` entry. Harmless
+  (the component is rendered directly, only the search params matter), but worth tidying.
+
+### Open points
+
+- `checkScreenList()` in `scripts/lib/screens.mjs` warns that `agents` is missing from the
+  script's screen list. Pre-existing from story 001 and out of scope here: adding it would make
+  `shootScreens` and `shootDeepStates` both write `agents.png` for the same route.
