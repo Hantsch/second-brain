@@ -49,15 +49,31 @@ instead of a duty.
 
 Sprints:
 
-- [sprints/S01/sprint.md](sprints/S01/sprint.md) — the rail becomes places (002, 007, 008), `planned`
+- [sprints/S01/sprint.md](sprints/S01/sprint.md) — the rail becomes places (002, 007, 008),
+  `done` — built, acceptance pending
+  ([review](sprints/S01/review.md) · [testplan](sprints/S01/testplan.md))
 - [sprints/S02/sprint.md](sprints/S02/sprint.md) — notes get a home (005, 006), `planned`
+
+After S01 the rail is down from eleven entries to seven: dashboard, inbox, projects, journal,
+knowledge, garden, settings. Sources sits under Knowledge, agent sessions under Projects,
+capture and ask are shell overlays. What M1 still owes: `areas/` gets its own screen and the
+inbox becomes a filter (005, 006 in S02).
 
 Gaps/notes:
 
 - **Nobody owns the wholesale rail renumber.** Story 002 defers it ("the rail is renumbered
   wholesale by the later navigation stories"), but no story's acceptance criteria claim it. After
-  S01 the rail is correct but its digit hotkeys have holes. To be picked up in `/refine 006` as an
-  explicit deliverable, or promoted to its own story before S02 starts.
+  S01 the rail is correct but its digit hotkeys have holes — concretely at **2, 4 and 8**. To be
+  picked up in `/refine 006` as an explicit deliverable, or promoted to its own story before S02
+  starts. This is now blocking-ish rather than theoretical: four entries left the rail in S01.
+- **`tests/core/wiki/module.test.ts` is red and predates S01.** `MODULE_SCHEMA_TEMPLATE` in
+  `src/core/wiki/module.ts` drifted from `docs/MODULE-SCHEMA.md` when the doc was migrated to
+  English (commit `e8959d1`). Left untouched in S01 because resyncing it changes the module
+  schema template written into the user's vault — a content decision, not a navigation one.
+  Needs an owner: decide which side is authoritative.
+- **`scripts/seed/internal.mjs` pins `claudeProjectsDir` for the demo vault but not Codex**, so
+  screenshot runs read the real `~/.codex/sessions`. Pre-existing from story 001, surfaced by 008
+  because the Sessions tab now reads both CLIs.
 - **Story 001 shipped without a sprint.** It sits in `done/` with `· — ·` instead of a sprint id.
   Not worth backfilling; noted so the gap in the sprint history is not read as a lost sprint.
 - Acceptance of M1 is the user's call — no milestone here is ticked by a session.
