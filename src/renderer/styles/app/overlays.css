@@ -1,5 +1,5 @@
-/* Everything that sits above the shell: toasts, command palette, onboarding,
-   and the quick-capture window. */
+/* Everything that sits above the shell: toasts, command palette, the shell
+   overlays, onboarding, and the quick-capture window. */
 
 /* ── Overlays ───────────────────────────────────────────────────────────── */
 
@@ -43,9 +43,23 @@
   display: flex;
   flex-direction: column;
 }
+/* Two modes behind one shortcut — the chips say so without anyone having to
+   know the key. Deliberately the `.sb-chip` from ask.css: same control, same
+   look, and no second accent on the screen. */
+.sb-palette-modes {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4) 0;
+}
 .sb-palette-input {
   padding: var(--space-4);
   border-bottom: 1px solid var(--border-subtle);
+}
+/* Ask mode has no result list, so the field sits directly above the hint —
+   without this the two borders would stack into one 2 px line. */
+.sb-palette--ask .sb-palette-input {
+  border-bottom: 0;
 }
 .sb-palette-list {
   list-style: none;
@@ -99,6 +113,60 @@
   border-top: 1px solid var(--border-subtle);
   font-size: var(--text-xs);
   color: var(--text-faint);
+}
+
+/* ── Shell overlays ─────────────────────────────────────────────────────── */
+
+/* The panel of an overlay that carries a whole working surface — capture
+   today, ask next. Own widths instead of the `Dialog` atom: that one caps at
+   820 px, which is a confirmation's width, not a writing surface's. The
+   height is capped and scrolls inside, so a long answer or a grown field
+   can never push the panel past the edge of the window. */
+.sb-overlay {
+  width: 100%;
+  max-width: 720px;
+  max-height: calc(100vh - 2 * var(--space-6));
+  overflow-y: auto;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+/* For the overlay that shows question, answer and evidence side by side.
+
+   The ask body only stands up inside a defined height: conversations and
+   answer scroll in their own columns and the composer sits at the bottom
+   edge. Without a height the flex column would shrink to its content, and
+   both would collapse. The panel therefore keeps the height instead of
+   scrolling itself — the scrolling happens inside, where it belongs. */
+.sb-overlay--wide {
+  max-width: 1080px;
+  height: min(760px, calc(100vh - 2 * var(--space-6)));
+  overflow: hidden;
+}
+/* On the screen the narrow window lets the page scroll instead of the column
+   (see ask.css). An overlay has no page to scroll into, so the column keeps
+   its own scrollbar here. */
+@media (max-width: 1100px) {
+  .sb-overlay--wide .sb-ask-column {
+    overflow-y: auto;
+  }
+}
+
+/* The overlay's own header row: it replaces the `ScreenHeader` a screen
+   brings with it. Title left, actions right — both secondary, because the
+   one teal focal point belongs to "ask question" in the composer. */
+.sb-overlay-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex: 0 0 auto;
+}
+.sb-overlay-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 /* ── Onboarding ─────────────────────────────────────────────────────────── */

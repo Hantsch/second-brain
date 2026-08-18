@@ -10,11 +10,16 @@
    Voraussetzung: `npm run build`. Fehlt `out/`, sagt das Skript das deutlich.
    Fehlt `.demo-vault/`, legt es ihn selbst an.
 
-   Neben den zehn Rail-Screens entstehen: Befehlspalette offen, Tastaturfokus in
-   der Rail, Onboarding ohne Vault, das Schnell-Erfassen-Fenster und ein
-   Fehlerzustand. Der Zustand „kein Modell konfiguriert" wird auf dem
-   Fragen-Screen geprüft (der Demo-Vault trägt keinen Provider). Was nicht
-   erreichbar ist, wird gemeldet, nicht erfunden.
+   Neben den Rail-Screens entstehen: die beiden Overlays der Hülle (Erfassen,
+   Fragen), Befehlspalette offen, Tastaturfokus in der Rail, Onboarding ohne
+   Vault, das Schnell-Erfassen-Fenster und ein Fehlerzustand. Der Zustand
+   „kein Modell konfiguriert" wird im Fragen-Overlay geprüft (der Demo-Vault
+   trägt keinen Provider). Was nicht erreichbar ist, wird gemeldet, nicht
+   erfunden.
+
+   Erfassen und Fragen sind seit Story 007 keine Screens mehr. Ihre Aufnahmen
+   heißen deshalb `capture-overlay` und `ask-overlay` statt `NN-<screen>` — eine
+   laufende Nummer würde eine Reihenfolge behaupten, in der sie nicht stehen.
 
    Was nicht entstand, bleibt nicht als altes Bild liegen: jede geschriebene
    Aufnahme wird mitgezählt, und was am Ende im Ordner steht, ohne in diesem Lauf
@@ -42,8 +47,10 @@ import {
   NARROW_SCREENS,
   SCREENS,
   checkScreenList,
+  closeOverlay,
   gotoHash,
   gotoScreen,
+  openOverlay,
   screenHeading,
   settle,
 } from './lib/screens.mjs';
@@ -475,11 +482,36 @@ async function shootNarrow(session, shooter, screens, log, skipped) {
     );
     if (!ready) skipped.push(`${id} (eng): ${state.wait} erschien nicht`);
   }
+  await shootOverlaysNarrow(session, shooter, files, log, skipped);
   await session.resize(WIDE.width, WIDE.height);
   return files.filter(Boolean);
 }
 
-/** Befehlspalette (Ctrl+K) und Schnell-Erfassen-Fenster. */
+/**
+ * Die beiden Overlays im engen Fenster.
+ *
+ * Sie stehen nicht in `NARROW_SCREENS` — sie sind keine Rail-Screens mehr, und
+ * sie dort wieder einzuschmuggeln hieße, die Trennung wieder aufzuheben. Eng
+ * geprüft gehören sie trotzdem: das Fragen-Overlay ist ausdrücklich breit
+ * gebaut (`sb-overlay--wide`, Gespräche neben Antwort neben Belegen), und bei
+ * 1152 px bricht so etwas zuerst.
+ */
+async function shootOverlaysNarrow(session, shooter, files, log, skipped) {
+  for (const kind of ['capture', 'ask']) {
+    await gotoScreen(session.page, 'dashboard');
+    if (!(await openOverlay(session.page, kind))) {
+      skipped.push(`${kind}-overlay (eng): das Overlay ging nicht auf`);
+      continue;
+    }
+    const file = `${kind}-overlay-narrow.png`;
+    files.push(await shooter.shotAs(file, session.page));
+    log(`  eng ${NARROW.width}×${NARROW.height}  ${kind.padEnd(10)} → ${file}`);
+    await closeOverlay(session.page);
+  }
+}
+
+/** Die Flächen der Hülle: Befehlspalette (Ctrl+K), Erfassen-Overlay und das
+    eigene Schnell-Erfassen-Fenster. */
 async function shootOverlays(session, shooter, log, skipped) {
   await gotoScreen(session.page, 'dashboard');
   await session.page.keyboard.press('Control+K');
@@ -493,6 +525,19 @@ async function shootOverlays(session, shooter, log, skipped) {
   } catch {
     skipped.push('Befehlspalette: Ctrl+K öffnete keinen Dialog');
   }
+
+  /* Das Erfassen-Overlay über einem Screen mit Inhalt — genau das ist seine
+     Aussage: der Gedanke kommt an, ohne dass der Screen darunter weichen muss.
+     Geöffnet über den Knopf in der Titelleiste, den Weg des Nutzers. Erst der
+     Screen, dann das Overlay: ein Pfadwechsel schlösse es wieder. */
+  await gotoScreen(session.page, 'projects');
+  if (await openOverlay(session.page, 'capture')) {
+    const file = await shooter.shotAs('capture-overlay.png', session.page);
+    log(`  Erfassen-Overlay → ${file ?? 'capture-overlay.png — nicht entstanden'}`);
+  } else {
+    skipped.push('Erfassen-Overlay: der Knopf in der Titelleiste öffnete kein Erfassen-Feld');
+  }
+  await closeOverlay(session.page);
 
   try {
     const [captureWindow] = await Promise.all([
@@ -617,40 +662,60 @@ async function shootDashboard(session, shooter, log, skipped) {
 }
 
 /**
- * Zustand „kein Modell konfiguriert". Der Demo-Vault trägt bewusst keinen
- * Provider. Der Fragen-Screen bleibt trotzdem benutzbar — das Fragefeld steht da
- * und daneben eine ruhige Hinweiszeile. Genau das soll die Aufnahme belegen;
- * fehlt die Zeile, ist das ein Befund.
+ * Das leere Fragen-Overlay und damit zugleich der Zustand „kein Modell
+ * konfiguriert". Der Demo-Vault trägt bewusst keinen Provider. Das Overlay
+ * bleibt trotzdem benutzbar — das Fragefeld steht da und darüber eine ruhige
+ * Hinweiszeile. Genau das belegt `ask-overlay.png`; fehlt die Zeile, ist das
+ * ein Befund.
+ *
+ * Geöffnet über `#/ask`: hier wird nichts gefragt, sondern das leere Overlay
+ * gebraucht. Die Adresse ist der unterstützte Weg dorthin (`OpenOverlayRoute`
+ * in `App.tsx`) und legt das Overlay über das Dashboard.
  */
-async function checkLlmMissing(session, log, skipped) {
-  await gotoScreen(session.page, 'ask');
+async function checkLlmMissing(session, shooter, log, skipped) {
+  await gotoScreen(session.page, 'dashboard');
+  if (!(await openOverlay(session.page, 'ask'))) {
+    skipped.push('Fragen-Overlay: #/ask öffnete kein Overlay mit Fragefeld');
+    return;
+  }
   const note = session.page.getByText('brauchen ein Modell', { exact: false });
   const shown = await note.waitFor({ state: 'visible', timeout: 4000 }).then(
     () => true,
     () => false,
   );
   const field = await session.page.locator('#sb-ask-field').count();
+  const file = await shooter.shotAs('ask-overlay.png', session.page);
+  log(`  Fragen-Overlay → ${file ?? 'ask-overlay.png — nicht entstanden'}`);
   if (shown && field > 0) {
-    /* Keine eigene Aufnahme: 04-ask.png zeigt genau diesen Zustand, ein zweites
-       Bild derselben Fläche wäre nur Rauschen. */
-    log('  Kein Modell konfiguriert → Hinweiszeile plus Fragefeld auf 04-ask.png');
+    log('  Kein Modell konfiguriert → Hinweiszeile plus Fragefeld auf ask-overlay.png');
   } else if (!shown) {
-    skipped.push('Zustand „kein Modell konfiguriert": der Fragen-Screen zeigte keinen Hinweis');
+    skipped.push('Zustand „kein Modell konfiguriert": das Fragen-Overlay zeigte keinen Hinweis');
   } else {
-    skipped.push('Fragen-Screen ohne Fragefeld: ohne Modell bleibt nichts Benutzbares');
+    skipped.push('Fragen-Overlay ohne Fragefeld: ohne Modell bleibt nichts Benutzbares');
   }
+  await closeOverlay(session.page);
 }
 
 /**
- * Eine echte Frage auf dem Fragen-Screen — der Weg, der ohne Modell funktionieren
- * muss. Der Demo-Vault trägt keinen Provider, also sind die Fundstellen die
- * Antwort: Titel, Zitat, Pfad mit Zeile. Kommt keine Fundstelle, ist das ein
- * Befund, keine Aufnahme.
+ * Eine echte Frage — der Weg, der ohne Modell funktionieren muss. Der
+ * Demo-Vault trägt keinen Provider, also sind die Fundstellen die Antwort:
+ * Titel, Zitat, Pfad mit Zeile. Kommt keine Fundstelle, ist das ein Befund,
+ * keine Aufnahme.
+ *
+ * Der Weg ist der des Nutzers: Ctrl+K, `Tab` in den Frage-Modus, tippen, Enter.
+ * Das öffnet das Overlay und stellt die Frage in einem Zug. Gestanden wird
+ * dabei auf dem Dashboard — es trägt keinen Bezug, den `ask-scope.ts` in die
+ * Frage legen würde, die Antwort bleibt also auf den ganzen Vault bezogen.
  */
 async function shootAskAnswer(session, shooter, log, skipped) {
-  await gotoScreen(session.page, 'ask');
-  await session.page.fill('#sb-ask-field', 'Was weiß ich über Token-Lebensdauer?');
-  await session.page.locator('.sb-composer-action button').click();
+  await gotoScreen(session.page, 'dashboard');
+  const asked = await openOverlay(session.page, 'ask', {
+    question: 'Was weiß ich über Token-Lebensdauer?',
+  });
+  if (!asked) {
+    skipped.push('Fragen: Ctrl+K im Frage-Modus öffnete kein Fragen-Overlay');
+    return;
+  }
   const cite = session.page.locator('.sb-cite').first();
   const found = await cite.waitFor({ state: 'visible', timeout: 8000 }).then(
     () => true,
@@ -661,6 +726,7 @@ async function shootAskAnswer(session, shooter, log, skipped) {
   const count = await session.page.locator('.sb-cite').count();
   log(`  Frage ohne Modell → ${file} (${count} Belege)`);
   if (!found) skipped.push('Fragen: die Antwort blieb ohne Fundstelle');
+  await closeOverlay(session.page);
 }
 
 /**
@@ -668,9 +734,16 @@ async function shootAskAnswer(session, shooter, log, skipped) {
  * Belegen (`scripts/seed/chats.mjs`). Genau dieser Zustand — Prosa mit
  * Belegmarken — entsteht nur mit Modell und war deshalb in keiner Aufnahme.
  * Danach ein Klick auf die Marke `[1]`: das Beleg-Panel zeigt die Fundstelle.
+ *
+ * Hier wird nichts gefragt, sondern ein vorhandenes Gespräch geöffnet — also
+ * das leere Overlay über `#/ask`, und der Verlauf darin ist der Weg.
  */
 async function shootAskAnswered(session, shooter, log, skipped) {
-  await gotoScreen(session.page, 'ask');
+  await gotoScreen(session.page, 'dashboard');
+  if (!(await openOverlay(session.page, 'ask'))) {
+    skipped.push('Beantwortete Frage: #/ask öffnete kein Fragen-Overlay');
+    return;
+  }
   /* Nicht „das erste Gespräch": das ist nach `shootAskAnswer` die eben gestellte
      Frage ohne Modell. Gesucht ist die beantwortete Runde aus dem Seed. */
   const thread = session.page
@@ -682,6 +755,7 @@ async function shootAskAnswered(session, shooter, log, skipped) {
   );
   if (!opened) {
     skipped.push(`Beantwortete Frage: „${SEEDED_QUESTION}" stand nicht im Verlauf`);
+    await closeOverlay(session.page);
     return;
   }
   await thread.click();
@@ -697,6 +771,7 @@ async function shootAskAnswered(session, shooter, log, skipped) {
   );
   if (!shown) {
     skipped.push('Beantwortete Frage: die Antwort zeigte keine Belege');
+    await closeOverlay(session.page);
     return;
   }
 
@@ -707,9 +782,12 @@ async function shootAskAnswered(session, shooter, log, skipped) {
   );
   if (!clickable) {
     skipped.push('Belegmarke: im Antworttext stand keine Marke');
+    await closeOverlay(session.page);
     return;
   }
   await mark.click();
+  /* Das Beleg-Panel liegt jetzt im Fragen-Overlay: zwei Dialoge übereinander,
+     der Selektor greift trotzdem denselben Inhalt. */
   const panel = session.page.locator('[role="dialog"] .sb-context').first();
   const open = await panel.waitFor({ state: 'visible', timeout: 4000 }).then(
     () => true,
@@ -718,10 +796,11 @@ async function shootAskAnswered(session, shooter, log, skipped) {
   await settle(session.page);
   if (open) {
     log(`  Beleg-Panel → ${await shooter.shot('ask-citation', session.page)}`);
-    await session.page.keyboard.press('Escape');
   } else {
     skipped.push('Beleg-Panel: der Klick auf die Marke öffnete nichts');
   }
+  /* Beide Vorhänge weg — sonst läge der nächste Klick auf die Rail darunter. */
+  await closeOverlay(session.page);
 }
 
 /**
@@ -1103,7 +1182,7 @@ async function main() {
       skipped,
     );
 
-    await checkLlmMissing(session, log, skipped);
+    await checkLlmMissing(session, shooter, log, skipped);
     await shootAskAnswer(session, shooter, log, skipped);
     await shootAskAnswered(session, shooter, log, skipped);
     await shootSourceDetail(session, shooter, log, skipped);

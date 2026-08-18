@@ -54,6 +54,7 @@ interface AnswerInput {
   question: string;
   module: string | null;
   scope: 'work' | 'private' | null;
+  project: string | null;
   history: { role: 'user' | 'assistant'; content: string }[];
 }
 
@@ -75,6 +76,7 @@ async function runAnswer(
     question: input.question,
     module: input.module,
     scope: input.scope,
+    project: input.project,
     history: input.history,
     replyLanguage: replyLanguage(services),
     onDelta: run.delta,
@@ -102,7 +104,7 @@ export function chatHandlers(services: Services): HandlerMap {
   const streams = llmStreams(services);
 
   return defineHandlers({
-    'chat:ask': async ({ question, threadId, module, scope }) => {
+    'chat:ask': async ({ question, threadId, module, scope, project }) => {
       const text = (question ?? '').trim();
       if (text.length === 0) throw fail('invalid', 'eine Frage ohne Text');
       const archive = archiveOf(services);
@@ -132,6 +134,7 @@ export function chatHandlers(services: Services): HandlerMap {
             question: text,
             module: module ?? null,
             scope: scope ?? null,
+            project: project ?? null,
             /* Der Stand *vor* dieser Frage: sie steckt schon im Prompt, und zweimal
                dieselbe Frage wuerde das Modell nur verwirren. */
             history: historyOf(known),

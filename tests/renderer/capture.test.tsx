@@ -14,7 +14,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { IpcChannel, IpcRequest, IpcResponse } from '@shared/ipc';
 import type { DumpItem, FilingProposal, SettingsSnapshot, TaskDefinition } from '@shared/types';
-import { CaptureScreen } from '@renderer/screens/capture/CaptureScreen';
+import { CapturePanel } from '@renderer/screens/capture/CapturePanel';
 import type { SbBridge } from '@renderer/lib/bridge';
 import { setLanguage } from '@renderer/i18n';
 
@@ -152,7 +152,7 @@ function renderCapture(extra: Handlers = {}, autoClassify = true): Mock {
   render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
-        <CaptureScreen />
+        <CapturePanel />
       </MemoryRouter>
     </QueryClientProvider>,
   );

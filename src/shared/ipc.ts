@@ -299,7 +299,14 @@ export interface IpcRoutes {
   // ── Asking questions ─────────────────────────────────────────────────────
   /** Question to the Second Brain; answer streams over `event:llm-stream`. */
   'chat:ask': {
-    req: { question: string; threadId?: string; module?: string | null; scope?: Scope | null };
+    req: {
+      question: string;
+      threadId?: string;
+      module?: string | null;
+      scope?: Scope | null;
+      /** Restrict the answer to documents under this project slug. */
+      project?: string | null;
+    };
     res: AskAnswer;
   };
   /**

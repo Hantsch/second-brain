@@ -109,23 +109,29 @@ One folder per screen under `src/renderer/screens/`. The rail on the left leads 
 this order. Most screens have a digit shortcut, but not all: `agents` is reachable
 by click and command palette only.
 
-| Screen      | Purpose                                                                  | Hotkey                          |
-| ----------- | ------------------------------------------------------------------------ | ------------------------------- |
-| `dashboard` | Movable modules: what happened, what's coming up, what's being waited on | `1`                             |
-| `capture`   | Dump back in. Big text field, nothing else. Also its own mini window     | `2` / global `Ctrl+Shift+Space` |
-| `inbox`     | Dumps with a filing proposal: accept, edit, discard                      | `3`                             |
-| `ask`       | Questions to the Second Brain, answers with evidence                     | `4`                             |
-| `projects`  | List + detail: status, next step, todos, waiting-on                      | `5`                             |
-| `journal`   | Daily entry and coaching dialog                                          | `6`                             |
-| `knowledge` | Knowledge modules (pages, graph) and the sources tab (ingest, progress)  | `7`                             |
-| `garden`    | Maintenance: findings, health, one-click fixes                           | `9`                             |
-| `settings`  | Languages, provider/models, task routing, vault, behavior                | `0`                             |
+| Screen      | Purpose                                                                  | Hotkey |
+| ----------- | ------------------------------------------------------------------------ | ------ |
+| `dashboard` | Movable modules: what happened, what's coming up, what's being waited on | `1`    |
+| `inbox`     | Dumps with a filing proposal: accept, edit, discard                      | `3`    |
+| `projects`  | List + detail: status, next step, todos, waiting-on                      | `5`    |
+| `journal`   | Daily entry and coaching dialog                                          | `6`    |
+| `knowledge` | Knowledge modules (pages, graph) and the sources tab (ingest, progress)  | `7`    |
+| `garden`    | Maintenance: findings, health, one-click fixes                           | `9`    |
+| `settings`  | Languages, provider/models, task routing, vault, behavior                | `0`    |
 
-`8` is currently unassigned: sources became a tab under `knowledge`. The rail gets
-renumbered wholesale by the later navigation stories, so there is no interim churn
-here.
+`2`, `4` and `8` are currently unassigned: sources became a tab under `knowledge`,
+capture and ask became overlays. The rail gets renumbered wholesale by the later
+navigation stories, so there is no interim churn here.
 
 Plus: `onboarding` (no vault open), `quick-capture` (its own frameless window).
+
+Capture and ask are **not** screens but **overlays** over the running screen
+(`components/CaptureOverlay.tsx`, `components/AskOverlay.tsx`, hosted by the shell
+in `lib/shell-overlays.tsx`). Capture opens from the title-bar button or the
+command palette, ask from `Ctrl+K` in ask mode. `#/capture` and `#/ask?q=…` stay as
+opener routes: they open the overlay and hand the address straight on to
+`/dashboard`. Any change of the path closes an open overlay. The global
+`Ctrl+Shift+Space` is unaffected — it opens the separate quick-capture window.
 
 ## State in the renderer
 
@@ -162,8 +168,10 @@ same applies to settings: **a toggle nobody reads gets removed, not left dormant
 
 ## Usability (binding)
 
-- **Keyboard first.** `Ctrl+K` command palette, `Ctrl+Enter` submits, `Esc` closes,
-  digits switch screens. Every focus is visible (`:focus-visible`, teal ring).
+- **Keyboard first.** `Ctrl+K` is one control with two modes — command palette and
+  ask; `Tab` or a leading `?` switches between them, `Enter` in ask mode opens the
+  ask overlay with the question. `Ctrl+Enter` submits, `Esc` closes, digits switch
+  screens. Every focus is visible (`:focus-visible`, teal ring).
 - **One focal point per screen.** Exactly one primary action in teal.
 - **Make latency visible:** anything over 200 ms gets a skeleton, anything over 2 s
   gets a progress indicator with a cancelable action.

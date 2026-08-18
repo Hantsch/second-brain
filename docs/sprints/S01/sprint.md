@@ -19,7 +19,7 @@ function it has today, and no existing deep link, hotkey or palette entry lands 
 <!-- Order = the order the build phase works through. Dependent stories go last. -->
 
 - [x] 002 — Knowledge absorbs sources
-- [ ] 007 — Capture and ask become actions, not places
+- [x] 007 — Capture and ask become actions, not places
 - [ ] 008 — Agent sessions move inside projects
 
 ## Notes

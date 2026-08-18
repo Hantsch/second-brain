@@ -1,9 +1,9 @@
 /* Router und Weichen. Ohne Vault sieht der Nutzer das Onboarding — sonst die
    Hülle mit der Rail. Die UI-Sprache folgt den Einstellungen. */
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import type { CSSProperties } from 'react';
-import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { AppShell } from './components/AppShell';
 import { TitleBar } from './components/TitleBar';
@@ -12,9 +12,9 @@ import { setLanguage } from './i18n';
 import { api } from './lib/api';
 import { backgroundImage } from './lib/customization-assets';
 import { qk } from './lib/queries/keys';
+import type { ShellOverlay } from './lib/shell-overlays';
+import { useShellOverlays } from './lib/shell-overlays';
 import { AgentsScreen } from './screens/agents/AgentsScreen';
-import { AskScreen } from './screens/ask/AskScreen';
-import { CaptureScreen } from './screens/capture/CaptureScreen';
 import { DashboardScreen } from './screens/dashboard/DashboardScreen';
 import { GardenScreen } from './screens/garden/GardenScreen';
 import { InboxScreen } from './screens/inbox/InboxScreen';
@@ -46,6 +46,41 @@ function KnowledgeRedirect({ tab }: { tab?: string }) {
   const params = new URLSearchParams(search);
   params.set('tab', tab);
   return <Navigate to={`/knowledge?${params.toString()}`} replace />;
+}
+
+/** Route that opens a shell overlay and hands the address back.
+
+    Capture and ask are no longer screens, but their addresses stay: the
+    dashboard tiles, the inbox and old bookmarks point at them. So the route
+    does what the address asks for — open the overlay — and then sends the URL
+    on to the dashboard, the app's default route, so the overlay lies over a
+    screen instead of over nothing.
+
+    Why the query string is read here and not left to `<Navigate>`: `<Navigate
+    to="/dashboard" replace />` drops `search`, so `#/ask?q=…` would arrive
+    without its question. `q` is therefore taken from the location while this
+    route still is the location, and handed to the opener.
+
+    The route only fills the field. It never sets `submit` — the rule the ask
+    screen carried before it: a URL is not a user action, so asking stays the
+    user's move. */
+function OpenOverlayRoute({ kind }: { kind: ShellOverlay }) {
+  const [params] = useSearchParams();
+  const { openCapture, openAsk } = useShellOverlays();
+  const opened = useRef(false);
+  /* Capture has no `q`: `#/capture?q=…` means nothing, so it is ignored. */
+  const question = params.get('q') ?? '';
+
+  /* The ref makes this a one-off: StrictMode invokes effects twice, and the
+     overlay must not be reopened after the user closed it. */
+  useEffect(() => {
+    if (opened.current) return;
+    opened.current = true;
+    if (kind === 'capture') openCapture();
+    else openAsk(question.length > 0 ? { question } : undefined);
+  }, [kind, question, openCapture, openAsk]);
+
+  return <Navigate to="/dashboard" replace />;
 }
 
 export function App() {
@@ -92,12 +127,14 @@ export function App() {
       <Routes>
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<DashboardScreen />} />
-        <Route path="/capture" element={<CaptureScreen />} />
         <Route path="/inbox" element={<InboxScreen />} />
-        <Route path="/ask" element={<AskScreen />} />
         <Route path="/projects" element={<ProjectsScreen />} />
         <Route path="/journal" element={<JournalScreen />} />
         <Route path="/knowledge" element={<ModulesScreen />} />
+        {/* Capture and ask live as overlays inside the shell; these addresses
+            open them over the dashboard instead of leading to a screen. */}
+        <Route path="/capture" element={<OpenOverlayRoute kind="capture" />} />
+        <Route path="/ask" element={<OpenOverlayRoute kind="ask" />} />
         {/* Old routes, kept so existing deep links and bookmarks still land. */}
         <Route path="/modules" element={<KnowledgeRedirect />} />
         <Route path="/sources" element={<KnowledgeRedirect tab="sources" />} />

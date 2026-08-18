@@ -36,7 +36,6 @@ export const enScreens = {
   'capture.hint': 'saves',
   'capture.hintEscape': 'leaves the field',
   'capture.hintPalette': 'jumps to the command palette',
-  'capture.window': 'In its own window',
   'capture.count': '{chars} characters · {words} words',
   'capture.scope': 'Scope',
   'capture.scopeOpen': 'Leave open',
@@ -138,6 +137,8 @@ export const enScreens = {
   'ask.filter.scope': 'Scope',
   'ask.filter.module': 'Module',
   'ask.filter.all': 'everything',
+  'ask.filter.project': 'Project',
+  'ask.filter.clear': 'Remove filter',
 
   'ask.turn.question': 'Question',
   'ask.turn.answer': 'Answer',

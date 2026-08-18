@@ -16,6 +16,13 @@ import { createFetchFake, sseChunks, sseResponse } from '../fakes/llm';
 import type { FetchResponder } from '../fakes/llm';
 import { createTempVault } from '../helpers/vault';
 import type { TempVault } from '../helpers/vault';
+import {
+  PRIVATE_NOTE_PATH,
+  PROJECT_QUESTION,
+  WORK_NOTE_PATH,
+  WORK_PROJECT,
+  projectNoteFiles,
+} from '../fixtures';
 
 /* Electron gibt es im Test nicht: Fenster keine, Verschlüsselung keine. */
 vi.mock('electron', () => ({
@@ -82,7 +89,9 @@ describe('Fragen-Kanäle im Main', () => {
   let harness: Harness;
 
   beforeEach(async () => {
-    vault = await createTempVault({ sample: true });
+    /* Zusaetzlich zwei Projektnotizen mit demselben Stichwort — nur so ist zu
+       sehen, ob ein Projektfilter wirklich etwas wegnimmt. */
+    vault = await createTempVault({ sample: true, files: projectNoteFiles() });
     userDataDir = await mkdtemp(join(tmpdir(), 'sb-userdata-chat-'));
     harness = await createHarness(userDataDir);
     await harness.services.openVault(vault.root);
@@ -304,6 +313,25 @@ describe('Fragen-Kanäle im Main', () => {
     const answer = (await harness.call('chat:thread', { id: threadId }))?.messages[1];
     expect(answer?.model).toBeUndefined();
     expect(answer?.citations?.[0]?.line).toBeGreaterThan(0);
+  });
+
+  it('beantwortet mit Projekt nur aus diesem Projekt', async () => {
+    const { messageId } = await ask({ question: PROJECT_QUESTION, project: WORK_PROJECT });
+    const done = await waitForDone(messageId);
+
+    const paths = (done.citations ?? []).map((citation) => citation.path);
+    expect(paths).toContain(WORK_NOTE_PATH);
+    expect(paths.every((path) => path.startsWith(`projects/work/${WORK_PROJECT}/`))).toBe(true);
+    expect(done.delta).not.toContain(PRIVATE_NOTE_PATH);
+  });
+
+  it('nimmt ohne Projekt weiter den ganzen Vault', async () => {
+    const { messageId } = await ask({ question: PROJECT_QUESTION });
+    const done = await waitForDone(messageId);
+
+    const paths = (done.citations ?? []).map((citation) => citation.path);
+    expect(paths).toContain(WORK_NOTE_PATH);
+    expect(paths).toContain(PRIVATE_NOTE_PATH);
   });
 
   it('sagt ehrlich, wenn nichts im Vault dazu steht', async () => {

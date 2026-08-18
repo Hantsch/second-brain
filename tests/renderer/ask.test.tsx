@@ -24,7 +24,7 @@ import type {
   TaskDefinition,
   VaultDoc,
 } from '@shared/types';
-import { AskScreen } from '@renderer/screens/ask/AskScreen';
+import { AskPanel } from '@renderer/screens/ask/AskPanel';
 import type { SbBridge } from '@renderer/lib/bridge';
 import { wireEvents } from '@renderer/lib/events';
 import { clearStream } from '@renderer/lib/llm-stream';
@@ -194,7 +194,7 @@ function renderAsk(extra: Handlers = {}): Rendered {
   const { container } = render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
-        <AskScreen />
+        <AskPanel />
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -275,6 +275,7 @@ describe('Fragen: eine Antwort entsteht', () => {
       expect(sb.payloadOf('chat:ask')).toEqual({
         question: QUESTION,
         module: null,
+        project: null,
         scope: null,
       }),
     );
@@ -657,6 +658,7 @@ describe('Fragen: Bedienbarkeit', () => {
       expect(sb.payloadOf('chat:ask')).toEqual({
         question: QUESTION,
         module: MODULE,
+        project: null,
         scope: 'work',
       }),
     );

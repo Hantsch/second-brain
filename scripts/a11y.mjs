@@ -28,8 +28,10 @@ import {
   DEEP_STATES,
   SCREENS,
   checkScreenList,
+  closeOverlay,
   gotoHash,
   gotoScreen,
+  openOverlay,
   settle,
 } from './lib/screens.mjs';
 
@@ -352,6 +354,37 @@ async function main() {
       await session.page.keyboard.press('Escape');
     } else {
       console.log('  command-palette  nicht erreichbar, übersprungen');
+    }
+
+    /* Die beiden Overlays der Hülle (Erfassen, Fragen). Seit Story 007 sind sie
+       keine Screens mehr und fielen damit aus der Schleife oben heraus — genau
+       so entsteht ein Dialog, den niemand misst. Sie stehen unter lesbarer
+       Kennung im Bericht, nicht unter einer Nummer, und werden über den Weg des
+       Nutzers geöffnet (`openOverlay`). Geht einer nicht auf, sagt der Lauf das,
+       statt still nichts zu melden. */
+    for (const kind of ['capture', 'ask']) {
+      const id = `${kind}-overlay`;
+      await gotoScreen(session.page, 'dashboard');
+      if (!(await openOverlay(session.page, kind))) {
+        console.log(`  ${id.padEnd(18)} nicht erreichbar, übersprungen`);
+        continue;
+      }
+      await injectAxe(session.page);
+      const result = await runAxe(session.page);
+      report.screens.push({
+        screen: id,
+        ...result,
+        blockingCount: result.violations.filter((violation) => BLOCKING.has(violation.impact))
+          .length,
+      });
+      const summary =
+        result.violations.length === 0
+          ? 'ohne Verstoß'
+          : result.violations
+              .map((violation) => `${violation.id}[${violation.impact}]×${violation.nodeCount}`)
+              .join(', ');
+      console.log(`  ${id.padEnd(18)} ${summary}`);
+      await closeOverlay(session.page);
     }
 
     /* Die Meldung mit „Rückgängig" — nur bei vollem Lauf, sie hängt am Dashboard. */

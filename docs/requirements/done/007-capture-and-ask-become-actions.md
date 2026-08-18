@@ -1,7 +1,7 @@
 ---
 id: 007
 title: Capture and ask become actions, not places
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-08-12
 ---
 
@@ -24,23 +24,23 @@ Target picture: [concepts/navigation.md](../concepts/navigation.md).
 
 ## Acceptance Criteria
 
-- [ ] The rail entries "Capture" and "Ask" are gone.
-- [ ] Both are reachable from a visible control in the shell — not by hotkey alone —
+- [x] The rail entries "Capture" and "Ask" are gone.
+- [x] Both are reachable from a visible control in the shell — not by hotkey alone —
       and from the command palette.
-- [ ] Their hotkeys keep working, including the global `Ctrl+Shift+Space`.
-- [ ] Ask opens as an overlay over the current screen, with the search scope
+- [x] Their hotkeys keep working, including the global `Ctrl+Shift+Space`.
+- [x] Ask opens as an overlay over the current screen, with the search scope
       prefilled from where I am: inside a module, that module; inside a project, that
       project; otherwise the whole vault.
-- [ ] Ask keeps everything it has today: citations with file paths, the honest "no
+- [x] Ask keeps everything it has today: citations with file paths, the honest "no
       evidence found" answer, and filing an answer back as a wiki page.
-- [ ] Capture keeps stating where the thought landed, with the path, and keeps its
+- [x] Capture keeps stating where the thought landed, with the path, and keeps its
       undo.
-- [ ] `#/capture` and `#/ask` still land correctly — as the overlay, not a dead route.
-- [ ] The quick-capture window is untouched.
-- [ ] The freed hotkeys are either reassigned deliberately or left unassigned; no key
+- [x] `#/capture` and `#/ask` still land correctly — as the overlay, not a dead route.
+- [x] The quick-capture window is untouched.
+- [x] The freed hotkeys are either reassigned deliberately or left unassigned; no key
       points at a screen that no longer exists.
-- [ ] Both have an honest "no model configured" state, as today.
-- [ ] Both are still reachable from their dashboard tiles.
+- [x] Both have an honest "no model configured" state, as today.
+- [x] Both are still reachable from their dashboard tiles.
 
 ## Open Questions
 
@@ -337,4 +337,79 @@ capability that is no longer reachable, which a green test run does not show.
 
 ## Done
 
-<Filled by `/ai-scrum:build 007`.>
+Capture and ask stopped being places. Both bodies were extracted as reusable panels
+(`CapturePanel`, `AskPanel`), the shell gained a `ShellOverlays` context that hosts them as
+overlays, and the two rail entries plus their routes and screens are gone. `#/capture` and
+`#/ask?q=…` survive as opener routes that read the query string, open the overlay and hand the
+address on to `/dashboard`. `Ctrl+K` became one control with two modes (palette and ask, `Tab`
+or a leading `?`), capture got a title-bar button and both a palette entry for the overlay and
+one for the separate quick-capture window. Ask now derives its scope from where you are and
+carries a real `project` filter down through `chat:ask` into `retrieve()`.
+
+Commit message:
+
+```
+007: capture and ask become overlays, not rail screens
+```
+
+### Decisions
+
+- `AskPanel` exposes its screen-level actions through an `onControls` registration slot
+  (`newThread`, `ask`, `fill`) rather than a render prop, so the host — screen header or
+  overlay header — keeps control over where those buttons sit.
+- The overlay frame is hand-rolled (`.sb-overlay`, `.sb-overlay--wide`) mirroring
+  `CommandPalette`, because the `Dialog` atom caps at 820 px and the ask body needs 1080 px and
+  a defined height for its two columns.
+- Closing an overlay never aborts a running answer: the main process finishes the stream and
+  writes the answer as a file. An abort would write nothing, which is worse than a background
+  completion.
+- Beyond the written plan, `ShellOverlaysProvider` closes an open overlay on a pathname change
+  (opener routes `/capture` and `/ask` exempted, since they navigate away by design right after
+  opening). Without it, "set up routing" in ask's no-model note and capture's "to inbox" left
+  the user on a new screen behind the scrim. Two acceptance criteria depend on those links.
+- `Escape` closes the topmost surface only: with the palette over an overlay it closes the
+  palette and leaves the overlay standing.
+- The palette's `Enter` submit is deferred by one microtask. React StrictMode tears down and
+  re-creates every effect in the same flush, and TanStack Query's mutation observer detaches on
+  unsubscribe without ever re-attaching — firing `mutate()` straight from the mount effect wedged
+  the whole panel in every development build.
+- `CommandPalette` and `AskPanel` were split (`lib/use-palette-commands.ts`,
+  `screens/ask/FileBack.tsx`) to stay near the ~300-line limit. `AskPanel.tsx` is still 326
+  lines; the remainder is one responsibility, so it was left whole rather than cut arbitrarily.
+- `checkScreenList()` now measures against the union of `SCREENS` and the `DEEP_STATES` ids.
+  That also silences a pre-existing false warning about `agents`, which is covered as a deep
+  state rather than as a rail screen.
+- The dead i18n key `capture.window` was removed; `screen.capture.*` and `screen.ask.*` stay, as
+  the sprint decisions require, because the overlays use them.
+- Every in-app link keeps navigating to `/capture` and `/ask?q=…` — one mechanism, not two.
+
+### Verification
+
+- `npm run build` green, `npm run lint` green, `npm run typecheck` green.
+- `npm test`: 1792 passed, 1 failed. The single failure is `tests/core/wiki/module.test.ts`, a
+  pre-existing char-for-char drift check between `MODULE_SCHEMA_TEMPLATE` and
+  `docs/MODULE-SCHEMA.md`; it fails on a clean tree too and was not touched.
+- `npm run format:check` reports only pre-existing offenders. Verified per file that this story
+  adds no content-level formatting debt (the flagged files differ from prettier's output solely
+  by CRLF line endings, a `core.autocrlf=true` artefact of this machine).
+- Live smoke (`npm run seed && npm run shot`): ran through, 53 shots, no console errors, no
+  skipped ask step, no `checkScreenList()` warning. `capture-overlay.png` and `ask-overlay.png`
+  were looked at: capture lies over the projects screen with "save" as the single teal accent,
+  ask lies over the dashboard with thread list, examples, the honest no-model note and "ask
+  question" as the single teal accent. The rail shows eight entries, without capture and ask.
+- `npm run a11y`: 0 violations, both overlays in the run (`capture-overlay`, `ask-overlay`),
+  plus the palette in ask mode and the visible project filter.
+- Code review by a clean agent (Opus tier): FAIL on the first pass. Two real bugs — a second
+  question from the palette was silently dropped while the ask overlay was already open, and
+  `Escape` in the palette tore down the overlay underneath it — plus three comment/dead-key
+  findings. All five fixed with regression tests. A second clean verifier confirmed the fixes and
+  surfaced the StrictMode wedge described above, which was then fixed at its root; the regression
+  test now runs under StrictMode like every other test in the file.
+
+### Open points
+
+- The screenshot run reports one skipped step (journal, narrow, "say"): three warning toasts
+  "the quick-capture key combination is taken" cover the composer, because another application
+  holds `Ctrl+Shift+Space` on this machine. Environment-caused, unrelated to this story —
+  nothing under `src/main/` other than `ipc/chat.ts` was touched.
+- `AskPanel.tsx` sits at 326 lines, over the ~300 soft limit.

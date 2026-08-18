@@ -8,7 +8,10 @@ import type { AppBackground, AppIcon } from '@shared/types';
 import { api } from '../lib/api';
 import { qk } from '../lib/queries/keys';
 import { backgroundImage } from '../lib/customization-assets';
+import { ShellOverlaysProvider, useShellOverlays } from '../lib/shell-overlays';
 import { useShellHotkeys } from '../lib/use-shell-hotkeys';
+import { AskOverlay } from './AskOverlay';
+import { CaptureOverlay } from './CaptureOverlay';
 import { CommandPalette } from './CommandPalette';
 import { Rail } from './Rail';
 import { TitleBar } from './TitleBar';
@@ -20,17 +23,39 @@ export interface AppShellProps {
   appIcon: AppIcon;
 }
 
-export function AppShell({ children, background, appIcon }: AppShellProps) {
+/* The provider sits above the entire shell body, not just around the routed
+   children: the title bar opens the capture overlay too, and it lives here. */
+export function AppShell(props: AppShellProps) {
+  return (
+    <ShellOverlaysProvider>
+      <ShellBody {...props} />
+    </ShellOverlaysProvider>
+  );
+}
+
+function ShellBody({ children, background, appIcon }: AppShellProps) {
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const overlays = useShellOverlays();
   const { data: status } = useQuery({ queryKey: qk.vault.status(), queryFn: api.vault.status });
 
   const openPalette = useCallback(() => setPaletteOpen(true), []);
-  const closeOverlays = useCallback(() => setPaletteOpen(false), []);
-  useShellHotkeys({ onPalette: openPalette, onEscape: closeOverlays });
+  const closePalette = useCallback(() => setPaletteOpen(false), []);
+  const closeOverlay = overlays.close;
+  /* Escape closes the topmost surface only — the palette lies over the overlay. */
+  const onEscape = useCallback(() => {
+    if (paletteOpen) setPaletteOpen(false);
+    else closeOverlay();
+  }, [paletteOpen, closeOverlay]);
+  useShellHotkeys({ onPalette: openPalette, onEscape });
 
   return (
     <div className="sb-app">
-      <TitleBar context={status?.name ?? null} onSearch={openPalette} appIcon={appIcon} />
+      <TitleBar
+        context={status?.name ?? null}
+        onSearch={openPalette}
+        onCapture={overlays.openCapture}
+        appIcon={appIcon}
+      />
       <div
         className={background === 'none' ? 'sb-body' : 'sb-body sb-body--custom-background'}
         style={{ '--sb-custom-background': backgroundImage(background) } as CSSProperties}
@@ -38,7 +63,11 @@ export function AppShell({ children, background, appIcon }: AppShellProps) {
         <Rail />
         <main className="sb-content">{children}</main>
       </div>
-      {paletteOpen ? <CommandPalette onClose={closeOverlays} /> : null}
+      {paletteOpen ? <CommandPalette onClose={closePalette} /> : null}
+      {overlays.open === 'capture' ? <CaptureOverlay onClose={closeOverlay} /> : null}
+      {overlays.open === 'ask' ? (
+        <AskOverlay prefill={overlays.askPrefill} onClose={closeOverlay} />
+      ) : null}
       <ToastHost />
     </div>
   );

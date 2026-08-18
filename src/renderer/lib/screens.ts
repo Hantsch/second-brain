@@ -2,16 +2,7 @@
    Befehlspalette. Reihenfolge und Tasten stehen in docs/ARCHITECTURE.md. */
 
 export type ScreenId =
-  | 'dashboard'
-  | 'capture'
-  | 'inbox'
-  | 'ask'
-  | 'projects'
-  | 'journal'
-  | 'knowledge'
-  | 'garden'
-  | 'agents'
-  | 'settings';
+  'dashboard' | 'inbox' | 'projects' | 'journal' | 'knowledge' | 'garden' | 'agents' | 'settings';
 
 export interface ScreenDef {
   id: ScreenId;
@@ -33,17 +24,16 @@ export const SCREENS: readonly ScreenDef[] = [
     labelKey: 'rail.dashboard',
     hotkey: '1',
   },
-  { id: 'capture', path: '/capture', icon: 'zap', labelKey: 'rail.capture', hotkey: '2' },
   { id: 'inbox', path: '/inbox', icon: 'inbox', labelKey: 'rail.inbox', hotkey: '3' },
-  { id: 'ask', path: '/ask', icon: 'message-square', labelKey: 'rail.ask', hotkey: '4' },
   { id: 'projects', path: '/projects', icon: 'folder', labelKey: 'rail.projects', hotkey: '5' },
   { id: 'journal', path: '/journal', icon: 'notebook-pen', labelKey: 'rail.journal', hotkey: '6' },
   { id: 'knowledge', path: '/knowledge', icon: 'network', labelKey: 'rail.knowledge', hotkey: '7' },
   { id: 'garden', path: '/garden', icon: 'sprout', labelKey: 'rail.garden', hotkey: '9' },
   { id: 'settings', path: '/settings', icon: 'settings', labelKey: 'rail.settings', hotkey: '0' },
-  /* Digits in use: 1–7, 9, 0. `8` is deliberately unassigned since sources
-     became a tab under knowledge — the rail gets renumbered wholesale by the
-     later navigation stories, so no interim churn here.
+  /* Digits in use: 1, 3, 5, 6, 7, 9, 0. `2`, `4` and `8` are deliberately
+     unassigned: sources became a tab under knowledge, capture and ask became
+     shell overlays — the rail gets renumbered wholesale by the later
+     navigation stories, so no interim churn here.
      No hotkey for "agents": reachable by click and command palette only
      (story 001, resolved Open Questions). */
   { id: 'agents', path: '/agents', icon: 'workflow', labelKey: 'rail.agents' },

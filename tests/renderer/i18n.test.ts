@@ -69,15 +69,18 @@ describe('i18n', () => {
     }
   });
 
-  /* Seit „Quellen" ein Tab unter „Wissen" ist, fallen die beiden Mengen
-     auseinander: die Rail führt nicht mehr zu den Quellen, deren Kopfpaar
-     `screen.sources.*` braucht der Tab aber weiter. */
+  /* Rail und Kopfpaare sind nicht mehr dieselbe Menge: „Quellen" ist ein Tab
+     unter „Wissen", „Erfassen" und „Fragen" sind Overlays der Hülle. Ihre
+     `screen.*`-Keys braucht jeweils die neue Stelle weiter, ihr `rail.*`-Key
+     aber niemand mehr — taucht er wieder auf, ist die Rail zurückgewachsen. */
   it('deckt jeden Eintrag der Rail ab', () => {
     for (const screen of SCREENS) {
       expect(deKeys, `Rail-Eintrag ${screen.id}`).toContain(screen.labelKey);
     }
     expect(deKeys).not.toContain('rail.modules');
     expect(deKeys).not.toContain('rail.sources');
+    expect(deKeys).not.toContain('rail.capture');
+    expect(deKeys).not.toContain('rail.ask');
   });
 
   it('deckt das Kopfpaar und den Leerzustand jedes Screens ab', () => {

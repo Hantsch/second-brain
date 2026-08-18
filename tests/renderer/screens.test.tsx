@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 /* Die Screens müssen zeigen, was im Vault liegt — und dürfen nie behaupten, er
    sei leer, solange sie es nicht wissen. Genau das wird hier geprüft:
-   Erfassen hat ein Feld, Inbox und Projekte zeigen Daten, das Dashboard
-   antwortet auf die drei Fragen, Fragen kann suchen, und die noch nicht gebauten
-   Bereiche sagen das als Platzhalter statt als Leerzustand. */
+   Erfassen und Fragen öffnen als Overlay über dem Dashboard, Inbox und Projekte
+   zeigen Daten, das Dashboard antwortet auf die drei Fragen, und die noch nicht
+   gebauten Bereiche sagen das als Platzhalter statt als Leerzustand. */
 
 import { StrictMode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -61,6 +61,15 @@ async function openScreen(hash: string, heading: string) {
   return rendered;
 }
 
+/** Dasselbe für die beiden Adressen, die kein Screen mehr sind: `#/capture` und
+    `#/ask` öffnen ein Overlay über dem Dashboard. Es trägt keine h1, das Signal
+    ist der Dialog. */
+async function openOverlay(hash: string, name: string) {
+  const rendered = renderAt(hash);
+  await screen.findByRole('dialog', { name });
+  return rendered;
+}
+
 async function expectNoViolations(container: HTMLElement): Promise<void> {
   const result = await axe.run(container);
   expect(result.violations.map((violation) => `${violation.id}: ${violation.help}`)).toEqual([]);
@@ -84,14 +93,14 @@ afterEach(() => {
 
 describe('Erfassen', () => {
   it('rendert ein fokussiertes Textfeld, nicht bloß einen Knopf', async () => {
-    await openScreen('#/capture', 'Erfassen');
+    await openOverlay('#/capture', 'Erfassen');
     const field = screen.getByLabelText('Was liegt an?');
     expect(field.tagName).toBe('TEXTAREA');
     await waitFor(() => expect(document.activeElement).toBe(field));
   });
 
   it('legt mit Ctrl+Enter ab und leert das Feld', async () => {
-    await openScreen('#/capture', 'Erfassen');
+    await openOverlay('#/capture', 'Erfassen');
     const field = screen.getByLabelText('Was liegt an?');
     await userEvent.type(field, 'Die Pipeline braucht einen Schritt.');
     await userEvent.keyboard('{Control>}{Enter}{/Control}');
@@ -108,7 +117,7 @@ describe('Erfassen', () => {
   });
 
   it('hat keinen A11y-Verstoß', async () => {
-    const { container } = await openScreen('#/capture', 'Erfassen');
+    const { container } = await openOverlay('#/capture', 'Erfassen');
     await expectNoViolations(container);
   });
 });
@@ -189,7 +198,7 @@ describe('Fragen', () => {
      kommt als Stream mit Belegen (siehe tests/renderer/ask.test.tsx). Hier zählt
      nur, dass der Weg aus der Hülle heraus funktioniert. */
   it('nimmt eine Frage auf und schickt sie an den Hauptprozess', async () => {
-    await openScreen('#/ask', 'Fragen');
+    await openOverlay('#/ask', 'Fragen');
     const field = screen.getByLabelText('Deine Frage');
     await userEvent.type(field, 'Was weiß ich über Rollen?');
     await userEvent.click(screen.getByRole('button', { name: 'Frage stellen' }));
@@ -198,6 +207,7 @@ describe('Fragen', () => {
       expect(invoke).toHaveBeenCalledWith('chat:ask', {
         question: 'Was weiß ich über Rollen?',
         module: null,
+        project: null,
         scope: null,
       }),
     );
@@ -210,17 +220,22 @@ describe('Fragen', () => {
   /* „Routing einrichten" muss in der Routing-Tabelle landen, nicht irgendwo in
      den Einstellungen — sonst sucht der Nutzer den Weg selbst weiter. */
   it('führt von „kein Modell" direkt in den Modelle-Tab', async () => {
-    await openScreen('#/ask', 'Fragen');
+    await openOverlay('#/ask', 'Fragen');
 
     await userEvent.click(await screen.findByRole('button', { name: 'Routing einrichten' }));
 
+    /* Der Klick führt aus dem Overlay heraus: die Hülle räumt es weg, sobald
+       sich die Adresse ändert (`lib/shell-overlays.tsx`), sonst läge der
+       Schleier über den Einstellungen, die der Nutzer sehen wollte — dafür
+       steht der eigene Fall in `shell.test.tsx`. Geprüft wird hier nur das
+       Ziel: der richtige Screen mit dem richtigen Tab. */
     await screen.findByRole('heading', { level: 1, name: 'Einstellungen' });
     expect(window.location.hash).toContain('tab=models');
     expect(screen.getByRole('tab', { name: 'Modelle' }).getAttribute('aria-selected')).toBe('true');
   });
 
   it('hat keinen A11y-Verstoß', async () => {
-    const { container } = await openScreen('#/ask', 'Fragen');
+    const { container } = await openOverlay('#/ask', 'Fragen');
     await expectNoViolations(container);
   });
 });
@@ -333,7 +348,8 @@ describe('Einstieg in die Befehlspalette', () => {
     const trigger = screen.getByRole('button', {
       name: /Befehlspalette öffnen/,
     });
-    expect(trigger.textContent).toContain('Springen, erfassen, suchen');
+    /* Hinter Ctrl+K stehen zwei Modi, der Knopf sagt beide an. */
+    expect(trigger.textContent).toContain('Suchen oder fragen');
     await userEvent.click(trigger);
     expect(await screen.findByRole('dialog', { name: 'Befehle' })).toBeTruthy();
   });
@@ -383,5 +399,35 @@ describe('Einstieg in die Befehlspalette', () => {
     await screen.findByRole('heading', { level: 1, name: 'Knowledge' });
     expect(window.location.hash).toBe('#/knowledge?tab=sources');
     expect(screen.getByRole('tab', { name: 'Sources' }).getAttribute('aria-selected')).toBe('true');
+  });
+
+  /* Die Palette filtert über die übersetzte Beschriftung. Beide Erfassen-Wege
+     und der Weg zum Fragen müssen deshalb in beiden Sprachen auffindbar sein —
+     und unterscheidbar, sonst führt ein Treffer irgendwohin. */
+  it('findet auf Deutsch beide Erfassen-Wege und das Fragen', async () => {
+    await openScreen('#/dashboard', 'Dashboard');
+
+    const dialog = await openPalette('erfass');
+    expect(within(dialog).getByRole('button', { name: 'Gedanken erfassen' })).toBeTruthy();
+    expect(within(dialog).getByRole('button', { name: 'Erfassen-Fenster' })).toBeTruthy();
+    await userEvent.keyboard('{Escape}');
+
+    const asking = await openPalette('frage stellen');
+    expect(within(asking).getByRole('button', { name: 'Frage stellen' })).toBeTruthy();
+  });
+
+  it('findet auf Englisch „capture", „capture window" und „ask"', async () => {
+    uiLanguage = 'en';
+    setLanguage('en');
+    document.documentElement.lang = 'en';
+    await openScreen('#/dashboard', 'Dashboard');
+
+    const dialog = await openPalette('capture', /Open the command palette/);
+    expect(within(dialog).getByRole('button', { name: 'Capture a thought' })).toBeTruthy();
+    expect(within(dialog).getByRole('button', { name: 'Capture window' })).toBeTruthy();
+    await userEvent.keyboard('{Escape}');
+
+    const asking = await openPalette('ask a question', /Open the command palette/);
+    expect(within(asking).getByRole('button', { name: 'Ask a question' })).toBeTruthy();
   });
 });

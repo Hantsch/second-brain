@@ -43,7 +43,6 @@ export const deScreens = {
   'capture.hint': 'speichert',
   'capture.hintEscape': 'verlässt das Feld',
   'capture.hintPalette': 'springt in die Befehlspalette',
-  'capture.window': 'Im eigenen Fenster',
   'capture.count': '{chars} Zeichen · {words} Wörter',
   'capture.scope': 'Bereich',
   'capture.scopeOpen': 'Offen lassen',
@@ -150,6 +149,8 @@ export const deScreens = {
   'ask.filter.scope': 'Bereich',
   'ask.filter.module': 'Modul',
   'ask.filter.all': 'alles',
+  'ask.filter.project': 'Projekt',
+  'ask.filter.clear': 'Filter entfernen',
 
   'ask.turn.question': 'Frage',
   'ask.turn.answer': 'Antwort',

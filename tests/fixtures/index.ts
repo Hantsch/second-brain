@@ -69,3 +69,61 @@ export function fixtureVaultFiles(): Record<string, string> {
   }
   return files;
 }
+
+/* ── Projektnotizen (additiv) ──────────────────────────────────────────────
+ *
+ * Zwei Notizen mit demselben Stichwort, je eine im Arbeits- und im
+ * Privatprojekt des Fixture-Vaults. Sie liegen bewusst **nicht** in
+ * `tests/fixtures/vault/`: der Bestand dort ist auf Zaehlungen und
+ * Pflege-Befunde festgelegt. Wer den Projektfilter prueft, legt sie ueber
+ * `wikiFixture(extra)` bzw. `createTempVault({ files })` obendrauf.
+ */
+
+/** Projekt-Slug des Arbeitsprojekts im Fixture-Vault. */
+export const WORK_PROJECT = 'kundenportal-relaunch';
+/** Projekt-Slug des Privatprojekts im Fixture-Vault. */
+export const PRIVATE_PROJECT = 'hochbeet-bauen';
+
+export const WORK_NOTE_PATH = `projects/work/${WORK_PROJECT}/notes/2026-08-09-zeitplan.md`;
+export const PRIVATE_NOTE_PATH = `projects/private/${PRIVATE_PROJECT}/notes/2026-08-09-zeitplan.md`;
+
+/** Steht in beiden Notizen und sonst nirgends — ohne Filter treffen beide. */
+export const PROJECT_QUESTION = 'Wie sieht der Zeitplan aus?';
+
+function projectNote(title: string, tag: string, body: string): string {
+  return [
+    '---',
+    'type: note',
+    `title: ${title}`,
+    'created: 2026-08-09',
+    'updated: 2026-08-09',
+    `tags: [${tag}]`,
+    'lang: de',
+    '---',
+    '',
+    body,
+    '',
+  ].join('\n');
+}
+
+/** Die beiden Notizen als „vault-relativer Pfad → Inhalt". */
+export function projectNoteFiles(): Record<string, string> {
+  return {
+    [WORK_NOTE_PATH]: projectNote(
+      'Zeitplan bis zur Abnahme',
+      'kundenportal',
+      [
+        'Der Zeitplan bis zur Abnahme steht: Mittwoch die Ladezeiten der Angebotsliste,',
+        'Donnerstag der Fallback für abgelaufene Sitzungen, Freitag das Protokoll mit Miriam.',
+      ].join('\n'),
+    ),
+    [PRIVATE_NOTE_PATH]: projectNote(
+      'Zeitplan für den Aufbau',
+      'garten',
+      [
+        'Der Zeitplan für den Aufbau: Samstag die Bretter sägen, Sonntag die Noppenfolie',
+        'tackern. Erde und Kompost holen wir erst danach.',
+      ].join('\n'),
+    ),
+  };
+}

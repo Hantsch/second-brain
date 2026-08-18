@@ -36,6 +36,8 @@ export interface RetrieveOptions {
   module?: string | null;
   /** Auf Arbeit oder Privat einschraenken. */
   scope?: Scope | null;
+  /** Auf ein Projekt einschraenken (Slug aus `projects/<scope>/<slug>/`). */
+  project?: string | null;
   /** Auf Dokumenttypen einschraenken. */
   types?: readonly DocType[];
   limit?: number;
@@ -68,6 +70,13 @@ export function retrieve(
     const doc = byPath.get(hit.path);
     if (doc === undefined) continue;
     if (options.scope !== undefined && options.scope !== null && doc.scope !== options.scope) {
+      continue;
+    }
+    if (
+      options.project !== undefined &&
+      options.project !== null &&
+      doc.project !== options.project
+    ) {
       continue;
     }
     const slice = buildExcerpt(doc, terms);

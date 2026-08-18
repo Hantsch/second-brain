@@ -1,14 +1,21 @@
-/* Capture — one field, one question, one button.
+/* Capture — one field, one question, one button, as a reusable panel body.
 
-   This screen is the app's reason for existing: under two seconds from
-   "thought" to "saved". So focus lands in the field on open, Ctrl+Enter
+   This body is the app's reason for existing: under two seconds from
+   "thought" to "saved". So focus lands in the field on mount, Ctrl+Enter
    files it, and afterward the field is empty, focused, and ready for the
    next thought — several dumps in a row go by without a single mouse
    click.
 
    No form: scope and tags are two calm offers in the footer, not required
    fields. Whoever doesn't touch them loses nothing — filing happens later,
-   as a proposal one confirms. */
+   as a proposal one confirms.
+
+   Why this is a component and not a screen: whoever hosts this body brings its
+   own chrome. Today that host is the shell's capture overlay behind
+   `#/capture`; the standalone quick-capture window deliberately keeps its own,
+   smaller body (`screens/quick-capture/QuickCapture.tsx`) and stays untouched
+   by anything here. The panel therefore renders no `ScreenHeader` and no chrome
+   of its own, only the field, its footer and what follows from saving. */
 
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -18,9 +25,7 @@ import { Card } from '../../atoms/Card';
 import { Icon } from '../../atoms/Icon';
 import { Kbd } from '../../atoms/Kbd';
 import { ErrorState } from '../../components/ErrorState';
-import { ScreenHeader } from '../../components/ScreenHeader';
 import { useT } from '../../i18n';
-import { api } from '../../lib/api';
 import { useCaptureMutations, useCaptureSettings, useProposal } from '../../lib/queries/capture';
 import { useTaskRouted } from '../../lib/queries/llm';
 
@@ -44,7 +49,17 @@ function countWords(text: string): number {
   return words.length;
 }
 
-export function CaptureScreen() {
+/** Escape without a host to hand it to: focus moves to the active rail entry. */
+function focusRail(): void {
+  document.querySelector<HTMLElement>('.sb-rail-item[aria-current="page"]')?.focus();
+}
+
+export interface CapturePanelProps {
+  /** What happens after Escape left the field. Default: focus the rail. */
+  onEscape?: () => void;
+}
+
+export function CapturePanel({ onEscape }: CapturePanelProps = {}) {
   const t = useT();
   const navigate = useNavigate();
   const field = useRef<HTMLTextAreaElement>(null);
@@ -103,21 +118,7 @@ export function CaptureScreen() {
   };
 
   return (
-    <div className="sb-screen">
-      <ScreenHeader
-        overline={t('screen.capture.overline')}
-        title={t('screen.capture.title')}
-        action={
-          <Button
-            variant="secondary"
-            icon="external-link"
-            onClick={() => void api.capture.window(true).catch(() => undefined)}
-          >
-            {t('capture.window')}
-          </Button>
-        }
-      />
-
+    <>
       <Card padded={false} className="sb-capture">
         <label className="sb-capture-ask" htmlFor="sb-capture-field">
           {t('capture.ask')}
@@ -140,12 +141,14 @@ export function CaptureScreen() {
             }
             /* Esc used to not leave the field — focus stayed put, with no
                way back except the mouse. The draft stays as it is, only
-               focus moves to the active rail entry. */
+               focus moves on: to the active rail entry, or wherever the
+               host that passed `onEscape` sends it. */
             if (event.key === 'Escape') {
               event.preventDefault();
               event.stopPropagation();
               event.currentTarget.blur();
-              document.querySelector<HTMLElement>('.sb-rail-item[aria-current="page"]')?.focus();
+              if (onEscape === undefined) focusRail();
+              else onEscape();
             }
           }}
         />
@@ -258,6 +261,6 @@ export function CaptureScreen() {
           ) : null}
         </div>
       ) : null}
-    </div>
+    </>
   );
 }

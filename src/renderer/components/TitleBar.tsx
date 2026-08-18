@@ -14,10 +14,18 @@ export interface TitleBarProps {
   context?: string | null;
   /** Opens the command palette. If missing, the search field stays hidden. */
   onSearch?: () => void;
+  /** Opens the capture overlay. Only the shell can do that — without a shell
+      (onboarding, no vault) the button stays hidden. */
+  onCapture?: () => void;
   appIcon?: AppIcon;
 }
 
-export function TitleBar({ context, onSearch, appIcon = 'knowledge-garden' }: TitleBarProps) {
+export function TitleBar({
+  context,
+  onSearch,
+  onCapture,
+  appIcon = 'knowledge-garden',
+}: TitleBarProps) {
   const t = useT();
   const [maximized, setMaximized] = useState(false);
 
@@ -44,6 +52,17 @@ export function TitleBar({ context, onSearch, appIcon = 'knowledge-garden' }: Ti
         <div className="sb-titlebar-search">
           <SearchTrigger onOpen={onSearch} />
         </div>
+      ) : null}
+      {/* Capture is the app's reason for existing — it belongs one click away
+          on every screen, right next to the way into the palette. */}
+      {onCapture ? (
+        <IconButton
+          icon="zap"
+          label={t('titlebar.captureAria')}
+          title={t('titlebar.capture')}
+          className="sb-no-drag"
+          onClick={onCapture}
+        />
       ) : null}
       <div className="sb-window-controls sb-no-drag">
         <IconButton

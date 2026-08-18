@@ -13,3 +13,7 @@ second roadmap.
 - 002 — Knowledge absorbs sources · S01 · Modules screen became Knowledge (`#/knowledge`), Sources
   left the rail and moved in as its input tab with an `into=` module prefill; old `#/modules` and
   `#/sources` deep links redirect with the query string intact.
+- 007 — Capture and ask become actions, not places · S01 · Both left the rail and became shell
+  overlays: capture from a title-bar button, ask from `Ctrl+K`'s second mode with the scope
+  prefilled from the current module or project; `#/capture` and `#/ask?q=…` survive as opener
+  routes and `chat:ask` gained a real `project` filter.

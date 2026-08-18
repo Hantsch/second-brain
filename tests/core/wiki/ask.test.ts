@@ -6,11 +6,21 @@
  * - erfundenes Zitat   → verworfen, Antwort als `unsupported` markiert.
  * - keine Treffer      → ehrliche Absage, **kein** Modellaufruf.
  * - kein Modell        → die Suchtreffer selbst, mit Pfad und Zeile.
+ *
+ * Dazu die Einschraenkungen: Modul, Scope und Projekt filtern die Kandidaten,
+ * bevor irgendetwas zitiert wird — mit Modell wie ohne.
  */
 
 import { describe, expect, it } from 'vitest';
 import { askQuestion, retrieve } from '@core/wiki';
 import { emptyGateway, gatewayWithReplies } from '../../helpers/llm';
+import {
+  PRIVATE_NOTE_PATH,
+  PROJECT_QUESTION,
+  WORK_NOTE_PATH,
+  WORK_PROJECT,
+  projectNoteFiles,
+} from '../../fixtures';
 import { MODULE, OAUTH_PATH, TOKEN_PATH, wikiFixture } from './fixtures';
 import type { WikiFixture } from './fixtures';
 
@@ -31,6 +41,15 @@ const INVENTED_QUOTE = [
 ].join('\n');
 
 const INVENTED_PATH = `Steht in [[modules/${MODULE}/wiki/concepts/gibt-es-nicht.md]].`;
+
+/** Eine Antwort, die ueber die Projektgrenze hinweg belegt — der Filter muss greifen. */
+const ACROSS_PROJECTS = [
+  `Der Zeitplan bis zur Abnahme steht [[${WORK_NOTE_PATH}]].`,
+  `Das Hochbeet kommt danach [[${PRIVATE_NOTE_PATH}]].`,
+].join('\n');
+
+/** Alles, was unter dem Arbeitsprojekt liegt. */
+const WORK_PREFIX = `projects/work/${WORK_PROJECT}/`;
 
 /** Die Zeile, in der ein Zitat wirklich beginnt — der Beleg muss auffindbar sein. */
 async function lineAt(fixture: WikiFixture, path: string, line: number): Promise<string> {
@@ -64,6 +83,26 @@ describe('retrieve', () => {
     expect(work.length).toBeGreaterThan(0);
     expect(work.every((entry) => entry.path.startsWith('projects/work/'))).toBe(true);
     expect(retrieve(fixture.index, 'Kundenportal', { scope: 'private', limit: 10 })).toEqual([]);
+  });
+
+  it('schraenkt auf ein Projekt ein — ohne Angabe bleibt der Bestand derselbe', async () => {
+    const fixture = await wikiFixture(projectNoteFiles());
+
+    const all = retrieve(fixture.index, PROJECT_QUESTION, { limit: 10 });
+    expect(all.map((entry) => entry.path)).toContain(WORK_NOTE_PATH);
+    expect(all.map((entry) => entry.path)).toContain(PRIVATE_NOTE_PATH);
+    /* Fehlend und `null` heissen beide „kein Filter" — sonst waere der Bestand
+       davon abhaengig, ob der Renderer das Feld mitschickt. */
+    expect(retrieve(fixture.index, PROJECT_QUESTION, { project: null, limit: 10 })).toEqual(all);
+
+    const inProject = retrieve(fixture.index, PROJECT_QUESTION, {
+      project: WORK_PROJECT,
+      limit: 10,
+    });
+    expect(inProject.length).toBeGreaterThan(0);
+    expect(inProject.map((entry) => entry.path)).toContain(WORK_NOTE_PATH);
+    expect(inProject.every((entry) => entry.path.startsWith(WORK_PREFIX))).toBe(true);
+    expect(retrieve(fixture.index, PROJECT_QUESTION, { project: 'gibt-es-nicht' })).toEqual([]);
   });
 
   it('haelt die Obergrenze ein und meldet eine leere Frage leer', async () => {
@@ -134,6 +173,23 @@ describe('askQuestion mit Modell', () => {
     expect(new Set(answer.excerpts.map((entry) => entry.path)).size).toBe(4);
   });
 
+  it('zitiert mit Projektfilter nur Seiten dieses Projekts', async () => {
+    const fixture = await wikiFixture(projectNoteFiles());
+    const { gateway } = gatewayWithReplies({ 'query-answer': ACROSS_PROJECTS }, ['query-answer']);
+
+    const answer = await askQuestion(fixture.deps(gateway), {
+      question: PROJECT_QUESTION,
+      project: WORK_PROJECT,
+    });
+
+    expect(answer.usedLlm).toBe(true);
+    expect(answer.citations.map((citation) => citation.path)).toContain(WORK_NOTE_PATH);
+    /* Das zweite Beleg-Ziel liegt im anderen Projekt und stand deshalb nie in den
+       Kandidaten — es wird verworfen, statt als Fundstelle behauptet zu werden. */
+    expect(answer.citations.every((citation) => citation.path.startsWith(WORK_PREFIX))).toBe(true);
+    expect(answer.excerpts.every((entry) => entry.path.startsWith(WORK_PREFIX))).toBe(true);
+  });
+
   it('faellt auf die Suchtreffer zurueck, wenn das Modell den Dienst verweigert', async () => {
     const fixture = await wikiFixture();
     const { gateway, provider } = gatewayWithReplies({}, ['query-answer']);
@@ -199,6 +255,30 @@ describe('askQuestion ohne Modell', () => {
       expect(answer.answer).toContain(`${citation.path}:${citation.line}`);
       expect(await fixture.text(citation.path)).toContain(citation.quote);
     }
+  });
+
+  it('filtert auch ohne Modell auf das Projekt — die Stellen sind die Antwort', async () => {
+    const fixture = await wikiFixture(projectNoteFiles());
+    const deps = fixture.deps(emptyGateway());
+
+    const open = await askQuestion(deps, { question: PROJECT_QUESTION, limit: 10 });
+    expect(open.excerpts.map((entry) => entry.path)).toContain(PRIVATE_NOTE_PATH);
+
+    const answer = await askQuestion(deps, {
+      question: PROJECT_QUESTION,
+      project: WORK_PROJECT,
+      limit: 10,
+    });
+
+    expect(answer.usedLlm).toBe(false);
+    expect(answer.excerpts.length).toBeGreaterThan(0);
+    expect(answer.excerpts.map((entry) => entry.path)).toContain(WORK_NOTE_PATH);
+    expect(answer.excerpts.every((entry) => entry.path.startsWith(WORK_PREFIX))).toBe(true);
+    expect(answer.citations.every((citation) => citation.path.startsWith(WORK_PREFIX))).toBe(true);
+    /* Ohne Modell sind die Stellen die Antwort — dann darf auch dort nichts aus
+       einem anderen Projekt stehen. */
+    expect(answer.answer).toContain(WORK_NOTE_PATH);
+    expect(answer.answer).not.toContain(PRIVATE_NOTE_PATH);
   });
 
   it('nennt auch Seiten ausserhalb der Module, wenn sie passen', async () => {

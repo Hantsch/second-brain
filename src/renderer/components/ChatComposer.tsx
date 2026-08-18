@@ -9,17 +9,23 @@
    "ask question"; during the answer it becomes "cancel" — a stream you
    can't stop is a hostage situation.
 
+   The project is not a third chip set but a single chip: it comes from
+   where the question was asked (`lib/ask-scope.ts`), and one chip per project
+   would drown the composer. What it has to do is state the restriction and
+   let it go again in one click.
+
    The same field also carries the journal's coaching conversation. That's
-   why the filters and labels are **selectable**: without `onScope` or
-   `onModule` the chip set doesn't exist — a toggle that filters nothing
-   there would be a false claim. `extra` accommodates whatever else belongs
-   in this footer (in the journal, the coach's stance, right next to the
-   submit button). */
+   why the filters and labels are **selectable**: without `onScope`,
+   `onModule` or `onProject` the chip set doesn't exist — a toggle that
+   filters nothing there would be a false claim. `extra` accommodates
+   whatever else belongs in this footer (in the journal, the coach's stance,
+   right next to the submit button). */
 
 import type { KeyboardEvent, ReactNode, RefObject } from 'react';
-import type { KnowledgeModule, Scope } from '@shared/types';
+import type { KnowledgeModule, Project, Scope } from '@shared/types';
 import { Button } from '../atoms/Button';
 import { Icon } from '../atoms/Icon';
+import { IconButton } from '../atoms/IconButton';
 import { Kbd } from '../atoms/Kbd';
 import { useT } from '../i18n';
 
@@ -71,9 +77,18 @@ export interface ChatComposerProps {
   scope?: Scope | null;
   /** If the callback is missing, the scope chips don't exist. */
   onScope?: (scope: Scope | null) => void;
+  /** Only there to name the project chip: slug in, title out. */
+  projects?: readonly Project[];
+  /** Project slug to restrict to. `null` renders no chip at all. */
+  project?: string | null;
+  /** If the callback is missing, the project chip doesn't exist. */
+  onProject?: (project: string | null) => void;
   texts?: ComposerTexts;
   /** Additional controls in this footer, before the button. */
   extra?: ReactNode;
+  /** What `Esc` in the field does. Without it the field is only left (see below);
+      an overlay passes its own close here. */
+  onEscape?: () => void;
   /** Field identifier — only needed when two composers sit in the same tree. */
   fieldId?: string;
   fieldRef?: RefObject<HTMLTextAreaElement | null>;
@@ -90,12 +105,19 @@ export function ChatComposer({
   onModule,
   scope = null,
   onScope,
+  projects = [],
+  project = null,
+  onProject,
   texts = {},
   extra,
+  onEscape,
   fieldId = 'sb-ask-field',
   fieldRef,
 }: ChatComposerProps) {
   const t = useT();
+  /* The title if the list happens to know it, otherwise the slug — asking must
+     not wait on a query just to put a name on a chip. */
+  const projectName = projects.find((entry) => entry.slug === project)?.title ?? project;
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>): void => {
     if (event.key === 'Enter' && !event.shiftKey) {
@@ -106,10 +128,16 @@ export function ChatComposer({
     /* Esc used to not leave the field at all — focus stayed in the
        textarea, with no way back except the mouse. Blur is enough: the
        draft stays as it is, only focus moves to the active rail entry,
-       from where the digit keys work again. */
+       from where the digit keys work again. Whoever passes `onEscape` has
+       a better answer than the rail (an overlay closes itself); the draft
+       is left untouched either way. */
     if (event.key === 'Escape') {
       event.preventDefault();
       event.stopPropagation();
+      if (onEscape !== undefined) {
+        onEscape();
+        return;
+      }
       const field = event.currentTarget;
       field.blur();
       document.querySelector<HTMLElement>('.sb-rail-item[aria-current="page"]')?.focus();
@@ -182,6 +210,25 @@ export function ChatComposer({
                 onClick={() => onModule(module === entry.slug ? null : entry.slug)}
               />
             ))}
+          </div>
+        )}
+
+        {project === null || onProject === undefined ? null : (
+          <div className="sb-chips" role="group" aria-label={t('ask.filter.project')}>
+            <span className="sb-chips-label">
+              <Icon name="folder" size={13} />
+              {t('ask.filter.project')}
+            </span>
+            {/* A statement, not a surface — the chip itself does nothing.
+                Removing the filter is the button next to it, a real one with a
+                name: an x on its own says nothing out loud. */}
+            <span className="sb-chip sb-chip--active sb-chip--static">{projectName}</span>
+            <IconButton
+              icon="x"
+              size="sm"
+              label={t('ask.filter.clear')}
+              onClick={() => onProject(null)}
+            />
           </div>
         )}
 
