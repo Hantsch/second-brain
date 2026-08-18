@@ -2,44 +2,61 @@
 sprint: S01
 status: planned # planned | in-progress | done
 branch: # set by /sprint
-milestone: M1 — Navigation: places, actions, system
+milestone: M1 — Navigation: places, actions, systems
 ---
 
-# Sprint S01 — Knowledge, Notes, and the end of the inbox
+# Sprint S01 — The rail becomes places
 
 ## Goal
 
-The rail stops lying about what the app is. Sources moves inside Knowledge, so the way knowledge
-gets in is visible instead of explained. `areas/` gets its first read path: a Notes screen for
-the thoughts that belong neither to a project nor to a day. And the inbox stops being a place
-with a duty — it becomes the "unfiled" filter on Notes, which is what makes filing an offer
-rather than a chore.
-
-Demonstrable at the end: eleven rail entries are nine, a note written in the app and a note
-written by the filing path are the same thing in the file, and every old deep link
-(`#/sources`, `#/inbox`, `#/modules?m=…`) still lands correctly.
+Three screens that are not places stop being rail entries and move into the place they belong
+to: Sources into Knowledge, agent sessions into Projects, capture and ask into the shell as
+overlays. At the end the rail is down from eleven entries to seven, every screen keeps every
+function it has today, and no existing deep link, hotkey or palette entry lands on a dead route.
 
 ## Stories (in build order)
 
 <!-- Order = the order the build phase works through. Dependent stories go last. -->
 
 - [ ] 002 — Knowledge absorbs sources
-- [ ] 005 — Notes: a home for the areas
-- [ ] 006 — Inbox becomes the "unfiled" filter in Notes
+- [ ] 007 — Capture and ask become actions, not places
+- [ ] 008 — Agent sessions move inside projects
 
 ## Notes
 
-Order is deliberate: 002 is already refined (`status: ready`, plan and deliverables in the file)
-and is the self-contained one — a tab merge, a rename, redirects. 005 is the weight of this
-sprint, a new screen plus the core read path for `areas/`. 006 depends on 005 and cannot start
-before the Notes screen exists.
+**Why this order.** 002 is already refined (`status: ready`, plan + six deliverables) and
+establishes the pattern the other two follow: fold a screen into a tab, move the route, add a
+query-preserving redirect, repoint palette and screenshot scripts. 007 and 008 then reuse it.
+007 before 008 because 008 is the larger of the two — it merges the existing work trace in the
+project detail with the sessions view rather than putting them side by side.
 
-Constraints that apply to all three, from [concepts/navigation.md](../../concepts/navigation.md):
+**Renderer only, or close to it.** 002 states it explicitly: no file under `src/core/`,
+`src/main/` or `src/shared/` is touched. 007 and 008 should stay that way too — if either one
+starts wanting a new IPC channel, that is a signal the story grew and is worth raising before
+building it.
 
-- Renaming stops at the UI. No vault path, frontmatter key, type name or IPC channel is renamed.
-- No dead links. Routes that leave the rail redirect to their new home, query string preserved.
-- Both languages, every label through `t()`, `de` and `en`.
-- No new emptiness — a place that can be empty says what belongs in it and how to get it there.
+**The recurring risk is the redirect.** `<Navigate to="…" />` drops the query string. Every
+route that leaves the rail in this sprint has deep links pointing at it — citations, maintenance
+findings, the command palette, toasts. A green test run will not catch a silently emptied query
+string.
 
-005 and 006 are still `draft`; `/ai-scrum:sprint` resolves their Open Questions in the
-clarification round before refining them.
+**Hotkeys are left with holes on purpose.** Four entries disappear here; Notes arrives in S02.
+Renumbering the rail twice is churn. See the M1 gap note in
+[../../ROADMAP.md](../../ROADMAP.md) — the wholesale renumber has no owner yet and must be
+assigned before S02.
+
+**Open questions to resolve in the clarification round** (from the story files):
+
+- 007 — does the capture _screen_ disappear entirely, leaving the global
+  `Ctrl+Shift+Space` window as the only capture path, or does it stay as an overlay?
+- 007 — Ask and the command palette are both `Ctrl+K`-shaped: one control with two modes, or
+  two separate controls?
+- 008 — where does the all-sessions view hang: a Projects top-level tab beside the project
+  list, or its own route under Projects?
+- 008 — a project with no linked agent project: Sessions tab hidden, or visible with an empty
+  state that offers to link one?
+- 008 — do agent projects that will never map to a vault project need to be dismissable?
+
+**Acceptance.** `ui-acceptance-required` and `live-smoke-required` are both true: all three
+stories are user-facing, so each needs a real path through the running app
+(`npm run seed && npm run shot`) before it may be called done.

@@ -1,7 +1,7 @@
 # Roadmap
 
 **The** one source of status and planning: where we stand, what comes next, what is not planned
-at all yet. As of: 2026-08-18.
+at all yet. As of: 2026-08-14.
 
 Rules (so this document does not drift):
 
@@ -17,75 +17,89 @@ Rules (so this document does not drift):
 
 ## Phase overview
 
-| Phase                                | Goal                                                                                                                                               | Status            |
-| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
-| 1 — The screens do what they promise | Every screen the app shows can actually be used: no write path without a read path, no finding without an exit, no place that is really an action. | ▶ **in progress** |
-| 2 — Knowledge that condenses itself  | Project knowledge distilled from agent sessions and sources, confirmed by the human.                                                               | planned           |
+| Phase                | Goal                                                                                                       | Status            |
+| -------------------- | ---------------------------------------------------------------------------------------------------------- | ----------------- |
+| 1 — Usable every day | Every capability exists; now the app has to be legible — obvious paths, nothing written that stays unread. | ▶ **in progress** |
+
+Phase 2 is deliberately not defined. It gets cut once phase 1 has been used for a while and
+the gaps are known from use, not from guessing.
 
 ---
 
-## Current phase: 1 — The screens do what they promise
+## Current phase: 1 — Usable every day
 
-The app is broad already — eleven screens, the vault format, ingest, gardener, the LLM gateway
-all exist. What it is not yet is _honest_: `areas/` is written to but never read, the gardener
-names findings it offers no way out of, capture owns a place although it is an action, and the
-project screen looks finished while "add a note" is missing. This phase closes those gaps rather
-than adding surface.
+The feature surface is complete: all rail screens are built and every channel in
+`IPC_CHANNELS` is really implemented ([README, "Status"](../README.md)). What is missing is not
+capability but legibility — eleven flat rail entries, a write path into `areas/` that no screen
+reads, and screens for things that are actions rather than places.
 
-Way of working: every milestone ends in an increment that can be driven through the running app.
-Stories are cut only once the previous milestone is accepted, so scope does not balloon up front.
-Story 001 (agent session browser) landed before this roadmap existed and is the baseline.
+Way of working: every milestone ends in an increment that can be driven through the real UI.
+Between milestones: playtest, review, steering by the user. Stories are cut only once the
+previous milestone is accepted, so scope does not balloon up front.
 
-### M1 — Navigation: places, actions, system — ▶ in progress
+### M1 — Navigation: places, actions, systems — ▶ in progress
 
-The rail goes from eleven flat entries to five places plus a system foot. "Sources feeds
-Knowledge" and "agent work belongs to a project" become structurally visible; `areas/` gets a
-read path at last; capture and ask become actions in the shell instead of destinations.
 Concept: [concepts/navigation.md](concepts/navigation.md).
-Scope: stories 002, 005, 006, 007, 008.
+
+The rail goes from eleven flat entries to seven, and the distinction between **place**,
+**action** and **system** becomes structurally visible. Sources moves inside Knowledge, agent
+sessions move inside Projects, capture and ask lose their rail entries and become overlays, and
+`areas/` finally gets a screen that reads it — which is also what turns the inbox into a filter
+instead of a duty.
+
 Sprints:
 
-- [S01 — Knowledge, Notes, and the end of the inbox](sprints/S01/sprint.md) — planned (002, 005, 006)
-- S02 — capture and ask become actions, agent sessions move into projects (007, 008) — not cut yet
+- [sprints/S01/sprint.md](sprints/S01/sprint.md) — the rail becomes places (002, 007, 008), `planned`
+- [sprints/S02/sprint.md](sprints/S02/sprint.md) — notes get a home (005, 006), `planned`
 
 Gaps/notes:
 
-- Renaming stops at the UI — the vault format, frontmatter keys, IPC channels and code
-  identifiers keep their names. Only labels and routes change.
-- Every route that leaves the rail needs a redirect that preserves its query string, or deep
-  links from citations, gardener findings and the palette break.
+- **Nobody owns the wholesale rail renumber.** Story 002 defers it ("the rail is renumbered
+  wholesale by the later navigation stories"), but no story's acceptance criteria claim it. After
+  S01 the rail is correct but its digit hotkeys have holes. To be picked up in `/refine 006` as an
+  explicit deliverable, or promoted to its own story before S02 starts.
+- **Story 001 shipped without a sprint.** It sits in `done/` with `· — ·` instead of a sprint id.
+  Not worth backfilling; noted so the gap in the sprint history is not read as a lost sprint.
+- Acceptance of M1 is the user's call — no milestone here is ticked by a session.
 
-### M2 — Projects answer "where did I leave off" — open
+### M2 — Projects answer where I left off — planned
 
-The project screen carries the app's first promise. Today it cannot take a note, cannot record
-who I am waiting on, and cannot say where its status came from — so the one line meant to carry
-my re-entry after a break is a line I do not trust. Plus: the handful of projects I actually
-work on should not sit somewhere in a list of fifteen.
-Scope: stories 003, 004, 013.
-Depends on M1 — story 008 adds a sessions tab to the same screen; settle the structure first.
+Stories 003 (notes and waiting-on, editable in place), 004 (where the status and next step come
+from), 013 (favourite projects and an order that matches how I work). No concept behind them;
+the stories are detailed enough to cut from directly.
 
-### M3 — The journal is one field — open
+Depends on M1: story 008 moves a Sessions tab into this same screen, so doing this first would
+mean touching the project detail twice.
 
-Writing a day should not start with deciding _where_ to write. One field, a stance that decides
-what happens with it, an interview for the empty-page days, a calendar over the months, and a
-filter for the days I started and never finished.
-Scope: stories 009, 010, 011, 012.
-Independent of M1 — the navigation concept leaves the journal untouched.
+### M3 — The journal becomes one thing — planned
 
-### M4 — A finding says how it ends — open
+Stories 011 (one entry instead of day and conversation), 012 (the interview, for when the field
+is empty), 009 (filter for days that are not finished), 010 (a calendar on top of the days). No
+concept behind them.
 
-The maintenance run is precise and then stops: half the findings come without a fix, and the
-only other way out is "looks fine", which is permanent. A near-duplicate can be compared but not
-resolved; an orphan can be reported but only linked when the app is already sure. Every finding
-needs an exit the human chooses.
-Scope: stories 014, 015, 016, 017.
+Independent of everything else — [concepts/navigation.md](concepts/navigation.md) explicitly
+leaves the journal untouched, so this milestone can be pulled forward at any point without
+rework.
+
+### M4 — A finding can be acted on — planned
+
+Stories 014 (the run reports findings, not results), 017 (a finding says how it ends), 016
+(orphan page — I pick the target), 015 (resolve a near-duplicate). Cut straight from the
+stories, by decision on 2026-08-14 — no concept.
+
+Note: 015, 016 and 017 add new **write** paths into the vault (merging pages, inserting links,
+recording a verdict). The AI-proposes/human-confirms guardrail and the hash-guarded write are
+the load-bearing part of this milestone, not the screens.
+
+The order of M2 / M3 / M4 is not fixed. It is confirmed at the next `/ai-scrum:roadmap plan`,
+once M1 has been used.
 
 ---
 
 ## Open / unprioritised
 
-| Topic                                           | State                                                                                                        | Next step                                                                                             |
-| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
-| Project knowledge condensed from agent sessions | Named and deliberately deferred in [concepts/navigation.md](concepts/navigation.md) ("Not part of this")     | Own concept via `/ai-scrum:concept` — what gets condensed, when, from what, how the human confirms it |
-| German docs under `docs/`                       | CONCEPT.md, ARCHITECTURE.md, VAULT-FORMAT.md, MODULE-SCHEMA.md still German; generated artifacts are English | Migration to English planned as separate work, not blocking any milestone                             |
-| Dashboard tile system                           | Stays as it is; only the "unfiled" strip is added by story 006                                               | Revisit after M2, once projects carry real state                                                      |
+| Topic                                           | State                                                                     | Next step                                                                |
+| ----------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Project knowledge condensed from agent sessions | Named as out of scope in [concepts/navigation.md](concepts/navigation.md) | `/ai-scrum:concept` — what gets condensed, when, and how it is confirmed |
+| German docs migrated to English                 | Decided in `.claude/ai-scrum.md`; `docs/*.md` are still German            | Own story once it stops being cosmetic                                   |
+| Phase 2                                         | Not defined                                                               | Cut after phase 1 has been used                                          |
