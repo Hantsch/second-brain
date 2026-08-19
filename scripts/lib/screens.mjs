@@ -12,10 +12,12 @@ import { REPO_ROOT } from './app-harness.mjs';
 
 /** Die Rail-Screens in der Reihenfolge aus docs/ARCHITECTURE.md.
     Erfassen und Fragen stehen seit Story 007 nicht mehr darin: sie sind keine
-    Screens mehr, sondern Overlays über dem laufenden Screen (`openOverlay`). */
+    Screens mehr, sondern Overlays über dem laufenden Screen (`openOverlay`).
+    Inbox ist seit Story 006 kein eigener Rail-Eintrag mehr: was dort stand, ist
+    jetzt der Unerledigt-Filter von Notizen — ein Tiefzustand in `DEEP_STATES`
+    (`notes-unfiled`), keine eigene Zeile hier. */
 export const SCREENS = [
   'dashboard',
-  'inbox',
   'projects',
   'notes',
   'journal',
@@ -30,7 +32,6 @@ export const SCREENS = [
     (`shootOverlaysNarrow` in shot.mjs). */
 export const NARROW_SCREENS = [
   'dashboard',
-  'inbox',
   'projects',
   /* Die Fußzeile des Composers (Zielauswahl, Tastenhinweis, Speichern-Knopf)
      steht in einer Flex-Zeile mit `flex-wrap: wrap` (`sb-notecompose-foot` in
@@ -57,7 +58,7 @@ export const NARROW_SCREENS = [
  * Die Kennungen sind Verweise in `DEEP_STATES`; wer dort einen Zustand umbenennt,
  * bekommt hier eine Meldung statt einer stillen Lücke.
  */
-export const NARROW_DEEP_STATES = ['project-detail', 'project-todos'];
+export const NARROW_DEEP_STATES = ['project-detail', 'project-todos', 'notes-unfiled'];
 
 /**
  * Zustände, die in der Adresse stehen und deshalb ohne Klickweg erreichbar sind:
@@ -81,6 +82,16 @@ export const DEEP_STATES = [
     wait: '.sb-nextstep-missing',
   },
   { id: 'project-todos', hash: '/projects?tab=todos', wait: '.sb-todogroup' },
+  {
+    /* Story 006: Inbox ist kein eigener Rail-Screen mehr, sondern der
+       Unerledigt-Filter von Notizen (`#/notes?filter=unfiled`) — ohne diesen
+       Zustand wäre die zweispaltige Ablage-Werkbank in keinem Bild mehr.
+       `.sb-inbox` steht in jedem gefüllten Zustand der Werkbank (Liste plus
+       Detailspalte) und belegt damit, dass sie wirklich stand. */
+    id: 'notes-unfiled',
+    hash: '/notes?filter=unfiled',
+    wait: '.sb-inbox',
+  },
   {
     id: 'module-page',
     hash: '/knowledge?m=identity-management&p=modules/identity-management/wiki/concepts/token-lebensdauer.md',

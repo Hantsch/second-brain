@@ -621,6 +621,46 @@ describe('Dashboard-Gitter', () => {
   });
 });
 
+// ── Der Streifen für Unabgelegtes (Story 006, D6) ───────────────────────────
+
+describe('Streifen für Unabgelegtes', () => {
+  it('zeigt die Zahl der unabgelegten Dumps und springt in den Notizen-Filter', async () => {
+    mount();
+    wrap(
+      <>
+        <DashboardScreen />
+        <Location />
+      </>,
+    );
+    await screen.findByRole('heading', { name: 'Zuletzt gearbeitet' });
+
+    /* `dashboardFixture.inboxCount` ist 2 — dieselbe Zahl, die auch die
+       Inbox-Kachel und der Filter-Link auf Notizen lesen. */
+    const strip = screen.getByRole('button', { name: '2 nicht abgelegt' });
+    await userEvent.click(strip);
+    expect(screen.getByTestId('location').textContent).toBe('/notes?filter=unfiled');
+  });
+
+  it('fehlt ganz, wenn nichts unabgelegt ist — keine Meldung „0 nicht abgelegt"', async () => {
+    mount({ data: { ...dashboardFixture, inboxCount: 0 } });
+    wrap(<DashboardScreen />);
+    await screen.findByRole('heading', { name: 'Zuletzt gearbeitet' });
+
+    expect(screen.queryByText(/nicht abgelegt/)).toBeNull();
+  });
+
+  it('lässt die Inbox-Kachel unangetastet, wenn der Streifen dazukommt', async () => {
+    mount();
+    wrap(<DashboardScreen />);
+    await screen.findByRole('heading', { name: 'Inbox' });
+
+    /* Zwei Wege zum selben Filter: der Streifen über dem Gitter und der Fuß
+       der Inbox-Kachel — beide bleiben nebeneinander bestehen. */
+    expect(screen.getByRole('button', { name: '2 nicht abgelegt' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Zur Inbox' })).toBeTruthy();
+  });
+});
+
 // ── Die Kacheln einzeln ─────────────────────────────────────────────────────
 
 /** Jede datengetriebene Kachel: mit Bestand und mit einem echten Leerzustand. */
@@ -710,6 +750,8 @@ describe('Kacheln', () => {
             wordCount: 2,
             tags: [],
             scope: null,
+            filedInto: null,
+            filedAt: null,
           };
         },
         'capture:discard': (request) => {
@@ -876,6 +918,8 @@ describe('Kacheln', () => {
             wordCount: 1,
             tags: [],
             scope: null,
+            filedInto: null,
+            filedAt: null,
           },
         ],
       },

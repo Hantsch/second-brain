@@ -122,26 +122,23 @@ describe('Erfassen', () => {
   });
 });
 
-describe('Inbox', () => {
-  it('zeigt die Dumps aus dem Vault statt „die Inbox ist leer"', async () => {
-    await openScreen('#/inbox', 'Inbox');
-    /* Zweimal: als Zeile in der Liste und als Kopf der Detailspalte. */
-    expect(await screen.findAllByText(fx.dump.title)).toHaveLength(2);
-    expect(screen.queryByText('Die Inbox ist leer')).toBeNull();
+/* Inbox als eigener Ort ist weg (Story 006): die Adresse bleibt bestehen, weil
+   Kacheln, Erfassen-Panel und alte Lesezeichen weiter darauf zeigen, führt aber
+   jetzt auf den Unerledigt-Filter von Notizen. Der Filter selbst wird erst mit
+   Story 006/D3 ausgewertet — hier wird nur geprüft, dass die Umleitung selbst
+   funktioniert und dabei die Abfrage nicht verschluckt, so wie bei den alten
+   Wissen-Adressen weiter unten in dieser Datei. */
+describe('Inbox: alte Adresse', () => {
+  it('leitet #/inbox auf den Unerledigt-Filter von Notizen um', async () => {
+    await openScreen('#/inbox', 'Notizen');
+    expect(window.location.hash.split('?')[0]).toBe('#/notes');
+    expect(addressQuery()).toEqual({ filter: 'unfiled' });
   });
 
-  it('zeigt den Ablage-Vorschlag mit Ziel und Begründung', async () => {
-    await openScreen('#/inbox', 'Inbox');
-    expect(
-      await screen.findByRole('heading', { name: /Projekt Nyota Auth0 Migration/ }),
-    ).toBeTruthy();
-    expect(screen.getByText(fx.proposal.reason)).toBeTruthy();
-  });
-
-  it('hat keinen A11y-Verstoß', async () => {
-    const { container } = await openScreen('#/inbox', 'Inbox');
-    await screen.findByRole('heading', { name: /Projekt Nyota Auth0 Migration/ });
-    await expectNoViolations(container);
+  it('behält bei #/inbox eine mitgegebene Abfrage', async () => {
+    await openScreen('#/inbox?x=1', 'Notizen');
+    expect(window.location.hash.split('?')[0]).toBe('#/notes');
+    expect(addressQuery()).toEqual({ x: '1', filter: 'unfiled' });
   });
 });
 

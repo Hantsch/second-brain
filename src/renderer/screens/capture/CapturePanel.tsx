@@ -229,7 +229,11 @@ export function CapturePanel({ onEscape }: CapturePanelProps = {}) {
             <button type="button" className="sb-textlink" onClick={undoSave}>
               {t('capture.undo')}
             </button>
-            <button type="button" className="sb-textlink" onClick={() => void navigate('/inbox')}>
+            <button
+              type="button"
+              className="sb-textlink"
+              onClick={() => void navigate('/notes?filter=unfiled')}
+            >
               {t('capture.toInbox')}
             </button>
           </p>
@@ -252,7 +256,7 @@ export function CapturePanel({ onEscape }: CapturePanelProps = {}) {
                 <button
                   type="button"
                   className="sb-textlink"
-                  onClick={() => void navigate('/inbox')}
+                  onClick={() => void navigate('/notes?filter=unfiled')}
                 >
                   {t('capture.toProposal')}
                 </button>

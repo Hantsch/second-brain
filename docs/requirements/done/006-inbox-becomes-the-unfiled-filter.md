@@ -1,7 +1,7 @@
 ---
 id: 006
 title: Inbox becomes the "unfiled" filter in Notes
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-08-12
 ---
 
@@ -91,6 +91,25 @@ Decided during refine (reason each):
   `agents.*` family in story 008. Only new strings get `notes.unfiled.*`.
 - **The strip's number is `inboxCount`** from `dashboard:data`, which already counts
   only `raw`/`proposed` — no second truth for the same question.
+- **F1 (review finding, `applyProposal`, `src/core/capture/apply.ts`): an empty edited
+  proposal must fail, not file.** `Run.append` silently no-ops when the block is blank
+  (`block.length === 0`), so filing into a real target (project/area/journal) with an
+  emptied-out text wrote nothing to the target file, yet `applyProposal` still stamped
+  the dump `status: filed` with `filed_into`/`filed_at` — a receipt for a filing that
+  never happened, and a direct contradiction with the `written: []` the same call
+  returned. Considered two ways to close this: (a) silently fall back to `kept`, or
+  (b) reject with an error. Chose (b): a user who edits the proposal text down to
+  nothing and hits Ctrl+Enter asked to *file*, not to *leave it* — treating that as a
+  quiet "kept" would still misrepresent their action, just with a different lie. A
+  thrown `FilingError('invalid', ...)` fits the existing error surface exactly
+  (`'invalid'` is already a valid `IpcError.code`, wired through `toIpcError` and the
+  renderer's generic `error.code.invalid` string in both languages) and matches
+  CLAUDE.md's "no hallucinations" guardrail — the app says so instead of guessing a
+  status. The check sits right after `applyPrimary` returns and before any extras or
+  the dump-status write, gated on `!keepsDump && run.written.length === 0`, so `inbox`
+  targets (which are supposed to write nothing) are unaffected and `new-project`
+  (which always creates a file, even with empty state text) is unaffected too — only
+  the case the finding described trips it.
 
 ## Plan
 
@@ -267,4 +286,64 @@ to fail if the query string is dropped.
 
 ## Done
 
-<Filled by `/ai-scrum:build 006`.>
+### Summary
+
+Built D1–D6 end to end: the rail's final numbering (1 Dashboard · 2 Projekte ·
+3 Tagebuch · 4 Wissen · 5 Notizen · 6 Pflege · 7 Einstellungen, system entries in a
+separated foot, `ScreenDef.group`), a redirect (`UnfiledRedirect`, mirroring
+`KnowledgeRedirect`) so `#/inbox` and every in-app link (both tiles, the capture
+panel, the palette, the gardener's `targetFor()`) land on `/notes?filter=unfiled`
+with the query string intact, the filing workspace moved unchanged into Notes as
+`UnfiledWorkspace` (same keyboard, same 10 s undo, same path-bound selection) behind
+that filter, the core write path stopped deleting filed dumps into the trash and
+instead stamps them `status: filed` / `filed_into` / `filed_at` as a durable receipt
+(`core/capture/apply.ts`, `core/capture/undo.ts`, `core/index/dumps.ts`), a
+collapsed "filed" trail (`FiledTrail.tsx`) showing each receipt with a
+`targetFor()` link, and a "N unfiled" strip on Today (`UnfiledStrip.tsx`) that is
+absent at zero. `docs/VAULT-FORMAT.md` documents the new dump lifecycle.
+
+### F1 fix
+
+See "Decisions (Sprint)" above for the full reasoning. Short version:
+`applyProposal` now throws `FilingError('invalid', ...)` instead of stamping a dump
+`filed` when the primary target was real (not `inbox`) but nothing was actually
+written — an emptied-out edited proposal text is the only way to hit this, since
+`Run.append` no-ops on a blank block. Pinned by a new test in
+`tests/core/capture/apply.test.ts` ("meldet einen Fehler, statt den Dump als
+„filed" zu markieren, wenn der Text leer ist"), written first against the
+unfixed code to confirm the reproduction (`written: []` yet a resolved result
+with a live `undoToken`), then re-run green after the fix.
+
+### Commit message
+
+006: inbox becomes the unfiled filter in notes
+
+### Verification
+
+- `npm run format:check`, `npm run lint`, `npm run typecheck`, `npm run build` — all
+  green. (`format:check` shows pre-existing warnings on ~79 files this story never
+  touched — left alone, per scope.)
+- `npm test` — 1936 tests, 1935 passing. The one failure
+  (`tests/core/wiki/module.test.ts`, a German/English drift between
+  `MODULE_SCHEMA_TEMPLATE` and `docs/MODULE-SCHEMA.md`) is pre-existing and
+  unrelated to this story — confirmed as the only failure, left untouched.
+- Mandatory tests present and green: file round-trip and conflict (existing +
+  extended `tests/core/capture/apply.test.ts` cases — a stale hash on either the
+  target or the dump itself yields `conflict`, target file left byte-identical),
+  "no model configured" (the heuristic proposal path, `tests/renderer/inbox.test.tsx`
+  moved onto `/notes?filter=unfiled`), "answers without evidence" doesn't apply to
+  this story (no LLM-shaped question-answering surface here).
+- Live smoke (P2, re-confirmed after the F1 fix): `npm run seed && npm run shot` —
+  57 captures, 7 rail screens, "Keine Konsolenfehler". Rail numbering 1–7 confirmed
+  with no "Inbox" entry; `03-notes.png`/`22-notes-unfiled.png` show the "N nicht
+  abgelegt" filter badge, the two-column workspace with the heuristic proposal and
+  its four actions; `01-dashboard.png` shows the matching "4 nicht abgelegt" strip
+  above the tile grid.
+- Code review: `story-review-hard` ran in a prior session; found F1 (fixed here) plus
+  two already-resolved items (i18n wording to "Nicht abgelegt"/"nicht abgelegt",
+  confirmed consistent across `de.ts`/`de-notes.ts`/`de-dashboard.ts`; dead
+  `trashCopyPath` in `core/capture/undo.ts`, confirmed zero references). Not
+  re-reviewed by a second fresh agent after the F1 fix — the fix is small, isolated
+  to one guard clause, and independently verified via the pinning test, the full
+  suite, typecheck, lint and the live smoke test.
+- Open points: none blocking.

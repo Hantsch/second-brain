@@ -28,3 +28,10 @@ second roadmap.
   created on first use), a header action creates an area, and a per-note action moves it
   between areas — five new hash-guarded IPC channels, the move rolling back on a failed
   target write; search hits and citations for `areas/*` route in-app to `#/notes?a=<slug>`.
+- 006 — Inbox becomes the unfiled filter in Notes · S02 · The rail entry "Inbox" is gone
+  (final rail numbering 1–7); `#/inbox` and every in-app link redirect to
+  `/notes?filter=unfiled`, which runs the unchanged filing workspace inside Notes; filing
+  no longer deletes the dump into the trash but leaves it as a `status: filed` receipt
+  with `filed_into`/`filed_at`, shown in a collapsed "filed" trail; Today gained a
+  "N unfiled" strip. Fixed a review finding (F1): an emptied-out edited proposal now
+  raises an error instead of being stamped "filed" with nothing written.

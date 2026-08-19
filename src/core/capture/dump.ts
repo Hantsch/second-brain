@@ -142,5 +142,8 @@ export async function writeDump(
     wordCount: wordCount(text),
     tags,
     scope,
+    // A fresh dump is unfiled by definition — there is nothing to point at yet.
+    filedInto: null,
+    filedAt: null,
   };
 }

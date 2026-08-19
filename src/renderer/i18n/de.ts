@@ -41,7 +41,6 @@ export const de = {
 
   'rail.region': 'Hauptnavigation',
   'rail.dashboard': 'Dashboard',
-  'rail.inbox': 'Inbox',
   'rail.projects': 'Projekte',
   'rail.journal': 'Tagebuch',
   'rail.notes': 'Notizen',
@@ -82,6 +81,7 @@ export const de = {
   'palette.group.search': 'Suche',
   'palette.screen.sources': 'Quellen',
   'palette.screen.agentSessions': 'Agent-Sitzungen',
+  'palette.screen.unfiled': 'Nicht abgelegt',
   'palette.action.capture': 'Gedanken erfassen',
   'palette.action.captureWindow': 'Erfassen-Fenster',
   'palette.action.ask': 'Frage stellen',

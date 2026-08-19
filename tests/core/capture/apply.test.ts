@@ -67,13 +67,25 @@ describe('applyProposal — Projektnotiz', () => {
     );
   });
 
-  it('verschiebt den Dump in den Papierkorb und gibt eine Marke zurück', async () => {
+  /* Der abgelegte Dump bleibt liegen — als Beleg, wohin sein Inhalt ging. Nichts
+     wandert in den Papierkorb, nichts wird gelöscht; die Marke gibt es trotzdem. */
+  it('lässt den Dump als Beleg liegen und gibt eine Marke zurück', async () => {
     const { dump, proposal } = await proposalFor(TEXT);
+    const bodyBefore = (await read(dump.path)).body;
     const result = await applyProposal(fixture.store, proposal, { now: NOW_MS });
 
     expect(result.undoToken).not.toBeNull();
-    expect(result.movedTo).toContain('.secondbrain/trash/');
-    expect(await fixture.store.readText(dump.path)).toBeNull();
+    expect(result.movedTo).toBeNull();
+    expect(await fixture.store.readText(dump.path)).not.toBeNull();
+
+    const receipt = await read(dump.path);
+    expect(receipt.frontmatter['status']).toBe('filed');
+    expect(receipt.frontmatter['filed_into']).toBe(WORK_PROJECT_PATH);
+    expect(receipt.frontmatter['filed_at']).toBe(TODAY);
+    /* Der Rumpf bleibt Wort für Wort stehen: der Beleg trägt weiterhin, was
+       getippt wurde. */
+    expect(receipt.body).toBe(bodyBefore);
+    expect(receipt.body).toContain(TEXT);
   });
 
   it('dreht mit der Marke alles zurück — Notiz, Todo und Dump', async () => {
@@ -90,6 +102,46 @@ describe('applyProposal — Projektnotiz', () => {
     expect(touched).toContain(dump.path);
     const restored = await read(dump.path);
     expect(restored.frontmatter['status']).toBe('raw');
+    /* Der Beleg zeigte auf eine Ablage, die es nicht mehr gibt — er muss weg. */
+    expect(restored.frontmatter['filed_into']).toBeNull();
+    expect(restored.frontmatter['filed_at']).toBeNull();
+  });
+
+  /* Ein Dump, den der Nutzer selbst in `inbox/` gelegt hat, trägt vielleicht gar
+     kein `status`-Feld. Weil der Dump beim Ablegen liegen bleibt, gibt es keine
+     Papierkorb-Kopie mehr, die ihn im Original zurückbrächte: das Rückgängig muss
+     den Status selbst setzen, sonst bliebe die Datei als „filed" stehen, obwohl
+     ihre Ablage zurückgenommen ist. */
+  it('stellt einen Dump ohne eigenen Status als „raw" zurück', async () => {
+    const path = 'inbox/2026-08-09-1200-von-hand.md';
+    const own = await captureFixture({
+      [path]: [
+        '---',
+        'type: dump',
+        'title: Von Hand',
+        'created: 2026-08-09',
+        '---',
+        '',
+        TEXT,
+        '',
+      ].join('\n'),
+    });
+    const proposal = heuristicProposal({
+      dumpPath: path,
+      text: TEXT,
+      context: own.context,
+      now: NOW_MS,
+    });
+    const result = await applyProposal(own.store, proposal, { now: NOW_MS });
+    expect(result.undoToken).not.toBeNull();
+
+    const touched = await undoFiling(own.store, result.undoToken ?? '');
+
+    expect(touched).toContain(path);
+    const restored = parse((await own.store.readText(path)) ?? '');
+    expect(restored.frontmatter['status']).toBe('raw');
+    expect(restored.frontmatter['filed_into']).toBeNull();
+    expect(restored.frontmatter['filed_at']).toBeNull();
   });
 });
 
@@ -281,6 +333,35 @@ describe('applyProposal — weitere Ziele', () => {
   });
 });
 
+describe('applyProposal — leerer Text', () => {
+  /* Probe fuer F1: hat der Nutzer den Vorschlagstext auf leer editiert, haengt
+     `Run.append` nichts an (`block.length === 0`). Ohne Pruefung wuerde der Dump
+     trotzdem `status: filed` samt `filed_into` tragen — ein Beleg, der lügt,
+     denn die Zieldatei blieb unberuehrt. */
+  it('meldet einen Fehler, statt den Dump als „filed" zu markieren, wenn der Text leer ist', async () => {
+    const { dump, proposal } = await proposalFor('Kundenportal: Ladezeiten prüfen.');
+    const before = await fixture.store.readText(WORK_PROJECT_PATH);
+    /* Nur der Haupttext wird geleert, keine Nebenschreibvorgaenge — so bleibt die
+       Zieldatei ganz unberuehrt und der Beleg waere reine Erfindung. */
+    const emptied: FilingProposal = {
+      ...proposal,
+      primary: { ...proposal.primary, content: '   ' },
+      extras: [],
+      waitingOn: [],
+    };
+
+    await expect(applyProposal(fixture.store, emptied, { now: NOW_MS })).rejects.toMatchObject({
+      code: 'invalid',
+    });
+
+    expect(await fixture.store.readText(WORK_PROJECT_PATH)).toBe(before);
+    const unchanged = await read(dump.path);
+    expect(unchanged.frontmatter['status']).toBe('raw');
+    expect(unchanged.frontmatter['filed_into']).toBeUndefined();
+    expect(unchanged.frontmatter['filed_at']).toBeUndefined();
+  });
+});
+
 describe('applyProposal — Schutz vor Verlust', () => {
   it('meldet einen Konflikt statt zu überschreiben, wenn der Hash veraltet ist', async () => {
     const { dump, proposal } = await proposalFor('Kundenportal: Ladezeiten prüfen.');
@@ -297,9 +378,13 @@ describe('applyProposal — Schutz vor Verlust', () => {
     expect(await fixture.store.readText(dump.path)).not.toBeNull();
   });
 
+  /* Der Dump bleibt beim Ablegen liegen — ein veralteter Hash darf trotzdem kein
+     `status: filed` und keinen Beleg hineinschreiben, sondern muss den Konflikt
+     melden und die Datei so lassen, wie der Nutzer sie hat. */
   it('meldet einen Konflikt, wenn der Dump sich seit dem Vorschlag geändert hat', async () => {
     const { dump, proposal } = await proposalFor('Kundenportal: Ladezeiten prüfen.');
     const before = await fixture.store.readText(WORK_PROJECT_PATH);
+    const dumpBefore = await fixture.store.readText(dump.path);
 
     await expect(
       applyProposal(fixture.store, proposal, {
@@ -309,7 +394,11 @@ describe('applyProposal — Schutz vor Verlust', () => {
     ).rejects.toMatchObject({ code: 'conflict' });
 
     expect(await fixture.store.readText(WORK_PROJECT_PATH)).toBe(before);
-    expect(await fixture.store.readText(dump.path)).not.toBeNull();
+    expect(await fixture.store.readText(dump.path)).toBe(dumpBefore);
+    const unchanged = await read(dump.path);
+    expect(unchanged.frontmatter['status']).toBe('raw');
+    expect(unchanged.frontmatter['filed_into']).toBeUndefined();
+    expect(unchanged.frontmatter['filed_at']).toBeUndefined();
   });
 
   it('rollt bereits Geschriebenes zurück, wenn ein Teilschritt scheitert', async () => {

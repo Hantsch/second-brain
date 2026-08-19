@@ -51,6 +51,23 @@
   color: var(--text-faint);
 }
 
+/* ── Unfiled strip ──────────────────────────────────────────────────────── */
+
+/* One line above the grid, absent at zero — no card, no border, just enough
+   margin to read as its own row next to the day summary above it and the
+   grid below it. */
+.sb-unfiledstrip {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+.sb-unfiledstrip-link {
+  color: var(--text-muted);
+}
+.sb-unfiledstrip-link:hover,
+.sb-unfiledstrip-link:focus-visible {
+  color: var(--accent);
+}
+
 /* ── The grid ───────────────────────────────────────────────────────────── */
 
 .sb-tiles {

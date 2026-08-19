@@ -23,6 +23,7 @@ import { ErrorState } from '../../components/ErrorState';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { Skeleton } from '../../components/Skeleton';
 import { TileCatalog } from '../../components/TileCatalog';
+import { UnfiledStrip } from '../../components/UnfiledStrip';
 import { useT } from '../../i18n';
 import {
   useDashboardData,
@@ -130,6 +131,7 @@ export function DashboardScreen() {
         visible={visible}
         onJump={(id) => setFocus({ id, nonce: Date.now() })}
       />
+      <UnfiledStrip count={data.data?.inboxCount ?? 0} />
       {visible.size === 0 ? (
         <EmptyState
           icon="layout-dashboard"

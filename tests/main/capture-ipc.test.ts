@@ -364,7 +364,7 @@ describe('Erfassen-Kanäle im Main', () => {
 
   // ── Ablegen und zurücknehmen ───────────────────────────────────────────────
 
-  it('legt ab: Notiz unter Notizen, Todo unter Todos, Dump aus der Inbox', async () => {
+  it('legt ab: Notiz unter Notizen, Todo unter Todos, Dump bleibt als Beleg', async () => {
     const item = await dump('Kundenportal: Ladezeiten der Angebotsliste bis morgen prüfen.');
     const proposal = await harness.call('capture:classify', { path: item.path });
     expect(proposal.todos.length).toBeGreaterThan(0);
@@ -377,10 +377,20 @@ describe('Erfassen-Kanäle im Main', () => {
     expect(project).toContain('Ladezeiten der Angebotsliste bis morgen prüfen');
     expect(project).toContain('- [ ] ');
     expect(project).toContain('@due:');
-    /* Der Dump liegt nicht mehr in der Inbox … */
-    expect(await vault.exists(item.path)).toBe(false);
+    /* Der Dump bleibt liegen und trägt den Beleg: wohin und wann. Gelöscht wird
+       nichts — die Liste kennt ihn weiter, jetzt als „filed" statt als offen. */
+    expect(await vault.exists(item.path)).toBe(true);
+    const receipt = (await vault.read(item.path)) ?? '';
+    expect(receipt).toContain('status: filed');
+    expect(receipt).toContain(`filed_into: ${PROJECT_PATH}`);
+    expect(receipt).toMatch(/filed_at: \d{4}-\d{2}-\d{2}/);
+    expect(receipt).toContain('Ladezeiten der Angebotsliste bis morgen prüfen.');
+
     const inbox = await harness.call('capture:inbox', undefined);
-    expect(inbox.map((entry) => entry.path)).not.toContain(item.path);
+    const listed = inbox.find((entry) => entry.path === item.path);
+    expect(listed?.status).toBe('filed');
+    expect(listed?.filedInto).toBe(PROJECT_PATH);
+    expect(listed?.filedAt).not.toBeNull();
   });
 
   it('nimmt eine Ablage vollständig zurück', async () => {
@@ -396,8 +406,14 @@ describe('Erfassen-Kanäle im Main', () => {
     expect(after).not.toContain('Ladezeiten der Angebotsliste bis morgen prüfen');
     /* Der Bestand ist wieder der von vorher — Zeile für Zeile. */
     expect(after.trim()).toBe(before.trim());
+    /* Auch der Beleg ist weg: er zeigte auf eine Ablage, die es nicht mehr gibt.
+       Nennt das Rückgängig den Dump nicht, zieht der Aufrufer den Index für diese
+       Datei nicht nach — dann stünde in der Liste weiter „filed". */
     const inbox = await harness.call('capture:inbox', undefined);
-    expect(inbox.map((entry) => entry.path)).toContain(item.path);
+    const reopened = inbox.find((entry) => entry.path === item.path);
+    expect(reopened?.status).toBe('raw');
+    expect(reopened?.filedInto).toBeNull();
+    expect(reopened?.filedAt).toBeNull();
   });
 
   it('schreibt nur die Todos, die der Nutzer stehen gelassen hat', async () => {

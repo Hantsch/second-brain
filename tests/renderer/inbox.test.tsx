@@ -5,6 +5,11 @@
  * Der Prüfstein ist die Zusage aus Guardrail 2: was der Nutzer auf dem Schirm
  * bearbeitet, ist genau das, was über `capture:apply` geht. Deshalb prüfen die
  * Tests nicht nur, dass geklickt werden kann, sondern was im Aufruf steht.
+ *
+ * Seit Story 006 heißt die Arbeitsfläche `UnfiledWorkspace` und liegt im Körper
+ * von `NotesScreen` (`/notes?filter=unfiled`). Diese Suite rendert sie weiter
+ * allein: die Zusagen dieser Datei sind die der Arbeitsfläche, nicht die des
+ * Wirts — dessen Kopf und Filter-Einstieg prüft `notes.test.tsx`.
  */
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -22,7 +27,7 @@ import type {
   Routing,
   TaskDefinition,
 } from '@shared/types';
-import { InboxScreen } from '@renderer/screens/inbox/InboxScreen';
+import { UnfiledWorkspace } from '@renderer/screens/inbox/UnfiledWorkspace';
 import type { SbBridge } from '@renderer/lib/bridge';
 import { setLanguage } from '@renderer/i18n';
 
@@ -108,6 +113,8 @@ const fresh: DumpItem = {
   wordCount: 14,
   tags: ['kundenportal'],
   scope: 'work',
+  filedInto: null,
+  filedAt: null,
 };
 
 const old: DumpItem = {
@@ -122,6 +129,26 @@ const old: DumpItem = {
   wordCount: 9,
   tags: ['garten'],
   scope: 'private',
+  filedInto: null,
+  filedAt: null,
+};
+
+/* Seit D4 bleibt ein abgelegter Dump liegen — als Beleg. Er darf in dieser
+   Arbeitsfläche nicht mehr als offen zählen (D5). */
+const filedDump: DumpItem = {
+  path: 'inbox/2026-08-05-0900-abgelegt.md',
+  id: '2026-08-05-0900-abgelegt',
+  title: 'Schon abgelegter Gedanke',
+  text: 'Dieser Text wurde bereits abgelegt.',
+  created: '2026-08-05T09:00:00+02:00',
+  origin: 'quick-capture',
+  status: 'filed',
+  ageDays: 5,
+  wordCount: 6,
+  tags: [],
+  scope: 'work',
+  filedInto: PROJECT_PATH,
+  filedAt: '2026-08-06',
 };
 
 function proposalFor(dump: DumpItem): FilingProposal {
@@ -226,7 +253,7 @@ function renderInbox(extra: Handlers = {}): Rendered {
   const { container } = render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
-        <InboxScreen />
+        <UnfiledWorkspace />
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -640,13 +667,55 @@ describe('Inbox', () => {
   it('erklärt den Leerzustand statt einen leeren Kasten zu zeigen', async () => {
     renderInbox({ 'capture:inbox': () => [] });
     expect(await screen.findByText('Die Inbox ist leer')).toBeTruthy();
-    /* Zweimal derselbe Weg: im Kopf des Screens und in der Karte. */
-    expect(screen.getAllByRole('button', { name: /Gedanken erfassen/ })).toHaveLength(2);
+    /* Einmal, in der Karte. Vorher stand derselbe Weg zweimal da, weil die
+       Arbeitsfläche einen eigenen `ScreenHeader` mit demselben Knopf trug; den
+       Kopf stellt seit Story 006 `NotesScreen`, und der trägt „Neuer Bereich",
+       nicht „Gedanken erfassen". */
+    expect(screen.getAllByRole('button', { name: /Gedanken erfassen/ })).toHaveLength(1);
   });
 
   it('hat keinen A11y-Verstoß', async () => {
     const { container } = renderInbox();
     await waitForProposal();
     await expectNoViolations(container);
+  });
+
+  /* Story 006, D5: seit `capture:inbox` auch abgelegte Dumps liefert (D4 lässt
+     sie liegen statt sie zu löschen), muss die Arbeitsfläche sie selbst
+     aussortieren — sonst würden sie die Tastaturliste und ihre Zählung
+     verstopfen, obwohl sie längst erledigt sind. */
+  describe('Beleg: abgelegte Dumps', () => {
+    it('hält einen abgelegten Dump aus der Arbeitsliste und zeigt ihn eingeklappt im Beleg', async () => {
+      renderInbox({ 'capture:inbox': () => [fresh, old, filedDump] });
+
+      /* Nur die zwei offenen Dumps zählen und stehen in der Tastaturliste. */
+      await screen.findByText('Einkauf fürs Hochbeet');
+      expect(screen.getByText('2 Dumps')).toBeTruthy();
+      expect(screen.queryByRole('button', { name: /Schon abgelegter Gedanke/ })).toBeNull();
+
+      /* Der Beleg steht eingeklappt da, mit seiner Zahl — die Zeile selbst ist
+         erst nach dem Aufklappen zu sehen. */
+      const toggle = screen.getByRole('button', { name: 'Notizen zeigen' });
+      expect(toggle.getAttribute('aria-expanded')).toBe('false');
+      expect(screen.getByText('1 abgelegt')).toBeTruthy();
+      expect(screen.queryByText('Schon abgelegter Gedanke')).toBeNull();
+
+      /* Aufgeklappt zeigt die Zeile den Titel und das aufgelöste Ziel, und der
+         Link lässt sich anklicken, ohne zu werfen. */
+      await userEvent.click(toggle);
+      expect(await screen.findByText('Schon abgelegter Gedanke')).toBeTruthy();
+      const link = screen.getByRole('button', { name: 'abgelegt in Kundenportal Relaunch' });
+      await userEvent.click(link);
+      expect(link).toBeTruthy();
+    });
+
+    it('zeigt keinen Beleg-Abschnitt, wenn nichts abgelegt ist', async () => {
+      renderInbox();
+      await screen.findByText('Einkauf fürs Hochbeet');
+
+      expect(screen.queryByText('Abgelegt')).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Notizen zeigen' })).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Notizen verbergen' })).toBeNull();
+    });
   });
 });

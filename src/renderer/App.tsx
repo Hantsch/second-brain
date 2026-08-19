@@ -16,7 +16,6 @@ import type { ShellOverlay } from './lib/shell-overlays';
 import { useShellOverlays } from './lib/shell-overlays';
 import { DashboardScreen } from './screens/dashboard/DashboardScreen';
 import { GardenScreen } from './screens/garden/GardenScreen';
-import { InboxScreen } from './screens/inbox/InboxScreen';
 import { JournalScreen } from './screens/journal/JournalScreen';
 import { ModulesScreen } from './screens/modules/ModulesScreen';
 import { NotesScreen } from './screens/notes/NotesScreen';
@@ -47,6 +46,23 @@ function KnowledgeRedirect({ tab }: { tab?: string }) {
   const params = new URLSearchParams(search);
   params.set('tab', tab);
   return <Navigate to={`/knowledge?${params.toString()}`} replace />;
+}
+
+/** Redirect off the old inbox address onto Notes' unfiled filter.
+
+    Inbox stopped being a place of its own (story 006): what used to live at
+    `/inbox` is now the unfiled filter on Notes. The address stays reachable —
+    tiles, capture and old bookmarks still point at it — so it must arrive
+    with its query string intact and with `filter=unfiled` added. A bare
+    `<Navigate to="/notes?filter=unfiled" />` would drop whatever else the
+    address carried (`#/inbox?x=1` would land without `x`), so `search` is
+    read here, while this route still is the location, merged with the one
+    fixed param the destination needs. */
+function UnfiledRedirect() {
+  const { search } = useLocation();
+  const params = new URLSearchParams(search);
+  params.set('filter', 'unfiled');
+  return <Navigate to={`/notes?${params.toString()}`} replace />;
 }
 
 /** Redirect off the old all-sessions address that keeps the query string.
@@ -143,7 +159,7 @@ export function App() {
       <Routes>
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<DashboardScreen />} />
-        <Route path="/inbox" element={<InboxScreen />} />
+        <Route path="/inbox" element={<UnfiledRedirect />} />
         <Route path="/projects" element={<ProjectsScreen />} />
         {/* Nested under Projects on purpose: the rail entry stays lit through
             the `NavLink` prefix match. */}

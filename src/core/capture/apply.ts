@@ -8,8 +8,12 @@
  * - **Kein halber Zustand.** Scheitert ein Schritt in der Mitte, wird alles
  *   Geschriebene zurueckgedreht und der Fehler gemeldet.
  * - **Ein Rueckweg fuer alles.** Der `undoToken` dreht jeden Teilschritt zurueck,
- *   nicht nur den Dump; das Protokoll dazu liegt neben der Papierkorb-Kopie
- *   (`undo.ts`).
+ *   nicht nur den Dump; das Protokoll dazu liegt unter der Marke im
+ *   Papierkorb-Ordner (`undo.ts`).
+ *
+ * Der abgelegte Dump **bleibt liegen**: er traegt `status: filed` samt `filed_into`
+ * und `filed_at` und wird damit zum Beleg, wohin sein Inhalt gewandert ist. Es gibt
+ * dafuer weder eine Papierkorb-Kopie noch eine Loeschung — `movedTo` ist immer `null`.
  *
  * Format: docs/VAULT-FORMAT.md. Neue Projektdateien tragen die Abschnitte Stand,
  * Todos und Notizen; angehaengte Dumps stehen unter „Notizen" mit ihrem Datum.
@@ -24,9 +28,10 @@ import type {
 } from '@shared/types';
 import { isoDay } from '@core/vault/paths';
 import type { DateLike } from '@core/vault/paths';
+import { createUndoToken } from '@core/vault/trash';
 import { SECTION_NOTES, SECTION_STATE, SECTION_TODOS } from './actions';
 import { FilingError } from './filing';
-import { revertStep, trashCopyPath, writeJournal } from './undo';
+import { revertStep, writeJournal } from './undo';
 import type { FilingJournal, Step, UndoStore } from './undo';
 
 /** Was das Ausfuehren am Store braucht. `VaultStore` erfuellt es strukturell. */
@@ -199,9 +204,17 @@ function sectionOf(action: FilingAction, fallback: string): string {
   return section === undefined || section.length === 0 ? fallback : section;
 }
 
-/** Der Status, den der Dump vor der Ablage trug. */
-function previousStatus(value: unknown): string | null {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+/**
+ * Der Status, den der Dump vor der Ablage trug — der Wert, auf den ein Rueckgaengig
+ * ihn zurueckstellt.
+ *
+ * Trug er keinen, ist die Antwort `raw`: genau das leitet jeder Leser aus einem
+ * Dump ohne `status` ab (`index/dumps.ts`). Die Ablage schreibt das Feld ohnehin,
+ * und `null` hiesse fuer den Rueckweg „nichts zurueckzustellen" — der Dump bliebe
+ * mit `status: filed` liegen, obwohl seine Ablage gerade zurueckgenommen wurde.
+ */
+function previousStatus(value: unknown): string {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : 'raw';
 }
 
 /**
@@ -240,11 +253,23 @@ export async function applyProposal(
   const run = new Run(store, options);
   try {
     await applyPrimary(run, proposal, today);
+
+    /* Ein echtes Ziel (nicht `inbox`), das trotzdem nichts geschrieben hat: der
+       Vorschlagstext war leer oder nur Leerraum — `Run.append` haengt einen
+       leeren Block gar nicht erst an. Ohne diese Pruefung liefe der Code unten
+       weiter und schriebe `status: filed` samt `filed_into` auf eine Zieldatei,
+       die nichts empfangen hat: ein Beleg, der lügt, und ein Widerspruch zum
+       `written`, das dann leer bliebe. Kein stiller Erfolg also, sondern ein
+       Fehler — die Oberflaeche zeigt ihn, statt eine Ablage zu bestaetigen, die
+       nie stattfand. */
+    if (!keepsDump && run.written.length === 0) {
+      throw new FilingError('invalid', 'Nichts zum Ablegen: der Text ist leer.');
+    }
+
     /* Bleibt der Dump liegen, wird **nichts** geschrieben — auch kein Todo-Block
-       in einer fremden Projektdatei. Es gaebe dafuer keinen Rueckweg: der
-       `undoToken` entsteht erst mit der Papierkorb-Kopie des Dumps, und die gibt
-       es hier nicht. Ein Schreibvorgang ohne Rueckweg ist keiner, den die
-       Oberflaeche „Liegen lassen" nennen darf. */
+       in einer fremden Projektdatei. Es gaebe dafuer keinen Rueckweg: dieser Zweig
+       schreibt kein Protokoll und gibt keine Marke zurueck. Ein Schreibvorgang ohne
+       Rueckweg ist keiner, den die Oberflaeche „Liegen lassen" nennen darf. */
     if (!keepsDump) {
       for (const extra of proposal.extras) {
         if (extra.target === 'inbox') continue;
@@ -256,9 +281,12 @@ export async function applyProposal(
       }
     }
 
+    /* Der Beleg: wohin der Inhalt ging und an welchem Tag. Nur beim Ablegen — ein
+       liegen gelassener Dump wurde nirgends abgelegt und traegt die Felder nicht. */
+    const filedFields = keepsDump ? {} : { filed_into: proposal.primary.path, filed_at: today };
     await store.write({
       path: proposal.dumpPath,
-      frontmatter: { status: keepsDump ? 'kept' : 'filed' },
+      frontmatter: { status: keepsDump ? 'kept' : 'filed', ...filedFields },
       expectedHash: dumpHash,
     });
     if (keepsDump) {
@@ -270,20 +298,25 @@ export async function applyProposal(
       };
     }
 
-    const removed = await store.delete(proposal.dumpPath);
+    /* Die Marke entsteht hier selbst, nicht aus einer Loeschung: der Dump bleibt als
+       Beleg liegen, es gibt also keine Papierkorb-Kopie, die eine Marke stiften
+       koennte. Das Protokoll traegt sie trotzdem — und `trashed: false` sagt dem
+       Rueckweg, dass er im Papierkorb nichts zu suchen hat. */
+    const token = createUndoToken();
     const journal: FilingJournal = {
       version: 1,
       dumpPath: proposal.dumpPath,
       dumpStatus: previousStatus(dump.frontmatter['status']),
+      trashed: false,
       steps: run.steps,
     };
-    await writeJournal(store, removed.undoToken, journal);
+    await writeJournal(store, token, journal);
 
     return {
       dumpPath: proposal.dumpPath,
       written: [...run.written],
-      movedTo: trashCopyPath(removed.undoToken, proposal.dumpPath),
-      undoToken: removed.undoToken,
+      movedTo: null,
+      undoToken: token,
     };
   } catch (error) {
     await run.rollback();

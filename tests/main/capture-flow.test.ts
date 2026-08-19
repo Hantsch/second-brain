@@ -183,17 +183,31 @@ describe('Der Weg eines Gedanken durch die echten Handler', () => {
     );
     /* Im gewählten Ziel steht der Text, aber keine erfundene Checkbox. */
     expect(filed).not.toContain('@due:2026-08-11');
-    expect(await vault.exists(dump.path)).toBe(false);
 
-    // 7. Rückgängig: Bestand wie vorher — in beiden Dateien — Dump wieder da.
+    /* Der Dump bleibt liegen — als Beleg, wohin sein Inhalt ging. */
+    expect(await vault.exists(dump.path)).toBe(true);
+    const receipt = (await vault.read(dump.path)) ?? '';
+    expect(receipt).toContain('status: filed');
+    expect(receipt).toContain(`filed_into: ${HOCHBEET}`);
+    expect(receipt).toContain(`filed_at: ${TODAY}`);
+    expect(receipt).toContain(DUMP_TEXT);
+
+    // 7. Rückgängig: Bestand wie vorher — in beiden Dateien — Beleg wieder weg.
     await app.call('capture:undo', { undoToken: result.undoToken ?? '' });
 
     expect(await vault.read(HOCHBEET)).toBe(before.private);
     expect(await vault.read(PROJECT)).toBe(before.work);
     expect(await vault.exists(dump.path)).toBe(true);
     expect((await vault.read(dump.path)) ?? '').toContain('status: raw');
+    /* Und die Liste zeigt ihn wieder als offen: das Rückgängig muss den Dump auch
+       melden, sonst zieht der Aufrufer den Index für diese Datei nicht nach und der
+       Beleg bleibt in der Ansicht stehen, obwohl er auf der Platte weg ist. */
     const back = await app.call('capture:inbox', undefined);
     expect(back.map((entry) => entry.path)).toContain(dump.path);
+    const reopened = back.find((entry) => entry.path === dump.path);
+    expect(reopened?.status).toBe('raw');
+    expect(reopened?.filedInto).toBeNull();
+    expect(reopened?.filedAt).toBeNull();
   });
 
   it('meldet jeden Schritt an den Renderer, damit die Oberfläche nachlädt', async () => {

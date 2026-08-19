@@ -149,6 +149,8 @@ export const dump: DumpItem = {
   wordCount: 12,
   tags: [],
   scope: 'work',
+  filedInto: null,
+  filedAt: null,
 };
 
 export const proposal: FilingProposal = {

@@ -344,7 +344,9 @@ describe('Ordnung der Befunde', () => {
       kind: 'route',
       to: `/knowledge?m=${MODULE}&p=${encodeURIComponent(PAGE_A)}`,
     });
-    expect(targetFor('inbox/x.md')).toEqual({ kind: 'route', to: '/inbox' });
+    /* Seit Story 006 ist die Inbox kein Ort mehr, sondern der Filter auf
+       Notizen — der Weg zu einem liegengebliebenen Dump führt dorthin. */
+    expect(targetFor('inbox/x.md')).toEqual({ kind: 'route', to: '/notes?filter=unfiled' });
     expect(targetFor('raw/web/x.md')).toEqual({ kind: 'route', to: '/knowledge?tab=sources' });
     /* Katalog und Chronik sind keine Wiki-Seiten: die Seitenansicht lüde sie nicht. */
     expect(targetFor(CATALOG)).toEqual({ kind: 'file', path: CATALOG });
@@ -569,9 +571,13 @@ describe('Fixes', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Zum Einordnen öffnen' }));
 
     expect(calls('gardener:applyFix')).toEqual([{ finding: DUMP }]);
-    /* Der Weg führt in die Inbox — und die Meldung behauptet kein Schreiben. */
+    /* Der Weg führt zu den nicht abgelegten Dumps — seit Story 006 der Filter
+       auf Notizen, nicht mehr ein eigener Screen — und die Meldung behauptet
+       kein Schreiben. */
     expect(await screen.findByText(`Geöffnet: ${DUMP.paths[0]}`)).toBeTruthy();
-    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('/inbox'));
+    await waitFor(() =>
+      expect(screen.getByTestId('location').textContent).toBe('/notes?filter=unfiled'),
+    );
   });
 
   it('dreht einen Fix auf Wunsch zurück', async () => {

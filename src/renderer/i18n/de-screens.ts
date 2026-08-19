@@ -55,8 +55,10 @@ export const deScreens = {
   'capture.classified': 'Vorschlag steht — in der Inbox',
   'capture.toProposal': 'In der Inbox ansehen',
 
-  'screen.inbox.overline': 'Einordnen',
-  'screen.inbox.title': 'Inbox',
+  /* Kein Kopfpaar mehr: die Inbox ist kein eigener Screen, sondern der Filter
+     „nicht abgelegt" auf Notizen (Story 006). Den einen `ScreenHeader` dieses
+     Screens stellt `NotesScreen`; der Leerzustand unten gehört weiter der
+     Arbeitsfläche (`UnfiledWorkspace`). */
   'screen.inbox.empty.title': 'Die Inbox ist leer',
   'screen.inbox.empty.body':
     'Erfasste Gedanken liegen hier, bis sie ein Ziel haben. Zu jedem Dump schlägt die App eine Ablage vor und sagt, warum.',

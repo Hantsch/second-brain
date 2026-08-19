@@ -18,6 +18,13 @@ export const deDashboard = {
   'dashboard.summary.clear': 'Nichts ist überfällig, nichts ist heute fällig.',
   'dashboard.summary.jump': 'Zu „{module}" springen',
 
+  // ── Der „nicht abgelegt"-Streifen (Story 006) ─────────────────────────────
+  /* Über dem Gitter, nicht Teil der Tageszusammenfassung — bei 0 fehlt er
+     ganz, statt „nichts unabgelegt" zu behaupten. Ein Key genügt, wie bei
+     `notes.filter.unfiled`: „1 nicht abgelegt" und „3 nicht abgelegt" beugen
+     im Deutschen gleich. */
+  'dashboard.unfiled.strip': '{count} nicht abgelegt',
+
   // ── The grid ───────────────────────────────────────────────────────────
   'dashboard.tiles.label': 'Module des Dashboards',
   'dashboard.tiles.empty':

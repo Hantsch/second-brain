@@ -48,6 +48,17 @@ export function usePaletteCommands({ onAsk }: PaletteHandlers): CommandDef[] {
       icon: 'workflow',
       run: () => void navigate('/projects/sessions'),
     };
+    /* Inbox stopped being a screen of its own (story 006): it is now the
+       unfiled filter on Notes, not tied to one SCREENS entry the rail entry
+       used to point at. Still a destination — the icon that used to live on
+       the rail now shows up here instead. */
+    const unfiled: CommandDef = {
+      id: 'screen:unfiled',
+      group: 'screens',
+      labelKey: 'palette.screen.unfiled',
+      icon: 'inbox',
+      run: () => void navigate('/notes?filter=unfiled'),
+    };
     const screens: CommandDef[] = SCREENS.flatMap((screen) => {
       const entry: CommandDef = {
         id: `screen:${screen.id}`,
@@ -89,6 +100,6 @@ export function usePaletteCommands({ onAsk }: PaletteHandlers): CommandDef[] {
         run: onAsk,
       },
     ];
-    return [...screens, ...actions, ...registered];
+    return [...screens, unfiled, ...actions, ...registered];
   }, [navigate, onAsk, overlays, registered]);
 }

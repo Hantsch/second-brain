@@ -48,8 +48,10 @@ export const enScreens = {
   'capture.classified': 'Proposal ready — in the inbox',
   'capture.toProposal': 'See it in the inbox',
 
-  'screen.inbox.overline': 'Sort it',
-  'screen.inbox.title': 'Inbox',
+  /* No header pair any more: the inbox is not a screen of its own but the
+     "unfiled" filter on Notes (story 006). `NotesScreen` owns the one
+     `ScreenHeader`; the empty state below still belongs to the workspace
+     (`UnfiledWorkspace`). */
   'screen.inbox.empty.title': 'The inbox is empty',
   'screen.inbox.empty.body':
     'Captured thoughts stay here until they have a home. For every dump the app proposes a target and says why.',

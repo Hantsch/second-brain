@@ -6,6 +6,16 @@ export const enNotes = {
   'notes.rule':
     'A journal entry looks back on the day; a note is a thought that stands on its own.',
 
+  // ── The "unfiled" filter (story 006) ─────────────────────────────────────
+  'notes.filter.unfiled': '{count} unfiled',
+  'notes.unfiled.optional':
+    'Filing is optional — a dump that never gets filed is not a backlog item, it is a note.',
+  /* The receipt (D5): a filed dump stays in place and shows up here,
+     collapsed, below the working list. */
+  'notes.unfiled.filedTitle': 'Filed',
+  'notes.unfiled.filedCount': '{count} filed',
+  'notes.unfiled.filedInto': 'filed into {target}',
+
   // ── Composer ─────────────────────────────────────────────────────────────
   'notes.composer.placeholder': 'A thought that stands on its own.',
   'notes.composer.targetLabel': 'Area',

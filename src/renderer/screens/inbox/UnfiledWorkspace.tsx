@@ -1,4 +1,15 @@
-/* Inbox — the workspace for filing.
+/* The unfiled filter's workspace — filing, as a job.
+
+   Story 006 moved this out of a screen of its own: "Inbox" named a container,
+   not a job, so what used to sit at `/inbox` is now the body of Notes while
+   `filter=unfiled` is in the address. Everything below is the former
+   `InboxScreen` unchanged; only the `ScreenHeader` is gone, because the host
+   (`NotesScreen`) owns the one header of this screen, filtered or not — and
+   the surrounding `.sb-screen--fill` column, which the host owns for the same
+   reason: `height: 100%` only resolves against a parent with a definite
+   height, and nesting a second `.sb-screen` inside the host's would have made
+   the two columns grow with their content instead of scrolling inside
+   themselves.
 
    Two columns instead of expanding cards: at 1440 px the list stays put
    while the proposal sits on the right with text field, todos, and four
@@ -24,7 +35,6 @@ import { Button } from '../../atoms/Button';
 import { Dialog } from '../../atoms/Dialog';
 import { EmptyState } from '../../components/EmptyState';
 import { ErrorState } from '../../components/ErrorState';
-import { ScreenHeader } from '../../components/ScreenHeader';
 import { Skeleton } from '../../components/Skeleton';
 import { TargetPicker } from '../../components/TargetPicker';
 import { applied, useProposalEdit } from '../../components/proposal-edit';
@@ -35,6 +45,7 @@ import { useInbox, useModules, useProjects } from '../../lib/queries/data';
 import { useTaskRouted } from '../../lib/queries/llm';
 import { DumpDetail } from './DumpDetail';
 import { DumpRow } from './DumpRow';
+import { FiledTrail } from './FiledTrail';
 import { UndoStrip } from './UndoStrip';
 import type { UndoOffer } from './UndoStrip';
 import { useInboxKeys } from './use-inbox-keys';
@@ -59,7 +70,7 @@ function pickIndex(dumps: readonly DumpItem[], anchor: Anchor | null): number {
   return found >= 0 ? found : Math.min(anchor.at, dumps.length - 1);
 }
 
-export function InboxScreen() {
+export function UnfiledWorkspace() {
   const t = useT();
   const navigate = useNavigate();
   const { data, error, isPending, refetch } = useInbox();
@@ -77,7 +88,13 @@ export function InboxScreen() {
   const textField = useRef<HTMLTextAreaElement>(null);
   const panel = useRef<HTMLDivElement>(null);
 
-  const dumps: DumpItem[] = data ?? [];
+  /* `capture:inbox` returns every dump under `inbox/` regardless of status —
+     since a filed dump stays on disk as its own receipt (story 006, D4), it
+     shows up here too. Split right here, once: `dumps` is the working set
+     the keyboard, the count, and the list below all still operate on;
+     `filed` feeds the trail beneath them and touches none of that. */
+  const dumps: DumpItem[] = (data ?? []).filter((dump) => dump.status !== 'filed');
+  const filed: DumpItem[] = (data ?? []).filter((dump) => dump.status === 'filed');
   const index = pickIndex(dumps, anchor);
   const current = dumps[index] ?? null;
   /* Even the first selection — which nobody clicked — hangs off the path.
@@ -160,18 +177,16 @@ export function InboxScreen() {
     focusText: () => textField.current?.focus(),
   });
 
-  const header = (
-    <ScreenHeader
-      overline={t('screen.inbox.overline')}
-      title={t('screen.inbox.title')}
-      action={
-        /* Secondary: this screen's one teal focus point is "File". */
-        <Button variant="secondary" icon="zap" onClick={() => void navigate('/capture')}>
-          {t('screen.inbox.empty.action')}
-        </Button>
-      }
-    />
-  );
+  /* Filing is an offer, not a chore (story 006) — and the sentence that says
+     so sits where the screen's own header used to, above every state of the
+     workspace. Same shape as `notes.rule` one level up, which the host also
+     keeps above its error and skeleton states. */
+  const rule = <p className="sb-notes-rule">{t('notes.unfiled.optional')}</p>;
+
+  /* Passed to `DumpDetail`/`TargetPicker` today, and to `FiledTrail` for the
+     same reason: resolving a filed dump's target path to a human title
+     needs the same lookup tables. */
+  const names = { projects: projects.data ?? [], modules: modules.data ?? [] };
 
   const strip =
     undoOffer === null ? null : (
@@ -189,26 +204,26 @@ export function InboxScreen() {
 
   if (error) {
     return (
-      <div className="sb-screen sb-screen--wide sb-screen--fill">
-        {header}
+      <>
+        {rule}
         <ErrorState error={error} onRetry={() => void refetch()} />
-      </div>
+      </>
     );
   }
 
   if (isPending || data === undefined) {
     return (
-      <div className="sb-screen sb-screen--wide sb-screen--fill">
-        {header}
+      <>
+        {rule}
         <Skeleton lines={6} height={48} />
-      </div>
+      </>
     );
   }
 
   if (dumps.length === 0) {
     return (
-      <div className="sb-screen sb-screen--wide sb-screen--fill">
-        {header}
+      <>
+        {rule}
         {strip}
         <EmptyState
           icon="inbox"
@@ -220,15 +235,14 @@ export function InboxScreen() {
             onClick: () => void navigate('/capture'),
           }}
         />
-      </div>
+        <FiledTrail dumps={filed} names={names} />
+      </>
     );
   }
 
-  const names = { projects: projects.data ?? [], modules: modules.data ?? [] };
-
   return (
-    <div className="sb-screen sb-screen--wide sb-screen--fill">
-      {header}
+    <>
+      {rule}
       {strip}
       {failed === null ? null : (
         /* Secondary: this screen's one teal belongs to the action in the card. */
@@ -283,6 +297,8 @@ export function InboxScreen() {
         )}
       </div>
 
+      <FiledTrail dumps={filed} names={names} />
+
       {proposal.data !== undefined && edit !== null ? (
         <TargetPicker
           open={pickerOpen}
@@ -317,6 +333,6 @@ export function InboxScreen() {
           </>
         }
       />
-    </div>
+    </>
   );
 }

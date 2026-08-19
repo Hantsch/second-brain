@@ -9,10 +9,19 @@
 
    `?a=<slug>` is the deep link into an area: that section starts open in
    addition to the default area (`slug === 'notes'`), which is always open —
-   it is where an untargeted note lands, so it should never look empty. */
+   it is where an untargeted note lands, so it should never look empty.
+
+   `?filter=unfiled` is the second parameter, from story 006: the inbox stopped
+   being a place of its own, so the dumps nobody has filed yet are a filter
+   here. It switches the body — and only the body — into `UnfiledWorkspace`;
+   the header stays the same either way, because it is still one screen. The
+   switch happens before the areas query is looked at, so the workspace mounts
+   once for as long as the filter is in the address and its keyboard listener,
+   selection anchor, and ten-second undo timer never see a remount from an
+   areas refetch. */
 
 import { useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '../../atoms/Button';
 import { EmptyState } from '../../components/EmptyState';
 import { ErrorState } from '../../components/ErrorState';
@@ -21,20 +30,28 @@ import { Skeleton } from '../../components/Skeleton';
 import { useT } from '../../i18n';
 import { IpcCallError } from '../../lib/api';
 import { useAreaMutations, useAreas } from '../../lib/queries/areas';
+import { useDashboardData } from '../../lib/queries/dashboard';
 import { pushToast } from '../../lib/toast';
+import { UnfiledWorkspace } from '../inbox/UnfiledWorkspace';
 import { AreaSection } from './AreaSection';
 import { NewAreaDialog } from './NewAreaDialog';
 import { NoteComposer } from './NoteComposer';
 
+/** The address of the filter — used as a link target and read back from it. */
+const UNFILED = '/notes?filter=unfiled';
+
 export function NotesScreen() {
   const t = useT();
+  const navigate = useNavigate();
   const [params] = useSearchParams();
   const areas = useAreas();
+  const dashboard = useDashboardData();
   const mutations = useAreaMutations();
   const field = useRef<HTMLTextAreaElement>(null);
   const [newAreaOpen, setNewAreaOpen] = useState(false);
 
   const wanted = params.get('a');
+  const unfiled = params.get('filter') === 'unfiled';
 
   const header = (
     <ScreenHeader
@@ -63,6 +80,42 @@ export function NotesScreen() {
         mutations.createArea.mutate(title, { onSuccess: () => setNewAreaOpen(false) })
       }
     />
+  );
+
+  /* The filter, not a second screen: one header, one wrapper — the body below
+     is either the workspace or the areas. `sb-screen--fill` only comes with the
+     filter, because only the workspace's two columns scroll inside themselves
+     (`inbox.css`); the areas list scrolls with the page.
+
+     Deliberately before the areas query is inspected: `areas` may go pending
+     again on any refetch, and a `return` per query state would put
+     `<UnfiledWorkspace />` in a differently shaped child list each time —
+     React would remount it, and with it the key listener, the anchor, and the
+     running undo timer. */
+  if (unfiled) {
+    return (
+      <div className="sb-screen sb-screen--wide sb-screen--fill">
+        {header}
+        <UnfiledWorkspace />
+        {newAreaDialog}
+      </div>
+    );
+  }
+
+  /* AC1: unfiled dumps are reachable from Notes as a filter, labelled with
+     their count. Present at zero too — this is a permanent way into a filter,
+     not a notification (the strip on Today that disappears at zero is a
+     different thing). The count comes from `dashboard:data`, the one place
+     that counts open dumps; `InboxTile` reads the same field. */
+  const unfiledLink = (
+    <p className="sb-notes-rule">
+      <button type="button" className="sb-textlink" onClick={() => void navigate(UNFILED)}>
+        {/* One interpolated key, no singular/plural pair: "1 nicht abgelegt"
+            and "3 nicht abgelegt" inflect the same in both languages — the
+            same reason `notes.area.openTodos` gets by with one. */}
+        {t('notes.filter.unfiled', { count: dashboard.data?.inboxCount ?? 0 })}
+      </button>
+    </p>
   );
 
   const createNoteError = mutations.createNote.error;
@@ -103,6 +156,7 @@ export function NotesScreen() {
       <div className="sb-screen sb-screen--wide">
         {header}
         <p className="sb-notes-rule">{t('notes.rule')}</p>
+        {unfiledLink}
         {composer}
         <ErrorState error={areas.error} onRetry={() => void areas.refetch()} />
         {newAreaDialog}
@@ -115,6 +169,7 @@ export function NotesScreen() {
       <div className="sb-screen sb-screen--wide">
         {header}
         <p className="sb-notes-rule">{t('notes.rule')}</p>
+        {unfiledLink}
         {composer}
         <Skeleton lines={4} height={64} />
         {newAreaDialog}
@@ -126,6 +181,7 @@ export function NotesScreen() {
     <div className="sb-screen sb-screen--wide">
       {header}
       <p className="sb-notes-rule">{t('notes.rule')}</p>
+      {unfiledLink}
       {composer}
 
       {areas.data.length === 0 ? (

@@ -22,6 +22,10 @@ export interface DumpItem {
   tags: string[];
   /** Scope, if already clear at capture time. */
   scope: Scope | null;
+  /** Where a filed dump was written to — the receipt. `null` while unfiled. */
+  filedInto: string | null;
+  /** When it was filed (`YYYY-MM-DD`) — `null` while unfiled. */
+  filedAt: string | null;
 }
 
 /** Where a dump ends up. */
@@ -92,9 +96,12 @@ export interface FilingResult {
   dumpPath: string;
   /** Files written or changed. */
   written: string[];
-  /** Where the dump itself was moved to, or null if it stayed in the inbox. */
+  /**
+   * Where the dump file itself was moved to. Filing leaves it in place as a
+   * receipt, so this is `null` — it only ever names a trash copy.
+   */
   movedTo: string | null;
-  /** Undo marker: a copy under `.secondbrain/trash/`. */
+  /** Undo marker: a journal (and possibly a copy) under `.secondbrain/trash/`. */
   undoToken: string | null;
 }
 

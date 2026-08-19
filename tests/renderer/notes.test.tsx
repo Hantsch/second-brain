@@ -20,7 +20,7 @@ import userEvent from '@testing-library/user-event';
 import axe from 'axe-core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { IpcChannel, IpcError, IpcRequest, IpcResponse } from '@shared/ipc';
-import type { Area, AreaNote, Todo } from '@shared/types';
+import type { Area, AreaNote, DashboardData, Todo } from '@shared/types';
 import { ToastHost } from '@renderer/components/ToastHost';
 import { NotesScreen } from '@renderer/screens/notes/NotesScreen';
 import type { SbBridge } from '@renderer/lib/bridge';
@@ -72,6 +72,21 @@ async function expectNoViolations(container: HTMLElement): Promise<void> {
 }
 
 const NOW = '2026-08-10T14:32:00+02:00';
+
+/** Everything `dashboard:data` answers with; only `inboxCount` matters here. */
+const EMPTY_DASHBOARD: DashboardData = {
+  reminders: [],
+  recentWork: [],
+  staleProjects: [],
+  todos: { work: [], private: [] },
+  waitingOn: [],
+  inboxCount: 0,
+  journal: { streak: 0, lastEntry: null, moodTrend: [] },
+  health: 0,
+  findingCount: 0,
+  healthKnown: false,
+  sessions: [],
+};
 
 /* The default area: always in the list, starts open, and is where an
    untargeted note lands — so it stays present even without a note yet. */
@@ -160,6 +175,16 @@ function renderNotes(path = '/notes', extra: Handlers = {}): { sb: Mock; contain
       to: { path: `areas/${to}.md`, hash: 'hash-target-after-move', created: false },
     }),
     'todos:list': ({ area }) => (area === 'gesundheit' ? [healthTodo] : []),
+    /* Story 006: the unfiled filter lives on this screen, so its count
+       (`dashboard:data`, the one place that counts open dumps) and the
+       channels its workspace opens belong in this mock too. Deliberately not
+       a full dashboard fixture — only `inboxCount` is read here. */
+    'dashboard:data': () => ({ ...EMPTY_DASHBOARD, inboxCount: 2 }),
+    'capture:inbox': () => [],
+    'projects:list': () => [],
+    'modules:list': () => [],
+    'llm:routing': () => ({ tasks: {}, defaults: {} }),
+    'llm:tasks': () => [],
     ...extra,
   });
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -225,6 +250,45 @@ describe('Notizen: Bereiche', () => {
 
     expect(await screen.findByText(/Zwei Wochen Schlafprotokoll, ausführlich/)).toBeTruthy();
     expect(screen.getByText(healthTodo.text)).toBeTruthy();
+  });
+});
+
+/* Story 006: die Inbox ist kein Ort mehr, sondern der Filter „nicht abgelegt"
+   auf diesem Screen. Was die Arbeitsfläche selbst zusagt, prüft
+   `inbox.test.tsx`; hier steht nur, dass sie erreichbar ist und dass der Filter
+   den Körper tauscht — den Kopf nicht. */
+describe('Notizen: der Filter „nicht abgelegt"', () => {
+  it('trägt den Einstieg in den Filter mit seiner Zahl, auch bei null', async () => {
+    renderNotes();
+
+    expect(await screen.findByRole('button', { name: '2 nicht abgelegt' })).toBeTruthy();
+
+    /* Ein dauerhafter Einstieg, keine Meldung: bei 0 verschwindet er nicht. */
+    renderNotes('/notes', { 'dashboard:data': () => EMPTY_DASHBOARD });
+    expect(await screen.findByRole('button', { name: '0 nicht abgelegt' })).toBeTruthy();
+  });
+
+  it('tauscht mit dem Klick den Körper gegen die Arbeitsfläche, der Kopf bleibt', async () => {
+    renderNotes();
+
+    await userEvent.click(await screen.findByRole('button', { name: '2 nicht abgelegt' }));
+
+    /* Derselbe Kopf wie vorher — es ist ein Screen, kein zweiter. */
+    expect(screen.getByRole('heading', { level: 1, name: 'Notizen' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Neuer Bereich' })).toBeTruthy();
+    /* Der Körper aber ist die Arbeitsfläche: der Satz, dass Ablegen freiwillig
+       ist, steht da — und der Composer der Bereiche nicht mehr. */
+    expect(await screen.findByText(/Ablegen ist freiwillig/)).toBeTruthy();
+    expect(screen.queryByLabelText('Ein Gedanke, der für sich steht.')).toBeNull();
+    expect(screen.queryByRole('heading', { level: 2, name: 'Gesundheit' })).toBeNull();
+  });
+
+  it('zeigt den Filter direkt aus der Adresse, ohne Umweg über einen Klick', async () => {
+    renderNotes('/notes?filter=unfiled');
+
+    expect(await screen.findByText('Die Inbox ist leer')).toBeTruthy();
+    expect(screen.getByText(/Ablegen ist freiwillig/)).toBeTruthy();
+    expect(screen.queryByLabelText('Ein Gedanke, der für sich steht.')).toBeNull();
   });
 });
 

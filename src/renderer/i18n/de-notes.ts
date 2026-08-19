@@ -15,6 +15,19 @@ export const deNotes = {
   'notes.rule':
     'Tagebuch ist Rückblick auf den Tag, eine Notiz ist ein Gedanke, der für sich steht.',
 
+  // ── Der „nicht abgelegt"-Filter (Story 006) ──────────────────────────────
+  /* Der Weg in den Filter, mit seiner Zahl. Steht auch bei 0 da: ein
+     dauerhafter Einstieg, keine Meldung. Ein Key genügt — „1 nicht abgelegt"
+     und „3 nicht abgelegt" beugen gleich, wie bei `notes.area.openTodos`. */
+  'notes.filter.unfiled': '{count} nicht abgelegt',
+  'notes.unfiled.optional':
+    'Ablegen ist freiwillig — ein Dump, der nie abgelegt wird, ist kein Rückstand, sondern eine Notiz.',
+  /* Der Beleg (D5): ein abgelegter Dump bleibt liegen und wird hier sichtbar,
+     eingeklappt, unterhalb der Arbeitsliste. */
+  'notes.unfiled.filedTitle': 'Abgelegt',
+  'notes.unfiled.filedCount': '{count} abgelegt',
+  'notes.unfiled.filedInto': 'abgelegt in {target}',
+
   // ── Composer ─────────────────────────────────────────────────────────────
   'notes.composer.placeholder': 'Ein Gedanke, der für sich steht.',
   'notes.composer.targetLabel': 'Bereich',

@@ -68,6 +68,8 @@ export function toDumpItem(doc: IndexedDoc, options: DumpDerivationOptions = {})
     wordCount: doc.words,
     tags: doc.tags.length > 0 ? doc.tags : asStringList(doc.frontmatter['tags']),
     scope: doc.scope,
+    filedInto: asText(doc.frontmatter['filed_into']),
+    filedAt: asText(doc.frontmatter['filed_at']),
   };
 }
 
@@ -94,6 +96,8 @@ export function dumpFromDoc(doc: VaultDoc, options: DumpDerivationOptions = {}):
     wordCount: wordCount(text),
     tags: asStringList(doc.frontmatter['tags']),
     scope: scopeHint(doc.path, doc.frontmatter),
+    filedInto: asText(doc.frontmatter['filed_into']),
+    filedAt: asText(doc.frontmatter['filed_at']),
   };
 }
 

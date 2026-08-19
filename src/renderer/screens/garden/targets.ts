@@ -46,7 +46,7 @@ export function targetFor(path: string): PathTarget {
   if (project !== null) {
     return { kind: 'route', to: `/projects?p=${encodeURIComponent(project[1] ?? '')}` };
   }
-  if (path.startsWith('inbox/')) return { kind: 'route', to: '/inbox' };
+  if (path.startsWith('inbox/')) return { kind: 'route', to: '/notes?filter=unfiled' };
   if (path.startsWith('raw/')) return { kind: 'route', to: '/knowledge?tab=sources' };
   return { kind: 'file', path };
 }

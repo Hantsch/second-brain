@@ -87,7 +87,6 @@ describe('i18n', () => {
     for (const screen of [
       'dashboard',
       'capture',
-      'inbox',
       'ask',
       'projects',
       'journal',
@@ -101,6 +100,21 @@ describe('i18n', () => {
         expect(deKeys).toContain(`screen.${screen}.${suffix}`);
       }
     }
+  });
+
+  /* Die Inbox ist kein Screen mehr, sondern der Filter „nicht abgelegt" auf
+     Notizen (Story 006): den einen `ScreenHeader` stellt `NotesScreen`, also
+     gibt es kein eigenes Kopfpaar mehr — steht es wieder da, ist die Inbox als
+     Ort zurückgewachsen. Der Leerzustand bleibt, er gehört der Arbeitsfläche
+     (`UnfiledWorkspace`), und die Sätze des Filters selbst kommen dazu. */
+  it('hat für die Inbox keinen Kopf mehr, aber ihren Leerzustand und die Filter-Sätze', () => {
+    expect(deKeys).not.toContain('screen.inbox.overline');
+    expect(deKeys).not.toContain('screen.inbox.title');
+    for (const suffix of ['empty.title', 'empty.body', 'empty.action']) {
+      expect(deKeys).toContain(`screen.inbox.${suffix}`);
+    }
+    expect(deKeys).toContain('notes.filter.unfiled');
+    expect(deKeys).toContain('notes.unfiled.optional');
   });
 
   it('deckt jeden Fehlercode und jede LLM-Aufgabe ab', () => {

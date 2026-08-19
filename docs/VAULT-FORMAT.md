@@ -77,14 +77,30 @@ origin: quick-capture
 status: raw
 tags: []
 scope: null
+filed_into: null # only set once filed: path of the target file
+filed_at: null # only set once filed: YYYY-MM-DD
 ---
 
 The whole raw text, unchanged from what was typed.
 ```
 
-`status`: `raw` (untouched) → `proposed` (a proposal exists) → `filed` (filed
-away, the file moves to `.secondbrain/trash/` or gets deleted) or `kept`
-(deliberately left as-is).
+`status`: `raw` (untouched) → `proposed` (a proposal exists) → `filed` (the
+content was written to its target) or `kept` (deliberately left as-is).
+
+**A filed dump stays where it is.** It is neither moved to
+`.secondbrain/trash/` nor deleted: it remains in `inbox/` as a receipt of where
+its content went, with its body unchanged. Filing writes exactly three fields:
+
+```yaml
+status: filed
+filed_into: projects/work/kundenportal-relaunch/project.md
+filed_at: 2026-08-11
+```
+
+Undoing a filing takes the appended block back out of the target file and sets
+all three back — the previous status, and `filed_into`/`filed_at` to `null`.
+Whatever counts open dumps looks at `status` alone: `raw` and `proposed` are
+open, `filed` and `kept` are not, so a receipt never shows up as unfiled again.
 
 ## Project (`projects/<scope>/<slug>/project.md`)
 

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-/* Die Hülle muss stehen, bevor irgendein Screen ausgebaut wird: acht Ziele in
+/* Die Hülle muss stehen, bevor irgendein Screen ausgebaut wird: sieben Ziele in
    der Rail, Tastaturwege, die Adressen von Erfassen und Fragen, und keine
    A11y-Verstöße. */
 
@@ -17,7 +17,7 @@ import { useShellOverlays } from '@renderer/lib/shell-overlays';
 import { DashboardScreen } from '@renderer/screens/dashboard/DashboardScreen';
 import type { SbBridge } from '@renderer/lib/bridge';
 import { mockBridge } from '@renderer/lib/mock-bridge';
-import { SCREENS, screenByHotkey } from '@renderer/lib/screens';
+import { SCREENS } from '@renderer/lib/screens';
 import { setLanguage, t } from '@renderer/i18n';
 
 /* `window.sb` wird ausdrücklich gemockt: die Oberfläche darf im Test nichts
@@ -152,16 +152,17 @@ describe('AppShell', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Dashboard' })).toBeTruthy();
   });
 
-  it('führt in acht Screens, jeder mit aria-label', async () => {
+  it('führt in sieben Screens, jeder mit aria-label', async () => {
     renderApp();
     const nav = await screen.findByRole('navigation', { name: 'Hauptnavigation' });
     const links = nav.querySelectorAll('a');
     expect(links.length).toBe(SCREENS.length);
-    /* Acht Screens, jeder mit Ziffer (1, 3, 4, 5, 6, 7, 9, 0). Frei sind die 8
-       („Quellen" ist ein Tab unter „Wissen") sowie die 2 (Erfassen ist ein
-       Overlay, kein Screen). „Agents" ist seit story 008 kein Rail-Eintrag
-       mehr: die Sitzungen hängen unter „Projekte". */
-    expect(SCREENS.length).toBe(8);
+    /* Sieben Screens, durchgehend nummeriert von 1 bis 7, keine Lücke mehr:
+       Inbox ist kein Rail-Eintrag mehr (die Inbox wird ein Filter auf
+       „Notizen"), „Quellen" ist ein Tab unter „Wissen", Erfassen und Fragen
+       sind Overlays. „Agents" ist seit story 008 kein Rail-Eintrag mehr: die
+       Sitzungen hängen unter „Projekte". */
+    expect(SCREENS.length).toBe(7);
     for (const link of links) {
       expect(link.getAttribute('aria-label')?.length ?? 0).toBeGreaterThan(0);
     }
@@ -184,27 +185,12 @@ describe('AppShell', () => {
   it('wechselt den Screen über die Ziffern', async () => {
     renderApp();
     await screen.findByRole('heading', { level: 1, name: 'Dashboard' });
-    await userEvent.keyboard('5');
+    await userEvent.keyboard('2');
     expect(await screen.findByRole('heading', { level: 1, name: 'Projekte' })).toBeTruthy();
-    await userEvent.keyboard('7');
+    await userEvent.keyboard('4');
     expect(await screen.findByRole('heading', { level: 1, name: 'Wissen' })).toBeTruthy();
-    await userEvent.keyboard('0');
+    await userEvent.keyboard('7');
     expect(await screen.findByRole('heading', { level: 1, name: 'Einstellungen' })).toBeTruthy();
-  });
-
-  /* Die 2 gehörte Erfassen, jetzt ein Overlay statt eines Screens; die 8 ist
-     „Quellen", ein Tab unter „Wissen". Beide bleiben unbelegt, statt
-     nachzurücken: umnummeriert wird die Rail später im Stück, nicht hier.
-     Eine Ziffer, die „irgendwohin" springt, wäre schlimmer als eine tote. */
-  it('lässt die 2 und die 8 unbelegt, statt irgendwohin zu springen', async () => {
-    renderApp();
-    await screen.findByRole('heading', { level: 1, name: 'Dashboard' });
-    for (const digit of ['2', '8']) {
-      expect(screenByHotkey(digit), `Ziffer ${digit}`).toBeUndefined();
-      await userEvent.keyboard(digit);
-      expect(screen.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeTruthy();
-      expect(screen.queryByRole('dialog')).toBeNull();
-    }
   });
 
   it('öffnet die Befehlspalette mit Ctrl+K und schließt sie mit Esc', async () => {
@@ -660,7 +646,12 @@ describe('Overlays und Navigation', () => {
     await userEvent.click(within(dialog).getByRole('button', { name: /Speichern/ }));
 
     await userEvent.click(await within(dialog).findByRole('button', { name: 'Zur Inbox' }));
-    expect(await screen.findByRole('heading', { level: 1, name: 'Inbox' })).toBeTruthy();
+    /* Seit Story 006 führt der Weg nach „Notizen" mit gesetztem Filter — es
+       gibt keinen Inbox-Screen mehr. Der Kopf allein wäre kein Beweis, dass er
+       auch im Filter landet: der Satz, dass Ablegen freiwillig ist, steht nur
+       in der Arbeitsfläche. */
+    expect(await screen.findByRole('heading', { level: 1, name: 'Notizen' })).toBeTruthy();
+    expect(await screen.findByText(/Ablegen ist freiwillig/)).toBeTruthy();
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
 });

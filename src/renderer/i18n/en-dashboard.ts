@@ -12,6 +12,13 @@ export const enDashboard = {
   'dashboard.summary.clear': 'Nothing is overdue, nothing is due today.',
   'dashboard.summary.jump': 'Jump to “{module}”',
 
+  // ── The "unfiled" strip (story 006) ────────────────────────────────────────
+  /* Above the grid, not part of the day summary — absent at 0 rather than
+     claiming "nothing unfiled". One key is enough, same as
+     `notes.filter.unfiled`: "1 unfiled" and "3 unfiled" need no separate
+     plural form. */
+  'dashboard.unfiled.strip': '{count} unfiled',
+
   // ── The grid ─────────────────────────────────────────────────────────────
   'dashboard.tiles.label': 'Dashboard modules',
   'dashboard.tiles.empty': 'Every module is hidden. The picker lists what can go here.',

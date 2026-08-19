@@ -42,7 +42,11 @@ export function InboxTile() {
         },
       }}
       foot={
-        <button type="button" className="sb-textlink" onClick={() => void navigate('/inbox')}>
+        <button
+          type="button"
+          className="sb-textlink"
+          onClick={() => void navigate('/notes?filter=unfiled')}
+        >
           {t('tile.inbox.open')}
         </button>
       }
@@ -54,7 +58,7 @@ export function InboxTile() {
             <button
               type="button"
               className="sb-line-open sb-line-name--full"
-              onClick={() => void navigate('/inbox')}
+              onClick={() => void navigate('/notes?filter=unfiled')}
             >
               {dump.title}
             </button>

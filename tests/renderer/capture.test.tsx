@@ -94,6 +94,8 @@ function dumpFor(request: IpcRequest<'capture:dump'>): DumpItem {
     wordCount: request.text.split(/\s+/).length,
     tags: request.tags ?? [],
     scope: request.scope ?? null,
+    filedInto: null,
+    filedAt: null,
   };
 }
 
