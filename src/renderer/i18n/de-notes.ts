@@ -27,6 +27,8 @@ export const deNotes = {
   'notes.unfiled.filedTitle': 'Abgelegt',
   'notes.unfiled.filedCount': '{count} abgelegt',
   'notes.unfiled.filedInto': 'abgelegt in {target}',
+  'notes.unfiled.show': 'Notizen zeigen',
+  'notes.unfiled.hide': 'Notizen verbergen',
 
   // ── Composer ─────────────────────────────────────────────────────────────
   'notes.composer.placeholder': 'Ein Gedanke, der für sich steht.',
@@ -39,6 +41,8 @@ export const deNotes = {
   'notes.list.aria': 'Bereiche',
   'notes.area.noteCount': '{count} Notizen',
   'notes.area.openTodos': '{count} offen',
+  'notes.area.show': 'Notizen zeigen',
+  'notes.area.hide': 'Notizen verbergen',
   'notes.area.empty':
     'Noch keine Notiz in diesem Bereich. Die erste entsteht oben im Feld — wähle diesen Bereich als Ziel.',
 

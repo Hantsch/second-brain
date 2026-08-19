@@ -329,6 +329,11 @@ const BODY = [
    die Datei neu, während der Screen offen ist. */
 let docHash = 'hash-portal';
 
+/* Ebenfalls veränderlich: die Notiz-Tests lassen `projects:createNote` und
+   `projects:removeNote` den Textkörper wirklich verändern, damit der Refetch
+   nach dem Schreiben zeigt, was der Hauptprozess laut Mock jetzt hätte. */
+let body = BODY;
+
 /* `waiting_on`, wie es in der Datei steht — samt eines Feldes, das die App nicht
    deutet (`ticket`). Genau das muss ein Rückgängig zurückbringen. */
 const RAW_WAITING = [
@@ -351,7 +356,7 @@ function doc(path: string): VaultDoc {
       created: '2026-06-19',
       waiting_on: RAW_WAITING,
     },
-    body: BODY,
+    body,
     hash: docHash,
     modified: NOW,
     size: 800,
@@ -482,6 +487,7 @@ function callsTo(sb: SbMock, channel: IpcChannel): unknown[] {
 
 beforeEach(() => {
   docHash = 'hash-portal';
+  body = BODY;
   /* Der Meldungsspeicher lebt außerhalb von React: ohne Leeren trüge der nächste
      Test die Meldung des vorigen. */
   clearToasts();
@@ -763,6 +769,100 @@ describe('Projektdetail', () => {
     });
   });
 
+  /* D5: die Pflichtangabe ist nur „wer" — „seit" landet trotzdem als heutiges
+     Datum in der Datei, weil `asWaiting` es im Hauptprozess verlangt. */
+  it('trägt einen Warte-auf-Eintrag mit nur „wer" ein und zeigt ihn sofort in der Liste', async () => {
+    let waitingOn = portal.waitingOn;
+    const { sb } = mount({
+      extra: {
+        'projects:get': ({ slug }) => {
+          const found = PROJECTS.find((entry) => entry.slug === slug);
+          if (found === undefined) return null;
+          const project = found.slug === portal.slug ? { ...found, waitingOn } : found;
+          return { project, doc: doc(found.path) };
+        },
+        'projects:patch': () => {
+          waitingOn = [...portal.waitingOn, { who: 'Elke', what: '', since: TODAY }];
+          return { ...portal, waitingOn };
+        },
+      },
+    });
+    await detailReady();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Warten auf hinzufügen' }));
+    await userEvent.type(screen.getByLabelText('Auf wen wird gewartet'), 'Elke');
+    await userEvent.click(screen.getByRole('button', { name: 'Eintragen' }));
+
+    /* Weder „what" noch „due" stehen im Patch: leer mitgeschickt scheitert
+       `asWaiting`s `asText` an jedem Feld, das sie prüft — auch an „what". */
+    await waitFor(() =>
+      expect(callsTo(sb, 'projects:patch')).toEqual([
+        {
+          slug: portal.slug,
+          patch: { waiting_on: [...RAW_WAITING, { who: 'Elke', since: TODAY }] },
+          expectedHash: 'hash-portal',
+        },
+      ]),
+    );
+    expect(await screen.findByText('Elke')).toBeTruthy();
+  });
+
+  it('bestätigt keinen Warte-auf-Eintrag, wenn die Datei zwischenzeitlich geändert wurde', async () => {
+    mount({
+      extra: {
+        'projects:patch': () => {
+          throw Object.assign(new Error('Konflikt'), { code: 'conflict' });
+        },
+      },
+    });
+    await detailReady();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Warten auf hinzufügen' }));
+    await userEvent.type(screen.getByLabelText('Auf wen wird gewartet'), 'Elke');
+    await userEvent.click(screen.getByRole('button', { name: 'Eintragen' }));
+
+    expect(await screen.findByText(/wurde zwischenzeitlich geändert/)).toBeTruthy();
+    expect(screen.queryByText('Elke')).toBeNull();
+  });
+
+  /* Dasselbe Rückgängig-Muster wie beim Abhaken: die volle Liste von vorher,
+     wortwörtlich — samt `ticket`, das die App nicht deutet. */
+  it('trägt einen Warte-auf-Eintrag ein und nimmt ihn auf Wunsch zurück, samt uninterpretierter Felder', async () => {
+    const { sb } = mount({ extra: { 'projects:patch': () => portal } });
+    await detailReady();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Warten auf hinzufügen' }));
+    await userEvent.type(screen.getByLabelText('Auf wen wird gewartet'), 'Elke');
+    await userEvent.click(screen.getByRole('button', { name: 'Eintragen' }));
+
+    expect(await screen.findByText('Warten auf Elke eingetragen.')).toBeTruthy();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Rückgängig' }));
+
+    await waitFor(() => expect(callsTo(sb, 'projects:patch')).toHaveLength(2));
+    expect(callsTo(sb, 'projects:patch')[1]).toEqual({
+      slug: portal.slug,
+      patch: { waiting_on: RAW_WAITING },
+    });
+  });
+
+  /* Guardrail 1, leichtgewichtig: der Composer selbst ruft kein Modell. Das
+     Detail fragt beim Öffnen bereits `llm:routing`/`llm:tasks` ab (für den
+     Vorschlags-Knopf) — genau dieser Aufruf darf durch das Eintragen nicht
+     ein zweites Mal passieren. */
+  it('trägt einen Warte-auf-Eintrag ohne weiteren Modellaufruf ein', async () => {
+    const { sb } = mount({ extra: { 'projects:patch': () => portal } });
+    await detailReady();
+    const llmCallsBefore = sb.calls.filter((call) => call.channel.startsWith('llm:')).length;
+
+    await userEvent.click(screen.getByRole('button', { name: 'Warten auf hinzufügen' }));
+    await userEvent.type(screen.getByLabelText('Auf wen wird gewartet'), 'Elke');
+    await userEvent.click(screen.getByRole('button', { name: 'Eintragen' }));
+
+    await waitFor(() => expect(callsTo(sb, 'projects:patch')).toHaveLength(1));
+    expect(sb.calls.filter((call) => call.channel.startsWith('llm:'))).toHaveLength(llmCallsBefore);
+  });
+
   it('zeigt Warte-auf mit Person, Sache und Überfälligkeit', async () => {
     mount();
     await detailReady();
@@ -772,14 +872,142 @@ describe('Projektdetail', () => {
     expect(screen.getByText('überfällig')).toBeTruthy();
   });
 
-  it('rendert den Stand als Prosa und die Notizen einklappbar', async () => {
+  /* D4: der Umschalter ist weg — Notizen und der Composer stehen von Anfang
+     an da, ohne einen Klick, der sie erst hervorholt. */
+  it('rendert den Stand als Prosa und zeigt die Notizen sofort, ohne Aufklappen', async () => {
     mount();
     await detailReady();
 
     expect(screen.getByText('Die neue Angebotsliste liegt auf dem Testsystem.')).toBeTruthy();
-    expect(screen.queryByText('Testlauf mit Miriam lief durch.')).toBeNull();
+    expect(screen.getByText('Testlauf mit Miriam lief durch.')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Notizen zeigen' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Notizen verbergen' })).toBeNull();
+    expect(screen.getByLabelText('Notiz eintragen')).toBeTruthy();
+  });
 
-    await userEvent.click(screen.getByRole('button', { name: 'Notizen zeigen' }));
+  /* Der Parser lernt beide Schreibweisen der Überschrift: ein Dokument in
+     englischer Dokumentsprache trägt „## Notes", nicht „## Notizen" — und
+     seine Notizen müssen trotzdem erscheinen. */
+  it('zeigt Notizen auch unter der Überschrift „## Notes"', async () => {
+    const englishBody = BODY.replace('## Notizen', '## Notes');
+    mount({
+      extra: {
+        'projects:get': ({ slug }) => {
+          const found = PROJECTS.find((entry) => entry.slug === slug);
+          if (found === undefined) return null;
+          return { project: found, doc: { ...doc(found.path), body: englishBody } };
+        },
+      },
+    });
+    await detailReady();
+
+    expect(screen.getByText('Testlauf mit Miriam lief durch.')).toBeTruthy();
+  });
+
+  /* Trägt eine Datei beide Überschriften, muss die Anzeige dieselbe gewinnen
+     lassen, die auch der Schreibweg wählt (`headingFor` in
+     `src/core/vault/sections.ts`): die zuerst im Dokument stehende. Sonst
+     könnte eine Notiz unter der einen Überschrift landen, während das Panel
+     die andere zeigt — beides ein Verstoß gegen „ohne Neuladen sichtbar". */
+  it('zeigt bei beiden Überschriften die zuerst im Dokument stehende, wie der Schreibweg', async () => {
+    const bothHeadings = BODY.replace(
+      '## Notizen\n\n### 2026-08-09\n\nTestlauf mit Miriam lief durch.',
+      [
+        '## Notes',
+        '',
+        '### 2026-08-01',
+        '',
+        'Zuerst im Dokument — muss gewinnen.',
+        '',
+        '## Notizen',
+        '',
+        '### 2026-08-09',
+        '',
+        'Steht später im Dokument — darf nicht gewinnen.',
+      ].join('\n'),
+    );
+    mount({
+      extra: {
+        'projects:get': ({ slug }) => {
+          const found = PROJECTS.find((entry) => entry.slug === slug);
+          if (found === undefined) return null;
+          return { project: found, doc: { ...doc(found.path), body: bothHeadings } };
+        },
+      },
+    });
+    await detailReady();
+
+    expect(screen.getByText('Zuerst im Dokument — muss gewinnen.')).toBeTruthy();
+    expect(screen.queryByText('Steht später im Dokument — darf nicht gewinnen.')).toBeNull();
+  });
+
+  /* Eine neu eingetragene Notiz steht ohne Neuladen im Panel — der Composer
+     ist Teil des Panels, kein separater Weg dorthin. */
+  it('zeigt eine neu eingetragene Notiz sofort im Panel und bestätigt es', async () => {
+    const { sb } = mount({
+      extra: {
+        'projects:createNote': ({ slug, text, expectedHash }) => {
+          expect(slug).toBe(portal.slug);
+          expect(expectedHash).toBe('hash-portal');
+          const block = `### 2026-08-10\n\n${String(text)}`;
+          docHash = 'hash-portal-2';
+          body = `${body}\n${block}\n`;
+          return { path: portal.path, hash: docHash, created: false, block };
+        },
+      },
+    });
+    await detailReady();
+
+    await userEvent.type(screen.getByLabelText('Notiz eintragen'), 'Neue Notiz zum Testen');
+    await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+
+    expect(await screen.findByText('Neue Notiz zum Testen')).toBeTruthy();
+    expect(await screen.findByText('Notiz eingetragen.')).toBeTruthy();
+    await waitFor(() =>
+      expect(callsTo(sb, 'projects:createNote')).toEqual([
+        { slug: portal.slug, text: 'Neue Notiz zum Testen', expectedHash: 'hash-portal' },
+      ]),
+    );
+  });
+
+  /* Rückgängig nimmt genau den geschriebenen Block wieder heraus — nicht die
+     ganze Notizen-Sektion, nicht Text, den die App nicht gesetzt hat. */
+  it('nimmt eine neu eingetragene Notiz auf Wunsch zurück', async () => {
+    let writtenBlock = '';
+    const { sb } = mount({
+      extra: {
+        'projects:createNote': ({ text }) => {
+          const block = `### 2026-08-10\n\n${String(text)}`;
+          writtenBlock = block;
+          docHash = 'hash-portal-2';
+          body = `${body}\n${block}\n`;
+          return { path: portal.path, hash: docHash, created: false, block };
+        },
+        'projects:removeNote': ({ block }) => {
+          expect(block).toBe(writtenBlock);
+          docHash = 'hash-portal-3';
+          body = body.replace(`\n${block}\n`, '\n');
+          return { path: portal.path, hash: docHash, created: false };
+        },
+      },
+    });
+    await detailReady();
+
+    await userEvent.type(screen.getByLabelText('Notiz eintragen'), 'Neue Notiz zum Testen');
+    await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    expect(await screen.findByText('Notiz eingetragen.')).toBeTruthy();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Rückgängig' }));
+
+    await waitFor(() =>
+      expect(callsTo(sb, 'projects:removeNote')).toEqual([
+        { slug: portal.slug, block: writtenBlock },
+      ]),
+    );
+    /* Und die Notiz ist wieder weg — nicht nur der Aufruf ist raus, das Panel
+       zeigt es auch. */
+    await waitFor(() => expect(screen.queryByText('Neue Notiz zum Testen')).toBeNull());
+    /* Der Stand von vorher bleibt unberührt. */
     expect(screen.getByText('Testlauf mit Miriam lief durch.')).toBeTruthy();
   });
 
@@ -1255,7 +1483,10 @@ describe('Todos im Projekt', () => {
       within(priority).getByRole('button', { name: 'Medium' }).getAttribute('aria-pressed'),
     ).toBe('true');
     await userEvent.click(within(priority).getByRole('button', { name: 'High' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    /* Gescoped auf die Todo-Zeile: der Notiz-Composer trägt seit D4 dieselbe
+       Beschriftung auf seinem eigenen Speichern-Knopf. */
+    const editRow = screen.getByLabelText('Todo-Text').closest('li') as HTMLElement;
+    await userEvent.click(within(editRow).getByRole('button', { name: 'Speichern' }));
 
     await waitFor(() =>
       expect(callsTo(sb, 'todos:update')).toEqual([
@@ -1284,7 +1515,10 @@ describe('Todos im Projekt', () => {
     );
     await userEvent.clear(screen.getByLabelText('Todo-Text'));
     await userEvent.type(screen.getByLabelText('Todo-Text'), 'Meine überarbeitete Fassung');
-    await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    /* Gescoped auf die Todo-Zeile: der Notiz-Composer trägt seit D4 dieselbe
+       Beschriftung auf seinem eigenen Speichern-Knopf. */
+    const editRow = screen.getByLabelText('Todo-Text').closest('li') as HTMLElement;
+    await userEvent.click(within(editRow).getByRole('button', { name: 'Speichern' }));
 
     expect(await screen.findByText(/wurde zwischenzeitlich geändert/)).toBeTruthy();
     expect((screen.getByLabelText('Todo-Text') as HTMLInputElement).value).toBe(
@@ -1533,6 +1767,50 @@ describe('Tastatur', () => {
     await userEvent.keyboard('x');
 
     await waitFor(() => expect(callsTo(sb, 'todos:toggle')).toEqual([{ id: someday.id }]));
+  });
+
+  it('fokussiert mit m das Notizfeld', async () => {
+    mount();
+    await detailReady();
+
+    const noteField = await screen.findByLabelText('Notiz eintragen');
+    expect(document.activeElement).not.toBe(noteField);
+
+    await userEvent.keyboard('m');
+
+    expect(document.activeElement).toBe(noteField);
+  });
+
+  it('öffnet mit w den Warte-auf-Composer und fokussiert das Feld', async () => {
+    mount();
+    await detailReady();
+
+    expect(screen.getByRole('button', { name: 'Warten auf hinzufügen' })).toBeTruthy();
+
+    await userEvent.keyboard('w');
+
+    const whoField = await screen.findByLabelText('Auf wen wird gewartet');
+    expect(document.activeElement).toBe(whoField);
+    expect(screen.queryByRole('button', { name: 'Warten auf hinzufügen' })).toBeNull();
+  });
+
+  it('lässt m und w beim Tippen in einem Feld unberührt', async () => {
+    mount();
+    await detailReady();
+
+    await userEvent.keyboard('t');
+    const todoField = await screen.findByLabelText('Neues Todo');
+    await userEvent.type(todoField, 'x');
+
+    await userEvent.keyboard('m');
+    await userEvent.keyboard('w');
+
+    /* m/w landen als gewöhnliche Zeichen im fokussierten Feld statt als
+       Kürzel zu wirken — sonst hätte der Fokus das Feld verlassen oder der
+       Warte-auf-Composer wäre aufgegangen. */
+    expect((todoField as HTMLInputElement).value).toBe('xmw');
+    expect(document.activeElement).toBe(todoField);
+    expect(screen.getByRole('button', { name: 'Warten auf hinzufügen' })).toBeTruthy();
   });
 });
 

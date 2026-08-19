@@ -25,7 +25,8 @@ export const enProjects = {
   'projects.open': 'Open project “{title}”',
   'projects.waitingMark': 'waiting',
   'projects.openTodos': '{count} open',
-  'projects.keys': 'j/k select · Enter opens · n new project · t new todo · x checks off',
+  'projects.keys':
+    'j/k select · Enter opens · n new project · t new todo · x checks off · m new note · w waiting for',
   'projects.detail.none': 'Pick a project on the left.',
 
   // ── New project ──────────────────────────────────────────────────────────
@@ -84,6 +85,16 @@ export const enProjects = {
   'project.waiting.resolved': 'Waiting for {who} is now marked as answered.',
   'project.waiting.resolvedWhere':
     'The entry stays in the project file with “resolved: true”, only the list no longer shows it.',
+  'project.waiting.added': 'Waiting for {who} added.',
+  'project.waiting.new.action': 'Add waiting for',
+  'project.waiting.new.who': 'Who is this waiting on',
+  'project.waiting.new.whoPlaceholder': 'Name',
+  'project.waiting.new.what': 'What are you waiting for',
+  'project.waiting.new.whatPlaceholder': 'What for? (optional)',
+  'project.waiting.new.since': 'Since',
+  'project.waiting.new.due': 'By',
+  'project.waiting.new.submit': 'Add',
+  'project.waiting.new.hint': 'Enter adds, Esc cancels',
 
   'project.todos.title': 'Todos',
   'project.todos.empty':
@@ -94,8 +105,10 @@ export const enProjects = {
     'No status noted. The first paragraph under “## Stand” is the way back in after a break.',
   'project.notes.title': 'Notes',
   'project.notes.empty': 'No filed dumps yet.',
-  'project.notes.show': 'Show notes',
-  'project.notes.hide': 'Hide notes',
+  'project.notes.added': 'Note added.',
+  'project.notes.composer.placeholder': 'Write a note',
+  'project.notes.composer.hint': 'Ctrl+Enter saves the note.',
+  'project.notes.composer.save': 'Save',
 
   'project.tab.label': 'Choose project view',
   'project.tab.overview': 'Overview',

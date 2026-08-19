@@ -3,18 +3,30 @@
    The list comes from the index (it's the derived truth), every write path
    goes through `VaultStore` — with hash, with merge, with follow-up.
 
-   Three decisions you otherwise wouldn't see in the code:
+   Four decisions you otherwise wouldn't see in the code:
 
    - **`patch` writes only known fields** and leaves everything else alone
      (`project-patch.ts`). The store merges, so every user field survives.
    - **`updated` is set when the app writes** — as documented in
      VAULT-FORMAT.md. On an external change, the mtime counts, not us.
    - **`suggestStatus` writes nothing.** The suggestion goes back to the
-     caller; accepting it is a separate call the user makes. */
+     caller; accepting it is a separate call the user makes.
+   - **`createNote`/`removeNote` are one pair.** The note is written as the
+     block `filingBlock` produces, and the undo takes exactly that block back
+     out via `removeBlock`. If it isn't in the file verbatim any more, the
+     user has edited it — then nothing is written. No undo rewrites a line the
+     app didn't create. */
 
-import { SECTION_NOTES, SECTION_STATE, SECTION_TODOS } from '@core/capture';
+import {
+  SECTION_NOTES,
+  SECTION_STATE,
+  SECTION_TODOS,
+  filingBlock,
+  removeBlock,
+} from '@core/capture';
 import { deriveProjects, toIndexedDoc } from '@core/index';
 import { suggestProjectStatus } from '@core/overview';
+import { projectNotesHeading } from '@core/projects';
 import { isoDay, projectPath } from '@core/vault/paths';
 import type { Project, Scope, VaultDoc } from '@shared/types';
 import { SCOPES } from '@shared/types';
@@ -23,7 +35,7 @@ import { defineHandlers, fail } from './registry';
 import { requireLists } from './lists';
 import { checkProjectPatch, resolveWaitingEntry } from './project-patch';
 import { claudeSessions, forgetSessions, overviewIndex, overviewSettings } from './overview-deps';
-import { settle } from './wiki-bridge';
+import { docLanguage, settle } from './wiki-bridge';
 import { createGateway } from '../llm-bridge';
 import type { VaultStoreLike } from '../contracts';
 import type { Services } from '../services';
@@ -95,6 +107,25 @@ function newBody(state: string): string {
 function requireScope(value: unknown): Scope {
   if (value === 'work' || value === 'private') return value;
   throw fail('invalid', 'scope: erwartet work oder private');
+}
+
+/* The text of a note, or a refusal — an empty note is never written. Same rule
+   as `noteText` in `areas.ts`; it stays a rule of each channel module so that
+   neither of the two write paths depends on the other. */
+function noteText(text: unknown): string {
+  const note = typeof text === 'string' ? text.replace(/\r\n/g, '\n').trim() : '';
+  if (note.length === 0) throw fail('invalid', 'text: darf nicht leer sein');
+  return note;
+}
+
+/**
+ * The block the undo is supposed to take out. An empty one would match nothing
+ * and quietly report success — that is a malformed request, not an undo.
+ */
+function requireBlock(value: unknown): string {
+  const block = typeof value === 'string' ? value.replace(/\r\n/g, '\n').trim() : '';
+  if (block.length === 0) throw fail('invalid', 'block: darf nicht leer sein');
+  return block;
 }
 
 export function projectHandlers(services: Services): HandlerMap {
@@ -181,6 +212,43 @@ export function projectHandlers(services: Services): HandlerMap {
       if (text.length === 0) throw fail('invalid', 'content: darf nicht leer sein');
       const { project, doc } = await readProject(services, slug);
       const result = await store(services).append(project.path, name, text, {
+        expectedHash: doc.hash,
+      });
+      await settle(services, [project.path], 'projects');
+      return { path: result.path, hash: result.hash, created: false };
+    },
+
+    /* The file is read fresh right before it is written: the index is a
+       derivation and may lag behind an external edit, so a body from it would
+       be a basis the file no longer has. The heading comes from that fresh
+       body — a project that says "Notizen" keeps saying it, even after the
+       document language has changed. */
+    'projects:createNote': async ({ slug, text, expectedHash }) => {
+      const note = noteText(text);
+      const { project, doc } = await readProject(services, slug);
+      const heading = projectNotesHeading(doc.body, docLanguage(services));
+      /* The same function the filing path uses — the two must not drift apart,
+         or the same file would grow two shapes of "a note". */
+      const block = filingBlock(note);
+      const result = await store(services).append(project.path, heading, block, {
+        expectedHash: expectedHash ?? doc.hash,
+      });
+      await settle(services, [project.path], 'projects');
+      return { path: result.path, hash: result.hash, created: false, block };
+    },
+
+    'projects:removeNote': async ({ slug, block }) => {
+      const wanted = requireBlock(block);
+      const { project, doc } = await readProject(services, slug);
+      const body = removeBlock(doc.body, wanted);
+      /* Not in the file verbatim any more: the user has edited it since. His
+         text wins — nothing is written, and that is the honest answer, not a
+         failure. The hash is the file's current one, so the caller stays in
+         step with what is really there. */
+      if (body === null) return { path: project.path, hash: doc.hash, created: false };
+      const result = await store(services).write({
+        path: project.path,
+        body,
         expectedHash: doc.hash,
       });
       await settle(services, [project.path], 'projects');

@@ -80,7 +80,7 @@ export function FiledTrail({ dumps, names }: FiledTrailProps) {
             aria-expanded={open}
             onClick={() => setOpen(!open)}
           >
-            {t(open ? 'project.notes.hide' : 'project.notes.show')}
+            {t(open ? 'notes.unfiled.hide' : 'notes.unfiled.show')}
           </Button>
         }
       >

@@ -1,7 +1,7 @@
 ---
 sprint: S03
-status: planned # planned | in-progress | done
-branch: # set by /sprint
+status: in-progress # planned | in-progress | done
+branch: sprint/S03
 milestone: M2 — Projects answer where I left off
 ---
 
@@ -20,7 +20,7 @@ me hunting for it.
 
 <!-- Order = the order the build phase works through. Dependent stories go last. -->
 
-- [ ] 003 — Project notes and waiting-on, editable in place
+- [x] 003 — Project notes and waiting-on, editable in place
 - [ ] 004 — Where the project status and next step come from
 - [ ] 013 — Favourite projects (star) and an order that matches how I work
 

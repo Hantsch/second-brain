@@ -65,6 +65,15 @@ const RESPONSES: MockResponses = {
   'projects:create': ({ title, scope }) => ({ ...fx.project, title, scope }),
   'projects:patch': () => fx.project,
   'projects:append': () => writeResult,
+  /* `block` is what the undo gets handed back. Shaped like `filingBlock` in
+     `@core/capture`, written out here rather than imported: the renderer does
+     not reach into the core. */
+  'projects:createNote': ({ text }) => ({
+    ...writeResult,
+    path: fx.project.path,
+    block: `### ${fx.TODAY}\n\n${text.trim()}`,
+  }),
+  'projects:removeNote': () => ({ ...writeResult, path: fx.project.path }),
   'projects:suggestStatus': () => ({
     status: 'active',
     nextStep: fx.project.nextStep ?? '',

@@ -64,7 +64,7 @@ export function AreaSection({ area, startOpen }: AreaSectionProps) {
           aria-expanded={open}
           onClick={() => setOpen(!open)}
         >
-          {t(open ? 'project.notes.hide' : 'project.notes.show')}
+          {t(open ? 'notes.area.hide' : 'notes.area.show')}
         </Button>
       }
     >

@@ -147,7 +147,11 @@ Text of the filed dump.
 
 `status`: `idea` · `active` · `waiting` · `paused` · `done` · `dropped`.
 `repos` connects the project to Claude Code sessions: if a session lives in this
-directory, it counts as a work trace for the project.
+directory, it counts as a work trace for the project. The notes section accepts
+either heading, "Notes" or "Notizen" — the same tolerance areas have (below): a
+document-language switch never orphans notes already filed under the other
+spelling, and a file carrying both appends new notes under whichever heading
+comes first in the file.
 
 ## Area (`areas/<slug>.md`)
 

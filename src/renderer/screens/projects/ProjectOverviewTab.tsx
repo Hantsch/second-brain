@@ -13,10 +13,11 @@
    that handles selection and filtering, so there is no chain of callbacks
    running through three layers. */
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Project, Todo, VaultDoc, WaitingOn } from '@shared/types';
 import { Button } from '../../atoms/Button';
 import { Checkbox } from '../../atoms/Checkbox';
+import { Kbd } from '../../atoms/Kbd';
 import { ErrorState } from '../../components/ErrorState';
 import { LlmMissing } from '../../components/LlmMissing';
 import { Markdown } from '../../components/Markdown';
@@ -32,9 +33,12 @@ import { useProjectMutations } from '../../lib/queries/projects';
 import type { StatusSuggestion } from '../../lib/queries/projects';
 import { useProjectTodos, useTodoMutations } from '../../lib/queries/todos';
 import { pushToast } from '../../lib/toast';
+import { ProjectNoteComposer } from './ProjectNoteComposer';
 import { SuggestionCard } from './SuggestionCard';
-import { SECTION_NOTES, SECTION_STATE, datedEntries, sectionOf } from './sections';
-import { useTodoKeys } from './use-project-keys';
+import { WaitingComposer } from './WaitingComposer';
+import type { WaitingEntryInput } from './WaitingComposer';
+import { SECTION_STATE, datedEntries, notesSectionOf, sectionOf } from './sections';
+import { useComposerKeys, useTodoKeys } from './use-project-keys';
 
 function openFile(path: string): void {
   void api.shell.openPath(path).catch(() => undefined);
@@ -72,11 +76,24 @@ export function ProjectOverviewTab({ project, doc, now }: ProjectOverviewTabProp
      mean silently overwriting a change made elsewhere. */
   const [suggestBase, setSuggestBase] = useState<string | null>(null);
   const [stepSaved, setStepSaved] = useState(false);
-  const [notesOpen, setNotesOpen] = useState(false);
   const [waitingBusy, setWaitingBusy] = useState<number | null>(null);
   const [focused, setFocused] = useState<Todo | null>(null);
   const [composeOpen, setComposeOpen] = useState(false);
+  const [waitComposeOpen, setWaitComposeOpen] = useState(false);
   const [showDone, setShowDone] = useState(false);
+  /* `m`/`w` (D6) focus these directly. The note field is always mounted, so
+     `note()` below just calls `.focus()`; the waiting field only exists once
+     `WaitingComposer` is open, hence the effect that focuses it once it
+     mounts. */
+  const noteFieldRef = useRef<HTMLTextAreaElement | null>(null);
+  const waitFieldRef = useRef<HTMLInputElement | null>(null);
+
+  /* Runs after the DOM commit that mounts the `<input>` (React flushes
+     effects after paint of the same commit that flips `open`), so the field
+     is there by the time this fires. */
+  useEffect(() => {
+    if (waitComposeOpen) waitFieldRef.current?.focus();
+  }, [waitComposeOpen]);
 
   const saveStep = (next: string): void => {
     setStepSaved(false);
@@ -134,6 +151,37 @@ export function ProjectOverviewTab({ project, doc, now }: ProjectOverviewTabProp
     );
   };
 
+  /* A fresh entry, not a state flip — same toast shape as `saveNote`, not
+     `resolveWaiting`'s "here's what the file now says" explanation. `what`
+     and `due` only make it into the written entry when the user filled them:
+     `asWaiting` treats an explicit empty string as invalid text, same as any
+     other field it validates, so an empty `what` has to be left out, not
+     sent blank. */
+  const saveWaiting = (entry: WaitingEntryInput): Promise<unknown> => {
+    const before = rawWaiting(doc, project.waitingOn);
+    const item: Partial<WaitingOn> & Pick<WaitingOn, 'who' | 'since'> = {
+      who: entry.who,
+      since: entry.since,
+    };
+    if (entry.what.length > 0) item.what = entry.what;
+    if (entry.due !== undefined && entry.due.length > 0) item.due = entry.due;
+    const next = [...before, item as WaitingOn];
+    return mutations.patch
+      .mutateAsync({ slug: project.slug, patch: { waiting_on: next }, expectedHash: doc.hash })
+      .then((result) => {
+        pushToast('success', {
+          message: 'project.waiting.added',
+          values: { who: entry.who },
+          action: {
+            label: 'common.undo',
+            run: () =>
+              mutations.patch.mutate({ slug: project.slug, patch: { waiting_on: before } }),
+          },
+        });
+        return result;
+      });
+  };
+
   /* Only the row that currently has focus. Without focus, nothing happens:
      an `x` that checks off some random todo would be worse than an `x` that
      does nothing. */
@@ -143,14 +191,38 @@ export function ProjectOverviewTab({ project, doc, now }: ProjectOverviewTabProp
   };
 
   useTodoKeys({ compose: () => setComposeOpen(true), toggle: toggleFocused });
+  useComposerKeys({
+    note: () => noteFieldRef.current?.focus(),
+    waiting: () => setWaitComposeOpen(true),
+  });
+
+  /* A note is a fresh addition, not a state flip — so the toast is plain
+     confirmation plus undo, with none of `resolveWaiting`'s "here's what the
+     file now says" explanation. `removeNote` on the returned block is the
+     undo: exact, because it's the same text the write just produced. */
+  const saveNote = (text: string): Promise<unknown> =>
+    mutations.createNote
+      .mutateAsync({ slug: project.slug, text, expectedHash: doc.hash })
+      .then((result) => {
+        pushToast('success', {
+          message: 'project.notes.added',
+          action: {
+            label: 'common.undo',
+            run: () => mutations.removeNote.mutate({ slug: project.slug, block: result.block }),
+          },
+        });
+        return result;
+      });
 
   const state = sectionOf(doc.body, SECTION_STATE);
-  const notes = sectionOf(doc.body, SECTION_NOTES);
+  const notes = notesSectionOf(doc.body);
   const noteCount = datedEntries(notes);
   const openWaiting = project.waitingOn.filter((entry) => entry.resolved !== true).length;
   const failed =
     mutations.patch.error ??
     mutations.resolveWaiting.error ??
+    mutations.createNote.error ??
+    mutations.removeNote.error ??
     mutations.suggest.error ??
     todoMutations.toggle.error ??
     todoMutations.create.error ??
@@ -212,12 +284,20 @@ export function ProjectOverviewTab({ project, doc, now }: ProjectOverviewTabProp
       <Panel
         title={t('project.waiting.title')}
         meta={openWaiting === 0 ? undefined : String(openWaiting)}
+        action={<Kbd keys={['w']} />}
       >
         <WaitingList
           entries={project.waitingOn}
           busyIndex={mutations.resolveWaiting.isPending ? waitingBusy : null}
           onResolve={resolveWaiting}
           {...(now === undefined ? {} : { now })}
+        />
+        <WaitingComposer
+          busy={mutations.patch.isPending}
+          onSave={saveWaiting}
+          fieldRef={waitFieldRef}
+          open={waitComposeOpen}
+          onOpenChange={setWaitComposeOpen}
         />
       </Panel>
 
@@ -280,32 +360,34 @@ export function ProjectOverviewTab({ project, doc, now }: ProjectOverviewTabProp
         {state.length === 0 ? (
           <p className="sb-panel-empty">{t('project.state.empty')}</p>
         ) : (
-          <Markdown text={state} onOpenPath={openFile} />
+          /* `headingOffset={0}`: this text sits under the Panel's own `<h2>`
+             title. docs/VAULT-FORMAT.md's dated entries are always `###`
+             (markdown depth 3) — the default offset (assuming a screen's
+             own `<h1>` above the content, not a Panel's `<h2>`) would turn
+             that into `<h4>` and skip a level. Offset 0 renders the file's
+             own depth directly, floored at `<h2>`, so `###` continues the
+             outline as `<h3>`. */
+          <Markdown text={state} onOpenPath={openFile} headingOffset={0} />
         )}
       </Panel>
 
       <Panel
         title={t('project.notes.title')}
         meta={noteCount === 0 ? undefined : String(noteCount)}
-        action={
-          notes.length === 0 ? undefined : (
-            <Button
-              variant="ghost"
-              size="sm"
-              icon={notesOpen ? 'chevron-up' : 'chevron-down'}
-              aria-expanded={notesOpen}
-              onClick={() => setNotesOpen(!notesOpen)}
-            >
-              {t(notesOpen ? 'project.notes.hide' : 'project.notes.show')}
-            </Button>
-          )
-        }
+        action={<Kbd keys={['m']} />}
       >
         {notes.length === 0 ? (
           <p className="sb-panel-empty">{t('project.notes.empty')}</p>
-        ) : notesOpen ? (
-          <Markdown text={notes} onOpenPath={openFile} />
-        ) : null}
+        ) : (
+          /* Same reasoning as the Stand panel above: the dated `###` entries
+             continue the outline as `<h3>` under this Panel's `<h2>` title. */
+          <Markdown text={notes} onOpenPath={openFile} headingOffset={0} />
+        )}
+        <ProjectNoteComposer
+          busy={mutations.createNote.isPending}
+          onSave={saveNote}
+          fieldRef={noteFieldRef}
+        />
       </Panel>
     </>
   );

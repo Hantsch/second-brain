@@ -156,6 +156,40 @@ describe('reminders — überfällige Warte-auf', () => {
     ]);
     expect(reminders(index, LIMITS, TODAY)).toEqual([]);
   });
+
+  it('mahnt eine composer-angelegte Zeile ohne `was` nach `waitingNudgeDays` — der Titel faellt auf den Namen zurueck', () => {
+    const index = indexFrom([
+      projectDoc({
+        slug: 'nyota',
+        waitingOn: [{ who: 'Neu', what: '', since: day(-6) }],
+      }),
+    ]);
+    const list = reminders(index, LIMITS, TODAY);
+    expect(list).toHaveLength(1);
+    expect(list[0]).toMatchObject({ source: 'waiting-overdue', title: 'Neu' });
+  });
+
+  it('mahnt eine composer-angelegte Zeile mit ueberfaelliger Frist', () => {
+    const index = indexFrom([
+      projectDoc({
+        slug: 'nyota',
+        waitingOn: [{ who: 'Neu', what: '', since: day(-8), due: day(-1) }],
+      }),
+    ]);
+    const list = reminders(index, LIMITS, TODAY);
+    expect(list).toHaveLength(1);
+    expect(list[0]).toMatchObject({ source: 'waiting-overdue', title: 'Neu', date: day(-1) });
+  });
+
+  it('ignoriert eine erledigte composer-angelegte Zeile', () => {
+    const index = indexFrom([
+      projectDoc({
+        slug: 'a',
+        waitingOn: [{ who: 'Neu', what: '', since: day(-30), resolved: true }],
+      }),
+    ]);
+    expect(reminders(index, LIMITS, TODAY)).toEqual([]);
+  });
 });
 
 describe('reminders — stagnierende Projekte', () => {

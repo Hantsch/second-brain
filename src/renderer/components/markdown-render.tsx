@@ -117,19 +117,20 @@ function listItems(
   refs: MarkdownRefs,
   items: readonly Tokens.ListItem[],
   key: string,
+  headingOffset: number,
 ): ReactNode[] {
   return items.map((item, at) => (
     <li key={`${key}-${at}`} className={item.task ? 'sb-md-task' : undefined}>
       {item.task ? (
         <span className="sb-md-box sb-mono">{item.checked === true ? '[x]' : '[ ]'}</span>
       ) : null}
-      {blocks(refs, item.tokens, `${key}-${at}`)}
+      {blocks(refs, item.tokens, `${key}-${at}`, headingOffset)}
     </li>
   ));
 }
 
-function heading(refs: MarkdownRefs, token: Tokens.Heading, key: string): ReactNode {
-  const level = Math.min(6, Math.max(2, token.depth + HEADING_OFFSET));
+function heading(refs: MarkdownRefs, token: Tokens.Heading, key: string, offset: number): ReactNode {
+  const level = Math.min(6, Math.max(2, token.depth + offset));
   const Tag = `h${level}` as 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
   return (
     <Tag key={key} className="sb-md-heading">
@@ -164,13 +165,18 @@ function table(refs: MarkdownRefs, token: Tokens.Table, key: string): ReactNode 
   );
 }
 
-function blocks(refs: MarkdownRefs, tokens: readonly Token[], key: string): ReactNode[] {
+function blocks(
+  refs: MarkdownRefs,
+  tokens: readonly Token[],
+  key: string,
+  headingOffset: number,
+): ReactNode[] {
   const out: ReactNode[] = [];
   tokens.forEach((token, at) => {
     const own = `${key}-${at}`;
     if (token.type === 'space' || token.type === 'def') return;
     if (token.type === 'heading') {
-      out.push(heading(refs, token as Tokens.Heading, own));
+      out.push(heading(refs, token as Tokens.Heading, own, headingOffset));
       return;
     }
     if (token.type === 'hr') {
@@ -188,14 +194,14 @@ function blocks(refs: MarkdownRefs, tokens: readonly Token[], key: string): Reac
     if (token.type === 'blockquote') {
       out.push(
         <blockquote key={own} className="sb-md-quote">
-          {blocks(refs, (token as Tokens.Blockquote).tokens, own)}
+          {blocks(refs, (token as Tokens.Blockquote).tokens, own, headingOffset)}
         </blockquote>,
       );
       return;
     }
     if (token.type === 'list') {
       const list = token as Tokens.List;
-      const items = listItems(refs, list.items, own);
+      const items = listItems(refs, list.items, own, headingOffset);
       out.push(
         list.ordered ? (
           <ol key={own} className="sb-md-list">
@@ -234,11 +240,23 @@ function blocks(refs: MarkdownRefs, tokens: readonly Token[], key: string): Reac
   return out;
 }
 
-/** Markdown as React nodes. Empty text yields an empty list. */
-export function renderMarkdown(text: string, refs: MarkdownRefs): ReactNode[] {
+/**
+ * Markdown as React nodes. Empty text yields an empty list.
+ *
+ * `headingOffset` defaults to the screen-level assumption ("h1 is the
+ * screen's own title, so markdown headings start at h2"). A caller that
+ * nests this inside something that already carries its own heading — a
+ * `Panel`'s `<h2>` title, for instance — passes a larger offset so the
+ * content's headings continue the outline instead of jumping past it.
+ */
+export function renderMarkdown(
+  text: string,
+  refs: MarkdownRefs,
+  headingOffset: number = HEADING_OFFSET,
+): ReactNode[] {
   const source = (text ?? '').trim();
   if (source.length === 0) return [];
-  return blocks(refs, lexer(source), 'b');
+  return blocks(refs, lexer(source), 'b', headingOffset);
 }
 
 /**

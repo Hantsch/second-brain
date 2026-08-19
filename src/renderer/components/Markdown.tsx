@@ -44,6 +44,13 @@ export interface MarkdownProps {
   /** Klick auf einen Dateiverweis ohne Beleg. */
   onOpenPath?: (path: string) => void;
   className?: string;
+  /**
+   * Weitergereicht an `renderMarkdown` — nur für Aufrufer nötig, die diesen
+   * Text unter einer eigenen Überschrift zeigen (ein `Panel`-Titel etwa),
+   * damit eine „###" in der Datei die Gliederung fortsetzt statt sie zu
+   * überspringen.
+   */
+  headingOffset?: number;
 }
 
 export function Markdown({
@@ -52,6 +59,7 @@ export function Markdown({
   onCitation,
   onOpenPath,
   className = '',
+  headingOffset,
 }: MarkdownProps) {
   const t = useT();
 
@@ -97,8 +105,10 @@ export function Markdown({
       path: (path, line, key) =>
         reference(path, line === null ? leaf(path) : `${leaf(path)}:${line}`, key),
     };
-    return renderMarkdown(text, refs);
-  }, [text, citations, onCitation, onOpenPath, t]);
+    return headingOffset === undefined
+      ? renderMarkdown(text, refs)
+      : renderMarkdown(text, refs, headingOffset);
+  }, [text, citations, onCitation, onOpenPath, t, headingOffset]);
 
   return <div className={`sb-md sb-markdown ${className}`.trim()}>{nodes}</div>;
 }

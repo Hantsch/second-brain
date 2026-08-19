@@ -28,7 +28,8 @@ export const deProjects = {
   'projects.open': 'Projekt „{title}" öffnen',
   'projects.waitingMark': 'wartet',
   'projects.openTodos': '{count} offen',
-  'projects.keys': 'j/k wählen · Enter öffnet · n neues Projekt · t neues Todo · x hakt ab',
+  'projects.keys':
+    'j/k wählen · Enter öffnet · n neues Projekt · t neues Todo · x hakt ab · m neue Notiz · w warte auf',
   'projects.detail.none': 'Links ein Projekt wählen.',
 
   // ── Neues Projekt ────────────────────────────────────────────────────────
@@ -87,6 +88,16 @@ export const deProjects = {
   'project.waiting.resolved': 'Warten auf {who} steht jetzt auf erledigt.',
   'project.waiting.resolvedWhere':
     'Der Eintrag bleibt mit „resolved: true" in der Projektdatei stehen, nur die Liste zeigt ihn nicht mehr.',
+  'project.waiting.added': 'Warten auf {who} eingetragen.',
+  'project.waiting.new.action': 'Warten auf hinzufügen',
+  'project.waiting.new.who': 'Auf wen wird gewartet',
+  'project.waiting.new.whoPlaceholder': 'Name',
+  'project.waiting.new.what': 'Worauf wird gewartet',
+  'project.waiting.new.whatPlaceholder': 'Worauf? (optional)',
+  'project.waiting.new.since': 'Seit',
+  'project.waiting.new.due': 'Bis',
+  'project.waiting.new.submit': 'Eintragen',
+  'project.waiting.new.hint': 'Enter trägt ein, Esc bricht ab',
 
   'project.todos.title': 'Todos',
   'project.todos.empty':
@@ -97,8 +108,10 @@ export const deProjects = {
     'Kein Stand notiert. Der erste Absatz unter „## Stand" ist der Wiedereinstieg nach einer Pause.',
   'project.notes.title': 'Notizen',
   'project.notes.empty': 'Noch keine eingeordneten Dumps.',
-  'project.notes.show': 'Notizen zeigen',
-  'project.notes.hide': 'Notizen verbergen',
+  'project.notes.added': 'Notiz eingetragen.',
+  'project.notes.composer.placeholder': 'Notiz eintragen',
+  'project.notes.composer.hint': 'Strg+Enter speichert die Notiz.',
+  'project.notes.composer.save': 'Speichern',
 
   'project.tab.label': 'Projektansicht wählen',
   'project.tab.overview': 'Überblick',

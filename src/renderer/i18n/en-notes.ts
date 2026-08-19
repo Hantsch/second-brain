@@ -15,6 +15,8 @@ export const enNotes = {
   'notes.unfiled.filedTitle': 'Filed',
   'notes.unfiled.filedCount': '{count} filed',
   'notes.unfiled.filedInto': 'filed into {target}',
+  'notes.unfiled.show': 'Show notes',
+  'notes.unfiled.hide': 'Hide notes',
 
   // ── Composer ─────────────────────────────────────────────────────────────
   'notes.composer.placeholder': 'A thought that stands on its own.',
@@ -27,6 +29,8 @@ export const enNotes = {
   'notes.list.aria': 'Areas',
   'notes.area.noteCount': '{count} notes',
   'notes.area.openTodos': '{count} open',
+  'notes.area.show': 'Show notes',
+  'notes.area.hide': 'Hide notes',
   'notes.area.empty':
     'No note in this area yet. The first one starts in the field above — pick this area as the target.',
 

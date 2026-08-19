@@ -202,6 +202,32 @@ export interface IpcRoutes {
     req: { slug: string; section: string; content: string };
     res: WriteResult;
   };
+  /**
+   * A hand-written note into the project's notes section. The block is the one
+   * filing a dump writes (`### YYYY-MM-DD` plus the text), character for
+   * character — both paths write the same shape into the same file.
+   *
+   * Which heading it lands under comes from the file ("Notizen" · "Notes"); the
+   * document language only decides when the file carries neither yet.
+   *
+   * `expectedHash` is the hash the client read; without it the file's current
+   * hash is used — the write is guarded either way, never unguarded. `block`
+   * comes back exactly as written, so the caller can hand it straight to
+   * `projects:removeNote` for the undo.
+   */
+  'projects:createNote': {
+    req: { slug: string; text: string; expectedHash?: string };
+    res: WriteResult & { block: string };
+  };
+  /**
+   * Undo of `projects:createNote`: takes exactly that block back out again.
+   *
+   * If the block no longer stands in the file verbatim, the user has edited it
+   * meanwhile — then nothing is written and his version stays. That is a plain
+   * success with the file's current hash, not a conflict: the undo has nothing
+   * left to undo, and no line of his is rewritten for it.
+   */
+  'projects:removeNote': { req: { slug: string; block: string }; res: WriteResult };
   /** LLM derives status and next step from the project history (a suggestion). */
   'projects:suggestStatus': {
     req: { slug: string };
@@ -556,6 +582,8 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'projects:create',
   'projects:patch',
   'projects:append',
+  'projects:createNote',
+  'projects:removeNote',
   'projects:suggestStatus',
   'projects:resolveWaiting',
   'areas:list',

@@ -11,6 +11,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { filingBlock, removeBlock } from '@core/capture';
 import type { IpcChannel, IpcRequest, IpcResponse } from '@shared/ipc';
 import { createFetchFake, jsonResponse } from '../fakes/llm';
 import { CLAUDE_PROJECTS_DIR } from '../fixtures';
@@ -238,6 +239,249 @@ describe('Projekt- und Todo-Kanäle im Main', () => {
     expect(raw).toContain('Lärche war teurer als gedacht.');
     expect(raw).toContain('Maße stehen: 120 × 60 × 80');
     expect(raw.indexOf('## Notizen')).toBe(before.indexOf('## Notizen'));
+  });
+
+  // ── Notizen ────────────────────────────────────────────────────────────────
+
+  /* Der zweite neue Schreibweg in die Dateien des Nutzers. Deshalb steht hier
+     vor allem, was *nicht* passieren darf: ein Block, der anders aussieht als
+     der der Ablage; ein Schreibvorgang über eine fremde Änderung hinweg; ein
+     Rückweg, der eine vom Nutzer überarbeitete Notiz mitnimmt. */
+
+  const hashOf = async (path: string): Promise<string> => {
+    const doc = await vault.store.read(path);
+    expect(doc, path).not.toBeNull();
+    return doc?.hash ?? '';
+  };
+
+  /** Ein Projekt ganz ohne Notizen-Abschnitt — von außen geschrieben. */
+  const NO_SECTION = 'projects/work/altbau-sanierung/project.md';
+  const noSectionFile = [
+    '---',
+    'type: project',
+    'title: Altbau Sanierung',
+    'slug: altbau-sanierung',
+    'scope: work',
+    'status: active',
+    'priority: 3',
+    'started: 2026-07-01',
+    'created: 2026-07-01',
+    'updated: 2026-07-01',
+    '---',
+    '',
+    '## Stand',
+    '',
+    'Der Statiker ist beauftragt.',
+    '',
+    '## Todos',
+    '',
+    '- [ ] Angebot vom Dachdecker einholen',
+    '',
+  ].join('\n');
+
+  it('schreibt eine Notiz als Datumsblock, Zeichen für Zeichen wie die Ablage', async () => {
+    const before = await vault.store.read(PRIVATE);
+    const text = 'Lärche war teurer als gedacht, Douglasie tut es auch.';
+
+    const written = await harness.call('projects:createNote', { slug: 'hochbeet-bauen', text });
+
+    /* Genau der Block, den `filingBlock` erzeugt — sonst driften Ablage und
+       handgeschriebene Notiz in derselben Datei auseinander. */
+    expect(written.block).toBe(filingBlock(text));
+    expect(written.block).toBe(`### ${TODAY}\n\n${text}`);
+    expect(written.path).toBe(PRIVATE);
+    expect(written.created).toBe(false);
+    expect(written.hash).toBe(await hashOf(PRIVATE));
+    const after = await vault.store.read(PRIVATE);
+    expect(after?.body).toContain(written.block);
+    /* Nichts sonst hat sich bewegt: den Block wieder heraus, und die Datei ist
+       die alte — Frontmatter, Stand, Todos, der ältere Eintrag. */
+    expect(removeBlock(after?.body ?? '', written.block)).toBe(before?.body);
+    expect(await vault.read(PRIVATE)).toContain('### 2026-08-08');
+    expect(harness.events).toHaveBeenCalledWith('event:vault-changed', {
+      paths: [PRIVATE],
+      external: false,
+    });
+  });
+
+  it('legt den Notizen-Abschnitt am Dateiende an, wenn die Datei keinen hat', async () => {
+    await vault.write(NO_SECTION, noSectionFile);
+
+    const written = await harness.call('projects:createNote', {
+      slug: 'altbau-sanierung',
+      text: 'Statiker meldet sich nächste Woche.',
+    });
+
+    expect(written.path).toBe(NO_SECTION);
+    const raw = (await vault.read(NO_SECTION)) ?? '';
+    /* Der Abschnitt steht hinten, und alles davor ist Zeichen für Zeichen die
+       Datei, die der Nutzer geschrieben hat. */
+    expect(raw.slice(0, raw.indexOf('## Notizen'))).toBe(`${noSectionFile}\n`);
+    expect(raw.slice(raw.indexOf('## Notizen'))).toBe(`## Notizen\n\n${written.block}\n`);
+  });
+
+  /* Die Überschrift kommt aus der Datei: ein Projekt, das „Notes" führt, führt
+     es weiter — sonst hätte dieselbe Datei zwei Notizen-Abschnitte. */
+  it('hängt unter die englische Überschrift an, wenn die Datei sie führt', async () => {
+    await vault.write(
+      NO_SECTION,
+      `${noSectionFile}\n## Notes\n\n### 2026-08-01\n\nErster Eintrag.\n`,
+    );
+
+    const written = await harness.call('projects:createNote', {
+      slug: 'altbau-sanierung',
+      text: 'Dachdecker war da.',
+    });
+
+    const raw = (await vault.read(NO_SECTION)) ?? '';
+    expect(raw).not.toContain('## Notizen');
+    expect(raw.split('## Notes')).toHaveLength(2);
+    expect(raw.indexOf(written.block)).toBeGreaterThan(raw.indexOf('Erster Eintrag.'));
+  });
+
+  it('schreibt eine Notiz mit veraltetem Hash nicht, sondern meldet den Konflikt', async () => {
+    const stale = await hashOf(PRIVATE);
+    await harness.call('projects:createNote', { slug: 'hochbeet-bauen', text: 'Erste Notiz' });
+    const between = await vault.read(PRIVATE);
+
+    await expect(
+      harness.call('projects:createNote', {
+        slug: 'hochbeet-bauen',
+        text: 'Zweite Notiz auf veraltetem Stand',
+        expectedHash: stale,
+      }),
+    ).rejects.toMatchObject({ code: 'conflict' });
+
+    expect(await vault.read(PRIVATE)).toBe(between);
+    expect(await vault.read(PRIVATE)).not.toContain('Zweite Notiz auf veraltetem Stand');
+  });
+
+  it('verliert bei schreiben → von außen ändern → wieder lesen nichts', async () => {
+    const written = await harness.call('projects:createNote', {
+      slug: 'hochbeet-bauen',
+      text: 'Erde nach dem Regen holen.',
+    });
+    /* Der Nutzer öffnet die Datei selbst und ergänzt eine Zeile im Stand. */
+    await vault.write(
+      PRIVATE,
+      ((await vault.read(PRIVATE)) ?? '').replace(
+        'Keller, die Schrauben auch.',
+        'Keller, die Schrauben auch. Winkel fehlen noch.',
+      ),
+    );
+
+    const reread = await harness.call('projects:get', { slug: 'hochbeet-bauen' });
+
+    expect(reread?.doc.body).toContain('Winkel fehlen noch.');
+    expect(reread?.doc.body).toContain(written.block);
+    expect(reread?.doc.hash).not.toBe(written.hash);
+    /* Und die nächste Notiz geht auf dem neuen Stand durch, ohne die fremde
+       Zeile anzufassen. */
+    const second = await harness.call('projects:createNote', {
+      slug: 'hochbeet-bauen',
+      text: 'Winkel bestellt.',
+    });
+    const raw = (await vault.read(PRIVATE)) ?? '';
+    expect(raw).toContain('Winkel fehlen noch.');
+    expect(raw).toContain(written.block);
+    expect(raw).toContain(second.block);
+    expect(raw).toContain('### 2026-08-08');
+  });
+
+  it('nimmt genau den geschriebenen Block wieder heraus', async () => {
+    const before = await vault.read(PRIVATE);
+    const written = await harness.call('projects:createNote', {
+      slug: 'hochbeet-bauen',
+      text: 'Doch nicht Lärche.',
+    });
+
+    const removed = await harness.call('projects:removeNote', {
+      slug: 'hochbeet-bauen',
+      block: written.block,
+    });
+
+    /* Zeichen für Zeichen die Datei von vorher. */
+    expect(await vault.read(PRIVATE)).toBe(before);
+    expect(removed).toEqual({ path: PRIVATE, hash: await hashOf(PRIVATE), created: false });
+  });
+
+  it('lässt eine vom Nutzer geänderte Notiz stehen und schreibt nichts', async () => {
+    const written = await harness.call('projects:createNote', {
+      slug: 'hochbeet-bauen',
+      text: 'Erde und Kompost aus dem Baumarkt.',
+    });
+    /* Der Nutzer schreibt die Notiz um — jetzt ist es seine Zeile. */
+    await vault.write(
+      PRIVATE,
+      ((await vault.read(PRIVATE)) ?? '').replace(
+        'Erde und Kompost aus dem Baumarkt.',
+        'Erde und Kompost besser vom Gärtner nebenan.',
+      ),
+    );
+    const edited = await vault.read(PRIVATE);
+    const hash = await hashOf(PRIVATE);
+
+    const result = await harness.call('projects:removeNote', {
+      slug: 'hochbeet-bauen',
+      block: written.block,
+    });
+
+    /* Kein Fehler: es gibt nur nichts mehr zurückzunehmen. Und keine Zeile des
+       Nutzers wurde dafür angefasst. */
+    expect(result).toEqual({ path: PRIVATE, hash, created: false });
+    expect(await vault.read(PRIVATE)).toBe(edited);
+    expect(await vault.read(PRIVATE)).toContain('Erde und Kompost besser vom Gärtner nebenan.');
+  });
+
+  it('verweigert eine leere Notiz und einen leeren Block', async () => {
+    const before = await vault.read(PRIVATE);
+
+    await expect(
+      harness.call('projects:createNote', { slug: 'hochbeet-bauen', text: '   \n  ' }),
+    ).rejects.toMatchObject({ code: 'invalid' });
+    await expect(
+      harness.call('projects:removeNote', { slug: 'hochbeet-bauen', block: '   ' }),
+    ).rejects.toMatchObject({ code: 'invalid' });
+
+    expect(await vault.read(PRIVATE)).toBe(before);
+  });
+
+  it('schreibt keine Notiz in ein Projekt, das es nicht gibt', async () => {
+    await expect(
+      harness.call('projects:createNote', { slug: 'gibt-es-nicht', text: 'Irgendwas' }),
+    ).rejects.toMatchObject({ code: 'not-found' });
+    await expect(
+      harness.call('projects:removeNote', { slug: 'gibt-es-nicht', block: `### ${TODAY}\n\nx` }),
+    ).rejects.toMatchObject({ code: 'not-found' });
+  });
+
+  it('erhält beim Schreiben einer Notiz unbekannte Frontmatter-Felder des Nutzers', async () => {
+    await vault.write(
+      WORK,
+      ((await vault.read(WORK)) ?? '').replace(
+        'type: project',
+        'type: project\nkostenstelle: 4711\neigene_liste:\n  - a\n  - b',
+      ),
+    );
+    await harness.services.requireIndex().refresh?.([WORK]);
+    const before = await vault.read(WORK);
+
+    const written = await harness.call('projects:createNote', {
+      slug: 'kundenportal-relaunch',
+      text: 'Jonas hat den Fallback abgenickt.',
+    });
+
+    const raw = (await vault.read(WORK)) ?? '';
+    expect(raw).toContain('kostenstelle: 4711');
+    expect(raw).toContain('eigene_liste:');
+    expect(raw).toContain('  - b');
+    expect(raw).toContain(written.block);
+    /* Und der Rückweg lässt das Frontmatter genauso stehen. */
+    await harness.call('projects:removeNote', {
+      slug: 'kundenportal-relaunch',
+      block: written.block,
+    });
+    expect(await vault.read(WORK)).toBe(before);
   });
 
   // ── Warte-auf ──────────────────────────────────────────────────────────────

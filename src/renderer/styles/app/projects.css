@@ -425,6 +425,50 @@
   flex-wrap: wrap;
 }
 
+.sb-waitcompose {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+}
+.sb-waitcompose-fields {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.sb-waitcompose-who {
+  flex: 1 1 12rem;
+  min-width: 10rem;
+}
+.sb-waitcompose-what {
+  flex: 2 1 16rem;
+  min-width: 12rem;
+}
+.sb-waitcompose-foot {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+.sb-waitcompose-date {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+}
+.sb-waitcompose-dateinput {
+  width: auto;
+}
+.sb-waitcompose-hint {
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+}
+
 /* ── Todos ──────────────────────────────────────────────────────────────── */
 
 .sb-todolist {
@@ -632,6 +676,32 @@
   border-color: rgba(232, 180, 90, 0.35);
   background: var(--warning-soft);
   color: var(--warning);
+}
+
+/* ── Notes ──────────────────────────────────────────────────────────────── */
+
+.sb-notecompose-project {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.sb-notecompose-project-field {
+  resize: vertical;
+  min-height: 4.5em;
+}
+.sb-notecompose-project-foot {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+.sb-notecompose-project-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
 }
 
 /* ── All todos ──────────────────────────────────────────────────────────── */

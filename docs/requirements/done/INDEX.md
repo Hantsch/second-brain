@@ -35,3 +35,10 @@ second roadmap.
   with `filed_into`/`filed_at`, shown in a collapsed "filed" trail; Today gained a
   "N unfiled" strip. Fixed a review finding (F1): an emptied-out edited proposal now
   raises an error instead of being stamped "filed" with nothing written.
+- 003 — Project notes and waiting-on, editable in place · S03 · The project detail view
+  gained a hand-typed note composer (`projects:createNote`/`removeNote`, byte-identical to
+  the filing path, undoable) and an inline waiting-on composer (who required, what/since/due
+  optional, via the existing `projects:patch`), both hash-guarded and reachable via `m`/`w`;
+  the notes panel dropped its show/hide toggle and now always shows notes plus the composer.
+  Fixed a review finding (F2): the renderer's own heading-alias resolution now agrees with
+  the write path on which of "Notizen"/"Notes" wins when a file carries both.

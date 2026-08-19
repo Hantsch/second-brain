@@ -60,6 +60,12 @@ export interface ProjectMutations {
   create: UseMutationResult<Project, unknown, IpcRequest<'projects:create'>>;
   patch: UseMutationResult<Project, unknown, IpcRequest<'projects:patch'>>;
   append: UseMutationResult<WriteResult, unknown, IpcRequest<'projects:append'>>;
+  createNote: UseMutationResult<
+    WriteResult & { block: string },
+    unknown,
+    IpcRequest<'projects:createNote'>
+  >;
+  removeNote: UseMutationResult<WriteResult, unknown, IpcRequest<'projects:removeNote'>>;
   resolveWaiting: UseMutationResult<Project, unknown, { slug: string; index: number }>;
   suggest: UseMutationResult<StatusSuggestion | null, unknown, string>;
 }
@@ -77,6 +83,14 @@ export function useProjectMutations(): ProjectMutations {
     }),
     append: useMutation({
       mutationFn: api.projects.append,
+      onSuccess: (_written, request) => refresh(client, request.slug),
+    }),
+    createNote: useMutation({
+      mutationFn: api.projects.createNote,
+      onSuccess: (_written, request) => refresh(client, request.slug),
+    }),
+    removeNote: useMutation({
+      mutationFn: api.projects.removeNote,
       onSuccess: (_written, request) => refresh(client, request.slug),
     }),
     resolveWaiting: useMutation({

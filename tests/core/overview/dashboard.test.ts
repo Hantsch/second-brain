@@ -125,6 +125,39 @@ describe('dashboardData — Warte-auf und stagnierende Projekte', () => {
     });
   });
 
+  it('nimmt eine composer-angelegte Zeile (nur wer und seit, ohne was) genauso auf wie eine ausgefuellte, richtig einsortiert', () => {
+    const index = indexFrom([
+      projectDoc({
+        slug: 'nyota',
+        title: 'Nyota Auth0 Migration',
+        waitingOn: [
+          { who: 'Stefan', what: 'Freigabe', since: day(-2) },
+          { who: 'Neu', what: '', since: day(-3) },
+        ],
+      }),
+    ]);
+    const data = dashboardData(index, [], LIMITS, TODAY);
+    expect(data.waitingOn.map((entry) => entry.who)).toEqual(['Neu', 'Stefan']);
+    expect(data.waitingOn[0]).toMatchObject({
+      who: 'Neu',
+      what: '',
+      project: 'nyota',
+      projectTitle: 'Nyota Auth0 Migration',
+      path: 'projects/work/nyota/project.md',
+    });
+  });
+
+  it('laesst eine erledigte composer-angelegte Zeile weg', () => {
+    const index = indexFrom([
+      projectDoc({
+        slug: 'nyota',
+        waitingOn: [{ who: 'Neu', what: '', since: day(-3), resolved: true }],
+      }),
+    ]);
+    const data = dashboardData(index, [], LIMITS, TODAY);
+    expect(data.waitingOn).toEqual([]);
+  });
+
   it('nennt stagnierende Projekte als Slugs, laengste Pause zuerst', () => {
     const index = indexFrom([
       projectDoc({ slug: 'lang', updated: stamp(-40) }),

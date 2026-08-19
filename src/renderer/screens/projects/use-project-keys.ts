@@ -1,9 +1,10 @@
-/* Keyboard handling for the projects screen. Two hooks, because two areas
-   act: the list (j/k, arrows, Enter, n) and the detail (t, x).
+/* Keyboard handling for the projects screen. Three hooks, because three
+   areas act: the list (j/k, arrows, Enter, n), the todo detail (t, x), and
+   the note/waiting-on composers (m, w).
 
-   Both ignore keystrokes from input fields — otherwise "x" while typing a
-   todo would check off a different one. Digits stay with the rail (the shell
-   catches them), so nothing here touches modifier keys. */
+   All three ignore keystrokes from input fields — otherwise "x" while typing
+   a todo would check off a different one. Digits stay with the rail (the
+   shell catches them), so nothing here touches modifier keys. */
 
 import { useEffect } from 'react';
 
@@ -107,4 +108,32 @@ export function useTodoKeys({ compose, toggle, enabled = true }: TodoKeysOptions
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [compose, toggle, enabled]);
+}
+
+export interface ComposerKeysOptions {
+  /** m: open the note composer and focus its field. */
+  note: () => void;
+  /** w: open the waiting-on composer and focus its field. */
+  waiting: () => void;
+  enabled?: boolean;
+}
+
+export function useComposerKeys({ note, waiting, enabled = true }: ComposerKeysOptions): void {
+  useEffect(() => {
+    if (!enabled) return undefined;
+    const onKey = (event: KeyboardEvent): void => {
+      if (!plain(event) || inField(event.target)) return;
+      if (event.key === 'm') {
+        event.preventDefault();
+        note();
+        return;
+      }
+      if (event.key === 'w') {
+        event.preventDefault();
+        waiting();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [note, waiting, enabled]);
 }
