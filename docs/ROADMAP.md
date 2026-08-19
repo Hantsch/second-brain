@@ -37,7 +37,7 @@ Way of working: every milestone ends in an increment that can be driven through 
 Between milestones: playtest, review, steering by the user. Stories are cut only once the
 previous milestone is accepted, so scope does not balloon up front.
 
-### M1 — Navigation: places, actions, systems — built, acceptance pending
+### M1 — Navigation: places, actions, systems — accepted
 
 Concept: [systems/navigation.md](systems/navigation.md) (moved from `concepts/` — fully built).
 
@@ -45,15 +45,16 @@ The rail went from eleven flat entries to seven, and the distinction between **p
 **action** and **system** is now structurally visible. Sources moved inside Knowledge, agent
 sessions moved inside Projects, capture and ask lost their rail entries and became overlays, and
 `areas/` finally has a screen that reads it — which is also what turned the inbox into a filter
-instead of a duty. All five stories are done; the milestone's target picture is fully built.
+instead of a duty. All five stories are done; the milestone's target picture is fully built and
+accepted by the user on 2026-08-19.
 
 Sprints:
 
 - [sprints/S01/sprint.md](sprints/S01/sprint.md) — the rail becomes places (002, 007, 008),
-  `done` — built, acceptance pending
+  `done` — accepted
   ([review](sprints/S01/review.md) · [testplan](sprints/S01/testplan.md))
-- [sprints/S02/sprint.md](sprints/S02/sprint.md) — notes get a home (005, 006), `done` — built,
-  acceptance pending
+- [sprints/S02/sprint.md](sprints/S02/sprint.md) — notes get a home (005, 006), `done` —
+  accepted
   ([review](sprints/S02/review.md) · [testplan](sprints/S02/testplan.md))
 
 The rail now stands at its final seven entries: Dashboard, Projects, Journal, Knowledge, Notes,
@@ -77,19 +78,22 @@ Gaps/notes:
   because the Sessions tab now reads both CLIs.
 - **Story 001 shipped without a sprint.** It sits in `done/` with `· — ·` instead of a sprint id.
   Not worth backfilling; noted so the gap in the sprint history is not read as a lost sprint.
-- **Acceptance of M1 is the user's call** — no milestone here is ticked by a session. Both
-  sprints' test plans are the way in:
+- **M1 accepted by the user on 2026-08-19**, both sprints' test plans walked end to end:
   [sprints/S01/testplan.md](sprints/S01/testplan.md),
   [sprints/S02/testplan.md](sprints/S02/testplan.md).
 
-### M2 — Projects answer where I left off — planned
+### M2 — Projects answer where I left off — sprint cut
 
 Stories 003 (notes and waiting-on, editable in place), 004 (where the status and next step come
 from), 013 (favourite projects and an order that matches how I work). No concept behind them;
 the stories are detailed enough to cut from directly.
 
-Depends on M1: story 008 moves a Sessions tab into this same screen, so doing this first would
-mean touching the project detail twice.
+Depended on M1: story 008 moved a Sessions tab into this same screen, so M1 went first to avoid
+touching the project detail twice. M1 is accepted; M2 is next.
+
+Sprints:
+
+- [sprints/S03/sprint.md](sprints/S03/sprint.md) — where I left off (003, 004, 013), `planned`
 
 ### M3 — The journal becomes one thing — planned
 
@@ -111,8 +115,8 @@ Note: 015, 016 and 017 add new **write** paths into the vault (merging pages, in
 recording a verdict). The AI-proposes/human-confirms guardrail and the hash-guarded write are
 the load-bearing part of this milestone, not the screens.
 
-The order of M2 / M3 / M4 is not fixed. It is confirmed at the next `/ai-scrum:roadmap plan`,
-once M1 has been used.
+M2 was chosen next at the 2026-08-19 `/ai-scrum:roadmap plan`, now that M1 is accepted. The
+order of M3 / M4 after it is still open.
 
 ---
 
