@@ -23,7 +23,7 @@ The way I actually think about it: there is one field, I write into it, and the
 So the stance stops being "which conversation am I having" and becomes "what should the
 app do with what I just wrote". Writing is always the same act.
 
-This supersedes the line in [concepts/navigation.md](../concepts/navigation.md) that
+This supersedes the line in [systems/navigation.md](../systems/navigation.md) that
 says the journal stays untouched: the journal's inner structure changes here, its place
 in the rail does not.
 

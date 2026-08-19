@@ -20,7 +20,7 @@ means the app can decide to put my thought somewhere I can never look at it.
 So: a rail entry **Notes** that shows the areas and their notes, and lets me write
 one directly, without picking a folder first.
 
-Target picture: [concepts/navigation.md](../concepts/navigation.md).
+Target picture: [systems/navigation.md](../../systems/navigation.md).
 
 ## Acceptance Criteria
 
@@ -70,7 +70,7 @@ Decided while refining (session, not user):
 
 - **Vault names stay in the code.** Types, core module and IPC channels are called
   `Area` / `src/core/areas/` / `areas:*`; only the label says "Notes". Reason:
-  [concepts/navigation.md](../concepts/navigation.md) rules that renaming stops at
+  [systems/navigation.md](../../systems/navigation.md) rules that renaming stops at
   the UI.
 - **Section headings are resolved like journal sections, not hardcoded.** A new
   `src/core/areas/sections.ts` mirrors `src/core/journal/sections.ts`: an existing
@@ -279,7 +279,7 @@ Files: `scripts/lib/screens.mjs` (add `notes`; `checkScreenList()` compares it w
 `screens.ts`), `scripts/seed/projects.mjs` (only if the seeded areas need a third one
 without notes, for the per-area empty state), `docs/VAULT-FORMAT.md` (an "Area
 (`areas/<slug>.md`)" block with frontmatter, notes and todos sections),
-`docs/concepts/navigation.md` (tick Notes off in the target picture if it tracks
+`docs/systems/navigation.md` (tick Notes off in the target picture if it tracks
 state).
 Acceptance: `npm run seed && npm run shot` produces a `notes` screenshot, wide and
 narrow, without a Playwright error; `npm run verify` green. → acceptance for AC 1-10

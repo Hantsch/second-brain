@@ -17,7 +17,7 @@ note. So the inbox is not a place of its own: it is the **unfiled** filter on No
 
 Depends on 005 — this story needs the Notes screen to exist.
 
-Target picture: [concepts/navigation.md](../concepts/navigation.md).
+Target picture: [systems/navigation.md](../../systems/navigation.md).
 
 ## Acceptance Criteria
 
@@ -84,7 +84,7 @@ Decided during refine (reason each):
   keep a digit: that closes the holes at 2/4/8 without taking away a hotkey that
   works today, and the visual separation already carries the place/system distinction.
 - **The inbox tile on Today stays** (retargeted) and the strip is added beside it —
-  [concepts/navigation.md](../concepts/navigation.md) keeps the tile system as it is,
+  [systems/navigation.md](../../systems/navigation.md) keeps the tile system as it is,
   and a tile can be hidden while the strip cannot.
 - **Folder, component, i18n and IPC names keep the word "inbox"**
   (`screens/inbox/`, `inbox.*`, `capture:*`) — renaming stops at the UI, as with the

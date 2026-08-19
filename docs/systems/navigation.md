@@ -1,5 +1,9 @@
 # Navigation
 
+Status: **Built** — all five stories (002, 005, 006, 007, 008) are done, across sprints S01 and
+S02, as of 2026-08-19. Acceptance of M1 is still the user's own call; see
+[sprints/S02/review.md](../sprints/S02/review.md).
+
 How the app is divided, and why. The target picture that the individual navigation
 stories work towards, so they do not drift apart.
 

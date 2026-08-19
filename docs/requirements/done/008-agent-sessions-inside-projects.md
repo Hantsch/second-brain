@@ -21,7 +21,7 @@ entry point for agent projects that are not linked yet.
 
 Depends on story 001 (agent session browser), which is done.
 
-Target picture: [concepts/navigation.md](../concepts/navigation.md).
+Target picture: [systems/navigation.md](../../systems/navigation.md).
 
 ## Acceptance Criteria
 

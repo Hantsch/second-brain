@@ -16,7 +16,7 @@ rail entries, that relationship is invisible: a new user cannot tell that ingest
 source is how knowledge gets in. Sources belongs *inside* Knowledge, as its input
 tab.
 
-Target picture and reasoning: [concepts/navigation.md](../concepts/navigation.md).
+Target picture and reasoning: [systems/navigation.md](../../systems/navigation.md).
 
 This is a UI change only. The vault format is untouched — `modules/`, `raw/`,
 frontmatter keys, and every code identifier keep their names. Renaming the folder

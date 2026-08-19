@@ -1,6 +1,6 @@
 ---
 sprint: S02
-status: in-progress # planned | in-progress | done
+status: done # planned | in-progress | done
 branch: sprint/S02
 milestone: M1 — Navigation: places, actions, systems
 ---
@@ -12,15 +12,15 @@ milestone: M1 — Navigation: places, actions, systems
 `areas/` stops being a write path with no read path. A rail entry **Notes** shows the areas and
 their entries, lets a thought be written without picking a target first, and the old inbox
 becomes the "unfiled" filter on it — so filing turns from a duty into an offer. At the end the
-rail stands at the seven entries of [the concept](../../concepts/navigation.md), and M1 is
+rail stands at the seven entries of [the concept](../../systems/navigation.md), and M1 is
 complete.
 
 ## Stories (in build order)
 
 <!-- Order = the order the build phase works through. Dependent stories go last. -->
 
-- [ ] 005 — Notes — a home for the areas
-- [ ] 006 — Inbox becomes the "unfiled" filter in Notes
+- [x] 005 — Notes — a home for the areas
+- [x] 006 — Inbox becomes the "unfiled" filter in Notes
 
 ## Notes
 

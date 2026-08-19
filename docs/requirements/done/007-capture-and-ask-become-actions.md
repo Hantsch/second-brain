@@ -20,7 +20,7 @@ context — in a project, in a module — and have the search scope already righ
 Navigating away to a separate screen loses exactly the context that would have made
 the question precise.
 
-Target picture: [concepts/navigation.md](../concepts/navigation.md).
+Target picture: [systems/navigation.md](../../systems/navigation.md).
 
 ## Acceptance Criteria
 

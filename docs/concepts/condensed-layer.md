@@ -12,7 +12,7 @@ This document follows the architecture rules in [CLAUDE.md](../../CLAUDE.md): th
 stay the truth (the artifact is a Markdown file in the vault, not an index entry), the
 AI proposes and the human confirms (guardrail 2), every statement carries evidence
 (guardrail 3), and the app stays usable without a model (guardrail 1). It builds on
-[concepts/navigation.md](navigation.md), which already reserves a **Project knowledge**
+[systems/navigation.md](../systems/navigation.md), which already reserves a **Project knowledge**
 tab for exactly this, and on [MODULE-SCHEMA.md](../MODULE-SCHEMA.md), whose
 `wiki/overview.md` is the one existing instance of the layer.
 
@@ -435,7 +435,7 @@ due and links there.
 
 | Level    | Location                                                                                   |
 | -------- | ------------------------------------------------------------------------------------------ |
-| Project  | The **Project knowledge** tab, already reserved in [concepts/navigation.md](navigation.md) |
+| Project  | The **Project knowledge** tab, already reserved in [systems/navigation.md](../systems/navigation.md) |
 | Module   | Inside the module view, next to the wiki pages                                             |
 | Area     | Inside the area, in the Notes screen (story 005)                                           |
 | Due-ness | Maintenance, as a finding that links to the unit                                           |

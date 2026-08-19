@@ -1,7 +1,7 @@
 # Roadmap
 
 **The** one source of status and planning: where we stand, what comes next, what is not planned
-at all yet. As of: 2026-08-14.
+at all yet. As of: 2026-08-19.
 
 Rules (so this document does not drift):
 
@@ -37,46 +37,50 @@ Way of working: every milestone ends in an increment that can be driven through 
 Between milestones: playtest, review, steering by the user. Stories are cut only once the
 previous milestone is accepted, so scope does not balloon up front.
 
-### M1 — Navigation: places, actions, systems — ▶ in progress
+### M1 — Navigation: places, actions, systems — built, acceptance pending
 
-Concept: [concepts/navigation.md](concepts/navigation.md).
+Concept: [systems/navigation.md](systems/navigation.md) (moved from `concepts/` — fully built).
 
-The rail goes from eleven flat entries to seven, and the distinction between **place**,
-**action** and **system** becomes structurally visible. Sources moves inside Knowledge, agent
-sessions move inside Projects, capture and ask lose their rail entries and become overlays, and
-`areas/` finally gets a screen that reads it — which is also what turns the inbox into a filter
-instead of a duty.
+The rail went from eleven flat entries to seven, and the distinction between **place**,
+**action** and **system** is now structurally visible. Sources moved inside Knowledge, agent
+sessions moved inside Projects, capture and ask lost their rail entries and became overlays, and
+`areas/` finally has a screen that reads it — which is also what turned the inbox into a filter
+instead of a duty. All five stories are done; the milestone's target picture is fully built.
 
 Sprints:
 
 - [sprints/S01/sprint.md](sprints/S01/sprint.md) — the rail becomes places (002, 007, 008),
   `done` — built, acceptance pending
   ([review](sprints/S01/review.md) · [testplan](sprints/S01/testplan.md))
-- [sprints/S02/sprint.md](sprints/S02/sprint.md) — notes get a home (005, 006), `planned`
+- [sprints/S02/sprint.md](sprints/S02/sprint.md) — notes get a home (005, 006), `done` — built,
+  acceptance pending
+  ([review](sprints/S02/review.md) · [testplan](sprints/S02/testplan.md))
 
-After S01 the rail is down from eleven entries to seven: dashboard, inbox, projects, journal,
-knowledge, garden, settings. Sources sits under Knowledge, agent sessions under Projects,
-capture and ask are shell overlays. What M1 still owes: `areas/` gets its own screen and the
-inbox becomes a filter (005, 006 in S02).
+The rail now stands at its final seven entries: Dashboard, Projects, Journal, Knowledge, Notes,
+Maintenance, Settings — digits 1–7, system entries separated at the foot. Sources sits under
+Knowledge, agent sessions under Projects, capture and ask are shell overlays, `areas/` reads
+into Notes, and the old inbox is the "unfiled" filter on it.
 
 Gaps/notes:
 
-- **Nobody owns the wholesale rail renumber.** Story 002 defers it ("the rail is renumbered
-  wholesale by the later navigation stories"), but no story's acceptance criteria claim it. After
-  S01 the rail is correct but its digit hotkeys have holes — concretely at **2, 4 and 8**. To be
-  picked up in `/refine 006` as an explicit deliverable, or promoted to its own story before S02
-  starts. This is now blocking-ish rather than theoretical: four entries left the rail in S01.
 - **`tests/core/wiki/module.test.ts` is red and predates S01.** `MODULE_SCHEMA_TEMPLATE` in
   `src/core/wiki/module.ts` drifted from `docs/MODULE-SCHEMA.md` when the doc was migrated to
-  English (commit `e8959d1`). Left untouched in S01 because resyncing it changes the module
-  schema template written into the user's vault — a content decision, not a navigation one.
-  Needs an owner: decide which side is authoritative.
+  English (commit `e8959d1`). Left untouched through both sprints because resyncing it changes
+  the module schema template written into the user's vault — a content decision, not a
+  navigation one. Still needs an owner: decide which side is authoritative.
+- **`capture-proposal.ts` hardcodes the German filing section name** regardless of the vault's
+  document language (`docs.documents` setting). Surfaced by S02's story 005, which built a
+  tolerant heading match for its own areas-specific write path but deliberately did not extend
+  the general filing path. Worth its own story once English-language vaults are common.
 - **`scripts/seed/internal.mjs` pins `claudeProjectsDir` for the demo vault but not Codex**, so
   screenshot runs read the real `~/.codex/sessions`. Pre-existing from story 001, surfaced by 008
   because the Sessions tab now reads both CLIs.
 - **Story 001 shipped without a sprint.** It sits in `done/` with `· — ·` instead of a sprint id.
   Not worth backfilling; noted so the gap in the sprint history is not read as a lost sprint.
-- Acceptance of M1 is the user's call — no milestone here is ticked by a session.
+- **Acceptance of M1 is the user's call** — no milestone here is ticked by a session. Both
+  sprints' test plans are the way in:
+  [sprints/S01/testplan.md](sprints/S01/testplan.md),
+  [sprints/S02/testplan.md](sprints/S02/testplan.md).
 
 ### M2 — Projects answer where I left off — planned
 
@@ -93,7 +97,7 @@ Stories 011 (one entry instead of day and conversation), 012 (the interview, for
 is empty), 009 (filter for days that are not finished), 010 (a calendar on top of the days). No
 concept behind them.
 
-Independent of everything else — [concepts/navigation.md](concepts/navigation.md) explicitly
+Independent of everything else — [systems/navigation.md](systems/navigation.md) explicitly
 leaves the journal untouched, so this milestone can be pulled forward at any point without
 rework.
 
@@ -114,8 +118,9 @@ once M1 has been used.
 
 ## Open / unprioritised
 
-| Topic                                           | State                                                                     | Next step                                                                |
-| ----------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| Project knowledge condensed from agent sessions | Named as out of scope in [concepts/navigation.md](concepts/navigation.md) | `/ai-scrum:concept` — what gets condensed, when, and how it is confirmed |
-| German docs migrated to English                 | Decided in `.claude/ai-scrum.md`; `docs/*.md` are still German            | Own story once it stops being cosmetic                                   |
-| Phase 2                                         | Not defined                                                               | Cut after phase 1 has been used                                          |
+| Topic                                                         | State                                                                                                                                                                                                                                              | Next step                                                                                                           |
+| ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Condensed layer (module / project / area)                     | Concept written 2026-08-18: [concepts/condensed-layer.md](concepts/condensed-layer.md). Supersedes the earlier "project knowledge from agent sessions" entry — that is now one of four project inputs. 40 requirements, 11 open points, no stories | `/ai-scrum:roadmap plan` — prioritise against M2/M3/M4; depends on story 005 and the Project knowledge tab from 008 |
+| MCP interface for projects, knowledge and the condensed layer | Named as an outlook in [concepts/condensed-layer.md](concepts/condensed-layer.md) §14, deliberately without requirements                                                                                                                           | Own `/ai-scrum:concept` once the condensed artifacts exist                                                          |
+| German docs migrated to English                               | Decided in `.claude/ai-scrum.md`; `docs/*.md` are still German                                                                                                                                                                                     | Own story once it stops being cosmetic                                                                              |
+| Phase 2                                                       | Not defined                                                                                                                                                                                                                                        | Cut after phase 1 has been used                                                                                     |
