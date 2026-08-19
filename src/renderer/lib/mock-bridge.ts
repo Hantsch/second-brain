@@ -147,6 +147,16 @@ const RESPONSES: MockResponses = {
   }),
   'journal:applyClose': () => ({ written: [fx.journalDay.path], undo: [] }),
   'journal:foldDay': () => ({ ...writeResult, path: fx.journalDay.path }),
+  'journal:interviewPlan': () => ({
+    steps: [
+      { topic: 'events', question: 'Was ist heute passiert, das dir aufgefallen ist?' },
+      { topic: 'open', question: 'Was ist noch offen?' },
+    ],
+    mode: 'fixed',
+    finished: false,
+  }),
+  'journal:interviewAnswer': () => ({ ...writeResult, path: fx.journalDay.path, at: '14:32' }),
+  'journal:interviewFollowUp': () => ({ question: null, noModel: true }),
 
   'modules:list': () => [fx.knowledgeModule],
   'modules:create': ({ title, description }) => ({ ...fx.knowledgeModule, title, description }),

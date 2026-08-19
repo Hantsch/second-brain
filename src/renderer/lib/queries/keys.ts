@@ -35,6 +35,10 @@ export const qk = {
   journal: {
     list: () => ['journal', 'list'] as const,
     day: (date: string) => ['journal', 'day', date] as const,
+    /** The interview plan (012): read once per opening of the overlay, never
+        invalidated by a file change — a run's step list is fixed for its
+        duration (Decisions: "the five topics are never extended"). */
+    interview: (date: string) => ['journal', 'interview', date] as const,
   },
   modules: {
     list: () => ['modules', 'list'] as const,

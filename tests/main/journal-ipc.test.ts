@@ -19,7 +19,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { parseStream } from '@core/journal';
 import type { IpcChannel, IpcEvents, IpcRequest, IpcResponse } from '@shared/ipc';
-import { createFetchFake, sseChunks, sseResponse } from '../fakes/llm';
+import { createFetchFake, jsonResponse, sseChunks, sseResponse } from '../fakes/llm';
 import type { FetchResponder } from '../fakes/llm';
 import { createTempVault } from '../helpers/vault';
 import type { TempVault } from '../helpers/vault';
@@ -692,6 +692,125 @@ describe('Tagebuch-Kanäle im Main', () => {
     const file = (await vault.read(DAY_PATH)) ?? '';
     expect(file).toContain('extern geändert');
     expect(file).toContain('## Gespräch');
+  });
+
+  // ── Interview (012, D4) ──────────────────────────────────────────────────
+
+  it('plant das Interview für einen Tag ohne Datei, ohne sie anzulegen', async () => {
+    const date = '2026-08-14';
+    expect(await vault.exists(`journal/2026/08/${date}.md`)).toBe(false);
+
+    const plan = await harness.call('journal:interviewPlan', { date });
+
+    expect(plan.mode).toBe('fixed');
+    expect(plan.finished).toBe(false);
+    expect(plan.steps.map((step) => step.topic)).toEqual([
+      'work',
+      'events',
+      'people',
+      'open',
+      'feeling',
+    ]);
+    expect(plan.steps[0]?.question.length).toBeGreaterThan(0);
+    /* Ein Plan ist ein Lesevorgang: er darf die Datei nicht anlegen, sonst
+       würde das bloße Öffnen des Interviews einen leeren Tag erzeugen. */
+    expect(await vault.exists(`journal/2026/08/${date}.md`)).toBe(false);
+  });
+
+  it('lässt bereits beantwortete Themen des Tages im Plan weg', async () => {
+    const before = await harness.call('journal:get', { date: DATE });
+    /* Der Beispieltag hat schon mood/energy/people/projects im Frontmatter —
+       „work", „people" und „feeling" sind also von Anfang an nicht im Plan,
+       nur „events" und „open" bleiben offen. */
+    const firstPlan = await harness.call('journal:interviewPlan', { date: DATE });
+    expect(firstPlan.steps.map((step) => step.topic)).toEqual(['events', 'open']);
+
+    await harness.call('journal:interviewAnswer', {
+      date: DATE,
+      step: { topic: 'open', question: 'Was ist noch offen?' },
+      answer: 'Der Interceptor-Bug ist noch offen.',
+    });
+
+    const plan = await harness.call('journal:interviewPlan', { date: DATE });
+    expect(plan.steps.map((step) => step.topic)).toEqual(['events']);
+    expect(before?.doc.hash).not.toBe(
+      (await harness.call('journal:get', { date: DATE }))?.doc.hash,
+    );
+  });
+
+  it('schreibt die beantwortete Interview-Frage in den Tagesstrom und stößt den Index an', async () => {
+    const result = await harness.call('journal:interviewAnswer', {
+      date: '2026-08-15',
+      step: { topic: 'events', question: 'Was ist heute passiert, das dir aufgefallen ist?' },
+      answer: 'Ein Kollege hat gekündigt.',
+    });
+
+    expect(result.path).toBe('journal/2026/08/2026-08-15.md');
+    expect(result.hash.length).toBeGreaterThan(10);
+    expect(result.at).toMatch(/^\d{2}:\d{2}$/);
+    const file = (await vault.read(result.path)) ?? '';
+    expect(file).toContain('Was ist heute passiert, das dir aufgefallen ist?');
+    expect(file).toContain('Ein Kollege hat gekündigt.');
+    /* Wie bei `journal:append`: der Nachlauf bringt den Index hoch und weckt
+       den Renderer über das Ereignis, nicht über Polling. */
+    expect(harness.changed.some((event) => event.paths.includes(result.path))).toBe(true);
+  });
+
+  it('weist ein unmögliches Datum und ein unbekanntes Thema ab', async () => {
+    await expect(
+      harness.call('journal:interviewPlan', { date: '2026-02-31' }),
+    ).rejects.toMatchObject({ code: 'invalid' });
+    await expect(
+      harness.call('journal:interviewAnswer', {
+        date: '2026-02-31',
+        step: { topic: 'work', question: 'Woran hast du heute gearbeitet?' },
+        answer: 'Etwas.',
+      }),
+    ).rejects.toMatchObject({ code: 'invalid' });
+    await expect(
+      harness.call('journal:interviewAnswer', {
+        date: DATE,
+        step: {
+          topic: 'erfunden' as IpcRequest<'journal:interviewAnswer'>['step']['topic'],
+          question: 'Gibt es nicht?',
+        },
+        answer: 'Etwas.',
+      }),
+    ).rejects.toMatchObject({ code: 'invalid' });
+    await expect(
+      harness.call('journal:interviewFollowUp', {
+        date: '2026-02-31',
+        step: { topic: 'work', question: 'Woran hast du heute gearbeitet?' },
+        answer: 'Etwas.',
+      }),
+    ).rejects.toMatchObject({ code: 'invalid' });
+  });
+
+  it('stellt mit einer Route eine Rückfrage zur gerade beantworteten Frage', async () => {
+    await routeTo(() =>
+      jsonResponse({
+        choices: [{ message: { content: 'Was hat dich daran am meisten gefordert?' } }],
+      }),
+    );
+
+    const result = await harness.call('journal:interviewFollowUp', {
+      date: DATE,
+      step: { topic: 'work', question: 'Woran hast du heute gearbeitet?' },
+      answer: 'Am Kundenportal-Relaunch.',
+    });
+
+    expect(result.noModel).toBe(false);
+    expect(result.question).toBe('Was hat dich daran am meisten gefordert?');
+  });
+
+  it('meldet ohne Modell ehrlich "kein Modell", statt eine Rückfrage zu erfinden', async () => {
+    const result = await harness.call('journal:interviewFollowUp', {
+      date: DATE,
+      step: { topic: 'work', question: 'Woran hast du heute gearbeitet?' },
+      answer: 'Am Kundenportal-Relaunch.',
+    });
+
+    expect(result).toEqual({ question: null, noModel: true });
   });
 
   // ── Ohne Vault ─────────────────────────────────────────────────────────────

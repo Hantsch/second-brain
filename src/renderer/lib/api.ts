@@ -103,6 +103,17 @@ export const api = {
     applyClose: (request: IpcRequest<'journal:applyClose'>) => call('journal:applyClose', request),
     foldDay: (date: string, expectedHash?: string) =>
       call('journal:foldDay', { date, expectedHash }),
+    interviewPlan: (date: string) => call('journal:interviewPlan', { date }),
+    interviewAnswer: (
+      date: string,
+      step: IpcRequest<'journal:interviewAnswer'>['step'],
+      answer: string,
+    ) => call('journal:interviewAnswer', { date, step, answer }),
+    interviewFollowUp: (
+      date: string,
+      step: IpcRequest<'journal:interviewFollowUp'>['step'],
+      answer: string,
+    ) => call('journal:interviewFollowUp', { date, step, answer }),
   },
   modules: {
     list: () => call('modules:list'),

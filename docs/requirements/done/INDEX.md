@@ -65,3 +65,13 @@ second roadmap.
   automatic. Fixed two review findings: a duplicate-paragraph render when a new entry
   merged into existing prose in the stream, and a silent loss of an embedded answer
   block when editing a heading-less day.
+- 012 — Journal: the interview, for when I do not know what to write · S04 · A fixed
+  five-question interview (work/events/people/open/feeling) as a starting aid, run as a
+  `Dialog` overlay with an optional one-question model follow-up on `journal-chat`; each
+  answer writes as a question/answer pair into 011's day stream before the next question
+  appears, skips write nothing, and the overlay honestly names whether it's running the
+  fixed set or a routed model. Fixed four review findings after a first FAIL: a possible
+  double-write on a fast double Ctrl+Enter, an unbacked "day is covered" closing claim,
+  the engine line trusting client-side routing instead of the plan's own server-decided
+  mode, and a missing `todosDue` follow-up context; also added D2's missing
+  external-edit round-trip test and restored focus to the composer on close.

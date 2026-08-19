@@ -19,8 +19,8 @@ showing entries, mood and unfinished state. At the end, the journal is legible b
 
 <!-- Order = the order the build phase works through. Dependent stories go last. -->
 
-- [ ] 011 — Journal — one entry instead of day and conversation
-- [ ] 012 — Journal — the interview, for when I do not know what to write
+- [x] 011 — Journal — one entry instead of day and conversation
+- [x] 012 — Journal — the interview, for when I do not know what to write
 - [ ] 009 — Journal — filter for days that are not finished
 - [ ] 010 — Journal — a calendar on top of the days
 

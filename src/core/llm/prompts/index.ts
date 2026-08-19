@@ -39,6 +39,10 @@ export {
 } from './journal-chat';
 export { journalClosePrompt, JOURNAL_CLOSE_SCHEMA, type JournalCloseInput } from './journal-close';
 export {
+  journalInterviewFollowupPrompt,
+  type JournalInterviewFollowupInput,
+} from './journal-interview';
+export {
   projectStatusPrompt,
   PROJECT_STATUS_SCHEMA,
   type ProjectStatusInput,

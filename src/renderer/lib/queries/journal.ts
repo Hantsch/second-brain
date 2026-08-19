@@ -16,7 +16,14 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { QueryClient, UseMutationResult, UseQueryResult } from '@tanstack/react-query';
-import type { IpcRequest, JournalCloseSuggestion, JournalDayView, WriteRequest } from '@shared/ipc';
+import type {
+  IpcRequest,
+  JournalCloseSuggestion,
+  JournalDayView,
+  JournalInterviewPlan,
+  JournalInterviewStep,
+  WriteRequest,
+} from '@shared/ipc';
 import type { CoachMode, JournalDay, JournalSettings, WriteResult } from '@shared/types';
 import { api } from '../api';
 import { qk } from './keys';
@@ -132,6 +139,60 @@ export function useJournalMutations(date: string): JournalMutations {
       mutationFn: (request: IpcRequest<'journal:foldDay'>) =>
         api.journal.foldDay(request.date, request.expectedHash),
       onSuccess: done,
+    }),
+  };
+}
+
+/**
+ * The interview's plan for one day (012): which of the five topics are still
+ * open, fetched once while the overlay (`InterviewDialog.tsx`) is open —
+ * mirrors `useJournalDay`'s `enabled` pattern. The dialog owns this read
+ * itself, so the caller only ever needs `open`/`date`/`onClose`.
+ *
+ * Later steps come from this same response, held in the overlay's own local
+ * state: a plan re-fetch after every answer would risk the model extending
+ * the five topics, which the story explicitly rules out.
+ */
+export function useInterviewPlan(
+  date: string,
+  open: boolean,
+): UseQueryResult<JournalInterviewPlan> {
+  const ready = useVaultReady();
+  return useQuery({
+    queryKey: qk.journal.interview(date),
+    queryFn: () => api.journal.interviewPlan(date),
+    enabled: ready && open,
+  });
+}
+
+export interface InterviewMutations {
+  answer: UseMutationResult<
+    { path: string; hash: string; at: string },
+    unknown,
+    { step: JournalInterviewStep; answer: string }
+  >;
+  /** The optional one-question follow-up on a just-answered backbone step.
+      Writes nothing itself, so unlike `answer` it never refreshes the day. */
+  followUp: UseMutationResult<
+    { question: string | null; noModel: boolean },
+    unknown,
+    { step: JournalInterviewStep; answer: string }
+  >;
+}
+
+export function useInterviewMutations(date: string): InterviewMutations {
+  const client = useQueryClient();
+  const done = (): void => refreshDay(client, date);
+
+  return {
+    answer: useMutation({
+      mutationFn: ({ step, answer }: { step: JournalInterviewStep; answer: string }) =>
+        api.journal.interviewAnswer(date, step, answer),
+      onSuccess: done,
+    }),
+    followUp: useMutation({
+      mutationFn: ({ step, answer }: { step: JournalInterviewStep; answer: string }) =>
+        api.journal.interviewFollowUp(date, step, answer),
     }),
   };
 }

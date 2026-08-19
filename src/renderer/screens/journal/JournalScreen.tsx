@@ -47,6 +47,7 @@ import { DayEntry } from './DayEntry';
 import { EntryStream } from './EntryStream';
 import { FactsSection } from './FactsSection';
 import type { AppliedClose } from './FactsSection';
+import { InterviewDialog } from './InterviewDialog';
 import { useJournalKeys } from './use-journal-keys';
 
 /** A talk turn in progress: marker and one's own message. */
@@ -101,6 +102,7 @@ export function JournalScreen() {
   const [closeOpen, setCloseOpen] = useState(false);
   const [suggestion, setSuggestion] = useState<JournalCloseSuggestion | null>(null);
   const [applied, setApplied] = useState<AppliedClose | null>(null);
+  const [interviewOpen, setInterviewOpen] = useState(false);
 
   const rows = useMemo(() => dayRows(days.data ?? [], today), [days.data, today]);
   const dates = useMemo(() => selectableDates(rows), [rows]);
@@ -238,6 +240,37 @@ export function JournalScreen() {
     </Button>
   );
 
+  /* 012, D6: the entry point on the day itself. `dayEmpty` reuses exactly the
+     check `DayText.tsx` already treats as authoritative for "has this day
+     got prose yet" (`fresh || text.trim().length === 0`, with `fresh` being
+     `view === null`) — no second, independently invented empty-check.
+
+     One wrinkle worth naming: this screen already reserves its one teal
+     accent for the composer's send button (see the comment on `closeAction`
+     above, kept secondary for exactly that reason — Gaston allows only one
+     accent per surface). Making the interview button primary risks a second
+     teal accent the moment someone is mid-draft. The `draft` guard below
+     closes that gap: the composer's send button only lights up once there is
+     something to send, so on a truly empty day — no prose, no draft yet —
+     it stays disabled/muted and the interview button is the only live teal
+     control. The instant someone starts drafting their own entry, the send
+     button turns live too, and this guard demotes the interview button back
+     to secondary in the same render — the two never compete as live accents
+     at once. */
+  const dayEmpty =
+    (view.data === null || view.data === undefined || view.data.text.trim().length === 0) &&
+    draft.trim().length === 0;
+
+  const interviewAction = (
+    <Button
+      variant={dayEmpty ? 'primary' : 'secondary'}
+      icon="message-square"
+      onClick={() => setInterviewOpen(true)}
+    >
+      {t('journal.interview.start')}
+    </Button>
+  );
+
   const header = (
     <ScreenHeader overline={t('screen.journal.overline')} title={t('screen.journal.title')} />
   );
@@ -332,6 +365,7 @@ export function JournalScreen() {
                 },
               }}
               onOpenProject={(slug) => void navigate(`/projects?p=${encodeURIComponent(slug)}`)}
+              interviewAction={interviewAction}
               closeAction={narrow ? closeAction : undefined}
               legacy={{
                 busy: mutations.foldDay.isPending,
@@ -400,6 +434,23 @@ export function JournalScreen() {
             setCloseOpen(false);
           }}
           onApply={apply}
+        />
+      ) : null}
+
+      {/* Unmounted while closed, per the remount-per-opening contract
+          `InterviewDialog.tsx`'s own header comment asks callers to honour —
+          each open is therefore a fresh instance, `session` and all. Closing
+          also returns focus to the day's own field — the interview is a
+          starting aid, and the acceptance is that walking out of it drops you
+          straight back into writing, not onto some unfocused part of the page. */}
+      {interviewOpen ? (
+        <InterviewDialog
+          open={interviewOpen}
+          date={date}
+          onClose={() => {
+            setInterviewOpen(false);
+            field.current?.focus();
+          }}
         />
       ) : null}
     </div>

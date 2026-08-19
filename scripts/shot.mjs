@@ -748,6 +748,48 @@ async function shootAskAnswer(session, shooter, log, skipped) {
 }
 
 /**
+ * Das Interview (012, D7): Startknopf auf dem Tageseintrag, dann eine Aufnahme
+ * der ersten offenen Frage im Overlay.
+ *
+ * Der Knopf steht auf jedem Tag, nicht nur auf dem eigens für 012 geseedeten
+ * (offset -6 in `scripts/seed/journal.mjs`) — angesteuert wird deshalb der
+ * Tag, den der Screen sowieso zuerst zeigt (heute), das ist der einfachste
+ * verlässliche Weg und braucht keine eigene Adresse. Frontmatter von „heute"
+ * deckt zwei der fünf Themen schon ab (Personen, Projekte), das Overlay zeigt
+ * also eine der beiden übrigen Fragen — ein echter, unbeantworteter Zustand,
+ * keine Behauptung über ein bestimmtes Thema.
+ */
+async function shootInterview(session, shooter, log, skipped) {
+  await gotoScreen(session.page, 'journal');
+  const button = session.page.getByRole('button', { name: 'Interview starten' });
+  const there = await button.waitFor({ state: 'visible', timeout: 4000 }).then(
+    () => true,
+    () => false,
+  );
+  if (!there) {
+    skipped.push('Interview: der Knopf „Interview starten" stand nicht auf dem Tag');
+    process.exitCode = 1;
+    return;
+  }
+  await button.click();
+  const dialog = session.page.getByRole('dialog', { name: 'Interview' });
+  const open = await dialog.waitFor({ state: 'visible', timeout: 4000 }).then(
+    () => true,
+    () => false,
+  );
+  await settle(session.page);
+  if (open) {
+    log(`  Interview-Overlay → ${await shooter.shot('journal-interview', session.page)}`);
+  } else {
+    skipped.push('Interview: der Knopf öffnete kein Overlay');
+    process.exitCode = 1;
+  }
+  /* Vorhang weg, wie jede andere Aufnahme eines Overlays — sonst läge
+     `.gs-scrim` über der Rail und der nächste Klick liefe ins Leere. */
+  await closeOverlay(session.page);
+}
+
+/**
  * Ein beantwortetes Gespräch: der Demo-Vault trägt eine Runde mit drei geprüften
  * Belegen (`scripts/seed/chats.mjs`). Genau dieser Zustand — Prosa mit
  * Belegmarken — entsteht nur mit Modell und war deshalb in keiner Aufnahme.
@@ -1200,6 +1242,9 @@ async function main() {
       skipped,
     );
 
+    if (options.screens.includes('journal')) {
+      await shootInterview(session, shooter, log, skipped);
+    }
     await checkLlmMissing(session, shooter, log, skipped);
     await shootAskAnswer(session, shooter, log, skipped);
     await shootAskAnswered(session, shooter, log, skipped);

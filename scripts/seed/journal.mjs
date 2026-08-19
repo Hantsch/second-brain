@@ -1,11 +1,15 @@
-/* 14 Tageseinträge über die letzten drei Wochen — mit Lücken, weil niemand
-   jeden Tag schreibt. Zwei Tage tragen einen Coaching-Dialog: der stressige
+/* 15 Tageseinträge über die letzten drei Wochen — mit Lücken, weil niemand
+   jeden Tag schreibt. Drei Tage tragen einen Coaching-Dialog: der stressige
    Tag (offset -2) bleibt bewusst im alten, nicht mehr geschriebenen, aber
    weiter lesbaren `## Gespräch`-Format (Legacy, 011) — genau er zeigt im
    Screenshot am klarsten ein Gespräch, das sichtbar getrennt von der
    Tagesprosa steht, und damit auch die "Gespräch in den Eintrag holen"-
-   Aktion. Der andere (offset -9) webt denselben Dialog direkt in `## Tag`
-   ein, im neuen, verschachtelten Stream-Format.
+   Aktion. Offset -9 webt denselben Dialog direkt in `## Tag` ein, im neuen,
+   verschachtelten Stream-Format. Offset -6 ist das Interview (012): dieselbe
+   Blockquote-dann-Prosa-Form, aber mit den fünf echten Interview-Fragen aus
+   `src/core/journal/interview.ts#INTERVIEW_QUESTIONS.de` statt frei
+   formulierter Coaching-Sätze, und ohne einleitenden freien Absatz davor —
+   siehe `streamBlock` und den Kommentar an diesem Eintrag.
 
    Aufbau nach docs/VAULT-FORMAT.md: `## Tag` (mit optional eingewobenen
    Antwort-Blöcken), optional die Legacy-Überschrift `## Gespräch`, optional
@@ -120,6 +124,44 @@ notiert.
 
 Danach eine Stunde Belege sortiert. 2025 ist zur Hälfte durch.`,
       facts: [`- [ ] Belege 2025 zu Ende sortieren @due:${day(-3)} !!`],
+    },
+    {
+      offset: -6,
+      mood: 3,
+      energy: 2,
+      people: ['Miriam'],
+      projects: ['kundenportal-relaunch', 'orbit-sso-migration'],
+      tags: [],
+      time: '19:20',
+      /* Kein `tag`: dieser Tag ist ein reines Interview (012, D7) — kein
+         freier Absatz davor, nur die beantworteten Fragen, damit der
+         Screenshot die Q&A-Form so klar wie möglich zeigt. Die Fragen sind
+         wortwörtlich aus `src/core/journal/interview.ts#INTERVIEW_QUESTIONS.de`
+         übernommen, nicht neu formuliert — sonst wäre der Tag nicht als
+         Interview erkennbar. */
+      dialogue: [
+        { who: 'brain', time: '19:00', text: 'Woran hast du heute gearbeitet?' },
+        {
+          who: 'ich',
+          time: '19:00',
+          text: `Vormittags weiter am Kundenportal, die Ladezeiten der Angebotsliste gemessen und
+einen ersten Verdacht gefunden. Nachmittags kurz in die SSO-Migration reingeschaut,
+aber ohne Fortschritt — der Testmandant von Halim ist immer noch nicht da.`,
+        },
+        { who: 'brain', time: '19:07', text: 'Mit wem hattest du heute zu tun?' },
+        {
+          who: 'ich',
+          time: '19:07',
+          text: 'Nur kurz mit Miriam telefoniert, wegen der Abnahme nächste Woche. Sonst war es ein stiller Tag.',
+        },
+        { who: 'brain', time: '19:14', text: 'Wie hat sich der Tag angefühlt?' },
+        {
+          who: 'ich',
+          time: '19:14',
+          text: `Ruhiger als die letzten, aber am Nachmittag spürbar müde. Kein Feuer, das gelöscht
+werden musste — einfach normale Arbeit.`,
+        },
+      ],
     },
     {
       offset: -7,
@@ -303,7 +345,11 @@ function streamBlock(entry) {
 export function seedJournal(seeder, clock) {
   for (const entry of entries(clock)) {
     const date = clock.day(entry.offset);
-    const parts = ['## Tag', '', entry.tag.trim(), ''];
+    /* `tag` ist optional: der Interview-Tag (offset -6) hat keinen freien
+       Absatz, nur die beantworteten Fragen — genau das, was ein Tag zeigt,
+       dessen einziger Inhalt bislang ein Interview war (`recordAnswer`
+       schreibt nichts anderes vor dem ersten Fragen/Antworten-Paar). */
+    const parts = entry.tag ? ['## Tag', '', entry.tag.trim(), ''] : ['## Tag', ''];
     if (entry.dialogue) {
       if (entry.legacyDialogue) {
         parts.push('## Gespräch', '', dialogueBlock(entry));

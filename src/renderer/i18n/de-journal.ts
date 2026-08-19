@@ -147,4 +147,25 @@ export const deJournal = {
   'journal.close.done': 'Übernommen in',
   'journal.close.doneMore': 'und {count} weitere',
   'journal.close.doneNothing': 'Nichts ausgewählt — nichts geschrieben.',
+
+  // ── Interview (012) ───────────────────────────────────────────────────────
+  /* Der Einstieg direkt am Tag (D6) — ein Schlüssel für den Knopf, unabhängig
+     davon, ob der Tag leer ist oder schon Text hat; nur die Variante
+     (primary/secondary) des Knopfs ändert sich damit. */
+  'journal.interview.start': 'Interview starten',
+  'journal.interview.title': 'Interview',
+  'journal.interview.description':
+    'Eine Frage nach der anderen — antworten, überspringen oder selbst weiterschreiben.',
+  'journal.interview.field.label': 'Deine Antwort',
+  'journal.interview.field.placeholder': 'Schreib deine Antwort hierhin.',
+  'journal.interview.answer': 'Antworten und weiter',
+  'journal.interview.skip': 'Überspringen',
+  'journal.interview.leave': 'Verlassen und selbst schreiben',
+  'journal.interview.progress': '{current} / {total}',
+  'journal.interview.engine.fixed': 'Fester Fragenkatalog — kein Modell nötig.',
+  'journal.interview.engine.model.local': 'Rückfragen laufen lokal auf diesem Rechner.',
+  'journal.interview.engine.model.remote':
+    'Rückfragen gehen an {provider} — ein lokales Modell bleibt auf diesem Rechner.',
+  'journal.interview.done.body':
+    'Das Interview ist für heute durch — Übersprungenes bleibt offen. Stimmung und Energie warten noch auf die Regler oben im Tag.',
 } as const;

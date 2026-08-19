@@ -138,4 +138,25 @@ export const enJournal = {
   'journal.close.done': 'Applied to',
   'journal.close.doneMore': 'and {count} more',
   'journal.close.doneNothing': 'Nothing selected — nothing written.',
+
+  // ── Interview (012) ───────────────────────────────────────────────────────
+  /* The entry point on the day itself (D6) — one key, reused for the button
+     regardless of whether the day is empty or already has prose; only the
+     button's variant (primary/secondary) changes with that. */
+  'journal.interview.start': 'Start interview',
+  'journal.interview.title': 'Interview',
+  'journal.interview.description':
+    'One question at a time — answer, skip, or leave and write yourself.',
+  'journal.interview.field.label': 'Your answer',
+  'journal.interview.field.placeholder': 'Write your answer here.',
+  'journal.interview.answer': 'Answer and continue',
+  'journal.interview.skip': 'Skip',
+  'journal.interview.leave': 'Leave and write myself',
+  'journal.interview.progress': '{current} / {total}',
+  'journal.interview.engine.fixed': 'Fixed question set — no model needed.',
+  'journal.interview.engine.model.local': 'Follow-up questions run locally on this machine.',
+  'journal.interview.engine.model.remote':
+    'Follow-up questions go to {provider} — a local model stays on this machine.',
+  'journal.interview.done.body':
+    'The interview is done for today — anything skipped stays open. Mood and energy still wait on the pickers at the top of the day.',
 } as const;

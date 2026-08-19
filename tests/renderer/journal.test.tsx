@@ -29,6 +29,7 @@ import type {
   IpcResponse,
   JournalCloseSuggestion,
   JournalDayView,
+  JournalInterviewPlan,
 } from '@shared/ipc';
 import type {
   JournalDay,
@@ -237,6 +238,15 @@ const suggestion: JournalCloseSuggestion = {
   heuristic: true,
 };
 
+/* 012, D6: a minimal plan so opening the interview overlay from the day's own
+   button doesn't hit an unhandled channel — none of these tests answer a
+   question, they only check that the entry point opens/closes correctly. */
+const INTERVIEW_PLAN: JournalInterviewPlan = {
+  steps: [{ topic: 'work', question: 'Was hast du heute gearbeitet?' }],
+  mode: 'fixed',
+  finished: false,
+};
+
 const LOCAL_PROVIDER: ProviderConfig = {
   id: 'local-1',
   label: 'Ollama',
@@ -353,6 +363,7 @@ function renderJournal(extra: Handlers = {}): Rendered {
     'vault:write': () => ({ path: DAY_PATH, hash: 'hash-4', created: false }),
     'journal:foldDay': () => ({ path: DAY_PATH, hash: 'hash-5', created: false }),
     'shell:openPath': () => undefined,
+    'journal:interviewPlan': () => INTERVIEW_PLAN,
     ...extra,
   });
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -993,5 +1004,64 @@ describe('Tagebuch: Tagesabschluss', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Tag abschließen' }));
     await screen.findByRole('dialog', { name: 'Tagesabschluss' });
     await expectNoViolations(container);
+  });
+});
+
+describe('Tagebuch: Interview-Einstieg (012, D6)', () => {
+  /* The button is the entry point for the interview overlay (D5) — a real
+     `<button>`, reachable via role, on every day the screen renders. */
+  it('zeigt den Interview-Knopf als echten Button, an einem leeren wie an einem beschriebenen Tag', async () => {
+    open();
+    const withProse = await screen.findByRole('button', { name: 'Interview starten' });
+    expect(withProse.tagName).toBe('BUTTON');
+  });
+
+  it('ist primary, solange der Tag weder Text noch einen Entwurf hat — das ist der Moment, in dem es gebraucht wird', async () => {
+    open({ 'journal:get': () => null });
+
+    const button = await screen.findByRole('button', { name: 'Interview starten' });
+    expect(button.className).toContain('gs-btn--primary');
+  });
+
+  it('ist secondary, sobald der Tag schon Text hat', async () => {
+    open();
+
+    const button = await screen.findByRole('button', { name: 'Interview starten' });
+    expect(button.className).toContain('gs-btn--secondary');
+  });
+
+  it('weicht auch bei einem leeren Tag auf secondary aus, sobald selbst schon ein Entwurf im Feld steht — sonst stünden zwei Teal-Knöpfe gleichzeitig da', async () => {
+    open({ 'journal:get': () => null });
+
+    const button = await screen.findByRole('button', { name: 'Interview starten' });
+    expect(button.className).toContain('gs-btn--primary');
+
+    const field = await screen.findByLabelText('Was beschäftigt dich?');
+    await userEvent.type(field, 'Ein erster eigener Satz.');
+
+    await waitFor(() => expect(button.className).toContain('gs-btn--secondary'));
+  });
+
+  it('öffnet beim Klick das Interview-Overlay', async () => {
+    open();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Interview starten' }));
+
+    expect(await screen.findByRole('dialog', { name: 'Interview' })).toBeTruthy();
+  });
+
+  it('lässt beim Schließen das eigene Schreibfeld bearbeitbar zurück', async () => {
+    open();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Interview starten' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Interview' });
+    await userEvent.click(
+      within(dialog).getByRole('button', { name: 'Verlassen und selbst schreiben' }),
+    );
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    const field = screen.getByLabelText('Was beschäftigt dich?') as HTMLTextAreaElement;
+    expect(field.disabled).toBe(false);
+    await waitFor(() => expect(document.activeElement).toBe(field));
   });
 });

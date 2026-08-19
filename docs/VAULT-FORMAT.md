@@ -260,6 +260,14 @@ never merged into one of my paragraphs; the two stay visually and structurally
 distinct. `Facts` holds what day close extracted — proposals the user
 confirmed.
 
+The interview (story 012) is a scripted way of producing exactly this shape,
+not a new one: each of its fixed questions is written as the app's blockquote,
+immediately followed by my own prose as the answer, one pair at a time as each
+question gets answered. No new section, no new heading — the same `Day` stream
+above, just filled in by the interview's five-question flow instead of free
+typing. A day that opened with the interview and nothing else reads as a
+sequence of these pairs, back to back.
+
 `Conversation`/`Gespräch` is legacy: a day written before this format kept the
 coaching dialog in its own section, separate from `Day`. That section is
 still valid to **read** — an existing file with one keeps working, untouched,

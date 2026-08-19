@@ -1,7 +1,7 @@
 ---
 id: 012
 title: Journal — the interview, for when I do not know what to write
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-08-12
 ---
 
@@ -24,29 +24,29 @@ surface that story settles on. Refine 011 first, or this one has to guess a targ
 
 ## Acceptance Criteria
 
-- [ ] A visible "Interview" button on the day, most prominent when the day is still
+- [x] A visible "Interview" button on the day, most prominent when the day is still
       empty — that is when I need it.
-- [ ] It asks one question at a time. I answer, the next one comes. No wall of
+- [x] It asks one question at a time. I answer, the next one comes. No wall of
       questions.
-- [ ] It covers a day roughly: work, events, people, what is still open, how it felt.
+- [x] It covers a day roughly: work, events, people, what is still open, how it felt.
       The coverage is a stated set, not whatever the model feels like asking.
-- [ ] It ends by itself when the day is covered, and it says so. It does not keep
+- [x] It ends by itself when the day is covered, and it says so. It does not keep
       asking until I close the window.
-- [ ] I can leave at any point and keep writing freely, and what I answered so far is
+- [x] I can leave at any point and keep writing freely, and what I answered so far is
       already in the file — leaving early loses nothing.
-- [ ] I can skip a question without ending the interview.
-- [ ] My answers land in the day entry as my own text, attributed to me. The questions
+- [x] I can skip a question without ending the interview.
+- [x] My answers land in the day entry as my own text, attributed to me. The questions
       are legible as the app's — my words and its words never blur.
-- [ ] Every answer reaches the file before the next question is asked. Nothing is held
+- [x] Every answer reaches the file before the next question is asked. Nothing is held
       in memory waiting for an end that may not come.
-- [ ] **Without a model it still works**: a fixed set of questions in the document
+- [x] **Without a model it still works**: a fixed set of questions in the document
       language, asked in order. This is the case where the heuristic fallback is
       genuinely as good as the model, and the screen says which one is running.
-- [ ] Questions never assert facts about me. No "you seemed stressed yesterday" unless
+- [x] Questions never assert facts about me. No "you seemed stressed yesterday" unless
       it is actually in an entry, with the entry as evidence.
-- [ ] Starting the interview on a day that already has text picks up from there and
+- [x] Starting the interview on a day that already has text picks up from there and
       does not ask what I have just written.
-- [ ] All questions go through `t()` / the document language, in `de` and `en`;
+- [x] All questions go through `t()` / the document language, in `de` and `en`;
       sentence case, no emoji, calm tone — no cheerleading.
 
 ## Open Questions
@@ -269,4 +269,120 @@ Preparation: `npm run seed && npm run build`, start the app, open journal, selec
 
 ## Done
 
-<Filled by `/ai-scrum:build 012`.>
+**Summary.** Built the interview end to end: `planInterview`/`recordAnswer` in
+`src/core/journal/interview.ts` (D1+D2), the optional one-question model follow-up in
+`src/core/journal/interview-followup.ts` + `src/core/llm/prompts/journal-interview.ts`
+(D3), three IPC channels `journal:interviewPlan`/`interviewAnswer`/`interviewFollowUp`
+(D4), the `InterviewDialog` overlay (D5), the entry-point button on `JournalScreen`/
+`DayEntry` (D6), and `docs/VAULT-FORMAT.md` + a seeded demo day + a screenshot function
+in `scripts/shot.mjs` (D7). A clean `story-review-hard` pass found four real defects and
+five lower-priority findings; all are fixed or dispositioned below.
+
+**Review findings (story-review-hard, first pass: FAIL) — disposition:**
+
+- **F1** (fixed) `InterviewDialog.tsx`: Ctrl/Cmd+Enter could re-enter `handleAnswer`
+  before `busy` was reflected, risking a duplicate Q/A append on a fast double press.
+  Added the same `busy` guard the button already had to the keyboard handler and to
+  `handleAnswer` itself (defense in depth), and disabled the textarea while a write is
+  in flight.
+- **F2** (fixed) `de-journal.ts` / `en-journal.ts`: the closing panel claimed "the day is
+  covered by these five questions" even when topics were skipped or pre-covered by
+  frontmatter — an unbacked claim (guardrail 3). Reworded to "the interview is done for
+  today — anything skipped stays open," in both languages; updated the two renderer
+  tests that asserted the old copy.
+- **F3** (fixed) `InterviewDialog.tsx`: the "which engine" line derived fixed-vs-model
+  from `useCoachRoute()` (client-side routing config only) instead of the plan's own
+  `mode` (server-side `gateway.isAvailable('journal-chat')` — checks provider present,
+  enabled, keyed). The two could disagree. Now `plan.data.mode` decides fixed vs. model;
+  `route` only supplies the local/remote + provider-name detail once `mode` already says
+  a model is in play. Added a regression test (route configured but plan still reports
+  `fixed`) plus fixed the existing "no route" test, which had been passing incidentally
+  against a plan mock that didn't actually vary with the route.
+- **F4** (fixed) `main/ipc/journal.ts`: `journal:interviewFollowUp` passed `projects` but
+  never `todosDue`, though the story's Decisions and D3's prompt both name it as context.
+  Wired `todosDue` from `requireLists(services).todos()`, filtered to open todos due on
+  or before the interviewed day.
+- **F5** (accepted, not fixed) overlay doesn't show the day's existing prose as context
+  during the interview. It's a stated Decision but not part of D5's own acceptance list,
+  and the live screenshot already shows the overlay working correctly without it; adding
+  it would mean a second data fetch and a new layout region for marginal value against
+  this story's scope. Left for a follow-up story if it turns out to matter in practice.
+- **F6** (fixed) `handleAnswer` is invoked via `void handleAnswer()`; a rejected
+  `mutateAsync` would have been an unhandled rejection even though the UI already shows
+  `mutations.answer.error`. Wrapped the write in try/catch inside `handleAnswer` so
+  nothing propagates past it — the mutation's own error state still drives the UI.
+- **F7** (fixed) D2 (`deliverable-hard`) was missing the mandatory external-edit
+  round-trip test (CLAUDE.md: "write → edit externally → re-read, without data loss").
+  Added it to `tests/core/journal/interview-write.test.ts`: write one answer, edit the
+  file directly (as an editor would, mid-"Day"-section), write the second answer, and
+  assert the hand-edit and both Q/A pairs all survive in write order.
+- **F8** (fixed) closing the overlay didn't return focus to the day's own composer
+  field, weaker than D6's stated acceptance ("leaves the writing surface focused and
+  editable"). `JournalScreen`'s `onClose` now also calls `field.current?.focus()`;
+  strengthened the existing D6 close test to assert `document.activeElement`, matching
+  the pattern `ask.test.tsx`/`capture.test.tsx` already use for this kind of assertion.
+- **F9** (accepted, not fixed) the globe icon paired with "no model needed" copy mirrors
+  an existing pattern already in `CoachComposer.tsx` — inherited, not a new issue.
+
+**Verification (after fixes):**
+
+- `npm run format:check` — the ~28 files this story touches all pass `prettier --check`
+  individually; the wider repo-level count (~255+ files) is a pre-existing Windows
+  `core.autocrlf=true` artifact confirmed unrelated by stashing this story's changes and
+  re-running the check (same failures appear on untouched files). Not fixed — out of
+  scope, and "fixing" it would mean rewriting line endings across the whole repo against
+  its own checkout policy.
+- `npm run lint` — clean.
+- `npm run typecheck` — clean.
+- `npm test` — 2113/2114 pass. The one failure, `tests/core/wiki/module.test.ts`
+  (a docs/MODULE-SCHEMA.md ↔ embedded-template drift), reproduces identically with this
+  story's changes stashed out; `docs/MODULE-SCHEMA.md` is untouched here. Pre-existing,
+  unrelated.
+- `npm run build` — clean.
+- `npm run seed && npm run shot -- --screens journal` — `.screenshots/04-journal-interview.png`
+  shows the overlay for real: title "Interview", progress "1 / 2" in mono, the fixed-mode
+  engine line ("Fester Fragenkatalog — kein Modell nötig." — the demo vault has no
+  provider, and `journal:interviewPlan` genuinely reports `mode: 'fixed'`), the question
+  as an app turn, an answer field, and the three actions with exactly one teal accent
+  ("Antworten und weiter"). Zero console errors. Re-ran after the review fixes; the
+  screenshot is unchanged in substance. A full unscoped `npm run shot` was not run in
+  addition — the scoped run already exercises nearly every unconditional screenshot
+  function in the script (dashboard, ask, sources, modules, settings, agents, onboarding,
+  error states), so this is treated as sufficient live-smoke evidence rather than
+  re-running the ~10-minute full sweep a second time.
+
+**Decisions made during implementation (beyond the story's own Decisions section):**
+
+- D1's `mode: 'fixed' | 'model'` is a required parameter to `planInterview`, decided by
+  the IPC layer (`journal:interviewPlan`) via `gateway.isAvailable('journal-chat')`, not
+  guessed by the pure core function — matches guardrail 4 (core knows nothing of
+  `LlmGateway`).
+- D2's `recordAnswer` writes question+answer as one `appendToDay` call (one blockquote
+  block followed by a blank line and the plain-prose answer) rather than two separate
+  appends — guarantees the pair can never be split by an intervening write.
+- D4: `journal:interviewPlan` never creates the day file (a plan is a read); a
+  non-existent day is planned from an in-memory equivalent of a fresh day's shape
+  (`emptyDayDoc`) instead of calling `ensureDay`.
+- D5: `InterviewDialog` self-fetches its plan and derives session state from the query
+  result directly during render (`session ?? computed-from-plan.data`), not via
+  `useEffect` — avoids `setState`-in-effect entirely. This requires the caller to mount
+  a fresh instance per opening (conditional render or a changing `key`), which `D6`
+  satisfies by only rendering `<InterviewDialog>` while `interviewOpen` is true.
+- D6: the interview button is primary (teal) only when the day has no prose **and** the
+  composer draft is empty, demoting to secondary the instant a draft exists — avoids two
+  simultaneous live teal accents on the screen (the composer's send button is primary by
+  default too, gated by `disabled` until there's a draft).
+- `src/renderer/lib/mock-bridge.ts` needed the three new channel stubs beyond the
+  original D4 file list — `MockResponses` is a compile-time-exhaustive map over every
+  `IpcChannel`, so this was unavoidable, not scope creep.
+
+**Commit message:**
+
+```
+012: journal interview as a starting aid
+```
+
+**Open points:** none blocking. F5 (day text as context in the overlay) is an accepted
+gap against the story's own Decisions, not against its Acceptance Criteria — worth
+revisiting if user feedback says the interview needs that context, but not required for
+this story to be done.

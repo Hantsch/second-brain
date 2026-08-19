@@ -8,6 +8,13 @@
  *   `stream`    „Tag" als ein Block-Strom: eigene Worte und Antworten der App,
  *               in Schreibreihenfolge (011) — lesen mit `parseStream`, schreiben
  *               mit `appendEntry`/`appendAnswer`
+ *   `interview` Fragebogen als Starthilfe (012): `planInterview` bestimmt, was
+ *               von den fuenf festen Themen an einem Tag noch offen ist,
+ *               `recordAnswer` schreibt eine beantwortete Frage als Paar
+ *               (Frage als App-Blockzitat, Antwort als eigene Prosa) in den Strom
+ *   `interview-followup` die optionale Rueckfrage zu einer schon beantworteten
+ *               Frage (`interviewFollowup`, mit Modell) — die feste Themenmenge
+ *               bleibt dabei unangetastet, das ist nur eine Zusatzfrage
  *   `legacy`    `foldLegacyDay`: den alten „Gespräch"-Abschnitt in den Strom
  *               falten — reine Textfunktion, wird nie von selbst aufgerufen
  *   `coach`     die drei Haltungen — zuhoeren, Tipps, analysieren
@@ -47,6 +54,13 @@ export {
   type AppendAnswerOptions,
   type AppendEntryOptions,
 } from './stream';
+export { planInterview, recordAnswer, type RecordAnswerOptions } from './interview';
+export {
+  interviewFollowup,
+  type InterviewFollowupDeps,
+  type InterviewFollowupInput,
+  type InterviewFollowupResult,
+} from './interview-followup';
 export { foldLegacyDay } from './legacy';
 export {
   dayText,
@@ -82,6 +96,7 @@ export {
 } from './streak';
 export {
   DIALOG_HISTORY_TURNS,
+  INTERVIEW_TOPICS,
   JournalError,
   MAX_EARLIER_DAYS,
   type CloseDayDeps,
@@ -94,6 +109,10 @@ export {
   type DialogRole,
   type DialogTurn,
   type EnsureDayResult,
+  type InterviewMode,
+  type InterviewPlan,
+  type InterviewStep,
+  type InterviewTopic,
   type JournalBlock,
   type JournalDayDoc,
   type JournalFrontmatterSuggestion,

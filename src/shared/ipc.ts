@@ -150,6 +150,34 @@ export interface JournalFrontmatterFields {
 }
 
 /**
+ * One of the interview's five fixed topics (012) — mirrors `InterviewTopic`
+ * from `@core/journal`. Kept as its own literal union here (not imported from
+ * the core) for the same reason `JournalStreamBlock` mirrors `JournalBlock`:
+ * `src/shared/` is the IPC-facing layer, and nothing outside `core/journal`
+ * should have to import from it just to describe the wire shape.
+ */
+export type JournalInterviewTopic = 'work' | 'events' | 'people' | 'open' | 'feeling';
+
+/** One interview question, answered or still open — mirrors `InterviewStep`. */
+export interface JournalInterviewStep {
+  topic: JournalInterviewTopic;
+  question: string;
+}
+
+/**
+ * The interview plan for one day (012): which of the five topics are still
+ * open, and whether a model is routed for the optional follow-up (`mode`).
+ * Mirrors `InterviewPlan` from `@core/journal`.
+ */
+export interface JournalInterviewPlan {
+  /** Remaining steps, in `INTERVIEW_TOPICS` order. */
+  steps: JournalInterviewStep[];
+  /** 'model': a route exists for `journal-chat`, so a follow-up can be asked. */
+  mode: 'model' | 'fixed';
+  finished: boolean;
+}
+
+/**
  * The day close-out's suggestion. Nothing from it is written yet: the card
  * shows it, `journal:applyClose` carries out what was confirmed.
  */
@@ -377,6 +405,34 @@ export interface IpcRoutes {
    * is used, but the write is never unguarded.
    */
   'journal:foldDay': { req: { date: string; expectedHash?: string }; res: WriteResult };
+
+  /**
+   * The interview (012): which of the five fixed topics still have no answer
+   * for this day. Works on a day that has no file yet — planning is a read,
+   * it never creates one just to answer the question.
+   */
+  'journal:interviewPlan': { req: { date: string }; res: JournalInterviewPlan };
+  /**
+   * Write one answered interview step into the day: the question as the
+   * app's blockquote, the answer as prose right below it — one call, one
+   * append (`recordAnswer`). No `expectedHash`: appending adds and rewrites
+   * no line of the user's, so a conflict here would be pure friction, the
+   * same trade-off `journal:append` already makes.
+   */
+  'journal:interviewAnswer': {
+    req: { date: string; step: JournalInterviewStep; answer: string };
+    res: { path: string; hash: string; at: string };
+  };
+  /**
+   * The interview's optional model follow-up to a step just answered — one
+   * extra question about that answer, never a sixth topic. `noModel: true`
+   * with `question: null` means no route at all; `false` with `null` means a
+   * model answered but nothing it said held up.
+   */
+  'journal:interviewFollowUp': {
+    req: { date: string; step: JournalInterviewStep; answer: string };
+    res: { question: string | null; noModel: boolean };
+  };
 
   // ── Knowledge modules ────────────────────────────────────────────────────
   'modules:list': { req: void; res: KnowledgeModule[] };
@@ -638,6 +694,9 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'journal:close',
   'journal:applyClose',
   'journal:foldDay',
+  'journal:interviewPlan',
+  'journal:interviewAnswer',
+  'journal:interviewFollowUp',
   'modules:list',
   'modules:create',
   'modules:pages',

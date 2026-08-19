@@ -46,6 +46,14 @@ export interface DayEntryProps {
     onReset: () => void;
   };
   onOpenProject: (slug: string) => void;
+  /** "Start interview" (012, D6) — built by the screen, which alone knows
+      whether the day already has prose and therefore which variant
+      (primary/secondary) applies. Placed right after the header/mood/chips
+      block and before the "Day" section itself: the story's own acceptance
+      criterion is that it reads as most prominent while the day is still
+      empty, which means it must be the first thing seen on a blank day, not
+      something found only after scrolling past the composer. */
+  interviewAction: ReactNode;
   /** The stream section — built by the screen so `EntryStream` lives there. */
   dialogue: ReactNode;
   /** "Move the conversation into the entry" (011, D9) — the hash it writes
@@ -75,6 +83,7 @@ export function DayEntry({
   mood,
   text,
   onOpenProject,
+  interviewAction,
   dialogue,
   legacy,
   facts,
@@ -162,6 +171,8 @@ export function DayEntry({
           )}
         </div>
       )}
+
+      {interviewAction}
 
       <section className="sb-daysection" aria-label={t('journal.day.title')}>
         <h3 className="sb-section-title">{t('journal.day.title')}</h3>

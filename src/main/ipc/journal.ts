@@ -30,13 +30,20 @@ import {
   coach,
   dayOf,
   ensureDay,
+  interviewFollowup,
+  journalTitle,
+  newDayBody,
   pathFor,
+  planInterview,
   readDay,
+  recordAnswer,
   setMood,
+  INTERVIEW_TOPICS,
 } from '@core/journal';
-import type { CoachDeps, JournalIndexView } from '@core/journal';
+import type { CoachDeps, InterviewMode, JournalDayDoc, JournalIndexView } from '@core/journal';
+import { toVaultDoc } from '@core/vault';
 import { COACH_MODES } from '@shared/types';
-import type { Citation } from '@shared/types';
+import type { Citation, DocLanguage, JournalDay, JournalFrontmatter } from '@shared/types';
 import type { IpcRequest } from '@shared/ipc';
 import type { HandlerMap } from './registry';
 import { defineHandlers, fail } from './registry';
@@ -79,6 +86,35 @@ function threadOf(date: string): string {
  */
 function asCitation(evidence: { date: string; path: string; excerpt: string }): Citation {
   return { path: evidence.path, title: evidence.date, quote: evidence.excerpt, line: null };
+}
+
+/**
+ * A day that has no file yet, as `planInterview` needs it: empty frontmatter
+ * fields (nothing is covered yet) and the body a fresh day would start with
+ * (no stream, so no topic reads as already answered).
+ *
+ * `journal:interviewPlan` is a read — like `journal:get`, it must not create
+ * the file just to answer "what's still open". `ensureDay` would create it;
+ * this builds the same shape in memory instead, without writing anything.
+ */
+function emptyDayDoc(date: string, language: DocLanguage): JournalDayDoc {
+  const day: JournalDay = {
+    path: pathFor(date),
+    date,
+    title: journalTitle(date, language),
+    mood: null,
+    energy: null,
+    people: [],
+    projects: [],
+    tags: [],
+    excerpt: '',
+    wordCount: 0,
+    turns: 0,
+  };
+  const doc = toVaultDoc<JournalFrontmatter>(day.path, newDayBody(language), {
+    modified: new Date().toISOString(),
+  });
+  return { day, doc };
 }
 
 /**
@@ -241,6 +277,59 @@ export function journalHandlers(services: Services): HandlerMap {
       const result = await foldDay(store, date, docLanguage(services), expectedHash);
       await settle(services, [result.path], 'journal');
       return result;
+    },
+
+    'journal:interviewPlan': async ({ date }) => {
+      /* Throws on a date that isn't a calendar day — before anything runs,
+         same as `journal:coach`. */
+      const day = dayOf(date);
+      const language = docLanguage(services);
+      const found = await readDay(journalStore(services), day);
+      /* Whether the optional follow-up can run at all is a question about
+         this running app's configuration — `core/journal` knows nothing of
+         `LlmGateway` (guardrail 4), so it's decided here, not in the core. */
+      const mode: InterviewMode = createGateway(services).isAvailable('journal-chat')
+        ? 'model'
+        : 'fixed';
+      return planInterview(found ?? emptyDayDoc(day, language), language, mode);
+    },
+
+    'journal:interviewAnswer': async ({ date, step, answer }) => {
+      const day = dayOf(date);
+      /* An unknown topic would otherwise write a blockquote `planInterview`
+         can never recognize as covering one of the fixed five — refused
+         before anything is written. */
+      if (!(INTERVIEW_TOPICS as readonly string[]).includes(step.topic)) {
+        throw fail('invalid', 'dieses Interview-Thema gibt es nicht');
+      }
+      const written = await recordAnswer(journalStore(services), day, step, answer, {
+        docLanguage: docLanguage(services),
+      });
+      await settle(services, [written.path], 'journal');
+      return written;
+    },
+
+    'journal:interviewFollowUp': async ({ date, step, answer }) => {
+      const day = dayOf(date);
+      /* Context only, never a claim (interview-followup.ts): the projects
+         already on the day's own frontmatter, and todos that are actually
+         open and due on or before this day — nothing re-derived, nothing
+         guessed. Writes nothing, so no `settle()` call. */
+      const found = await readDay(journalStore(services), day);
+      const projects = found?.day.projects ?? [];
+      const todosDue = requireLists(services)
+        .todos()
+        .filter((todo) => todo.state === 'open' && todo.due !== null && todo.due <= day)
+        .map((todo) => todo.text);
+      return interviewFollowup(
+        { gateway: createGateway(services), docLanguage: docLanguage(services) },
+        {
+          step,
+          answer,
+          ...(projects.length > 0 ? { projects } : {}),
+          ...(todosDue.length > 0 ? { todosDue } : {}),
+        },
+      );
     },
   });
 }

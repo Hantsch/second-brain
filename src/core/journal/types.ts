@@ -122,6 +122,44 @@ export type JournalBlock =
   | { kind: 'entry'; text: string; line: number }
   | { kind: 'answer'; text: string; at: string | null; line: number };
 
+/**
+ * Der Fragebogen als Starthilfe (012): die feste Themenmenge, nie erweitert —
+ * auch nicht vom Modell (`interview-followup`, D3). `planInterview`
+ * (`interview.ts`) bestimmt daraus, welche Fragen an einem Tag noch offen sind.
+ */
+export const INTERVIEW_TOPICS = ['work', 'events', 'people', 'open', 'feeling'] as const;
+
+/** Eines der fuenf Themen, nach denen der Fragebogen fragt. */
+export type InterviewTopic = (typeof INTERVIEW_TOPICS)[number];
+
+/**
+ * Ob fuer die optionale Rueckfrage (`journal-chat`, D3) ein Modell geroutet
+ * ist. Das entscheidet der Aufrufer (IPC, D4) — ein reiner Kernbaustein hat
+ * kein `LlmGateway`, um das selbst zu pruefen, und soll auch keins bekommen,
+ * nur um diese eine Frage zu beantworten.
+ */
+export type InterviewMode = 'fixed' | 'model';
+
+/** Eine noch zu stellende Frage, schon in der verlangten Dokumentsprache. */
+export interface InterviewStep {
+  topic: InterviewTopic;
+  question: string;
+}
+
+/** Ergebnis von `planInterview`: was von der festen Themenmenge noch offen ist. */
+export interface InterviewPlan {
+  /** Verbleibende Schritte, in der Reihenfolge von `INTERVIEW_TOPICS`. */
+  steps: InterviewStep[];
+  mode: InterviewMode;
+  /**
+   * Fertig, sobald jedes Thema entweder aus dem Frontmatter hervorgeht oder an
+   * diesem Tag schon einmal beantwortet wurde — also `steps.length === 0`.
+   * Ein eigenes Feld statt einer leeren Liste, damit „fertig" nie erraten,
+   * sondern immer ausdruecklich gemeldet wird.
+   */
+  finished: boolean;
+}
+
 /** Alles, was das Coaching-Gespraech braucht. */
 export interface CoachDeps extends JournalOptions {
   store: JournalStore;
