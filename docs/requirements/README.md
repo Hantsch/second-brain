@@ -15,7 +15,7 @@ draft ──► ready ──► in-progress ──► done
 ```
 
 | Status        | Meaning                                                       |
-| ------------- | ---------------------------------------------------------------- |
+| ------------- | ------------------------------------------------------------- |
 | `draft`       | The requirement is written, the plan is missing               |
 | `ready`       | Plan + deliverables are in the document, approved to build    |
 | `in-progress` | Implementation is running                                     |
