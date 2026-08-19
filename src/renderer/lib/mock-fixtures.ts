@@ -75,6 +75,7 @@ export const project: Project = {
   priority: 2,
   deadline: '2026-09-01',
   nextStep: 'Rückmeldung von Stefan zur Rollenzuordnung einarbeiten',
+  nextStepStale: false,
   waitingOn: [
     { who: 'Stefan', what: 'Freigabe des Rollenkonzepts', since: '2026-08-04', due: '2026-08-12' },
   ],

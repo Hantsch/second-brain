@@ -34,6 +34,8 @@ const PROJECT = [
   'deadline',
   'updated',
   'next_step',
+  'status_set',
+  'next_step_set',
   'tags',
   'modules',
   'repos',

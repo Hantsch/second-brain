@@ -91,6 +91,13 @@ describe('Projekt- und Todo-Kanäle im Main', () => {
     await rm(userDataDir, { recursive: true, force: true });
   });
 
+  /* Das Frontmatter, wie es in der Datei steht — über den Lesekanal geparst,
+     damit die Prüfung am Inhalt hängt und nicht am YAML-Stil. */
+  async function frontmatterOf(slug: string): Promise<Record<string, unknown>> {
+    const found = await harness.call('projects:get', { slug });
+    return found?.doc.frontmatter ?? {};
+  }
+
   // ── Lesen ──────────────────────────────────────────────────────────────────
 
   it('trennt Arbeit und Privat und lässt Erledigtes draußen', async () => {
@@ -146,6 +153,74 @@ describe('Projekt- und Todo-Kanäle im Main', () => {
     expect(raw).toContain('- [ ] Abnahmeprotokoll mit Miriam durchgehen @due:2026-08-10 !!!');
   });
 
+  /* Die Herkunft steht in der Datei, nicht nur im Index: wer den Vault ohne die
+     App liest, sieht ebenfalls, woher Status und nächster Schritt stammen. */
+  it('stempelt beim Patchen die Herkunft von Status und nächstem Schritt', async () => {
+    await harness.call('projects:patch', {
+      slug: 'kundenportal-relaunch',
+      patch: { status: 'paused', next_step: 'Erst nach dem Release weitermachen' },
+    });
+
+    const front = await frontmatterOf('kundenportal-relaunch');
+    expect(front['status_set']).toEqual({ at: TODAY, by: 'user' });
+    expect(front['next_step_set']).toEqual({ at: TODAY, by: 'user' });
+    expect((await vault.read(WORK)) ?? '').toContain('status_set:');
+  });
+
+  it('schreibt eine angenommene Vorschlagsänderung als Vorschlag, nicht als Nutzerentscheidung', async () => {
+    await harness.call('projects:patch', {
+      slug: 'kundenportal-relaunch',
+      patch: { status: 'paused' },
+      origin: 'suggestion',
+    });
+
+    expect((await frontmatterOf('kundenportal-relaunch'))['status_set']).toEqual({
+      at: TODAY,
+      by: 'suggestion',
+    });
+    expect((await vault.read(WORK)) ?? '').toContain('by: suggestion');
+  });
+
+  /* Ein Patch über `priority` sagt nichts über den Status — er darf deshalb auch
+     keinen Stempel erfinden, der behauptet, heute habe jemand den Status gesetzt. */
+  it('stempelt nichts, wenn der Patch Status und nächsten Schritt gar nicht anfasst', async () => {
+    await harness.call('projects:patch', {
+      slug: 'kundenportal-relaunch',
+      patch: { priority: 1 },
+    });
+
+    const raw = (await vault.read(WORK)) ?? '';
+    expect(raw).not.toContain('status_set:');
+    expect(raw).not.toContain('next_step_set:');
+    expect(raw).toContain(`updated: ${TODAY}`);
+  });
+
+  /* Der eigentliche Risikofall des Schreibpfads: `setPreserving` ersetzt eine
+     verschachtelte Map als Ganzes. Ein Patch, der Status/nächsten Schritt gar
+     nicht nennt, darf einen bereits vorhandenen Stempel deshalb nicht nur
+     „nicht neu erfinden" (das prüft der Test darüber), sondern muss ihn
+     Zeichen für Zeichen stehen lassen — auch über mehrere Tage hinweg, nicht
+     nur am selben Tag wie das ursprüngliche Setzen. */
+  it('lässt einen vorhandenen Stempel unangetastet, wenn ein Patch ihn nicht betrifft', async () => {
+    await harness.call('projects:patch', {
+      slug: 'kundenportal-relaunch',
+      patch: { status: 'paused', next_step: 'Erst nach dem Release weitermachen' },
+      origin: 'suggestion',
+    });
+    const before = await frontmatterOf('kundenportal-relaunch');
+    expect(before['status_set']).toEqual({ at: TODAY, by: 'suggestion' });
+    expect(before['next_step_set']).toEqual({ at: TODAY, by: 'suggestion' });
+
+    await harness.call('projects:patch', {
+      slug: 'kundenportal-relaunch',
+      patch: { priority: 1 },
+    });
+
+    const after = await frontmatterOf('kundenportal-relaunch');
+    expect(after['status_set']).toEqual({ at: TODAY, by: 'suggestion' });
+    expect(after['next_step_set']).toEqual({ at: TODAY, by: 'suggestion' });
+  });
+
   it('weist ein Feld ab, das die App nicht kennt, statt es stillschweigend zu schlucken', async () => {
     await expect(
       harness.call('projects:patch', {
@@ -165,6 +240,14 @@ describe('Projekt- und Todo-Kanäle im Main', () => {
         patch: { status: 'irgendwas' as never },
       }),
     ).rejects.toMatchObject({ code: 'invalid' });
+    /* Die Herkunft stempelt die App selbst — ein Aufrufer, der sie mitschickt,
+       würde eine Behauptung setzen, für die niemand geradesteht. */
+    await expect(
+      harness.call('projects:patch', {
+        slug: 'kundenportal-relaunch',
+        patch: { status_set: { at: '2026-01-01', by: 'user' } } as never,
+      }),
+    ).rejects.toMatchObject({ code: 'invalid' });
   });
 
   it('schreibt mit veraltetem Hash nicht, sondern meldet den Konflikt', async () => {
@@ -176,7 +259,11 @@ describe('Projekt- und Todo-Kanäle im Main', () => {
       }),
     ).rejects.toMatchObject({ code: 'conflict' });
 
-    expect(await vault.read(WORK)).toContain('status: active');
+    const raw = (await vault.read(WORK)) ?? '';
+    expect(raw).toContain('status: active');
+    /* Kein halber Schreibvorgang: der abgewiesene Patch hat auch keinen Stempel
+       hinterlassen, der einen Statuswechsel behaupten würde. */
+    expect(raw).not.toContain('status_set:');
   });
 
   it('meldet die Änderung, damit der Renderer nachlädt', async () => {
@@ -213,6 +300,12 @@ describe('Projekt- und Todo-Kanäle im Main', () => {
     expect(raw).toContain('Angebote von zwei Schreinern liegen vor.');
     expect(raw).toContain('## Todos');
     expect(raw).toContain('## Notizen');
+    /* Beim Anlegen gibt es keinen Vorschlag, den jemand angenommen haben könnte:
+       der Status kommt vom Nutzer. */
+    expect((await frontmatterOf('kueche-renovieren'))['status_set']).toEqual({
+      at: TODAY,
+      by: 'user',
+    });
     /* Sofort in der Liste — der Index ist nachgezogen. */
     const list = await harness.call('projects:list', { scope: 'private' });
     expect(list.map((project) => project.slug)).toContain('kueche-renovieren');

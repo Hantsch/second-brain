@@ -51,6 +51,12 @@ export const enProjects = {
   'project.statusSaved': 'Status is now “{status}”.',
   'project.openFile': 'Open the project file',
 
+  // ── Provenance ───────────────────────────────────────────────────────────
+  'project.provenance.setByUser': 'Set by you · {date}',
+  'project.provenance.acceptedSuggestion': 'Accepted from a suggestion · {date}',
+  'project.provenance.writtenByFiling': 'Written by filing · {date}',
+  'project.provenance.unknown': 'Origin not recorded · last touched {age}',
+
   'project.nextStep.title': 'Next step',
   'project.nextStep.empty': 'No next step set',
   'project.nextStep.edit': 'Edit the next step',
@@ -62,6 +68,8 @@ export const enProjects = {
     'The next step was removed outside the app. Saving writes your version.',
   'project.nextStep.take': 'Take the outside version',
   'project.nextStep.keep': 'Keep my version',
+  'project.nextStep.stale': 'Possibly outdated',
+  'project.nextStep.staleExplain': 'Something in the project changed since this was written.',
 
   'project.suggest.action': 'Get a suggestion',
   'project.suggest.title': 'Suggestion',

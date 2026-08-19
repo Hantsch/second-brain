@@ -21,7 +21,7 @@ me hunting for it.
 <!-- Order = the order the build phase works through. Dependent stories go last. -->
 
 - [x] 003 — Project notes and waiting-on, editable in place
-- [ ] 004 — Where the project status and next step come from
+- [x] 004 — Where the project status and next step come from
 - [ ] 013 — Favourite projects (star) and an order that matches how I work
 
 ## Notes

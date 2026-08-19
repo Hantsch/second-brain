@@ -115,6 +115,8 @@ priority: 2
 started: 2026-06-12
 deadline: 2026-09-01
 next_step: Work in Stefan's feedback on the role mapping
+status_set: { at: 2026-08-10, by: user }
+next_step_set: { at: 2026-08-10, by: user }
 tags: [auth0, infrastructure]
 modules: [identity-management]
 repos: ['C:/development/Kunde/Nyota-Auth0-Infrastructure']
@@ -146,6 +148,13 @@ Text of the filed dump.
 ```
 
 `status`: `idea` · `active` · `waiting` · `paused` · `done` · `dropped`.
+`status_set` and `next_step_set` are optional — a project file without them stays
+valid. Where present, each has the shape `{ at: <YYYY-MM-DD>, by: ... }`, with `by`
+exactly one of `user` · `suggestion` · `filing`: set by the user directly, accepted
+from a suggestion, or written while filing a dump. An unrecognized value counts as
+missing to anything that reads it — a hand-typed word is never trusted as a claim
+the app can't back. The app stamps these itself whenever it writes the paired field
+(`status` or `next_step`); nothing else writes them.
 `repos` connects the project to Claude Code sessions: if a session lives in this
 directory, it counts as a work trace for the project. The notes section accepts
 either heading, "Notes" or "Notizen" — the same tolerance areas have (below): a

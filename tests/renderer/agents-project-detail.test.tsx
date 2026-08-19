@@ -379,6 +379,7 @@ function vaultProject(): Project {
     priority: 2,
     deadline: null,
     nextStep: null,
+    nextStepStale: false,
     waitingOn: [],
     tags: [],
     modules: [],

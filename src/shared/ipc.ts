@@ -195,7 +195,18 @@ export interface IpcRoutes {
     res: Project;
   };
   'projects:patch': {
-    req: { slug: string; patch: Partial<ProjectFrontmatter>; expectedHash?: string };
+    req: {
+      slug: string;
+      patch: Partial<ProjectFrontmatter>;
+      expectedHash?: string;
+      /**
+       * Where this patch comes from: a direct edit (`user`, the default) or accepting
+       * an AI suggestion (`suggestion`). Decides `by` in the `status_set`/`next_step_set`
+       * stamps this write produces — manual edit and suggestion-accept are otherwise
+       * indistinguishable at this boundary.
+       */
+      origin?: 'user' | 'suggestion';
+    };
     res: Project;
   };
   'projects:append': {

@@ -96,6 +96,17 @@ describe('composeContent: Stil je Schluessel erhalten', () => {
     expect(diffLines(FLOW, after).removed).toEqual([]);
   });
 
+  it('setzt ein erstmaliges status_set an seine kanonische Stelle', () => {
+    const after = write(FLOW, {
+      next_step: 'Rollen-Mapping dokumentieren',
+      status_set: { at: '2026-08-11', by: 'user' },
+    });
+    const keys = Object.keys(parse(after).frontmatter);
+
+    expect(keys.indexOf('status_set')).toBeGreaterThan(keys.indexOf('next_step'));
+    expect(keys.indexOf('status_set')).toBeLessThan(keys.indexOf('tags'));
+  });
+
   it('behaelt vierer-Einrueckung und Listen ohne Einrueckung', () => {
     const odd = [
       '---',
@@ -191,6 +202,8 @@ describe('patchFrontmatterYaml', () => {
 describe('canonicalOrder', () => {
   it('kennt die dokumentierten Typen und raet bei unbekannten nicht', () => {
     expect(canonicalOrder('project')).toContain('next_step');
+    expect(canonicalOrder('project')).toContain('status_set');
+    expect(canonicalOrder('project')).toContain('next_step_set');
     expect(canonicalOrder('concept')).toContain('sources');
     expect(canonicalOrder('dump')).toContain('origin');
     expect(canonicalOrder('gibtsnicht')).toEqual([]);

@@ -9,7 +9,8 @@ import { Badge } from '../../atoms/Badge';
 import { Button } from '../../atoms/Button';
 import { DeadlineChip } from '../../components/DeadlineChip';
 import { StatusPicker } from '../../components/StatusPicker';
-import { useT } from '../../i18n';
+import { useLanguage, useT } from '../../i18n';
+import { formatAge, formatDate } from '../../lib/format';
 
 export interface ProjectHeadProps {
   project: Project;
@@ -29,6 +30,26 @@ export function ProjectHead({
   now,
 }: ProjectHeadProps) {
   const t = useT();
+  const language = useLanguage();
+
+  /* Honest provenance for the status: who set it and when, straight from the
+     file's `status_set` frontmatter (D4). A project that never recorded this
+     (old file, hand-edited) gets the fallback instead of a guessed author —
+     it reuses `lastTouch`, the same recency notion the staleness badge uses,
+     rather than inventing a second one. */
+  const statusSet = project.statusSet;
+  const statusProvenance =
+    statusSet === undefined
+      ? t('project.provenance.unknown', { age: formatAge(project.lastTouch, language, now) })
+      : t(
+          statusSet.by === 'user'
+            ? 'project.provenance.setByUser'
+            : statusSet.by === 'suggestion'
+              ? 'project.provenance.acceptedSuggestion'
+              : 'project.provenance.writtenByFiling',
+          { date: formatDate(statusSet.at, language) },
+        );
+
   return (
     <div className="sb-phead">
       <div className="sb-phead-title">
@@ -38,12 +59,15 @@ export function ProjectHead({
       </div>
 
       <div className="sb-phead-facts">
-        <StatusPicker
-          value={project.status}
-          busy={statusBusy}
-          savedAs={savedStatus}
-          onChange={onStatus}
-        />
+        <div className="sb-phead-status">
+          <StatusPicker
+            value={project.status}
+            busy={statusBusy}
+            savedAs={savedStatus}
+            onChange={onStatus}
+          />
+          <p className="sb-phead-provenance">{statusProvenance}</p>
+        </div>
         <span className="sb-phead-fact">
           {project.deadline === null ? (
             <span className="sb-phead-none">{t('project.deadlineNone')}</span>

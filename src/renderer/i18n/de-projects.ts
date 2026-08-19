@@ -54,6 +54,12 @@ export const deProjects = {
   'project.statusSaved': 'Status steht jetzt auf „{status}".',
   'project.openFile': 'Projektdatei öffnen',
 
+  // ── Herkunft ─────────────────────────────────────────────────────────────
+  'project.provenance.setByUser': 'Von dir gesetzt · {date}',
+  'project.provenance.acceptedSuggestion': 'Aus einem Vorschlag übernommen · {date}',
+  'project.provenance.writtenByFiling': 'Durch Ablage eingetragen · {date}',
+  'project.provenance.unknown': 'Herkunft nicht erfasst · zuletzt berührt {age}',
+
   'project.nextStep.title': 'Nächster Schritt',
   'project.nextStep.empty': 'Kein nächster Schritt festgelegt',
   'project.nextStep.edit': 'Nächsten Schritt bearbeiten',
@@ -65,6 +71,8 @@ export const deProjects = {
     'Der nächste Schritt wurde außerhalb entfernt. Speichern trägt deine Fassung ein.',
   'project.nextStep.take': 'Fremde Fassung übernehmen',
   'project.nextStep.keep': 'Meine Fassung behalten',
+  'project.nextStep.stale': 'Möglicherweise veraltet',
+  'project.nextStep.staleExplain': 'Seit dem Eintragen hat sich etwas im Projekt getan.',
 
   'project.suggest.action': 'Vorschlag holen',
   'project.suggest.title': 'Vorschlag',

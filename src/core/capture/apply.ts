@@ -69,9 +69,12 @@ function projectFrontmatter(
     slug,
     scope: proposal.scope,
     status: 'active',
+    status_set: { at: today, by: 'filing' },
     priority: 3,
     started: today,
-    ...(firstTodo === undefined ? {} : { next_step: firstTodo.text }),
+    ...(firstTodo === undefined
+      ? {}
+      : { next_step: firstTodo.text, next_step_set: { at: today, by: 'filing' } }),
     tags: proposal.tags,
     modules: [],
     repos: [],

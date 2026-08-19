@@ -116,6 +116,7 @@ const project: Project = {
   priority: 1,
   deadline: null,
   nextStep: 'Abnahmeprotokoll durchgehen',
+  nextStepStale: false,
   waitingOn: [],
   tags: [],
   modules: [],

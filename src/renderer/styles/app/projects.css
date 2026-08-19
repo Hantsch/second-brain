@@ -230,6 +230,18 @@
 .sb-phead-none {
   color: var(--text-disabled);
 }
+.sb-phead-status {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+/* Quiet meta line under the status control — who set it, and when. The
+   fallback ("origin not recorded") is just as quiet; it's an honest gap,
+   not a warning. */
+.sb-phead-provenance {
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+}
 
 .sb-statuspick {
   display: flex;
@@ -333,6 +345,26 @@
   display: flex;
   gap: var(--space-2);
   flex-wrap: wrap;
+}
+
+/* Quiet meta line under the value — who set it, and when. Same weight as
+   `.sb-phead-provenance`, the analogous line under the status. */
+.sb-nextstep-provenance {
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+}
+/* The stale marker is a passive note, not an actionable notice like
+   `.sb-nextstep-external` — no border/background box, just the badge and an
+   explaining line stacked underneath it. */
+.sb-nextstep-stale {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+.sb-nextstep-stale-text {
+  font-size: var(--text-sm);
+  color: var(--text-body);
 }
 
 /* ── Suggestion ─────────────────────────────────────────────────────────── */

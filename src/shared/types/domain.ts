@@ -4,6 +4,14 @@ import type { BaseFrontmatter, Scope } from './vault';
 
 export type ProjectStatus = 'idea' | 'active' | 'waiting' | 'paused' | 'done' | 'dropped';
 
+export type ProvenanceOrigin = 'user' | 'suggestion' | 'filing';
+
+/** Who set a value, and when — day granularity, like `started`/`deadline`/`updated`. */
+export interface Provenance {
+  at: string;
+  by: ProvenanceOrigin;
+}
+
 export const PROJECT_STATUSES: readonly ProjectStatus[] = [
   'idea',
   'active',
@@ -38,6 +46,10 @@ export interface ProjectFrontmatter extends BaseFrontmatter {
   deadline?: string;
   /** Der eine nächste Schritt — was der Nutzer beim Wiedereinstieg zuerst liest. */
   next_step?: string;
+  /** Where `status` came from and when it was set. */
+  status_set?: Provenance;
+  /** Where `next_step` came from and when it was set. */
+  next_step_set?: Provenance;
   waiting_on?: WaitingOn[];
   /** Verknüpfte Wissens-Module (Ordnernamen unter `modules/`). */
   modules?: string[];
@@ -55,6 +67,16 @@ export interface Project {
   priority: number;
   deadline: string | null;
   nextStep: string | null;
+  /** Where `status` came from and when — undefined if the file never recorded it. */
+  statusSet?: Provenance;
+  /** Where `next_step` came from and when — undefined if the file never recorded it. */
+  nextStepSet?: Provenance;
+  /**
+   * `next_step` predates work that happened since: `lastTouch`'s calendar day is
+   * strictly after `nextStepSet.at`. Always `false` without a `nextStepSet` — nothing
+   * invented for a value whose origin isn't recorded at all.
+   */
+  nextStepStale: boolean;
   waitingOn: WaitingOn[];
   tags: string[];
   modules: string[];

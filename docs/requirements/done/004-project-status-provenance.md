@@ -1,7 +1,7 @@
 ---
 id: 004
 title: Where the project status and next step come from
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-08-12
 ---
 
@@ -22,25 +22,25 @@ when it last changed. That knowledge just is not shown.
 
 ## Acceptance Criteria
 
-- [ ] The project detail view states, for the status, where it comes from and how
+- [x] The project detail view states, for the status, where it comes from and how
       old it is — set by me, accepted from a suggestion, or written by filing —
       with the date.
-- [ ] The same for `next_step`.
-- [ ] Nothing is invented. If the file does not record where a value came from, the
+- [x] The same for `next_step`.
+- [x] Nothing is invented. If the file does not record where a value came from, the
       screen says only what it actually knows (e.g. "last changed on …") and does
       not guess an author.
-- [ ] A stale next step is visible as stale: if the project has been worked on since
+- [x] A stale next step is visible as stale: if the project has been worked on since
       the next step was written (file changes or agent sessions), the screen says so.
       This is the maintenance finding "project without a next step", made visible at
       the place where I can fix it.
-- [ ] Accepting a suggestion records that it was a suggestion, so the provenance is
+- [x] Accepting a suggestion records that it was a suggestion, so the provenance is
       still right the next time I look.
-- [ ] Whatever gets recorded is recorded in the file, not in the index — the index
+- [x] Whatever gets recorded is recorded in the file, not in the index — the index
       stays derivable and deletable.
-- [ ] The frontmatter addition is documented in
+- [x] The frontmatter addition is documented in
       [VAULT-FORMAT.md](../VAULT-FORMAT.md), is optional, and a project file without
       it stays valid.
-- [ ] Works without a configured model.
+- [x] Works without a configured model.
 
 ## Open Questions
 
@@ -210,10 +210,152 @@ model → D5 + D6.
    touch a file in the project folder afterwards). Back in the app the next step shows
    the "possibly outdated" marker; remove the change → the marker disappears.
 6. Delete `status_set` / `next_step_set` from the file. The screen shows only "Origin
-   not recorded · file last changed on …" — no author, no stale claim.
+   not recorded · last touched …" (see Decisions in Done: reuses `lastTouch` instead of
+   a new field) — no author, no stale claim.
 7. Delete `.secondbrain/index/`, restart: both lines are back unchanged.
 8. Settings → remove the configured model: both lines render exactly the same.
 
 ## Done
 
-<Filled by `/ai-scrum:build 004`.>
+### Summary
+
+Two optional frontmatter maps, `status_set`/`next_step_set` (`{ at, by }`), are now
+stamped by the app itself everywhere it writes `status`/`next_step` — `projects:patch`
+(with an `origin: 'user' | 'suggestion'` request field), `projects:create`, and filing a
+dump into a new project (`by: 'filing'`). `deriveProjects` reads them into the `Project`
+record (`statusSet?`, `nextStepSet?`, `nextStepStale`), discarding the whole map on any
+unrecognized `by` or unparsable `at` rather than partially trusting it. `ProjectHead` and
+`NextStepEditor` render a quiet meta line for each ("Set by you · {date}" / "Accepted
+from a suggestion · {date}" / "Written by filing · {date}", or the honest fallback), plus
+a "Possibly outdated" warning badge on the next step when the project was touched since
+it was written. Nothing here touches an LLM.
+
+### Decisions
+
+- **Fallback source reuses `lastTouch`, not a new field.** The Decisions section
+  originally proposed "file last changed on {date}" sourced from `updated`. Implemented
+  instead as "Origin not recorded · last touched {age}" (`project.provenance.unknown`),
+  reusing the existing `Project.lastTouch`/`lastTouchSource` (already the max of file
+  mtime and external touches) instead of introducing a second frontmatter-derived
+  recency field on `Project`. Rationale: `lastTouch` is exactly the story's own "any of
+  the three" staleness signal (file mtime, index changes, agent sessions) — adding a
+  second, narrower "file mtime only" notion of recency purely for this one fallback line
+  would reintroduce the "second notion of recency" problem story 013 explicitly closed,
+  and it would have required adding a new field to `Project`, rippling into every
+  hand-built `Project` fixture across the test suite for a display nicety. The wording
+  ("last touched", not "the status changed") still satisfies "it names the file/trail,
+  not the field" from the original reasoning — it never implies `status`/`next_step`
+  itself changed then. The manual Test Plan step 6 above was updated to match. Flagged
+  by review (F2) as an undocumented spec deviation; documented here per CLAUDE.md's house
+  rule that a deviation wins over the plan when recorded with its reason.
+- **`status_set`/`next_step_set` rejected as unknown fields, not added to `LOCKED`.**
+  `project-patch.ts`'s `LOCKED` array is for fields embedded in the file path or covered
+  by a different, already-existing write path (`type`/`slug`/`scope`/`created`/`updated`);
+  its error message ("sits in the file path...") would be wrong for these two. Simply
+  never adding them to `WRITABLE` makes `checkProjectPatch` reject them via the existing
+  generic "unknown field" branch — same effect, correct message, zero new code.
+- **Provenance/stale line on the next step is gated on the value actually being
+  present**, not just on `nextStepStale`/`nextStepSet` alone. Found in review (F1): since
+  `checkProjectPatch` allows `next_step: null` (an explicit clear) and `projects:patch`
+  stamps `next_step_set` whenever the patch touches `next_step` regardless of value, a
+  cleared-but-stamped file (or a hand-edited one) could show "Set by you" and a "possibly
+  outdated" badge next to "No next step set" — an author and a staleness claim for a
+  value that isn't there, contradicting the empty-state message right above it and the
+  "project without a next step" maintenance finding. Fixed in
+  `NextStepEditor.tsx`: the provenance line and the stale badge now only render when
+  `value` is non-empty. Verified live via a hand-edited demo-vault project file plus a
+  new test (`tests/renderer/projects.test.tsx`, "zeigt weder Herkunft noch Veraltung,
+  wenn next_step leer ist, auch mit next_step_set").
+- **`nextStepStale: boolean` (required) and `statusSet?`/`nextStepSet?` (optional)** on
+  `Project`: the two maps are optional so hand-built `Project` fixtures elsewhere in the
+  test suite don't need updating just because they don't care about provenance;
+  `nextStepStale` is required per the plan's literal wording, which mechanically forced
+  a one-line `nextStepStale: false` default onto every other fixture/factory building a
+  full `Project` object (`src/renderer/lib/mock-fixtures.ts` and seven test files) — a
+  deliberate, bounded, non-functional ripple, not scope creep.
+
+### Known limitations (not fixed, judged acceptable)
+
+- **F3 (test coverage, low):** the original D2 test suite proved an unrelated patch
+  doesn't *invent* a stamp on a file that never had one, but not that it leaves an
+  *existing* stamp byte-identical (the actual `setPreserving`-wholesale-replace risk
+  named in Model Hints). Fixed during review follow-up: added
+  `tests/main/projects-ipc.test.ts`, "lässt einen vorhandenen Stempel unangetastet, wenn
+  ein Patch ihn nicht betrifft".
+- **F4 (test coverage, low):** "deleting the index and rebuilding reproduces the same
+  values" (D4's acceptance) was originally discharged by a comment, not a test. Fixed
+  during review follow-up: added `tests/core/index/projects.test.ts`, "liefert bei
+  erneutem Aufruf mit denselben Eingaben dieselbe Herkunft (Index-Neuaufbau)".
+- **F5 (test coverage, low, left as-is):** neither D5 nor D6 has a dedicated "renders
+  identically with no model configured" test for the provenance lines specifically. Left
+  unfixed: the render path (`ProjectHead`/`NextStepEditor`) has no LLM dependency at
+  all — verified by inspection, and confirmed live in the smoke test with no provider
+  configured in the demo vault (see Verification below) — so a dedicated stub-failure
+  test would prove a property the component's structure already guarantees.
+- **F6 (style nit, no action needed):** wrapping `StatusPicker` in a new `.sb-phead-status`
+  column shifts its baseline relative to the deadline/priority facts next to it. Checked
+  live in `.screenshots/19-project-detail.png` and `20-project-nostep.png` (plus the
+  axe run, 0 violations across all screens) — reads cleanly, no visual defect worth a
+  second pass.
+
+### Verification
+
+- `npm run build` — clean.
+- `npm run typecheck` — clean.
+- `npm run lint` — clean.
+- `npx vitest run --pool=threads` (full suite, run via the PowerShell tool — the Bash
+  tool's reported cwd casing on this machine intermittently confuses Vitest's suite
+  registration, see below) — **1992 passed**, 2 pre-existing failures unrelated to this
+  story and not touched by it: `tests/core/wiki/module.test.ts` (MODULE-SCHEMA drift) and
+  `tests/main/ipc/agents.test.ts` (leaks real `~/.claude`/Codex session data on this
+  machine).
+- `npm run format:check` — fails repo-wide (~190+ files, CRLF vs. Prettier's LF default
+  on this Windows checkout), pre-existing per story 003, not a regression here.
+- Live smoke test: `npm run seed && npm run shot`. Screenshots inspected directly
+  (`.screenshots/19-project-detail.png`, `20-project-nostep.png`): status provenance
+  ("Von dir gesetzt · 17. Aug. 2026"), next-step provenance ("Aus einem Vorschlag
+  übernommen · 1. Aug. 2026") plus the "Möglicherweise veraltet" stale badge and its
+  explaining line all render correctly on a hand-stamped demo-vault project; the honest
+  fallback ("Herkunft nicht erfasst · zuletzt berührt vor 3 Tagen") renders on a project
+  with no recorded provenance, with no stale claim next to its empty next step. No model
+  is configured in the demo vault, confirming AC 8 live, not just by inspection.
+  `.screenshots/a11y.json`: 0 axe violations across all 38 screens/states, including
+  `project-detail` and `project-nostep`. No new console errors.
+- Environment note (not a defect in this story): a transient "Vitest failed to find the
+  current suite" failure appeared repo-wide partway through this build, traced to
+  another deliverable's agent switching Node versions mid-session (see D3's report); it
+  cleared after a cache-cold run and did not recur. Separately, running `vitest` through
+  the Bash tool's git-bash cwd (`c:/...` vs `C:/...`) can reproduce a similar-looking
+  failure that does not occur via PowerShell — noted for future stories in this repo, not
+  fixed here (no source change is implicated).
+
+### Review
+
+Delegated to `story-review-hard` against the full diff (D1–D6). Verdict: **PASS**, all 8
+acceptance criteria PASS with file:line evidence, no test weakening, no scope creep, D2's
+named risk (hash-guarded write path) specifically re-verified and confirmed safe. Six
+findings (F1–F6, one medium, five low/nit) — F1 was a genuine correctness/guardrail-3 bug
+and is fixed (see Decisions); F3/F4 were real test-coverage gaps and are fixed; F2 is a
+documented spec deviation with reasoning; F5/F6 are accepted as-is with reasoning above.
+
+### Commit message
+
+```
+004: project status/next-step provenance
+```
+
+### Changed files
+
+`docs/VAULT-FORMAT.md`, `docs/requirements/004-project-status-provenance.md`,
+`src/core/capture/apply.ts`, `src/core/index/projects.ts`,
+`src/core/vault/frontmatter-order.ts`, `src/main/ipc/project-patch.ts`,
+`src/main/ipc/projects.ts`, `src/renderer/components/NextStepEditor.tsx`,
+`src/renderer/i18n/de-projects.ts`, `src/renderer/i18n/en-projects.ts`,
+`src/renderer/lib/mock-fixtures.ts`, `src/renderer/screens/projects/ProjectHead.tsx`,
+`src/renderer/screens/projects/ProjectOverviewTab.tsx`,
+`src/renderer/styles/app/projects.css`, `src/shared/ipc.ts`, `src/shared/types/domain.ts`,
+`tests/core/capture/apply.test.ts`, `tests/core/index/projects.test.ts`,
+`tests/core/vault/frontmatter-patch.test.ts`, `tests/main/projects-ipc.test.ts`,
+`tests/renderer/agents-project-detail.test.tsx`, `tests/renderer/ask.test.tsx`,
+`tests/renderer/dashboard-fixtures.ts`, `tests/renderer/inbox.test.tsx`,
+`tests/renderer/journal.test.tsx`, `tests/renderer/projects.test.tsx`.

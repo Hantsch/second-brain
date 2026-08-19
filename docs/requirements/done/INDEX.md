@@ -42,3 +42,8 @@ second roadmap.
   the notes panel dropped its show/hide toggle and now always shows notes plus the composer.
   Fixed a review finding (F2): the renderer's own heading-alias resolution now agrees with
   the write path on which of "Notizen"/"Notes" wins when a file carries both.
+- 004 — Where the project status and next step come from · S03 · Optional
+  `status_set`/`next_step_set` frontmatter maps (`{at, by: user|suggestion|filing}`),
+  stamped by the app on every write and shown as a quiet provenance line under status and
+  next step, plus a "possibly outdated" badge when the project was touched since the step
+  was written; the honest fallback shows no author when the file never recorded one.

@@ -17,12 +17,22 @@
    the way. */
 
 import { useEffect, useRef, useState } from 'react';
+import type { Provenance } from '@shared/types';
+import { Badge } from '../atoms/Badge';
 import { Button } from '../atoms/Button';
 import { Icon } from '../atoms/Icon';
-import { useT } from '../i18n';
+import { useLanguage, useT } from '../i18n';
+import { formatAge, formatDate } from '../lib/format';
 
 export interface NextStepEditorProps {
   value: string | null;
+  /** Where `value` came from, for the provenance line — undefined if never recorded. */
+  provenance?: Provenance;
+  /** Is `value` stale — worked on since it was written. */
+  stale?: boolean;
+  /** Fallback recency when `provenance` is absent — the project's own `lastTouch`. */
+  lastTouch?: string;
+  now?: Date;
   /** The write is in progress. */
   busy?: boolean;
   /** The latest state has arrived in the file. */
@@ -35,6 +45,10 @@ export interface NextStepEditorProps {
 
 export function NextStepEditor({
   value,
+  provenance,
+  stale = false,
+  lastTouch,
+  now,
   busy = false,
   saved = false,
   onSave,
@@ -42,6 +56,7 @@ export function NextStepEditor({
   suggestBusy = false,
 }: NextStepEditorProps) {
   const t = useT();
+  const language = useLanguage();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value ?? '');
   /** The value the draft is based on — frozen when the field opens. */
@@ -56,6 +71,22 @@ export function NextStepEditor({
 
   const current = value ?? '';
   const changedOutside = base !== null && current !== base && accepted !== current;
+
+  /* Same reasoning as `ProjectHead`'s status provenance (D5): who set this
+     line, and when, straight from the file's `next_step_set` frontmatter. A
+     project that never recorded this falls back to `lastTouch` rather than
+     guessing an author. */
+  const provenanceText =
+    provenance === undefined
+      ? t('project.provenance.unknown', { age: formatAge(lastTouch ?? null, language, now) })
+      : t(
+          provenance.by === 'user'
+            ? 'project.provenance.setByUser'
+            : provenance.by === 'suggestion'
+              ? 'project.provenance.acceptedSuggestion'
+              : 'project.provenance.writtenByFiling',
+          { date: formatDate(provenance.at, language) },
+        );
 
   const start = (): void => {
     setDraft(current);
@@ -193,6 +224,24 @@ export function NextStepEditor({
       <span className="sb-nextstep-saved" role="status">
         {saved ? t('project.nextStep.saved') : ''}
       </span>
+      {/* Provenance and the stale marker are both claims about the CURRENT next
+          step — an author or a staleness claim for a line that is empty would
+          contradict "no next step set" right above it. `next_step_set` can
+          outlive `next_step` (a hand edit can clear the text while leaving the
+          stamp, or a patch can explicitly clear `next_step` to `null` while
+          still stamping when it happened — see `checkProjectPatch`), so this
+          gates on the value actually being there, not just on `stale`. */}
+      {value === null || value.length === 0 ? null : (
+        <>
+          <p className="sb-nextstep-provenance">{provenanceText}</p>
+          {stale ? (
+            <div className="sb-nextstep-stale">
+              <Badge variant="warning">{t('project.nextStep.stale')}</Badge>
+              <p className="sb-nextstep-stale-text">{t('project.nextStep.staleExplain')}</p>
+            </div>
+          ) : null}
+        </>
+      )}
     </div>
   );
 }

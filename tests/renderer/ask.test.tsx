@@ -123,6 +123,7 @@ const project: Project = {
   priority: 1,
   deadline: null,
   nextStep: 'Abnahmeprotokoll durchgehen',
+  nextStepStale: false,
   waitingOn: [{ who: 'Miriam', what: 'Abnahme', since: '2026-08-06' }],
   tags: [],
   modules: [],

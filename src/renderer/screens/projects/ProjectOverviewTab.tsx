@@ -115,6 +115,7 @@ export function ProjectOverviewTab({ project, doc, now }: ProjectOverviewTabProp
             ? { status: suggestion.status, next_step: suggestion.nextStep }
             : { next_step: suggestion.nextStep },
         expectedHash: suggestBase ?? doc.hash,
+        origin: 'suggestion',
       },
       {
         onSuccess: () => {
@@ -251,6 +252,10 @@ export function ProjectOverviewTab({ project, doc, now }: ProjectOverviewTabProp
 
       <NextStepEditor
         value={project.nextStep}
+        provenance={project.nextStepSet}
+        stale={project.nextStepStale}
+        lastTouch={project.lastTouch}
+        {...(now === undefined ? {} : { now })}
         busy={mutations.patch.isPending}
         saved={stepSaved}
         onSave={saveStep}

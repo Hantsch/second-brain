@@ -102,6 +102,7 @@ function project(patch: Partial<Project> & { slug: string; title: string }): Pro
     todoCount: 0,
     openTodoCount: 0,
     excerpt: '',
+    nextStepStale: false,
     ...patch,
   };
 }
@@ -671,6 +672,7 @@ describe('Projektdetail', () => {
             next_step: 'Bei Jonas nachfassen: Fallback für Sitzungen',
           },
           expectedHash: 'hash-portal',
+          origin: 'suggestion',
         },
       ]),
     );
@@ -1025,6 +1027,138 @@ describe('Projektdetail', () => {
     expect(screen.queryByText('Arbeitsspur')).toBeNull();
     expect(screen.queryByText(/Letzte Spur/)).toBeNull();
     expect(screen.queryByText('Sitzung im Web-Repo')).toBeNull();
+  });
+});
+
+// ── Herkunft des Status ──────────────────────────────────────────────────────
+
+/* D5: die ruhige Zeile unter dem Statusfeld — wer den Status gesetzt hat, und
+   wann. Vier Zustaende: die drei bekannten `by`-Werte aus `status_set` (D4),
+   plus der ehrliche Fallback, wenn die Datei nie Provenienz geschrieben hat —
+   der greift auf `lastTouch` zurueck statt einen Autor zu raten. */
+describe('Herkunft des Status', () => {
+  it('zeigt „Von dir gesetzt" mit dem Datum aus der Datei', async () => {
+    const withProvenance = { ...portal, statusSet: { at: '2026-08-05', by: 'user' as const } };
+    mount({ projects: [withProvenance, legacy, hochbeet] });
+    await detailReady();
+
+    expect(await screen.findByText('Von dir gesetzt · 5. Aug. 2026')).toBeTruthy();
+  });
+
+  it('zeigt „Aus einem Vorschlag übernommen", wenn ein Vorschlag angenommen wurde', async () => {
+    const withProvenance = {
+      ...portal,
+      statusSet: { at: '2026-08-05', by: 'suggestion' as const },
+    };
+    mount({ projects: [withProvenance, legacy, hochbeet] });
+    await detailReady();
+
+    expect(await screen.findByText('Aus einem Vorschlag übernommen · 5. Aug. 2026')).toBeTruthy();
+  });
+
+  it('zeigt „Durch Ablage eingetragen", wenn die Ablage den Status geschrieben hat', async () => {
+    const withProvenance = { ...portal, statusSet: { at: '2026-08-05', by: 'filing' as const } };
+    mount({ projects: [withProvenance, legacy, hochbeet] });
+    await detailReady();
+
+    expect(await screen.findByText('Durch Ablage eingetragen · 5. Aug. 2026')).toBeTruthy();
+  });
+
+  it('faellt ehrlich auf die letzte Beruehrung zurueck, wenn keine Herkunft erfasst ist', async () => {
+    /* `portal` traegt von Haus aus kein `statusSet` — der Normalfall fuer eine
+       Datei, die die Provenienz nie geschrieben hat (altes Format oder von
+       Hand editiert). Ein Autor wird dann nicht geraten.
+
+       Seit D6 zeigt `NextStepEditor` denselben Fallbacktext fuer `portal`
+       (das ebenfalls kein `nextStepSet` traegt) — deshalb wird hier gezielt
+       in `ProjectHead`s eigener Zeile gesucht statt ueber den Text allein. */
+    const { container } = mount();
+    await detailReady();
+
+    const provenance = container.querySelector('.sb-phead-provenance');
+    expect(provenance?.textContent).toBe('Herkunft nicht erfasst · zuletzt berührt heute');
+  });
+});
+
+// ── Herkunft des nächsten Schritts ────────────────────────────────────────────
+
+/* D6: dieselbe ruhige Zeile wie bei „Herkunft des Status" (D5), jetzt unter dem
+   nächsten Schritt — dieselben `project.provenance.*`-Schlüssel, kein eigener
+   Satz dafür. Dazu neu: die Warnung, wenn seit dem Eintragen am Projekt
+   gearbeitet wurde (`nextStepStale`, D4 hat sie schon korrekt auf `false`
+   gesetzt, sobald kein `nextStepSet` vorliegt — daher genügt es, allein auf
+   `stale` zu prüfen). Die Vorschlag-Annahme selbst ist oben in „schreibt erst
+   nach der Bestätigung" mitgeprüft: der `projects:patch`-Aufruf trägt dort
+   jetzt `origin: 'suggestion'`. */
+describe('Herkunft des nächsten Schritts', () => {
+  it('zeigt „Von dir gesetzt" mit dem Datum aus der Datei', async () => {
+    const withProvenance = {
+      ...portal,
+      nextStepSet: { at: '2026-08-05', by: 'user' as const },
+    };
+    mount({ projects: [withProvenance, legacy, hochbeet] });
+    await detailReady();
+
+    expect(await screen.findByText('Von dir gesetzt · 5. Aug. 2026')).toBeTruthy();
+  });
+
+  it('zeigt die Warnung „Möglicherweise veraltet", wenn seither am Projekt gearbeitet wurde', async () => {
+    const stale = {
+      ...portal,
+      nextStepSet: { at: '2026-08-05', by: 'user' as const },
+      nextStepStale: true,
+    };
+    mount({ projects: [stale, legacy, hochbeet] });
+    await detailReady();
+
+    expect(await screen.findByText('Möglicherweise veraltet')).toBeTruthy();
+    expect(screen.getByText('Seit dem Eintragen hat sich etwas im Projekt getan.')).toBeTruthy();
+  });
+
+  it('zeigt die Warnung nicht, wenn der Schritt frisch ist', async () => {
+    const fresh = {
+      ...portal,
+      nextStepSet: { at: '2026-08-05', by: 'user' as const },
+      nextStepStale: false,
+    };
+    mount({ projects: [fresh, legacy, hochbeet] });
+    await detailReady();
+
+    expect(screen.queryByText('Möglicherweise veraltet')).toBeNull();
+  });
+
+  /* `portal` traegt von Haus aus kein `nextStepSet` — derselbe Normalfall wie
+     beim Status. `ProjectHead`s eigene Herkunftszeile faellt fuer denselben
+     Bestand auf denselben Text zurueck, deshalb wird hier gezielt in der
+     Zeile unter dem naechsten Schritt gesucht statt ueber den Text allein. */
+  it('faellt ohne next_step_set auf die letzte Beruehrung zurueck und zeigt keine Veraltung', async () => {
+    const { container } = mount();
+    await detailReady();
+
+    const provenance = container.querySelector('.sb-nextstep-provenance');
+    expect(provenance?.textContent).toBe('Herkunft nicht erfasst · zuletzt berührt heute');
+    expect(container.querySelector('.sb-nextstep-stale')).toBeNull();
+  });
+
+  /* Ein `next_step_set` kann `next_step` ueberleben: eine Hand-Bearbeitung
+     kann den Text loeschen, ohne den Stempel mitzunehmen, oder ein Patch setzt
+     `next_step: null` ausdruecklich und stempelt trotzdem, wann das geschah
+     (`checkProjectPatch`). Ohne Wert gibt es aber nichts, das „von dir gesetzt"
+     oder „veraltet" sein koennte — sonst widerspricht die Zeile der leeren
+     Anzeige direkt darueber. */
+  it('zeigt weder Herkunft noch Veraltung, wenn next_step leer ist, auch mit next_step_set', async () => {
+    const clearedButStamped = {
+      ...portal,
+      nextStep: null,
+      nextStepSet: { at: '2026-08-05', by: 'user' as const },
+      nextStepStale: true,
+    };
+    const { container } = mount({ projects: [clearedButStamped, legacy, hochbeet] });
+    await detailReady();
+
+    expect(screen.getByText('Kein nächster Schritt festgelegt')).toBeTruthy();
+    expect(container.querySelector('.sb-nextstep-provenance')).toBeNull();
+    expect(container.querySelector('.sb-nextstep-stale')).toBeNull();
   });
 });
 

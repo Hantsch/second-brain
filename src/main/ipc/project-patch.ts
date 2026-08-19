@@ -17,6 +17,10 @@ import type { ProjectFrontmatter, WaitingOn } from '@shared/types';
 import { PROJECT_STATUSES } from '@shared/types';
 import { fail } from './errors';
 
+/* `status_set` and `next_step_set` are deliberately absent: the app stamps them
+   itself when it writes the paired field, so a caller sending them lands in the
+   "unknown field" branch below — which is the honest answer, because `by` is not
+   the caller's to claim. */
 /** Fields that `projects:patch` is allowed to write. */
 const WRITABLE = [
   'title',

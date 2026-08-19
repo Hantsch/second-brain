@@ -3,7 +3,7 @@
    The list comes from the index (it's the derived truth), every write path
    goes through `VaultStore` — with hash, with merge, with follow-up.
 
-   Four decisions you otherwise wouldn't see in the code:
+   Five decisions you otherwise wouldn't see in the code:
 
    - **`patch` writes only known fields** and leaves everything else alone
      (`project-patch.ts`). The store merges, so every user field survives.
@@ -11,6 +11,11 @@
      VAULT-FORMAT.md. On an external change, the mtime counts, not us.
    - **`suggestStatus` writes nothing.** The suggestion goes back to the
      caller; accepting it is a separate call the user makes.
+   - **Provenance is stamped by the app, not by the caller.** `status_set` and
+     `next_step_set` are written exactly when the patch touches `status` or
+     `next_step` — a patch about something else leaves them alone. The caller
+     only says where the change came from (`origin`); `status_set` in the patch
+     itself is an unknown field and gets rejected.
    - **`createNote`/`removeNote` are one pair.** The note is written as the
      block `filingBlock` produces, and the undo takes exactly that block back
      out via `removeBlock`. If it isn't in the file verbatim any more, the
@@ -177,6 +182,9 @@ export function projectHandlers(services: Services): HandlerMap {
         {
           type: 'project',
           ...frontmatter,
+          /* The status of a project the user just created is his own — there is
+             no suggestion that could have set it. */
+          status_set: { at: today, by: 'user' },
           slug,
           scope: where,
           created: today,
@@ -188,12 +196,23 @@ export function projectHandlers(services: Services): HandlerMap {
       return projectFor(services, slug);
     },
 
-    'projects:patch': async ({ slug, patch, expectedHash }) => {
+    'projects:patch': async ({ slug, patch, expectedHash, origin }) => {
       const { project, doc } = await readProject(services, slug);
       const fields = checkProjectPatch(patch);
+      const today = isoDay(new Date());
+      /* Only the caller knows whether this is a hand edit or an accepted
+         suggestion; anything else counts as the user's own decision. */
+      const by = origin === 'suggestion' ? 'suggestion' : 'user';
+      const frontmatter: Record<string, unknown> = { ...fields, updated: today };
+      /* `undefined` never reaches here for a field the caller sent — an explicit
+         `next_step: null` is a change too and gets its stamp. Fields the patch
+         doesn't mention stay out of the write entirely, so the store's merge
+         keeps their old stamp. */
+      if (fields['status'] !== undefined) frontmatter['status_set'] = { at: today, by };
+      if (fields['next_step'] !== undefined) frontmatter['next_step_set'] = { at: today, by };
       await store(services).write({
         path: project.path,
-        frontmatter: { ...fields, updated: isoDay(new Date()) },
+        frontmatter,
         expectedHash: expectedHash ?? doc.hash,
       });
       /* `repos` is the link for sessions. If it changes, the session buffer

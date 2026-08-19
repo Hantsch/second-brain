@@ -229,8 +229,10 @@ describe('applyProposal — weitere Ziele', () => {
     expect(created.frontmatter['slug']).toBe('suche-im-portal-beschleunigen');
     expect(created.frontmatter['scope']).toBe('work');
     expect(created.frontmatter['status']).toBe('active');
+    expect(created.frontmatter['status_set']).toEqual({ at: TODAY, by: 'filing' });
     expect(created.frontmatter['started']).toBe(TODAY);
     expect(created.frontmatter['next_step']).toBe('Index prüfen');
+    expect(created.frontmatter['next_step_set']).toEqual({ at: TODAY, by: 'filing' });
     expect(created.frontmatter['tags']).toEqual(['performance']);
     expect(created.frontmatter['waiting_on']).toHaveLength(1);
     expect(created.body).toContain('## Stand');
@@ -262,8 +264,19 @@ describe('applyProposal — weitere Ziele', () => {
       },
       { now: NOW_MS },
     );
+
+    /* Ohne Todo im Vorschlag gibt es kein `next_step` — und darum auch keinen
+       Beleg dafür. Ein `next_step_set` für ein Feld, das nie geschrieben wurde,
+       wäre erfunden. */
+    const created = await read(path);
+    expect(created.frontmatter['next_step']).toBeUndefined();
+    expect(created.frontmatter['next_step_set']).toBeUndefined();
+
     await undoFiling(fixture.store, result.undoToken ?? '');
 
+    /* Die ganze Datei ist weg — und mit ihr jeder Beleg, den sie trug. Kein
+       `status_set`/`next_step_set` kann eine zurückgestellte Datei widersprechen,
+       die es gar nicht mehr gibt. */
     expect(await fixture.store.readText(path)).toBeNull();
     expect(await fixture.store.readText(dump.path)).not.toBeNull();
   });

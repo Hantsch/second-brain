@@ -6,12 +6,20 @@
  * Spur, `excerpt` der Wiedereinstiegspunkt, `stale` die stille Warnung.
  */
 
-import type { Project, ProjectStatus, Scope, Todo, WaitingOn } from '@shared/types';
+import type {
+  Project,
+  ProjectStatus,
+  Provenance,
+  ProvenanceOrigin,
+  Scope,
+  Todo,
+  WaitingOn,
+} from '@shared/types';
 import { PROJECT_STATUSES } from '@shared/types';
 import { excerpt, extractSections } from '@core/vault/doc';
-import { dirName } from '@core/vault/paths';
+import { dirName, isoDay } from '@core/vault/paths';
 import type { DateLike } from '@core/vault/paths';
-import { ageInDays, laterOf } from './dates';
+import { ageInDays, daysBetween, laterOf } from './dates';
 import { asDate, asStringList, asText } from './text';
 import { scopeFromPath } from './todos';
 import { DEFAULT_STALE_AFTER_DAYS } from './types';
@@ -40,6 +48,18 @@ function priorityOf(value: unknown): number {
   if (typeof value === 'number' && Number.isFinite(value)) return Math.trunc(value);
   if (typeof value === 'string' && /^\d+$/.test(value.trim())) return Number(value.trim());
   return 3;
+}
+
+const PROVENANCE_BY: readonly string[] = ['user', 'suggestion', 'filing'];
+
+/** `status_set`/`next_step_set` aus dem Frontmatter — nur wenn beide Teile brauchbar sind. */
+function provenanceOf(value: unknown): Provenance | undefined {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const record = value as Record<string, unknown>;
+  const at = asDate(record['at']);
+  const by = record['by'];
+  if (at === null || typeof by !== 'string' || !PROVENANCE_BY.includes(by)) return undefined;
+  return { at, by: by as ProvenanceOrigin };
 }
 
 function scopeOf(doc: IndexedDoc): Scope {
@@ -153,6 +173,11 @@ export function deriveProjects(
       lastTouchSource = external.source;
     }
     const ageDays = ageInDays(lastTouch, now);
+    const statusSet = provenanceOf(doc.frontmatter['status_set']);
+    const nextStepSet = provenanceOf(doc.frontmatter['next_step_set']);
+    const nextStepStale =
+      nextStepSet !== undefined &&
+      (daysBetween(nextStepSet.at, isoDay(new Date(lastTouch))) ?? 0) > 0;
 
     projects.push({
       path: doc.path,
@@ -163,6 +188,9 @@ export function deriveProjects(
       priority: priorityOf(doc.frontmatter['priority']),
       deadline: asDate(doc.frontmatter['deadline']),
       nextStep: asText(doc.frontmatter['next_step']),
+      statusSet,
+      nextStepSet,
+      nextStepStale,
       waitingOn: waitingOnOf(doc.frontmatter['waiting_on']),
       tags: doc.tags,
       modules: asStringList(doc.frontmatter['modules']),

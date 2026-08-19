@@ -144,6 +144,75 @@ describe('deriveProjects: externalTouches', () => {
   });
 });
 
+describe('deriveProjects: status_set/next_step_set', () => {
+  it('ohne Frontmatter-Eintraege bleiben statusSet/nextStepSet undefined und nextStepStale false', () => {
+    const [project] = derive();
+    expect(project?.statusSet).toBeUndefined();
+    expect(project?.nextStepSet).toBeUndefined();
+    expect(project?.nextStepStale).toBe(false);
+  });
+
+  it('next_step_set am oder nach lastTouch ist frisch', () => {
+    // lastTouch ist die juengste Datei im Ordner: 2026-08-05T10:00:00.000Z (NOTE).
+    const [project] = derive([
+      projectDoc({ next_step_set: { at: '2026-08-05', by: 'user' } }),
+      NOTE,
+    ]);
+    expect(project?.nextStepSet).toEqual({ at: '2026-08-05', by: 'user' });
+    expect(project?.nextStepStale).toBe(false);
+  });
+
+  it('next_step_set vor lastTouch (Dateiaenderung) ist veraltet', () => {
+    const [project] = derive([
+      projectDoc({ next_step_set: { at: '2026-08-01', by: 'suggestion' } }),
+      NOTE,
+    ]);
+    // lastTouch bleibt die Dateiaenderung der NOTE (2026-08-05), next_step_set liegt davor.
+    expect(project?.lastTouchSource).toBe('file');
+    expect(project?.nextStepStale).toBe(true);
+  });
+
+  it('next_step_set vor einer externen Spur (Claude-Session) ist veraltet', () => {
+    const touch: Map<string, ExternalTouch> = new Map([
+      ['nyota-auth0-migration', { at: '2026-08-09T12:00:00.000Z', source: 'claude-session' }],
+    ]);
+    const [project] = derive(
+      [projectDoc({ next_step_set: { at: '2026-08-01', by: 'filing' } }), NOTE],
+      { externalTouches: touch },
+    );
+    expect(project?.lastTouchSource).toBe('claude-session');
+    expect(project?.nextStepStale).toBe(true);
+  });
+
+  it('ein unbekannter `by`-Wert verwirft die ganze Map, statt sie halb zu vertrauen', () => {
+    const [project] = derive([
+      projectDoc({ status_set: { at: '2026-08-01', by: 'robot' } }),
+      NOTE,
+    ]);
+    expect(project?.statusSet).toBeUndefined();
+  });
+
+  /* `deriveProjects` liest nur `docs`/`todos`/`options` — kein verstecktes Gedaechtnis.
+     Das Loeschen und Neuaufbauen von `.secondbrain/index/` ruft also nur denselben
+     Code mit denselben Dateien noch einmal auf; ein zweiter Aufruf mit identischen
+     Eingaben muss deshalb Zeichen fuer Zeichen dasselbe liefern. */
+  it('liefert bei erneutem Aufruf mit denselben Eingaben dieselbe Herkunft (Index-Neuaufbau)', () => {
+    const docs = [
+      projectDoc({
+        status_set: { at: '2026-08-01', by: 'suggestion' },
+        next_step_set: { at: '2026-08-01', by: 'filing' },
+      }),
+      NOTE,
+    ];
+    const first = derive(docs);
+    const second = derive(docs);
+
+    expect(second).toEqual(first);
+    expect(first[0]?.statusSet).toEqual({ at: '2026-08-01', by: 'suggestion' });
+    expect(first[0]?.nextStepSet).toEqual({ at: '2026-08-01', by: 'filing' });
+  });
+});
+
 describe('projectExcerpt', () => {
   it('nimmt den ersten Absatz, wenn es keinen Abschnitt „Stand" gibt', () => {
     const body = ['Der Keller ist ausgeräumt.', '', '## Todos', '', '- [ ] messen'].join('\n');
