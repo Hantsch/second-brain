@@ -50,12 +50,12 @@ accepted by the user on 2026-08-19.
 
 Sprints:
 
-- [sprints/S01/sprint.md](sprints/S01/sprint.md) — the rail becomes places (002, 007, 008),
+- [sprints/done/S01/sprint.md](sprints/done/S01/sprint.md) — the rail becomes places (002,
+  007, 008), `done` — accepted
+  ([review](sprints/done/S01/review.md) · [testplan](sprints/done/S01/testplan.md))
+- [sprints/done/S02/sprint.md](sprints/done/S02/sprint.md) — notes get a home (005, 006),
   `done` — accepted
-  ([review](sprints/S01/review.md) · [testplan](sprints/S01/testplan.md))
-- [sprints/S02/sprint.md](sprints/S02/sprint.md) — notes get a home (005, 006), `done` —
-  accepted
-  ([review](sprints/S02/review.md) · [testplan](sprints/S02/testplan.md))
+  ([review](sprints/done/S02/review.md) · [testplan](sprints/done/S02/testplan.md))
 
 The rail now stands at its final seven entries: Dashboard, Projects, Journal, Knowledge, Notes,
 Maintenance, Settings — digits 1–7, system entries separated at the foot. Sources sits under
@@ -82,20 +82,21 @@ Gaps/notes:
   [sprints/S01/testplan.md](sprints/S01/testplan.md),
   [sprints/S02/testplan.md](sprints/S02/testplan.md).
 
-### M2 — Projects answer where I left off — built, acceptance pending
+### M2 — Projects answer where I left off — accepted
 
 Stories 003 (notes and waiting-on, editable in place), 004 (where the status and next step come
 from), 013 (favourite projects and an order that matches how I work). No concept behind them;
 the stories are detailed enough to cut from directly.
 
 Depended on M1: story 008 moved a Sessions tab into this same screen, so M1 went first to avoid
-touching the project detail twice. M1 is accepted; M2 is built, pending the user's live
-acceptance via [sprints/S03/testplan.md](sprints/S03/testplan.md).
+touching the project detail twice. M1 is accepted; M2's target picture is fully built and
+accepted by the user on 2026-08-19, [sprints/done/S03/testplan.md](sprints/done/S03/testplan.md)
+walked end to end.
 
 Sprints:
 
-- [sprints/S03/sprint.md](sprints/S03/sprint.md) — where I left off (003, 004, 013), `done`
-  ([review](sprints/S03/review.md) · [testplan](sprints/S03/testplan.md))
+- [sprints/done/S03/sprint.md](sprints/done/S03/sprint.md) — where I left off (003, 004, 013),
+  `done` ([review](sprints/done/S03/review.md) · [testplan](sprints/done/S03/testplan.md))
 
 Gaps/notes:
 
@@ -126,6 +127,11 @@ Independent of everything else — [systems/navigation.md](systems/navigation.md
 leaves the journal untouched, so this milestone can be pulled forward at any point without
 rework.
 
+Sprints:
+
+- [sprints/S04/sprint.md](sprints/S04/sprint.md) — the journal becomes one thing (011, 012,
+  009, 010), `planned`
+
 ### M4 — A finding can be acted on — planned
 
 Stories 014 (the run reports findings, not results), 017 (a finding says how it ends), 016
@@ -136,8 +142,8 @@ Note: 015, 016 and 017 add new **write** paths into the vault (merging pages, in
 recording a verdict). The AI-proposes/human-confirms guardrail and the hash-guarded write are
 the load-bearing part of this milestone, not the screens.
 
-M2 was chosen next at the 2026-08-19 `/ai-scrum:roadmap plan`, now that M1 is accepted. The
-order of M3 / M4 after it is still open.
+M3 was chosen next at the 2026-08-19 `/ai-scrum:roadmap plan`, now that M2 is accepted. M4
+follows after M3.
 
 ---
 
