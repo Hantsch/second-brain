@@ -17,6 +17,7 @@ import type { DocLanguage } from '@shared/types';
 import { SECTION_DAY, SECTION_FACTS } from '@core/capture';
 import { fold } from '@core/index/text';
 import { findSections } from '@core/vault/sections';
+import { assistantBlockSpans } from './dialog';
 
 /** An ATX heading, as `core/vault/sections` recognizes it. */
 const HEADING = /^ {0,3}#{1,6}\s/;
@@ -77,22 +78,24 @@ export function sectionText(body: string, kind: JournalSectionKind): string {
 }
 
 /**
- * What the human themself wrote about the day — the basis of every
- * extraction and every prompt.
+ * Everything that isn't "Conversation"/"Facts" or a heading line — the raw
+ * material both `dayText` (below) and the day's *edit* surface
+ * (`main/ipc/journal-day.ts#toView`'s no-heading fallback) start from.
  *
- * "Conversation" and "Facts" are removed: the conversation also contains the
- * coach's own sentences, and pulling a todo out of those would mean the app
- * suggesting things to itself. "Facts" has already been extracted — reading
- * it a second time would double every suggestion.
+ * "Conversation" and "Facts" are dropped: the conversation also contains the
+ * coach's own sentences, and "Facts" has already been extracted. Everything
+ * else stays — including an embedded answer blockquote — even in a body
+ * without any heading at all: a hand-written file is just as valid as one
+ * the app created.
  *
- * Everything else stays, even a body without any heading at all: a
- * hand-written file is just as valid as one the app created.
- *
- * The headings themselves are dropped. Otherwise a freshly created, still
- * empty day would be "## Tag" — text that looks like something and says
- * nothing.
+ * This is deliberately the *unfiltered* version: `dayText` below additionally
+ * strips answer blocks for reading (search, prompts, day close), but the
+ * editor that writes the "Day" section back (`withDayText`) must start from
+ * every byte that's actually there, or saving a heading-less day would
+ * silently delete an answer the app wrote — the exact silent loss CLAUDE.md
+ * rules out, just aimed at the app's own words instead of the human's.
  */
-export function dayText(body: string): string {
+export function rawDayText(body: string): string {
   const dropped = findSections(body, 2).filter(
     (range) => isSectionOf(range.heading, 'dialogue') || isSectionOf(range.heading, 'facts'),
   );
@@ -104,4 +107,32 @@ export function dayText(body: string): string {
     })
     .join('\n');
   return kept.trim();
+}
+
+/**
+ * What the human themself wrote about the day — the basis of every
+ * extraction and every prompt.
+ *
+ * Since 011, an app answer can also live *inside* "Day" itself, interleaved
+ * with the human's prose (`stream.ts`). Its blockquote is stripped out here
+ * too, for the same reason "Conversation" is dropped: the coach's own sentence
+ * must never come back as a todo the human supposedly wrote (see
+ * `close.test.ts`). The scan runs across the whole body rather than just the
+ * kept "Day" range — harmless where it overlaps an already-dropped section,
+ * correct where the answer sits in the content that's kept.
+ *
+ * This is a *read* view, meant for search/prompts/close-out — never for
+ * writing back. The edit surface uses `rawDayText` instead, which keeps the
+ * answer blocks, precisely so this function's stripping never becomes a
+ * deletion (see `rawDayText`'s doc comment).
+ */
+export function dayText(body: string): string {
+  const raw = rawDayText(body);
+  const rawLines = raw.split('\n');
+  const answers = assistantBlockSpans(rawLines, 0, rawLines.length);
+  if (answers.length === 0) return raw;
+  return rawLines
+    .filter((_line, at) => !answers.some((span) => at >= span.start && at < span.end))
+    .join('\n')
+    .trim();
 }

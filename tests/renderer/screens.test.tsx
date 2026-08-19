@@ -242,10 +242,17 @@ describe('Tagebuch', () => {
   it('zeigt Tagesliste, Tagestext und das Gespräch', async () => {
     await openScreen('#/journal', 'Tagebuch');
 
-    /* Der Tagestext steht rechts als Prosa und links als erste Worte der Zeile. */
+    /* Der Tagestext steht im Strom (`EntryStream`) und links als erste Worte
+       der Zeile in der Tagesliste. */
     expect((await screen.findAllByText(fx.journalDay.excerpt)).length).toBeGreaterThan(0);
-    expect(screen.getByText('Der Sprint fühlt sich unmöglich an.')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Sagen' })).toBeTruthy();
+    /* Die Attrappe legt dieselbe Runde doppelt an (siehe `mock-bridge.ts`):
+       einmal im Strom, einmal im alten Gespräch — seit 011/D9 rendert
+       `LegacyConversation` `turns` zusätzlich zum Strom, also erscheint der
+       Satz jetzt zweimal statt einmal. */
+    expect((await screen.findAllByText('Der Sprint fühlt sich unmöglich an.')).length).toBe(2);
+    /* Die Demo-Einstellungen (`mock-settings.ts`) stehen auf „Tipps" — dort
+       fragt der Knopf nach einem Modell, statt nur zu sagen (011, D8). */
+    expect(screen.getByRole('button', { name: 'Speichern und fragen' })).toBeTruthy();
     expect(screen.queryByText('Noch nicht gebaut')).toBeNull();
     /* Kein Leerzustand, solange etwas im Vault liegt. */
     expect(screen.queryByText('Noch kein Tageseintrag im Vault')).toBeNull();

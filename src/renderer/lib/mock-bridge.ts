@@ -107,6 +107,16 @@ const RESPONSES: MockResponses = {
     day: fx.journalDay,
     doc: { ...fx.doc, path: fx.journalDay.path },
     text: fx.journalDay.excerpt,
+    /* Same two rounds as `turns` below, in the shape the "Day" stream (011)
+       shows them in — an `entry` for my words, an `answer` for the app's. */
+    stream: [
+      { kind: 'entry', text: 'Der Sprint fühlt sich unmöglich an.', at: null },
+      {
+        kind: 'answer',
+        text: 'Zwei der drei offenen Punkte warten auf andere. Was heute an dir hing, ist fertig.',
+        at: '18:40',
+      },
+    ],
     turns: [
       { role: 'user', text: 'Der Sprint fühlt sich unmöglich an.', at: '18:40' },
       {
@@ -136,6 +146,7 @@ const RESPONSES: MockResponses = {
     heuristic: true,
   }),
   'journal:applyClose': () => ({ written: [fx.journalDay.path], undo: [] }),
+  'journal:foldDay': () => ({ ...writeResult, path: fx.journalDay.path }),
 
   'modules:list': () => [fx.knowledgeModule],
   'modules:create': ({ title, description }) => ({ ...fx.knowledgeModule, title, description }),

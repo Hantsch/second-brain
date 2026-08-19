@@ -105,6 +105,18 @@ export interface JournalTurn {
 }
 
 /**
+ * One block of the "Day" stream (011), the IPC-facing mirror of
+ * `JournalBlock` from `@core/journal`: my own prose (`entry`) or an app
+ * answer (`answer`), in write order. `at` is the answer's time, `null` for an
+ * `entry` block — the renderer never derives it itself.
+ */
+export interface JournalStreamBlock {
+  kind: 'entry' | 'answer';
+  text: string;
+  at: string | null;
+}
+
+/**
  * A journal day for display: the file plus its three sections, already
  * split apart. The renderer never parses markdown itself — otherwise there
  * would be a second version of the file format that drifts apart the moment
@@ -115,7 +127,9 @@ export interface JournalDayView {
   doc: VaultDoc;
   /** Prose of the "Day" section — what the human wrote themselves. */
   text: string;
-  /** Rounds of the "Conversation" section, oldest first. */
+  /** The "Day" section as a stream of blocks, in write order (011). */
+  stream: JournalStreamBlock[];
+  /** Rounds of the "Conversation" section, oldest first (legacy). */
   turns: JournalTurn[];
   /** The "Facts" section, verbatim as it is in the file. */
   facts: string;
@@ -356,6 +370,13 @@ export interface IpcRoutes {
     };
     res: { written: string[]; undo: WriteRequest[] };
   };
+  /**
+   * One-time migration (011, D5/D6): folds the legacy "Conversation" section
+   * into the "Day" stream and removes the heading. `expectedHash` guards the
+   * write exactly like `journal:setDay` — without it, the file's current hash
+   * is used, but the write is never unguarded.
+   */
+  'journal:foldDay': { req: { date: string; expectedHash?: string }; res: WriteResult };
 
   // ── Knowledge modules ────────────────────────────────────────────────────
   'modules:list': { req: void; res: KnowledgeModule[] };
@@ -616,6 +637,7 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'journal:abort',
   'journal:close',
   'journal:applyClose',
+  'journal:foldDay',
   'modules:list',
   'modules:create',
   'modules:pages',

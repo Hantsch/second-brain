@@ -116,7 +116,7 @@ const own = {
   'settings.behavior.coach.tips': 'Give tips',
   'settings.behavior.coach.tips.hint': 'Listen, then make concrete suggestions.',
   'settings.behavior.coach.analyze': 'Analyse',
-  'settings.behavior.coach.analyze.hint': 'Show patterns in the light of earlier entries.',
+  'settings.behavior.coach.analyze.hint': 'Help understand and support, with real entries.',
   'settings.behavior.coach.where':
     'This is the default. In the journal the attitude switches per round with Ctrl+1 to Ctrl+3.',
   'settings.behavior.gardener': 'Care',

@@ -36,7 +36,7 @@ Three kinds of thing are currently in one list:
 | **System** | A chore. Rarely, deliberately.              | Maintenance, Settings               |
 
 The rule that follows: **only places get a rail entry.** Actions get a hotkey and a
-visible button in the shell, because you want them *out of* a context — ask inside a
+visible button in the shell, because you want them _out of_ a context — ask inside a
 project, ask inside a module. System entries sit at the foot of the rail, visually
 separated from the places.
 
@@ -44,13 +44,13 @@ separated from the places.
 
 Places, top of the rail:
 
-| Key | Entry     | Contains                                                            |
-| --- | --------- | ------------------------------------------------------------------- |
-| 1   | Today     | Dashboard tiles, plus an "unfiled" strip when something is waiting   |
-| 2   | Projects  | Overview · Todos · Sessions · Project knowledge                     |
-| 3   | Journal   | Daily entries and the coach, unchanged                              |
-| 4   | Knowledge | Modules · Sources · Graph                                           |
-| 5   | Notes     | The `areas/` — plus the "unfiled" filter that used to be the inbox   |
+| Key | Entry     | Contains                                                           |
+| --- | --------- | ------------------------------------------------------------------ |
+| 1   | Today     | Dashboard tiles, plus an "unfiled" strip when something is waiting |
+| 2   | Projects  | Overview · Todos · Sessions · Project knowledge                    |
+| 3   | Journal   | Daily entries and the coach, unchanged                             |
+| 4   | Knowledge | Modules · Sources · Graph                                          |
+| 5   | Notes     | The `areas/` — plus the "unfiled" filter that used to be the inbox |
 
 Foot of the rail: **Maintenance**, **Settings**.
 
@@ -98,5 +98,8 @@ global capture window stays exactly as it is — it is already the better path.
   Needs its own concept: what gets condensed, when, from what, and how the human
   confirms it.
 - **The dashboard tile system** stays as it is. Only the "unfiled" strip is added.
-- **Journal** is untouched. Notes and the journal stay separate: dated day entries
-  with a coach on one side, undated thoughts on the other.
+- ~~**Journal** is untouched.~~ Its place in the rail is unchanged: notes and the
+  journal stay separate, dated day entries with a coach on one side, undated
+  thoughts on the other. Its _inner_ structure is not untouched —
+  [superseded by story 011](../requirements/011-journal-one-entry-not-two.md),
+  which replaced the Day/Conversation tab split with one continuous stream.

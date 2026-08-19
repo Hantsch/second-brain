@@ -5,8 +5,8 @@
  * - Der eigene Satz steht in der Datei, **bevor** ein Modell gefragt wird — auch
  *   wenn der Stream danach mit einem Fehler endet oder abgebrochen wird.
  * - Ohne Route wird der Eintrag geschrieben und **keine Antwort erfunden**.
- * - Ein Haltungswechsel wirkt auf den nächsten Aufruf (die Verbote von „Zuhören"
- *   stehen nur dann im Prompt).
+ * - Ein Haltungswechsel wirkt auf den nächsten Aufruf (der Auftrag von „Tipps"
+ *   steht nur dann im Prompt).
  * - Der Editor des Tagestextes schreibt mit dem eingefrorenen Hash: ein veralteter
  *   Hash bekommt `conflict`, und das Gespräch bleibt unangetastet.
  * - Der Tagesabschluss schreibt nichts; erst `journal:applyClose` schreibt, und
@@ -17,8 +17,8 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { parseStream } from '@core/journal';
 import type { IpcChannel, IpcEvents, IpcRequest, IpcResponse } from '@shared/ipc';
-import { LISTEN_FORBIDDEN } from '@core/llm/prompts';
 import { createFetchFake, sseChunks, sseResponse } from '../fakes/llm';
 import type { FetchResponder } from '../fakes/llm';
 import { createTempVault } from '../helpers/vault';
@@ -142,9 +142,12 @@ describe('Tagebuch-Kanäle im Main', () => {
     );
   }
 
+  /* Vorgabe „Tipps": seit 011 ist `listen` die Haltung, die **kein** Modell fragt
+     (sie geht über `journal:append`), taugt also nicht als Vorgabe für die Wege,
+     die hier geprüft werden — Stream, Abbruch, Ausfall. */
   const coach = (patch: Partial<IpcRequest<'journal:coach'>> = {}) =>
     harness.call('journal:coach', {
-      mode: 'listen',
+      mode: 'tips',
       date: DATE,
       message: 'Der Sprint fühlt sich unmöglich an.',
       useHistory: true,
@@ -165,6 +168,18 @@ describe('Tagebuch-Kanäle im Main', () => {
     expect(view?.turns[0]?.text).toBe('Der Sprint fühlt sich unmöglich an.');
     expect(view?.facts).toContain('- [ ] Doppelten Interceptor');
     expect(view?.doc.hash.length).toBeGreaterThan(10);
+    /* Der Strom (011) kommt aus derselben Kernfunktion, die der Renderer sonst
+       selbst aufrufen würde — hier gegen sie gegengeprüft, statt ihre Logik im
+       Test zu wiederholen. Der Alt-Abschnitt „Gespräch" zählt für `parseStream`
+       nicht mit, „Tag" liefert nur die eine Prosa-Zeile als `entry`. */
+    const expected = parseStream(view!.doc.body).map((block) => ({
+      kind: block.kind,
+      text: block.text,
+      at: block.kind === 'answer' ? block.at : null,
+    }));
+    expect(view?.stream).toEqual(expected);
+    expect(view?.stream).toHaveLength(1);
+    expect(view?.stream[0]).toMatchObject({ kind: 'entry', at: null });
   });
 
   it('meldet einen Tag ohne Datei als null, statt einen leeren zu erfinden', async () => {
@@ -189,12 +204,16 @@ describe('Tagebuch-Kanäle im Main', () => {
     expect(threadId).toBe(`journal-${DATE}`);
 
     const file = (await vault.read(DAY_PATH)) ?? '';
-    expect(file).toContain('> Der Sprint fühlt sich unmöglich an.');
+    /* Meine Worte als Prosa, die Antwort als Antwortblock darunter (011) — und
+       meine Worte stehen nirgends als Zitat. */
+    expect(file).toContain('\nDer Sprint fühlt sich unmöglich an.\n');
     expect(file).toContain(`> ${REPLY}`);
-    /* Genau zwei neue Runden, keine doppelte Protokollierung. */
-    expect(file.split('> **Ich**')).toHaveLength(3);
+    expect(file.split('> **Ich**')).toHaveLength(2);
+    /* Genau eine neue Antwort neben der einen aus dem Bestand. */
+    expect(file.split('> **Second Brain**')).toHaveLength(3);
+    /* Der Alt-Abschnitt „Gespräch" bleibt unangetastet, mit seinen zwei Runden. */
     const view = await harness.call('journal:get', { date: DATE });
-    expect(view?.turns).toHaveLength(4);
+    expect(view?.turns).toHaveLength(2);
     /* Der Renderer erfährt davon über das Ereignis, nicht über Polling. */
     expect(harness.changed.some((event) => event.paths.includes(DAY_PATH))).toBe(true);
   });
@@ -208,7 +227,7 @@ describe('Tagebuch-Kanäle im Main', () => {
     /* Der Ausfall ist ein Zustand mit Grund, kein Absturz. */
     expect(done.error).toBe('unreachable');
     const file = (await vault.read(DAY_PATH)) ?? '';
-    expect(file).toContain('> Heute war zu viel.');
+    expect(file).toContain('\nHeute war zu viel.\n');
     /* Keine erfundene Antwort darunter: die eine Runde des Beispielbestands
        bleibt die einzige Antwort in der Datei. */
     expect(file.split('Second Brain')).toHaveLength(2);
@@ -232,7 +251,7 @@ describe('Tagebuch-Kanäle im Main', () => {
 
     expect(done.error).toBe('cancelled');
     const file = (await vault.read(DAY_PATH)) ?? '';
-    expect(file).toContain('> Ich mag heute nicht mehr.');
+    expect(file).toContain('\nIch mag heute nicht mehr.\n');
     expect(file.split('Second Brain')).toHaveLength(2);
   });
 
@@ -244,23 +263,22 @@ describe('Tagebuch-Kanäle im Main', () => {
 
     const file = (await vault.read('journal/2026/08/2026-08-07.md')) ?? '';
     expect(file).toContain('type: journal');
-    expect(file).toContain('> Nachtrag zu Freitag.');
+    expect(file).toContain('\nNachtrag zu Freitag.\n');
   });
 
   it('wechselt mit der Haltung den Auftrag des nächsten Aufrufs', async () => {
     const fake = await routeTo(streamed(REPLY));
 
-    await waitForDone((await coach({ mode: 'listen' })).messageId);
     await waitForDone((await coach({ mode: 'tips' })).messageId);
+    await waitForDone((await coach({ mode: 'analyze' })).messageId);
 
     const systemOf = (index: number): string => {
       const body = fake.calls[index]?.body as { messages?: { role: string; content: string }[] };
       return (body.messages ?? []).find((turn) => turn.role === 'system')?.content ?? '';
     };
-    const forbidden = LISTEN_FORBIDDEN[0] ?? 'hast du schon versucht';
-    expect(systemOf(0)).toContain(forbidden);
-    expect(systemOf(1)).not.toContain(forbidden);
-    expect(systemOf(1)).toContain('höchstens drei Vorschläge');
+    expect(systemOf(0)).toContain('höchstens drei Vorschläge');
+    expect(systemOf(1)).not.toContain('höchstens drei Vorschläge');
+    expect(systemOf(1)).toContain('Datum des Eintrags');
   });
 
   it('weist Runde ohne Text, unmögliches Datum und unbekannte Haltung ab', async () => {
@@ -285,7 +303,7 @@ describe('Tagebuch-Kanäle im Main', () => {
     /* Der Grund kommt als Code — formuliert wird im Renderer. */
     expect(done.error).toBe('no-route');
     const file = (await vault.read(DAY_PATH)) ?? '';
-    expect(file).toContain('> Niemand da, der antwortet?');
+    expect(file).toContain('\nNiemand da, der antwortet?\n');
     expect(file.split('Second Brain')).toHaveLength(2);
   });
 
@@ -336,13 +354,62 @@ describe('Tagebuch-Kanäle im Main', () => {
     expect(result.path).toBe('journal/2026/08/2026-08-08.md');
     const file = (await vault.read(result.path)) ?? '';
     expect(file.indexOf('Werkstatt')).toBeGreaterThan(file.indexOf('## Tag'));
-    expect(file.indexOf('Werkstatt')).toBeLessThan(file.indexOf('## Gespräch'));
+    /* Ein frischer Tag hat seit 011 nur „Tag" und „Fakten" — die Prosa steht
+       unter „Tag", also vor „Fakten". */
+    expect(file.indexOf('Werkstatt')).toBeLessThan(file.indexOf('## Fakten'));
 
     const second = await harness.call('journal:append', {
       date: '2026-08-08',
       text: 'Und die Säge geschärft.',
     });
     expect(second.created).toBe(false);
+  });
+
+  it('verliert beim Speichern keine eingebettete Antwort, wenn die Datei keine Tag-Überschrift hat', async () => {
+    /* Ein von Hand geschriebener Tag ohne "## Tag" — z. B. weil jemand die
+       Überschrift versehentlich gelöscht hat. `dayText()` (die Lesefassung für
+       Suche/Prompts/Tagesabschluss) streicht eingebettete Antwortblöcke
+       absichtlich; die Editier-Oberfläche darf das nicht tun, sonst würde
+       Speichern die Antwort der App unbemerkt löschen. */
+    const path = 'journal/2026/08/2026-08-13.md';
+    const answer = '> **Second Brain** — 09:00\n> Eine Antwort der App.';
+    await vault.write(
+      path,
+      [
+        '---',
+        'type: journal',
+        "title: 'Donnerstag, 13. August 2026'",
+        'date: 2026-08-13',
+        'tags: []',
+        '---',
+        '',
+        'Prosa ohne Überschrift.',
+        '',
+        answer,
+        '',
+      ].join('\n'),
+    );
+
+    const opened = await harness.call('journal:get', { date: '2026-08-13' });
+    expect(opened?.text).toContain('Prosa ohne Überschrift.');
+    expect(opened?.text).toContain('Eine Antwort der App.');
+
+    /* Speichern mit unverändertem Text muss die Datei byte-identisch lassen —
+       insbesondere darf die Antwort nicht verschwinden. */
+    await harness.call('journal:setDay', {
+      date: '2026-08-13',
+      text: opened?.text ?? '',
+      expectedHash: opened?.doc.hash,
+    });
+
+    const file = (await vault.read(path)) ?? '';
+    expect(file).toContain('Eine Antwort der App.');
+    expect(
+      parseStream((await harness.call('journal:get', { date: '2026-08-13' }))?.doc.body ?? ''),
+    ).toEqual([
+      { kind: 'entry', text: 'Prosa ohne Überschrift.', line: expect.any(Number) },
+      { kind: 'answer', text: 'Eine Antwort der App.', at: '09:00', line: expect.any(Number) },
+    ]);
   });
 
   it('ersetzt beim Speichern nur den Tagestext — das Gespräch bleibt stehen', async () => {
@@ -401,7 +468,8 @@ describe('Tagebuch-Kanäle im Main', () => {
 
     expect(day.mood).toBe(4);
     expect(day.energy).toBe(3);
-    expect((await vault.read('journal/2026/08/2026-08-06.md')) ?? '').toContain('## Gespräch');
+    /* Angelegt mit dem Rumpf eines frischen Tages (011: „Tag" und „Fakten"). */
+    expect((await vault.read('journal/2026/08/2026-08-06.md')) ?? '').toContain('## Tag');
   });
 
   // ── Tagesabschluss ─────────────────────────────────────────────────────────
@@ -550,6 +618,82 @@ describe('Tagebuch-Kanäle im Main', () => {
     expect(await vault.exists('journal/2026/08/2026-08-05.md')).toBe(false);
   });
 
+  // ── Migration: Gespräch → Strom (011, D6) ───────────────────────────────────
+
+  it('faltet den Alt-Abschnitt „Gespräch" in den Strom und entfernt die Überschrift', async () => {
+    const before = await harness.call('journal:get', { date: DATE });
+
+    const result = await harness.call('journal:foldDay', {
+      date: DATE,
+      expectedHash: before?.doc.hash,
+    });
+
+    const file = (await vault.read(DAY_PATH)) ?? '';
+    expect(file).not.toContain('## Gespräch');
+    expect(result.hash).not.toBe(before?.doc.hash);
+
+    const after = await harness.call('journal:get', { date: DATE });
+    /* Die Prosa aus „Tag" und meine gefaltete Runde bilden zusammen einen
+       Prosa-Lauf (nichts trennt sie), die Antwort der App folgt als eigener
+       Antwortblock. */
+    expect(after?.stream.map((block) => block.kind)).toEqual(['entry', 'answer']);
+    expect(after?.stream[0]?.text).toContain('Vormittag im Testsystem');
+    expect(after?.stream[0]?.text).toContain('Der Sprint fühlt sich unmöglich an.');
+    expect(after?.stream[1]).toMatchObject({
+      kind: 'answer',
+      at: '18:40',
+      text: 'Zwei der drei offenen Punkte warten auf andere. Was heute an dir hing, ist fertig.',
+    });
+    /* Der Alt-Leser findet danach nichts mehr — der Abschnitt, aus dem er
+       liest, ist weg. */
+    expect(after?.turns).toEqual([]);
+  });
+
+  it('lässt einen Tag ohne Gespräch-Abschnitt unangetastet', async () => {
+    /* `foldLegacyDay` ist eine Durchreiche ohne Konversationsabschnitt (siehe
+       `core/journal/legacy.ts`) — hier gegen die Datei geprüft, nicht nur
+       gegen die reine Funktion. */
+    const path = 'journal/2026/08/2026-08-08.md';
+    await harness.call('journal:append', { date: '2026-08-08', text: 'Nur Prosa, kein Gespräch.' });
+    const before = (await vault.read(path)) ?? '';
+
+    await harness.call('journal:foldDay', { date: '2026-08-08' });
+
+    expect(await vault.read(path)).toBe(before);
+  });
+
+  it('legt für einen Fold ohne Datei den Tag an, statt ins Leere zu klicken', async () => {
+    /* Wie `journal:setDay`/`journal:setMood`: ein fehlender Tag ist kein
+       Fehler, er entsteht über `ensureDay`. Ein frischer Tag hat kein
+       „Gespräch" (011), also ist das Falten hier ein reiner Leerlauf — der
+       Tag existiert danach trotzdem, mit „Tag" und „Fakten". */
+    const path = 'journal/2026/08/2026-08-06.md';
+    expect(await vault.exists(path)).toBe(false);
+
+    const result = await harness.call('journal:foldDay', { date: '2026-08-06' });
+
+    expect(result.path).toBe(path);
+    const file = (await vault.read(path)) ?? '';
+    expect(file).toContain('## Tag');
+    expect(file).toContain('## Fakten');
+  });
+
+  it('lehnt das Falten mit veraltetem Hash ab, statt das Gespräch zu überschreiben', async () => {
+    const opened = await harness.call('journal:get', { date: DATE });
+    /* Jemand editiert die Datei von außen, während der Vorschlag offen ist. */
+    const raw = (await vault.read(DAY_PATH)) ?? '';
+    await vault.write(DAY_PATH, raw.replace('Vormittag', 'Vormittag (extern geändert)'));
+
+    await expect(
+      harness.call('journal:foldDay', { date: DATE, expectedHash: opened?.doc.hash }),
+    ).rejects.toMatchObject({ code: 'conflict' });
+
+    /* Nichts überschrieben: weder die fremde Änderung noch der Alt-Abschnitt. */
+    const file = (await vault.read(DAY_PATH)) ?? '';
+    expect(file).toContain('extern geändert');
+    expect(file).toContain('## Gespräch');
+  });
+
   // ── Ohne Vault ─────────────────────────────────────────────────────────────
 
   it('verlangt einen offenen Vault', async () => {
@@ -560,6 +704,9 @@ describe('Tagebuch-Kanäle im Main', () => {
     });
     await expect(coach()).rejects.toMatchObject({ code: 'no-vault' });
     await expect(harness.call('journal:close', { date: DATE })).rejects.toMatchObject({
+      code: 'no-vault',
+    });
+    await expect(harness.call('journal:foldDay', { date: DATE })).rejects.toMatchObject({
       code: 'no-vault',
     });
   });

@@ -1,10 +1,14 @@
-/* Tageseinträge aus den indizierten Dokumenten. Der Dialog wird gezählt, nicht
-   gedeutet: zwei Sprecherzeilen sind eine Runde. */
+/* Tageseinträge aus den indizierten Dokumenten. Gezählt werden die Antworten
+   der App, nicht Sprecherzeilen insgesamt — im Strom unter „Tag" (011) genauso
+   wie im alten „Gespräch"-Abschnitt. */
 
 import { describe, expect, it } from 'vitest';
+import { formatAnswer } from '@core/journal';
 import { countTurns, deriveJournalDays, toJournalDay } from '@core/index/journal';
 import { makeDoc } from './fixtures';
 
+/* Legacy format (pre-011): "Tag" carries only prose, the dialogue lives in
+   its own "Gespräch" section. */
 const BODY = [
   '## Tag',
   '',
@@ -24,6 +28,42 @@ const BODY = [
   '## Fakten',
   '',
   '- [ ] Stefan wegen Rollenkonzept nachfassen @due:2026-08-12',
+  '',
+].join('\n');
+
+/* Current format (011): prose and app answers interleaved inside "Tag"
+   itself, in write order — no separate "Gespräch" section. */
+const STREAM_BODY = [
+  '## Tag',
+  '',
+  'Vormittag mit dem Rollenkonzept verbracht.',
+  '',
+  formatAnswer('Was davon ist heute wirklich fällig?', '09:10', 'de'),
+  '',
+  'Nachmittags Kundenportal.',
+  '',
+  formatAnswer('Und wie ist das Kundenportal gelaufen?', '15:30', 'de'),
+  '',
+  '## Fakten',
+  '',
+].join('\n');
+
+/* A hand-edited day: one app answer in the new stream, one more in a
+   left-over legacy "Gespräch" — both must be counted, not just one. */
+const MIXED_BODY = [
+  '## Tag',
+  '',
+  'Kurzer Eintrag.',
+  '',
+  formatAnswer('Magst du das genauer beschreiben?', '08:00', 'de'),
+  '',
+  '## Gespräch',
+  '',
+  '> **Ich** — 18:40',
+  '> Ein alter Absatz, von Hand ergänzt.',
+  '',
+  '> **Second Brain** — 18:41',
+  '> Eine alte Antwort.',
   '',
 ].join('\n');
 
@@ -57,15 +97,55 @@ describe('deriveJournalDays', () => {
     expect(day.projects).toEqual(['nyota-auth0-migration']);
   });
 
-  it('nimmt den ersten Absatz unter „Tag" als Auszug — nicht den Dialog', () => {
+  it('nimmt den ersten Absatz unter „Tag" als Auszug — nicht den Dialog (legacy)', () => {
     expect(toJournalDay(journalDoc()).excerpt).toContain('Rollenkonzept verbracht');
     expect(toJournalDay(journalDoc()).excerpt).not.toContain('Sprint');
   });
 
-  it('zählt eine angefangene Runde mit', () => {
-    /* Drei Sprecherzeilen: zwei Runden, die zweite noch unbeantwortet. */
-    expect(countTurns(BODY)).toBe(2);
+  it('nimmt den ersten Absatz unter „Tag" als Auszug — ohne die eingestreuten Antworten der App', () => {
+    const day = toJournalDay(
+      makeDoc({ path: 'journal/2026/08/2026-08-10.md', docType: 'journal', body: STREAM_BODY }),
+    );
+    expect(day.excerpt).toContain('Rollenkonzept verbracht');
+    expect(day.excerpt).not.toContain('fällig');
+    expect(day.excerpt).not.toContain('Kundenportal gelaufen');
+  });
+
+  it('zählt die Antworten der App im Gespräch (legacy) — nur ihre Zeilen, nicht meine', () => {
+    /* Drei Sprecherzeilen, davon nur eine von "Second Brain". */
+    expect(countTurns(BODY)).toBe(1);
     expect(countTurns('## Tag\n\nOhne Gespräch.\n')).toBe(0);
+  });
+
+  it('zählt die Antworten der App im Strom unter „Tag" (011)', () => {
+    /* Zwei eingestreute Antwortblöcke. */
+    expect(countTurns(STREAM_BODY)).toBe(2);
+  });
+
+  it('zählt Antworten aus Strom und Gespräch zusammen, statt sich gegenseitig zu verdrängen', () => {
+    /* Handeditierter Tag: eine Antwort im Strom, eine weitere im alten Abschnitt. */
+    expect(countTurns(MIXED_BODY)).toBe(2);
+  });
+
+  it('zählt eine bis zu 3 Leerzeichen eingerückte Antwort genauso wie `parseStream` sie liest', () => {
+    /* `dialog.ts#SPEAKER_LINE`/`assistantBlockSpans` tolerieren bis zu 3
+       führende Leerzeichen vor dem Blockzitat (CommonMark). Diese Datei
+       spiegelt die Erkennung lokal (siehe Kommentar bei `ASSISTANT_LABELS`) —
+       eine engere Regex hier würde dieselbe Antwort abweichend zählen. */
+    const indented = [
+      '## Tag',
+      '',
+      'Kurzer Eintrag.',
+      '',
+      '  > **Second Brain** — 09:10',
+      '  > Eingerückt, aber gültig.',
+      '',
+    ].join('\n');
+    expect(countTurns(indented)).toBe(1);
+    const day = toJournalDay(
+      makeDoc({ path: 'journal/2026/08/2026-08-10.md', docType: 'journal', body: indented }),
+    );
+    expect(day.excerpt).not.toContain('Eingerückt');
   });
 
   it('fällt für das Datum auf den Dateinamen zurück', () => {

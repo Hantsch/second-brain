@@ -1,7 +1,7 @@
 ---
 sprint: S04
-status: planned # planned | in-progress | done
-branch: # set by /sprint
+status: in-progress # planned | in-progress | done
+branch: sprint/S04
 milestone: M3 — The journal becomes one thing
 ---
 

@@ -98,6 +98,11 @@ describe('parseDialog', () => {
     );
     expect(parseDialog(body)[0]?.role).toBe('user');
   });
+
+  /* 011 (D2): neue Tage legen "## Conversation"/"## Gespräch" nicht mehr an,
+     aber ein Tag, der ihn schon hat — ein legacy Tag — muss weiter lesbar
+     bleiben. Der Test oben deckt das bereits ab: die exakte englische
+     Ueberschrift "## Conversation" wird nach wie vor erkannt. */
 });
 
 describe('appendTurn', () => {

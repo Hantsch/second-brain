@@ -1,10 +1,16 @@
 /* 14 Tageseinträge über die letzten drei Wochen — mit Lücken, weil niemand
-   jeden Tag schreibt. Zwei Tage tragen einen Coaching-Dialog, einer ist der
-   stressige Tag, an dem alles zusammenkommt.
+   jeden Tag schreibt. Zwei Tage tragen einen Coaching-Dialog: der stressige
+   Tag (offset -2) bleibt bewusst im alten, nicht mehr geschriebenen, aber
+   weiter lesbaren `## Gespräch`-Format (Legacy, 011) — genau er zeigt im
+   Screenshot am klarsten ein Gespräch, das sichtbar getrennt von der
+   Tagesprosa steht, und damit auch die "Gespräch in den Eintrag holen"-
+   Aktion. Der andere (offset -9) webt denselben Dialog direkt in `## Tag`
+   ein, im neuen, verschachtelten Stream-Format.
 
-   Aufbau nach docs/VAULT-FORMAT.md: `## Tag`, optional `## Gespräch`,
-   optional `## Fakten`. Personen sind erfunden, Projekte sind dieselben Slugs
-   wie unter `projects/`. */
+   Aufbau nach docs/VAULT-FORMAT.md: `## Tag` (mit optional eingewobenen
+   Antwort-Blöcken), optional die Legacy-Überschrift `## Gespräch`, optional
+   `## Fakten`. Personen sind erfunden, Projekte sind dieselben Slugs wie
+   unter `projects/`. */
 
 import { countTodos } from './projects.mjs';
 
@@ -54,6 +60,10 @@ Belege für Svenja auch noch liegen.
 
 Drei Baustellen, an keiner bin ich weitergekommen. Um 20 Uhr habe ich aufgehört und
 eine Liste gemacht, statt weiter zwischen den Fenstern zu springen.`,
+      /* Bleibt im alten `## Gespräch`-Format (011): der einzige seeded Tag,
+         der noch zeigt, wie ein Legacy-Tag aussieht und wie sich "Gespräch in
+         den Eintrag holen" verhält. */
+      legacyDialogue: true,
       dialogue: [
         {
           who: 'ich',
@@ -249,6 +259,8 @@ diesen Monat aus; das ist keine Niederlage, sondern eine Entscheidung. Lektion 7
   ];
 }
 
+/* Legacy-Rendering (weiter gelesen, nicht mehr geschrieben): jede Runde als
+   eigener Blockquote unter der eigenen Überschrift `## Gespräch`. */
 function dialogueBlock(entry) {
   const lines = [];
   for (const turn of entry.dialogue) {
@@ -263,12 +275,45 @@ function dialogueBlock(entry) {
   return lines.join('\n');
 }
 
+/* Neues Stream-Format (011): dieselben Runden, aber direkt in `## Tag`
+   eingewoben statt in einer eigenen `## Gespräch`-Sektion — eine `ich`-Runde
+   wird ein zusätzlicher Prosa-Absatz (kein Blockquote, kein Sprecher-Label,
+   genau wie meine eigenen Worte im neuen Format aussehen,
+   src/core/journal/stream.ts), eine `brain`-Runde derselbe Blockquote-Block,
+   den `formatTurn`/`formatAnswer` erzeugen. Absichtlich eine eigene Funktion
+   statt eine Erweiterung von `dialogueBlock`: die beiden Sektionen haben
+   unterschiedliche Form, kein gemeinsamer Code macht das klarer. */
+function streamBlock(entry) {
+  const lines = [];
+  for (const turn of entry.dialogue) {
+    if (turn.who === 'ich') {
+      lines.push(turn.text.trim(), '');
+      continue;
+    }
+    const quoted = turn.text
+      .trim()
+      .split('\n')
+      .map((line) => (line.trim().length === 0 ? '>' : `> ${line.trimEnd()}`))
+      .join('\n');
+    lines.push(`> **Second Brain** — ${turn.time}`, quoted, '');
+  }
+  return lines.join('\n');
+}
+
 export function seedJournal(seeder, clock) {
   for (const entry of entries(clock)) {
     const date = clock.day(entry.offset);
     const parts = ['## Tag', '', entry.tag.trim(), ''];
     if (entry.dialogue) {
-      parts.push('## Gespräch', '', dialogueBlock(entry));
+      if (entry.legacyDialogue) {
+        parts.push('## Gespräch', '', dialogueBlock(entry));
+      } else {
+        parts.push(streamBlock(entry));
+      }
+      /* Ein Zähler für beide Formen: die Zusammenfassung
+         (scripts/seed-vault.mjs) meldet "Tage mit Coaching-Dialog" — das ist
+         unabhängig davon wahr, ob die Runden in einer eigenen `## Gespräch`-
+         Sektion oder eingewoben in `## Tag` stehen. */
       seeder.bump('journalDialogues');
     }
     if (entry.facts) {

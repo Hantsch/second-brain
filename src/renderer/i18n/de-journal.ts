@@ -3,9 +3,10 @@
 
    Two things here are text, not code:
 
-   - **The stances explain themselves.** Each carries a sentence in the coach's
-     first-person voice ("I mirror and ask follow-up questions, no advice") —
-     you need to know who you're talking to before you type.
+   - **The stances explain themselves.** Each carries a sentence naming what it
+     does before you press send ("Listen: filed as is, no answer" / "Tips: I
+     listen first, then at most three small steps") — you need to know what
+     happens next before you type, not after.
    - **The failure is a statement, not an apology.** Every reason from
      `LlmUnavailable.reason` has its own sentence, and each begins with what
      happened anyway: it was written down. */
@@ -19,7 +20,7 @@ export const deJournal = {
   'journal.words': '{count} Wörter',
   'journal.gap': '{count} Tage ohne Eintrag',
   'journal.gapOne': 'Ein Tag ohne Eintrag',
-  'journal.hasDialogue': 'Mit Gespräch',
+  'journal.hasDialogue': 'Mit Antwort der App',
   'journal.open': 'Eintrag vom {date} öffnen',
   'journal.keys': 'Pfeiltasten wechseln den Tag',
 
@@ -43,15 +44,9 @@ export const deJournal = {
   'journal.projects': 'Projekte',
   'journal.project.open': 'Projekt {title} öffnen',
   'journal.file.open': 'Datei im Editor öffnen',
-  /* Nur im engen Fenster sichtbar (`DayEntry.tsx`) — zwei Reiter statt zwei
-     Spalten, weil beides zusammen in eine Rollspalte nicht passt. */
-  'journal.tab.day': 'Tag',
-  'journal.tab.talk': 'Gespräch',
 
   // ── Abschnitt „Tag" ───────────────────────────────────────────────────────
   'journal.day.title': 'Tag',
-  'journal.day.ask': 'Wie war der Tag?',
-  'journal.day.askHint': 'Ein Absatz genügt. Ctrl+Enter speichert.',
   'journal.day.placeholder': 'Was ist passiert?',
   'journal.day.write': 'Tagestext schreiben',
   'journal.day.edit': 'Tagestext bearbeiten',
@@ -72,7 +67,10 @@ export const deJournal = {
   'journal.day.conflict.overwrite': 'Trotzdem speichern',
 
   // ── Conversation ───────────────────────────────────────────────────────────
-  'journal.dialogue.title': 'Gespräch',
+  /* Heißt bewusst nicht mehr „Gespräch" (011, D10): der Stream zeigt meist
+     nur meinen eigenen Text ohne jede Antwort — „Zuhören" fragt nie ein
+     Modell — und eine Überschrift, die Dialog verspricht, wäre dann falsch. */
+  'journal.dialogue.title': 'Verlauf',
   'journal.dialogue.empty': 'Was du hier schreibst, steht wörtlich im Tageseintrag — und nur dort.',
   'journal.turn.user': 'Ich',
   'journal.turn.assistant': 'Second Brain',
@@ -81,14 +79,17 @@ export const deJournal = {
   'journal.field.placeholder': 'Schreib es hin, wie es dir kommt.',
   'journal.field.hintSend': 'sagt es',
   'journal.send': 'Sagen',
+  /* Nur für Tipps/Analysieren (011, D8): die Haltung entscheidet, ob überhaupt
+     ein Modell gefragt wird, und der Knopf sagt es geradeheraus. */
+  'journal.sendAsk': 'Speichern und fragen',
   'journal.mode.label': 'Haltung',
   'journal.mode.listen': 'Zuhören',
   'journal.mode.tips': 'Tipps',
   'journal.mode.analyze': 'Analysieren',
-  'journal.mode.listen.hint': 'Zuhören: ich spiegle und frage nach, ohne Ratschläge.',
+  'journal.mode.listen.hint': 'Zuhören: wird abgelegt, ohne Antwort und ohne Rückfrage.',
   'journal.mode.tips.hint': 'Tipps: ich höre erst zu, dann höchstens drei kleine Schritte.',
   'journal.mode.analyze.hint':
-    'Analysieren: ich vergleiche mit früheren Tagen und zeige Muster, mit Datum.',
+    'Analysieren: ich helfe verstehen und stütze dich, anhand echter früherer Einträge.',
   'journal.mode.keys': 'Ctrl+1 bis Ctrl+3 wechseln die Haltung',
   'journal.mode.set': 'Haltung {label} wählen',
 
@@ -110,6 +111,14 @@ export const deJournal = {
   'journal.failure.other': 'Aufgeschrieben. Eine Antwort kam nicht.',
   'journal.evidence.title': 'Ähnlich klang es an diesen Tagen',
   'journal.evidence.open': 'Zum Eintrag vom {date}',
+
+  // ── Altes Gespräch (Legacy, 011/D9) ───────────────────────────────────────
+  'journal.legacy.title': 'Altes Gespräch',
+  'journal.legacy.fold.action': 'In den Eintrag übernehmen',
+  'journal.legacy.fold.title': 'Gespräch in den Eintrag übernehmen',
+  'journal.legacy.fold.body':
+    'Was sich als Gesprächsrunde lesen lässt, wandert der Reihe nach in den Tagestext — deine Worte als Absatz, die Antworten der App als Zitat. Zeilen im alten Abschnitt, die sich keiner Runde zuordnen lassen, gehen dabei verloren. Das Kapitel „Gespräch" verschwindet danach aus der Datei, und es gibt keinen Weg zurück.',
+  'journal.legacy.fold.confirm': 'Übernehmen',
 
   // ── Fakten und Tagesabschluss ─────────────────────────────────────────────
   'journal.facts.title': 'Fakten',

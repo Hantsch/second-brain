@@ -4,7 +4,12 @@
  *
  * Der Weg eines Tages, in dieser Reihenfolge:
  *   `day`       Tagesdatei anlegen (idempotent), lesen, anhaengen, Stimmung setzen
- *   `dialog`    das Gespraech im Tageseintrag protokollieren und zurueck lesen
+ *   `dialog`    das Gespraech im Tageseintrag protokollieren und zurueck lesen (legacy)
+ *   `stream`    „Tag" als ein Block-Strom: eigene Worte und Antworten der App,
+ *               in Schreibreihenfolge (011) — lesen mit `parseStream`, schreiben
+ *               mit `appendEntry`/`appendAnswer`
+ *   `legacy`    `foldLegacyDay`: den alten „Gespräch"-Abschnitt in den Strom
+ *               falten — reine Textfunktion, wird nie von selbst aufgerufen
  *   `coach`     die drei Haltungen — zuhoeren, Tipps, analysieren
  *   `close`     Tagesabschluss: Todos, Warte-auf, Personen, Stimmung als Vorschlag
  *   `streak`    Serie, laengste Serie, Monat, Stimmungsverlauf
@@ -35,9 +40,19 @@ export {
   type AppendTurnOptions,
 } from './dialog';
 export {
+  appendAnswer,
+  appendEntry,
+  formatAnswer,
+  parseStream,
+  type AppendAnswerOptions,
+  type AppendEntryOptions,
+} from './stream';
+export { foldLegacyDay } from './legacy';
+export {
   dayText,
   isSectionOf,
   journalSections,
+  rawDayText,
   sectionIn,
   sectionText,
   type JournalSectionKind,
@@ -79,6 +94,7 @@ export {
   type DialogRole,
   type DialogTurn,
   type EnsureDayResult,
+  type JournalBlock,
   type JournalDayDoc,
   type JournalFrontmatterSuggestion,
   type JournalIndexView,

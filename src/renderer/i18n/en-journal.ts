@@ -10,7 +10,7 @@ export const enJournal = {
   'journal.words': '{count} words',
   'journal.gap': '{count} days without an entry',
   'journal.gapOne': 'One day without an entry',
-  'journal.hasDialogue': 'With conversation',
+  'journal.hasDialogue': 'With an answer from the app',
   'journal.open': 'Open the entry of {date}',
   'journal.keys': 'Arrow keys change the day',
 
@@ -34,15 +34,9 @@ export const enJournal = {
   'journal.projects': 'Projects',
   'journal.project.open': 'Open project {title}',
   'journal.file.open': 'Open the file in an editor',
-  /* Visible only in the narrow window (`DayEntry.tsx`) — two tabs instead of
-     two columns, because both together don't fit one scroll column. */
-  'journal.tab.day': 'Day',
-  'journal.tab.talk': 'Conversation',
 
   // ── Section „Day" ─────────────────────────────────────────────────────────
   'journal.day.title': 'Day',
-  'journal.day.ask': 'How was your day?',
-  'journal.day.askHint': 'One paragraph is enough. Ctrl+Enter saves.',
   'journal.day.placeholder': 'What happened?',
   'journal.day.write': 'Write the day',
   'journal.day.edit': 'Edit the day',
@@ -63,7 +57,10 @@ export const enJournal = {
   'journal.day.conflict.overwrite': 'Save anyway',
 
   // ── Conversation ──────────────────────────────────────────────────────────
-  'journal.dialogue.title': 'Conversation',
+  /* Deliberately not "Conversation" any more (011, D10): the stream is
+     usually just my own prose with no answer at all — "listen" never asks a
+     model — so a heading that promises dialogue would be wrong. */
+  'journal.dialogue.title': 'Timeline',
   'journal.dialogue.empty':
     'What you write here goes into the day entry, word for word — and nowhere else.',
   'journal.turn.user': 'Me',
@@ -73,14 +70,17 @@ export const enJournal = {
   'journal.field.placeholder': 'Write it down as it comes.',
   'journal.field.hintSend': 'says it',
   'journal.send': 'Say it',
+  /* Only for tips/analyse (011, D8): the stance decides whether a model is
+     asked at all, and the button says so plainly. */
+  'journal.sendAsk': 'Save and ask',
   'journal.mode.label': 'Stance',
   'journal.mode.listen': 'Listen',
   'journal.mode.tips': 'Tips',
   'journal.mode.analyze': 'Analyse',
-  'journal.mode.listen.hint': 'Listen: I mirror and ask, without advice.',
+  'journal.mode.listen.hint': 'Listen: filed as is, no answer and no follow-up question.',
   'journal.mode.tips.hint': 'Tips: I listen first, then at most three small steps.',
   'journal.mode.analyze.hint':
-    'Analyse: I compare with earlier days and show patterns, with dates.',
+    'Analyse: I help you understand and steady you, grounded in real earlier entries.',
   'journal.mode.keys': 'Ctrl+1 to Ctrl+3 change the stance',
   'journal.mode.set': 'Choose the stance {label}',
 
@@ -102,6 +102,14 @@ export const enJournal = {
   'journal.failure.other': 'Written down. No answer arrived.',
   'journal.evidence.title': 'It sounded similar on these days',
   'journal.evidence.open': 'Go to the entry of {date}',
+
+  // ── Legacy conversation (011/D9) ──────────────────────────────────────────
+  'journal.legacy.title': 'Legacy conversation',
+  'journal.legacy.fold.action': 'Move into the entry',
+  'journal.legacy.fold.title': 'Move the conversation into the entry',
+  'journal.legacy.fold.body':
+    'Whatever reads as a round moves into the day text, in order — your words as a paragraph, the app\'s answers as a quote. A line in the old section that can\'t be attributed to a round is lost in the process. The "Conversation" section then disappears from the file, and there is no way back.',
+  'journal.legacy.fold.confirm': 'Apply',
 
   // ── Facts and closing the day ─────────────────────────────────────────────
   'journal.facts.title': 'Facts',

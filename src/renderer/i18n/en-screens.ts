@@ -207,7 +207,7 @@ export const enScreens = {
   'projects.deadline': 'Due {date}',
   'projects.waiting': 'Waiting for {who}',
 
-  'screen.journal.overline': 'Day and conversation',
+  'screen.journal.overline': 'One day, one entry',
   'screen.journal.title': 'Journal',
   'screen.journal.empty.title': 'No journal entry in the vault yet',
   'screen.journal.empty.body':

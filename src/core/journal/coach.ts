@@ -1,17 +1,22 @@
 /**
  * Das Coaching-Gespraech — das Herz des Tagebuchs.
  *
- * Der Ablauf ist so gebaut, dass der Mensch nichts verliert, egal was die Technik
- * tut:
+ * Seit 011 sind es zwei sehr verschiedene Ablaeufe hinter einer Funktion, und der
+ * Unterschied ist der Punkt:
  *
- * 1. Die Tagesdatei wird bereitgestellt (`ensureDay`, idempotent).
- * 2. Kontext wird gelesen: der heutige Eintrag, die letzten Runden des Gespraechs,
- *    im Modus `analyze` zusaetzlich die relevantesten frueheren Tage.
- * 3. **Die Nutzerrunde wird geschrieben — vor dem Modellaufruf.** Stirbt die App
- *    mitten im Stream, steht der Satz des Menschen trotzdem in der Datei. Verloren
- *    ist dann eine Antwort, die ohnehin nicht fertig war.
- * 4. `journal-chat` wird streamend gefragt.
- * 5. Die Antwort wird angehaengt, wortwoertlich wie sie kam.
+ * - **`listen` legt ab und fragt nichts.** Der Satz des Menschen wird als Prosa in
+ *   den Tagesstrom geschrieben, und damit ist die Runde fertig. Das Gateway wird
+ *   nicht angefasst — kein `isAvailable`, kein `stream`. Das ist ein Erfolg und
+ *   ausdruecklich **kein** `noModel`: Es war keins gewollt, nicht keins da.
+ * - **`tips` und `analyze` fragen ein Modell** — in dieser Reihenfolge:
+ *   1. Die Tagesdatei wird bereitgestellt (`ensureDay`, idempotent).
+ *   2. Kontext wird gelesen: der heutige Eintrag, die bisherigen Runden des Tages,
+ *      im Modus `analyze` zusaetzlich die relevantesten frueheren Tage.
+ *   3. **Die eigenen Worte werden geschrieben — vor dem Modellaufruf.** Stirbt die
+ *      App mitten im Stream, steht der Satz des Menschen trotzdem in der Datei.
+ *      Verloren ist dann eine Antwort, die ohnehin nicht fertig war.
+ *   4. `journal-chat` wird streamend gefragt.
+ *   5. Die Antwort wird als Antwortblock angehaengt, wortwoertlich wie sie kam.
  *
  * Ohne Modell entsteht **kein toter Zustand und keine gespielte Empathie**: der
  * Eintrag ist geschrieben (das ist der Wert — der Mensch hat sich mitgeteilt),
@@ -26,10 +31,11 @@ import { LlmUnavailableError, journalChatPrompt } from '@core/llm';
 import { toJournalDay } from '@core/index/journal';
 import { collapse } from '@core/index/text';
 import { dayOf, ensureDay } from './day';
-import { appendTurn, dialogHistory } from './dialog';
+import { dialogHistory } from './dialog';
 import { dayText } from './sections';
+import { appendAnswer, appendEntry, parseStream } from './stream';
 import { DIALOG_HISTORY_TURNS, JournalError, MAX_EARLIER_DAYS } from './types';
-import type { CoachDeps, CoachEvidence, CoachResult, JournalIndexView } from './types';
+import type { CoachDeps, CoachEvidence, CoachResult, DialogRole, JournalIndexView } from './types';
 
 /** So viel Text geht in die Volltextsuche — mehr verwaessert die Anfrage. */
 const SEARCH_CHARS = 400;
@@ -79,36 +85,88 @@ export function earlierDays(index: JournalIndexView, options: EarlierDaysOptions
 }
 
 /**
- * Eine Runde des Gespraechs. Wirft nur bei leerer Nachricht, bei einem Abbruch
- * des Aufrufers und bei einem echten Providerfehler — und in jedem dieser Faelle
- * steht die Nutzerrunde schon in der Datei.
+ * Die bisherigen Runden **dieses Tages** als Vorgeschichte, aelteste zuerst.
+ *
+ * Zwei Quellen, weil eine Tagesdatei in zwei Formaten vorliegen kann: der Strom
+ * unter „Tag" (011, `parseStream` — eigene Prosa als Nutzerrunde, Antwortbloecke
+ * als Antwort) und, solange der Tag nicht gefaltet ist, der alte Abschnitt
+ * „Gespraech". In den schreibt seit 011 nichts mehr, seine Runden sind also immer
+ * die aelteren — deshalb stehen sie vorn.
+ *
+ * Ohne den Strom saehe die zweite Tipp-Frage desselben Tages die erste **Antwort**
+ * nicht mehr: die eigene Prosa kommt als „bisheriger Eintrag" mit, was die App
+ * darauf gesagt hat, stand nirgends. Dafuer steht ein Absatz, der schon im
+ * Eintrag steht, hier ein zweites Mal — die Reihenfolge der Runden ist das wert,
+ * und ein fehlender Absatz waere der teurere Fehler.
+ */
+function dayHistory(body: string, limit: number): { role: DialogRole; content: string }[] {
+  if (limit <= 0) return [];
+  const stream = parseStream(body).map((block) => ({
+    role: block.kind === 'answer' ? ('assistant' as const) : ('user' as const),
+    content: block.text,
+  }));
+  const recent = [...dialogHistory(body, limit), ...stream].slice(-limit);
+  /* Eine Vorgeschichte, die mit einer Antwort beginnt, nimmt nicht jede API an
+     (die Messages-API von Anthropic verlangt die erste Nachricht in der
+     Nutzerrolle). Vorne abgeschnittene Antworten fallen deshalb weg. */
+  const start = recent.findIndex((turn) => turn.role === 'user');
+  return start < 0 ? [] : recent.slice(start);
+}
+
+/**
+ * Eine Runde. Wirft nur bei leerer Nachricht, bei einem Abbruch des Aufrufers und
+ * bei einem echten Providerfehler — und in jedem dieser Faelle stehen die eigenen
+ * Worte schon in der Datei.
  */
 export async function coach(deps: CoachDeps, request: CoachRequest): Promise<CoachResult> {
   const message = (request.message ?? '').replace(/\r\n/g, '\n').trim();
   if (message.length === 0) {
     throw new JournalError('invalid', 'Eine Gespraechsrunde ohne Text.');
   }
+  /* In eine lokale Variable, damit die Verzweigung den Modus auch nach dem ersten
+     `await` noch auf `tips | analyze` verengt haelt. */
+  const mode = request.mode;
   const date = dayOf(request.date);
   const docLanguage = deps.docLanguage ?? 'de';
-  const now = deps.now ?? new Date();
 
+  if (mode === 'listen') {
+    /* Zuhoeren heisst seit 011: ablegen. Kein Modell wird gefragt, also wird auch
+       keins vermisst — `noModel` bleibt falsch, `failure` bleibt null. Der Wert
+       der Runde ist der Eintrag, und der steht. */
+    const filed = await appendEntry(deps.store, date, message, { docLanguage });
+    return {
+      date,
+      path: filed.path,
+      mode,
+      message,
+      reply: '',
+      noModel: false,
+      failure: null,
+      earlier: [],
+      usedLlm: false,
+      model: null,
+      hash: filed.hash,
+    };
+  }
+
+  const now = deps.now ?? new Date();
   const day = await ensureDay(deps.store, date, docLanguage);
   const entry = dayText(day.doc.body);
-  const history = dialogHistory(day.doc.body, DIALOG_HISTORY_TURNS);
+  const history = dayHistory(day.doc.body, DIALOG_HISTORY_TURNS);
   /* Belege gibt es nur im Modus, der sie braucht — und nur, wenn der Nutzer die
      Vorgeschichte zulaesst. */
   const earlier =
-    request.mode === 'analyze' && request.useHistory !== false
+    mode === 'analyze' && request.useHistory !== false
       ? earlierDays(deps.index, { date, text: `${message}\n${entry}` })
       : [];
 
   /* Vor dem Modell: was der Mensch gesagt hat, ist gesagt. */
-  const asked = await appendTurn(deps.store, date, 'user', message, { docLanguage, now });
-  const base = { date, path: asked.path, mode: request.mode, message, earlier };
+  const asked = await appendEntry(deps.store, date, message, { docLanguage });
+  const base = { date, path: asked.path, mode, message, earlier };
 
   const messages = journalChatPrompt(
     {
-      mode: request.mode,
+      mode,
       message,
       date,
       ...(entry.length === 0 ? {} : { entry }),
@@ -133,8 +191,8 @@ export async function coach(deps: CoachDeps, request: CoachRequest): Promise<Coa
     );
     const reply = result.text.trim();
     if (reply.length === 0) {
-      /* Ein leeres Modell-Ergebnis wird nicht protokolliert. Eine leere Runde in
-         der Datei waere eine Behauptung, es haette geantwortet. */
+      /* Ein leeres Modell-Ergebnis wird nicht protokolliert. Ein leerer
+         Antwortblock in der Datei waere die Behauptung, es haette geantwortet. */
       return {
         ...base,
         reply: '',
@@ -145,7 +203,7 @@ export async function coach(deps: CoachDeps, request: CoachRequest): Promise<Coa
         hash: asked.hash,
       };
     }
-    const answered = await appendTurn(deps.store, date, 'assistant', reply, { docLanguage, now });
+    const answered = await appendAnswer(deps.store, date, reply, { docLanguage, now });
     return {
       ...base,
       reply,

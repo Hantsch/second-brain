@@ -222,7 +222,7 @@ export const deScreens = {
   'projects.deadline': 'Frist {date}',
   'projects.waiting': 'Warte auf {who}',
 
-  'screen.journal.overline': 'Tag und Gespräch',
+  'screen.journal.overline': 'Ein Tag, ein Eintrag',
   'screen.journal.title': 'Tagebuch',
   'screen.journal.empty.title': 'Noch kein Tageseintrag im Vault',
   'screen.journal.empty.body':

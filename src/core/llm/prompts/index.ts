@@ -34,8 +34,8 @@ export {
 export {
   journalChatPrompt,
   journalChatSystemPrompt,
-  LISTEN_FORBIDDEN,
   type JournalChatInput,
+  type JournalChatMode,
 } from './journal-chat';
 export { journalClosePrompt, JOURNAL_CLOSE_SCHEMA, type JournalCloseInput } from './journal-close';
 export {

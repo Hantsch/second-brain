@@ -232,25 +232,39 @@ const scrollToStart = (page) => scrollAll(page, 'start');
  * dem Composer verdeckte Text, Stimmung, Energie und Chips dahinter; ein
  * eigener Deckel-Roller für den Composer schnitt eine Textzeile mittendurch
  * ab, und Feld, „Sagen" sowie Haltungswahl lagen darunter — formal im Baum,
- * praktisch unsichtbar. Die dritte, vorgegebene Bauform trägt zwei Reiter,
- * „Tag" und „Gespräch" (`DayEntry.tsx`): jeder zeigt nur, wozu er da ist, und
- * keine Rollhöhe muss mehr beides gleichzeitig tragen.
+ * praktisch unsichtbar. Eine dritte, seither wieder verworfene Bauform trug
+ * zwei Reiter, „Tag" und „Gespräch": jeder zeigte nur, wozu er da war, und
+ * keine Rollhöhe musste mehr beides gleichzeitig tragen.
  *
- * Dieses Gate prüft deshalb beide Reiter — per `elementFromPoint` bzw.
- * Geometrie, mit einer Meldung, die sagt, WAS verdeckt oder unerreichbar ist
- * und um wie viele Pixel:
+ * Story 011 löst die Reiter komplett auf: der Tag ist jetzt EIN
+ * fortlaufender Strom (Tageseintrag, Fakten, Antworten der App, ggf. das
+ * alte Gespräch, Composer — alles in einer Spalte, `EntryStream.tsx`/
+ * `DayEntry.tsx`), in jeder Fensterbreite. Damit stellt sich „ohne zu rollen
+ * sichtbar" nicht mehr als Ziel: ein Tag mit Stimmung, Chips, Fakten und
+ * einem vollen Strom ist bei 1152×720 ehrlicherweise länger als ein
+ * Bildschirm — das ist dieselbe Realität wie bei `project-detail`,
+ * `project-todos` und `notes-unfiled`, die im engen Fenster ebenfalls über
+ * das Rollen ans Ende geprüft werden (`scrollToEnd`, `*-narrow-end.png`).
+ * Der Composer steht seit 011/D11 deshalb in normalem Fluss am Ende der
+ * Spalte (`position: static` im engen Fenster, `journal.css`) statt geklebt —
+ * geklebt zeigte sich in der Praxis genau das Gegenteil dessen, was es sollte:
+ * bei kurzem Inhalt legte sich der am Boden fixierte Composer über Stimmung
+ * und Chips, statt sie freizulassen.
  *
- * 1. Reiter „Tag": der Tageseintrag (Stimmung, Energie, Projekt-/
- *    Personen-Chips) ist anklickbar, ungerollt oben in `.sb-journal-main`.
- * 2. Reiter „Tag": mindestens eine Zeile der Tagesliste steht vollständig in
- *    ihrem eigenen Rollbereich, nicht nur angeschnitten (gilt unabhängig vom
- *    Reiter — die Liste liegt außerhalb von `.sb-dayentry` —, geprüft wird
- *    hier, weil der Aufruf ohnehin auf diesem Reiter steht).
- * 3. Reiter „Gespräch": Composer-Feld, Haltungswahl und „Sagen" stehen ohne
- *    Rollen im Fenster — kein zweiter, verschachtelter Roller schneidet dabei
- *    eine Zeile ab.
+ * Geprüft wird deshalb in zwei Schritten, mit einer Meldung, die sagt, WAS
+ * verdeckt oder unerreichbar ist und um wie viele Pixel:
+ *
+ * 1. Ungerollt, oben: der Tageseintrag (Stimmung, Energie, Projekt-/
+ *    Personen-Chips) ist anklickbar, und mindestens eine Zeile der
+ *    Tagesliste steht vollständig in ihrem eigenen Rollbereich (die Liste
+ *    liegt außerhalb von `.sb-dayentry`, wird aber im selben Aufruf
+ *    mitgeprüft).
+ * 2. Ans Ende gerollt (falls es überhaupt etwas zu rollen gibt): Composer-
+ *    Feld, Haltungswahl und „Sagen" sind an ihrer jetzigen Stelle sichtbar
+ *    und anklickbar — nicht von einem fixierten Element verdeckt, das nach
+ *    dem Rollen immer noch im Weg steht.
  */
-async function measureJournalDayTab(session) {
+async function measureJournal(session) {
   return session.page.evaluate(() => {
     const findings = [];
 
@@ -268,9 +282,7 @@ async function measureJournalDayTab(session) {
       const y = rect.top + rect.height / 2;
       const hit = document.elementFromPoint(x, y);
       if (hit !== null && (hit === el || el.contains(hit))) continue;
-      findings.push(
-        `${name} (Reiter „Tag") ist nicht anklickbar (getroffen: ${hit?.className || 'nichts'})`,
-      );
+      findings.push(`${name} ist nicht anklickbar (getroffen: ${hit?.className || 'nichts'})`);
     }
 
     // ── Mindestens eine Zeile der Tagesliste vollständig sichtbar ────────
@@ -295,9 +307,14 @@ async function measureJournalDayTab(session) {
   });
 }
 
-/** Reiter „Gespräch" (siehe `measureJournalDayTab` für den Kontext): Feld,
-    Haltungswahl und „Sagen" müssen ohne Rollen im Fenster stehen. */
-async function measureJournalTalkTab(session) {
+/**
+ * Composer-Feld, Haltungswahl und „Sagen" dort prüfen, wo sie gerade stehen —
+ * der Aufrufer rollt vorher ans Ende, falls es dort etwas zu rollen gibt
+ * (siehe `measureJournal`). Erreichbar heißt hier: im sichtbaren Fenster und
+ * nicht von einem anderen Element verdeckt — nicht mehr zwingend ohne jedes
+ * Rollen, seit der Composer im engen Fenster in normalem Fluss steht.
+ */
+async function measureJournalComposer(session) {
   return session.page.evaluate(() => {
     const findings = [];
     const reachTargets = [
@@ -307,14 +324,15 @@ async function measureJournalTalkTab(session) {
     ];
     for (const [name, el] of reachTargets) {
       if (el === null) {
-        findings.push(`${name} (Reiter „Gespräch") steht nicht im Baum`);
+        findings.push(`${name} steht nicht im Baum`);
         continue;
       }
       const rect = el.getBoundingClientRect();
-      if (rect.bottom > window.innerHeight || rect.top < 0) {
+      if (rect.bottom <= 0 || rect.top >= window.innerHeight) {
         findings.push(
-          `${name} (Reiter „Gespräch") steht bei ${Math.round(rect.top)}–${Math.round(rect.bottom)}px, ` +
-            `das Fenster reicht bis ${window.innerHeight}px — ohne Rollen nicht sichtbar`,
+          `${name} steht bei ${Math.round(rect.top)}–${Math.round(rect.bottom)}px, ` +
+            `das Fenster reicht von 0–${window.innerHeight}px — auch nach dem Rollen ans Ende ` +
+            `nicht sichtbar`,
         );
         continue;
       }
@@ -323,7 +341,8 @@ async function measureJournalTalkTab(session) {
       const hit = document.elementFromPoint(x, y);
       if (hit !== null && (hit === el || el.contains(hit))) continue;
       findings.push(
-        `${name} (Reiter „Gespräch") ist nicht anklickbar (getroffen: ${hit?.className || 'nichts'})`,
+        `${name} ist verdeckt (getroffen: ${hit?.className || 'nichts'}) — steht bei ` +
+          `${Math.round(rect.top)}–${Math.round(rect.bottom)}px`,
       );
     }
     return findings;
@@ -386,20 +405,6 @@ async function shootNarrow(session, shooter, screens, log, skipped) {
   for (const screen of screens) {
     await gotoScreen(session.page, screen);
 
-    /* Das Tagebuch trägt im engen Fenster zwei Reiter (`DayEntry.tsx`) — die
-       Vorgabe beim Betreten hängt davon ab, ob der Tag schon Text hat, ist
-       hier also keine verlässliche Grundlage für ein Gate. Der Reiter „Tag"
-       wird deshalb ausdrücklich gewählt, bevor die erste Aufnahme entsteht
-       und Zusicherung 1 sowie 3 (Tageseintrag anklickbar, eine Zeile der
-       Tagesliste vollständig sichtbar) geprüft werden. */
-    if (screen === 'journal') {
-      const dayTab = session.page.getByRole('tab', { name: 'Tag' });
-      if ((await dayTab.count()) > 0) {
-        await dayTab.click();
-        await settle(session.page);
-      }
-    }
-
     const file = `${screen}-narrow.png`;
     files.push(await shooter.shotAs(file, session.page));
     log(`  eng ${NARROW.width}×${NARROW.height}  ${screen.padEnd(10)} → ${file}`);
@@ -407,31 +412,44 @@ async function shootNarrow(session, shooter, screens, log, skipped) {
     /* Composer und „Tag abschließen" waren einmal am unteren Rand der
        Detailspalte verankert — genau die Aktion, die bei 1152 px unter den
        Rand rutschte, ohne dass ein Gate es meldete, und später, geklebt, den
-       Tageseintrag selbst verdeckte. Die dritte Bauform trägt dafür zwei
-       Reiter; dieses Gate prüft deshalb beide, nicht nur die Kante einer
-       Leiste (siehe `measureJournalDayTab`). */
+       Tageseintrag selbst verdeckte. Seit 011 ist der ganze Tag eine Spalte,
+       und der Composer steht darin in normalem Fluss — dieses Gate prüft
+       deshalb in zwei Schritten: ungerollt oben (Tageseintrag, Tagesliste),
+       dann ans Ende gerollt (Feld, Haltungswahl, „Sagen"; siehe
+       `measureJournal`/`measureJournalComposer`). */
     if (screen === 'journal') {
-      const dayFindings = await measureJournalDayTab(session);
-      for (const finding of dayFindings) skipped.push(`Tagebuch (eng, Reiter „Tag"): ${finding}`);
-      if (dayFindings.length > 0) process.exitCode = 1;
+      /* Der Tag lädt seinen Inhalt (Stimmung, Text, Antworten, Composer) erst
+         nach der Überschrift nach — `gotoScreen` wartet nur auf `h1`. Ohne ein
+         `settle` hier misst dieses Gate mitten im Laden, gegen Skelette statt
+         gegen den fertigen Composer. */
+      await settle(session.page);
+      const findings = await measureJournal(session);
+      for (const finding of findings) skipped.push(`Tagebuch (eng): ${finding}`);
+      if (findings.length > 0) process.exitCode = 1;
 
-      const talkTab = session.page.getByRole('tab', { name: /Gespräch/ });
-      if ((await talkTab.count()) === 0) {
-        skipped.push('Tagebuch (eng, Reiter „Gespräch"): der Reiter steht nicht im Baum');
-        process.exitCode = 1;
-      } else {
-        await talkTab.click();
+      /* Ein Tag mit Stimmung, Chips, Fakten und vollem Strom ist bei
+         1152×720 ehrlicherweise länger als ein Bildschirm — genau wie bei
+         `project-detail`/`project-todos`/`notes-unfiled` unten wird deshalb
+         ans Ende gerollt und ein zweites Bild aufgenommen, statt Rollen als
+         Fehler zu werten. Rollt nichts (der Tag passt ganz ins Fenster),
+         bleibt der Composer dort stehen, wo `measureJournal` ihn schon
+         zulässt — geprüft wird er dann an genau dieser Stelle. */
+      let journalEnd = null;
+      if (await scrollToEnd(session.page)) {
         await settle(session.page);
-        files.push(await shooter.shotAs('journal-narrow-talk.png', session.page));
-        log(
-          `  eng ${NARROW.width}×${NARROW.height}  journal     → journal-narrow-talk.png (Reiter „Gespräch")`,
-        );
-        const talkFindings = await measureJournalTalkTab(session);
-        for (const finding of talkFindings) {
-          skipped.push(`Tagebuch (eng, Reiter „Gespräch"): ${finding}`);
-        }
-        if (talkFindings.length > 0) process.exitCode = 1;
+        journalEnd = 'journal-narrow-end.png';
+        files.push(await shooter.shotAs(journalEnd, session.page));
       }
+      const composerFindings = await measureJournalComposer(session);
+      for (const finding of composerFindings) {
+        skipped.push(`Tagebuch (eng${journalEnd === null ? '' : ', gerollt'}): ${finding}`);
+      }
+      if (composerFindings.length > 0) process.exitCode = 1;
+      if (journalEnd !== null) await scrollToStart(session.page);
+      log(
+        `  eng ${NARROW.width}×${NARROW.height}  journal     ` +
+          (journalEnd === null ? '(passt ohne Rollen)' : `→ ${journalEnd}`),
+      );
     }
 
     /* Die Dichte des Dashboards ist eine Zahl, nicht ein Gefühl — und sie wird

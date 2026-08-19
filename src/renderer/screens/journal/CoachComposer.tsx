@@ -12,15 +12,14 @@
  * (see `DayEntry.tsx`), the frame is the whole detail column — the field
  * thus reaches the bottom window edge without anyone having to scroll.
  *
- * In the narrow window (≤ 1200 px) the day carries its own "Day" and "Talk"
- * tabs (see `DayEntry.tsx`, `styles/app/journal.css`): there this component
- * lives alone in the "Talk" tab, without `footerAction` — "close the day"
- * sits there instead next to the facts in the "Day" tab
+ * In the narrow window (≤ 1200 px) there is no separate tab any more (011,
+ * D7 removed it): the whole day, including this composer, flows as one
+ * scrolling column, so `footerAction` still stays `undefined` there —
+ * "close the day" sits instead next to the facts in `DayEntry.tsx`
  * (`JournalScreen.tsx` decides based on window width where the one button
- * goes; it's never duplicated). The composer no longer needs the sticking
- * there anyway: its tab shows nothing but the history above it, and as the
- * last, non-growing element of its own, bounded column it's always within
- * the window regardless.
+ * goes; it's never duplicated). The composer doesn't need the sticky frame
+ * there either: as the column's last, non-growing element it's always
+ * within the window regardless of how long the day gets.
  */
 
 import type { RefObject } from 'react';
@@ -119,7 +118,10 @@ export function CoachComposer({
           label: t('journal.field.label'),
           placeholder: t('journal.field.placeholder'),
           hintSend: t('journal.field.hintSend'),
-          send: t('journal.send'),
+          /* The stance choice *is* the request (011, D8): listen only ever
+             files what's written, so its label stays the plain "say it" it
+             always was; tips/analyse ask a model, and the button says so. */
+          send: mode === 'listen' ? t('journal.send') : t('journal.sendAsk'),
           cancel: t('common.cancel'),
         }}
         /* The stance sits in the field's footer: you need to know who

@@ -92,6 +92,10 @@ export interface JournalMutations {
   >;
   /** Run the undo path of a day close — exactly the write requests from there. */
   undo: UseMutationResult<void, unknown, readonly WriteRequest[]>;
+  /** One-time migration (011, D9): folds a legacy `## Conversation` into the
+      day stream. Hash-guarded exactly like `setDay` — a stale hash surfaces
+      as `conflict` instead of silently overwriting. */
+  foldDay: UseMutationResult<WriteResult, unknown, IpcRequest<'journal:foldDay'>>;
 }
 
 export function useJournalMutations(date: string): JournalMutations {
@@ -119,6 +123,14 @@ export function useJournalMutations(date: string): JournalMutations {
            each carries the hash of the state it reverts. */
         for (const entry of plan) await api.vault.write(entry);
       },
+      onSuccess: done,
+    }),
+    foldDay: useMutation({
+      /* `api.journal.foldDay` takes positional args (date, expectedHash?), unlike
+         `setDay`/`applyClose` which take the request object directly — this
+         adapter is the only difference from the other mutations here. */
+      mutationFn: (request: IpcRequest<'journal:foldDay'>) =>
+        api.journal.foldDay(request.date, request.expectedHash),
       onSuccess: done,
     }),
   };

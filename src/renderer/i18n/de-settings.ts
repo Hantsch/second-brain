@@ -116,7 +116,7 @@ const own = {
   'settings.behavior.coach.tips': 'Tipps geben',
   'settings.behavior.coach.tips.hint': 'Zuhören und danach konkrete Vorschläge machen.',
   'settings.behavior.coach.analyze': 'Analysieren',
-  'settings.behavior.coach.analyze.hint': 'Im Licht früherer Einträge Muster zeigen.',
+  'settings.behavior.coach.analyze.hint': 'Verstehen helfen und stützen, mit echten Einträgen.',
   'settings.behavior.coach.where':
     'Gilt als Vorgabe. Im Tagebuch lässt sich die Haltung pro Runde mit Strg+1 bis Strg+3 wechseln.',
   'settings.behavior.gardener': 'Pflege',

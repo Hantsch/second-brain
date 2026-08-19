@@ -178,6 +178,16 @@ function view(patch: Partial<JournalDayView> = {}): JournalDayView {
     day: day(),
     doc: doc(),
     text: DAY_TEXT,
+    /* Mirrors `turns`/`text` above as the new-format stream would parse them:
+       the day's own prose first (the whole-day text plus the one paragraph
+       from the existing conversation), then the app's answer as a block —
+       same content, so the assertions below that look for these exact texts
+       keep working against `EntryStream` instead of the old `CoachPanel`. */
+    stream: [
+      { kind: 'entry', text: DAY_TEXT, at: null },
+      { kind: 'entry', text: 'Der Sprint fühlt sich unmöglich an.', at: null },
+      { kind: 'answer', text: 'Zwei der drei Punkte warten auf andere.', at: '18:41' },
+    ],
     turns: [
       { role: 'user', text: 'Der Sprint fühlt sich unmöglich an.', at: '18:40' },
       { role: 'assistant', text: 'Zwei der drei Punkte warten auf andere.', at: '18:41' },
@@ -341,6 +351,7 @@ function renderJournal(extra: Handlers = {}): Rendered {
       undo: [{ path: DAY_PATH, body: doc().body, expectedHash: 'hash-3' }],
     }),
     'vault:write': () => ({ path: DAY_PATH, hash: 'hash-4', created: false }),
+    'journal:foldDay': () => ({ path: DAY_PATH, hash: 'hash-5', created: false }),
     'shell:openPath': () => undefined,
     ...extra,
   });
@@ -379,11 +390,18 @@ function open(extra: Handlers = {}): Rendered {
   return rendered;
 }
 
-/** Etwas ins Gesprächsfeld schreiben und abschicken. */
+/** Etwas ins Gesprächsfeld schreiben und abschicken.
+ *
+ * Der Knopf heißt „Sagen" bei Zuhören und „Speichern und fragen" bei
+ * Tipps/Analysieren (011, D8) — der Helfer sucht beide, statt die Haltung zu
+ * kennen, damit er in jedem Modus funktioniert. */
 async function say(text: string): Promise<void> {
   const field = await screen.findByLabelText('Was beschäftigt dich?');
   await userEvent.type(field, text);
-  await userEvent.click(screen.getByRole('button', { name: 'Sagen' }));
+  const button =
+    screen.queryByRole('button', { name: 'Sagen' }) ??
+    screen.getByRole('button', { name: 'Speichern und fragen' });
+  await userEvent.click(button);
 }
 
 describe('Tagebuch: Tage und Tag', () => {
@@ -400,7 +418,11 @@ describe('Tagebuch: Tage und Tag', () => {
     expect(screen.getAllByText('42 Wörter').length).toBeGreaterThan(0);
 
     expect(screen.getByRole('heading', { name: 'Montag, 10. August 2026' })).toBeTruthy();
-    /* Der Tagestext steht rechts als Prosa — und links als erste Worte der Zeile. */
+    /* Der Tagestext steht links als erste Worte der Zeile (Tagesliste) und im
+       Strom (`EntryStream`), weil der Strom denselben Absatz als `entry`-Block
+       enthält — D8 hat die zusätzliche, komplette Prosa-Ansicht in `DayText`
+       aufgelöst (siehe deren Kommentar): dort steht jetzt nur noch der kleine
+       Bearbeiten-Knopf, kein dritter Abdruck des Texts mehr. */
     expect(screen.getAllByText(DAY_TEXT).length).toBe(2);
     expect(screen.getByRole('button', { name: 'Geht so eintragen' })).toBeTruthy();
     expect(screen.getByText('Miriam')).toBeTruthy();
@@ -415,24 +437,30 @@ describe('Tagebuch: Tage und Tag', () => {
     open({ 'journal:list': () => [], 'journal:get': () => null });
 
     expect(await screen.findByText('Noch kein Tageseintrag im Vault')).toBeTruthy();
-    /* Und darunter kein weggeklicktes Angebot, sondern das Feld selbst. */
-    expect(screen.getByLabelText('Wie war der Tag?')).toBeTruthy();
+    /* Und darunter kein weggeklicktes Angebot, sondern das Feld selbst — seit
+       D8 der eine Composer, nicht mehr die alte Einladung von `DayText`. */
+    expect(screen.getByLabelText('Was beschäftigt dich?')).toBeTruthy();
   });
 
   it('fragt bei einem Tag ohne Eintrag sofort im Feld, statt eine Karte zu zeigen', async () => {
+    /* Der alte Eintrittspunkt war `DayText`s Einlade-Feld mit `journal:setDay`
+       (vor 011/D8) — der neue, echte Eintrittspunkt für den ersten Satz eines
+       frischen Tages ist der eine Composer, über `journal:append`, exakt wie
+       jeder andere Zuhören-Absatz auch. */
     const { sb } = open({ 'journal:get': () => null });
 
-    const field = await screen.findByLabelText('Wie war der Tag?');
-    expect(field).toBe(document.activeElement);
+    const field = await screen.findByLabelText('Was beschäftigt dich?');
+    await waitFor(() => expect(field).toBe(document.activeElement));
     await userEvent.type(field, 'Ein ruhiger Abend in der Werkstatt.');
-    await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Sagen' }));
 
     await waitFor(() =>
-      expect(sb.payloadOf('journal:setDay')).toEqual({
+      expect(sb.payloadOf('journal:append')).toEqual({
         date: TODAY,
         text: 'Ein ruhiger Abend in der Werkstatt.',
       }),
     );
+    expect(sb.payloadsOf('journal:setDay')).toEqual([]);
   });
 
   it('speichert eine Stimmung mit einem Klick', async () => {
@@ -447,6 +475,9 @@ describe('Tagebuch: Tage und Tag', () => {
   it('ist frei von A11y-Verstößen', async () => {
     const { container } = open();
     await screen.findByRole('heading', { name: 'Montag, 10. August 2026' });
+    /* The acceptance criterion for 011/D7 is literally "no tablist any
+       more" — the day used to carry a "Day"/"Talk" tab switch here. */
+    expect(screen.queryByRole('tablist')).toBeNull();
     await expectNoViolations(container);
   });
 });
@@ -525,14 +556,50 @@ describe('Tagebuch: der Tagestext', () => {
 });
 
 describe('Tagebuch: das Gespräch', () => {
-  it('zeigt die eigene Runde sofort und lässt die Antwort sichtbar entstehen', async () => {
+  it('schreibt in der Haltung Zuhören nur auf und ruft nie journal:coach', async () => {
+    /* 011/D8: Zuhören geht ausschließlich über journal:append — verifizierbar
+       an der IPC-Grenze, nicht nur im Prompt. Das gilt auch, wenn (wie hier,
+       über die Standard-Fixtur) ein Modell für das Gespräch geroutet ist: die
+       Haltung entscheidet, nicht die Verfügbarkeit eines Modells. */
+    const state = { view: view() };
+    const { sb } = open({
+      'journal:get': () => state.view,
+      'journal:append': (request) => {
+        state.view = view({
+          stream: [...state.view.stream, { kind: 'entry', text: request.text, at: null }],
+        });
+        return { path: DAY_PATH, hash: 'hash-2', created: false };
+      },
+    });
+
+    await say('Heute war zu viel.');
+
+    await waitFor(() =>
+      expect(sb.payloadOf('journal:append')).toEqual({ date: TODAY, text: 'Heute war zu viel.' }),
+    );
+    expect(sb.payloadsOf('journal:coach')).toEqual([]);
+    /* Der Absatz steht im Strom, sobald der Tag neu geladen ist — und es gibt
+       weder ein „Denkt nach" noch eine erfundene Antwort, denn kein Modell
+       wurde je gefragt. */
+    expect(await screen.findByText('Heute war zu viel.')).toBeTruthy();
+    expect(screen.queryByText('Denkt nach')).toBeNull();
+    /* Das Feld ist geleert — der Absatz ist unterwegs zur Datei. */
+    const field = (await screen.findByLabelText('Was beschäftigt dich?')) as HTMLTextAreaElement;
+    expect(field.value).toBe('');
+  });
+
+  it('zeigt in Tipps/Analysieren die eigene Runde sofort und lässt die Antwort sichtbar entstehen', async () => {
     const { sb } = open();
+    /* Zuhören streamt nie (siehe oben) — das hier ist Tipps/Analysierens Job. */
+    const tips = await screen.findByRole('button', { name: 'Haltung Tipps wählen' });
+    await userEvent.click(tips);
+    await waitFor(() => expect(tips.getAttribute('aria-pressed')).toBe('true'));
 
     await say('Heute war zu viel.');
 
     await waitFor(() =>
       expect(sb.payloadOf('journal:coach')).toEqual({
-        mode: 'listen',
+        mode: 'tips',
         date: TODAY,
         message: 'Heute war zu viel.',
         useHistory: true,
@@ -560,20 +627,59 @@ describe('Tagebuch: das Gespräch', () => {
     ).toBeTruthy();
   });
 
-  it('schickt die gewechselte Haltung im nächsten Aufruf mit', async () => {
+  it('zeigt die eigene Runde nur einmal, auch wenn sie im Strom mit vorheriger Prosa verschmilzt', async () => {
+    /* `appendEntry` schreibt reine Prosa — landet die eigene Runde direkt hinter
+       schon vorhandener Prosa desselben Tages, verschmilzt `parseStream` beides
+       zu einem einzigen `entry`-Block (kein Absatz-Schnitt innerhalb eines
+       Laufs). Ein Abgleich auf exakte Gleichheit der eigenen Nachricht gegen
+       den ganzen Block träfe dann nie — die Nachricht muss als Ende des Blocks
+       erkannt werden, sonst steht sie doppelt da, sobald der Tag nach dem
+       Schreiben neu geladen wird. */
+    const state = {
+      view: view({
+        stream: [{ kind: 'entry', text: DAY_TEXT, at: null }],
+        turns: [],
+      }),
+    };
+    const { sb } = open({ 'journal:get': () => state.view });
+
+    const tips = await screen.findByRole('button', { name: 'Haltung Tipps wählen' });
+    await userEvent.click(tips);
+    await say('Und noch ein Satz.');
+
+    /* Der Hauptprozess hat geschrieben: die eigene Prosa ist jetzt EIN Block,
+       der mit dem vorhandenen Tagestext verschmolzen ist — exakt wie
+       `appendEntry`/`parseStream` es wirklich tun. */
+    state.view = view({
+      stream: [{ kind: 'entry', text: `${DAY_TEXT}\n\nUnd noch ein Satz.`, at: null }],
+      turns: [],
+    });
+    sb.emit('event:vault-changed', { paths: [DAY_PATH], external: false });
+
+    await waitFor(() => expect(screen.getAllByText(/Und noch ein Satz\./).length).toBe(1));
+  });
+
+  it('schickt die gewechselte Haltung im nächsten Aufruf mit und beschriftet den Knopf entsprechend', async () => {
     const { sb } = open();
 
     /* Die Grundhaltung kommt aus den Einstellungen. */
     const listen = await screen.findByRole('button', { name: 'Haltung Zuhören wählen' });
     expect(listen.getAttribute('aria-pressed')).toBe('true');
-    expect(screen.getByText('Zuhören: ich spiegle und frage nach, ohne Ratschläge.')).toBeTruthy();
+    expect(
+      screen.getByText('Zuhören: wird abgelegt, ohne Antwort und ohne Rückfrage.'),
+    ).toBeTruthy();
+    /* Zuhören sagt "Sagen" — die Haltung *ist* die Anfrage, aber Zuhören
+       fragt nichts. */
+    expect(screen.getByRole('button', { name: 'Sagen' })).toBeTruthy();
 
     await userEvent.click(screen.getByRole('button', { name: 'Haltung Analysieren wählen' }));
     expect(
       screen.getByText(
-        'Analysieren: ich vergleiche mit früheren Tagen und zeige Muster, mit Datum.',
+        'Analysieren: ich helfe verstehen und stütze dich, anhand echter früherer Einträge.',
       ),
     ).toBeTruthy();
+    /* Sobald ein Modell gefragt wird, sagt der Knopf es geradeheraus. */
+    expect(screen.getByRole('button', { name: 'Speichern und fragen' })).toBeTruthy();
     await say('Und wieder derselbe Sprint.');
 
     await waitFor(() => expect(sb.payloadOf('journal:coach')).toMatchObject({ mode: 'analyze' }));
@@ -615,11 +721,18 @@ describe('Tagebuch: das Gespräch', () => {
     expect(screen.queryByText(/geht an/)).toBeNull();
   });
 
-  it('schreibt ohne Modell den Eintrag und erfindet keine Antwort', async () => {
-    const state = { view: view({ turns: [] }) };
+  it('schreibt in Zuhören auch ohne Modell den Eintrag — journal:coach bleibt ungerufen', async () => {
+    /* `stream: []` (not just `turns: []`): the default fixture's stream
+       already contains one answer block, which would otherwise satisfy the
+       "no answer round" check below for the wrong reason. */
+    const state = { view: view({ turns: [], stream: [] }) };
     const { sb } = open({
       'journal:get': () => state.view,
       'llm:routing': () => ({ tasks: {}, defaults: {} }),
+      'journal:append': (request) => {
+        state.view = view({ turns: [], stream: [{ kind: 'entry', text: request.text, at: null }] });
+        return { path: DAY_PATH, hash: 'hash-2', created: true };
+      },
     });
 
     expect(
@@ -629,29 +742,32 @@ describe('Tagebuch: das Gespräch', () => {
     ).toBeTruthy();
 
     await say('Niemand da, der antwortet?');
-    /* Der Hauptprozess hat die Runde geschrieben und meldet den Grund. */
-    state.view = view({
-      turns: [{ role: 'user', text: 'Niemand da, der antwortet?', at: '18:40' }],
-    });
-    sb.emit('event:llm-stream', {
-      messageId: 'm-1',
-      threadId: `journal-${TODAY}`,
-      delta: '',
-      done: true,
-      error: 'no-route',
-    });
 
-    expect(
-      await screen.findByText('Aufgeschrieben. Für eine Antwort ist kein Modell zugeordnet.'),
-    ).toBeTruthy();
-    /* Keine gespielte Empathie: es gibt keine Antwortrunde. */
+    await waitFor(() =>
+      expect(sb.payloadOf('journal:append')).toEqual({
+        date: TODAY,
+        text: 'Niemand da, der antwortet?',
+      }),
+    );
+    /* Zuhören ruft journal:coach nie — mit oder ohne Modell macht das keinen
+       Unterschied, denn die Haltung entscheidet, nicht das Routing. */
+    expect(sb.payloadsOf('journal:coach')).toEqual([]);
+    expect(await screen.findByText('Niemand da, der antwortet?')).toBeTruthy();
+    /* Keine gespielte Empathie: es gibt keine Antwortrunde — und auch keinen
+       Ausfall-Hinweis, weil nie ein Modell gefragt wurde. */
     expect(screen.queryByRole('article', { name: 'Second Brain' })).toBeNull();
-    expect(screen.getByText('Niemand da, der antwortet?')).toBeTruthy();
+    expect(
+      screen.queryByText('Aufgeschrieben. Für eine Antwort ist kein Modell zugeordnet.'),
+    ).toBeNull();
   });
 
   it('zeigt ohne Modell die gefundenen früheren Stellen und springt dorthin', async () => {
     const { sb } = open({ 'llm:routing': () => ({ tasks: {}, defaults: {} }) });
 
+    /* Frühere Stellen sind Analysierens Job — Zuhören ruft journal:coach nie. */
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Haltung Analysieren wählen' }),
+    );
     await say('Der Sprint fühlt sich wieder unmöglich an.');
     sb.emit('event:llm-stream', {
       messageId: 'm-1',
@@ -678,6 +794,9 @@ describe('Tagebuch: das Gespräch', () => {
 
   it('bietet während der Antwort einen Abbruch, der wirklich abbricht', async () => {
     const { sb } = open();
+    /* Nur Tipps/Analysieren rufen ein Modell — nur dort gibt es etwas
+       abzubrechen. */
+    await userEvent.click(await screen.findByRole('button', { name: 'Haltung Tipps wählen' }));
 
     await say('Ich rede lieber nicht weiter.');
     const cancel = await screen.findByRole('button', { name: 'Abbrechen' });
@@ -688,6 +807,7 @@ describe('Tagebuch: das Gespräch', () => {
 
   it('schickt während einer laufenden Antwort keine zweite Runde', async () => {
     const { sb } = open();
+    await userEvent.click(await screen.findByRole('button', { name: 'Haltung Tipps wählen' }));
 
     await say('Erste Runde.');
     await screen.findByRole('button', { name: 'Abbrechen' });
@@ -702,71 +822,91 @@ describe('Tagebuch: das Gespräch', () => {
   });
 });
 
-describe('Tagebuch: die Reiter im engen Fenster', () => {
-  it('startet auf „Tag", wenn der Tag schon Text hat', async () => {
+/* The "Day"/"Talk" tab system this block tested is gone (011, D7): the
+   screen renders one chronological column now, so there is no subject left
+   to test tab-switching behaviour against — this is a deletion of a test for
+   a removed feature, not a weakened assertion. */
+
+describe('Tagebuch: altes Gespräch (011, D9)', () => {
+  /* The default fixture's `turns` was never cleared by D7/D8 (see the
+     comment on `view()`), so it is already legacy-shaped out of the box —
+     no separate fixture needed for "there is a legacy conversation". A
+     folded/new-format day is the one that needs its own fixture: `turns: []`. */
+
+  it('zeigt Strom und altes Gespräch nebeneinander, und der Eintrag bleibt bearbeitbar', async () => {
     open();
 
-    const dayTab = await screen.findByRole('tab', { name: 'Tag' });
-    expect(dayTab.getAttribute('aria-selected')).toBe('true');
-    expect(screen.getByRole('tab', { name: /Gespräch/ }).getAttribute('aria-selected')).toBe(
-      'false',
+    const legacy = await screen.findByRole('region', { name: 'Altes Gespräch' });
+    expect(within(legacy).getByText('Der Sprint fühlt sich unmöglich an.')).toBeTruthy();
+    expect(within(legacy).getByText('Zwei der drei Punkte warten auf andere.')).toBeTruthy();
+
+    const stream = screen.getByRole('region', { name: 'Verlauf' });
+    expect(within(stream).getByText('Der Sprint fühlt sich unmöglich an.')).toBeTruthy();
+
+    /* Editing-in-place is untouched by the legacy block — it operates on
+       `view.text`/`view.doc.hash` alone (D8), regardless of `view.turns`. */
+    expect(screen.getByRole('button', { name: 'Tagestext bearbeiten' })).toBeTruthy();
+  });
+
+  it('zeigt keinen Legacy-Block mehr, sobald ein Tag keine Konversation mehr hat', async () => {
+    open({ 'journal:get': () => view({ turns: [] }) });
+
+    await screen.findByRole('heading', { name: 'Montag, 10. August 2026' });
+    expect(screen.queryByRole('region', { name: 'Altes Gespräch' })).toBeNull();
+  });
+
+  it('fragt nach, bevor journal:foldDay etwas schreibt', async () => {
+    const { sb } = open();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'In den Eintrag übernehmen' }));
+    await screen.findByRole('dialog', { name: 'Gespräch in den Eintrag übernehmen' });
+
+    expect(sb.payloadsOf('journal:foldDay')).toEqual([]);
+  });
+
+  it('übernimmt erst nach Bestätigung, mit dem eingefrorenen Hash — danach ist der Legacy-Block weg', async () => {
+    const state = { view: view() };
+    const { sb } = open({
+      'journal:get': () => state.view,
+      'journal:foldDay': () => {
+        state.view = view({
+          turns: [],
+          stream: [
+            ...state.view.stream,
+            { kind: 'entry', text: 'Nachgetragen aus dem Gespräch.', at: null },
+          ],
+        });
+        return { path: DAY_PATH, hash: 'hash-5', created: false };
+      },
+    });
+
+    await userEvent.click(await screen.findByRole('button', { name: 'In den Eintrag übernehmen' }));
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Gespräch in den Eintrag übernehmen',
+    });
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Übernehmen' }));
+
+    await waitFor(() =>
+      expect(sb.payloadOf('journal:foldDay')).toEqual({ date: TODAY, expectedHash: 'hash-1' }),
     );
-  });
-
-  it('startet auf „Gespräch", wenn der Tag noch keinen Text hat', async () => {
-    open({ 'journal:get': () => view({ text: '' }) });
-
-    expect(
-      (await screen.findByRole('tab', { name: /Gespräch/ })).getAttribute('aria-selected'),
-    ).toBe('true');
-  });
-
-  it('zeigt beim Wechsel auf „Gespräch" das Feld — fokussiert, ohne dass man rollen muss', async () => {
-    open();
-
-    await screen.findByRole('tab', { name: 'Tag' });
-    const field = screen.getByLabelText('Was beschäftigt dich?');
-    expect(field).not.toBe(document.activeElement);
-
-    await userEvent.click(screen.getByRole('tab', { name: /Gespräch/ }));
-
-    expect(screen.getByRole('tab', { name: /Gespräch/ }).getAttribute('aria-selected')).toBe(
-      'true',
+    await waitFor(() =>
+      expect(screen.queryByRole('region', { name: 'Altes Gespräch' })).toBeNull(),
     );
-    expect(field).toBe(document.activeElement);
+    expect(await screen.findByText('Nachgetragen aus dem Gespräch.')).toBeTruthy();
   });
 
-  it('wechselt die Reiter mit den Pfeiltasten', async () => {
-    open();
+  it('schreibt beim Abbrechen nichts — das alte Gespräch bleibt stehen', async () => {
+    const { sb } = open();
 
-    const dayTab = await screen.findByRole('tab', { name: 'Tag' });
-    dayTab.focus();
-    await userEvent.keyboard('{ArrowRight}');
+    await userEvent.click(await screen.findByRole('button', { name: 'In den Eintrag übernehmen' }));
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Gespräch in den Eintrag übernehmen',
+    });
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Abbrechen' }));
 
-    const talkTab = screen.getByRole('tab', { name: /Gespräch/ });
-    expect(talkTab.getAttribute('aria-selected')).toBe('true');
-    expect(screen.getByLabelText('Was beschäftigt dich?')).toBe(document.activeElement);
-
-    /* Zurück auf „Tag": der Fokus liegt nach dem Wechsel im Feld, nicht mehr
-       am Reiter — die Pfeiltaste dort gehört dem Text, nicht der Navigation
-       (dieselbe Abgrenzung wie bei den Ziffern). */
-    talkTab.focus();
-    await userEvent.keyboard('{ArrowLeft}');
-    expect(dayTab.getAttribute('aria-selected')).toBe('true');
-  });
-
-  it('lässt Ziffern im Feld ein Zeichen bleiben, ohne den Reiter zu wechseln', async () => {
-    open();
-
-    await userEvent.click(await screen.findByRole('tab', { name: /Gespräch/ }));
-    const field = screen.getByLabelText('Was beschäftigt dich?');
-    await userEvent.type(field, '2 Punkte sind offen.');
-
-    expect((field as HTMLTextAreaElement).value).toBe('2 Punkte sind offen.');
-    /* Die Ziffer hat den Reiter nicht zurück auf „Tag" gestellt. */
-    expect(screen.getByRole('tab', { name: /Gespräch/ }).getAttribute('aria-selected')).toBe(
-      'true',
-    );
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(sb.payloadsOf('journal:foldDay')).toEqual([]);
+    expect(screen.getByRole('region', { name: 'Altes Gespräch' })).toBeTruthy();
   });
 });
 

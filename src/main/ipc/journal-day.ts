@@ -18,23 +18,28 @@
 
 import { SECTION_FACTS, todoActions, todoBlock } from '@core/capture';
 import {
-  dayText,
+  ensureDay,
+  foldLegacyDay,
   isSectionOf,
   journalSections,
   parseDialog,
+  parseStream,
+  rawDayText,
   requireDay,
   sectionIn,
 } from '@core/journal';
-import type { JournalIndexView, JournalStore } from '@core/journal';
+import type { JournalBlock, JournalIndexView, JournalStore } from '@core/journal';
+import type { DateLike } from '@core/vault/paths';
 import { FsVaultStore, findSections, toVaultDoc } from '@core/vault';
 import type { SectionRange } from '@core/vault';
 import type {
   IpcRequest,
   JournalDayView,
   JournalFrontmatterFields,
+  JournalStreamBlock,
   WriteRequest,
 } from '@shared/ipc';
-import type { DocLanguage, FilingAction, JournalDay, VaultDoc } from '@shared/types';
+import type { DocLanguage, FilingAction, JournalDay, VaultDoc, WriteResult } from '@shared/types';
 import { fail } from './errors';
 import type { Services } from '../services';
 
@@ -62,12 +67,22 @@ function textIn(body: string, range: SectionRange): string {
   return body.split('\n').slice(range.start, range.end).join('\n').trim();
 }
 
+/** `JournalBlock` (core) → `JournalStreamBlock` (IPC): `at` only exists on an answer. */
+function toStreamBlock(block: JournalBlock): JournalStreamBlock {
+  return { kind: block.kind, text: block.text, at: block.kind === 'answer' ? block.at : null };
+}
+
 /**
  * The daily entry for display. If the "Day" heading is missing entirely (a
  * hand-written file), everything except conversation and facts counts as the
- * day's text — exactly what `dayText` reads, and exactly what `withDayText`
- * replaces. This way the screen never shows an empty day whose file actually
- * has prose in it.
+ * day's text — exactly what `rawDayText` reads, and exactly what
+ * `withDayText` replaces. This way the screen never shows an empty day whose
+ * file actually has prose in it.
+ *
+ * `rawDayText`, not `dayText`: the edit surface must round-trip every byte
+ * that's actually there, including an embedded answer block — `dayText`
+ * strips those for reading (search, prompts, close-out), and reusing it here
+ * would mean saving a heading-less day silently deletes the app's own words.
  */
 export function toView(found: { day: JournalDay; doc: VaultDoc }): JournalDayView {
   const body = found.doc.body;
@@ -76,12 +91,35 @@ export function toView(found: { day: JournalDay; doc: VaultDoc }): JournalDayVie
   return {
     day: found.day,
     doc: found.doc,
-    text: day === null ? dayText(body) : textIn(body, day),
+    text: day === null ? rawDayText(body) : textIn(body, day),
+    /* The "Day" section as a block stream (011) — same leniency as `parseDialog`
+       below, the renderer receives it pre-built. */
+    stream: parseStream(body).map(toStreamBlock),
     /* The turns come from the core (`parseDialog`, lenient about blocks
        added by hand) — the renderer receives them pre-built. */
     turns: parseDialog(body).map((turn) => ({ role: turn.role, text: turn.text, at: turn.at })),
     facts: facts === null ? '' : textIn(body, facts),
   };
+}
+
+/**
+ * Fold the legacy "Conversation" section into the "Day" stream (011, D6) —
+ * the write side of the pure `foldLegacyDay` migration. Mirrors
+ * `journal:setDay`'s hash idiom: without `expectedHash`, the file's own hash
+ * guards the write, so it never runs unguarded.
+ */
+export async function foldDay(
+  store: JournalStore,
+  date: DateLike,
+  language: DocLanguage,
+  expectedHash?: string,
+): Promise<WriteResult> {
+  const day = await ensureDay(store, date, language);
+  return store.write({
+    path: day.path,
+    body: foldLegacyDay(day.doc.body, language),
+    expectedHash: expectedHash ?? day.doc.hash,
+  });
 }
 
 /**

@@ -238,23 +238,35 @@ tags: [stress]
 
 ## Day
 
-What happened, in prose.
-
-## Conversation
-
-> **Me** — 18:40
-> This sprint feels impossible.
+This sprint feels impossible. Three things at once, and everyone is waiting
+on me.
 
 > **Second Brain** — 18:40
-> ...
+> Two of the three aren't waiting on you — they're waiting on someone else.
+> What actually depended on you today is done.
+
+Fair. Doesn't change how it feels, but it helps to see it written down.
 
 ## Facts
 
 - [ ] Follow up with Stefan about the role concept @due:2026-08-12
 ```
 
-The `Conversation` section is the coaching dialog, recorded verbatim. `Facts`
-holds what day close extracted — proposals the user confirmed.
+`Day` is one continuous, chronological stream: my own paragraphs are plain
+Markdown, exactly as typed, and the app's replies are the same blockquote
+block, `> **Second Brain** — HH:MM`, interleaved between them in write order.
+Nothing marks my own words specially — they're just prose — but an answer is
+never merged into one of my paragraphs; the two stay visually and structurally
+distinct. `Facts` holds what day close extracted — proposals the user
+confirmed.
+
+`Conversation`/`Gespräch` is legacy: a day written before this format kept the
+coaching dialog in its own section, separate from `Day`. That section is
+still valid to **read** — an existing file with one keeps working, untouched,
+and stays editable — but a new day never gets one again, and nothing folds it
+into the stream automatically. Moving a legacy conversation into the stream
+is one explicit, user-confirmed, one-way action ("move the conversation into
+the entry").
 
 ## Wiki pages (`modules/<slug>/wiki/`)
 

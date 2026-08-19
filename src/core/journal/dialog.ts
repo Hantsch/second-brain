@@ -126,6 +126,38 @@ function blocksIn(lines: readonly string[], from: number, to: number): Block[] {
 }
 
 /**
+ * A recognized `assistant` block plus its raw line span (`end` is the first line
+ * after it) — pure line scanning, no heading awareness. Shared by
+ * `journal/stream.ts` (to surface an app answer embedded in "Day", 011) and
+ * `journal/sections.ts` (to strip that same answer out of `dayText`), so the
+ * blockquote regexes above stay the one place that knows this format.
+ *
+ * Restricted to `assistant`: a stream block is never authored by "me" as a
+ * quote, so `user` blocks never need this reading.
+ */
+export interface AssistantBlockSpan {
+  start: number;
+  end: number;
+  text: string;
+  at: string | null;
+}
+
+export function assistantBlockSpans(
+  lines: readonly string[],
+  from: number,
+  to: number,
+): AssistantBlockSpan[] {
+  const spans: AssistantBlockSpan[] = [];
+  for (const block of blocksIn(lines, from, to)) {
+    if (roleOf(block.label) !== 'assistant') continue;
+    const text = block.lines.join('\n').trim();
+    if (text.length === 0) continue;
+    spans.push({ start: block.line, end: block.line + 1 + block.lines.length, text, at: block.at });
+  }
+  return spans;
+}
+
+/**
  * The turns from the "Conversation" section, oldest first. If the section
  * doesn't exist, the list is empty — that's a result, not an error.
  */

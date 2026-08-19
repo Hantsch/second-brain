@@ -5,9 +5,12 @@
  * **idempotent**: liegt die Datei schon, wird sie gelesen und nicht angefasst.
  * Zweimal aufgerufen aendert er nichts, auch nicht das Frontmatter des Nutzers.
  *
- * Angelegt wird genau, was docs/VAULT-FORMAT.md zeigt: `type`, der ausgeschriebene
- * Titel in der Dokumentsprache, `date`, `tags` — und die drei leeren Abschnitte.
- * Mehr nicht: was hier nicht steht, wird nicht geschrieben.
+ * Angelegt wird genau, was ein frischer Tag braucht: `type`, der ausgeschriebene
+ * Titel in der Dokumentsprache, `date`, `tags` — und die zwei leeren Abschnitte
+ * "Tag" und "Fakten". "Gespräch" entsteht seit 011 nicht mehr von selbst: neue
+ * Tage schreiben Prosa und App-Antworten in einem Strom unter "Tag"
+ * (`stream.ts`); der alte Dialog-Abschnitt bleibt les- und anhaengbar, wo er
+ * schon existiert, wird aber fuer neue Tage nicht mehr angelegt.
  */
 
 import type { DocLanguage, JournalDay, JournalFrontmatter } from '@shared/types';
@@ -124,12 +127,17 @@ export function newDayFrontmatter(
   };
 }
 
-/** Der Rumpf eines neuen Tageseintrags: die drei Abschnitte, noch leer. */
+/**
+ * Der Rumpf eines neuen Tageseintrags: "Tag" und "Fakten", noch leer.
+ *
+ * Kein "Gespräch" mehr (011): Prosa und App-Antworten landen ab jetzt beide
+ * unter "Tag", in Schreibreihenfolge (`stream.ts#appendEntry/appendAnswer`).
+ * Der Dialog-Abschnitt bleibt ein gueltiges Ziel — `appendTurn` legt ihn bei
+ * Bedarf weiterhin an —, nur der Default fuer neue Tage ist er nicht mehr.
+ */
 export function newDayBody(docLanguage: DocLanguage = 'de'): string {
   const sections = journalSections(docLanguage);
-  return [`## ${sections.day}`, '', `## ${sections.dialogue}`, '', `## ${sections.facts}`, ''].join(
-    '\n',
-  );
+  return [`## ${sections.day}`, '', `## ${sections.facts}`, ''].join('\n');
 }
 
 /**

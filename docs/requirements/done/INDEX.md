@@ -55,3 +55,13 @@ second roadmap.
   (`ActiveProjectsTile`/`StaleProjectsTile`) and the filing/agent-link pickers put
   favourites first via a shared `favoritesFirst()` helper. Fixed a review finding: added
   the missing D1 test coverage for `favorite`'s derivation and patch allowlist.
+- 011 — Journal: one entry instead of day and conversation · S04 · The day file's
+  `## Day`/`## Conversation` split became one chronological stream (my prose plain,
+  the app's replies as interleaved blockquote blocks); the screen lost its "Day"/"Talk"
+  tabs for one column, one field, and a stance row (listen/tips/analyse) whose primary
+  action reads "save" or "save and ask" — listen writes via `journal:append` and never
+  touches the LLM gateway. Legacy `## Conversation` files stay readable and get an
+  explicit, confirmed, one-way "move into the entry" fold (`journal:foldDay`), never
+  automatic. Fixed two review findings: a duplicate-paragraph render when a new entry
+  merged into existing prose in the stream, and a silent loss of an embedded answer
+  block when editing a heading-less day.

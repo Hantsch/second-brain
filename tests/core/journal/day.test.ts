@@ -7,6 +7,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   JournalError,
+  appendAnswer,
+  appendEntry,
   appendToDay,
   ensureDay,
   journalTitle,
@@ -43,7 +45,7 @@ describe('journalTitle', () => {
 });
 
 describe('ensureDay', () => {
-  it('legt Frontmatter und die drei leeren Abschnitte an', async () => {
+  it('legt Frontmatter und genau die zwei Abschnitte "Tag"/"Fakten" an', async () => {
     const store = emptyStore();
     const result = await ensureDay(store, FRESH_DAY, 'de');
 
@@ -56,8 +58,12 @@ describe('ensureDay', () => {
     expect(content).toContain('date: 2026-08-11');
     expect(content).toContain('tags: []');
     expect(content).toContain('## Tag');
-    expect(content).toContain('## Gespräch');
     expect(content).toContain('## Fakten');
+    /* Kein "Gespräch" mehr fuer neue Tage (011): Prosa und App-Antworten
+       teilen sich ab jetzt den "Tag"-Abschnitt. */
+    expect(content).not.toContain('## Gespräch');
+    const body = content.slice(content.indexOf('\n---\n', 4) + 5).replace(/^\n+/, '');
+    expect(body).toBe('## Tag\n\n## Fakten\n');
     expect(result.day.date).toBe(FRESH_DAY);
     expect(result.day.turns).toBe(0);
   });
@@ -69,8 +75,8 @@ describe('ensureDay', () => {
     const content = (await store.readText(FRESH_PATH)) ?? '';
     expect(content).toContain('title: Tuesday, 11 August 2026');
     expect(content).toContain('## Day');
-    expect(content).toContain('## Conversation');
     expect(content).toContain('## Facts');
+    expect(content).not.toContain('## Conversation');
   });
 
   it('ist idempotent — der zweite Aufruf ändert kein Byte', async () => {
@@ -142,6 +148,80 @@ describe('appendToDay', () => {
   it('hängt leeren Text nicht an', async () => {
     const store = emptyStore();
     await expect(appendToDay(store, FRESH_DAY, 'day', '   ')).rejects.toThrow(JournalError);
+  });
+});
+
+describe('appendEntry', () => {
+  it('hängt Prosa unter „Tag" an und legt den Tag bei Bedarf an', async () => {
+    const store = emptyStore();
+
+    const result = await appendEntry(store, FRESH_DAY, 'Kurzer Gedanke zum Tag.');
+
+    expect(result.path).toBe(FRESH_PATH);
+    const content = (await store.readText(FRESH_PATH)) ?? '';
+    expect(content).toContain('## Tag\n\nKurzer Gedanke zum Tag.');
+  });
+
+  it('hängt leeren Text nicht an', async () => {
+    const store = emptyStore();
+    await expect(appendEntry(store, FRESH_DAY, '  \n ')).rejects.toThrow(JournalError);
+    expect(await store.readText(FRESH_PATH)).toBeNull();
+  });
+
+  it('schreibt nicht mit veraltetem Hash', async () => {
+    const fixture = await journalFixture();
+    const before = await fixture.text(DAY_PATH);
+
+    await expect(
+      appendEntry(fixture.store, DAY, 'Noch ein Gedanke.', { expectedHash: 'von-vorgestern' }),
+    ).rejects.toMatchObject({ code: 'conflict' });
+    expect(await fixture.text(DAY_PATH)).toBe(before);
+  });
+});
+
+describe('appendAnswer', () => {
+  it('hängt das Blockzitat unter „Tag" an', async () => {
+    const store = emptyStore();
+
+    const result = await appendAnswer(store, FRESH_DAY, 'Ich höre.', { now: NOW_MS });
+
+    expect(result.at).toBe('14:32');
+    const content = (await store.readText(FRESH_PATH)) ?? '';
+    expect(content).toContain('## Tag\n\n> **Second Brain** — 14:32\n> Ich höre.');
+  });
+
+  it('landet zusammen mit appendEntry in Schreibreihenfolge im „Tag"-Abschnitt', async () => {
+    const store = emptyStore();
+
+    await appendEntry(store, FRESH_DAY, 'Erster Gedanke.');
+    await appendAnswer(store, FRESH_DAY, 'Ich höre.', { now: NOW_MS });
+    await appendEntry(store, FRESH_DAY, 'Noch ein Gedanke.');
+
+    const content = (await store.readText(FRESH_PATH)) ?? '';
+    const entryOne = content.indexOf('Erster Gedanke.');
+    const answer = content.indexOf('> **Second Brain**');
+    const entryTwo = content.indexOf('Noch ein Gedanke.');
+    expect(entryOne).toBeGreaterThan(-1);
+    expect(entryOne).toBeLessThan(answer);
+    expect(answer).toBeLessThan(entryTwo);
+    /* Alles noch im "Tag"-Abschnitt, nicht in einem separaten "Fakten". */
+    expect(entryTwo).toBeLessThan(content.indexOf('## Fakten'));
+  });
+
+  it('hängt leeren Text nicht an', async () => {
+    const store = emptyStore();
+    await expect(appendAnswer(store, FRESH_DAY, '  \n ')).rejects.toThrow(JournalError);
+    expect(await store.readText(FRESH_PATH)).toBeNull();
+  });
+
+  it('schreibt nicht mit veraltetem Hash', async () => {
+    const fixture = await journalFixture();
+    const before = await fixture.text(DAY_PATH);
+
+    await expect(
+      appendAnswer(fixture.store, DAY, 'Antwort.', { expectedHash: 'von-vorgestern' }),
+    ).rejects.toMatchObject({ code: 'conflict' });
+    expect(await fixture.text(DAY_PATH)).toBe(before);
   });
 });
 

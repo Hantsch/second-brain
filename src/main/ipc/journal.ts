@@ -25,7 +25,7 @@
 
 import { newMessageId } from '@core/chat';
 import {
-  appendToDay,
+  appendEntry,
   closeDay,
   coach,
   dayOf,
@@ -40,7 +40,7 @@ import type { Citation } from '@shared/types';
 import type { IpcRequest } from '@shared/ipc';
 import type { HandlerMap } from './registry';
 import { defineHandlers, fail } from './registry';
-import { applyClose, journalStore, toView, withDayText } from './journal-day';
+import { applyClose, foldDay, journalStore, toView, withDayText } from './journal-day';
 import { llmStreams } from './llm-stream';
 import type { StreamRun } from './llm-stream';
 import { requireLists } from './lists';
@@ -121,7 +121,10 @@ export function journalHandlers(services: Services): HandlerMap {
     'journal:append': async ({ date, text }) => {
       const store = journalStore(services);
       const created = (await store.stat(pathFor(date))) === null;
-      const written = await appendToDay(store, date, 'day', text, {
+      /* `appendEntry` (011, D2) is the named entry point for writing into the
+         "Day" stream — the same target `appendToDay(..., 'day', ...)` reached
+         before, now through the module that owns the stream format. */
+      const written = await appendEntry(store, date, text, {
         docLanguage: docLanguage(services),
       });
       await settle(services, [written.path], 'journal');
@@ -230,6 +233,13 @@ export function journalHandlers(services: Services): HandlerMap {
         request,
       );
       await settle(services, result.written, 'journal');
+      return result;
+    },
+
+    'journal:foldDay': async ({ date, expectedHash }) => {
+      const store = journalStore(services);
+      const result = await foldDay(store, date, docLanguage(services), expectedHash);
+      await settle(services, [result.path], 'journal');
       return result;
     },
   });

@@ -1,4 +1,5 @@
-/* The "day" section: the prose text, rendered — a click makes it editable.
+/* The "day" section: the raw text kept for reference — a small edit trigger
+ * opens it for hash-guarded, in-place changes.
  *
  * Conflict protection is the core of this file, and it hinges on one detail:
  * **the value and hash are frozen when the editor opens, not read at the moment
@@ -19,16 +20,23 @@
  * If the main process still returns a `conflict`, the draft stays put and the
  * message offers the explicit path to overwrite. Nothing is lost without someone
  * deciding it.
+ *
+ * 011/D8: the whole-text "click anywhere to edit" surface and the "How was
+ * your day?" inviting field are both gone. `EntryStream` (rendered by
+ * `DayEntry.tsx`) now shows every paragraph of prose as part of the one
+ * chronological column, and the composer below it is the entry point for a
+ * fresh day. What's left here is only the raw section's edit-in-place
+ * affordance — a day with nothing written yet has nothing for this
+ * component to show at all.
  */
 
 import { useEffect, useRef, useState } from 'react';
 import type { KeyboardEvent, ReactNode } from 'react';
 import { Button } from '../../atoms/Button';
 import { Card } from '../../atoms/Card';
-import { Icon } from '../../atoms/Icon';
+import { IconButton } from '../../atoms/IconButton';
 import { Kbd } from '../../atoms/Kbd';
 import { ErrorState } from '../../components/ErrorState';
-import { Markdown } from '../../components/Markdown';
 import { useT } from '../../i18n';
 import { decodeIpcError } from '../../lib/ipc-error';
 
@@ -43,7 +51,7 @@ export interface DayTextProps {
   text: string;
   /** Hash of the file it's in. */
   hash: string;
-  /** The day has no file yet — then the field is the entry point. */
+  /** The day has no file yet. */
   fresh: boolean;
   busy: boolean;
   /** The main process rejected the last attempt. */
@@ -73,9 +81,9 @@ export function DayText({
   const t = useT();
   /**
    * The draft **and** the version it's based on — one state, not two. It's
-   * created when the editor opens and on the first keystroke in the inviting
-   * field; derived, not chased in an effect (`useProposalEdit` does the same).
-   * That way there's no state where text and hash don't match.
+   * created when the editor opens; derived, not chased in an effect
+   * (`useProposalEdit` does the same). That way there's no state where text
+   * and hash don't match.
    */
   const [stored, setStored] = useState<{ draft: string; base: Base } | null>(null);
   /** Outside version whose notice the user has dismissed. */
@@ -85,11 +93,10 @@ export function DayText({
   /* Once saved, the draft has arrived — then the file takes over again. */
   const draft = saved ? null : (stored?.draft ?? null);
   const base = saved ? null : (stored?.base ?? null);
-  /* A day without prose invites input instead of showing an empty area with a
-     pen icon — even when the file already exists (a day where only talking
-     happened). */
-  const inviting = draft === null && (fresh || text.trim().length === 0);
-  const editing = draft !== null || inviting;
+  const editing = draft !== null;
+  /* Nothing written yet: the composer below is the entry point now, not this
+     section — a click-to-edit affordance on empty content doesn't make sense. */
+  const empty = fresh || text.trim().length === 0;
   const conflict =
     error !== null && error !== undefined && decodeIpcError(error).code === 'conflict';
   const changedOutside = base !== null && text !== base.text && accepted !== text;
@@ -122,14 +129,13 @@ export function DayText({
     onReset();
   };
 
-  /* The first keystroke in the inviting field freezes what was there before. */
   const type = (value: string): void => {
     setStored({ draft: value, base: stored?.base ?? { text, hash } });
   };
 
   const save = (expectedHash: string | undefined): void => {
-    if (draft === null && !inviting) return;
-    onSave(draft ?? '', expectedHash);
+    if (draft === null) return;
+    onSave(draft, expectedHash);
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>): void => {
@@ -138,7 +144,7 @@ export function DayText({
       save(frozen);
       return;
     }
-    if (event.key === 'Escape' && !inviting) {
+    if (event.key === 'Escape') {
       event.preventDefault();
       event.stopPropagation();
       stop();
@@ -146,19 +152,22 @@ export function DayText({
   };
 
   if (!editing) {
+    /* Nothing written and nothing just saved: no card, no button — the
+       composer field is where a fresh day starts now (see the module
+       comment above). */
+    if (empty && !saved) return null;
     return (
       <div className="sb-daytext">
         {saved ? <p className="sb-note-line">{t('journal.day.saved')}</p> : null}
-        {/* A click on the text opens it — that's why the text is the button. */}
-        <button
-          type="button"
-          className="sb-daytext-view"
-          aria-label={t('journal.day.edit')}
-          onClick={start}
-        >
-          <Markdown text={text} className="sb-daytext-md" />
-          <Icon name="pencil" size={14} className="sb-daytext-pen" />
-        </button>
+        {empty ? null : (
+          <IconButton
+            icon="pencil"
+            variant="ghost"
+            size="sm"
+            label={t('journal.day.edit')}
+            onClick={start}
+          />
+        )}
       </div>
     );
   }
@@ -166,13 +175,13 @@ export function DayText({
   return (
     <div className="sb-daytext sb-daytext--editing">
       <label className="gs-label" htmlFor="sb-day-field">
-        {inviting ? t('journal.day.ask') : t('journal.day.editLabel')}
+        {t('journal.day.editLabel')}
       </label>
       <textarea
         id="sb-day-field"
         ref={field}
         className="gs-input sb-daytext-field"
-        rows={inviting ? 4 : 8}
+        rows={8}
         placeholder={t('journal.day.placeholder')}
         value={draft ?? ''}
         onChange={(event) => type(event.target.value)}
@@ -244,17 +253,15 @@ export function DayText({
         >
           {t('journal.day.save')}
         </Button>
-        {inviting ? null : (
-          <Button variant="ghost" onClick={stop}>
-            {t('common.cancel')}
-          </Button>
-        )}
+        <Button variant="ghost" onClick={stop}>
+          {t('common.cancel')}
+        </Button>
         {conflict ? (
           <span className="sb-pageedit-warn">{t('journal.day.unsaved')}</span>
         ) : (
           <span className="sb-capture-hint">
             <Kbd keys={['Ctrl', 'Enter']} />
-            <span>{inviting ? t('journal.day.askHint') : t('journal.day.hint')}</span>
+            <span>{t('journal.day.hint')}</span>
           </span>
         )}
       </div>

@@ -39,7 +39,11 @@ import type { VaultStat } from '@core/vault/types';
 /** So viele frueheren Tage gehen hoechstens als Belege in ein `analyze`-Gespraech. */
 export const MAX_EARLIER_DAYS = 5;
 
-/** So viele frueheren Runden desselben Tages gehen als Vorgeschichte in den Prompt. */
+/**
+ * So viele frueheren Runden desselben Tages gehen als Vorgeschichte in den Prompt
+ * — seit 011 die Bloecke des Tagesstroms (eigene Prosa und Antworten der App) und
+ * die Runden eines noch nicht gefalteten „Gespraech"-Abschnitts zusammen.
+ */
 export const DIALOG_HISTORY_TURNS = 6;
 
 /** Untermenge von `VaultStore`, die der Tagebuch-Kern braucht. */
@@ -109,6 +113,15 @@ export interface DialogTurn {
   line: number;
 }
 
+/**
+ * Ein Block im „Tag"-Abschnitt, so wie er geschrieben wurde (011): entweder ein
+ * Prosa-Lauf der Nutzerin oder eine Antwort der App als Blockzitat im Format von
+ * `formatTurn`. Reihenfolge der Liste = Reihenfolge im Dokument.
+ */
+export type JournalBlock =
+  | { kind: 'entry'; text: string; line: number }
+  | { kind: 'answer'; text: string; at: string | null; line: number };
+
 /** Alles, was das Coaching-Gespraech braucht. */
 export interface CoachDeps extends JournalOptions {
   store: JournalStore;
@@ -142,8 +155,10 @@ export interface CoachResult {
   /** Die protokollierte Antwort. Leer, wenn keine kam — nie erfunden. */
   reply: string;
   /**
-   * Es kam keine Antwort von einem Modell. Der Eintrag wurde trotzdem geschrieben;
-   * `earlier` traegt, was statt einer Antwort belegt ist.
+   * Es kam keine Antwort von einem Modell, **obwohl eine gewollt war**. Der Eintrag
+   * wurde trotzdem geschrieben; `earlier` traegt, was statt einer Antwort belegt
+   * ist. In der Haltung `listen` ist das `false`: dort war keine Antwort verlangt,
+   * und eine ausgebliebene ist dann kein Mangel, sondern der Auftrag.
    */
   noModel: boolean;
   /**

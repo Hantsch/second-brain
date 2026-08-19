@@ -215,24 +215,6 @@
   padding: 2px var(--space-2);
 }
 
-/* ── "Day" / "Talk" tabs (narrow window only) ────────────────────────────── */
-
-/* Invisible in the wide window: there are two columns there, no tabs, and
-   this line must not change anything about the already-approved wide view.
-   `journal.css` is loaded after the Gaston components (`index.css`) — same
-   class specificity as `.gs-tabs`, but the later rule wins. */
-.sb-dayentry-tabs {
-  display: none;
-}
-/* Both wrappers remain invisible frames in the wide window: their children
-   then sit directly in the flow of `.sb-dayentry` again, in the same place
-   and with the same `gap`, as if the wrapper didn't exist — the previous
-   layout thus stays unchanged. Only in the narrow window (below) do they
-   become real frames, each carrying one tab. */
-.sb-dayentry-tagpanel,
-.sb-dayentry-talkpanel {
-  display: contents;
-}
 .sb-dayentry-closewrap {
   display: flex;
   justify-content: flex-end;
@@ -328,43 +310,14 @@
 
 /* ── Day text ────────────────────────────────────────────────────────────── */
 
+/* 011/D8: this used to wrap a giant clickable Markdown block (the whole day's
+   prose, duplicated from `EntryStream`) with a hover-revealed pencil. Now it
+   only wraps the compact edit trigger and, once used, the editing textarea —
+   the prose itself lives solely in `EntryStream`. */
 .sb-daytext {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-}
-.sb-daytext-view {
-  all: unset;
-  box-sizing: border-box;
-  display: block;
-  position: relative;
-  width: 100%;
-  cursor: text;
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid transparent;
-  border-radius: var(--radius-md);
-  user-select: text;
-}
-.sb-daytext-view:hover {
-  border-color: var(--border-subtle);
-  background: var(--surface-raised);
-}
-.sb-daytext-view:focus-visible {
-  box-shadow: var(--focus-ring);
-}
-.sb-daytext-md {
-  font-size: var(--text-base);
-}
-.sb-daytext-pen {
-  position: absolute;
-  top: var(--space-2);
-  right: var(--space-2);
-  color: var(--text-faint);
-  opacity: 0;
-}
-.sb-daytext-view:hover .sb-daytext-pen,
-.sb-daytext-view:focus-visible .sb-daytext-pen {
-  opacity: 1;
 }
 .sb-daytext-field {
   width: 100%;
@@ -600,7 +553,7 @@
 
 /* In the narrow window (the threshold is checked by `npm run shot` at
    1152 px, hence 1200 and not 1100 — otherwise the rule wouldn't apply at
-   exactly the width being checked), the day with day text and composer
+   exactly the width being checked), the day with its stream and composer
    comes first, and the day list becomes a tightly kept date picker below
    it: the purpose of the screen is the day, not the list of days.
 
@@ -611,33 +564,18 @@
    take its full content height — that would have laid it over the second
    row instead of placing it next to it.
 
-   Within `.sb-journal-main`, here — third attempt — is the chosen design:
-   two tabs (`DayEntry.tsx`), "Day" and "Talk", instead of a single
-   scrolling column for both. Two earlier designs were rejected for this,
-   not just one:
-   - `position: sticky` on the composer stuck it over the whole day from
-     the first screen line onward — text, mood, energy, and chips ended up
-     behind it, no longer reachable for `elementFromPoint`.
-   - The composer in normal flow (without a sticky frame) only shifted the
-     problem the other way: it ended up behind the bottom screen edge
-     itself, not visible without scrolling — on the one screen whose whole
-     purpose is writing, the worse failure.
-   The reason for both failures was the same: roughly 370 px of scroll
-   height isn't enough for the day entry AND the talk at the same time.
-   Tabs sidestep the question instead of asking it again — each shows only
-   what it's there for.
-
-   `.sb-dayentry-tagpanel`, for its part, keeps running in the flow of
-   `.sb-journal-main` (the same tightness as before: mood, energy, and chips
-   sit unscrolled at the top, facts and "close the day" below, scrolled if
-   needed). `.sb-dayentry-talkpanel`, on the other hand, gets its own
-   column bounded to the window height: only the history (`.sb-coach`)
-   scrolls inside it, the composer stays as the last, non-growing element
-   always within the window — without `position: sticky`, because it no
-   longer needs to overlap anything (nothing else sits in the "Talk" tab).
-   No second scroller cuts off a line in the process: `.sb-coach` ends at
-   the line edge the browser itself chooses, not at an estimated pixel
-   count. */
+   Within `.sb-journal-main`, the day itself scrolls as one column here too
+   (011, D7) — the same way the wide window already does. The earlier
+   "Day"/"Talk" tabs existed only because the previous two-section layout
+   (day text, then a separate "Conversation") couldn't fit into one
+   scrolling column without the composer covering the day or ending up out
+   of sight itself (roughly 370 px of scroll height wasn't enough for both
+   at once). The unified stream this story introduces doesn't split into two
+   halves any more — there's nothing left to switch between, so the simplest
+   defensible interim answer is to drop the tab-specific scroller and let
+   `.sb-dayentry` flow like it does in the wide window. If the new
+   single-field composer (D8) turns out to need its own sticky or narrow
+   treatment, that's a question for that deliverable, not this one. */
 @media (max-width: 1200px) {
   .sb-journal {
     grid-template-columns: minmax(0, 1fr);
@@ -656,8 +594,7 @@
   }
   /* At least one full row of the day list, not just its top edge
      (measured: one row is roughly 93 px tall). 60 px didn't show a single
-     one fully. Applies to both tabs — the list sits outside `.sb-dayentry`
-     and knows nothing about the tabs. */
+     one fully. */
   .sb-daylist {
     max-height: 108px;
   }
@@ -665,88 +602,29 @@
   .sb-dayentry {
     gap: var(--space-3);
   }
-  /* The tab itself — otherwise invisible by the base rule (see above). */
-  .sb-dayentry-tabs {
-    display: flex;
-  }
-  .sb-dayentry-tagpanel,
-  .sb-dayentry-talkpanel {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
-  }
-  /* Only the active tab's side sits in the window — `data-tab` is carried
-     by `DayEntry.tsx`. The other stays in the tree (no switch removes
-     anything, see there), just invisible: unreachable for
-     `elementFromPoint`, exactly as the gate requires. */
-  .sb-dayentry[data-tab='day'] .sb-dayentry-talkpanel {
-    display: none;
-  }
-  .sb-dayentry[data-tab='talk'] .sb-dayentry-tagpanel {
-    display: none;
-  }
-  /* "Talk" tab: its own column bounded to the window height — no longer the
-     shared scroll area with the day entry. `flex: 1 1 auto` on
-     `.sb-dayentry` itself sizes it to exactly the rest of the height of
-     `.sb-journal-main` (whose own scrolling thus goes unused here — there's
-     nothing left that extends beyond it). */
-  .sb-dayentry[data-tab='talk'] {
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow: hidden;
-  }
-  /* The header (date, path, editor link) belongs content-wise to the "Day"
-     tab (see the breakdown in the task) — and space is the scarcest
-     resource here: measured at 1152×720, the composer alone (privacy line,
-     field, stance choice, "Say") needs roughly 318 px, the header another
-     roughly 74 px (with spacing). Hidden, the rest is just enough for the
-     composer plus a narrow strip of history — visible, it would otherwise
-     only be partially shown, cut off by the `overflow: hidden` above
-     (`elementFromPoint` would then hit the day list below instead of
-     "Say", exactly the finding this third attempt was measured against). */
-  .sb-dayentry[data-tab='talk'] .sb-dayentry-head {
-    display: none;
-  }
-  .sb-dayentry[data-tab='talk'] .sb-dayentry-talkpanel {
-    flex: 1 1 auto;
-    min-height: 0;
-  }
-  /* Only the history scrolls; the composer after it is a last, non-growing
-     element and therefore always stays within the window — `flex-shrink: 0`
-     explicit, because a field could otherwise shrink below its automatic
-     minimum size instead of letting the history shrink. */
-  .sb-dayentry[data-tab='talk'] .sb-coach {
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow-y: auto;
-  }
-  .sb-dayentry[data-tab='talk'] .sb-journal-footer {
-    flex: 0 0 auto;
-  }
-  /* The same scarcity: the day list only needs its one mandatory row (see
-     above), not also the count and keyboard hint above and below it — in
-     the "Day" tab both remain, there's enough room there. `:has()` instead
-     of its own state in the screen: the two columns (`.sb-journal-main`,
-     `.sb-journal-side`) are siblings, not an ancestor-descendant
-     relationship that an ordinary rule would know about. */
-  .sb-journal:has(.sb-dayentry[data-tab='talk']) .sb-journal-count,
-  .sb-journal:has(.sb-dayentry[data-tab='talk']) .sb-journal-keys {
-    display: none;
-  }
   /* 72ch is two to three lines here instead of one — exactly the space the
      composer no longer has now that it also explains Esc. */
   .sb-privacy {
     max-width: none;
   }
-  /* The sticky frame from the base rule explicitly doesn't apply here: the
-     composer no longer needs it since its tab shows nothing above it but
-     the history — it's already the last, non-growing element of its own
-     column anyway (see above). `position: static` instead of `sticky` is
-     enough; the shadow belonged solely to the sticky edge and would be a
-     claim without function here. */
+  /* 011/D11: the sticky-at-bottom rule above is a wide-window decision — it
+     anchors the composer to the edge of the detail column so it never slides
+     out of view while the rest of the day scrolls past it. In the narrow
+     window the whole day, composer included, is already one plain scrolling
+     column (011, D7); `position: sticky` here has no scroll space left to
+     hide from, so it instead pins the composer over whatever sits right
+     above it — the mood/energy pickers and the chips, when the day is short.
+     `static` puts it back in normal flow as the column's last section, the
+     same conclusion the old tabbed design already reached for this window
+     width. The box-shadow existed only to paper over the sticky element's own
+     top edge; with nothing stuck there, it would just draw a band across the
+     section above for no reason. */
   .sb-journal-footer {
     position: static;
     box-shadow: none;
+    /* A notch tighter than the wide window's `--space-3`, matching the
+       general narrow-window tightening in this block (`.sb-daylist`,
+       `.sb-dayentry` above). */
     gap: var(--space-2);
   }
 }

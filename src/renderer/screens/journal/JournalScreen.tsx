@@ -1,7 +1,7 @@
 /* Journal — the screen where the app must not be useful, but human.
 
    Layout: on the left a narrow list of days (with named gaps, "Today" on
-   top), on the right the day — header, day text, talk, facts.
+   top), on the right the day — header, the unified entry stream, facts.
 
    The four states from ARCHITECTURE.md, all explicit:
    - **Empty**: no entry at all in the vault → two sentences about what's
@@ -43,8 +43,8 @@ import {
 } from '../../lib/queries/journal';
 import { CloseDialog } from './CloseDialog';
 import { CoachComposer } from './CoachComposer';
-import { CoachPanel } from './CoachPanel';
 import { DayEntry } from './DayEntry';
+import { EntryStream } from './EntryStream';
 import { FactsSection } from './FactsSection';
 import type { AppliedClose } from './FactsSection';
 import { useJournalKeys } from './use-journal-keys';
@@ -59,8 +59,8 @@ interface Pending {
 /** Same threshold as `journal.css` (`@media (max-width: 1200px)`) — the only
     place where this screen itself needs to know which of the two designs
     currently applies: "close the day" sits in the narrow window next to the
-    facts (tab "Day"), in the wide window next to the send button, never in
-    both places at once (see `closeAction` below). Same pattern as
+    facts (`DayEntry.tsx`), in the wide window next to the send button, never
+    in both places at once (see `closeAction` below). Same pattern as
     `useGridColumns` in the dashboard (`screens/dashboard/TileGrid.tsx`). */
 function useNarrow(): boolean {
   const [narrow, setNarrow] = useState(() =>
@@ -122,13 +122,33 @@ export function JournalScreen() {
 
   const busy = pending !== null && !stream.done;
 
+  /* A fresh day (no file yet) puts the cursor straight into the one field —
+     the same "ready to type into immediately" promise the old DayText
+     inviting field made (011, D8 removed it) now lives here instead. An
+     existing day never steals focus this way: only the transition into
+     `view.data === null` does. */
+  useEffect(() => {
+    if (view.data === null) field.current?.focus();
+  }, [date, view.data]);
+
   /* While an answer is running, no second turn gets sent: two writes to the
      same file would race each other, and one turn would be lost. The
      composer shows "Cancel" during this time; the Enter key needs the same
-     lock. */
+     lock. An append races the same way against itself (two clicks before the
+     first write lands), guarded the same way even though it never streams. */
   const say = (): void => {
     const message = draft.trim();
-    if (message.length === 0 || busy || mutations.coach.isPending) return;
+    if (message.length === 0 || busy || mutations.coach.isPending || mutations.append.isPending) {
+      return;
+    }
+    if (stance === 'listen') {
+      /* Listen never touches the gateway: journal:append is the only path,
+         which makes "no model was asked" verifiable at the IPC boundary
+         rather than just in a prompt (011, D1). No streaming UI exists for
+         it — the paragraph shows up once the day refetches. */
+      mutations.append.mutate({ date, text: message }, { onSuccess: () => setDraft('') });
+      return;
+    }
     if (pending !== null) clearStream(pending.messageId);
     mutations.coach.mutate(
       { mode: stance, date, message, useHistory: true },
@@ -139,6 +159,18 @@ export function JournalScreen() {
         },
       },
     );
+  };
+
+  /* "Move the conversation into the entry" (011, D9) — hash-guarded exactly
+     like `text.onSave`: without a loaded day there is nothing to fold, so
+     `expectedHash` is only added once one exists. */
+  const foldDay = (): void => {
+    mutations.foldDay.mutate({
+      date,
+      ...(view.data === null || view.data === undefined
+        ? {}
+        : { expectedHash: view.data.doc.hash }),
+    });
   };
 
   const closeDay = (): void => {
@@ -179,6 +211,7 @@ export function JournalScreen() {
     mutations.close.error ??
     mutations.applyClose.error ??
     mutations.undo.error ??
+    mutations.foldDay.error ??
     view.error ??
     days.error ??
     null;
@@ -187,12 +220,11 @@ export function JournalScreen() {
      window it sits next to the composer, anchored at the bottom edge of
      the detail column (`footerAction`), so neither of the two actions
      concerning the day slides below the visible edge. In the narrow window
-     it instead belongs to the "Day" tab, right next to the facts
-     (`DayEntry.tsx`) — the "Talk" tab otherwise shows only history and
-     field. `narrow` decides which of the two paths actually gets the
-     button; the other stays `undefined`. The action remains secondary
-     either way — this screen's one teal point is the talk, and in the
-     dialog, its "apply". */
+     it instead sits right next to the facts (`DayEntry.tsx`) — there is no
+     tab to place it in any more (011, D7 removed it). `narrow` decides
+     which of the two paths actually gets the button; the other stays
+     `undefined`. The action remains secondary either way — this screen's
+     one teal point is the stream, and in the dialog, its "apply". */
   const closeAction = (
     <Button
       variant="secondary"
@@ -205,11 +237,6 @@ export function JournalScreen() {
       {t('journal.close.action')}
     </Button>
   );
-
-  /* "Turn count" badge on the "Talk" tab — every turn starts with exactly
-     one own line, the response follows or is missing (see `CoachPanel.tsx`);
-     the running turn only counts once it's on disk as a file. */
-  const talkCount = (view.data?.turns ?? []).filter((turn) => turn.role === 'user').length;
 
   const header = (
     <ScreenHeader overline={t('screen.journal.overline')} title={t('screen.journal.title')} />
@@ -306,11 +333,14 @@ export function JournalScreen() {
               }}
               onOpenProject={(slug) => void navigate(`/projects?p=${encodeURIComponent(slug)}`)}
               closeAction={narrow ? closeAction : undefined}
-              talkCount={talkCount}
-              onEnterTalk={() => field.current?.focus()}
+              legacy={{
+                busy: mutations.foldDay.isPending,
+                error: mutations.foldDay.error,
+                onFold: foldDay,
+              }}
               dialogue={
-                <CoachPanel
-                  turns={view.data?.turns ?? []}
+                <EntryStream
+                  stream={view.data?.stream ?? []}
                   live={
                     pending === null
                       ? null

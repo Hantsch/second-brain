@@ -7,7 +7,7 @@
      verglichen: kein Byte darf sich ändern, solange niemand bestätigt hat. */
 
 import { describe, expect, it } from 'vitest';
-import { GERMAN_CLOSE_LABELS, closeDay, heuristicMood } from '@core/journal';
+import { GERMAN_CLOSE_LABELS, closeDay, formatAnswer, heuristicMood } from '@core/journal';
 import { emptyGateway, gatewayWithReplies } from '../../helpers/llm';
 import { DAY_PATH, journalFile, journalFixture, journalPathOf } from './fixtures';
 
@@ -119,6 +119,21 @@ describe('closeDay', () => {
     const fixture = await journalFixture({
       files: { [PATH]: journalFile(DATE, 'Ruhiger Tag.', { dialogue }) },
     });
+
+    const suggestion = await closeDay(fixture.closeDeps(emptyGateway()), DATE);
+
+    expect(suggestion?.proposal.todos).toEqual([]);
+    expect(suggestion?.frontmatter.people).toEqual([]);
+  });
+
+  it('liest eine eingebettete Antwort im Tag-Abschnitt nicht mit (011: Strom statt Gespräch)', async () => {
+    /* Analog zu 'liest den Gesprächsabschnitt nicht mit' oben, aber im neuen
+       Format: die Antwort steht nicht mehr in einem eigenen Abschnitt, sondern
+       als Blockzitat mitten in "Tag". Todo-artige Sprache darin darf trotzdem
+       nicht als Vorschlag der Nutzerin erscheinen. */
+    const answer = formatAnswer('Du solltest morgen die Rechnung an Svenja schicken.', '21:05');
+    const tag = ['Ruhiger Tag.', '', answer].join('\n');
+    const fixture = await journalFixture({ files: { [PATH]: journalFile(DATE, tag) } });
 
     const suggestion = await closeDay(fixture.closeDeps(emptyGateway()), DATE);
 

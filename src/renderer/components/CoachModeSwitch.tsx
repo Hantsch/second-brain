@@ -8,9 +8,9 @@
  *
  * Each stance carries its own sentence — in the tooltip on the button and as a
  * hint line under the segment for the selected one. The sentence is the
- * promise: "Listen: I reflect and ask follow-up questions, without advice" is
- * exactly what this stance's prompt forbids and allows
- * (`core/llm/prompts/journal-chat.ts`).
+ * promise: "Listen" says the entry is filed with no answer at all (011: it
+ * never calls a model — `core/journal/coach.ts`), "Tips"/"Analyse" each name
+ * exactly what their prompt forbids and allows (`core/llm/prompts/journal-chat.ts`).
  *
  * Keyboard: Ctrl+1 through Ctrl+3. Not the bare digits — those belong to the
  * rail (screen switching), and in the writing field they're characters. With

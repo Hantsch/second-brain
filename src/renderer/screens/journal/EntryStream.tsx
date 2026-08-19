@@ -1,17 +1,15 @@
-/* The "Conversation" section: the turns so far — the input field, coaching
- * stance, and day-close live separately in `CoachComposer`, anchored to the
- * bottom edge of the detail column, not here. Kept separate because whatever
- * sticks to the screen edge must be a direct descendant of `.sb-dayentry`:
- * nested under "Conversation", its own sticky frame would only span the
- * narrow remainder of this section, not the whole detail column (see the
- * comment in `styles/app/journal.css`, section "Composer, stance and
- * day-close").
+/* The day as one chronological column: my prose and the app's answers, in
+ * document order, exactly as `parseStream` read them from the file (011) —
+ * replaces the old "Conversation" tab (`CoachPanel.tsx`, now gone). The
+ * composer and day close-out live separately in `CoachComposer`, anchored to
+ * the bottom edge of the detail column, not here (see the comment in
+ * `styles/app/journal.css`, section "Composer, stance and day close-out").
  *
  * Three states, all explicit:
  *
- * - **Running.** The user's own turn appears immediately (it is written
+ * - **Running.** The user's own paragraph appears immediately (it is written
  *   before any model is asked), and the answer grows below it.
- * - **Done.** Both turns come from the file — the buffer is no longer needed.
+ * - **Done.** Every block comes from the file — the buffer is no longer needed.
  * - **No answer.** A statement with a reason, no simulated empathy. In
  *   "analyze" mode, the earlier passages that were actually found appear
  *   below it, with a jump to each.
@@ -20,7 +18,7 @@
 
 import { useNavigate } from 'react-router-dom';
 import type { Citation } from '@shared/types';
-import type { JournalTurn } from '@shared/ipc';
+import type { JournalStreamBlock } from '@shared/ipc';
 import { DialogTurn } from '../../components/DialogTurn';
 import { useT } from '../../i18n';
 
@@ -38,7 +36,7 @@ const KNOWN_FAILURES: readonly string[] = [
 const ROUTING_ROUTE = '/settings?tab=models';
 
 export interface CoachLive {
-  /** This run's own turn, verbatim as sent. */
+  /** This run's own paragraph, verbatim as sent. */
   message: string;
   /** The text that has arrived so far. */
   text: string;
@@ -49,22 +47,31 @@ export interface CoachLive {
   citations: readonly Citation[];
 }
 
-export interface CoachPanelProps {
-  /** The turns from the file, oldest first. */
-  turns: readonly JournalTurn[];
+export interface EntryStreamProps {
+  /** The day's blocks, oldest first, exactly as parsed from the file. */
+  stream: readonly JournalStreamBlock[];
   live: CoachLive | null;
   /** Jump to an earlier day. */
   onOpenDay: (date: string) => void;
 }
 
-export function CoachPanel({ turns, live, onOpenDay }: CoachPanelProps) {
+export function EntryStream({ stream, live, onOpenDay }: EntryStreamProps) {
   const t = useT();
   const navigate = useNavigate();
 
-  /* The user's own turn is already in the file once the day has reloaded —
-     until then, the buffer shows it. Twice would be once too many. */
+  /* The user's own paragraph is already in the file once the day has
+     reloaded — until then, the buffer shows it. Twice would be once too
+     many.
+     `appendEntry` writes plain prose, so a paragraph that lands right after
+     existing prose in the same "Day" section merges into ONE `entry` block
+     (`parseStream` doesn't split on blank lines within a run) — an exact
+     match against the whole block's text would then never fire, and the
+     paragraph would render twice. Checking the block's *end* is enough: the
+     message is always the most recently appended text, so it's always the
+     tail of whichever entry block it landed in. */
   const pendingUser =
-    live === null || turns.some((turn) => turn.role === 'user' && turn.text === live.message)
+    live === null ||
+    stream.some((block) => block.kind === 'entry' && block.text.endsWith(live.message))
       ? null
       : live.message;
   const failure = live?.error ?? null;
@@ -74,15 +81,27 @@ export function CoachPanel({ turns, live, onOpenDay }: CoachPanelProps) {
     <section className="sb-coach" aria-label={t('journal.dialogue.title')}>
       <h3 className="sb-section-title">{t('journal.dialogue.title')}</h3>
 
-      {turns.length === 0 && live === null ? (
+      {stream.length === 0 && live === null ? (
         <p className="sb-panel-empty">{t('journal.dialogue.empty')}</p>
       ) : (
         <div className="sb-dialogue">
-          {turns.map((turn, at) => (
-            <DialogTurn key={`${turn.role}-${at}-${turn.at ?? ''}`} turn={turn} />
+          {stream.map((block, at) => (
+            <DialogTurn
+              key={`${block.kind}-${at}-${block.at ?? ''}`}
+              turn={
+                block.kind === 'entry'
+                  ? { role: 'user', text: block.text, at: null }
+                  : { role: 'assistant', text: block.text, at: block.at }
+              }
+              /* An `entry` block is my own prose, not a "turn" with a
+                 speaker — it never carries a speaker header, mirroring the
+                 file where it's plain Markdown with no `> **Second Brain**`
+                 marker. */
+              plain={block.kind === 'entry'}
+            />
           ))}
           {pendingUser === null ? null : (
-            <DialogTurn turn={{ role: 'user', text: pendingUser, at: null }} />
+            <DialogTurn turn={{ role: 'user', text: pendingUser, at: null }} plain />
           )}
           {live === null || failure !== null ? null : (
             <DialogTurn

@@ -69,8 +69,10 @@ export const api = {
     create: (request: IpcRequest<'projects:create'>) => call('projects:create', request),
     patch: (request: IpcRequest<'projects:patch'>) => call('projects:patch', request),
     append: (request: IpcRequest<'projects:append'>) => call('projects:append', request),
-    createNote: (request: IpcRequest<'projects:createNote'>) => call('projects:createNote', request),
-    removeNote: (request: IpcRequest<'projects:removeNote'>) => call('projects:removeNote', request),
+    createNote: (request: IpcRequest<'projects:createNote'>) =>
+      call('projects:createNote', request),
+    removeNote: (request: IpcRequest<'projects:removeNote'>) =>
+      call('projects:removeNote', request),
     suggestStatus: (slug: string) => call('projects:suggestStatus', { slug }),
     resolveWaiting: (slug: string, index: number) =>
       call('projects:resolveWaiting', { slug, index }),
@@ -99,6 +101,8 @@ export const api = {
     abort: (messageId: string) => call('journal:abort', { messageId }),
     close: (date: string) => call('journal:close', { date }),
     applyClose: (request: IpcRequest<'journal:applyClose'>) => call('journal:applyClose', request),
+    foldDay: (date: string, expectedHash?: string) =>
+      call('journal:foldDay', { date, expectedHash }),
   },
   modules: {
     list: () => call('modules:list'),
