@@ -82,18 +82,39 @@ Gaps/notes:
   [sprints/S01/testplan.md](sprints/S01/testplan.md),
   [sprints/S02/testplan.md](sprints/S02/testplan.md).
 
-### M2 — Projects answer where I left off — sprint cut
+### M2 — Projects answer where I left off — built, acceptance pending
 
 Stories 003 (notes and waiting-on, editable in place), 004 (where the status and next step come
 from), 013 (favourite projects and an order that matches how I work). No concept behind them;
 the stories are detailed enough to cut from directly.
 
 Depended on M1: story 008 moved a Sessions tab into this same screen, so M1 went first to avoid
-touching the project detail twice. M1 is accepted; M2 is next.
+touching the project detail twice. M1 is accepted; M2 is built, pending the user's live
+acceptance via [sprints/S03/testplan.md](sprints/S03/testplan.md).
 
 Sprints:
 
-- [sprints/S03/sprint.md](sprints/S03/sprint.md) — where I left off (003, 004, 013), `planned`
+- [sprints/S03/sprint.md](sprints/S03/sprint.md) — where I left off (003, 004, 013), `done`
+  ([review](sprints/S03/review.md) · [testplan](sprints/S03/testplan.md))
+
+Gaps/notes:
+
+- **A `.gitignore` bug excluded `src/core/vault/` from git entirely, since S01.** The rule
+  `vault/` (meant to keep the user's real vault data out of the repo) was unanchored and
+  matched any directory named `vault` anywhere in the tree, including the core vault module.
+  Fixed in a standalone commit on the S03 branch (`af519ef`): anchored to `/vault/`, module
+  added. Confirmed missing from both `main` and `dev` before the fix — needs the S03 branch
+  merged to actually land the core module in history.
+- **Filing still hardcodes the German `Notizen` heading** (`src/core/capture/filing.ts`);
+  only the new note-composer write path from story 003 is heading-alias aware. A project using
+  `## Notes` can end up with a second, German-headed section if a dump is filed onto it. Same
+  family as the S01/S02 gap about `capture-proposal.ts` hardcoding the German section name —
+  worth one story once English-language vaults are common.
+- **The "last worked on" marker (013) is computed over the filtered list**, not globally — under
+  a narrowed scope filter it marks the most recent project within that scope. Intentional and
+  tested, not a defect.
+- **List-level star writes (013) have no error surface**, unlike the detail star. Matches an
+  existing pattern on the same screen for other list-level patches; not a regression.
 
 ### M3 — The journal becomes one thing — planned
 

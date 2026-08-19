@@ -1,6 +1,6 @@
 ---
 sprint: S03
-status: in-progress # planned | in-progress | done
+status: done # planned | in-progress | done
 branch: sprint/S03
 milestone: M2 — Projects answer where I left off
 ---
