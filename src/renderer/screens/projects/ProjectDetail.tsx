@@ -10,10 +10,10 @@
    so a link leads straight into a project's sessions. The screen above owns
    the address and hands the derived state down as `view`.
 
-   This component keeps exactly one write path: the status, because the
-   control for it sits in the head. Its failure is reported right below the
-   head — where the change was made. Every other write belongs to the
-   Overview tab and reports itself there.
+   This component keeps the write paths whose controls sit in the head
+   itself — the status and the favourite star. Their failure is reported
+   right below the head — where the change was made. Every other write
+   belongs to the Overview tab and reports itself there.
 
    The Sessions tab is only offered when there is something in it: a project
    with no agent working directory would carry an empty tab forever. What
@@ -113,6 +113,18 @@ export function ProjectDetail({ project, doc, view, now }: ProjectDetailProps) {
     );
   };
 
+  /* Same write path as the status, with the doc hash: a stale hash surfaces
+     through the shared error state below `ProjectHead`, not as a silent
+     no-op. No confirmation line — the story asks for one click, nothing
+     more, unlike the status's `savedStatus`. */
+  const setFavorite = (): void => {
+    mutations.patch.mutate({
+      slug: project.slug,
+      patch: { favorite: !project.favorite },
+      expectedHash: doc.hash,
+    });
+  };
+
   return (
     /* A named `section`, not a `div` with `aria-label`: on an element without
        a role, the name is invalid — and invisible to assistive tech. */
@@ -122,6 +134,7 @@ export function ProjectDetail({ project, doc, view, now }: ProjectDetailProps) {
         statusBusy={mutations.patch.isPending}
         savedStatus={savedStatus}
         onStatus={setStatus}
+        onFavorite={setFavorite}
         onOpenFile={() => void api.shell.openPath(project.path).catch(() => undefined)}
         {...(now === undefined ? {} : { now })}
       />

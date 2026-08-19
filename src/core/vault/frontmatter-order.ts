@@ -29,6 +29,7 @@ const PROJECT = [
   'scope',
   'status',
   'priority',
+  'favorite',
   'created',
   'started',
   'deadline',

@@ -88,15 +88,27 @@ export function TargetPicker({
   const [needle, setNeedle] = useState('');
   const field = useRef<HTMLInputElement>(null);
 
-  const entries = useMemo(
-    () =>
-      actions.map((action) => ({
-        action,
-        label: targetLabel(action, names),
-        key: `${action.target}:${action.path}`,
-      })),
-    [actions, names],
-  );
+  const entries = useMemo(() => {
+    const withMeta = actions.map((action) => ({
+      action,
+      label: targetLabel(action, names),
+      key: `${action.target}:${action.path}`,
+    }));
+    /* The app's own filing answer must not be pushed down — it comes first,
+       whether or not it happens to be a favourite too. */
+    const isCurrent = (entry: (typeof withMeta)[number]): boolean =>
+      entry.action.path === current.path;
+    const isFavoriteProject = (entry: (typeof withMeta)[number]): boolean =>
+      entry.action.target === 'project' &&
+      (names.projects.find((project) => project.path === entry.action.path)?.favorite ?? false);
+    const currentEntry = withMeta.find(isCurrent);
+    const rest = withMeta.filter((entry) => !isCurrent(entry));
+    return [
+      ...(currentEntry ? [currentEntry] : []),
+      ...rest.filter(isFavoriteProject),
+      ...rest.filter((entry) => !isFavoriteProject(entry)),
+    ];
+  }, [actions, current, names]);
 
   const query = needle.trim().toLowerCase();
   const shown =

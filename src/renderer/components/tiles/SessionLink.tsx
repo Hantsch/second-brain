@@ -16,6 +16,7 @@ import type { Project } from '@shared/types';
 import { Icon } from '../../atoms/Icon';
 import { Input } from '../../atoms/Input';
 import { useT } from '../../i18n';
+import { favoritesFirst } from '../../lib/favorites';
 
 /** Ab so vielen Projekten gibt es das Suchfeld. */
 const SEARCH_FROM = 8;
@@ -42,10 +43,11 @@ export function SessionLink({
   const t = useT();
   const [query, setQuery] = useState('');
   const needle = query.trim().toLowerCase();
+  const ordered = favoritesFirst(projects);
   const found =
     needle.length === 0
-      ? projects
-      : projects.filter((project) =>
+      ? ordered
+      : ordered.filter((project) =>
           `${project.title} ${project.slug}`.toLowerCase().includes(needle),
         );
 

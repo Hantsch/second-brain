@@ -121,6 +121,7 @@ const project: Project = {
   scope: 'work',
   status: 'active',
   priority: 1,
+  favorite: false,
   deadline: null,
   nextStep: 'Abnahmeprotokoll durchgehen',
   nextStepStale: false,

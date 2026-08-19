@@ -8,6 +8,7 @@
 
 import { useNavigate } from 'react-router-dom';
 import { useT } from '../../i18n';
+import { favoritesFirst } from '../../lib/favorites';
 import { useProjects } from '../../lib/queries/data';
 import { useDashboardData } from '../../lib/queries/dashboard';
 import { TileFrame } from '../TileFrame';
@@ -21,10 +22,10 @@ export function StaleProjectsTile() {
   const projects = useProjects();
 
   const slugs = dashboard.data?.staleProjects ?? [];
-  const rows = slugs
+  const resolved = slugs
     .map((slug) => projects.data?.find((project) => project.slug === slug))
-    .filter((project): project is NonNullable<typeof project> => project !== undefined)
-    .slice(0, LIMIT);
+    .filter((project): project is NonNullable<typeof project> => project !== undefined);
+  const rows = favoritesFirst(resolved).slice(0, LIMIT);
 
   return (
     <TileFrame

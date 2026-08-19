@@ -41,6 +41,8 @@ export interface ProjectFrontmatter extends BaseFrontmatter {
   status: ProjectStatus;
   /** 1 = zuerst, 5 = irgendwann. */
   priority?: number;
+  /** User- or app-set star; missing or anything but `true` counts as not-favourited. */
+  favorite?: boolean;
   started?: string;
   /** Harte Frist des Projekts, ISO-Datum. */
   deadline?: string;
@@ -65,6 +67,8 @@ export interface Project {
   scope: Scope;
   status: ProjectStatus;
   priority: number;
+  /** Starred by the user (or the app) to surface it immediately. */
+  favorite: boolean;
   deadline: string | null;
   nextStep: string | null;
   /** Where `status` came from and when — undefined if the file never recorded it. */

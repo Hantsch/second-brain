@@ -74,6 +74,7 @@ const project: Project = {
   scope: 'work',
   status: 'active',
   priority: 1,
+  favorite: false,
   deadline: '2026-08-13',
   nextStep: 'Abnahmeprotokoll mit Miriam durchgehen',
   nextStepStale: false,

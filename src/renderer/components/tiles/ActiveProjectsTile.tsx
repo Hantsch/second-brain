@@ -8,6 +8,7 @@
 import { useNavigate } from 'react-router-dom';
 import type { Project } from '@shared/types';
 import { useT } from '../../i18n';
+import { favoritesFirst } from '../../lib/favorites';
 import { useProjects } from '../../lib/queries/data';
 import { DeadlineChip } from '../DeadlineChip';
 import { TileFrame } from '../TileFrame';
@@ -24,7 +25,7 @@ export function ActiveProjectsTile() {
   const navigate = useNavigate();
   const { data, isPending, error, refetch } = useProjects();
   const active = (data ?? []).filter((project) => project.status === 'active');
-  const rows = [...active].sort(byPriority).slice(0, LIMIT);
+  const rows = favoritesFirst([...active].sort(byPriority)).slice(0, LIMIT);
 
   return (
     <TileFrame

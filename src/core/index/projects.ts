@@ -186,6 +186,7 @@ export function deriveProjects(
       scope: scopeOf(doc),
       status,
       priority: priorityOf(doc.frontmatter['priority']),
+      favorite: doc.frontmatter['favorite'] === true,
       deadline: asDate(doc.frontmatter['deadline']),
       nextStep: asText(doc.frontmatter['next_step']),
       statusSet,

@@ -75,6 +75,20 @@
   gap: var(--space-1);
   min-width: 0;
 }
+/* Wraps the row button and the star as a genuine flex sibling — not an
+   overlay, so the star never sits on top of the title/count text. Nesting a
+   button inside a button would be invalid HTML and would swallow the row's
+   click, hence the sibling. */
+.sb-projectitem-wrap {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+.sb-projectitem-wrap .sb-projectitem {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+}
 .sb-projectitem {
   all: unset;
   box-sizing: border-box;
@@ -142,12 +156,45 @@
   color: var(--text-muted);
 }
 
-/* The heading of a scope group in the list. */
-.sb-pgroup-title {
-  list-style: none;
-  padding: var(--space-1) var(--space-3) 0;
+/* The star: hidden until hovered/focused unless it's already set — fifteen
+   empty stars shouldn't compete with the data, but a set one stays visible
+   and a keyboard user tabbing onto it still sees it. No colour accent: teal
+   belongs to the selection on this screen and amber already means stale, so
+   outline = not starred, filled at text colour = starred. */
+.sb-projectitem-star {
+  all: unset;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  align-self: flex-start;
+  margin-top: var(--space-2);
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  color: var(--text-faint);
+  cursor: pointer;
+  opacity: 0;
+}
+.sb-projectitem-wrap:hover .sb-projectitem-star,
+.sb-projectitem-star:focus-visible {
+  opacity: 1;
+}
+.sb-projectitem-star:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+.sb-projectitem-star--on {
+  opacity: 1;
+  color: var(--text-heading);
+}
+.sb-projectitem-star--on svg {
+  fill: currentColor;
+}
+
+/* The "last worked on" marker — a quiet chip in the meta row, same visual
+   family as `.sb-projectitem-scope`: mono, small, muted, no accent. */
+.sb-projectitem-latest {
   font-family: var(--font-mono);
-  font-size: var(--text-2xs);
   text-transform: uppercase;
   letter-spacing: var(--tracking-caps);
   color: var(--text-faint);
@@ -212,6 +259,31 @@
   font-size: var(--text-xl);
   color: var(--text-heading);
   min-width: 0;
+}
+/* Same idea as `.sb-projectitem-star` in the list — outline off, filled at
+   text colour on, no accent — but always visible: the detail star sits next
+   to the title, not in a row competing with fourteen others, so the list's
+   hover-only-visibility rule (`opacity: 0` by default) doesn't apply. */
+.sb-phead-star {
+  all: unset;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  color: var(--text-faint);
+  cursor: pointer;
+}
+.sb-phead-star:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+.sb-phead-star--on {
+  color: var(--text-heading);
+}
+.sb-phead-star--on svg {
+  fill: currentColor;
 }
 .sb-phead-facts {
   display: flex;

@@ -248,6 +248,14 @@ describe('Projekt- und Todo-Kanäle im Main', () => {
         patch: { status_set: { at: '2026-01-01', by: 'user' } } as never,
       }),
     ).rejects.toMatchObject({ code: 'invalid' });
+    /* `favorite: null` würde "Feld löschen" bedeuten — Entstern schreibt aber
+       laut Spezifikation immer `favorite: false`, nie ein Fehlen des Feldes. */
+    await expect(
+      harness.call('projects:patch', {
+        slug: 'kundenportal-relaunch',
+        patch: { favorite: null } as never,
+      }),
+    ).rejects.toMatchObject({ code: 'invalid' });
   });
 
   it('schreibt mit veraltetem Hash nicht, sondern meldet den Konflikt', async () => {
@@ -264,6 +272,39 @@ describe('Projekt- und Todo-Kanäle im Main', () => {
     /* Kein halber Schreibvorgang: der abgewiesene Patch hat auch keinen Stempel
        hinterlassen, der einen Statuswechsel behaupten würde. */
     expect(raw).not.toContain('status_set:');
+  });
+
+  it('schreibt `favorite` beim Patchen und erhält dabei unbekannte Nutzerfelder', async () => {
+    await vault.write(
+      WORK,
+      ((await vault.read(WORK)) ?? '').replace('type: project', 'type: project\nkostenstelle: 4711'),
+    );
+    await harness.services.requireIndex().refresh?.([WORK]);
+
+    const patched = await harness.call('projects:patch', {
+      slug: 'kundenportal-relaunch',
+      patch: { favorite: true },
+    });
+
+    expect(patched.favorite).toBe(true);
+    const raw = (await vault.read(WORK)) ?? '';
+    expect(raw).toContain('favorite: true');
+    /* Das Patchen von `favorite` betrifft ein fremdes Feld nicht — es muss
+       genauso stehen bleiben wie bei jedem anderen Patch. */
+    expect(raw).toContain('kostenstelle: 4711');
+  });
+
+  it('schreibt mit veraltetem Hash auch bei `favorite` nicht, sondern meldet den Konflikt', async () => {
+    await expect(
+      harness.call('projects:patch', {
+        slug: 'kundenportal-relaunch',
+        patch: { favorite: true },
+        expectedHash: 'von-vorgestern',
+      }),
+    ).rejects.toMatchObject({ code: 'conflict' });
+
+    const raw = (await vault.read(WORK)) ?? '';
+    expect(raw).not.toContain('favorite: true');
   });
 
   it('meldet die Änderung, damit der Renderer nachlädt', async () => {

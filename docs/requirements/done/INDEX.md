@@ -47,3 +47,11 @@ second roadmap.
   stamped by the app on every write and shown as a quiet provenance line under status and
   next step, plus a "possibly outdated" badge when the project was touched since the step
   was written; the honest fallback shows no author when the file never recorded one.
+- 013 — Favourite projects (star) and an order that matches how I work · S03 · New
+  frontmatter field `favorite: boolean`, toggleable from the list and the detail; the
+  project list's default sort now shows the last-touched project, then favourites, then
+  the rest as one list (scope stacking removed, documented as this list's exception), with
+  a starred stale project pulled into the current section; dashboard tiles
+  (`ActiveProjectsTile`/`StaleProjectsTile`) and the filing/agent-link pickers put
+  favourites first via a shared `favoritesFirst()` helper. Fixed a review finding: added
+  the missing D1 test coverage for `favorite`'s derivation and patch allowlist.

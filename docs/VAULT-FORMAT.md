@@ -112,6 +112,7 @@ slug: nyota-auth0-migration
 scope: work
 status: active
 priority: 2
+favorite: true
 started: 2026-06-12
 deadline: 2026-09-01
 next_step: Work in Stefan's feedback on the role mapping
@@ -155,6 +156,12 @@ from a suggestion, or written while filing a dump. An unrecognized value counts 
 missing to anything that reads it — a hand-typed word is never trusted as a claim
 the app can't back. The app stamps these itself whenever it writes the paired field
 (`status` or `next_step`); nothing else writes them.
+`favorite` is a plain boolean the user or the app sets to mark a project they want
+to see immediately; missing or any value other than `true` counts as not-favourited.
+Work and private projects stay separated everywhere else in the app — todo tiles,
+todo scoping — but the project list is a documented exception: there, favourites
+and last-worked-on produce one single list across scopes, with scope separation
+left entirely to the existing scope filter rather than to visual blocks.
 `repos` connects the project to Claude Code sessions: if a session lives in this
 directory, it counts as a work trace for the project. The notes section accepts
 either heading, "Notes" or "Notizen" — the same tolerance areas have (below): a

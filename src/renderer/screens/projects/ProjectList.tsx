@@ -3,19 +3,20 @@
    Stagnierendes bekommt einen eigenen, einklappbaren Abschnitt. Es soll
    sichtbar bleiben — aber nicht zwischen der Arbeit stehen, die läuft.
 
-   Steht der Bereichsfilter auf „Alle", trägt die Liste zwei Überschriften —
-   Arbeit und Privat, wie die zwei Todo-Kacheln des Dashboards. Die Trennung der
-   Bereiche ist eine Anforderung, kein Filter. */
+   Eine einzige Liste, kein Bereichs-Absatz mehr: Arbeit und Privat werden
+   ausschließlich vom Bereichsfilter getrennt, nicht durch eine Überschrift in
+   der Liste selbst. Stattdessen sortiert die Liste nach Aufmerksamkeit — die
+   zuletzt berührte Zeile zuerst, dann die markierten Projekte (`filter.ts`
+   erklärt das genauer). Das ist die dokumentierte Ausnahme von der sonst
+   strikten Bereichstrennung (VAULT-FORMAT.md). */
 
-import { Fragment } from 'react';
 import { Button } from '../../atoms/Button';
 import { Icon } from '../../atoms/Icon';
-import type { Project, Scope } from '@shared/types';
+import type { Project } from '@shared/types';
 import { ProjectCard } from '../../components/ProjectCard';
 import { useT } from '../../i18n';
 import { plural } from '../../lib/format';
 import { ProjectFilters } from './ProjectFilters';
-import { scopeRank } from './filter';
 import type { ProjectFilter } from './filter';
 
 export interface ProjectListProps {
@@ -23,12 +24,14 @@ export interface ProjectListProps {
   stalled: readonly Project[];
   selected: string | null;
   filter: ProjectFilter;
-  /** Bei „Alle": nach Bereich gruppiert, mit Überschrift je Bereich. */
-  grouped: boolean;
+  /** Slug der obersten Zeile unter der Sortierung „Zuletzt berührt" — sonst
+      `null`. Markiert genau diese Zeile als Wiedereinstiegspunkt. */
+  latest: string | null;
   stalledOpen: boolean;
   onFilter: (next: ProjectFilter) => void;
   onSelect: (project: Project) => void;
   onStalledOpen: (open: boolean) => void;
+  onToggleFavorite: (project: Project) => void;
   rowRef: (slug: string, element: HTMLButtonElement | null) => void;
   now?: Date;
 }
@@ -38,11 +41,12 @@ export function ProjectList({
   stalled,
   selected,
   filter,
-  grouped,
+  latest,
   stalledOpen,
   onFilter,
   onSelect,
   onStalledOpen,
+  onToggleFavorite,
   rowRef,
   now,
 }: ProjectListProps) {
@@ -55,6 +59,8 @@ export function ProjectList({
       project={project}
       active={project.slug === selected}
       onSelect={() => onSelect(project)}
+      latest={project.slug === latest}
+      onToggleFavorite={() => onToggleFavorite(project)}
       buttonRef={(element) => rowRef(project.slug, element)}
       {...(now === undefined ? {} : { now })}
     />
@@ -76,18 +82,8 @@ export function ProjectList({
         </p>
       ) : null}
 
-      {/* Eine Liste, zwei Überschriften: die Bereichszeile ist ein eigener
-          Listeneintrag, damit auch ein Screenreader die Trennung hört. Zwei
-          getrennte Listen wären zwei Listen mit einem Namen. */}
       <ul className="sb-projectlist" aria-label={t('projects.list.aria')}>
-        {(grouped ? scopeGroups(current) : [{ scope: null, rows: [...current] }]).map((group) => (
-          <Fragment key={group.scope ?? 'all'}>
-            {group.scope === null ? null : (
-              <li className="sb-pgroup-title">{t(`scope.${group.scope}`)}</li>
-            )}
-            {group.rows.map(row)}
-          </Fragment>
-        ))}
+        {current.map(row)}
       </ul>
 
       {stalled.length === 0 ? null : (
@@ -116,15 +112,4 @@ export function ProjectList({
       <p className="sb-plist-keys">{t('projects.keys')}</p>
     </div>
   );
-}
-
-/** Die Bereiche in fester Reihenfolge, leere Bereiche fallen weg. */
-function scopeGroups(projects: readonly Project[]): { scope: Scope; rows: Project[] }[] {
-  const scopes = [...new Set(projects.map((project) => project.scope))].sort(
-    (a, b) => scopeRank(a) - scopeRank(b),
-  );
-  return scopes.map((scope) => ({
-    scope,
-    rows: projects.filter((project) => project.scope === scope),
-  }));
 }

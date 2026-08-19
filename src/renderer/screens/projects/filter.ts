@@ -1,7 +1,12 @@
-/* Filter, sort, split — the logic of the project list, without React.
+/* Filter, sort, rank, split — the logic of the project list, without React.
 
    It stands here on its own so that it's testable: which row ends up on
-   top is the actual statement this screen makes. */
+   top is the actual statement this screen makes. And that statement is now
+   a single list: starred projects and the one last worked on come first,
+   regardless of scope. Work and private stay separated everywhere else in
+   the app (todo tiles, todo scoping), but the project list is the documented
+   exception (VAULT-FORMAT.md) — here the scope filter alone separates the
+   scopes, not visual blocks. */
 
 import type { Project, ProjectStatus, Scope } from '@shared/types';
 
@@ -62,14 +67,6 @@ function byDeadline(a: Project, b: Project): number {
   return a.deadline.localeCompare(b.deadline);
 }
 
-/** Work before private — the order of the two scopes, the same everywhere. */
-const SCOPE_ORDER: readonly Scope[] = ['work', 'private'];
-
-export function scopeRank(scope: Scope): number {
-  const at = SCOPE_ORDER.indexOf(scope);
-  return at < 0 ? SCOPE_ORDER.length : at;
-}
-
 export function sortProjects(projects: readonly Project[], sort: ProjectSort): Project[] {
   const rows = [...projects];
   if (sort === 'name') return rows.sort((a, b) => a.title.localeCompare(b.title));
@@ -88,36 +85,63 @@ export function sortProjects(projects: readonly Project[], sort: ProjectSort): P
 /**
  * Stagnant projects sit as their own section at the end. They should stay
  * visible without clogging up the list of running work.
+ *
+ * Two rows are exempt and stay in `current` even when they are stale: a
+ * starred one and the one identified by `latest` (the row the user last
+ * worked on). The star and the re-entry point win over staleness — the user
+ * asked to see these, so they don't get banished. Their `stale` flag is
+ * untouched; the row still renders with whatever stale treatment it has.
+ * Relative order is preserved in both lists.
  */
-export function splitStalled(projects: readonly Project[]): {
+export function splitStalled(
+  projects: readonly Project[],
+  latest: string | null,
+): {
   current: Project[];
   stalled: Project[];
 } {
   const current: Project[] = [];
   const stalled: Project[] = [];
-  for (const project of projects) (project.stale ? stalled : current).push(project);
+  for (const project of projects) {
+    const banished = project.stale && !project.favorite && project.slug !== latest;
+    (banished ? stalled : current).push(project);
+  }
   return { current, stalled };
 }
 
 /**
- * The list as it appears on the screen: filtered, sorted, split.
+ * The list as it appears on the screen: filtered, sorted, ranked, split.
  *
- * With "all", the scopes appear **stacked, not interleaved**: work first,
- * then private. Separating the two scopes is a requirement
- * (VAULT-FORMAT.md, the two todo tiles) — a list where a client project and
- * a raised garden bed alternate breaks that. `grouped` tells the UI that it
- * should render headings; the order in `all` is the same, so the keyboard
- * follows exactly the sequence you see.
+ * One single list, whatever the scope: work and private are separated only by
+ * the scope filter, not by visual blocks — the project list is the documented
+ * exception to the scope separation the rest of the app keeps (VAULT-FORMAT.md).
+ * What the list is separated by instead is attention: under the default `touch`
+ * sort the row last worked on sits on top, the starred ones follow, the rest
+ * keeps its touch order. `latest` names that top row so the UI can mark it; it
+ * stays `null` under the other sorts, where nothing is pulled forward at all.
+ * The order in `all` is the order on screen, so the keyboard follows the eye.
  */
 export function visibleProjects(
   projects: readonly Project[],
   filter: ProjectFilter,
-): { current: Project[]; stalled: Project[]; all: Project[]; grouped: boolean } {
-  const grouped = filter.scope === 'all';
+): { current: Project[]; stalled: Project[]; all: Project[]; latest: string | null } {
   const sorted = sortProjects(filterProjects(projects, filter), filter.sort);
-  const ordered = grouped
-    ? [...sorted].sort((a, b) => scopeRank(a.scope) - scopeRank(b.scope))
-    : sorted;
-  const split = splitStalled(ordered);
-  return { ...split, all: [...split.current, ...split.stalled], grouped };
+  if (filter.sort !== 'touch') {
+    const split = splitStalled(sorted, null);
+    return { ...split, all: [...split.current, ...split.stalled], latest: null };
+  }
+
+  /* `sorted` is touch-ordered, so its head is the last thing worked on. */
+  const head = sorted[0];
+  const latest = head?.slug ?? null;
+  const { current, stalled } = splitStalled(sorted, latest);
+  /* Three buckets over one array, by reference — never a second pass over the
+     same rows, so every project lands in exactly one place. */
+  const rest = current.filter((project) => project !== head);
+  const ranked = [
+    ...(head ? [head] : []),
+    ...rest.filter((project) => project.favorite),
+    ...rest.filter((project) => !project.favorite),
+  ];
+  return { current: ranked, stalled, all: [...ranked, ...stalled], latest };
 }

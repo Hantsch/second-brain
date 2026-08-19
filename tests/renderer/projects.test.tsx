@@ -89,6 +89,7 @@ function project(patch: Partial<Project> & { slug: string; title: string }): Pro
     scope: 'work',
     status: 'active',
     priority: 2,
+    favorite: false,
     deadline: null,
     nextStep: null,
     waitingOn: [],
@@ -559,6 +560,48 @@ describe('Projektliste', () => {
     expect(row?.textContent).toContain('2 offen');
     expect(row?.textContent).toContain('Aug');
   });
+
+  it('markiert per Stern, ohne die Auswahl zu verändern', async () => {
+    const { sb } = mount({
+      extra: {
+        'projects:patch': ({ patch }) => ({ ...portal, favorite: Boolean(patch.favorite) }),
+      },
+    });
+    const list = await screen.findByRole('list', { name: 'Projekte' });
+    const star = within(list).getByRole('button', {
+      name: new RegExp(`${portal.title}.*Stern markieren`),
+    });
+
+    await userEvent.click(star);
+
+    expect(callsTo(sb, 'projects:patch')).toEqual([
+      { slug: portal.slug, patch: { favorite: true } },
+    ]);
+    /* Der Sternklick darf die Zeile nicht auswählen: `go` würde dafür `p` in
+       die Adresse schreiben — das darf nicht passieren. */
+    expect(query().p).toBeUndefined();
+  });
+
+  it('kennt keine Bereichsüberschriften mehr, wenn der Filter auf „Alle" steht', async () => {
+    mount();
+    const list = await screen.findByRole('list', { name: 'Projekte' });
+
+    expect(within(list).queryByRole('heading', { name: 'Arbeit' })).toBeNull();
+    expect(within(list).queryByRole('heading', { name: 'Privat' })).toBeNull();
+  });
+
+  it('markiert die oberste Zeile als zuletzt bearbeitet und verliert das bei anderer Sortierung', async () => {
+    mount();
+    const list = await screen.findByRole('list', { name: 'Projekte' });
+    const portalRow = within(list).getByText('Kundenportal Relaunch').closest('li');
+
+    expect(portalRow?.textContent).toContain('Zuletzt bearbeitet');
+
+    await userEvent.selectOptions(screen.getByLabelText('Sortierung'), 'name');
+
+    const portalRowAfter = within(list).getByText('Kundenportal Relaunch').closest('li');
+    expect(portalRowAfter?.textContent).not.toContain('Zuletzt bearbeitet');
+  });
 });
 
 // ── Detail: Status und nächster Schritt ──────────────────────────────────────
@@ -636,6 +679,49 @@ describe('Projektdetail', () => {
     expect(screen.queryByText(/Status steht jetzt auf/)).toBeNull();
     /* Das Feld zeigt weiter, was in der Datei steht. */
     expect((screen.getByLabelText('Status') as HTMLSelectElement).value).toBe('active');
+  });
+
+  /* Anders als der Stern in der Liste (kein `expectedHash`, siehe oben) schreibt
+     der Stern im Kopf mit dem Hash der geöffneten Datei — das ist der Pfad, der
+     das Konflikt-Kriterium der Story deckt. */
+  it('markiert das Projekt per Stern im Kopf, mit dem Hash der Datei', async () => {
+    const { sb } = mount({
+      extra: {
+        'projects:patch': ({ patch }) => ({ ...portal, favorite: Boolean(patch.favorite) }),
+      },
+    });
+    await detailReady();
+    const detail = screen.getByLabelText('Projektdetail');
+
+    await userEvent.click(
+      within(detail).getByRole('button', {
+        name: new RegExp(`${portal.title}.*Stern markieren`),
+      }),
+    );
+
+    expect(callsTo(sb, 'projects:patch')).toEqual([
+      { slug: portal.slug, patch: { favorite: true }, expectedHash: 'hash-portal' },
+    ]);
+  });
+
+  it('bestätigt den Stern nicht still, wenn die Datei zwischenzeitlich geändert wurde', async () => {
+    mount({
+      extra: {
+        'projects:patch': () => {
+          throw Object.assign(new Error('Konflikt'), { code: 'conflict' });
+        },
+      },
+    });
+    await detailReady();
+    const detail = screen.getByLabelText('Projektdetail');
+
+    await userEvent.click(
+      within(detail).getByRole('button', {
+        name: new RegExp(`${portal.title}.*Stern markieren`),
+      }),
+    );
+
+    expect(await screen.findByText(/wurde zwischenzeitlich geändert/)).toBeTruthy();
   });
 
   it('zeigt den Vorschlag mit Begründung und schreibt erst nach der Bestätigung', async () => {
@@ -1251,7 +1337,9 @@ describe('Sitzungen im Projekt', () => {
     mount({ at: '/projects?p=kundenportal-relaunch&tab=sessions&s=s-web' });
     await detailReady();
 
-    await userEvent.click(await screen.findByRole('button', { name: /Hochbeet für den Balkon/ }));
+    /* Anker am Anfang: der Stern trägt denselben Titel im Label, aber
+       eingeleitet von „ statt vom Titel selbst. */
+    await userEvent.click(await screen.findByRole('button', { name: /^Hochbeet für den Balkon/ }));
 
     await waitFor(() => expect(query()).toEqual({ p: hochbeet.slug, tab: 'sessions' }));
   });

@@ -45,6 +45,7 @@ function writeProject(seeder, clock, project) {
       scope: project.scope,
       status: project.status,
       priority: project.priority,
+      favorite: project.favorite,
       started: project.started,
       deadline: project.deadline,
       next_step: project.next_step,

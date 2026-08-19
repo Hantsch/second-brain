@@ -26,6 +26,9 @@ export const deProjects = {
   'projects.stalled.title': 'Lange nicht angefasst — {count}',
   'projects.list.aria': 'Projekte',
   'projects.open': 'Projekt „{title}" öffnen',
+  'projects.favorite.add': '„{title}" mit Stern markieren',
+  'projects.favorite.remove': 'Stern von „{title}" entfernen',
+  'projects.lastWorkedOn': 'Zuletzt bearbeitet',
   'projects.waitingMark': 'wartet',
   'projects.openTodos': '{count} offen',
   'projects.keys':

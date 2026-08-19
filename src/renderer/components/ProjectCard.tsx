@@ -28,18 +28,31 @@ export interface ProjectCardProps {
   project: Project;
   active: boolean;
   onSelect: () => void;
+  /** Whether this is the top row under the default sort — the "last worked
+      on" re-entry point. Computed by the caller against `visibleProjects`'s
+      `latest`, not here. */
+  latest: boolean;
+  onToggleFavorite: () => void;
   /** For the keyboard path: the row must be able to accept focus. */
   buttonRef?: (element: HTMLButtonElement | null) => void;
   now?: Date;
 }
 
-export function ProjectCard({ project, active, onSelect, buttonRef, now }: ProjectCardProps) {
+export function ProjectCard({
+  project,
+  active,
+  onSelect,
+  latest,
+  onToggleFavorite,
+  buttonRef,
+  now,
+}: ProjectCardProps) {
   const t = useT();
   const language = useLanguage();
   const waiting = project.waitingOn.filter((entry) => entry.resolved !== true);
 
   return (
-    <li>
+    <li className="sb-projectitem-wrap">
       <button
         type="button"
         ref={buttonRef}
@@ -72,10 +85,27 @@ export function ProjectCard({ project, active, onSelect, buttonRef, now }: Proje
               {t('projects.waitingMark')}
             </span>
           ) : null}
+          {latest ? (
+            <span className="sb-projectitem-latest">{t('projects.lastWorkedOn')}</span>
+          ) : null}
           {project.stale ? (
             <span className="sb-projectitem-stale">{t('projects.stale')}</span>
           ) : null}
         </span>
+      </button>
+      <button
+        type="button"
+        className={`sb-projectitem-star${project.favorite ? ' sb-projectitem-star--on' : ''}`}
+        aria-pressed={project.favorite}
+        aria-label={t(project.favorite ? 'projects.favorite.remove' : 'projects.favorite.add', {
+          title: project.title,
+        })}
+        onClick={(event) => {
+          event.stopPropagation();
+          onToggleFavorite();
+        }}
+      >
+        <Icon name="star" size={14} />
       </button>
     </li>
   );

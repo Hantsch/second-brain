@@ -73,6 +73,7 @@ export const project: Project = {
   scope: 'work',
   status: 'waiting',
   priority: 2,
+  favorite: true,
   deadline: '2026-09-01',
   nextStep: 'Rückmeldung von Stefan zur Rollenzuordnung einarbeiten',
   nextStepStale: false,

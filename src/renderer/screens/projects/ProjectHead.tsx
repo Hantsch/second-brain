@@ -1,12 +1,16 @@
 /* The head of the detail view: title, scope, status, deadline, priority.
 
    The status change writes immediately — that's why the confirmation sits
-   right below it (`StatusPicker`). Everything else here is display; it's
-   changed in the file or via the fields meant for that. */
+   right below it (`StatusPicker`). The star writes immediately too, one
+   click, no confirmation line (unlike the status, the story doesn't ask for
+   one here) — its failure surfaces through the shared error state the
+   caller renders below this component. Everything else here is display;
+   it's changed in the file or via the fields meant for that. */
 
 import type { Project } from '@shared/types';
 import { Badge } from '../../atoms/Badge';
 import { Button } from '../../atoms/Button';
+import { Icon } from '../../atoms/Icon';
 import { DeadlineChip } from '../../components/DeadlineChip';
 import { StatusPicker } from '../../components/StatusPicker';
 import { useLanguage, useT } from '../../i18n';
@@ -17,6 +21,7 @@ export interface ProjectHeadProps {
   statusBusy: boolean;
   savedStatus: Project['status'] | null;
   onStatus: (next: Project['status']) => void;
+  onFavorite: () => void;
   onOpenFile: () => void;
   now?: Date;
 }
@@ -26,6 +31,7 @@ export function ProjectHead({
   statusBusy,
   savedStatus,
   onStatus,
+  onFavorite,
   onOpenFile,
   now,
 }: ProjectHeadProps) {
@@ -56,6 +62,17 @@ export function ProjectHead({
         <h2 className="sb-phead-name">{project.title}</h2>
         <Badge>{t(`scope.${project.scope}`)}</Badge>
         {project.stale ? <Badge variant="warning">{t('projects.stale')}</Badge> : null}
+        <button
+          type="button"
+          className={`sb-phead-star${project.favorite ? ' sb-phead-star--on' : ''}`}
+          aria-pressed={project.favorite}
+          aria-label={t(project.favorite ? 'projects.favorite.remove' : 'projects.favorite.add', {
+            title: project.title,
+          })}
+          onClick={onFavorite}
+        >
+          <Icon name="star" size={16} />
+        </button>
       </div>
 
       <div className="sb-phead-facts">

@@ -23,6 +23,9 @@ export const enProjects = {
   'projects.stalled.title': 'Untouched for a while — {count}',
   'projects.list.aria': 'Projects',
   'projects.open': 'Open project “{title}”',
+  'projects.favorite.add': 'Star “{title}”',
+  'projects.favorite.remove': 'Unstar “{title}”',
+  'projects.lastWorkedOn': 'Last worked on',
   'projects.waitingMark': 'waiting',
   'projects.openTodos': '{count} open',
   'projects.keys':

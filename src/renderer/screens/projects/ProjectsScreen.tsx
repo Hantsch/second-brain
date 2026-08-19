@@ -244,11 +244,14 @@ export function ProjectsScreen() {
             stalled={list.stalled}
             selected={selected?.slug ?? null}
             filter={filter}
-            grouped={list.grouped}
+            latest={list.latest}
             stalledOpen={stalledOpen}
             onFilter={setFilter}
             onSelect={(project) => go({ p: project.slug })}
             onStalledOpen={setStalledOpen}
+            onToggleFavorite={(project) =>
+              mutations.patch.mutate({ slug: project.slug, patch: { favorite: !project.favorite } })
+            }
             rowRef={(slug, element) => {
               if (element === null) rows.current.delete(slug);
               else rows.current.set(slug, element);

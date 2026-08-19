@@ -377,6 +377,7 @@ function vaultProject(): Project {
     scope: 'work',
     status: 'active',
     priority: 2,
+    favorite: false,
     deadline: null,
     nextStep: null,
     nextStepStale: false,

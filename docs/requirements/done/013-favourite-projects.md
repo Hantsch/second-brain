@@ -1,7 +1,7 @@
 ---
 id: 013
 title: Favourite projects (star) and an order that matches how I work
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-08-12
 ---
 
@@ -57,45 +57,45 @@ Related: the list logic lives in
 
 ## Acceptance Criteria
 
-- [ ] A project can be starred and unstarred from the project list, and from the project
+- [x] A project can be starred and unstarred from the project list, and from the project
       detail — one click, no dialog, no confirmation.
-- [ ] The star is written to the project frontmatter as `favorite`, and
+- [x] The star is written to the project frontmatter as `favorite`, and
       [VAULT-FORMAT.md](../VAULT-FORMAT.md) documents the field.
-- [ ] A `favorite: true` typed into the file by hand in Obsidian has exactly the same
+- [x] A `favorite: true` typed into the file by hand in Obsidian has exactly the same
       effect as a click in the app — and the app reflects the external change.
-- [ ] Whether a project is starred is visible at a glance in the list, in Gaston terms —
+- [x] Whether a project is starred is visible at a glance in the list, in Gaston terms —
       one accent, no second one, no emoji.
-- [ ] With the default sort, the order is: the last-touched project, then the starred
+- [x] With the default sort, the order is: the last-touched project, then the starred
       projects, then the rest.
-- [ ] "Last touched" is `lastTouch` from the frontmatter — the same value the default sort
+- [x] "Last touched" is `lastTouch` from the frontmatter — the same value the default sort
       already uses, no second notion of recency.
-- [ ] Every project appears exactly once in the list. If the last-touched project is
+- [x] Every project appears exactly once in the list. If the last-touched project is
       starred, it stands at the top and not a second time in the favourites.
-- [ ] `deadline`, `priority`, and `name` sort exactly as they do today — neither the star
+- [x] `deadline`, `priority`, and `name` sort exactly as they do today — neither the star
       nor the last-touched project changes those orders.
-- [ ] With scope "all" the list is **one list**, no work/private blocks. Seeing a single
+- [x] With scope "all" the list is **one list**, no work/private blocks. Seeing a single
       scope happens through the scope filter.
-- [ ] A starred project is never banished to the stale section — the star pulls it into
+- [x] A starred project is never banished to the stale section — the star pulls it into
       the current list, and the fact that it is stale stays visible on the row.
-- [ ] The starred state survives an app restart, and travels with the vault: the same
+- [x] The starred state survives an app restart, and travels with the vault: the same
       vault on another machine has the same favourites.
-- [ ] Deleting `.secondbrain/index/` does not lose any favourite.
-- [ ] Starring does not overwrite the user's edits: writing with a stale hash gets a
+- [x] Deleting `.secondbrain/index/` does not lose any favourite.
+- [x] Starring does not overwrite the user's edits: writing with a stale hash gets a
       `conflict`, as everywhere.
-- [ ] Filters keep working: a starred project that the scope/status filter excludes stays
+- [x] Filters keep working: a starred project that the scope/status filter excludes stays
       excluded — the star raises a project, it does not smuggle it past a filter.
-- [ ] The list has a state for "nothing starred yet": no empty section, no gap — the order
+- [x] The list has a state for "nothing starred yet": no empty section, no gap — the order
       is simply the one it is today.
-- [ ] The dashboard tiles that list projects put favourites first —
+- [x] The dashboard tiles that list projects put favourites first —
       [ActiveProjectsTile](../../src/renderer/components/tiles/ActiveProjectsTile.tsx) and
       [StaleProjectsTile](../../src/renderer/components/tiles/StaleProjectsTile.tsx) —
       without dropping what they are about.
-- [ ] The project pickers put favourites first: filing a dump
+- [x] The project pickers put favourites first: filing a dump
       ([TargetPicker](../../src/renderer/components/TargetPicker.tsx)) and linking an agent
       project ([ProjectLinkPicker](../../src/renderer/screens/agents/ProjectLinkPicker.tsx)).
-- [ ] Keyboard navigation over the list follows the order actually shown.
-- [ ] Works with no model configured — this is an order over files, not a judgement.
-- [ ] Labels go through `t()`, in `de` and `en`.
+- [x] Keyboard navigation over the list follows the order actually shown.
+- [x] Works with no model configured — this is an order over files, not a judgement.
+- [x] Labels go through `t()`, in `de` and `en`.
 
 ## Open Questions
 
@@ -340,4 +340,88 @@ only recency → D2 · exactly once → D2 · other sorts unchanged → D2 · on
 
 ## Done
 
-<Filled by `/ai-scrum:build 013`.>
+**Summary.** `favorite: boolean` now travels the full frontmatter path (type, derivation,
+canonical key order, patch allowlist, VAULT-FORMAT.md). The project list's default sort
+(`touch`) ranks the last-touched project first, then favourites, then the rest, in one pass
+over the already filtered list — scope stacking (`grouped`/`scopeRank`/`SCOPE_ORDER`) is gone,
+per the story's documented scope-separation exception (project list only; todo tiles/scoping
+elsewhere are untouched). A starred stale project is pulled into the current section and keeps
+its stale marker. The star renders in the list (sibling of the row button, hover/focus-only
+when off, no colour accent) and in the detail head; the list write has no `expectedHash`, the
+detail write does, covering the conflict path. Dashboard tiles (`ActiveProjectsTile`,
+`StaleProjectsTile`) and both pickers (`TargetPicker`, `SessionLink`/`ProjectLinkPicker`) put
+favourites first via a shared `favoritesFirst()` helper (tiles/pickers) or an equivalent inline
+partition (`filter.ts`, which additionally interleaves with "last touched" and the stale split).
+Two demo projects were starred in the seed (one of them stale) for the live smoke test.
+
+**Commit message.**
+```
+013: favourite projects — star, reordered list, tiles and pickers
+```
+
+**Verification.**
+- `npm run build` — green.
+- `npm test` (`npx vitest run --pool=threads`) — 2023/2025 passed. The 2 failures are
+  pre-existing and unrelated to this story: `tests/core/wiki/module.test.ts` (MODULE-SCHEMA
+  drift) and `tests/main/ipc/agents.test.ts` (leaks real `~/.claude` data on this machine) —
+  both fail identically at HEAD before this story's changes.
+- `npm run lint` — clean.
+- `npm run typecheck` — clean.
+- `npm run format:check` — not run as a gate (pre-existing repo-wide CRLF/LF mismatch on this
+  Windows checkout vs. Prettier's LF default, called out as a known condition, not chased here).
+- Live smoke test (`npm run seed && npm run shot`), screenshots inspected directly:
+  - `.screenshots/02-projects.png` — scope filter on "Alle": one flat list, no "Arbeit"/"Privat"
+    headings. Top row (Kundenportal Relaunch) carries the "ZULETZT BEARBEITET" chip. Orbit
+    SSO-Migration and Datenmigration Legacy-CRM show a filled star; the latter also keeps its
+    amber "Stagniert" tag while sitting in the current section, not the stale one. The detail
+    head shows an outline (unstarred) star next to the scope badge.
+  - `.screenshots/34-project-sessions.png` — detail star renders filled for a starred project.
+  - Dashboard tiles: `ActiveProjectsTile`/`StaleProjectsTile` are hidden by default in this
+    app's (and the demo's) dashboard layout — same default as production, unrelated to this
+    story. To verify their favourites-first behaviour live regardless, the two tiles were
+    temporarily unhidden in the local seed config, `npm run seed && npm run shot` was re-run,
+    and the resulting dashboard screenshot showed "Datenmigration Legacy-CRM" (favourite, lower
+    priority, and — for the stale tile — later in slug order) ranked first in both "Laufende
+    Projekte" and "Stagnierende Projekte", ahead of higher-priority/earlier non-favourites. The
+    temporary config change was reverted afterward (`git diff` on `scripts/seed/internal.mjs`
+    is empty) and the demo vault/screenshots were regenerated against the real defaults before
+    finishing. No picker has a dedicated shot-script screenshot; ordering there is covered by
+    the new `tests/renderer/session-link.test.tsx` and `tests/renderer/target-picker.test.tsx`.
+- Code review (`story-review-hard`, clean agent): first pass returned **FAIL** — D1's own
+  stated acceptance tests (`tests/core/index/projects.test.ts`,
+  `tests/main/projects-ipc.test.ts`) were never written, leaving the derivation and the patch
+  allowlist for `favorite` completely unguarded by tests (confirmed correct by inspection, but
+  a silent regression there would have passed every existing test). Fixed in one review-fix
+  cycle: coverage added to both files (arrives-as-`true`, missing-key-is-`false`,
+  garbage-value-is-`false`, patch writes it, an unknown user key survives alongside it, a stale
+  `expectedHash` still yields `conflict`, and `favorite: null` is rejected rather than treated
+  as "clear the field"). Full verification re-run afterward: build/lint/typecheck green, tests
+  2023/2025 (same 2 pre-existing failures).
+
+**Decisions and known limitations** (beyond the ones already recorded under
+`## Decisions (Sprint)`):
+- A failed list-star write (`ProjectsScreen.tsx`) is silent — no `onError`/error surface, same
+  as the pre-existing `next_step` patch on this screen. The detail-star write is not silent (it
+  has `expectedHash` and shares `ProjectDetail`'s existing generic `ErrorState` for `patch`
+  failures). Left as-is: the story's own decision was that only the detail path carries a hash
+  and therefore a conflict is only reachable there; making the list path noisy on every kind of
+  failure (not just conflicts, which can't happen there) would be new scope, not something this
+  story's acceptance criteria ask for.
+- Starring a project from the detail view does not clear the `next_step` status-save
+  confirmation banner if one is currently showing (`ProjectHead`/`ProjectDetail` share one
+  `patch` mutation observer). Cosmetic; not covered by any acceptance criterion.
+- `TargetPicker`'s reorder removes every entry sharing `current`'s path from the "rest" bucket
+  before re-adding it once at the front. Two `FilingAction`s can never legitimately share a
+  path today (`alternativesFor` in `src/core/capture/actions.ts` guards this, and the picker's
+  own React `key` already assumes path uniqueness), so this is a non-reachable edge case, not a
+  live bug — left as an inline comment risk rather than a defensive rewrite for a case the rest
+  of the codebase already assumes can't happen.
+- The "last worked on" marker is computed over the already scope/status/query-filtered list
+  (`filter.ts`), so under a narrowed scope it marks the most recently touched project *within
+  that scope*, not the global last-touched project. This is intentional (the alternative would
+  either show no marker under a scope filter or mark a row that isn't visually on top) and is
+  pinned by a test, but wasn't written down as an explicit Decision during refine — recorded
+  here for the sprint review.
+- `tests/core/wiki/module.test.ts` and `tests/main/ipc/agents.test.ts` fail identically before
+  and after this story's changes (pre-existing, unrelated) — not fixed, per the sprint's
+  standing instruction not to chase pre-existing failures outside a story's scope.

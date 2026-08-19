@@ -91,10 +91,21 @@ describe('deriveProjects: Frontmatter lesen', () => {
   });
 
   it('faellt auf verlaessliche Werte zurueck, wenn das Frontmatter Unsinn enthaelt', () => {
-    const [project] = derive([projectDoc({ status: 'irgendwas', priority: 'zwei', deadline: 42 })]);
+    const [project] = derive([
+      projectDoc({ status: 'irgendwas', priority: 'zwei', deadline: 42, favorite: 'ja' }),
+    ]);
     expect(project?.status).toBe('active');
     expect(project?.priority).toBe(3);
     expect(project?.deadline).toBeNull();
+    expect(project?.favorite).toBe(false);
+  });
+
+  it('liest `favorite: true`, eine fehlende Angabe wird zu `false`', () => {
+    const [favorite] = derive([projectDoc({ favorite: true })]);
+    expect(favorite?.favorite).toBe(true);
+
+    const [ohneAngabe] = derive([projectDoc()]);
+    expect(ohneAngabe?.favorite).toBe(false);
   });
 });
 

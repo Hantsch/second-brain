@@ -27,6 +27,7 @@ import type {
   DashboardData,
   DashboardLayout,
   OverviewSettings,
+  Project,
   VaultSettings,
 } from '@shared/types';
 import { DashboardScreen } from '@renderer/screens/dashboard/DashboardScreen';
@@ -933,6 +934,119 @@ describe('Kacheln', () => {
     mount({ data: emptyDashboard });
     wrap(<InboxTile />);
     expect(await screen.findByText(/Die Inbox ist leer/)).toBeTruthy();
+  });
+});
+
+// ── Favoriten in den Projekt-Kacheln (Story 013, D5) ────────────────────────
+
+describe('Favoriten in den Projekt-Kacheln', () => {
+  /* Kopiert das erste Fixture-Projekt als Vorlage — nur die für den jeweiligen
+     Test wichtigen Felder werden überschrieben. Die Assertion ist sicher: das
+     Fixture-Array ist fest und nicht leer. */
+  const template = projects[0]!;
+  function project(overrides: Partial<Project> & Pick<Project, 'slug' | 'title'>): Project {
+    return { ...template, nextStep: null, waitingOn: [], deadline: null, ...overrides };
+  }
+
+  it('zeigt einen Favoriten in „Laufende Projekte", auch wenn die Priorität ihn abschneiden würde', async () => {
+    const custom: Project[] = [
+      project({
+        slug: 'p1',
+        title: 'Projekt eins',
+        status: 'active',
+        priority: 1,
+        favorite: false,
+      }),
+      project({
+        slug: 'p2',
+        title: 'Projekt zwei',
+        status: 'active',
+        priority: 2,
+        favorite: false,
+      }),
+      project({
+        slug: 'p3',
+        title: 'Projekt drei',
+        status: 'active',
+        priority: 3,
+        favorite: false,
+      }),
+      project({
+        slug: 'p4',
+        title: 'Projekt vier',
+        status: 'active',
+        priority: 4,
+        favorite: false,
+      }),
+      project({
+        slug: 'p5',
+        title: 'Favorit hinten',
+        status: 'active',
+        priority: 5,
+        favorite: true,
+      }),
+      /* Nicht aktiv, aber Favorit: der Aktiv-Filter muss ihn trotzdem aussortieren. */
+      project({
+        slug: 'p6',
+        title: 'Fertiges Projekt',
+        status: 'done',
+        priority: 1,
+        favorite: true,
+      }),
+    ];
+    mount({ extra: { 'projects:list': () => custom } });
+    wrap(<ActiveProjectsTile />);
+
+    /* Nach Priorität allein läge „Favorit hinten" (Platz 5) außerhalb der
+       sichtbaren vier Zeilen — der Favoritenvorzug muss ihn davor holen. */
+    expect(await screen.findByText('Favorit hinten')).toBeTruthy();
+    /* Aber die Kachel bleibt bei „aktiv": ein abgeschlossenes Projekt taucht
+       nicht auf, egal ob es ein Favorit ist. */
+    expect(screen.queryByText('Fertiges Projekt')).toBeNull();
+  });
+
+  it('zeigt einen Favoriten in „Stagnierende Projekte", auch wenn die Slug-Reihenfolge ihn abschneiden würde', async () => {
+    const slugs = ['s1', 's2', 's3', 's4', 's5', 's6', 's7'];
+    const custom: Project[] = [
+      ...slugs.slice(0, 6).map((slug, index) =>
+        project({
+          slug,
+          title: `Stagnierend ${index + 1}`,
+          status: 'paused',
+          stale: true,
+          favorite: false,
+          priority: 3,
+        }),
+      ),
+      project({
+        slug: 's7',
+        title: 'Favorit ganz hinten',
+        status: 'paused',
+        stale: true,
+        favorite: true,
+        priority: 3,
+      }),
+      /* Stagnierend, aber nicht in `staleProjects` gelistet — muss draußen bleiben. */
+      project({
+        slug: 'nicht-gelistet',
+        title: 'Nicht in der Liste',
+        status: 'paused',
+        stale: true,
+        favorite: false,
+        priority: 3,
+      }),
+    ];
+    mount({
+      data: { ...dashboardFixture, staleProjects: slugs },
+      extra: { 'projects:list': () => custom },
+    });
+    wrap(<StaleProjectsTile />);
+
+    /* Nach der Slug-Reihenfolge allein läge „Favorit ganz hinten" (Platz 7)
+       außerhalb der sichtbaren sechs Zeilen. */
+    expect(await screen.findByText('Favorit ganz hinten')).toBeTruthy();
+    /* Nur was in `staleProjects` steht — ein Favorit erfindet keine Zeile. */
+    expect(screen.queryByText('Nicht in der Liste')).toBeNull();
   });
 });
 

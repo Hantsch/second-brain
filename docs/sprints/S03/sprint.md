@@ -22,7 +22,7 @@ me hunting for it.
 
 - [x] 003 — Project notes and waiting-on, editable in place
 - [x] 004 — Where the project status and next step come from
-- [ ] 013 — Favourite projects (star) and an order that matches how I work
+- [x] 013 — Favourite projects (star) and an order that matches how I work
 
 ## Notes
 

@@ -26,6 +26,7 @@ const WRITABLE = [
   'title',
   'status',
   'priority',
+  'favorite',
   'started',
   'deadline',
   'next_step',
@@ -117,6 +118,11 @@ export function checkProjectPatch(patch: Partial<ProjectFrontmatter>): Record<st
     }
     if (key === 'priority') {
       out[key] = value === null ? null : asPriority(value);
+      continue;
+    }
+    if (key === 'favorite') {
+      if (value !== true && value !== false) invalid('favorite', 'erwartet true oder false');
+      out[key] = value;
       continue;
     }
     if (key === 'started' || key === 'deadline') {
