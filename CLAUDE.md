@@ -163,3 +163,21 @@ Neighbor repos this project deliberately draws from:
 - `../godot-RAG` — the Karpathy wiki schema (`AGENTS.md`) for the knowledge modules
 - `../yougrab` — YouTube pipeline (yt-dlp + fallback provider, transcript preparation)
 - `../claude-control` — reading Claude Code sessions from `~/.claude/projects`
+
+<!-- tech-rules:managed:start 1.0.0 -->
+## House rules
+
+These rules live in this repository as project skills, so they apply to everyone who works here —
+no plugin needed. Installed and updated with `/tech-rules:setup` (plugin `tech-rules@hantsch`).
+
+| Read before | Skill |
+| --- | --- |
+| any code change | `/karpathy` |
+| touching `src/renderer/` | `/frontend-guidelines`, `/design-tokens` |
+| main / preload / renderer, IPC, `webPreferences` | `/electron-arch`, `/typed-ipc` |
+| screenshotting or verifying the UI | `/ui-verify` |
+
+Do not edit a skill to make it fit this project. A deviation is recorded **here**, with its
+reason, and wins over the skill; a deviation without a reason is a violation that has been
+written down.
+<!-- tech-rules:managed:end -->
