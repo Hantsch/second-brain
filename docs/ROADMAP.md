@@ -117,7 +117,7 @@ Gaps/notes:
 - **List-level star writes (013) have no error surface**, unlike the detail star. Matches an
   existing pattern on the same screen for other list-level patches; not a regression.
 
-### M3 — The journal becomes one thing — built, acceptance pending
+### M3 — The journal becomes one thing — accepted
 
 Stories 011 (one entry instead of day and conversation), 012 (the interview, for when the field
 is empty), 009 (filter for days that are not finished), 010 (a calendar on top of the days). No
@@ -132,15 +132,15 @@ The `## Day`/`## Conversation` split is gone for new writing: one field, a stanc
 as blockquote turns. An interview overlay covers a fixed five-topic backbone for the days the
 field stays empty. The day list gets a "not finished" filter (`closed` is now a real vault
 frontmatter field) with a rail badge, and a collapsible month calendar sits above the list
-showing entry/mood/unfinished markers. All four stories done; end-to-end acceptance through the
-real UI is the user's next step,
-[sprints/S04/testplan.md](sprints/S04/testplan.md).
+showing entry/mood/unfinished markers. All four stories done; M3's target picture is fully built
+and accepted by the user,
+[sprints/done/S04/testplan.md](sprints/done/S04/testplan.md) walked end to end.
 
 Sprints:
 
-- [sprints/S04/sprint.md](sprints/S04/sprint.md) — the journal becomes one thing (011, 012,
-  009, 010), `done`
-  ([review](sprints/S04/review.md) · [testplan](sprints/S04/testplan.md))
+- [sprints/done/S04/sprint.md](sprints/done/S04/sprint.md) — the journal becomes one thing (011,
+  012, 009, 010), `done`
+  ([review](sprints/done/S04/review.md) · [testplan](sprints/done/S04/testplan.md))
 
 Gaps/notes:
 
@@ -168,8 +168,12 @@ Note: 015, 016 and 017 add new **write** paths into the vault (merging pages, in
 recording a verdict). The AI-proposes/human-confirms guardrail and the hash-guarded write are
 the load-bearing part of this milestone, not the screens.
 
-M3 was chosen next at the 2026-08-19 `/ai-scrum:roadmap plan`, now that M2 is accepted. M4
-follows after M3.
+M4 was chosen next at the 2026-08-20 `/ai-scrum:roadmap plan`, now that M3 is accepted.
+
+Sprints:
+
+- [sprints/S05/sprint.md](sprints/S05/sprint.md) — a finding can be acted on (014, 015, 016,
+  017), `planned`
 
 ---
 
