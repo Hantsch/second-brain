@@ -21,6 +21,8 @@ export const deJournal = {
   'journal.gap': '{count} Tage ohne Eintrag',
   'journal.gapOne': 'Ein Tag ohne Eintrag',
   'journal.hasDialogue': 'Mit Antwort der App',
+  'journal.list.closed': 'Abgeschlossen',
+  'journal.list.unfinished': 'Tag noch nicht abgeschlossen',
   'journal.open': 'Eintrag vom {date} öffnen',
   'journal.keys': 'Pfeiltasten wechseln den Tag',
   /* Der Filter (009, D5): heute bleibt immer sichtbar, gilt aber selbst nie

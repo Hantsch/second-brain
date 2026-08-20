@@ -46,6 +46,7 @@ export function MoodPicker({ kind, value, busy = false, saved = false, onPick }:
               key={level}
               type="button"
               className={`sb-moodstep ${active ? 'sb-moodstep--active' : ''}`.trim()}
+              data-level={level}
               aria-pressed={active}
               aria-label={t('journal.level.set', { label: name })}
               disabled={busy}

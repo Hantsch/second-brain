@@ -11,6 +11,8 @@ export const enJournal = {
   'journal.gap': '{count} days without an entry',
   'journal.gapOne': 'One day without an entry',
   'journal.hasDialogue': 'With an answer from the app',
+  'journal.list.closed': 'Closed',
+  'journal.list.unfinished': 'Day not closed out yet',
   'journal.open': 'Open the entry of {date}',
   'journal.keys': 'Arrow keys change the day',
   /* The filter (009, D5): today always stays visible but never counts as open

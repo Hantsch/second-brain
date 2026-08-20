@@ -17,13 +17,14 @@
  */
 
 import type { JournalDay } from '@shared/types';
+import { Icon } from '../atoms/Icon';
 import { useLanguage, useT } from '../i18n';
 import { plural } from '../lib/format';
 import { isDayOpen } from '../lib/journal-open';
 
 /** One row of the list: a day with a file, or a named gap. */
 export type DayRow =
-  | { kind: 'day'; date: string; day: JournalDay | null; today: boolean }
+  | { kind: 'day'; date: string; day: JournalDay | null; today: boolean; unfinished: boolean }
   | { kind: 'gap'; days: number; key: string };
 
 const MS_PER_DAY = 86_400_000;
@@ -81,20 +82,21 @@ export function dayRows(
     .sort((a, b) => (a.date < b.date ? 1 : -1));
   const rows: DayRow[] = [];
   const first = sorted.find((day) => day.date === today) ?? null;
-  rows.push({ kind: 'day', date: today, day: first, today: true });
+  rows.push({ kind: 'day', date: today, day: first, today: true, unfinished: false });
 
   let previous = today;
   for (const day of sorted) {
     if (day.date === today) continue;
+    const unfinished = isDayOpen(day, today);
     if (openOnly) {
-      if (isDayOpen(day, today)) rows.push({ kind: 'day', date: day.date, day, today: false });
+      if (unfinished) rows.push({ kind: 'day', date: day.date, day, today: false, unfinished });
       continue;
     }
     /* Only genuine gaps: consecutive days need no row, and neither does a
        day in the future (backfilled). */
     const missing = daysBetween(previous, day.date) - 1;
     if (missing > 0) rows.push({ kind: 'gap', days: missing, key: `${previous}-${day.date}` });
-    rows.push({ kind: 'day', date: day.date, day, today: false });
+    rows.push({ kind: 'day', date: day.date, day, today: false, unfinished });
     previous = day.date;
   }
   return rows;
@@ -166,6 +168,22 @@ export function DayList({ rows, selected, onSelect, rowRef }: DayListProps) {
                   <span
                     className="sb-dayrow-talk"
                     title={t('journal.hasDialogue')}
+                    aria-hidden="true"
+                  />
+                ) : null}
+                {row.day?.closed == null ? null : (
+                  <span
+                    className="sb-dayrow-closed"
+                    title={t('journal.list.closed')}
+                    aria-hidden="true"
+                  >
+                    <Icon name="circle-check-big" size={12} />
+                  </span>
+                )}
+                {row.unfinished ? (
+                  <span
+                    className="sb-dayrow-unfinished"
+                    title={t('journal.list.unfinished')}
                     aria-hidden="true"
                   />
                 ) : null}

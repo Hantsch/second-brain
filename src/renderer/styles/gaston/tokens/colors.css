@@ -31,6 +31,17 @@
   --red-400: #F07A7A;
   --red-300: #F9A8A8;
 
+  /* Five-step scale (heavy -> very good), for mood and energy. Its own hues,
+     not the semantic ones: `--danger`/`--warning`/`--success` sit at hue 0/35/147,
+     which leaves steps 2 and 3 nine degrees apart — indistinguishable in an
+     8px dot. These five are spaced across the red-to-green arc (0, 28, 51, 88,
+     150) and carry more chroma, so each step is a color you can name. */
+  --scale-1: #F4595B;
+  --scale-2: #F98432;
+  --scale-3: #EFD44E;
+  --scale-4: #86D13F;
+  --scale-5: #2CC97C;
+
   /* ---- Semantic aliases ---- */
   --surface-page: var(--ink-900);
   --surface-sunken: var(--ink-950);

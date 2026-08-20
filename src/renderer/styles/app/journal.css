@@ -132,29 +132,32 @@
   font-size: var(--text-sm);
   color: var(--text-faint);
 }
-/* The mood dot: one level, one saturation — the color stays the accent. */
+/* The mood dot: heavy through very good reads as red through green, five
+   distinct hues from the `--scale-*` tokens rather than a
+   red-to-green blend — a 50/50 RGB mix desaturates toward grey in the
+   middle and reads as barely different from its neighbours. Not the single
+   focal-point accent either: a scale needs a direction, not a spotlight. */
 .sb-moodmark {
   width: 8px;
   height: 8px;
   border-radius: var(--radius-full);
   flex-shrink: 0;
-  background: var(--accent);
   margin-left: auto;
 }
 .sb-moodmark[data-level='1'] {
-  opacity: 0.25;
+  background: var(--scale-1);
 }
 .sb-moodmark[data-level='2'] {
-  opacity: 0.45;
+  background: var(--scale-2);
 }
 .sb-moodmark[data-level='3'] {
-  opacity: 0.65;
+  background: var(--scale-3);
 }
 .sb-moodmark[data-level='4'] {
-  opacity: 0.85;
+  background: var(--scale-4);
 }
 .sb-moodmark[data-level='5'] {
-  opacity: 1;
+  background: var(--scale-5);
 }
 .sb-dayrow-talk {
   width: 6px;
@@ -162,6 +165,25 @@
   border-radius: var(--radius-full);
   flex-shrink: 0;
   border: 1px solid var(--border-strong);
+}
+/* The day's own `closed` field, the same success color as the badge in the
+   day header (`DayEntry.tsx`) — the list should say it too, not just the
+   opened day. */
+.sb-dayrow-closed {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--success);
+}
+/* The list's own "not closed out" cue — same square marker and reasoning as
+   `.sb-monthcal-unfinished`: a shape, not just a color, so it still reads
+   under a color-vision deficiency, and square rather than round so it can
+   never be mistaken for `.sb-moodmark`. */
+.sb-dayrow-unfinished {
+  width: 6px;
+  height: 6px;
+  border-radius: 1px;
+  background: var(--warning);
+  flex-shrink: 0;
 }
 
 /* The gap: a quiet line, not an invented day. */
@@ -254,24 +276,39 @@
 .sb-mood-label {
   min-width: 5.5em;
 }
+/* A grid, not a wrapping flex row: five equal columns mean the column a
+   level sits in is the same for mood and energy regardless of how long its
+   word is ("Gedrückt" vs. "Wenig") — the two rows line up as one scale, not
+   two independently-sized ones. `minmax(0, 1fr)` keeps a long word from
+   pushing its own column wider than its neighbours; `sb-moodstep-text`
+   below is the safety net if one still doesn't fit. */
 .sb-mood-steps {
-  display: inline-flex;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: var(--space-1);
-  flex-wrap: wrap;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 .sb-moodstep {
   all: unset;
   box-sizing: border-box;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: var(--space-2);
+  width: 100%;
   min-height: var(--sb-hit);
-  padding: 0 var(--space-3);
+  padding: 0 var(--space-2);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-full);
   cursor: pointer;
   font-size: var(--text-xs);
   color: var(--text-muted);
+}
+.sb-moodstep-text {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 .sb-moodstep:hover {
   border-color: var(--border-strong);
@@ -280,19 +317,42 @@
 .sb-moodstep:focus-visible {
   box-shadow: var(--focus-ring);
 }
+/* The picked step wears its own level color, not the teal accent: teal is the
+   focal point of this screen (the interview button), and a step tinted teal
+   hides the one thing the scale is supposed to show — which color the day
+   got. The tint is derived from `--sb-scale` set per level below. */
 .sb-moodstep--active {
-  border-color: var(--accent-soft-border);
-  background: var(--accent-soft);
+  border-color: var(--sb-scale);
+  background: color-mix(in srgb, var(--sb-scale) 16%, transparent);
   color: var(--text-heading);
 }
+/* The dot reads as the same heavy-to-very-good scale as the day list's mood
+   mark (below), at full strength on every step — dimming the unselected ones
+   was the point that made the scale illegible: four of five dots sat at 50%
+   opacity over near-black, and that crushes exactly the hue difference the
+   scale exists to show. The picked level is already unmistakable from the
+   pill's own border and fill; the dot's job is only the color. */
 .sb-moodstep-dot {
-  width: 6px;
-  height: 6px;
+  width: 10px;
+  height: 10px;
   border-radius: var(--radius-full);
-  background: var(--text-faint);
+  background: var(--sb-scale);
+  flex-shrink: 0;
 }
-.sb-moodstep--active .sb-moodstep-dot {
-  background: var(--accent);
+.sb-moodstep[data-level='1'] {
+  --sb-scale: var(--scale-1);
+}
+.sb-moodstep[data-level='2'] {
+  --sb-scale: var(--scale-2);
+}
+.sb-moodstep[data-level='3'] {
+  --sb-scale: var(--scale-3);
+}
+.sb-moodstep[data-level='4'] {
+  --sb-scale: var(--scale-4);
+}
+.sb-moodstep[data-level='5'] {
+  --sb-scale: var(--scale-5);
 }
 .sb-mood-state {
   font-size: var(--text-2xs);
