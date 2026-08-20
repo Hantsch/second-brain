@@ -9,6 +9,7 @@ import { enAgents } from './en-agents';
 import { enDashboard } from './en-dashboard';
 import { enGarden } from './en-garden';
 import { enJournal } from './en-journal';
+import { enJournalCalendar } from './en-journal-calendar';
 import { enNotes } from './en-notes';
 import { enProjects } from './en-projects';
 import { enScreens } from './en-screens';
@@ -201,6 +202,7 @@ export const en: Record<TranslationKey, string> = {
   ...enDashboard,
   ...enGarden,
   ...enJournal,
+  ...enJournalCalendar,
   ...enNotes,
   ...enProjects,
   ...enSettings,

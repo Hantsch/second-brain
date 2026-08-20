@@ -85,3 +85,11 @@ second roadmap.
   are the contract story 010's calendar marker builds on. Passed clean-agent review;
   fixed two findings (a wording note documented as a decision, wrong story-number
   comments corrected).
+- 010 — Journal calendar view · S04 · A month grid (`MonthCalendar.tsx`) now sits above
+  the day list, filtering the same `journal:list` data the list already reads — no new
+  IPC, no vault-format change. Keyboard grid navigation (roving tabindex, arrows crossing
+  month boundaries, PageUp/PageDown, Home/End) coexists with the existing day-list arrow
+  handling via one added bail-out in `use-journal-keys.ts`; mood and 009's unfinished
+  marker show per cell, a future day is only unselectable without an entry. Passed
+  story-review-hard after one fix cycle (a wide-layout toolbar overflow plus five smaller
+  findings); a narrow-layout overflow found during live smoke was fixed separately.

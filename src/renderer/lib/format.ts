@@ -11,7 +11,10 @@ import type { UiLanguage } from '@shared/types';
 
 const MS_PER_DAY = 86_400_000;
 
-function locale(language: UiLanguage): string {
+/** BCP-47 locale for the UI language — shared by every `Intl` call in the
+    renderer, so a date or number never picks its own separate idea of the
+    locale (`MonthCalendar.tsx` is the first caller outside this file). */
+export function locale(language: UiLanguage): string {
   return language === 'de' ? 'de-DE' : 'en-GB';
 }
 

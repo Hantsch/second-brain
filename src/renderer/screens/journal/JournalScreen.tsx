@@ -31,6 +31,7 @@ import { Checkbox } from '../../atoms/Checkbox';
 import { DayList, dayRows, selectableDates, todayIso } from '../../components/DayList';
 import { EmptyState } from '../../components/EmptyState';
 import { ErrorState } from '../../components/ErrorState';
+import { MonthCalendar } from '../../components/MonthCalendar';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { Skeleton } from '../../components/Skeleton';
 import { useT } from '../../i18n';
@@ -38,6 +39,7 @@ import { plural } from '../../lib/format';
 import { setOpenOnly, useOpenOnly } from '../../lib/journal-filter';
 import { countOpenDays } from '../../lib/journal-open';
 import { clearStream, useLlmStream } from '../../lib/llm-stream';
+import { monthOf } from '../../lib/month-calendar';
 import { useJournalDays, useProjects } from '../../lib/queries/data';
 import {
   useCoachRoute,
@@ -59,6 +61,29 @@ interface Pending {
   threadId: string;
   messageId: string;
   message: string;
+}
+
+/** Whether the month calendar (010, D1/D2) is folded away — `sessionStorage`,
+    not `localStorage`: the collapse is a within-session convenience, not a
+    setting. A fresh app start therefore always shows the calendar expanded,
+    the same default `MonthCalendar`'s own tests assume. */
+const CALENDAR_COLLAPSED_KEY = 'sb-journal-calendar-collapsed';
+
+function readCalendarCollapsed(): boolean {
+  try {
+    return window.sessionStorage.getItem(CALENDAR_COLLAPSED_KEY) === 'true';
+  } catch {
+    /* Without storage the toggle still works, it just forgets on remount. */
+    return false;
+  }
+}
+
+function writeCalendarCollapsed(collapsed: boolean): void {
+  try {
+    window.sessionStorage.setItem(CALENDAR_COLLAPSED_KEY, String(collapsed));
+  } catch {
+    return;
+  }
 }
 
 /** Same threshold as `journal.css` (`@media (max-width: 1200px)`) — the only
@@ -107,6 +132,23 @@ export function JournalScreen() {
   const [suggestion, setSuggestion] = useState<JournalCloseSuggestion | null>(null);
   const [applied, setApplied] = useState<AppliedClose | null>(null);
   const [interviewOpen, setInterviewOpen] = useState(false);
+
+  /* 010, D2: the shown month is the calendar's own state, seeded from the
+     selected date once, then left alone — paging the grid must not get
+     overridden by every render. A jump that lands outside the shown month
+     (a list click, a deep link) resyncs it. Adjusted during render rather
+     than in an effect (React's own recommended pattern for "state derived
+     from a prop that changed"): `syncedDate` is the guard that makes this
+     fire only on an actual `date` change, not on every render, which is what
+     keeps `onMonth`'s own paging from being immediately undone here. */
+  const [month, setMonth] = useState(() => monthOf(date));
+  const [syncedDate, setSyncedDate] = useState(date);
+  if (date !== syncedDate) {
+    setSyncedDate(date);
+    const next = monthOf(date);
+    if (next !== month) setMonth(next);
+  }
+  const [calendarCollapsed, setCalendarCollapsed] = useState(readCalendarCollapsed);
 
   /* 009, D5: the filter is session state, not a setting — `useOpenOnly` keeps
      it across a remount of this screen but not across a restart. It feeds
@@ -325,6 +367,22 @@ export function JournalScreen() {
 
       <div className="sb-journal">
         <aside className="sb-journal-side" aria-label={t('journal.list.title')}>
+          <MonthCalendar
+            days={days.data ?? []}
+            today={today}
+            selected={date}
+            onSelect={(next) => select(next)}
+            month={month}
+            onMonth={setMonth}
+            collapsed={calendarCollapsed}
+            onToggleCollapse={() => {
+              setCalendarCollapsed((previous) => {
+                const next = !previous;
+                writeCalendarCollapsed(next);
+                return next;
+              });
+            }}
+          />
           <p className="sb-journal-count sb-mono">
             {openOnly
               ? plural(openCount, 'journal.filter.countOne', 'journal.filter.count')

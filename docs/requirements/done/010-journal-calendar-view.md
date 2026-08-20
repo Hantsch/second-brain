@@ -1,7 +1,7 @@
 ---
 id: 010
 title: Journal — a calendar on top of the days
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-08-12
 ---
 
@@ -25,25 +25,25 @@ without turning on a filter first.
 
 ## Acceptance Criteria
 
-- [ ] A month calendar sits above the day list, showing the month of the selected day.
-- [ ] Every day cell states whether an entry exists — the difference between "written"
+- [x] A month calendar sits above the day list, showing the month of the selected day.
+- [x] Every day cell states whether an entry exists — the difference between "written"
       and "not written" is legible without hovering.
-- [ ] Clicking a day opens it, exactly like a click in the list, and updates
+- [x] Clicking a day opens it, exactly like a click in the list, and updates
       `#/journal?d=…`.
-- [ ] Today is marked, and it is marked differently from "selected".
-- [ ] I can page to the previous and next month, and get back to today in one step.
-- [ ] Months without a single entry are reachable and honestly empty, not skipped.
-- [ ] A day's state is visible beyond "exists": at least mood (the dot the list already
+- [x] Today is marked, and it is marked differently from "selected".
+- [x] I can page to the previous and next month, and get back to today in one step.
+- [x] Months without a single entry are reachable and honestly empty, not skipped.
+- [x] A day's state is visible beyond "exists": at least mood (the dot the list already
       uses) and whether the day is unfinished (from [009](009-journal-open-days-filter.md)).
-- [ ] Keyboard: the calendar is reachable and operable by keyboard, and the existing
+- [x] Keyboard: the calendar is reachable and operable by keyboard, and the existing
       arrow-key day switching keeps working unchanged.
-- [ ] A future day is not offered as if it were writable history; backfilling a past
+- [x] A future day is not offered as if it were writable history; backfilling a past
       day works.
-- [ ] Reading a month does not read every file of that month — it goes through the
+- [x] Reading a month does not read every file of that month — it goes through the
       derived days, like the list does.
-- [ ] External changes show up: a day added in Obsidian appears in the calendar.
-- [ ] Works with no model configured.
-- [ ] Weekday and month names come from the UI language via `Intl`, and every label
+- [x] External changes show up: a day added in Obsidian appears in the calendar.
+- [x] Works with no model configured.
+- [x] Weekday and month names come from the UI language via `Intl`, and every label
       goes through `t()`, in `de` and `en`.
 
 ## Open Questions
@@ -274,4 +274,117 @@ screenshots, or the launcher for hands-on).
 
 ## Done
 
-<Filled by `/ai-scrum:build 010`.>
+**Summary.** A month calendar (`MonthCalendar.tsx`, real `<table>`, Monday-first, one
+teal accent) now sits above the day list in the Journal screen's existing side column,
+seeded from `?d=` and paged independently as component state. It reads only the array
+`journal:list` already returns — no new IPC, no vault-format change, no core change; the
+whole story is renderer-only. Selecting a day reuses the screen's existing `select()`
+(same as a list click). Every cell carries at most two markers (mood/entry dot +
+009's unfinished mark, from `isDayOpen`); a future day without an entry is unselectable,
+a future day with one stays open, exactly per the story's decision. Full keyboard grid
+navigation (roving tabindex, arrows ±1/±7 crossing month boundaries, PageUp/PageDown,
+Home/End, Enter/Space) coexists with the existing global day-list handler via one added
+bail-out in `use-journal-keys.ts` (stands down when the event originates inside
+`.sb-monthcal-grid`); the day list's own `j`/`k`/arrow/Ctrl+1-3 behaviour is unchanged and
+regression-tested. Collapse state persists in `sessionStorage`, default expanded.
+
+**Decisions (mine, made while building, per the sprint's "no questions" rule):**
+
+- 009's `closed` field landed exactly as the plan assumed (`JournalDay.closed: string |
+  null`, `isDayOpen(day, today)` in `lib/journal-open.ts`) — D4 consumed it verbatim, no
+  adaptation needed.
+- The collapse toggle became icon-only (`chevron-up`/`chevron-down`, `aria-label` carries
+  the translated text) rather than a text button with a wrap fallback: the 200–240px side
+  column cannot fit four labelled toolbar buttons without either wrapping the toolbar
+  across lines (visually noisy above a compact grid) or shrinking one button to an icon —
+  the icon is the plainer fix and matches the existing icon-only prev/next-month buttons.
+- Pure grid helpers (`monthOf`, `shiftMonth`, `monthCells`, `nextOpenable`, …) were split
+  out of `MonthCalendar.tsx` into a new `src/renderer/lib/month-calendar.ts` once D4's
+  addition pushed the component file to ~400 lines, per CLAUDE.md's ~300-line soft cap —
+  the component is a rendering/keyboard responsibility, the grid math is a separate,
+  independently testable one. `MonthCalendar.tsx` is ~309 lines after the split, judged
+  acceptable by both the implementing agent and the reviewer (mostly header comment plus
+  JSX; further splitting would separate closely-coupled keyboard/render code for no real
+  gain).
+- `journal.calendar.open`'s label was changed mid-D2 (from a value that was
+  byte-identical to the day list's `journal.open`) to give the calendar's day buttons and
+  the list's day rows distinct accessible names — an accessible-name collision that D1
+  couldn't see while testing the calendar in isolation, but a real a11y defect once both
+  controls exist on the same screen.
+- A live-smoke bug was found after D5 (not part of any deliverable's original scope) and
+  fixed as its own pass: at the narrow (≤1200px) breakpoint, the calendar's
+  `aspect-ratio: 1` day cells scaled with the widened single-column layout and pushed the
+  mood/energy/chips/composer/save controls out of scroll reach. Fixed with narrow-only
+  CSS (a fixed cell height instead of `aspect-ratio`, plus a `grid-template-rows`/
+  `overflow` fix in `journal.css` for a related sizing trap it exposed) — confirmed via
+  `npm run shot` before and after.
+- Story-review-hard found one further **confirmed, blocking** defect in the *wide*
+  layout after that: the toolbar's four `.gs-btn` buttons (`white-space: nowrap`)
+  exceeded the 200–240px column's width, spilling the collapse label past the side
+  column's border (visible in `.screenshots/04-journal.png`). Fixed by making the
+  collapse toggle icon-only (see above) — confirmed resolved in a fresh screenshot.
+- Five further review findings were fixed in the same cycle, all low-severity/cheap: a
+  missing `.gs-scrim` guard on the grid's own keydown handler (the global handler already
+  had one; the grid's now mirrors it, closing one more path into a pre-existing,
+  out-of-scope class of bug — `atoms/Dialog.tsx` has no focus trap, which is not this
+  story's to fix); a raw `10px` font-size replaced with `var(--text-2xs)`; a dead empty
+  CSS rule removed; a specificity bug where "today" lost its accent colour when also
+  selected (the common default-view case) — fixed so both cues persist together; the
+  weekday header row now collapses along with the grid body instead of staying visible
+  when collapsed.
+- Accepted without a code change: `DayList.tsx`/`DayEntry.tsx` still each carry their own
+  inline `language === 'de' ? 'de-DE' : 'en-GB'` ternary even though `lib/format.ts` now
+  exports `locale()` for exactly that purpose (this story's own D1 rationale). Migrating
+  those two pre-existing call sites is a one-line-each cleanup with no user-visible
+  effect and no relation to this story's acceptance criteria — left as a follow-up rather
+  than scope creep into 010.
+
+**Verification.** `npm run build`, `npm run lint`, `npm run typecheck` all clean.
+`npm test`: 2199/2200 passing; the one failure (`tests/core/wiki/module.test.ts`, a
+docs/MODULE-SCHEMA.md drift check) is pre-existing and unrelated — independently
+reproduced on the base commit via `git stash`. `npm run format:check` shows the repo's
+known, pre-existing CRLF/LF artifact across 282 files; every file this story touched was
+confirmed byte-clean via `npx prettier --check --end-of-line auto <files>`. Live smoke
+(`npm run seed && npm run shot`) run twice (before and after the review-fix cycle) and
+visually inspected: the demo vault now spans two months (2026-07 and 2026-08) via two
+new seed entries ~40 days back; the wide Journal screenshot shows the calendar, today's
+distinct marking, entry/mood/unfinished markers, and paging controls all legible inside
+the side column with no overflow; the narrow screenshot confirms the calendar renders
+compact and the composer/save controls remain reachable by scroll. Code review
+(`story-review-hard`, Opus tier per this story's Model Hints): first pass FAIL on one
+confirmed blocking finding plus five low-severity/nit findings — all six fixed in one
+review-fix cycle, re-verified green above; no findings left undone.
+
+**Commit message:**
+
+```
+010: journal calendar view
+
+Month grid above the day list, keyboard grid navigation coexisting
+with the existing day-list arrows, mood/unfinished markers from 009,
+demo-vault seed spanning two months.
+```
+
+**Changed files:**
+
+New:
+- `src/renderer/components/MonthCalendar.tsx`
+- `src/renderer/lib/month-calendar.ts`
+- `src/renderer/styles/app/journal-calendar.css`
+- `src/renderer/i18n/de-journal-calendar.ts`
+- `src/renderer/i18n/en-journal-calendar.ts`
+- `tests/renderer/journal-calendar.test.tsx`
+
+Modified:
+- `src/renderer/screens/journal/JournalScreen.tsx`
+- `src/renderer/screens/journal/use-journal-keys.ts`
+- `src/renderer/lib/format.ts` (exported `locale()`)
+- `src/renderer/i18n/de.ts`, `src/renderer/i18n/en.ts` (wired the new partials)
+- `src/renderer/index.css` (one import)
+- `src/renderer/styles/app/journal.css` (narrow-breakpoint fix)
+- `tests/renderer/journal.test.tsx` (keyboard coexistence regression tests)
+- `scripts/seed/journal.mjs` (two entries ~40 days back)
+- `docs/requirements/010-journal-calendar-view.md` (this file)
+
+**Open points:** none. Story is fully accepted; no further story in this sprint depends
+on 010.

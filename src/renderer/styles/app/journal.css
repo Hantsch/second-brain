@@ -597,9 +597,43 @@
    single-field composer (D8) turns out to need its own sticky or narrow
    treatment, that's a question for that deliverable, not this one. */
 @media (max-width: 1200px) {
+  /* `minmax(0, 1fr)`'s `0` is a fixed length, not the item's automatic
+     minimum size — grid track sizing takes it literally, so once the
+     sibling `auto` row (calendar + day list, `.sb-journal-side`) asks for as
+     much as or more than this grid has to give, 100% of the deficit lands on
+     this row and it is squeezed to exactly 0 px, no matter what
+     `.sb-journal-main`'s own `overflow`/`min-height` say (that only matters
+     for the leftover-space case, not this one). At 0 px the row still has
+     content (its `scrollHeight` is unchanged), just nothing left to paint it
+     in or hit-test against — clicks meant for the mood/energy pickers or the
+     project chips land on the calendar cells sitting behind them instead,
+     and no amount of scrolling reveals a 0 px box. `minmax(220px, 1fr)`
+     gives this row a floor it can't be squeezed below, and `.sb-journal-main`'s
+     own `overflow-y: auto` (set above, for the wide window) turns that floor
+     into a proper clipped, independently scrollable box — `overflow-y: visible`
+     was tried here first and, with 961 px of day content and only 220 px of
+     row, spilled downward past the row and painted over the calendar that
+     starts right after it.
+
+     `.sb-journal-side` gets the same treatment below for the mirror-image
+     reason: letting *it* spill past its own box (its default, `overflow-y`
+     unset) does technically make its tail reachable — but only by scrolling
+     `.sb-content` (the page) itself, and `.sb-content` and `.sb-journal-main`
+     are two independent scroll containers with no ordering relationship
+     between them. Scrolling both to their respective ends at once (exactly
+     what a "can everything be reached" check has to do, since it can't know
+     which one a real user would reach for first) then double-counts: the
+     page scroll drags the whole grid — `.sb-journal-main` included — upward
+     by however far `.sb-journal-side` overflowed, shoving the composer back
+     off the top of the window even though its own 220 px box was already
+     scrolled correctly. Capping `.sb-journal-side` to its own box the same
+     way removes the second, independent scroll distance entirely: with
+     nothing left to spill, `.sb-content` has nothing to scroll, and the
+     calendar and day list become reachable the same way the day itself is —
+     one bounded, self-contained scroll area, not two competing ones. */
   .sb-journal {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-rows: minmax(220px, 1fr) auto;
     gap: var(--space-3);
   }
   .sb-journal-main {
@@ -611,12 +645,26 @@
     border-top: 1px solid var(--border-subtle);
     padding-right: 0;
     padding-top: var(--space-3);
+    overflow-y: auto;
   }
   /* At least one full row of the day list, not just its top edge
      (measured: one row is roughly 93 px tall). 60 px didn't show a single
-     one fully. */
+     one fully. `.sb-journal-side` is a flex column that now also holds 010's
+     calendar above the list — the calendar's own content (never a scroll
+     container, so it always keeps its full automatic minimum size)
+     routinely asks for more than this row's grid-assigned share.
+     `.sb-daylist` is the only flex-shrinkable-to-zero item in that column
+     (the one child that's a scroll container, so its automatic minimum is 0
+     instead of its content size), so without `flex-shrink: 0` it — not the
+     calendar — absorbs the whole deficit and collapses to 0, the exact same
+     failure this file's narrow rule for `.sb-journal-main` exists to prevent
+     one level up. `flex-shrink: 0` keeps its 108 px cap non-negotiable;
+     `.sb-journal-side`'s own `overflow-y: auto` above turns the resulting
+     overflow into a scrollbar for the calendar-and-list column, instead of
+     letting it spill into the page. */
   .sb-daylist {
     max-height: 108px;
+    flex-shrink: 0;
   }
   /* The same tightness applies between the sections of the day. */
   .sb-dayentry {

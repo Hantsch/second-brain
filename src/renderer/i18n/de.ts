@@ -9,6 +9,7 @@ import { deAgents } from './de-agents';
 import { deDashboard } from './de-dashboard';
 import { deGarden } from './de-garden';
 import { deJournal } from './de-journal';
+import { deJournalCalendar } from './de-journal-calendar';
 import { deNotes } from './de-notes';
 import { deProjects } from './de-projects';
 import { deScreens } from './de-screens';
@@ -209,6 +210,7 @@ export const de = {
   ...deDashboard,
   ...deGarden,
   ...deJournal,
+  ...deJournalCalendar,
   ...deNotes,
   ...deProjects,
   ...deSettings,

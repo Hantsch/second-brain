@@ -1224,6 +1224,93 @@ describe('Tagebuch: Filter „nur offene Tage" (009, D5)', () => {
   });
 });
 
+/* Zwei Tastaturflächen auf einem Bildschirm (010, D3). Der Kalender hat seinen
+   eigenen `keydown`-Handler am Gitter, `use-journal-keys.ts` hört weiter am
+   `window` — und genau eine der beiden darf auf denselben Tastendruck
+   reagieren. Beide Fehlerarten sind unsichtbar in einem Screenshot: entweder
+   reagieren beide (der Tag springt zweimal, die letzte Auswahl gewinnt), oder
+   der Kalender frisst die Tasten der Liste. Deshalb steht hier für beide
+   Richtungen ein Test. */
+describe('Tagebuch: Kalender und Liste teilen die Tasten (010, D3)', () => {
+  /** Die Gitterzelle zu einem Datum — über `data-date`, den Anker, den
+      `MonthCalendar` dafür trägt. */
+  function cellOf(dateIso: string): HTMLElement {
+    const cell = document.querySelector<HTMLElement>(`.sb-monthcal-day[data-date="${dateIso}"]`);
+    if (cell === null) throw new Error(`keine Kalenderzelle für ${dateIso}`);
+    return cell;
+  }
+
+  /** Die Zeile der Tagesliste zu einem Datum. */
+  function rowOf(dateIso: string): HTMLElement {
+    return screen.getByRole('button', { name: `Eintrag vom ${dateIso} öffnen` });
+  }
+
+  async function ready(): Promise<void> {
+    await screen.findByRole('group', { name: 'Monatskalender' });
+  }
+
+  it('lässt einen Pfeil im Gitter nur den Kalender bewegen, nicht auch die Liste', async () => {
+    const { sb } = open();
+    await ready();
+
+    /* Erst in den 6. wechseln — von dort aus fallen die beiden Handler
+       auseinander: das Gitter geht eine Woche zurück (30. Juli), die Liste
+       ginge einen Listeneintrag hoch (heute, der 10.). */
+    await userEvent.click(cellOf(EARLIER));
+    await waitFor(() => expect(cellOf(EARLIER).getAttribute('aria-current')).toBe('true'));
+
+    await userEvent.keyboard('{ArrowUp}');
+
+    await waitFor(() =>
+      expect(sb.payloadsOf('journal:get')).toContainEqual({ date: '2026-07-30' }),
+    );
+    expect(cellOf('2026-07-30').getAttribute('aria-current')).toBe('true');
+    expect(document.activeElement?.getAttribute('data-date')).toBe('2026-07-30');
+    /* Hätte der globale Handler mitgehört, stünde am Ende der 10. da — er läuft
+       nach dem Kalender und würde dessen Auswahl überschreiben. */
+    expect(rowOf(TODAY).getAttribute('aria-current')).toBeNull();
+    expect(rowOf(EARLIER).getAttribute('aria-current')).toBeNull();
+  });
+
+  it('lässt j im Gitter die Tagesliste gar nicht anfassen', async () => {
+    const { sb } = open();
+    await ready();
+    cellOf(TODAY).focus();
+
+    await userEvent.keyboard('j');
+
+    /* `j` kennt das Gitter nicht — und die Liste darf es von hier aus auch
+       nicht kennen. Also passiert nichts. */
+    expect(sb.payloadsOf('journal:get')).not.toContainEqual({ date: EARLIER });
+    expect(rowOf(TODAY).getAttribute('aria-current')).toBe('true');
+  });
+
+  it('wechselt vom Listeneintrag aus weiter mit j — der Kalender hält sich heraus', async () => {
+    const { sb } = open();
+    await ready();
+    rowOf(TODAY).focus();
+
+    await userEvent.keyboard('j');
+
+    await waitFor(() => expect(sb.payloadsOf('journal:get')).toContainEqual({ date: EARLIER }));
+    /* Und der Kalender ist dem Tag gefolgt, ohne selbst eine Taste zu
+       verbrauchen. */
+    await waitFor(() => expect(cellOf(EARLIER).getAttribute('aria-current')).toBe('true'));
+  });
+
+  it('wechselt die Haltung auch aus dem Gitter heraus — Ctrl bleibt global', async () => {
+    open();
+    await ready();
+    cellOf(TODAY).focus();
+
+    await userEvent.keyboard('{Control>}2{/Control}');
+
+    expect(
+      screen.getByRole('button', { name: 'Haltung Tipps wählen' }).getAttribute('aria-pressed'),
+    ).toBe('true');
+  });
+});
+
 describe('Tagebuch: Fertig markieren / wieder öffnen (009, D6)', () => {
   /* Same timestamp `journal:setClosed`'s default handler above writes when
      `closed: true` — used here to build the "already closed" view directly,

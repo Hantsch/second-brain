@@ -305,6 +305,36 @@ genau deshalb hier vermerkt, weil solche Abende in der Rückschau immer fehlen.`
       tag: `Svenja hat die Unterlagenliste geschickt, länger als erwartet. Italienisch fällt
 diesen Monat aus; das ist keine Niederlage, sondern eine Entscheidung. Lektion 7 wartet.`,
     },
+    /* D5 (010): zwei sparsame Einträge ~40 Tage zurück, weit vor dem
+       dichten Cluster oben — damit `journal/` Tage in mindestens zwei
+       verschiedenen Kalendermonaten enthält, egal an welchem Tag `npm run
+       seed` läuft, und Monatsblättern im Kalender im Demo-Vault vorführbar
+       ist ("die letzte Monatsblätterung"). Beide setzen frühere Stände
+       derselben Projekte, die weiter oben schon vorkommen. */
+    {
+      offset: -40,
+      mood: 4,
+      energy: 3,
+      people: ['Nico'],
+      projects: ['hochbeet-bauen'],
+      tags: [],
+      time: '19:30',
+      tag: `Erstes Mal mit Nico wirklich über das Hochbeet gesprochen, noch ohne Maße. Zwei
+Kästen, versetzt, damit die Tomaten den Salat nicht beschatten — mehr als eine Skizze
+auf der Rückseite eines Kassenzettels ist es noch nicht.`,
+    },
+    {
+      offset: -42,
+      mood: 3,
+      energy: 3,
+      people: [],
+      projects: ['rechnungsautomatisierung'],
+      tags: [],
+      time: '18:30',
+      tag: `Ersten Testlauf der Rechnungsautomatisierung gestartet, vierzig Belege aus dem
+letzten Quartal. Die Erkennung sitzt bei handschriftlichen Vermerken noch nicht, der
+Rest sieht vielversprechend aus.`,
+    },
   ];
 }
 

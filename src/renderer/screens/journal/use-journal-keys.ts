@@ -12,7 +12,8 @@
  *   with a modifier alone, and a text field doesn't type them. The hint for it
  *   sits on the segment (`CoachModeSwitch`), so no one has to guess.
  *
- * An open dialog keeps its keys (checked via `.gs-scrim`).
+ * An open dialog keeps its keys (checked via `.gs-scrim`), and so does the
+ * month calendar's grid (`.sb-monthcal-grid`, 010/D3 — see `inCalendarGrid`).
  */
 
 import { useEffect } from 'react';
@@ -29,6 +30,19 @@ function isTyping(target: EventTarget | null): boolean {
   if (target.isContentEditable) return true;
   if (target instanceof HTMLInputElement && target.type === 'checkbox') return false;
   return ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
+}
+
+/* Since 010/D3 the month calendar's grid carries its own `keydown` handler
+   (`MonthCalendar.tsx`: arrows move within the month, PageUp/PageDown page it).
+   Both handlers see the same keypress — this one runs on `window`, so the
+   grid's event bubbles up to it afterwards — and exactly one of them may act.
+   The subtree named here is precisely the one the grid's handler is attached
+   to, which is what makes the split airtight in both directions: no arrow key
+   is handled twice, and none is dropped. Everything outside it keeps the day
+   switch it always had — the day list, the writing field, and the calendar's
+   own toolbar buttons above the grid, which have no grid to move in. */
+function inCalendarGrid(target: EventTarget | null): boolean {
+  return target instanceof Element && target.closest('.sb-monthcal-grid') !== null;
 }
 
 export interface JournalKeysOptions {
@@ -55,7 +69,9 @@ export function useJournalKeys({ dates, current, select, onMode }: JournalKeysOp
         }
         return;
       }
-      if (event.altKey || isTyping(event.target)) return;
+      /* Deliberately after the Ctrl block above: the stance switch stays
+         global, the day switch does not. */
+      if (event.altKey || isTyping(event.target) || inCalendarGrid(event.target)) return;
 
       const at = dates.indexOf(current);
       const step = event.key === 'j' || event.key === 'ArrowDown' ? 1 : -1;
