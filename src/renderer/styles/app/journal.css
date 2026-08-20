@@ -29,6 +29,20 @@
   font-size: var(--text-2xs);
   color: var(--text-faint);
 }
+/* The "only open days" filter (009, D5): a plain checkbox above the list, one
+   step smaller than the rows so it reads as a control over them, never as an
+   entry. No accent of its own — the box's own checked state is what makes the
+   filter legible. */
+.sb-journal-filter {
+  font-size: var(--text-xs);
+  padding-bottom: var(--space-1);
+}
+/* Filtered to zero: `.sb-panel-empty` carries the tone, only the padding is
+   tightened for the narrow column. */
+.sb-journal-none {
+  padding: var(--space-2) var(--space-1);
+  font-size: var(--text-xs);
+}
 .sb-journal-keys {
   font-size: var(--text-2xs);
   color: var(--text-faint);
@@ -197,6 +211,12 @@
   font-size: var(--text-2xs);
   color: var(--text-faint);
   word-break: break-all;
+}
+.sb-dayentry-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 .sb-dayentry-levels {
   display: flex;

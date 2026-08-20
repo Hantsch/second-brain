@@ -85,6 +85,11 @@ export interface JournalMutations {
   append: UseMutationResult<WriteResult, unknown, IpcRequest<'journal:append'>>;
   setDay: UseMutationResult<WriteResult, unknown, IpcRequest<'journal:setDay'>>;
   setMood: UseMutationResult<JournalDay, unknown, IpcRequest<'journal:setMood'>>;
+  /** The manual "mark as finished" / "reopen" switch (009, D3/D6) — a day-level
+      field patch exactly like `setMood`: no rewritten user line, so it carries
+      `expectedHash` only when the caller has one, and a stale hash surfaces as
+      `conflict` instead of silently overwriting. */
+  setClosed: UseMutationResult<JournalDay, unknown, IpcRequest<'journal:setClosed'>>;
   coach: UseMutationResult<
     { threadId: string; messageId: string },
     unknown,
@@ -120,6 +125,7 @@ export function useJournalMutations(date: string): JournalMutations {
     }),
     setDay: useMutation({ mutationFn: api.journal.setDay, onSuccess: done }),
     setMood: useMutation({ mutationFn: api.journal.setMood, onSuccess: done }),
+    setClosed: useMutation({ mutationFn: api.journal.setClosed, onSuccess: done }),
     coach: useMutation({ mutationFn: api.journal.coach }),
     abort: useMutation({ mutationFn: api.journal.abort }),
     close: useMutation({ mutationFn: api.journal.close }),

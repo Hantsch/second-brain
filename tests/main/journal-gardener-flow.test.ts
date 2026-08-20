@@ -318,8 +318,9 @@ describe('Welle E von einer Naht zur nächsten', () => {
     /* Was übrig bleibt, ist die bekannte Grenze: **ein Frontmatter-Patch kann kein
        Feld entfernen.** Ein Feld, das es vorher nicht gab, steht danach leer da —
        begründet in `journal-day.ts` (`previousFields`). Ein erfundener alter Wert
-       wäre schlimmer als eine leere Liste. */
-    expect(dayDiff.added.filter((line) => !/^[a-z]+: \[\]$/.test(line))).toEqual([]);
+       wäre schlimmer als eine leere Liste — und `closed: null` ist genau das,
+       was „wieder offen" in der Datei heißt (009). */
+    expect(dayDiff.added.filter((line) => !/^[a-z]+: (\[\]|null)$/.test(line))).toEqual([]);
 
     for (const path of applied.written) {
       /* Die Zeile ist weg, und keine andere fehlt. */

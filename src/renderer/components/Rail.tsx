@@ -3,9 +3,13 @@
    icon, label, keyboard shortcut, and active state. */
 
 import { NavLink } from 'react-router-dom';
+import { Badge } from '../atoms/Badge';
 import { Icon } from '../atoms/Icon';
 import { useT } from '../i18n';
+import { countOpenDays } from '../lib/journal-open';
+import { useJournalDays } from '../lib/queries/data';
 import { SCREENS, type ScreenDef } from '../lib/screens';
+import { todayIso } from './DayList';
 import { VaultIndicator } from './VaultIndicator';
 
 /* No tooltip on the rail entries: the label and key are already visibly next
@@ -17,14 +21,27 @@ export function Rail() {
   const placeScreens = SCREENS.filter((screen) => screen.group === 'place');
   const systemScreens = SCREENS.filter((screen) => screen.group === 'system');
 
+  /* 009, D7: how many journal days are still unfinished — derived client-side
+     from the same days list and rule the journal screen itself uses
+     (`countOpenDays`), no dedicated IPC channel. */
+  const journalDays = useJournalDays();
+  const openDaysCount = countOpenDays(journalDays.data ?? [], todayIso());
+
   const renderItem = (screen: ScreenDef) => {
     const label = t(screen.labelKey);
+    const isJournal = screen.id === 'journal';
+    const showOpenCount = isJournal && openDaysCount > 0;
+    /* A pill that disappears at zero is a notification, not a permanent
+       part of the item (see NotesScreen's unfiled filter for the same
+       distinction) — so the aria-label carries the count only when the
+       pill itself is there to back it up. */
+    const ariaLabel = showOpenCount ? t('rail.journalOpenDays', { count: openDaysCount }) : label;
     return (
       <NavLink
         key={screen.id}
         to={screen.path}
         className="sb-rail-item"
-        aria-label={label}
+        aria-label={ariaLabel}
         {...(screen.hotkey === undefined ? {} : { 'aria-keyshortcuts': screen.hotkey })}
       >
         <Icon name={screen.icon} size={16} />
@@ -34,6 +51,11 @@ export function Rail() {
             {screen.hotkey}
           </span>
         )}
+        {showOpenCount ? (
+          <Badge variant="accent" className="sb-rail-count" aria-hidden="true">
+            {openDaysCount}
+          </Badge>
+        ) : null}
       </NavLink>
     );
   };

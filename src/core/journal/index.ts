@@ -38,6 +38,7 @@ export {
   requireDay,
   setMood,
 } from './day';
+export { setClosed } from './closed';
 export {
   appendTurn,
   dialogHistory,

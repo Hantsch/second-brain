@@ -171,6 +171,10 @@ werden musste — einfach normale Arbeit.`,
       projects: ['rechnungsautomatisierung'],
       tags: [],
       time: '17:30',
+      /* Als erledigt markiert (009, D8): der Tag ist inhaltlich fertig
+         beschrieben, gutes Beispiel für einen abgeschlossenen Tag im Filter
+         und im Screenshot. */
+      closed: true,
       tag: `Guter Tag. Die Fehlerbehandlung für unlesbare Belege läuft: unklare Fälle wandern in
 eine Prüfliste statt in eine falsche Buchung. Das war der letzte inhaltliche Punkt,
 jetzt fehlt nur die Dokumentation.`,
@@ -248,6 +252,9 @@ anlegen. Im Modul steht dazu ein älterer Stand, der dem Whitepaper widerspricht
       projects: ['hochbeet-bauen', 'podcast-werkstattfunk'],
       tags: [],
       time: '22:35',
+      /* Als erledigt markiert (009, D8): zweiter geschlossener Tag, damit
+         Filter und Rail-Badge im Demo-Vault etwas zu unterscheiden haben. */
+      closed: true,
       tag: `Abends Maße für das Hochbeet gerechnet und dabei über eine Podcast-Idee
 nachgedacht: eine halbe Stunde pro Folge, ein Handwerk, ein Gegenstand, der dabei
 entsteht. Als Idee angelegt, mehr nicht.`,
@@ -378,6 +385,7 @@ export function seedJournal(seeder, clock) {
         projects: entry.projects,
         tags: entry.tags,
         lang: 'de',
+        closed: entry.closed ? date : undefined,
       },
       body,
       clock.date(entry.offset, entry.time),

@@ -607,6 +607,100 @@ describe('Tagebuch-Kanäle im Main', () => {
     expect(before).not.toBe(await vault.read(DAY_PATH));
   });
 
+  it('hält im Frontmatter fest, dass der Tag abgeschlossen ist — und nimmt es zurück', async () => {
+    const view = await harness.call('journal:get', { date: DATE });
+    expect(view?.day.closed).toBeNull();
+
+    /* Kein Todo, kein geändertes Feld: allein der Abschluss selbst ist die
+       Tatsache, die in der Datei stehen muss. */
+    const applied = await harness.call('journal:applyClose', {
+      date: DATE,
+      todos: [],
+      frontmatter: { people: [], projects: [], mood: null, energy: null, tags: [] },
+      expectedHash: view?.doc.hash,
+    });
+
+    expect(applied.written).toEqual([DAY_PATH]);
+    expect((await vault.read(DAY_PATH)) ?? '').toContain(`closed: ${DATE}`);
+    expect((await harness.call('journal:get', { date: DATE }))?.day.closed).toBe(DATE);
+
+    for (const entry of applied.undo) {
+      await harness.services.requireStore().write(entry);
+    }
+    /* Ein Frontmatter-Patch kann kein Feld entfernen: der Rückweg setzt
+       ausdrücklich `null` — das ist „wieder offen", nicht „nie abgeschlossen
+       gewesen mit erfundenem Datum". */
+    expect((await vault.read(DAY_PATH)) ?? '').toContain('closed: null');
+    expect((await harness.call('journal:get', { date: DATE }))?.day.closed).toBeNull();
+  });
+
+  it('lässt einen zweiten Abschluss den Tag unangetastet, statt ihn umzudatieren', async () => {
+    const fields = { people: [], projects: [], mood: null, energy: null, tags: [] };
+    await harness.call('journal:applyClose', { date: DATE, todos: [], frontmatter: fields });
+    const once = (await vault.read(DAY_PATH)) ?? '';
+    expect(once).toContain(`closed: ${DATE}`);
+
+    const again = await harness.call('journal:applyClose', {
+      date: DATE,
+      todos: [],
+      frontmatter: fields,
+    });
+
+    /* Nichts zu tun heißt nichts geschrieben — und damit auch kein Rückweg, der
+       einen Abschluss zurücknehmen würde, den dieser Lauf nicht gesetzt hat. */
+    expect(again.written).toEqual([]);
+    expect(again.undo).toEqual([]);
+    expect(await vault.read(DAY_PATH)).toBe(once);
+  });
+
+  it('überschreibt ein vorhandenes Abschlussdatum nicht mit dem des Tages', async () => {
+    /* Von Hand geschlossen, mit einem anderen Datum als dem des Eintrags — die
+       Datei gehört dem Nutzer, der Abschluss korrigiert sie nicht. */
+    const path = 'journal/2026/08/2026-08-11.md';
+    await vault.write(
+      path,
+      [
+        '---',
+        'type: journal',
+        "title: 'Dienstag, 11. August 2026'",
+        'date: 2026-08-11',
+        'closed: 2026-08-13',
+        'tags: []',
+        '---',
+        '',
+        '## Tag',
+        '',
+        'Kurz notiert.',
+        '',
+        '## Fakten',
+        '',
+      ].join('\n'),
+    );
+
+    const applied = await harness.call('journal:applyClose', {
+      date: '2026-08-11',
+      todos: [
+        {
+          text: 'Ladezeiten messen',
+          scope: 'work',
+          due: null,
+          waitingFor: null,
+          priority: 0,
+          project: null,
+        },
+      ],
+      frontmatter: { people: ['Tobias'], projects: [], mood: null, energy: null, tags: [] },
+    });
+
+    expect(applied.written).toEqual([path]);
+    const file = (await vault.read(path)) ?? '';
+    expect(file).toContain('closed: 2026-08-13');
+    expect(file).not.toContain('closed: 2026-08-11');
+    /* Die übrigen Felder des Abschlusses werden trotzdem geschrieben. */
+    expect(file).toMatch(/people:\s*\n\s*- Tobias/);
+    expect(file).toContain('- [ ] Ladezeiten messen');
+  });
+
   it('lehnt einen Abschluss für einen Tag ohne Datei ab', async () => {
     await expect(
       harness.call('journal:applyClose', {

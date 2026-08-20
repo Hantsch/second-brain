@@ -181,6 +181,7 @@ export const journalDay: JournalDay = {
   path: `journal/2026/08/${TODAY}.md`,
   date: TODAY,
   title: 'Montag, 10. August 2026',
+  closed: null,
   mood: 3,
   energy: 2,
   people: ['Stefan'],

@@ -130,6 +130,10 @@ const RESPONSES: MockResponses = {
   'journal:append': () => ({ ...writeResult, path: fx.journalDay.path }),
   'journal:setDay': () => ({ ...writeResult, path: fx.journalDay.path }),
   'journal:setMood': ({ mood }) => ({ ...fx.journalDay, mood: mood ?? fx.journalDay.mood }),
+  'journal:setClosed': ({ closed }) => ({
+    ...fx.journalDay,
+    closed: closed ? fx.TODAY : null,
+  }),
   'journal:coach': () => ({ threadId: `journal-${fx.journalDay.date}`, messageId: 'm-demo' }),
   'journal:abort': () => undefined,
   'journal:close': () => ({

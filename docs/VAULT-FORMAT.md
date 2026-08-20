@@ -260,6 +260,9 @@ never merged into one of my paragraphs; the two stay visually and structurally
 distinct. `Facts` holds what day close extracted — proposals the user
 confirmed.
 
+`closed: YYYY-MM-DD` marks the day as finished — the calendar day, not a
+timestamp. Missing or `closed: null` means the day is still open.
+
 The interview (story 012) is a scripted way of producing exactly this shape,
 not a new one: each of its fixed questions is written as the app's blockquote,
 immediately followed by my own prose as the answer, one pair at a time as each

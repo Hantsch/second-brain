@@ -21,11 +21,13 @@
 import type { ReactNode } from 'react';
 import type { JournalDayView } from '@shared/ipc';
 import type { Project } from '@shared/types';
+import { Badge } from '../../atoms/Badge';
 import { Button } from '../../atoms/Button';
 import { dateOf, todayIso } from '../../components/DayList';
 import { MoodPicker } from '../../components/MoodPicker';
 import { useLanguage, useT } from '../../i18n';
 import { api } from '../../lib/api';
+import { formatDate } from '../../lib/format';
 import { DayText } from './DayText';
 import { LegacyConversation } from './LegacyConversation';
 
@@ -46,6 +48,17 @@ export interface DayEntryProps {
     onReset: () => void;
   };
   onOpenProject: (slug: string) => void;
+  /** The manual "mark as finished" / "reopen" switch (009, D3/D6) — a plain
+      on/off field on the day, separate from the day close-out below
+      (`closeAction`, which extracts facts and todos via a model or
+      heuristic). Only rendered once the day has a file (`view !== null`):
+      `journal:setClosed` itself refuses to create one, so there is nothing
+      to mark finished on a day that doesn't exist yet. */
+  finish: {
+    busy: boolean;
+    onMarkFinished: () => void;
+    onReopen: () => void;
+  };
   /** "Start interview" (012, D6) — built by the screen, which alone knows
       whether the day already has prose and therefore which variant
       (primary/secondary) applies. Placed right after the header/mood/chips
@@ -83,6 +96,7 @@ export function DayEntry({
   mood,
   text,
   onOpenProject,
+  finish,
   interviewAction,
   dialogue,
   legacy,
@@ -107,16 +121,44 @@ export function DayEntry({
           <span className="gs-overline">{date === todayIso() ? t('journal.today') : ''}</span>
           <h2 className="sb-dayentry-date">{long.format(dateOf(date))}</h2>
           {view === null ? null : <span className="sb-mono sb-dayentry-path">{view.doc.path}</span>}
+          {day?.closed === null || day?.closed === undefined ? null : (
+            <Badge variant="success">
+              {t('journal.finish.badge', { date: formatDate(day.closed, language) })}
+            </Badge>
+          )}
         </div>
         {view === null ? null : (
-          <Button
-            variant="ghost"
-            size="sm"
-            icon="external-link"
-            onClick={() => void api.shell.openPath(view.doc.path).catch(() => undefined)}
-          >
-            {t('journal.file.open')}
-          </Button>
+          <div className="sb-dayentry-actions">
+            {day?.closed === null || day?.closed === undefined ? (
+              <Button
+                variant="secondary"
+                size="sm"
+                icon="circle-check-big"
+                loading={finish.busy}
+                onClick={finish.onMarkFinished}
+              >
+                {t('journal.finish.markFinished')}
+              </Button>
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                icon="refresh-cw"
+                loading={finish.busy}
+                onClick={finish.onReopen}
+              >
+                {t('journal.finish.reopen')}
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              icon="external-link"
+              onClick={() => void api.shell.openPath(view.doc.path).catch(() => undefined)}
+            >
+              {t('journal.file.open')}
+            </Button>
+          </div>
         )}
       </div>
 

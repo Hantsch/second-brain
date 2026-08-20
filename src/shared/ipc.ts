@@ -377,6 +377,16 @@ export interface IpcRoutes {
     req: { date: string; mood?: number; energy?: number; expectedHash?: string };
     res: JournalDay;
   };
+  /**
+   * Mark a day finished or reopen it by hand (009, D3) — the manual switch
+   * next to the day close-out (`journal:applyClose`), which sets the same
+   * field automatically. `closed: true` writes today's date, `false` clears
+   * it to `null` (a frontmatter patch can set a field but not delete it).
+   */
+  'journal:setClosed': {
+    req: { date: string; closed: boolean; expectedHash?: string };
+    res: JournalDay;
+  };
   /** Coaching response; streams over `event:llm-stream`. */
   'journal:coach': { req: CoachRequest; res: { threadId: string; messageId: string } };
   /** Abort a running coaching response. The user's own turn stays written. */
@@ -689,6 +699,7 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'journal:append',
   'journal:setDay',
   'journal:setMood',
+  'journal:setClosed',
   'journal:coach',
   'journal:abort',
   'journal:close',

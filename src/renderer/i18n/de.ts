@@ -47,6 +47,7 @@ export const de = {
   'rail.knowledge': 'Wissen',
   'rail.garden': 'Pflege',
   'rail.settings': 'Einstellungen',
+  'rail.journalOpenDays': 'Tagebuch, {count} offene Tage',
 
   'time.today': 'heute',
   'time.yesterday': 'gestern',

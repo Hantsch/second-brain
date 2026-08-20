@@ -10,6 +10,7 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import axe from 'axe-core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { JournalDay } from '@shared/types';
 import { App } from '@renderer/App';
 import { AppShell } from '@renderer/components/AppShell';
 import type { AskPrefill } from '@renderer/lib/shell-overlays';
@@ -17,14 +18,25 @@ import { useShellOverlays } from '@renderer/lib/shell-overlays';
 import { DashboardScreen } from '@renderer/screens/dashboard/DashboardScreen';
 import type { SbBridge } from '@renderer/lib/bridge';
 import { mockBridge } from '@renderer/lib/mock-bridge';
+import * as fx from '@renderer/lib/mock-fixtures';
 import { SCREENS } from '@renderer/lib/screens';
 import { setLanguage, t } from '@renderer/i18n';
 
 /* `window.sb` wird ausdrücklich gemockt: die Oberfläche darf im Test nichts
    Echtes anfassen. Die Antworten kommen aus den Fixtures der Mock-Brücke. */
-const invoke = vi.fn((channel: string, payload?: unknown) =>
-  (mockBridge.invoke as (c: string, p?: unknown) => Promise<unknown>)(channel, payload),
-);
+const passthrough = (channel: string, payload?: unknown): Promise<unknown> =>
+  (mockBridge.invoke as (c: string, p?: unknown) => Promise<unknown>)(channel, payload);
+const invoke = vi.fn(passthrough);
+
+/* 009, D7: swaps only `journal:list` out from under the rail, everything
+   else keeps answering from the usual fixtures. Needed to get a
+   deterministic open-days count without touching the shared fixture the
+   rest of this file relies on. */
+function respondWithJournalDays(days: JournalDay[]): void {
+  invoke.mockImplementation((channel: string, payload?: unknown) =>
+    channel === 'journal:list' ? Promise.resolve(days) : passthrough(channel, payload),
+  );
+}
 
 function renderAppAt(hash: string) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -48,6 +60,15 @@ beforeEach(() => {
   setLanguage('de');
   document.documentElement.lang = 'de';
   invoke.mockClear();
+  invoke.mockImplementation(passthrough);
+  /* 009, D7: the rail derives its open-days count from real "now" versus
+     `JournalDay.date` — without a frozen clock the fixture's one demo day
+     (dated at the fixtures' own `NOW`) would drift into the past as real
+     time moves on and start counting as open on its own, out of nowhere in
+     tests that were never about the journal. Same fixed instant the demo
+     data is written from, so the fixture's day reads as "today" (never
+     open) as originally intended. */
+  vi.useFakeTimers({ shouldAdvanceTime: true, now: new Date(fx.NOW) });
   window.sb = {
     invoke,
     on: () => () => undefined,
@@ -56,6 +77,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   delete window.sb;
 });
 
@@ -179,6 +201,40 @@ describe('AppShell', () => {
       expect(definition.hotkey, `Rail-Eintrag ${definition.id}`).toBeDefined();
       expect(link.getAttribute('aria-keyshortcuts')).toBe(definition.hotkey);
       expect(link.querySelector('.sb-rail-key')?.textContent).toBe(definition.hotkey);
+    }
+  });
+
+  /* 009, D7: die Zahl offener Tage kommt ausschließlich aus `journal:list` +
+     `countOpenDays`, ohne eigenen IPC-Kanal — hier stehen beide Zustände
+     nebeneinander: kein Tag offen (Standard-Fixture, „heute" zählt nie als
+     offen) gegen zwei tatsächlich offene Tage. */
+  it('zeigt am Tagebuch-Eintrag kein Abzeichen, wenn kein Tag offen ist', async () => {
+    renderApp();
+    const nav = await screen.findByRole('navigation', { name: 'Hauptnavigation' });
+    const journalLink = within(nav).getByRole('link', { name: 'Tagebuch' });
+    expect(journalLink.querySelector('.sb-rail-count')).toBeNull();
+  });
+
+  it('zeigt am Tagebuch-Eintrag ein Abzeichen mit der Zahl offener Tage', async () => {
+    const openDays: JournalDay[] = [
+      { ...fx.journalDay, date: '2026-08-06', closed: null, path: 'journal/2026/08/2026-08-06.md' },
+      { ...fx.journalDay, date: '2026-08-08', closed: null, path: 'journal/2026/08/2026-08-08.md' },
+      /* "Heute" selbst darf trotz `closed: null` nicht mitzählen. */
+      fx.journalDay,
+    ];
+    respondWithJournalDays(openDays);
+    renderApp();
+
+    const nav = await screen.findByRole('navigation', { name: 'Hauptnavigation' });
+    const journalLink = await within(nav).findByRole('link', { name: 'Tagebuch, 2 offene Tage' });
+    const badge = journalLink.querySelector('.sb-rail-count');
+    expect(badge?.textContent).toBe('2');
+    expect(badge?.getAttribute('aria-hidden')).toBe('true');
+
+    /* Kein anderer Eintrag hat sich verändert. */
+    for (const definition of SCREENS.filter((screen) => screen.id !== 'journal')) {
+      const link = within(nav).getByRole('link', { name: t(definition.labelKey) });
+      expect(link.querySelector('.sb-rail-count')).toBeNull();
     }
   });
 

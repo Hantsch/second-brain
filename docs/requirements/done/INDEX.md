@@ -75,3 +75,13 @@ second roadmap.
   the engine line trusting client-side routing instead of the plan's own server-decided
   mode, and a missing `todosDue` follow-up context; also added D2's missing
   external-edit round-trip test and restored focus to the composer on close.
+- 009 — Journal: filter for days that are not finished · S04 · New frontmatter field
+  `closed: YYYY-MM-DD` (missing/null = not finished), set by the day close-out and by a
+  new manual mark/reopen switch in the day header (`journal:setClosed`); the day list
+  gained an "only open days" filter (off by default) built on a pure `isDayOpen`
+  module and a session-scoped toggle store — today always first and never counted as
+  open, no gap rows while filtered, a "nothing open" line at zero — plus a rail badge
+  showing the open-days count that hides at zero. `JournalDay.closed` and `isDayOpen()`
+  are the contract story 010's calendar marker builds on. Passed clean-agent review;
+  fixed two findings (a wording note documented as a decision, wrong story-number
+  comments corrected).

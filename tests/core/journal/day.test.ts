@@ -15,6 +15,7 @@ import {
   listDays,
   pathFor,
   readDay,
+  setClosed,
   setMood,
 } from '@core/journal';
 import { MemoryVaultStore } from '@core/vault/memory-store';
@@ -301,6 +302,46 @@ describe('setMood', () => {
   it('meldet einen fehlenden Tag als not-found', async () => {
     const fixture = await journalFixture();
     await expect(setMood(fixture.store, FRESH_DAY, { mood: 3 })).rejects.toMatchObject({
+      code: 'not-found',
+    });
+  });
+});
+
+describe('setClosed', () => {
+  it('setzt "closed" auf das heutige Datum', async () => {
+    const fixture = await journalFixture();
+
+    const day = await setClosed(fixture.store, DAY, true, { now: NOW_MS });
+
+    expect(day.closed).toBe(TODAY);
+    const content = await fixture.text(DAY_PATH);
+    expect(content).toContain(`closed: ${TODAY}`);
+  });
+
+  it('setzt "closed" beim Wiedereröffnen auf null, statt das Feld zu entfernen', async () => {
+    const fixture = await journalFixture();
+    await setClosed(fixture.store, DAY, true, { now: NOW_MS });
+
+    const day = await setClosed(fixture.store, DAY, false);
+
+    expect(day.closed).toBeNull();
+    const content = await fixture.text(DAY_PATH);
+    expect(content).toContain('closed: null');
+  });
+
+  it('schreibt nicht mit veraltetem Hash', async () => {
+    const fixture = await journalFixture();
+    const before = await fixture.text(DAY_PATH);
+
+    await expect(
+      setClosed(fixture.store, DAY, true, { now: NOW_MS, expectedHash: 'von-vorgestern' }),
+    ).rejects.toMatchObject({ code: 'conflict' });
+    expect(await fixture.text(DAY_PATH)).toBe(before);
+  });
+
+  it('meldet einen fehlenden Tag als not-found', async () => {
+    const fixture = await journalFixture();
+    await expect(setClosed(fixture.store, FRESH_DAY, true, { now: NOW_MS })).rejects.toMatchObject({
       code: 'not-found',
     });
   });

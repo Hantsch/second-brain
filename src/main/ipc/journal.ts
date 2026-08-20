@@ -37,6 +37,7 @@ import {
   planInterview,
   readDay,
   recordAnswer,
+  setClosed,
   setMood,
   INTERVIEW_TOPICS,
 } from '@core/journal';
@@ -102,6 +103,7 @@ function emptyDayDoc(date: string, language: DocLanguage): JournalDayDoc {
     path: pathFor(date),
     date,
     title: journalTitle(date, language),
+    closed: null,
     mood: null,
     energy: null,
     people: [],
@@ -193,6 +195,20 @@ export function journalHandlers(services: Services): HandlerMap {
           ...(mood === undefined ? {} : { mood }),
           ...(energy === undefined ? {} : { energy }),
         },
+        expectedHash === undefined ? {} : { expectedHash },
+      );
+      await settle(services, [pathFor(date)], 'journal');
+      return day;
+    },
+
+    'journal:setClosed': async ({ date, closed, expectedHash }) => {
+      const store = journalStore(services);
+      /* Unlike `setMood`, a missing day is not created here — marking a day
+         finished only makes sense for a day that already has an entry. */
+      const day = await setClosed(
+        store,
+        date,
+        closed,
         expectedHash === undefined ? {} : { expectedHash },
       );
       await settle(services, [pathFor(date)], 'journal');

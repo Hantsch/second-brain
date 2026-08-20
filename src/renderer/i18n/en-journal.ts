@@ -13,6 +13,12 @@ export const enJournal = {
   'journal.hasDialogue': 'With an answer from the app',
   'journal.open': 'Open the entry of {date}',
   'journal.keys': 'Arrow keys change the day',
+  /* The filter (009, D5): today always stays visible but never counts as open
+     itself — so the line above only ever counts past days. */
+  'journal.filter.openOnly': 'Only open days',
+  'journal.filter.count': '{count} days open',
+  'journal.filter.countOne': 'One day open',
+  'journal.filter.none': 'Nothing open. Every past day is closed.',
 
   // ── Head of the day ───────────────────────────────────────────────────────
   'journal.mood.label': 'Mood',
@@ -34,6 +40,12 @@ export const enJournal = {
   'journal.projects': 'Projects',
   'journal.project.open': 'Open project {title}',
   'journal.file.open': 'Open the file in an editor',
+  /* The manual switch (009, D3/D6) — separate from the day close-out further
+     below (`journal.close.*`), which extracts facts and todos: this is just
+     the one open/finished field, which also feeds the list filter (009, D5). */
+  'journal.finish.markFinished': 'Mark as finished',
+  'journal.finish.reopen': 'Reopen',
+  'journal.finish.badge': 'Closed on {date}',
 
   // ── Section „Day" ─────────────────────────────────────────────────────────
   'journal.day.title': 'Day',

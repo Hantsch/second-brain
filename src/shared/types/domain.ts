@@ -198,6 +198,8 @@ export const COACH_MODES: readonly CoachMode[] = ['listen', 'tips', 'analyze'];
 export interface JournalFrontmatter extends BaseFrontmatter {
   type: 'journal';
   date: string;
+  /** Tag abgeschlossen, ISO-Datum. Fehlt oder `null` heißt: noch nicht fertig. */
+  closed?: string;
   /** 1–5, wie der Tag war. Freiwillig. */
   mood?: number;
   energy?: number;
@@ -212,6 +214,8 @@ export interface JournalDay {
   path: string;
   date: string;
   title: string;
+  /** Tag abgeschlossen, ISO-Datum, oder `null` — noch nicht fertig. */
+  closed: string | null;
   mood: number | null;
   energy: number | null;
   people: string[];

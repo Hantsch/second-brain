@@ -19,10 +19,15 @@ import { useEffect } from 'react';
 import type { CoachMode } from '@shared/types';
 import { COACH_MODE_ORDER } from '../../lib/queries/journal';
 
-/* The user is typing in the field — same rule as in the shell. */
+/* The user is typing in the field — same rule as in the shell, with one
+   exception this screen needs since 013/D5: a checkbox (the "only open days"
+   filter above the list) holds focus after a click but has no use for an
+   arrow key, so it must not swallow the day switch. Radios and selects keep
+   their arrows — there they mean something. */
 function isTyping(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
   if (target.isContentEditable) return true;
+  if (target instanceof HTMLInputElement && target.type === 'checkbox') return false;
   return ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
 }
 

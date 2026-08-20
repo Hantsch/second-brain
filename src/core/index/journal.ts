@@ -159,6 +159,7 @@ export function toJournalDay(doc: IndexedDoc): JournalDay {
     path: doc.path,
     date: dateOf(doc),
     title: doc.title,
+    closed: asDate(doc.frontmatter['closed']),
     mood: numberOf(doc.frontmatter['mood']),
     energy: numberOf(doc.frontmatter['energy']),
     people: asStringList(doc.frontmatter['people']),

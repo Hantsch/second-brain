@@ -172,4 +172,24 @@ describe('deriveJournalDays', () => {
     expect(day.mood).toBeNull();
     expect(day.energy).toBeNull();
   });
+
+  it('liest ein gesetztes `closed`-Datum', () => {
+    const day = toJournalDay(journalDoc({ closed: '2026-08-12' }));
+    expect(day.closed).toBe('2026-08-12');
+  });
+
+  it('lässt `closed` null ohne das Feld — Tag gilt als nicht abgeschlossen', () => {
+    const day = toJournalDay(journalDoc());
+    expect(day.closed).toBeNull();
+  });
+
+  it('lässt `closed` null bei explizitem `null`', () => {
+    const day = toJournalDay(journalDoc({ closed: null }));
+    expect(day.closed).toBeNull();
+  });
+
+  it('lässt `closed` null bei einem nicht parsbaren Wert', () => {
+    const day = toJournalDay(journalDoc({ closed: 'irgendwann' }));
+    expect(day.closed).toBeNull();
+  });
 });

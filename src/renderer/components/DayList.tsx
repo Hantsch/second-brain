@@ -10,11 +10,16 @@
  * - **"Today" is always the first entry**, even without a file. It's the way
  *   in: a journal where you have to search for today's entry isn't being
  *   kept.
+ *
+ * Both promises survive the "only open days" filter (009, D5): today stays
+ * first even when it isn't open itself, and the gap rows switch off entirely
+ * while filtering — see `dayRows`.
  */
 
 import type { JournalDay } from '@shared/types';
 import { useLanguage, useT } from '../i18n';
 import { plural } from '../lib/format';
+import { isDayOpen } from '../lib/journal-open';
 
 /** One row of the list: a day with a file, or a named gap. */
 export type DayRow =
@@ -46,11 +51,31 @@ function daysBetween(newer: string, older: string): number {
   return Math.round((dateOf(newer).getTime() - dateOf(older).getTime()) / MS_PER_DAY);
 }
 
+export interface DayRowOptions {
+  /** Show only unfinished days (`isDayOpen`). Today's row is exempt — it is
+      never open itself, and it stays the way in regardless. */
+  openOnly?: boolean;
+}
+
 /**
  * The rows of the list, newest first: "Today" (with an entry if there is one),
  * then the remaining days with gap rows in between.
+ *
+ * With `openOnly` (009, D5) two things change, and both follow from the same
+ * idea: a filtered selection is no longer a timeline.
+ *
+ * - Only days `isDayOpen` calls unfinished remain — today itself is kept
+ *   unconditionally, because it is the way in and is never counted as open.
+ * - **No gap rows at all.** A gap between two open days is a gap the filter
+ *   made, not an absence of entries — naming it would be a claim about the
+ *   vault that isn't true.
  */
-export function dayRows(days: readonly JournalDay[], today: string): DayRow[] {
+export function dayRows(
+  days: readonly JournalDay[],
+  today: string,
+  options: DayRowOptions = {},
+): DayRow[] {
+  const openOnly = options.openOnly ?? false;
   const sorted = [...days]
     .filter((day) => day.date.length > 0)
     .sort((a, b) => (a.date < b.date ? 1 : -1));
@@ -61,6 +86,10 @@ export function dayRows(days: readonly JournalDay[], today: string): DayRow[] {
   let previous = today;
   for (const day of sorted) {
     if (day.date === today) continue;
+    if (openOnly) {
+      if (isDayOpen(day, today)) rows.push({ kind: 'day', date: day.date, day, today: false });
+      continue;
+    }
     /* Only genuine gaps: consecutive days need no row, and neither does a
        day in the future (backfilled). */
     const missing = daysBetween(previous, day.date) - 1;

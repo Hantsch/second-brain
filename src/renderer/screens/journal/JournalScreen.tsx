@@ -27,12 +27,16 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import type { CoachMode, ProposedTodo } from '@shared/types';
 import type { JournalCloseSuggestion } from '@shared/ipc';
 import { Button } from '../../atoms/Button';
+import { Checkbox } from '../../atoms/Checkbox';
 import { DayList, dayRows, selectableDates, todayIso } from '../../components/DayList';
 import { EmptyState } from '../../components/EmptyState';
 import { ErrorState } from '../../components/ErrorState';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { Skeleton } from '../../components/Skeleton';
 import { useT } from '../../i18n';
+import { plural } from '../../lib/format';
+import { setOpenOnly, useOpenOnly } from '../../lib/journal-filter';
+import { countOpenDays } from '../../lib/journal-open';
 import { clearStream, useLlmStream } from '../../lib/llm-stream';
 import { useJournalDays, useProjects } from '../../lib/queries/data';
 import {
@@ -104,8 +108,17 @@ export function JournalScreen() {
   const [applied, setApplied] = useState<AppliedClose | null>(null);
   const [interviewOpen, setInterviewOpen] = useState(false);
 
-  const rows = useMemo(() => dayRows(days.data ?? [], today), [days.data, today]);
+  /* 009, D5: the filter is session state, not a setting — `useOpenOnly` keeps
+     it across a remount of this screen but not across a restart. It feeds
+     `dayRows`, and `selectableDates` therefore follows it for free: the arrow
+     keys walk exactly the rows that are on screen, with no separate rule. */
+  const openOnly = useOpenOnly();
+  const rows = useMemo(
+    () => dayRows(days.data ?? [], today, { openOnly }),
+    [days.data, today, openOnly],
+  );
   const dates = useMemo(() => selectableDates(rows), [rows]);
+  const openCount = useMemo(() => countOpenDays(days.data ?? [], today), [days.data, today]);
   const stream = useLlmStream(pending?.messageId ?? null);
   const listRows = useRef(new Map<string, HTMLButtonElement>());
   const field = useRef<HTMLTextAreaElement>(null);
@@ -175,6 +188,19 @@ export function JournalScreen() {
     });
   };
 
+  /* The manual "mark as finished" / "reopen" switch (009, D3/D6) — the same
+     hash guard as `foldDay`/`applyClose`: without a loaded day there is
+     nothing to patch, so `expectedHash` is only added once one exists. */
+  const setClosed = (closed: boolean): void => {
+    mutations.setClosed.mutate({
+      date,
+      closed,
+      ...(view.data === null || view.data === undefined
+        ? {}
+        : { expectedHash: view.data.doc.hash }),
+    });
+  };
+
   const closeDay = (): void => {
     setApplied(null);
     mutations.close.mutate(date, {
@@ -210,6 +236,7 @@ export function JournalScreen() {
   const failed =
     mutations.coach.error ??
     mutations.setMood.error ??
+    mutations.setClosed.error ??
     mutations.close.error ??
     mutations.applyClose.error ??
     mutations.undo.error ??
@@ -299,8 +326,16 @@ export function JournalScreen() {
       <div className="sb-journal">
         <aside className="sb-journal-side" aria-label={t('journal.list.title')}>
           <p className="sb-journal-count sb-mono">
-            {t('journal.list.count', { count: (days.data ?? []).length })}
+            {openOnly
+              ? plural(openCount, 'journal.filter.countOne', 'journal.filter.count')
+              : t('journal.list.count', { count: (days.data ?? []).length })}
           </p>
+          <Checkbox
+            className="sb-journal-filter"
+            label={t('journal.filter.openOnly')}
+            checked={openOnly}
+            onChange={(event) => setOpenOnly(event.target.checked)}
+          />
           <DayList
             rows={rows}
             selected={date}
@@ -310,6 +345,12 @@ export function JournalScreen() {
               else listRows.current.set(day, element);
             }}
           />
+          {/* Filtered down to nothing: the list itself is never empty — today
+              is always in it — so the honest statement goes below it instead
+              of leaving the filter looking broken. */}
+          {openOnly && openCount === 0 ? (
+            <p className="sb-panel-empty sb-journal-none">{t('journal.filter.none')}</p>
+          ) : null}
           <p className="sb-journal-keys">{t('journal.keys')}</p>
         </aside>
 
@@ -365,6 +406,11 @@ export function JournalScreen() {
                 },
               }}
               onOpenProject={(slug) => void navigate(`/projects?p=${encodeURIComponent(slug)}`)}
+              finish={{
+                busy: mutations.setClosed.isPending,
+                onMarkFinished: () => setClosed(true),
+                onReopen: () => setClosed(false),
+              }}
               interviewAction={interviewAction}
               closeAction={narrow ? closeAction : undefined}
               legacy={{

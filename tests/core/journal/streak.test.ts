@@ -19,6 +19,7 @@ function day(date: string, mood: number | null = null, energy: number | null = n
     path: `journal/${date.slice(0, 4)}/${date.slice(5, 7)}/${date}.md`,
     date,
     title: date,
+    closed: null,
     mood,
     energy,
     people: [],

@@ -18,6 +18,7 @@
 
 import { SECTION_FACTS, todoActions, todoBlock } from '@core/capture';
 import {
+  dayOf,
   ensureDay,
   foldLegacyDay,
   isSectionOf,
@@ -172,6 +173,22 @@ function fieldPatch(doc: VaultDoc, fields: JournalFrontmatterFields): Record<str
   return patch;
 }
 
+/**
+ * The close-out's own mark: `closed: <the day's date>`.
+ *
+ * Set on **every** close-out, even when no other field changed — that a day is
+ * finished is the user's decision, and it has to stand in the file instead of
+ * being guessed back out of its contents later.
+ *
+ * A day that already carries a date keeps it: closing twice must not re-date
+ * the first close, and a date the user wrote by hand is not ours to correct.
+ * Reopening is the undo path's job — `previousFields` sets `closed: null`,
+ * because a frontmatter patch can set a field but not remove it.
+ */
+function closedMark(day: JournalDay, date: string): Record<string, unknown> {
+  return day.closed === null ? { closed: date } : {};
+}
+
 /** The state before writing — the basis of the undo path. */
 function previousFields(doc: VaultDoc, patch: Record<string, unknown>): Record<string, unknown> {
   const before: Record<string, unknown> = {};
@@ -238,7 +255,12 @@ export async function applyClose(
     request.todos,
     (slug) => projects.find((project) => project.slug === slug)?.path ?? null,
   );
-  const patch = fieldPatch(day.doc, request.frontmatter);
+  /* One patch, one write: the close-out mark travels with the fields, so the
+     day file is touched once and the undo path stays a single entry. */
+  const patch = {
+    ...fieldPatch(day.doc, request.frontmatter),
+    ...closedMark(day.day, dayOf(request.date)),
+  };
   const undo: WriteRequest[] = [];
   const written: string[] = [];
 

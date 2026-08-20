@@ -97,6 +97,7 @@ export const api = {
     append: (date: string, text: string) => call('journal:append', { date, text }),
     setDay: (request: IpcRequest<'journal:setDay'>) => call('journal:setDay', request),
     setMood: (request: IpcRequest<'journal:setMood'>) => call('journal:setMood', request),
+    setClosed: (request: IpcRequest<'journal:setClosed'>) => call('journal:setClosed', request),
     coach: (request: IpcRequest<'journal:coach'>) => call('journal:coach', request),
     abort: (messageId: string) => call('journal:abort', { messageId }),
     close: (date: string) => call('journal:close', { date }),

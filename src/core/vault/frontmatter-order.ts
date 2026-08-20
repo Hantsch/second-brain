@@ -50,6 +50,7 @@ const CANONICAL: Readonly<Record<string, readonly string[]>> = {
     'type',
     'title',
     'date',
+    'closed',
     'created',
     'updated',
     'mood',

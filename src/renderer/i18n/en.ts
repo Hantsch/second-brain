@@ -47,6 +47,7 @@ export const en: Record<TranslationKey, string> = {
   'rail.knowledge': 'Knowledge',
   'rail.garden': 'Care',
   'rail.settings': 'Settings',
+  'rail.journalOpenDays': 'Journal, {count} open days',
 
   'time.today': 'today',
   'time.yesterday': 'yesterday',

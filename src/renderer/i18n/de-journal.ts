@@ -23,6 +23,12 @@ export const deJournal = {
   'journal.hasDialogue': 'Mit Antwort der App',
   'journal.open': 'Eintrag vom {date} öffnen',
   'journal.keys': 'Pfeiltasten wechseln den Tag',
+  /* Der Filter (009, D5): heute bleibt immer sichtbar, gilt aber selbst nie
+     als offen — deshalb zählt die Zeile darüber nur die vergangenen Tage. */
+  'journal.filter.openOnly': 'Nur offene Tage',
+  'journal.filter.count': '{count} Tage offen',
+  'journal.filter.countOne': 'Ein Tag offen',
+  'journal.filter.none': 'Nichts offen. Jeder vergangene Tag ist abgeschlossen.',
 
   // ── Kopf des Tages ────────────────────────────────────────────────────────
   'journal.mood.label': 'Stimmung',
@@ -44,6 +50,13 @@ export const deJournal = {
   'journal.projects': 'Projekte',
   'journal.project.open': 'Projekt {title} öffnen',
   'journal.file.open': 'Datei im Editor öffnen',
+  /* Der manuelle Schalter (009, D3/D6) — unabhängig vom Tagesabschluss weiter
+     unten (`journal.close.*`), der Fakten und Todos herauszieht: hier geht es
+     nur um das eine Feld „offen/abgeschlossen", das auch den Listenfilter
+     speist (009, D5). */
+  'journal.finish.markFinished': 'Als abgeschlossen markieren',
+  'journal.finish.reopen': 'Wieder öffnen',
+  'journal.finish.badge': 'Abgeschlossen am {date}',
 
   // ── Abschnitt „Tag" ───────────────────────────────────────────────────────
   'journal.day.title': 'Tag',

@@ -44,6 +44,7 @@ import { JournalScreen } from '@renderer/screens/journal/JournalScreen';
 import type { SbBridge } from '@renderer/lib/bridge';
 import { wireEvents } from '@renderer/lib/events';
 import { clearStream } from '@renderer/lib/llm-stream';
+import { setOpenOnly } from '@renderer/lib/journal-filter';
 import { setLanguage } from '@renderer/i18n';
 
 /* Die IPC-Attrappe steht hier und nicht in `tests/setup.ts`: die Renderer-Tests
@@ -137,6 +138,7 @@ function day(patch: Partial<JournalDay> = {}): JournalDay {
     path: DAY_PATH,
     date: TODAY,
     title: 'Montag, 10. August 2026',
+    closed: null,
     mood: 3,
     energy: 2,
     people: ['Miriam'],
@@ -353,6 +355,7 @@ function renderJournal(extra: Handlers = {}): Rendered {
     'journal:coach': () => ({ threadId: `journal-${TODAY}`, messageId: 'm-1' }),
     'journal:abort': () => undefined,
     'journal:setMood': () => day({ mood: 5 }),
+    'journal:setClosed': ({ closed }) => day({ closed: closed ? NOW.toISOString() : null }),
     'journal:setDay': () => ({ path: DAY_PATH, hash: 'hash-2', created: false }),
     'journal:append': () => ({ path: DAY_PATH, hash: 'hash-2', created: true }),
     'journal:close': () => suggestion,
@@ -383,7 +386,15 @@ let cleanup: (() => void) | null = null;
 beforeEach(() => {
   setLanguage('de');
   document.documentElement.lang = 'de';
+  /* Der Filter (009, D5) lebt modulweit und überlebt deshalb einen Test —
+     ohne Rücksetzen würde ein Test den nächsten filtern. */
+  setOpenOnly(false);
   vi.useFakeTimers({ shouldAdvanceTime: true, now: NOW });
+  /* jsdom kennt `scrollIntoView` nicht. Ohne Attrappe stirbt `ErrorState` an
+     der Stelle, an der sie sich in den Sichtbereich holt (009, D6 ist der
+     erste Test hier, der die generische Fehlerkarte statt `DayText`s eigener
+     Konflikt-UI auslöst). */
+  Element.prototype.scrollIntoView = () => undefined;
 });
 
 afterEach(() => {
@@ -1063,5 +1074,241 @@ describe('Tagebuch: Interview-Einstieg (012, D6)', () => {
     const field = screen.getByLabelText('Was beschäftigt dich?') as HTMLTextAreaElement;
     expect(field.disabled).toBe(false);
     await waitFor(() => expect(document.activeElement).toBe(field));
+  });
+});
+
+describe('Tagebuch: Filter „nur offene Tage" (009, D5)', () => {
+  /* Eine Woche mit allen drei Sorten Tag: heute (nie „offen", immer Einstieg),
+     ein abgeschlossener Tag, zwei offene. Jeweils ein Kalendertag Abstand —
+     ungefiltert also drei Lückenzeilen, die nachrechenbar sind. */
+  const CLOSED = '2026-08-08';
+  const OLDER = '2026-08-04';
+  const closedDay: JournalDay = day({
+    path: `journal/2026/08/${CLOSED}.md`,
+    date: CLOSED,
+    title: 'Samstag, 8. August 2026',
+    closed: `${CLOSED}T22:10:00+02:00`,
+    people: [],
+    projects: [],
+    excerpt: 'Abgeschlossen und abgehakt.',
+    wordCount: 20,
+    turns: 0,
+  });
+  const olderOpenDay: JournalDay = day({
+    path: `journal/2026/08/${OLDER}.md`,
+    date: OLDER,
+    title: 'Dienstag, 4. August 2026',
+    people: [],
+    projects: [],
+    excerpt: 'Angefangen, nie beendet.',
+    wordCount: 18,
+    turns: 0,
+  });
+  const MIXED = [day(), closedDay, earlierDay, olderOpenDay];
+
+  /** Die Tage, die wirklich in der Liste stehen — in ihrer Reihenfolge. */
+  function shown(): string[] {
+    return within(screen.getByRole('list', { name: 'Tage' }))
+      .getAllByRole('button')
+      .map((button) =>
+        (button.getAttribute('aria-label') ?? '').replace(/^Eintrag vom | öffnen$/g, ''),
+      );
+  }
+
+  async function ready(): Promise<void> {
+    await screen.findByRole('list', { name: 'Tage' });
+  }
+
+  it('steht standardmäßig auf aus — sichtbar am Kästchen, und die Zeitleiste bleibt vollständig', async () => {
+    open({ 'journal:list': () => MIXED });
+    await ready();
+
+    const box = screen.getByLabelText('Nur offene Tage') as HTMLInputElement;
+    expect(box.checked).toBe(false);
+    /* Ungefiltert: alles da, in der Zeitachse, mit den echten Lücken. */
+    expect(shown()).toEqual([TODAY, CLOSED, EARLIER, OLDER]);
+    expect(screen.getAllByText('Ein Tag ohne Eintrag').length).toBe(3);
+    expect(screen.getByText('4 Tage mit Eintrag')).toBeTruthy();
+  });
+
+  it('zeigt eingeschaltet nur die offenen Tage — Heute zuerst, ohne selbst zu zählen', async () => {
+    open({ 'journal:list': () => MIXED });
+    await ready();
+
+    await userEvent.click(screen.getByLabelText('Nur offene Tage'));
+
+    expect((screen.getByLabelText('Nur offene Tage') as HTMLInputElement).checked).toBe(true);
+    /* Der abgeschlossene Tag ist weg, Heute bleibt der Einstieg — obwohl es
+       selbst nie als offen gilt und deshalb auch nicht mitgezählt wird. */
+    expect(shown()).toEqual([TODAY, EARLIER, OLDER]);
+    expect(screen.getByText('2 Tage offen')).toBeTruthy();
+  });
+
+  it('nennt keine Lücke, solange gefiltert wird — die käme vom Filter, nicht vom Vault', async () => {
+    open({ 'journal:list': () => MIXED });
+    await ready();
+
+    await userEvent.click(screen.getByLabelText('Nur offene Tage'));
+
+    expect(screen.queryAllByText(/ohne Eintrag/)).toEqual([]);
+  });
+
+  it('nennt einen einzelnen offenen Tag im Singular', async () => {
+    open({ 'journal:list': () => [day(), earlierDay] });
+    await ready();
+
+    await userEvent.click(screen.getByLabelText('Nur offene Tage'));
+
+    expect(screen.getByText('Ein Tag offen')).toBeTruthy();
+  });
+
+  it('sagt „Nichts offen", wenn jeder vergangene Tag abgeschlossen ist', async () => {
+    open({ 'journal:list': () => [day(), closedDay] });
+    await ready();
+
+    await userEvent.click(screen.getByLabelText('Nur offene Tage'));
+
+    expect(screen.getByText('Nichts offen. Jeder vergangene Tag ist abgeschlossen.')).toBeTruthy();
+    expect(screen.getByText('0 Tage offen')).toBeTruthy();
+    /* Und trotzdem keine leere Liste: der Einstieg in heute bleibt stehen. */
+    expect(shown()).toEqual([TODAY]);
+  });
+
+  it('nennt „Nichts offen" nur im gefilterten Zustand', async () => {
+    open({ 'journal:list': () => [day(), closedDay] });
+    await ready();
+
+    expect(screen.queryByText(/Nichts offen/)).toBeNull();
+  });
+
+  it('lässt die Pfeiltasten genau die gezeigten Tage abgehen', async () => {
+    const { sb } = open({ 'journal:list': () => MIXED });
+    await ready();
+    await userEvent.click(screen.getByLabelText('Nur offene Tage'));
+
+    /* Erster Schritt: der abgeschlossene 8. steht nicht in der Liste, also
+       auch nicht in der Tastaturfolge — der nächste Tag ist der 6. */
+    await userEvent.keyboard('{ArrowDown}');
+    await waitFor(() => expect(sb.payloadsOf('journal:get')).toContainEqual({ date: EARLIER }));
+    /* Der Schritt läuft über `?d=…` — die Zeile ist danach die aktuelle. */
+    await waitFor(() =>
+      expect(
+        screen
+          .getByRole('button', { name: `Eintrag vom ${EARLIER} öffnen` })
+          .getAttribute('aria-current'),
+      ).toBe('true'),
+    );
+
+    await userEvent.keyboard('{ArrowDown}');
+    await waitFor(() => expect(sb.payloadsOf('journal:get')).toContainEqual({ date: OLDER }));
+    expect(sb.payloadsOf('journal:get')).not.toContainEqual({ date: CLOSED });
+  });
+
+  it('filtert auch ohne zugeordnetes Modell — die Liste kommt aus den Dateien', async () => {
+    open({ 'journal:list': () => MIXED, 'llm:routing': () => ({ tasks: {}, defaults: {} }) });
+    await ready();
+
+    await userEvent.click(screen.getByLabelText('Nur offene Tage'));
+
+    expect(shown()).toEqual([TODAY, EARLIER, OLDER]);
+    expect(screen.getByText('2 Tage offen')).toBeTruthy();
+  });
+
+  it('ist auch gefiltert frei von A11y-Verstößen', async () => {
+    const { container } = open({ 'journal:list': () => [day(), closedDay] });
+    await ready();
+
+    await userEvent.click(screen.getByLabelText('Nur offene Tage'));
+
+    await expectNoViolations(container);
+  });
+});
+
+describe('Tagebuch: Fertig markieren / wieder öffnen (009, D6)', () => {
+  /* Same timestamp `journal:setClosed`'s default handler above writes when
+     `closed: true` — used here to build the "already closed" view directly,
+     without going through a click first. */
+  const CLOSED_AT = NOW.toISOString();
+
+  it('bietet an einem offenen Tag „Als abgeschlossen markieren" und keine Marke', async () => {
+    open();
+
+    expect(await screen.findByRole('button', { name: 'Als abgeschlossen markieren' })).toBeTruthy();
+    expect(screen.queryByText(/Abgeschlossen am/)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Wieder öffnen' })).toBeNull();
+  });
+
+  it('zeigt an einem abgeschlossenen Tag die Marke mit Datum und „Wieder öffnen" statt des Markieren-Knopfs', async () => {
+    open({ 'journal:get': () => view({ day: day({ closed: CLOSED_AT }) }) });
+
+    expect(await screen.findByText('Abgeschlossen am 10. Aug. 2026')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Wieder öffnen' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Als abgeschlossen markieren' })).toBeNull();
+  });
+
+  it('markiert per Klick als abgeschlossen, mit dem eingefrorenen Hash, und zeigt danach die Marke', async () => {
+    const state = { view: view() };
+    const { sb } = open({
+      'journal:get': () => state.view,
+      'journal:setClosed': ({ closed }) => {
+        const patched = day({ closed: closed ? CLOSED_AT : null });
+        state.view = view({ day: patched });
+        return patched;
+      },
+    });
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Als abgeschlossen markieren' }),
+    );
+
+    await waitFor(() =>
+      expect(sb.payloadOf('journal:setClosed')).toEqual({
+        date: TODAY,
+        closed: true,
+        expectedHash: 'hash-1',
+      }),
+    );
+    expect(await screen.findByText('Abgeschlossen am 10. Aug. 2026')).toBeTruthy();
+    /* Ohne vollständigen Reload: die Liste links zieht dieselbe Abfrage nach. */
+    expect(await screen.findByRole('button', { name: 'Wieder öffnen' })).toBeTruthy();
+  });
+
+  it('öffnet per Klick wieder, und die Marke verschwindet', async () => {
+    const state = { view: view({ day: day({ closed: CLOSED_AT }) }) };
+    const { sb } = open({
+      'journal:get': () => state.view,
+      'journal:setClosed': ({ closed }) => {
+        const patched = day({ closed: closed ? CLOSED_AT : null });
+        state.view = view({ day: patched });
+        return patched;
+      },
+    });
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Wieder öffnen' }));
+
+    await waitFor(() =>
+      expect(sb.payloadOf('journal:setClosed')).toEqual({
+        date: TODAY,
+        closed: false,
+        expectedHash: 'hash-1',
+      }),
+    );
+    await waitFor(() => expect(screen.queryByText(/Abgeschlossen am/)).toBeNull());
+    expect(await screen.findByRole('button', { name: 'Als abgeschlossen markieren' })).toBeTruthy();
+  });
+
+  it('meldet einen Konflikt sichtbar, statt still zu scheitern', async () => {
+    open({
+      'journal:setClosed': () => {
+        throw Object.assign(new Error('Konflikt'), { code: 'conflict' });
+      },
+    });
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Als abgeschlossen markieren' }),
+    );
+
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toContain('wurde zwischenzeitlich geändert');
   });
 });

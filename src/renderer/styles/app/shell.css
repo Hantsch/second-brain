@@ -192,6 +192,13 @@
 .sb-rail-item[aria-current='page'] .sb-rail-key {
   color: var(--teal-300);
 }
+/* The open-days count on the journal item (009, D7). It only ever appears
+   next to the hotkey — never alone — so it borrows that one's right
+   alignment instead of setting its own `margin-left: auto`; `flex-shrink: 0`
+   keeps a two-digit count from being squeezed if the label ever grows. */
+.sb-rail-count {
+  flex-shrink: 0;
+}
 
 .sb-rail-foot {
   margin-top: auto;
