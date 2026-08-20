@@ -9,7 +9,7 @@
   the commands read both.
 -->
 
-ai-scrum-version: 2.1.0
+ai-scrum-version: 2.1.1
 project: Second Brain (Guston)
 
 ## Verify
