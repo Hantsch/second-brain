@@ -1,7 +1,7 @@
 # Roadmap
 
 **The** one source of status and planning: where we stand, what comes next, what is not planned
-at all yet. As of: 2026-08-19.
+at all yet. As of: 2026-08-20.
 
 Rules (so this document does not drift):
 
@@ -117,20 +117,46 @@ Gaps/notes:
 - **List-level star writes (013) have no error surface**, unlike the detail star. Matches an
   existing pattern on the same screen for other list-level patches; not a regression.
 
-### M3 — The journal becomes one thing — planned
+### M3 — The journal becomes one thing — built, acceptance pending
 
 Stories 011 (one entry instead of day and conversation), 012 (the interview, for when the field
 is empty), 009 (filter for days that are not finished), 010 (a calendar on top of the days). No
 concept behind them.
 
 Independent of everything else — [systems/navigation.md](systems/navigation.md) explicitly
-leaves the journal untouched, so this milestone can be pulled forward at any point without
-rework.
+leaves the journal untouched at the rail level; 011 supersedes only the line about the journal's
+*inner* structure staying untouched.
+
+The `## Day`/`## Conversation` split is gone for new writing: one field, a stance next to it
+(listen/tips/analyse, chosen per write and not persisted), the app's answers interleaved inline
+as blockquote turns. An interview overlay covers a fixed five-topic backbone for the days the
+field stays empty. The day list gets a "not finished" filter (`closed` is now a real vault
+frontmatter field) with a rail badge, and a collapsible month calendar sits above the list
+showing entry/mood/unfinished markers. All four stories done; end-to-end acceptance through the
+real UI is the user's next step,
+[sprints/S04/testplan.md](sprints/S04/testplan.md).
 
 Sprints:
 
 - [sprints/S04/sprint.md](sprints/S04/sprint.md) — the journal becomes one thing (011, 012,
-  009, 010), `planned`
+  009, 010), `done`
+  ([review](sprints/S04/review.md) · [testplan](sprints/S04/testplan.md))
+
+Gaps/notes:
+
+- **Legacy `## Day`/`## Conversation` days are not migrated automatically.** They keep rendering
+  and stay editable; folding one into the new interleaved stream is one explicit, hash-guarded,
+  per-day action (011). The vault can carry both formats indefinitely.
+- **Stance is not persisted anywhere** — chosen per write/ask, by the user's own decision; a
+  day's file carries no record of which stance produced which answer.
+- **012's interview overlay does not show the day's existing text as context**, though the
+  story's own decisions named it — it fell outside the deliverable that shipped it and was
+  accepted as a gap rather than fixed in-sprint.
+- **010 leaves two pre-existing inline locale ternaries unmigrated** to the `locale()` helper it
+  introduced (`DayList.tsx`, `DayEntry.tsx`) — out of that story's scope, worth folding in
+  whenever those files are next touched.
+- **`tests/core/wiki/module.test.ts` is still red**, confirmed pre-existing and unrelated on
+  every story's build in this sprint (see the M1 gap above — still needs an owner).
 
 ### M4 — A finding can be acted on — planned
 
