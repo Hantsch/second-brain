@@ -113,6 +113,9 @@ export function CoachComposer({
         onCancel={onCancel}
         busy={busy}
         fieldId="sb-journal-field"
+        /* A journal entry is written text, not a one-line question: Enter
+           breaks the line like in any editor, Shift+Enter files it. */
+        submitKey="shift-enter"
         fieldRef={fieldRef}
         texts={{
           label: t('journal.field.label'),

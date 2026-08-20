@@ -578,6 +578,40 @@ describe('Tagebuch: der Tagestext', () => {
 });
 
 describe('Tagebuch: das Gespräch', () => {
+  /* Das Feld ist ein Schreibfeld, kein Fragefeld: Enter bricht die Zeile um wie
+     in jedem Editor, Shift+Enter legt ab. Umgekehrt (wie im Fragen-Screen) hat
+     jeder Absatzwechsel den halben Satz abgeschickt. */
+  it('macht mit Enter einen Umbruch und schickt mit Shift+Enter', async () => {
+    const { sb } = open();
+    const field = (await screen.findByLabelText('Was beschäftigt dich?')) as HTMLTextAreaElement;
+
+    await userEvent.type(field, 'Erste Zeile{Enter}zweite Zeile');
+    expect(field.value).toBe('Erste Zeile\nzweite Zeile');
+    expect(sb.payloadsOf('journal:append')).toEqual([]);
+
+    await userEvent.type(field, '{Shift>}{Enter}{/Shift}');
+    await waitFor(() =>
+      expect(sb.payloadOf('journal:append')).toEqual({
+        date: TODAY,
+        text: 'Erste Zeile\nzweite Zeile',
+      }),
+    );
+  });
+
+  /* Der Hinweis über dem Feld muss dieselbe Belegung nennen wie die Tasten tun
+     — ein Hinweis, der „Enter sagt es" behauptet, ist schlimmer als keiner. */
+  it('nennt im Hinweis Shift+Enter zum Sagen und Enter für den Umbruch', async () => {
+    open();
+    await screen.findByLabelText('Was beschäftigt dich?');
+
+    const hint = document
+      .querySelector('#sb-journal-field')
+      ?.closest('.sb-composer')
+      ?.querySelector('.sb-composer-hint');
+    expect(hint?.textContent).toContain('Shift+Entersagt es');
+    expect(hint?.textContent).toContain('Entermacht einen Umbruch');
+  });
+
   it('schreibt in der Haltung Zuhören nur auf und ruft nie journal:coach', async () => {
     /* 011/D8: Zuhören geht ausschließlich über journal:append — verifizierbar
        an der IPC-Grenze, nicht nur im Prompt. Das gilt auch, wenn (wie hier,

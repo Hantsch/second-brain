@@ -4,6 +4,11 @@
    that is stated as a hint below, so nobody has to try it out. Ctrl+Enter
    also works, because it submits everywhere in the app.
 
+   `submitKey` swaps the two: where the field is a writing field rather than
+   a question field (the journal), Enter has to break the line like it does in
+   every editor, and Shift+Enter submits. The hint follows the setting, so
+   what is shown is what happens.
+
    The two filters (module, scope) are subtle chips, not form fields: they
    are an offer, not a requirement. This screen's one teal focus point is
    "ask question"; during the answer it becomes "cancel" — a stream you
@@ -84,6 +89,8 @@ export interface ChatComposerProps {
   /** If the callback is missing, the project chip doesn't exist. */
   onProject?: (project: string | null) => void;
   texts?: ComposerTexts;
+  /** Which key submits. `'shift-enter'` frees plain Enter for a line break. */
+  submitKey?: 'enter' | 'shift-enter';
   /** Additional controls in this footer, before the button. */
   extra?: ReactNode;
   /** What `Esc` in the field does. Without it the field is only left (see below);
@@ -109,6 +116,7 @@ export function ChatComposer({
   project = null,
   onProject,
   texts = {},
+  submitKey = 'enter',
   extra,
   onEscape,
   fieldId = 'sb-ask-field',
@@ -119,10 +127,17 @@ export function ChatComposer({
      not wait on a query just to put a name on a chip. */
   const projectName = projects.find((entry) => entry.slug === project)?.title ?? project;
 
+  const onShift = submitKey === 'shift-enter';
+
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>): void => {
-    if (event.key === 'Enter' && !event.shiftKey) {
-      event.preventDefault();
-      onSubmit();
+    if (event.key === 'Enter' && !event.altKey) {
+      /* Ctrl/Cmd+Enter submits regardless of the setting; otherwise it is
+         whichever of Enter / Shift+Enter `submitKey` named. Any other Enter
+         falls through to the textarea and breaks the line. */
+      if (event.ctrlKey || event.metaKey || event.shiftKey === onShift) {
+        event.preventDefault();
+        onSubmit();
+      }
       return;
     }
     /* Esc used to not leave the field at all — focus stayed in the
@@ -154,9 +169,9 @@ export function ChatComposer({
           {texts.label ?? t('ask.field.label')}
         </label>
         <p className="sb-composer-hint">
-          <Kbd>Enter</Kbd>
+          <Kbd>{onShift ? 'Shift+Enter' : 'Enter'}</Kbd>
           <span>{texts.hintSend ?? t('ask.field.hintSend')}</span>
-          <Kbd>Shift+Enter</Kbd>
+          <Kbd>{onShift ? 'Enter' : 'Shift+Enter'}</Kbd>
           <span>{t('ask.field.hintBreak')}</span>
           <Kbd>Esc</Kbd>
           <span>{t('ask.field.hintEscape')}</span>
