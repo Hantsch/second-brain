@@ -84,8 +84,9 @@ explicitly not allowed, so it has to be the sanctioned one.
 - [ ] Recommendations only name what I can actually reach: models installed locally, models
       this machine could run if pulled (marked as "needs a download of X"), and models behind
       configured cloud providers. Never a name I have no way to get to.
-- [ ] For cloud targets the recommendation carries an estimated cost per run and per month at
-      my usage, not just a price per million tokens.
+- [ ] For cloud targets the recommendation carries an estimated cost **per run**, not just a
+      price per million tokens. No monthly forecast — instead, what was actually spent in the
+      last 30 days, once there is a request log to read it from (decided in question 5).
 - [ ] Accepting a recommendation writes the routing in one confirmed step, the way the
       existing routing proposal already does; rejecting it leaves routing untouched.
 
@@ -124,63 +125,79 @@ explicitly not allowed, so it has to be the sanctioned one.
 
 ## Open Questions
 
-1. **This is more than one story.** As written it has four separable clusters — guided
-   install, machine scan, recommendation engine, subscription providers — each of which can
-   ship alone and be useful alone. Should `/refine` split it into 019a–d (recommended; order:
-   scan → recommendation → install → subscriptions, because the recommendation is what makes
-   the install worth anything), or plan it as one sprint-sized story?
+All resolved on 2026-08-21. Kept here as the record of what was decided and why.
 
-2. **What exactly is "install Ollama" allowed to be?** Downloading and running an installer is
-   a privileged act on the user's machine and needs its own decision: silent install, hand off
-   to the platform package manager (`winget`, `brew`), or download plus "here is the
-   installer, click it". The last is the least clever and the most honest — confirm before
-   refine plans one of the others. Related: does uninstalling belong in scope, or may the app
-   leave behind something it can't remove?
+1. **~~One story or several?~~** → Split into **019a–d**, order `scan → recommendation →
+   install → subscriptions`. The recommendation is what makes the install worth anything, and
+   the recommendation needs the scan to know what fits. Each part ships and is useful alone.
+   Note the ID deviation: [README.md](README.md) asks for plain three-digit IDs. These four
+   carry a letter suffix on purpose, so the epic stays visible in the filename; `/build 019a`
+   resolves fine.
 
-3. **Where does the machine scan live?** GPU and VRAM detection is platform-specific and can't
-   sit in `src/core/` (guardrail 5 — and `os`/`child_process` is main's business anyway).
-   Proposal: main detects and reports a plain fact object, `src/core/llm/` owns the judgement
-   ("this fits / this crawls") and stays testable without a machine. Confirm the split before
-   it gets built the other way round.
+2. **~~What may "install Ollama" do?~~** → **Download the official installer, state size and
+   target path, open it after confirmation.** The user clicks through it themselves. No
+   elevation handling in the app, no package-manager dependency, same shape on every platform.
+   Uninstalling is **out of scope** — the app says up front that it leaves the runtime behind.
+   Ollama, not llama.cpp: it carries the model registry and `POST /api/pull` gives the
+   progress stream the acceptance criteria ask for. The app already has it as a preset
+   ([presets.ts:11](../../src/core/llm/presets.ts#L11)) and probes it
+   ([llm-detect.ts:49](../../src/main/ipc/llm-detect.ts#L49)).
 
-4. **Where does the model catalogue come from?** A recommendation needs facts the app doesn't
-   have today: size on disk, quantisation, price per million tokens, data policy. Three
-   options — bundle a curated list in the repo (offline, honest, goes stale), fetch from the
-   providers' own APIs at scan time (current, needs network and a cache), or both with the
-   bundled list as the offline fallback. The last is probably right, but "who curates the
-   bundled list, how often" is a maintenance commitment worth naming before we take it on.
+3. **~~Where does the scan live?~~** → As proposed: **main detects, core judges.** Main
+   reports a flat `MachineFacts` object (`os`, `child_process`); `src/core/llm/capacity.ts`
+   turns it into a verdict and stays testable without a machine. → 019a.
 
-5. **How much usage is "my usage"?** A cost per month needs a request volume. Estimate it from
-   the vault's own history (dumps per week, journal days, sources ingested), ask me for a rough
-   band ("a few notes a day" / "all day"), or show cost per run only and stay out of
-   prediction. The first is the most useful and the most likely to be wrong.
+4. **~~Where does the catalogue come from?~~** → **Curated list in the repo plus live fetch.**
+   Bundled JSON is the offline fallback and the source of truth for data policy; OpenRouter's
+   models API enriches prices when there is network. Maintenance commitment: the bundled list
+   is updated by hand, once per release, and carries the date it was written. → 019b.
 
-6. **The subscription terms must be read at the source during refine, not taken from here.**
-   What I found on 2026-08-21: Anthropic gives Pro/Max/Team/Enterprise plans a monthly Agent
-   SDK credit ($20/$100/$200) that explicitly covers third-party apps authenticating through
-   the Agent SDK, while reusing a Claude Code OAuth token in a third-party tool is not
-   permitted. For OpenAI the pointer is the Codex App Server, not the CLI's ChatGPT login.
-   Both change the shape of the provider abstraction (see question 7), so both need checking
-   before a line is written.
+5. **~~How much usage is "my usage"?~~** → **Cost per run only.** No prediction from vault
+   history — at first setup the vault is empty, which is exactly when the number would be
+   shown. The month figure becomes "what you actually spent in the last 30 days", from the
+   app's own request log, not a forecast. This narrows the acceptance criterion below.
 
-7. **Does a subscription target even fit `LlmGateway`?** The gateway speaks two protocols
-   today ([providers/](../../src/core/llm/providers/)): Anthropic Messages and
-   OpenAI-compatible. An Agent SDK / App Server target is a third shape, possibly a spawned
-   local process rather than an HTTP call. Whether that is a third provider behind the same
-   interface or a separate concept has to be decided before build — guardrail 4 says the
-   interface holds, so the burden of proof is on "it fits".
+6. **Subscription terms — still open, deliberately.** Carried into 019d as a research task, to
+   be read at the source when 019d is refined, not now.
 
-8. **Is the recommendation only for the first five minutes?** Today the entry point is the
-   models tab's `StartCard`, shown while no provider exists. But the recommendation is also
-   what someone wants six months in, when a model got cheaper or they bought a GPU. Is there a
-   "re-check my setup" path, and does anything ever prompt it, or is it strictly manual?
+7. **Does a subscription target fit `LlmGateway`?** — still open, carried into 019d. Guardrail
+   4 says the interface holds, so the burden of proof is on "it fits".
+
+8. **~~Only for the first five minutes?~~** → **No.** The machine card and the recommendation
+   section live permanently in the models tab, not inside `StartCard`. Re-checking is always
+   available and **strictly manual** — nothing in the app ever prompts it.
 
 ## Plan
 
+**This file is the epic. Do not run `/build 019`.** It holds the vision, the full acceptance
+criteria and the decision record; the buildable work lives in four child stories.
+
+| Story | Scope | Depends on |
+| --- | --- | --- |
+| [019a](019a-machine-scan.md) | Machine scan: facts from main, verdict from core, card in the models tab | — |
+| [019b](019b-model-recommendations.md) | Catalogue, reachability, per-task recommendation, sensitive-task rule | 019a |
+| [019c](019c-guided-local-runtime.md) | Guided Ollama install and model pull with progress | 019a |
+| [019d](019d-subscription-providers.md) | Claude / ChatGPT plan instead of a metered key | 019b, research |
+
+Coverage of the criteria above:
+
+- **Guided local runtime** → 019c
+- **Machine scan** → 019a
+- **Recommendations per task** → 019b
+- **Personal tasks** → 019b
+- **Subscriptions instead of keys** → 019d
+- **Across all of it** → each child story repeats it as its own criterion
+
 ## Deliverables
+
+None. The deliverables are in the child stories.
 
 ## Model Hints
 
+None. Set per child story.
+
 ## Test Plan (manual acceptance)
+
+None. Acceptance happens per child story.
 
 ## Done

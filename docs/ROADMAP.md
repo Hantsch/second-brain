@@ -175,6 +175,26 @@ Sprints:
 - [sprints/S05/sprint.md](sprints/S05/sprint.md) — a finding can be acted on (014, 015, 016,
   017), `planned`
 
+### M5 — Models without expertise — planned
+
+Requirement: [019-model-recommendations-for-people-without-expertise.md](../requirements/019-model-recommendations-for-people-without-expertise.md)
+(epic, not buildable itself — split by `/refine` on 2026-08-21 into four child stories after a
+requirements interview covering the split, the install shape, the catalogue source and the
+cost-estimate scope).
+
+Stories: 019a (machine scan), 019b (per-task recommendation, in money, with the sensitive-task
+rule), 019c (guided local Ollama install and pull). 019d (Claude/ChatGPT plan instead of a
+metered key) stays `draft` — its open questions need primary-source reading and an architecture
+decision that a build must not make on the fly.
+
+Cut directly to a sprint on 2026-08-21, without a separate `/roadmap plan` round — queued behind
+M4/S05, not yet started.
+
+Sprints:
+
+- [sprints/S06/sprint.md](sprints/S06/sprint.md) — a machine scan, a recommendation, a guided
+  local runtime (019a, 019b, 019c), `planned`
+
 ---
 
 ## Open / unprioritised
