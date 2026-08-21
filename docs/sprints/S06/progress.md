@@ -7,3 +7,22 @@
 - 2026-08-21 09:53 · 019a · D4 Machine card in the models tab · started
 - 2026-08-21 10:06 · 019a · D4 Machine card in the models tab · done
 - 2026-08-21 10:20 · 019a · story · done
+- 2026-08-21 10:14 · 019b · D1 Catalogue type, curated file, loader · started
+- 2026-08-21 10:14 · 019b · D1 Catalogue type, curated file, loader · done
+- 2026-08-21 10:18 · 019b · D2 Live enrichment with offline fallback · started
+- 2026-08-21 10:18 · 019b · D2 Live enrichment with offline fallback · done
+- 2026-08-21 10:23 · 019b · D3 Typical tokens per task · started
+- 2026-08-21 10:23 · 019b · D4 Reachability filter · started
+- 2026-08-21 10:27 · 019b · D3 Typical tokens per task · done
+- 2026-08-21 10:27 · 019b · D4 Reachability filter · done
+- 2026-08-21 10:27 · 019b · D5 The sensitive-task rule · started
+- 2026-08-21 10:33 · 019b · D5 The sensitive-task rule · done
+- 2026-08-21 10:33 · 019b · D6 Recommendation and cost per run · started
+- 2026-08-21 10:45 · 019b · D6 Recommendation and cost per run · done
+- 2026-08-21 10:45 · 019b · D7 Per-request no-training enforcement · started
+- 2026-08-21 10:52 · 019b · D7 Per-request no-training enforcement · done
+- 2026-08-21 10:52 · 019b · D8 IPC channel and handler · started
+- 2026-08-21 11:03 · 019b · D8 IPC channel and handler · done
+- 2026-08-21 11:03 · 019b · D9 Recommendation section in models tab · started
+- 2026-08-21 11:42 · 019b · D9 Recommendation section in models tab · done
+- 2026-08-21 13:19 · 019b · story · done (2 review-fix cycles)

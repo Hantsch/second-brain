@@ -35,6 +35,7 @@ import {
 } from '../../lib/queries/llm';
 import { MachineCard } from './MachineCard';
 import { ProviderDialog } from './ProviderDialog';
+import { RecommendationSection } from './RecommendationSection';
 import { RoutingSection } from './RoutingSection';
 import { StartCard } from './StartCard';
 
@@ -212,6 +213,14 @@ export function ModelsTab() {
       ) : (
         <Panel title={t('settings.routing.title')}>
           <Skeleton lines={6} height={40} />
+        </Panel>
+      )}
+
+      {tasks.data ? (
+        <RecommendationSection tasks={tasks.data} providers={providers.data ?? []} />
+      ) : (
+        <Panel title={t('settings.recommend.title')}>
+          <Skeleton lines={4} height={40} />
         </Panel>
       )}
 

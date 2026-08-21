@@ -2,6 +2,7 @@
    class belongs to which `ProviderKind` — the registry and the gateway share it. */
 
 import type { ProviderConfig } from '@shared/types';
+import { isOpenRouterBaseUrl } from './openrouter-host';
 import { AnthropicProvider } from './providers/anthropic';
 import { FakeProvider } from './providers/fake';
 import { OpenAiCompatibleProvider } from './providers/openai-compatible';
@@ -30,13 +31,11 @@ export function createProviderFactory(options: FactoryOptions = {}): ProviderFac
         return new OpenAiCompatibleProvider({
           baseUrl: config.baseUrl,
           ...shared,
-          ...(isOpenRouter(config.baseUrl) ? { headers: { 'x-title': 'Second Brain' } } : {}),
+          // OpenRouter likes a title in the header, so calls stay attributable.
+          ...(isOpenRouterBaseUrl(config.baseUrl)
+            ? { headers: { 'x-title': 'Second Brain' } }
+            : {}),
         });
     }
   };
-}
-
-/** OpenRouter likes a title in the header, so calls stay attributable. */
-function isOpenRouter(baseUrl: string): boolean {
-  return baseUrl.includes('openrouter.ai');
 }

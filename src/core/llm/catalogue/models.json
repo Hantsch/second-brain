@@ -1,0 +1,78 @@
+{
+  "_comment": "Hand-curated once per release from provider pricing pages and provider privacy/ToS pages. generatedAt is bumped by hand when the list is refreshed; nothing here is fetched automatically (D1 — live merge is a later deliverable).",
+  "generatedAt": "2026-08-01",
+  "entries": [
+    {
+      "id": "ollama/qwen2.5-coder:7b",
+      "providerKind": "openai-compatible",
+      "paramsB": 7,
+      "sizeOnDiskGb": 4.7,
+      "quantisation": "Q4_K_M",
+      "priceInPerMTok": null,
+      "priceOutPerMTok": null,
+      "dataPolicy": "no-training",
+      "policySource": "local model — never leaves the machine",
+      "policyReadAt": "2026-08-01"
+    },
+    {
+      "id": "ollama/llama3.1:8b",
+      "providerKind": "openai-compatible",
+      "paramsB": 8,
+      "sizeOnDiskGb": 4.9,
+      "quantisation": "Q4_K_M",
+      "priceInPerMTok": null,
+      "priceOutPerMTok": null,
+      "dataPolicy": "no-training",
+      "policySource": "local model — never leaves the machine",
+      "policyReadAt": "2026-08-01"
+    },
+    {
+      "id": "anthropic/claude-haiku-4-5",
+      "providerKind": "anthropic",
+      "paramsB": null,
+      "sizeOnDiskGb": null,
+      "quantisation": null,
+      "priceInPerMTok": 1,
+      "priceOutPerMTok": 5,
+      "dataPolicy": "no-training",
+      "policySource": "https://www.anthropic.com/legal/commercial-terms",
+      "policyReadAt": "2026-08-01"
+    },
+    {
+      "id": "openai/gpt-4o-mini",
+      "providerKind": "openai-compatible",
+      "paramsB": null,
+      "sizeOnDiskGb": null,
+      "quantisation": null,
+      "priceInPerMTok": 0.15,
+      "priceOutPerMTok": 0.6,
+      "dataPolicy": "no-training",
+      "policySource": "https://openai.com/enterprise-privacy/",
+      "policyReadAt": "2026-08-01"
+    },
+    {
+      "id": "openrouter/some-free-model",
+      "providerKind": "openai-compatible",
+      "paramsB": null,
+      "sizeOnDiskGb": null,
+      "quantisation": null,
+      "priceInPerMTok": 0,
+      "priceOutPerMTok": 0,
+      "dataPolicy": "trains",
+      "policySource": "https://openrouter.ai/docs#terms (free-tier models may train on prompts)",
+      "policyReadAt": "2026-08-01"
+    },
+    {
+      "id": "openai-compatible/unlisted-third-party",
+      "providerKind": "openai-compatible",
+      "paramsB": null,
+      "sizeOnDiskGb": null,
+      "quantisation": null,
+      "priceInPerMTok": null,
+      "priceOutPerMTok": null,
+      "dataPolicy": "unknown",
+      "policySource": "no published data-use policy found at curation time",
+      "policyReadAt": "2026-08-01"
+    }
+  ]
+}

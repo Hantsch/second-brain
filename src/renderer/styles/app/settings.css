@@ -519,6 +519,33 @@
   color: var(--text-body);
 }
 
+/* ── Recommendations ────────────────────────────────────────────────────── */
+
+.sb-recommend-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.sb-recommend-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+.sb-recommend-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.sb-recommend-target {
+  color: var(--text-heading);
+}
+
 /* In a narrow window the table no longer has room for four columns — then it scrolls. */
 @media (max-width: 1100px) {
   .sb-routing {

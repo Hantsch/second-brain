@@ -45,6 +45,7 @@ import type {
   ProviderKind,
   ProviderPreset,
   RawSource,
+  RecommendationSet,
   Reminder,
   Routing,
   Scope,
@@ -571,6 +572,12 @@ export interface IpcRoutes {
   };
   /** Cheap machine facts (RAM, CPU, disk, GPU) for judging local-model capacity. */
   'llm:scanMachine': { req: void; res: MachineScanResult };
+  /**
+   * One recommended target per task, with reason/tradeoff keys and cost per
+   * run — a proposal, nothing is written until `llm:setRoute`/`llm:setDefault`
+   * confirms it.
+   */
+  'llm:recommendModels': { req: void; res: RecommendationSet };
 
   // ── Dashboard, reminders, maintenance ────────────────────────────────────
   'dashboard:data': { req: void; res: DashboardData };
@@ -750,6 +757,7 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'llm:suggestRouting',
   'llm:testTask',
   'llm:scanMachine',
+  'llm:recommendModels',
   'dashboard:data',
   'dashboard:layout',
   'dashboard:setLayout',

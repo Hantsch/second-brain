@@ -247,6 +247,7 @@ function handlers(report: GardenerReport | null, extra: SbHandlers = {}): SbHand
         labelKey: 'task.gardener-audit.label',
         hintKey: 'task.gardener-audit.hint',
         suggested: 'strong' as const,
+        typicalTokens: { in: 15000, out: 1500 },
         sensitive: false,
         streams: false,
         structured: true,

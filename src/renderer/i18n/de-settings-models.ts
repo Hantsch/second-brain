@@ -179,6 +179,39 @@ export const deSettingsModels = {
   'settings.machine.fact.gpu': 'Grafikkarte',
   'settings.machine.fact.cpu': 'CPU-Kerne',
   'settings.machine.fact.disk': 'Freier Speicherplatz',
+
+  'settings.recommend.title': 'Modellempfehlung',
+  'settings.recommend.action': 'Empfehlungen holen',
+  'settings.recommend.note':
+    'Ein Vorschlag je Aufgabe, aus dem Katalog erreichbarer Modelle — übernommen wird erst nach deiner Zustimmung.',
+  'settings.recommend.idle':
+    'Noch keine Empfehlung geholt. Sie schlägt zu jeder Aufgabe ein erreichbares Modell vor, mit Begründung und Kosten.',
+  'settings.recommend.stale':
+    'Preise könnten veraltet sein — sie stammen aus dem mitgelieferten Katalog, Stand {date}.',
+  'settings.recommend.acceptAll': 'Alle übernehmen',
+  'settings.recommend.discard': 'Verwerfen',
+  'settings.recommend.accept': 'Übernehmen',
+  'settings.recommend.accepted': 'Übernommen',
+  'settings.recommend.acceptAria': 'Empfehlung für {task} übernehmen',
+  'settings.recommend.needsDownload': '{model} — braucht einen Download von {gb} GB',
+  'settings.recommend.notYetSetUp': 'Passenden Provider einrichten, um dies zu übernehmen.',
+  'settings.recommend.costEstimate': '~{cost} pro Lauf (Schätzung)',
+  'settings.recommend.policy': 'Richtlinie gelesen aus {source}, Stand {date}.',
+  /* One sentence per `RecommendationReasonKey`, jargon-free per the story's
+     requirement — see the doc comment on that type in `@shared/types/llm`. */
+  'settings.recommend.reason.best-fit-for-task':
+    'Passt in Umfang und Kosten genau zu dieser Aufgabe.',
+  'settings.recommend.reason.cheapest-reachable':
+    'Die passende Größe war nicht erreichbar — das hier ist die günstigste erreichbare Alternative.',
+  'settings.recommend.reason.only-local-option':
+    'Für diese Aufgabe ist nur ein lokales Modell erreichbar, mit dem sich etwas vergleichen ließe.',
+  'settings.recommend.reason.no-reachable-model':
+    'Kein Modell, das du derzeit erreichen kannst, passt zu dieser Aufgabe.',
+  'settings.recommend.reason.sensitive-rule-no-qualifying-target':
+    'Diese Aufgabe liest persönliche Inhalte, und kein erreichbares Modell erfüllt die Regel dafür — die Aufgabe bleibt ohne Modell.',
+  /* One sentence per `RecommendationTradeoffKey`. */
+  'settings.recommend.tradeoff.cheaper-alternative-available':
+    'Eine günstigere oder lokale Alternative wäre auch möglich: {alternatives}.',
 } as const;
 
 export type SettingsModelsKey = keyof typeof deSettingsModels;

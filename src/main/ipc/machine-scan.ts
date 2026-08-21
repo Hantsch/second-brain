@@ -12,7 +12,7 @@ import * as path from 'node:path';
 import { execFile } from 'node:child_process';
 import { promises as fs } from 'node:fs';
 import { judgeCapacity } from '@core/llm';
-import type { MachineFacts, MachineScanResult } from '@shared/types';
+import type { CapacityVerdict, MachineFacts, MachineScanResult } from '@shared/types';
 import type { HandlerMap } from './registry';
 import { defineHandlers } from './registry';
 import type { Services } from '../services';
@@ -333,17 +333,32 @@ export interface MachineScanDeps {
   execFileFn?: ExecFileFn;
 }
 
-export function machineScanHandlers(services: Services, deps: MachineScanDeps = {}): HandlerMap {
+/** Both detections combined into one `MachineFacts`. Shared by the
+ *  `'llm:scanMachine'` handler and `scanCapacityVerdict` below, so the two
+ *  never run the detection logic differently. */
+async function detectMachineFacts(deps: MachineScanDeps): Promise<MachineFacts> {
   const platform = deps.platform ?? os.platform();
   const execFileFn = deps.execFileFn ?? execFileAsync;
+  const [base, gpu] = await Promise.all([
+    detectCheapFacts(platform),
+    detectGpuFacts(platform, execFileFn),
+  ]);
+  return { ...base, ...gpu };
+}
+
+/** The same detections as `'llm:scanMachine'`, judged, without the raw facts
+ *  — what `recommendModels` (main/llm-bridge.ts) needs a verdict for, without
+ *  duplicating the GPU/RAM detection code. Never throws, same guarantee as
+ *  the detections it combines. */
+export async function scanCapacityVerdict(deps: MachineScanDeps = {}): Promise<CapacityVerdict> {
+  return judgeCapacity(await detectMachineFacts(deps));
+}
+
+export function machineScanHandlers(services: Services, deps: MachineScanDeps = {}): HandlerMap {
   return defineHandlers({
     'llm:scanMachine': async (): Promise<MachineScanResult> => {
       void services; // not needed for a machine scan — no vault access here
-      const [base, gpu] = await Promise.all([
-        detectCheapFacts(platform),
-        detectGpuFacts(platform, execFileFn),
-      ]);
-      const facts: MachineFacts = { ...base, ...gpu };
+      const facts = await detectMachineFacts(deps);
       return { facts, verdict: judgeCapacity(facts), scannedAt: new Date().toISOString() };
     },
   });

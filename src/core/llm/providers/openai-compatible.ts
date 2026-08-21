@@ -8,7 +8,9 @@
 import type { ProviderProbe, Usage } from '@shared/types';
 import { normalizeJsonText } from '../json';
 import { describeError, joinUrl, request, requestJson, type HttpContext } from '../http';
+import { isOpenRouterBaseUrl } from '../openrouter-host';
 import { sanitize } from '../redact';
+import { taskDefinition } from '../tasks';
 import {
   SCHEMA_NAME,
   meansSchemaUnsupported,
@@ -191,7 +193,36 @@ export class OpenAiCompatibleProvider implements LlmProvider {
         json_schema: { name: SCHEMA_NAME, schema: call.schema },
       };
     }
+    // Deliberately outside the `useNative` branch: the schema fallback rebuilds
+    // the body for a second attempt, and that attempt must carry the same
+    // constraint. A retry that quietly drops it would be the worst outcome —
+    // the call succeeds and the guarantee is gone.
+    if (this.enforcesNoTraining(call)) {
+      body.provider = { data_collection: 'deny' };
+    }
     return body;
+  }
+
+  /**
+   * Does this call need OpenRouter's per-request no-training constraint?
+   *
+   * Both halves have to be true, and each `false` means the body stays exactly
+   * as it was before this rule existed:
+   * - **OpenRouter base URL** — `provider` is OpenRouter's routing object. OpenAI,
+   *   Ollama, LM Studio and vLLM don't know the field; sending it there would
+   *   risk a rejected request for no gain. A local runtime trains on nothing
+   *   anyway, and its base URL never matches this host check.
+   * - **Sensitive task** (`classify-dump`, `extract-tasks`, `journal-chat`) — those
+   *   carry personal content (guardrail 6). For the rest, narrowing the routing
+   *   pool would only cost availability and money without protecting anything.
+   *
+   * When no endpoint can satisfy the constraint, OpenRouter answers with an HTTP
+   * error, which `request`/`requestJson` raise as `LlmHttpError`. That refusal is
+   * the intended outcome and propagates: there is no path here that repeats the
+   * call without the constraint.
+   */
+  private enforcesNoTraining(call: ProviderCall): boolean {
+    return isOpenRouterBaseUrl(this.config.baseUrl) && taskDefinition(call.task).sensitive;
   }
 
   private finish(call: ProviderCall, text: string, usage: Usage | undefined): ProviderResult {

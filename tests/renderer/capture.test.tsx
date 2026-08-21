@@ -33,6 +33,7 @@ const TASKS: TaskDefinition[] = [
     labelKey: 'task.classify-dump.label',
     hintKey: 'task.classify-dump.hint',
     suggested: 'cheap',
+    typicalTokens: { in: 600, out: 120 },
     sensitive: false,
     streams: false,
     structured: true,

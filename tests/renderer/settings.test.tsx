@@ -376,6 +376,133 @@ describe('Einstellungen: Aufgaben-Routing', () => {
   });
 });
 
+describe('Einstellungen: Modellempfehlung', () => {
+  /* `llm:recommendModels` fällt im obigen `invoke` durch zum Default-Zweig
+     und damit auf die Attrappe (`mock-bridge.ts`) zurück — die liefert zehn
+     realistische Zeilen, mit einer sensiblen Aufgabe ohne Treffer
+     (`classify-dump`) und einer mit Treffer und Richtlinie (`journal-chat`).
+     Die Attrappe nennt `openai`/`anthropic` als Provider-IDs — damit die
+     Zeilen wirklich übernehmbar sind (nicht nur `ollama-1` aus dem globalen
+     `beforeEach`), sind hier zusätzlich passende Provider konfiguriert;
+     `wiki-ingest` bleibt bewusst ohne passenden Provider (Platzhalter
+     `openai-compatible` aus `recommend.ts`s dokumentierter Abweichung für
+     einen noch nicht eingerichteten Download). */
+  beforeEach(() => {
+    state.providers = [
+      ollama(),
+      { ...ollama(), id: 'anthropic', kind: 'anthropic', local: false, hasKey: true },
+      { ...ollama(), id: 'openai', local: false, hasKey: true },
+    ];
+  });
+
+  async function fetchRecommendations() {
+    await openTab('models');
+    await screen.findByRole('table');
+    await userEvent.click(screen.getByRole('button', { name: 'Empfehlungen holen' }));
+    return screen.findAllByRole('listitem');
+  }
+
+  it('zeigt zu jeder der zehn Aufgaben Ziel, Begründung und – wo zutreffend – Kosten', async () => {
+    const rows = await fetchRecommendations();
+    expect(rows.length).toBe(TASK_KINDS.length);
+
+    /* Kosten als Schätzung ausgewiesen, nie für ein lokales Modell. */
+    expect(screen.getAllByText(/pro Lauf \(Schätzung\)/).length).toBeGreaterThan(0);
+    /* Ein noch nicht installiertes, aber tragbares lokales Modell nennt den
+       Namen des Ziels und den Download statt eines Kostenwerts. */
+    expect(
+      screen.getByText('openai-compatible / qwen2.5:32b — braucht einen Download von 18 GB'),
+    ).toBeTruthy();
+    /* Kein Provider für diesen Platzhalter eingerichtet — "Übernehmen" wäre
+       ein Knopf, der nur fehlschlagen könnte. */
+    expect(screen.getByText('Passenden Provider einrichten, um dies zu übernehmen.')).toBeTruthy();
+    /* Die Kompromiss-Zeile erscheint nur, wenn Alternativen existieren, und
+       nennt sie auch (statt nur "siehe Alternativen" zu behaupten). */
+    expect(
+      screen.getAllByText(/günstigere oder lokale Alternative.*llama3\.1:8b/).length,
+    ).toBeGreaterThan(0);
+  });
+
+  it('nennt bei einem veralteten Katalog den Hinweis samt Datum', async () => {
+    // Die Attrappe liefert `catalogueStale: true` mit `catalogueGeneratedAt: fx.NOW`
+    // (2026-08-10) — der Hinweis muss beides sichtbar machen, nicht nur den
+    // einen ohne den anderen.
+    await fetchRecommendations();
+
+    const note = screen.getByText(/Preise könnten veraltet sein/);
+    expect(note.textContent).toContain('2026');
+  });
+
+  it('übernimmt eine einzelne Empfehlung über die Zeile', async () => {
+    await fetchRecommendations();
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Empfehlung für Titel und Tags übernehmen' }),
+    );
+
+    await waitFor(() =>
+      expect(invoke).toHaveBeenCalledWith('llm:setRoute', {
+        task: 'title-tags',
+        ref: { providerId: 'ollama-1', model: 'llama3.1:8b' },
+      }),
+    );
+    expect(await screen.findByText('Übernommen')).toBeTruthy();
+  });
+
+  it('übernimmt jede Aufgabe mit erreichbarem, eingerichtetem Modell in einem Schritt', async () => {
+    await fetchRecommendations();
+    invoke.mockClear();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Alle übernehmen' }));
+
+    /* Sieben der zehn Aufgaben haben einen Treffer bei einem tatsächlich
+       konfigurierten Provider — `classify-dump`/`project-status` bleiben
+       ohne Modell, `wiki-ingest` nennt nur den Platzhalter eines noch nicht
+       eingerichteten Downloads und wird deshalb übersprungen statt zu
+       scheitern. */
+    await waitFor(() =>
+      expect(invoke.mock.calls.filter(([channel]) => channel === 'llm:setRoute').length).toBe(7),
+    );
+    expect(invoke).not.toHaveBeenCalledWith(
+      'llm:setRoute',
+      expect.objectContaining({ task: 'wiki-ingest' }),
+    );
+  });
+
+  it('verwirft die Empfehlung, ohne etwas zu schreiben', async () => {
+    await fetchRecommendations();
+    invoke.mockClear();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Verwerfen' }));
+
+    expect(
+      screen.queryByText('openai-compatible / qwen2.5:32b — braucht einen Download von 18 GB'),
+    ).toBeNull();
+    expect(invoke.mock.calls.some(([channel]) => channel === 'llm:setRoute')).toBe(false);
+  });
+
+  it('zeigt bei einer vertraulichen Aufgabe ohne Treffer die ehrliche Begründung statt einer Richtlinie', async () => {
+    await fetchRecommendations();
+
+    expect(
+      screen.getByText(
+        'Diese Aufgabe liest persönliche Inhalte, und kein erreichbares Modell erfüllt die Regel dafür — die Aufgabe bleibt ohne Modell.',
+      ),
+    ).toBeTruthy();
+    /* Nur die vertrauliche Aufgabe mit Treffer (`journal-chat`) nennt eine
+       Richtlinie — die ohne Treffer (`classify-dump`) tut es nicht. */
+    expect(screen.getAllByText(/Richtlinie gelesen aus/).length).toBe(1);
+  });
+
+  it('hat keinen A11y-Verstoß', async () => {
+    const rendered = await openTab('models');
+    await screen.findByRole('table');
+    await userEvent.click(screen.getByRole('button', { name: 'Empfehlungen holen' }));
+    await screen.findAllByRole('listitem');
+    await expectNoViolations(rendered.container);
+  });
+});
+
 describe('Einstellungen: ohne jeden Provider', () => {
   beforeEach(() => {
     state.providers = [];

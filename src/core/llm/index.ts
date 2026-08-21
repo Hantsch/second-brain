@@ -51,5 +51,48 @@ export {
 } from './providers/fake';
 
 export { JsonParseError, parseJsonLoose, normalizeJsonText } from './json';
+export {
+  loadCatalogue,
+  loadCatalogueWithLiveData,
+  parseCatalogue,
+  CatalogueParseError,
+  type Catalogue,
+  type CatalogueEntry,
+  type DataPolicy,
+  type LiveCatalogue,
+  type LoadCatalogueWithLiveDataDeps,
+} from './catalogue';
+export {
+  fetchOpenRouterPrices,
+  fetchOpenRouterEndpointPolicy,
+  type OpenRouterPrice,
+} from './catalogue/openrouter';
 export { sanitize } from './redact';
+export {
+  assessReachability,
+  reachableOnly,
+  type ReachabilityStatus,
+  type ReachabilityReason,
+  type ReachabilityResult,
+} from './reachability';
+export {
+  filterForSensitiveTask,
+  isAllowedForSensitiveTask,
+  isSensitiveTask,
+  judgeForSensitiveTask,
+  refusalsForSensitiveTask,
+  type AllowedSensitiveCandidate,
+  type SensitiveCandidate,
+  type SensitiveJudgement,
+  type SensitivePolicyInfo,
+  type SensitiveProviderFacts,
+  type SensitiveRefusalReason,
+} from './sensitive';
+export {
+  recommendModels,
+  type RecommendationReasonKey,
+  type RecommendationSet,
+  type RecommendationTradeoffKey,
+  type TaskRecommendation,
+} from './recommend';
 export * from './prompts';

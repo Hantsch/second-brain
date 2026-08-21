@@ -11,12 +11,15 @@ import {
   ProviderRegistry,
   RoutingGateway,
   TASK_DEFINITIONS,
+  loadCatalogueWithLiveData,
+  recommendModels,
   suggestRouting,
 } from '@core/llm';
 import type { KeyStore as CoreKeyStore } from '@core/llm';
 import type { LlmGateway } from '@core/llm';
-import type { ProviderConfig, TaskKind } from '@shared/types';
+import type { ProviderConfig, RecommendationSet, TaskKind } from '@shared/types';
 import type { LlmBridge } from './contracts';
+import { scanCapacityVerdict } from './ipc/machine-scan';
 import { providerKeyId } from './secrets';
 import type { KeyStore } from './secrets';
 import type { Services } from './services';
@@ -86,8 +89,32 @@ export function createLlmBridge(services: Services): LlmBridge {
 
     suggestRouting: () => suggestRouting(providersOf(services)),
 
+    recommendModels: () => buildRecommendations(services),
+
     testTask: (task: TaskKind) => runTestTask(services, task),
   };
+}
+
+/**
+ * Assembles what `recommendModels` (`@core/llm`) needs: the live-enriched
+ * catalogue, the configured providers, the local models already known to be
+ * installed (from `ProviderConfig.models` — no extra `listModels()` round
+ * trip here), and this machine's capacity verdict.
+ */
+async function buildRecommendations(services: Services): Promise<RecommendationSet> {
+  const providers = providersOf(services);
+  const [catalogue, verdict] = await Promise.all([
+    loadCatalogueWithLiveData({}),
+    scanCapacityVerdict(),
+  ]);
+  // A disabled local runtime isn't actually reachable, so its models don't
+  // count as "installed" here — otherwise an entry only present on a
+  // switched-off runtime would be reported reachable when it can't
+  // currently be called.
+  const installedLocalModelIds = providers
+    .filter((provider) => provider.local && provider.enabled)
+    .flatMap((provider) => provider.models);
+  return recommendModels(catalogue, providers, installedLocalModelIds, verdict);
 }
 
 /** A short, real call: does the route work, and how long does it take? */

@@ -33,7 +33,11 @@ export interface LlmGateway {
 
 /** What a provider needs for a call. Model and access come from outside. */
 export interface ProviderCall {
-  /** Only for traceability and for the `FakeProvider` — real providers ignore this. */
+  /**
+   * For traceability, for the `FakeProvider` — and for privacy decisions a
+   * provider makes itself: the OpenAI-compatible provider reads the task's
+   * `sensitive` flag to enforce no-training on OpenRouter. Don't drop it.
+   */
   task: TaskKind;
   model: string;
   messages: ChatTurn[];

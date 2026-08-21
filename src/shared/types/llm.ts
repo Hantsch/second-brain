@@ -89,6 +89,10 @@ export interface TaskDefinition {
   hintKey: string;
   /** Recommended tier. */
   suggested: ModelTier;
+  /** Rough typical input/output token counts for this task, used to estimate cost per
+      run. A heuristic guess, not measured — see src/core/llm/tasks.ts for per-task
+      reasoning. */
+  typicalTokens: { in: number; out: number };
   /** Operates on sensitive, personal content — prefer a local model. */
   sensitive: boolean;
   /** Responds with streaming (chat-like). */
@@ -207,4 +211,70 @@ export interface MachineScanResult {
   facts: MachineFacts;
   verdict: CapacityVerdict;
   scannedAt: string;
+}
+
+/**
+ * Why this target was picked, or why nothing was picked. Closed set. Lives in
+ * `@shared/types` (not in `core/llm/recommend.ts`), so `src/shared/ipc.ts` —
+ * used by the renderer via preload — can type the `llm:recommendModels`
+ * channel without pulling in the rest of `core/llm`; only main may import and
+ * run `recommendModels` itself. Re-exported from `core/llm/recommend.ts` for
+ * that module's own callers' convenience.
+ *
+ * - `'best-fit-for-task'` — the pick's heuristic tier matches the task's
+ *   `suggested` tier exactly.
+ * - `'cheapest-reachable'` — no reachable candidate matched the suggested
+ *   tier, so the cheapest reachable one was picked instead.
+ * - `'only-local-option'` — every surviving candidate is a local model (there
+ *   was nothing cloud-based to compare against), and none matched the
+ *   suggested tier exactly either.
+ * - `'no-reachable-model'` — nothing on the catalogue is reachable on this
+ *   machine/configuration for this task.
+ * - `'sensitive-rule-no-qualifying-target'` — the task reads personal content
+ *   and every reachable candidate was refused by the sensitive-task rule
+ *   (see `sensitive.ts`).
+ */
+export type RecommendationReasonKey =
+  | 'best-fit-for-task'
+  | 'cheapest-reachable'
+  | 'only-local-option'
+  | 'no-reachable-model'
+  | 'sensitive-rule-no-qualifying-target';
+
+/**
+ * What the user gives up by taking the pick over an alternative. Deliberately
+ * a single generic key rather than a per-comparison taxonomy (cost vs.
+ * quality vs. privacy vs. speed): the story allows this simplification
+ * explicitly, and a closed set of one is still closed. Set whenever
+ * `alternatives` is non-empty; `null` when there is nothing to trade off.
+ */
+export type RecommendationTradeoffKey = 'cheaper-alternative-available';
+
+export interface TaskRecommendation {
+  task: TaskKind;
+  pick: ModelRef | null;
+  reasonKey: RecommendationReasonKey;
+  tradeoffKey: RecommendationTradeoffKey | null;
+  /** USD estimate for one run at the task's typical token counts, or `null`
+   *  for a local model or when a catalogue price is missing. Never guessed. */
+  costPerRun: number | null;
+  /** Carried for every row (not only sensitive ones) — simpler than a
+   *  sensitive-only branch, and the AC only requires it for sensitive rows. */
+  policySource: string | null;
+  policyReadAt: string | null;
+  /** Set when the pick is a local model not yet installed, but this
+   *  machine's capacity verdict says it can carry it (reachability's
+   *  `'needs-download'` status) — the renderer labels this "needs a download
+   *  of X GB" instead of a cost figure. `null` when the pick is already
+   *  installed or is a cloud model. */
+  needsDownloadGb: number | null;
+  /** Remaining surviving candidates, capped so the UI has a short swap list
+   *  rather than the whole catalogue. */
+  alternatives: ModelRef[];
+}
+
+export interface RecommendationSet {
+  catalogueGeneratedAt: string;
+  catalogueStale: boolean;
+  tasks: TaskRecommendation[];
 }

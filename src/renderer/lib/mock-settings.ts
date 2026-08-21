@@ -66,6 +66,7 @@ export const tasks: TaskDefinition[] = TASK_KINDS.map((kind) => ({
   labelKey: `task.${kind}.label`,
   hintKey: `task.${kind}.hint`,
   suggested: 'balanced',
+  typicalTokens: { in: 1000, out: 200 },
   sensitive: kind === 'journal-chat' || kind === 'classify-dump',
   streams: kind === 'journal-chat' || kind === 'query-answer',
   structured: false,

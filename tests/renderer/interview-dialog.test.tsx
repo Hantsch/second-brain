@@ -85,6 +85,7 @@ const TASKS: TaskDefinition[] = [
     labelKey: 'task.journal-chat.label',
     hintKey: 'task.journal-chat.hint',
     suggested: 'cheap',
+    typicalTokens: { in: 2500, out: 400 },
     sensitive: true,
     streams: true,
     structured: false,

@@ -104,3 +104,9 @@ second roadmap.
   timeouts degrading to "unknown", core's `judgeCapacity` turns facts into a heuristic
   capacity verdict, renderer assembles the plain-language sentence; passed clean-agent
   review with no fix cycle.
+- 019b — One recommended model per task, in plain language and in money · S06 · New "Model
+  recommendation" panel in the models tab: curated + live-enriched catalogue, reachability
+  filter over the 019a capacity verdict, a hard sensitive-task rule (local or `no-training`
+  only, `unknown` refused) with per-request OpenRouter enforcement, cost-per-run and
+  needs-download labelling; accept-row/accept-all commit through the existing routing writer.
+  Two clean-agent review-fix cycles, including a privacy-relevant reachability fix.

@@ -163,6 +163,7 @@ export const api = {
     suggestRouting: () => call('llm:suggestRouting'),
     testTask: (task: IpcRequest<'llm:testTask'>['task']) => call('llm:testTask', { task }),
     scanMachine: () => call('llm:scanMachine'),
+    recommendModels: () => call('llm:recommendModels'),
   },
   dashboard: {
     data: () => call('dashboard:data'),

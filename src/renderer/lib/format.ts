@@ -106,6 +106,17 @@ export function formatDuration(ms: number): string {
   return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
 }
 
+/** Tiny per-run cost estimate, e.g. $0.0012 — a normal 2-decimal currency
+    format would round it to $0.00 and hide the only digits that matter. */
+export function formatCostUsd(value: number, language: UiLanguage): string {
+  return new Intl.NumberFormat(locale(language), {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 4,
+  }).format(value);
+}
+
 /** Singular or plural via two keys — German and English both need them. */
 export function plural(count: number, oneKey: string, manyKey: string): string {
   return count === 1 ? t(oneKey) : t(manyKey, { count });

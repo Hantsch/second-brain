@@ -176,6 +176,7 @@ const TASKS: TaskDefinition[] = [
     labelKey: 'task.query-answer.label',
     hintKey: 'task.query-answer.hint',
     suggested: 'strong',
+    typicalTokens: { in: 3000, out: 500 },
     sensitive: false,
     streams: true,
     structured: false,

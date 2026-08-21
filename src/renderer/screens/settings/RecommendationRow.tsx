@@ -1,0 +1,133 @@
+/* One row of the recommendation list: target, reason, tradeoff, cost or
+   pending-download size, and — for a sensitive task with a pick — the
+   policy that backed it. Split out of RecommendationSection.tsx to keep
+   both files under the project's soft line limit.
+
+   `reasonKey`/`tradeoffKey` are a closed set of i18n keys (guardrail 7):
+   this file never invents a sentence, it only looks one up. */
+
+import type { ProviderConfig, TaskDefinition, TaskRecommendation, UiLanguage } from '@shared/types';
+import { Badge } from '../../atoms/Badge';
+import { Button } from '../../atoms/Button';
+import { describeRef } from '../../components/RoutingTable';
+import { useT, type Vars } from '../../i18n';
+import { formatCostUsd, formatDate } from '../../lib/format';
+
+export interface RecommendationRowProps {
+  row: TaskRecommendation;
+  task: TaskDefinition;
+  providers: readonly ProviderConfig[];
+  language: UiLanguage;
+  accepted: boolean;
+  busy: boolean;
+  onAccept: () => void;
+}
+
+function targetText(
+  row: TaskRecommendation,
+  providers: readonly ProviderConfig[],
+  t: (key: string, vars?: Vars) => string,
+): string {
+  if (row.pick === null) return t('settings.routing.noModel');
+  const name = describeRef(row.pick, providers);
+  if (row.needsDownloadGb !== null) {
+    return t('settings.recommend.needsDownload', { model: name, gb: row.needsDownloadGb });
+  }
+  return name;
+}
+
+/**
+ * A pick is only acceptable once it names a provider actually configured in
+ * this vault — a `needs-download` pick (nothing pulled yet, and possibly no
+ * runtime configured at all) carries `recommend.ts`'s documented placeholder
+ * `providerId` (the catalogue's `providerKind`, e.g. `'openai-compatible'`),
+ * which `llm:setRoute` rejects as `not-found`. Offering "accept" on a pick
+ * that can only fail would be a dead-end button, not a proposal (guardrail
+ * 2 still has to end in something that actually writes).
+ */
+export function isAcceptable(
+  row: TaskRecommendation,
+  providers: readonly ProviderConfig[],
+): boolean {
+  return row.pick !== null && providers.some((provider) => provider.id === row.pick?.providerId);
+}
+
+export function RecommendationRow({
+  row,
+  task,
+  providers,
+  language,
+  accepted,
+  busy,
+  onAccept,
+}: RecommendationRowProps) {
+  const t = useT();
+  const label = t(task.labelKey);
+  /* A sensitive row only shows a policy line once something was actually
+     picked under that policy — for the mandated-rule case (`pick: null`)
+     the reason sentence already says nothing qualified, so a policy line
+     would claim a source for a choice that never happened. */
+  const showPolicy = task.sensitive && row.pick !== null && row.policySource !== null;
+
+  return (
+    <li className="sb-recommend-row">
+      <div className="sb-recommend-head">
+        <span className="sb-routing-task">{label}</span>
+        {task.sensitive ? (
+          <Badge variant="warning" title={t('settings.routing.sensitive')}>
+            {t('settings.routing.sensitiveShort')}
+          </Badge>
+        ) : null}
+      </div>
+
+      <p className="sb-mono sb-recommend-target">{targetText(row, providers, t)}</p>
+
+      <p className="sb-routing-hint">{t(`settings.recommend.reason.${row.reasonKey}`)}</p>
+
+      {row.tradeoffKey ? (
+        <p className="sb-routing-hint">
+          {t(`settings.recommend.tradeoff.${row.tradeoffKey}`, {
+            alternatives: row.alternatives.map((ref) => describeRef(ref, providers)).join(', '),
+          })}
+        </p>
+      ) : null}
+
+      {row.costPerRun !== null ? (
+        <p className="sb-note-detail">
+          {t('settings.recommend.costEstimate', { cost: formatCostUsd(row.costPerRun, language) })}
+        </p>
+      ) : null}
+
+      {showPolicy ? (
+        <p className="sb-note-detail">
+          {t('settings.recommend.policy', {
+            source: row.policySource as string,
+            date: formatDate(row.policyReadAt, language),
+          })}
+        </p>
+      ) : null}
+
+      <div className="sb-setting-actions">
+        {isAcceptable(row, providers) ? (
+          <Button
+            size="sm"
+            variant={accepted ? 'ghost' : 'secondary'}
+            icon={accepted ? 'check' : undefined}
+            loading={busy}
+            disabled={accepted}
+            onClick={onAccept}
+            aria-label={t('settings.recommend.acceptAria', { task: label })}
+          >
+            {accepted ? t('settings.recommend.accepted') : t('settings.recommend.accept')}
+          </Button>
+        ) : row.pick !== null ? (
+          /* A real pick that names no configured provider yet (a
+             needs-download row with no runtime set up at all) — nothing to
+             accept until that provider exists, so say so instead of
+             offering a button that can only fail. */
+          <p className="sb-routing-hint">{t('settings.recommend.notYetSetUp')}</p>
+        ) : null}
+      </div>
+    </li>
+  );
+}

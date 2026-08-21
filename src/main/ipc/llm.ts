@@ -190,6 +190,13 @@ export function llmHandlers(services: Services): HandlerMap {
     },
 
     'llm:testTask': ({ task }) => services.requireLlm().testTask(task),
+
+    /* Only the recommendation. It's adopted only once the user confirms it
+       via `llm:setRoute`/`llm:setDefault` — same rule as `llm:suggestRouting`. */
+    'llm:recommendModels': async () => {
+      requireVaultSettings(services);
+      return services.requireLlm().recommendModels();
+    },
   });
 }
 

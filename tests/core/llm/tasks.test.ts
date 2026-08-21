@@ -32,6 +32,14 @@ describe('Aufgabenkatalog', () => {
     }
   });
 
+  it('hat für jede Aufgabe plausible typische Tokenzahlen', () => {
+    for (const task of TASK_DEFINITIONS) {
+      expect(task.typicalTokens).toBeDefined();
+      expect(task.typicalTokens.in).toBeGreaterThan(0);
+      expect(task.typicalTokens.out).toBeGreaterThan(0);
+    }
+  });
+
   it('markiert genau die persönlichen Aufgaben als sensibel', () => {
     expect(sensitiveTasks().sort()).toEqual(['classify-dump', 'extract-tasks', 'journal-chat']);
   });

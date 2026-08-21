@@ -170,4 +170,33 @@ export const enSettingsModels: Record<SettingsModelsKey, string> = {
   'settings.machine.fact.gpu': 'GPU',
   'settings.machine.fact.cpu': 'CPU cores',
   'settings.machine.fact.disk': 'Free disk space',
+
+  'settings.recommend.title': 'Model recommendation',
+  'settings.recommend.action': 'Get recommendations',
+  'settings.recommend.note':
+    'One suggestion per task, from the catalogue of models you can reach — nothing is taken over until you agree.',
+  'settings.recommend.idle':
+    'No recommendation fetched yet. It proposes a reachable model for every task, with a reason and a cost.',
+  'settings.recommend.stale':
+    'Prices may be out of date — they come from the bundled catalogue, dated {date}.',
+  'settings.recommend.acceptAll': 'Accept all',
+  'settings.recommend.discard': 'Discard',
+  'settings.recommend.accept': 'Accept',
+  'settings.recommend.accepted': 'Accepted',
+  'settings.recommend.acceptAria': 'Accept the recommendation for {task}',
+  'settings.recommend.needsDownload': '{model} — needs a download of {gb} GB',
+  'settings.recommend.notYetSetUp': 'Set up a matching provider to accept this one.',
+  'settings.recommend.costEstimate': '~{cost} per run (estimate)',
+  'settings.recommend.policy': 'Policy read from {source}, dated {date}.',
+  'settings.recommend.reason.best-fit-for-task': "Fits this task's typical size and cost.",
+  'settings.recommend.reason.cheapest-reachable':
+    "The matching size wasn't reachable — this is the cheapest reachable alternative.",
+  'settings.recommend.reason.only-local-option':
+    'Only a local model is reachable for this task, with nothing to compare it against.',
+  'settings.recommend.reason.no-reachable-model':
+    'No model you can currently reach fits this task.',
+  'settings.recommend.reason.sensitive-rule-no-qualifying-target':
+    'This task reads personal content, and no reachable model meets the rule for it — the task stays without a model.',
+  'settings.recommend.tradeoff.cheaper-alternative-available':
+    'A cheaper or local alternative exists: {alternatives}.',
 };

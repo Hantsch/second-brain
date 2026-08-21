@@ -16,6 +16,7 @@ import type {
   ProviderConfig,
   ProviderPreset,
   RawSource,
+  RecommendationSet,
   Routing,
   SearchHit,
   SearchQuery,
@@ -116,6 +117,7 @@ export interface LlmBridge {
     error?: string;
   }>;
   suggestRouting(): Routing | Promise<Routing>;
+  recommendModels(): RecommendationSet | Promise<RecommendationSet>;
 }
 
 /** Watches the vault (subset of `core/vault/watch`). */

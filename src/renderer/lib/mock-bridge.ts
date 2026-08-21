@@ -4,13 +4,138 @@
    the type below enforces that at compile time. */
 
 import type { IpcChannel, IpcRequest, IpcResponse } from '@shared/ipc';
-import type { RawSource, WriteResult } from '@shared/types';
+import type { RawSource, RecommendationSet, WriteResult } from '@shared/types';
 import type { SbBridge } from './bridge';
 import { encodeIpcError } from './ipc-error';
 import * as fx from './mock-fixtures';
 import * as st from './mock-settings';
 
 const writeResult: WriteResult = { path: fx.doc.path, hash: 'demo-hash', created: false };
+
+/* Ten tasks — one per `TASK_KINDS` entry, in `mock-settings.ts`'s order —
+   covering every reason and tradeoff key at least once: a sensitive task
+   with nothing reachable (`classify-dump`), a sensitive task with a local
+   pick and a policy citation (`journal-chat`), a needs-download local pick
+   (`wiki-ingest`), priced cloud picks with and without a cheaper/local
+   alternative, and a non-sensitive task with nothing reachable
+   (`project-status`). Exercises `RecommendationSection` meaningfully instead
+   of the empty task list D6-D8 shipped with. */
+const recommendationSet: RecommendationSet = {
+  catalogueGeneratedAt: fx.NOW,
+  catalogueStale: true,
+  tasks: [
+    {
+      task: 'classify-dump',
+      pick: null,
+      reasonKey: 'sensitive-rule-no-qualifying-target',
+      tradeoffKey: null,
+      costPerRun: null,
+      policySource: null,
+      policyReadAt: null,
+      needsDownloadGb: null,
+      alternatives: [],
+    },
+    {
+      task: 'title-tags',
+      pick: { providerId: 'ollama-1', model: 'llama3.1:8b' },
+      reasonKey: 'best-fit-for-task',
+      tradeoffKey: null,
+      costPerRun: null,
+      policySource: null,
+      policyReadAt: null,
+      needsDownloadGb: null,
+      alternatives: [],
+    },
+    {
+      task: 'extract-tasks',
+      pick: { providerId: 'openai', model: 'gpt-4o-mini' },
+      reasonKey: 'cheapest-reachable',
+      tradeoffKey: 'cheaper-alternative-available',
+      costPerRun: 0.0012,
+      policySource: null,
+      policyReadAt: null,
+      needsDownloadGb: null,
+      alternatives: [{ providerId: 'ollama-1', model: 'llama3.1:8b' }],
+    },
+    {
+      task: 'summarize-source',
+      pick: { providerId: 'anthropic', model: 'claude-3-5-haiku' },
+      reasonKey: 'best-fit-for-task',
+      tradeoffKey: null,
+      costPerRun: 0.0034,
+      policySource: null,
+      policyReadAt: null,
+      needsDownloadGb: null,
+      alternatives: [],
+    },
+    {
+      task: 'wiki-ingest',
+      pick: { providerId: 'openai-compatible', model: 'qwen2.5:32b' },
+      reasonKey: 'only-local-option',
+      tradeoffKey: null,
+      costPerRun: null,
+      policySource: null,
+      policyReadAt: null,
+      needsDownloadGb: 18,
+      alternatives: [],
+    },
+    {
+      task: 'query-answer',
+      pick: { providerId: 'anthropic', model: 'claude-3-5-sonnet' },
+      reasonKey: 'best-fit-for-task',
+      tradeoffKey: 'cheaper-alternative-available',
+      costPerRun: 0.021,
+      policySource: null,
+      policyReadAt: null,
+      needsDownloadGb: null,
+      alternatives: [{ providerId: 'ollama-1', model: 'qwen2.5:32b' }],
+    },
+    {
+      task: 'query-rerank',
+      pick: { providerId: 'ollama-1', model: 'llama3.1:8b' },
+      reasonKey: 'best-fit-for-task',
+      tradeoffKey: null,
+      costPerRun: null,
+      policySource: null,
+      policyReadAt: null,
+      needsDownloadGb: null,
+      alternatives: [],
+    },
+    {
+      task: 'journal-chat',
+      pick: { providerId: 'ollama-1', model: 'llama3.1:8b' },
+      reasonKey: 'only-local-option',
+      tradeoffKey: null,
+      costPerRun: null,
+      policySource: 'vault settings.json: llm.sensitivePolicy',
+      policyReadAt: fx.NOW,
+      needsDownloadGb: null,
+      alternatives: [],
+    },
+    {
+      task: 'project-status',
+      pick: null,
+      reasonKey: 'no-reachable-model',
+      tradeoffKey: null,
+      costPerRun: null,
+      policySource: null,
+      policyReadAt: null,
+      needsDownloadGb: null,
+      alternatives: [],
+    },
+    {
+      task: 'gardener-audit',
+      pick: { providerId: 'openai', model: 'gpt-4o-mini' },
+      reasonKey: 'cheapest-reachable',
+      tradeoffKey: 'cheaper-alternative-available',
+      costPerRun: 0.0009,
+      policySource: null,
+      policyReadAt: null,
+      needsDownloadGb: null,
+      alternatives: [{ providerId: 'ollama-1', model: 'llama3.1:8b' }],
+    },
+  ],
+};
 
 const rawSource: RawSource = {
   path: 'raw/youtube/xOFkpf9KgKg',
@@ -300,6 +425,7 @@ const RESPONSES: MockResponses = {
     },
     scannedAt: fx.NOW,
   }),
+  'llm:recommendModels': () => recommendationSet,
 
   'dashboard:data': () => ({
     reminders: [fx.reminder],

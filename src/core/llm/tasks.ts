@@ -25,6 +25,7 @@ export const TASK_KINDS: readonly TaskKind[] = [
 function definition(
   kind: TaskKind,
   suggested: ModelTier,
+  typicalTokens: { in: number; out: number },
   flags: { sensitive?: boolean; streams?: boolean; structured?: boolean } = {},
 ): TaskDefinition {
   return {
@@ -32,6 +33,7 @@ function definition(
     labelKey: `task.${kind}.label`,
     hintKey: `task.${kind}.hint`,
     suggested,
+    typicalTokens,
     sensitive: flags.sensitive === true,
     streams: flags.streams === true,
     structured: flags.structured === true,
@@ -43,28 +45,58 @@ function definition(
  * - `sensitive`: operates on personal content → prefer local models.
  * - `streams`: chat-like, the answer streams into the UI piece by piece.
  * - `structured`: the answer is JSON against a schema, not prose.
+ *
+ * `typicalTokens` are rough guesses based on each task's shape (chat vs.
+ * one-shot, short vs. long input/output) — not measured. They only need to be
+ * plausible enough for a cost-per-run estimate in the recommendation screen.
+ * Recalibrate once real usage logging exists (see 019b's out-of-scope note on
+ * a usage log).
  */
 export const TASK_DEFINITIONS: readonly TaskDefinition[] = [
-  // One sentence of output — a large model would be wasteful here.
-  definition('title-tags', 'cheap', { structured: true }),
-  // Personal content, a simple decision: small and local.
-  definition('classify-dump', 'cheap', { sensitive: true, structured: true }),
-  // Structured extraction from personal text.
-  definition('extract-tasks', 'cheap', { sensitive: true, structured: true }),
-  // Must merge citations correctly and streams into the Ask screen.
-  definition('query-answer', 'balanced', { streams: true }),
-  // Just sorting: a short list of IDs, no prose.
-  definition('query-rerank', 'cheap', { structured: true }),
-  // Longer, but straightforward.
-  definition('summarize-source', 'balanced'),
-  // Linking, spotting contradictions, changing the vault's contents.
-  definition('wiki-ingest', 'strong'),
-  // The most sensitive thing here — and a conversation.
-  definition('journal-chat', 'balanced', { sensitive: true, streams: true }),
-  // Judgment on a project's history, presented as a proposal.
-  definition('project-status', 'balanced', { structured: true }),
-  // Judgment over the entire vault.
-  definition('gardener-audit', 'strong', { structured: true }),
+  // One sentence of output — a large model would be wasteful here. Input is a
+  // short dump text, output a handful of tags/title words.
+  definition('title-tags', 'cheap', { in: 500, out: 60 }, { structured: true }),
+  // Personal content, a simple decision: small and local. Input is a dump,
+  // output a compact filing verdict.
+  definition(
+    'classify-dump',
+    'cheap',
+    { in: 600, out: 120 },
+    { sensitive: true, structured: true },
+  ),
+  // Structured extraction from personal text — input a dump/note, output a
+  // short list of todo/deadline/waiting-on entries.
+  definition(
+    'extract-tasks',
+    'cheap',
+    { in: 700, out: 200 },
+    { sensitive: true, structured: true },
+  ),
+  // Must merge citations correctly and streams into the Ask screen — the
+  // input carries several retrieved snippets, the output a full answer.
+  definition('query-answer', 'balanced', { in: 3000, out: 500 }, { streams: true }),
+  // Just sorting: a short list of search-hit IDs in, an ordered list out.
+  definition('query-rerank', 'cheap', { in: 800, out: 40 }, { structured: true }),
+  // Longer, but straightforward — a whole source transcript/document in, a
+  // condensed wiki source page out.
+  definition('summarize-source', 'balanced', { in: 6000, out: 800 }),
+  // Linking, spotting contradictions, changing the vault's contents — several
+  // existing wiki pages plus new material in, edited pages out.
+  definition('wiki-ingest', 'strong', { in: 5000, out: 1500 }),
+  // The most sensitive thing here — and a conversation: growing chat history
+  // in, a conversational reply out.
+  definition(
+    'journal-chat',
+    'balanced',
+    { in: 2500, out: 400 },
+    { sensitive: true, streams: true },
+  ),
+  // Judgment on a project's history, presented as a proposal — a project's
+  // notes/todos in, a structured status verdict out.
+  definition('project-status', 'balanced', { in: 3000, out: 400 }, { structured: true }),
+  // Judgment over the entire vault — the largest input here by far, a report
+  // of findings out.
+  definition('gardener-audit', 'strong', { in: 15000, out: 1500 }, { structured: true }),
 ];
 
 const BY_KIND = new Map<TaskKind, TaskDefinition>(TASK_DEFINITIONS.map((t) => [t.kind, t]));

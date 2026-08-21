@@ -1062,6 +1062,21 @@ async function shootDeepStates(session, shooter, log, skipped) {
         );
       }
     }
+
+    /* Der Modelle-Tab trägt seit 019b die Modellempfehlung unter Anbietern
+       und Routing — ohne die Aufnahme am Ende wäre dieses ganze Panel in
+       keinem Bild. */
+    if (state.id === 'settings-models') {
+      if (await scrollToEnd(session.page)) {
+        await settle(session.page);
+        log(
+          `  ${'models bis zum Ende'.padEnd(18)} → ${await shooter.shot('settings-models-bottom', session.page)}`,
+        );
+        await scrollToStart(session.page);
+      } else {
+        skipped.push('settings-models: der Tab rollt nicht — die Modellempfehlung blieb ungeprüft');
+      }
+    }
   }
 }
 
