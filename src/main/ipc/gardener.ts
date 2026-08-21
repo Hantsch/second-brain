@@ -28,15 +28,21 @@ import {
   supersede,
   undoFix,
 } from '@core/gardener';
+import { shiftDay } from '@core/overview';
 import type { GardenerFinding, OrphanTargets } from '@shared/types';
 import type { HandlerMap } from './registry';
 import { defineHandlers, fail } from './registry';
-import { gardenerIndex, gardenerStateFor, runWithProgress } from './gardener-deps';
+import { gardenerIndex, gardenerStateFor, gardenerToday, runWithProgress } from './gardener-deps';
 import { docLanguage, settle, wikiIndex, wikiStore } from './wiki-bridge';
 import { gardenerLabels } from '../gardener-labels';
 import { GARDENER_STATE_FILE } from '../gardener-state';
 import type { GardenerState } from '../gardener-state';
 import type { Services } from '../services';
+
+/** Snoozing for longer than a year means: forgetting. That's not snoozing.
+    Mirrors `MAX_SNOOZE_DAYS` in `ipc/reminders.ts` — the same bound, for the
+    same reason, on a different kind of thing being put away. */
+const MAX_SNOOZE_DAYS = 365;
 
 /* One run per process. That's all that's needed: there's one open vault, and
    two simultaneous runs over the same content would produce the same report
@@ -111,7 +117,7 @@ function recordedHash(findings: readonly GardenerFinding[], path: string): strin
  */
 async function assertActionable(services: Services, ...paths: readonly string[]): Promise<void> {
   const state = await gardenerStateFor(services);
-  const findings = state.present()?.findings ?? [];
+  const findings = state.present(gardenerToday())?.findings ?? [];
   for (const path of paths) {
     const named = findings.filter((finding) => finding.paths.includes(path));
     if (named.length === 0) throw fail('not-found', `„${path}" steht in keinem aktuellen Befund.`);
@@ -150,7 +156,7 @@ interface OrphanPick {
  */
 async function orphanPick(services: Services, findingId: string): Promise<OrphanPick> {
   const state = await gardenerStateFor(services);
-  const findings = state.present()?.findings ?? [];
+  const findings = state.present(gardenerToday())?.findings ?? [];
   const finding = findings.find((entry) => entry.id === findingId);
   if (finding === undefined) throw fail('not-found', 'diesen Befund gibt es nicht');
   if (finding.kind !== 'orphan' || finding.fix !== null) {
@@ -174,7 +180,7 @@ async function orphanPick(services: Services, findingId: string): Promise<Orphan
 
 export function gardenerHandlers(services: Services): HandlerMap {
   return defineHandlers({
-    'gardener:report': async () => (await gardenerStateFor(services)).present(),
+    'gardener:report': async () => (await gardenerStateFor(services)).present(gardenerToday()),
 
     'gardener:run': async ({ useLlm }) => {
       if (running !== null) throw fail('invalid', 'es läuft schon ein Pflegelauf');
@@ -191,7 +197,7 @@ export function gardenerHandlers(services: Services): HandlerMap {
           onProgress: (progress) => services.sendEvent('event:gardener-progress', progress),
         });
         await state.save(run);
-        const report = state.present();
+        const report = state.present(gardenerToday());
         if (report === null) throw fail('io', 'der Bericht ließ sich nicht ablegen');
         return report;
       } finally {
@@ -225,6 +231,33 @@ export function gardenerHandlers(services: Services): HandlerMap {
       const state = await gardenerStateFor(services);
       if (!(await state.undismiss(id))) {
         throw fail('not-found', 'dieser Befund ist nicht ausgeblendet');
+      }
+      wake(services);
+    },
+
+    /* Mirrors `reminders:snooze`: the same bound, the same day arithmetic, the
+       same stance on an unknown id — a button that reports success and does
+       nothing would be worse than a missing one. */
+    'gardener:snooze': async ({ id, days }) => {
+      const count = Math.trunc(Number(days));
+      if (!Number.isFinite(count) || count < 1 || count > MAX_SNOOZE_DAYS) {
+        throw fail('invalid', `days: erwartet 1 bis ${MAX_SNOOZE_DAYS}`);
+      }
+      const today = gardenerToday();
+      const state = await gardenerStateFor(services);
+      if (!(await state.snooze(id, shiftDay(today, count)))) {
+        throw fail('not-found', 'diesen Befund gibt es nicht');
+      }
+      wake(services);
+    },
+
+    /* The reverse path — mirrors `reminders:unsnooze`. Setting a snooze to
+       "today" wouldn't be one: it only nags again once it has expired. So the
+       entry is removed instead; without one, there's nothing to undo. */
+    'gardener:unsnooze': async ({ id }) => {
+      const state = await gardenerStateFor(services);
+      if (!(await state.unsnooze(id))) {
+        throw fail('not-found', 'dieser Befund ruht nicht');
       }
       wake(services);
     },

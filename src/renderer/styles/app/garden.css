@@ -140,6 +140,15 @@
   color: var(--text-faint);
   line-height: var(--leading-snug);
 }
+.sb-ghealth-hidden {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+.sb-ghealth-hidden .sb-ghealth-note {
+  margin: 0;
+}
 .sb-ghealth-stamp {
   display: flex;
   align-items: center;

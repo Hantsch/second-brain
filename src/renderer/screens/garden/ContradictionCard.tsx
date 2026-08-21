@@ -47,6 +47,8 @@ export interface ContradictionCardProps {
   busy?: boolean;
   onFix: (finding: GardenerFinding) => void;
   onDismiss: (finding: GardenerFinding) => void;
+  onSnooze: (finding: GardenerFinding, days: number, until: string) => void;
+  onRecheck: (finding: GardenerFinding) => void;
   onOpenPath: (path: string) => void;
   onOpenFile: (path: string) => void;
   /** Records the supersede relationship. The caller writes and reports it. */
@@ -113,6 +115,8 @@ export function ContradictionCard({
   busy = false,
   onFix,
   onDismiss,
+  onSnooze,
+  onRecheck,
   onOpenPath,
   onOpenFile,
   onSupersede,
@@ -148,6 +152,8 @@ export function ContradictionCard({
       busy={busy}
       onFix={onFix}
       onDismiss={onDismiss}
+      onSnooze={onSnooze}
+      onRecheck={onRecheck}
       onOpenPath={onOpenPath}
       onOpenFile={onOpenFile}
       extraActions={

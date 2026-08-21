@@ -28,6 +28,11 @@ export const enGarden = {
   'garden.health.ranAt': 'Last checked',
   'garden.health.withModel': 'interpreted with a model',
   'garden.health.withoutModel': 'without a model, machine checks only',
+  'garden.health.hiddenOne':
+    '1 result is excluded from this score: {dismissed} marked as not a problem, {snoozed} not now.',
+  'garden.health.hidden':
+    '{total} results are excluded from this score: {dismissed} marked as not a problem, {snoozed} not now.',
+  'garden.health.showHidden': 'Show excluded results',
 
   // ── Advice ────────────────────────────────────────────────────────────────
   'garden.advice.label': 'What to do next',
@@ -55,12 +60,18 @@ export const enGarden = {
     'Checked: wiki pages and catalogues, raw sources, dumps in the inbox, and projects without a next step.',
   'garden.findings.filtered': 'No result matches this filter.',
   'garden.checkedAt': 'Last checked: {when}',
+  'garden.findings.hiddenOne': '1 hidden',
+  'garden.findings.hidden': '{count} hidden',
 
   // ── Filter ────────────────────────────────────────────────────────────────
   'garden.filter.label': 'Filter results',
   'garden.filter.kind': 'Kind',
   'garden.filter.module': 'Module',
   'garden.filter.severity': 'Weight',
+  'garden.filter.state': 'Status',
+  'garden.filter.stateOpen': 'Open',
+  'garden.filter.stateDismissed': 'Not a problem',
+  'garden.filter.stateSnoozed': 'Not now',
   'garden.filter.all': 'All',
   'garden.filter.noModule': 'Without a module',
   'garden.filter.reset': 'Reset the filter',
@@ -107,8 +118,16 @@ export const enGarden = {
   'garden.card.openThis': 'Open “{path}”',
   'garden.card.preview': 'What gets written to {file}:',
   'garden.card.previewNothing': 'Writes nothing. Only opens where the work continues.',
-  'garden.card.dismiss': 'Fine as it is',
-  'garden.card.dismissed': 'Fine as it is. The result no longer counts against the health score.',
+  'garden.card.noFix': 'Nothing here can be put right on its own. The ways out are below.',
+  'garden.card.dismiss': 'This is not a problem',
+  'garden.card.dismissed': 'Not a problem. The result no longer counts against the health score.',
+  'garden.card.handled': 'I dealt with it in the files',
+  'garden.card.recheckGone': 'Checked again: the result is gone.',
+  'garden.card.recheckStill':
+    'Checked again: the result is still there. Nothing about it changed in the files.',
+  'garden.card.snooze': 'Not now: “{title}”',
+  'garden.card.snoozed': 'Not now. The result comes back on {date}.',
+  'garden.card.unsnoozed': 'The result counts again.',
   'garden.card.undismiss': 'Show it again',
   'garden.card.written': 'Written: {file}',
   'garden.card.discarded': '“{file}” is now in the trash.',
@@ -119,6 +138,10 @@ export const enGarden = {
   'garden.card.opened': 'Opened: {path}',
   'garden.card.alsoOpen': 'The second file: {path}',
   'garden.card.openSecond': 'Open the second file',
+
+  // ── Hidden ────────────────────────────────────────────────────────────────
+  'garden.hidden.dismissed': 'This is not a problem.',
+  'garden.hidden.snoozed': 'Comes back on {date}.',
 
   // ── Contradiction ─────────────────────────────────────────────────────────
   'garden.contradiction.never': 'Never resolved automatically: both versions stay.',

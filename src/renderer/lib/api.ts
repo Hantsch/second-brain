@@ -191,6 +191,8 @@ export const api = {
     cancel: () => call('gardener:cancel'),
     dismiss: (id: string) => call('gardener:dismiss', { id }),
     undismiss: (id: string) => call('gardener:undismiss', { id }),
+    snooze: (id: string, days: number) => call('gardener:snooze', { id, days }),
+    unsnooze: (id: string) => call('gardener:unsnooze', { id }),
     applyFix: (finding: IpcRequest<'gardener:applyFix'>['finding']) =>
       call('gardener:applyFix', { finding }),
     undoFix: (undoToken: string) => call('gardener:undoFix', { undoToken }),

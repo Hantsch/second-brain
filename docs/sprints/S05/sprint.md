@@ -21,7 +21,7 @@ along in the same sprint: the journal notices what I announced and never followe
 - [x] 014 — The maintenance run reports findings, not results
 - [x] 015 — A near-duplicate can be resolved, not only compared
 - [x] 016 — An orphaned page can be linked where I say, not only where it is obvious
-- [ ] 017 — A finding says how it ends — and "looks fine" stays reversible
+- [x] 017 — A finding says how it ends — and "looks fine" stays reversible
 - [ ] 020 — Journal — announced and never followed up
 
 ## Notes

@@ -21,6 +21,7 @@
 
 import { CHECKS, auditFindings, buildContext, sortFindings, vaultSize } from '@core/gardener';
 import type { GardenerDeps, GardenerIndexView } from '@core/gardener';
+import { isoDay } from '@core/vault/paths';
 import type { DocLanguage, GardenerSettings, UiLanguage } from '@shared/types';
 import { fail } from './errors';
 import { docLanguage, replyLanguage } from './wiki-bridge';
@@ -56,9 +57,18 @@ export function gardenerIndex(services: Services): GardenerIndexView {
   return index;
 }
 
+/**
+ * The calendar day the maintenance state is read against: a snooze runs until a
+ * day, not until a timestamp. Read from the clock here rather than taken from a
+ * caller — when a finding comes back is not a parameter of the request.
+ */
+export function gardenerToday(): string {
+  return isoDay(new Date());
+}
+
 /** This vault's maintenance state, from `.secondbrain/gardener.json`. */
 export function gardenerStateFor(services: Services): Promise<GardenerState> {
-  return gardenerState(services.requireVaultRoot());
+  return gardenerState(services.requireVaultRoot(), gardenerToday());
 }
 
 /** The maintenance settings of the open vault, as far as they're set. */
@@ -151,18 +161,21 @@ export async function runWithProgress(
     done += 1;
   }
 
+  /* Everything this run re-derived. Kept separately from `findings`, because a
+     candidate the audit rejects is still one the deterministic check produced
+     again — the rejection says "don't show it now", not "the vault condition is
+     gone". Only the second would justify forgetting a user decision, so
+     `save` prunes against this list (see `gardener-state.ts`). */
+  const considered = [...deterministic, ...(audit?.contradictions ?? [])];
   const rejected = new Set(audit?.rejected ?? []);
-  const findings = sortFindings(
-    [...deterministic, ...(audit?.contradictions ?? [])].filter(
-      (finding) => !rejected.has(finding.id),
-    ),
-  );
+  const findings = sortFindings(considered.filter((finding) => !rejected.has(finding.id)));
   options.onProgress?.({ phase: 'done', check: null, done, total, running: false });
 
   return {
     ranAt: ctx.ranAt,
     usedLlm: audit?.usedLlm ?? false,
     findings,
+    consideredIds: considered.map((finding) => finding.id),
     advice: audit?.advice ?? [],
     size: vaultSize(run.index),
   };

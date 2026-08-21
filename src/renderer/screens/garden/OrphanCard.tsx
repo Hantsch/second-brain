@@ -17,7 +17,7 @@
  *
  * The write itself (`gardener:linkOrphan`) is not this card's job: like
  * `NearDuplicateCard`'s `onSupersede`, the card only reports the write it
- * wants through `onLink`; `useGardenOutcome.ts` owns the mutation and turns
+ * wants through `onLink`; `useFindingActions.ts` owns the mutation and turns
  * the result into an outcome-strip entry with undo. The read
  * (`orphanTargets`) is different — nothing depends on it being undoable or
  * shared across cards, so this card fetches it itself, the same way
@@ -63,6 +63,8 @@ export interface OrphanCardProps {
   busy?: boolean;
   onFix: (finding: GardenerFinding) => void;
   onDismiss: (finding: GardenerFinding) => void;
+  onSnooze: (finding: GardenerFinding, days: number, until: string) => void;
+  onRecheck: (finding: GardenerFinding) => void;
   onOpenPath: (path: string) => void;
   onOpenFile: (path: string) => void;
   /** Reports the pick to write. The caller writes and reports it, same split
@@ -135,6 +137,8 @@ export function OrphanCard({
   busy = false,
   onFix,
   onDismiss,
+  onSnooze,
+  onRecheck,
   onOpenPath,
   onOpenFile,
   onLink,
@@ -177,6 +181,8 @@ export function OrphanCard({
       busy={busy}
       onFix={onFix}
       onDismiss={onDismiss}
+      onSnooze={onSnooze}
+      onRecheck={onRecheck}
       onOpenPath={onOpenPath}
       onOpenFile={onOpenFile}
       extraActions={

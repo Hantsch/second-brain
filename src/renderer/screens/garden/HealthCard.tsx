@@ -16,12 +16,29 @@
    from the breakdown, with a note that it was derived that way
    (`advice.ts`). */
 
-import type { GardenerReport } from '@shared/types';
+/* 017 D5: hidden findings (dismissed or snoozed) don't count toward the score
+   — `present()` in `gardener-state.ts` already excludes them. But a score
+   that looks perfect while something was put away would be a quiet lie, so
+   this card names what it left out: the total and the split, plus a way to
+   go look at them. `garden.health.perfect` ("nothing pulls the score down")
+   must not render in that case, even when the visible score is 100. */
+
+import type { GardenerHiddenFinding, GardenerReport } from '@shared/types';
+import { Button } from '../../atoms/Button';
 import { Card } from '../../atoms/Card';
 import { HealthMeter } from '../../components/HealthMeter';
 import { useLanguage, useT } from '../../i18n';
 import { formatDate, plural } from '../../lib/format';
 import { adviceFor } from './advice';
+
+/** Total plus the split, worded as one sentence — never a bare count. */
+function hiddenNote(hidden: readonly GardenerHiddenFinding[], t: ReturnType<typeof useT>): string {
+  const dismissed = hidden.filter((entry) => entry.state === 'dismissed').length;
+  const snoozed = hidden.filter((entry) => entry.state === 'snoozed').length;
+  return hidden.length === 1
+    ? t('garden.health.hiddenOne', { dismissed, snoozed })
+    : t('garden.health.hidden', { total: hidden.length, dismissed, snoozed });
+}
 
 /** Timestamp in mono: date plus time, without seconds. */
 function stamp(iso: string, language: 'de' | 'en'): string {
@@ -36,14 +53,19 @@ function stamp(iso: string, language: 'de' | 'en'): string {
 
 export interface HealthCardProps {
   report: GardenerReport;
+  /** Switches the findings filter to reveal what the score left out. Absent
+      when there is nothing hidden — the button then never renders. */
+  onShowHidden?: () => void;
 }
 
-export function HealthCard({ report }: HealthCardProps) {
+export function HealthCard({ report, onShowHidden }: HealthCardProps) {
   const t = useT();
   const language = useLanguage();
   const known = report.healthKnown !== false;
   const contributions = report.healthContributions ?? [];
   const lost = contributions.reduce((sum, entry) => sum + entry.points, 0);
+  const hidden = report.hidden ?? [];
+  const hasHidden = hidden.length > 0;
   const advice = adviceFor(report);
 
   return (
@@ -55,9 +77,9 @@ export function HealthCard({ report }: HealthCardProps) {
           <span className="gs-overline">{t('garden.health.why')}</span>
           {!known ? (
             <p className="sb-ghealth-note">{t('garden.health.noStock')}</p>
-          ) : contributions.length === 0 ? (
+          ) : contributions.length === 0 && !hasHidden ? (
             <p className="sb-ghealth-note">{t('garden.health.perfect')}</p>
-          ) : (
+          ) : contributions.length === 0 ? null : (
             <>
               <ul className="sb-ghealth-list">
                 {contributions.map((entry) => (
@@ -78,6 +100,14 @@ export function HealthCard({ report }: HealthCardProps) {
               <p className="sb-ghealth-note">{t('garden.health.lost', { count: lost })}</p>
             </>
           )}
+          {known && hasHidden ? (
+            <div className="sb-ghealth-hidden">
+              <p className="sb-ghealth-note">{hiddenNote(hidden, t)}</p>
+              <Button variant="ghost" size="sm" onClick={onShowHidden}>
+                {t('garden.health.showHidden')}
+              </Button>
+            </div>
+          ) : null}
         </div>
       </div>
 

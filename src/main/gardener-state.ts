@@ -1,5 +1,6 @@
-/* The last maintenance report and the set of "fine as is" entries.
-   Both live in `<vault>/.secondbrain/gardener.json` — not in the
+/* The last maintenance report and the decisions the user made about it —
+   "fine as is" and "not now, ask me again on <day>".
+   All of it lives in `<vault>/.secondbrain/gardener.json` — not in the
    vault settings and not in the search index.
 
    Why a dedicated file:
@@ -16,15 +17,16 @@
      claim a 100. That's the honest loss.
 
    The report is stored **raw**: all findings of the run, including ones later
-   dismissed, plus the size of the stock at the time of the run. What the
-   screen sees is only produced in `present()` — filtered and with the health
-   score recalculated. Only this way does "fine as is" stay reversible without
-   checking again, and only this way does the health score always match the
-   list shown next to it. */
+   dismissed or snoozed, plus the size of the stock at the time of the run.
+   What the screen sees is only produced in `present(today)` — split into open
+   and hidden, and with the health score recalculated over the open list. Only
+   this way do "fine as is" and a snooze stay reversible without checking
+   again, and only this way does the health score always match the list shown
+   next to it. */
 
 import { join } from 'node:path';
-import { healthScore } from '@core/gardener';
-import type { GardenerFinding, GardenerReport } from '@shared/types';
+import { LLM_ONLY_KINDS, healthScore, kindOf } from '@core/gardener';
+import type { GardenerFinding, GardenerHiddenFinding, GardenerReport } from '@shared/types';
 import { readJson, writeJsonAtomic } from './fs-json';
 
 /** Vault-relative location. Also documented in docs/VAULT-FORMAT.md. */
@@ -38,6 +40,19 @@ export interface StoredRun {
   usedLlm: boolean;
   /** All findings of the run, unfiltered. */
   findings: GardenerFinding[];
+  /**
+   * The IDs the run **re-derived**, before the model's audit dropped any of
+   * them: the deterministic candidates plus the contradictions the model named.
+   *
+   * Why this exists next to `findings`: for `near-duplicate` and
+   * `missing-page` the audit may reject a candidate the deterministic check
+   * produced again unchanged. That rejection is the model's opinion about what
+   * to *show* this run — it is not evidence that the vault condition is gone,
+   * so it must not delete the user's decision about it (`save`). Missing or
+   * empty — a file written before this field existed — means: fall back to
+   * `findings`, exactly the behaviour from before.
+   */
+  consideredIds?: string[];
   advice: string[];
   /** `vaultSize` at the time of the run — the reference size for health. */
   size: number;
@@ -55,6 +70,12 @@ interface StoredGardener {
   /** IDs the user has marked as "fine as is". */
   dismissed: string[];
   /**
+   * Finding ID → calendar day from which it counts again (ISO). The same shape
+   * and the same cleanup as the reminder snoozes in `overview-state.ts`: a day
+   * that has passed is not a snooze anymore, so it doesn't stay in the file.
+   */
+  snoozed: Record<string, string>;
+  /**
    * Findings a fix has written. They stay in the run and are only hidden —
    * that way `undoFix` can bring them back without checking again. A new run
    * clears the list: then what's in the files is what counts.
@@ -63,7 +84,7 @@ interface StoredGardener {
 }
 
 function empty(): StoredGardener {
-  return { version: GARDENER_STATE_VERSION, run: null, dismissed: [], fixed: [] };
+  return { version: GARDENER_STATE_VERSION, run: null, dismissed: [], snoozed: {}, fixed: [] };
 }
 
 function isFinding(value: unknown): value is GardenerFinding {
@@ -82,6 +103,16 @@ function readStrings(value: unknown): string[] {
   return Array.isArray(value)
     ? value.filter((entry): entry is string => typeof entry === 'string')
     : [];
+}
+
+/** Only entries that look like `YYYY-MM-DD` — anything else isn't a day. */
+function readDays(value: unknown): Record<string, string> {
+  if (typeof value !== 'object' || value === null) return {};
+  const out: Record<string, string> = {};
+  for (const [key, day] of Object.entries(value as Record<string, unknown>)) {
+    if (typeof day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(day)) out[key] = day;
+  }
+  return out;
 }
 
 function readFixed(value: unknown): FixedFinding[] {
@@ -109,9 +140,47 @@ function readRun(value: unknown): StoredRun | null {
     ranAt,
     usedLlm: record['usedLlm'] === true,
     findings,
+    consideredIds: readStrings(record['consideredIds']),
     advice: readStrings(record['advice']),
     size: Math.max(0, Math.trunc(size)),
   };
+}
+
+/**
+ * Does a decision ("fine as is", snoozed) survive this run? Two cases keep it,
+ * and only these two: the run found the finding again — the decision still has
+ * a subject. Or the run **could not** have found it, because the kind is one
+ * only a model produces (`LLM_ONLY_KINDS`) and this run had none; a run that
+ * never looked says nothing by staying silent. Without that second case, one
+ * single run without a model would delete every dismissal of a model finding,
+ * and no screen would ever show it.
+ *
+ * Anything else falls away: the finding is gone, so the decision about it is
+ * too — otherwise the file grows with every run and never shrinks. The kind
+ * comes out of the ID (`kind:hash`), because a dismissed finding is exactly the
+ * case where the finding itself is no longer there to ask.
+ *
+ * "The run found it again" means `considered`, not the shown list: a candidate
+ * the model rejected was still re-derived, and only a re-derivation may end a
+ * decision.
+ */
+function outlivesRun(id: string, considered: ReadonlySet<string>, usedLlm: boolean): boolean {
+  if (considered.has(id)) return true;
+  if (usedLlm) return false;
+  const kind = kindOf(id);
+  return LLM_ONLY_KINDS.some((llmOnly) => llmOnly === kind);
+}
+
+/**
+ * What the run re-derived: the shown findings plus everything it considered.
+ * The union, not `consideredIds` alone — a run stored without that field (or by
+ * a caller that doesn't fill it) then falls back to its findings instead of
+ * silently dropping every decision.
+ */
+function consideredBy(run: StoredRun): ReadonlySet<string> {
+  const ids = new Set(run.findings.map((finding) => finding.id));
+  for (const id of run.consideredIds ?? []) ids.add(id);
+  return ids;
 }
 
 /**
@@ -132,7 +201,12 @@ export class GardenerState {
     return join(this.root, ...GARDENER_STATE_FILE.split('/'));
   }
 
-  static async load(root: string): Promise<GardenerState> {
+  /**
+   * Loads the state and cleans up as it goes: snoozes whose day has come drop
+   * out, the same way `overview-state.ts` does it. A file without `snoozed` —
+   * written before this field existed — simply has none.
+   */
+  static async load(root: string, today: string): Promise<GardenerState> {
     const stored = await readJson<Partial<StoredGardener>>(
       join(root, ...GARDENER_STATE_FILE.split('/')),
     );
@@ -142,8 +216,10 @@ export class GardenerState {
         version: GARDENER_STATE_VERSION,
         run: readRun(stored.run),
         dismissed: readStrings(stored.dismissed),
+        snoozed: readDays(stored.snoozed),
         fixed: readFixed(stored.fixed),
       };
+      state.pruneSnoozes(today);
     }
     return state;
   }
@@ -151,6 +227,11 @@ export class GardenerState {
   /** IDs considered "fine as is". */
   dismissed(): ReadonlySet<string> {
     return new Set(this.data.dismissed);
+  }
+
+  /** Until when this finding is snoozed, or `null`. */
+  snoozedUntil(id: string): string | null {
+    return this.data.snoozed[id] ?? null;
   }
 
   /** IDs whose fix was written. */
@@ -164,20 +245,38 @@ export class GardenerState {
   }
 
   /**
-   * The report as the screen sees it: without the dismissed findings, and
-   * with the health score that belongs to exactly this list. `null` without a
-   * run — a made-up 100 would be the kind of lie a dashboard dies from.
+   * The report as the screen sees it: the open findings in `findings`, the ones
+   * the user put away in `hidden` — each with its state and, for a snooze, the
+   * day it runs out. The health score is computed over the open list alone, so
+   * the number always matches the list beside it. `null` without a run — a
+   * made-up 100 would be the kind of lie a dashboard dies from.
+   *
+   * A snooze whose day has come is open again even if `pruneSnoozes` hasn't run
+   * yet: left running past midnight, the file is a day behind the calendar.
+   * Findings a fix has resolved are in neither list — they aren't a decision to
+   * review, they're done until the next run.
    */
-  present(): GardenerReport | null {
+  present(today: string): GardenerReport | null {
     const run = this.data.run;
     if (run === null) return null;
-    const hidden = new Set([...this.dismissed(), ...this.fixed()]);
-    const findings = run.findings.filter((finding) => !hidden.has(finding.id));
+    const dismissed = this.dismissed();
+    const fixed = this.fixed();
+    const findings: GardenerFinding[] = [];
+    const hidden: GardenerHiddenFinding[] = [];
+    for (const finding of run.findings) {
+      if (fixed.has(finding.id)) continue;
+      const until = this.data.snoozed[finding.id];
+      if (dismissed.has(finding.id)) hidden.push({ finding, state: 'dismissed' });
+      else if (until !== undefined && until > today) {
+        hidden.push({ finding, state: 'snoozed', until });
+      } else findings.push(finding);
+    }
     const health = healthScore(findings, run.size);
     return {
       ranAt: run.ranAt,
       usedLlm: run.usedLlm,
       findings,
+      hidden,
       health: health.score ?? 0,
       healthKnown: health.score !== null,
       healthContributions: health.contributions,
@@ -186,13 +285,28 @@ export class GardenerState {
   }
 
   /**
-   * Stores a run. The "fine as is" set stays (it's a decision about the
-   * subject matter, not about the run); the list of resolved findings is
-   * cleared — what a fix actually resolved is now determined by the new run.
+   * Stores a run — and the only place a decision is ever forgotten.
+   *
+   * "Fine as is" and a snooze are decisions about a thing, not about a run, so
+   * they outlive it; but one whose finding is gone would stay in the file
+   * forever. `outlivesRun` decides that, and it only ever sees what a
+   * **completed** run re-derived (`consideredBy`): a cancelled run throws
+   * before `save`, and its partial list must never be read as "everything else
+   * is gone".
+   *
+   * The list of resolved findings is cleared — what a fix actually resolved is
+   * now determined by the new run.
    */
   async save(run: StoredRun): Promise<void> {
+    const considered = consideredBy(run);
     this.data.run = run;
     this.data.fixed = [];
+    this.data.dismissed = this.data.dismissed.filter((id) =>
+      outlivesRun(id, considered, run.usedLlm),
+    );
+    for (const id of Object.keys(this.data.snoozed)) {
+      if (!outlivesRun(id, considered, run.usedLlm)) delete this.data.snoozed[id];
+    }
     await this.write();
   }
 
@@ -235,6 +349,40 @@ export class GardenerState {
     return true;
   }
 
+  /**
+   * Puts a finding away until `until` — the day from which it counts again.
+   * `false` for the same reason as `dismiss`: no run knows this finding.
+   */
+  async snooze(id: string, until: string): Promise<boolean> {
+    if (!this.knows(id)) return false;
+    this.data.snoozed[id] = until;
+    await this.write();
+    return true;
+  }
+
+  /**
+   * Lifts the snooze: the entry drops out, the finding counts again. Same
+   * reasoning as `overview-state.ts` — setting the day to "today" would not be
+   * the reverse. `false` means: wasn't snoozed.
+   */
+  async unsnooze(id: string): Promise<boolean> {
+    if (this.data.snoozed[id] === undefined) return false;
+    delete this.data.snoozed[id];
+    await this.write();
+    return true;
+  }
+
+  /** Remove snoozes whose day has come. `true` if something changed. */
+  pruneSnoozes(today: string): boolean {
+    let changed = false;
+    for (const [id, until] of Object.entries(this.data.snoozed)) {
+      if (until > today) continue;
+      delete this.data.snoozed[id];
+      changed = true;
+    }
+    return changed;
+  }
+
   /** Does the last run know this finding? */
   knows(id: string): boolean {
     return this.data.run?.findings.some((finding) => finding.id === id) === true;
@@ -250,11 +398,11 @@ export class GardenerState {
 const loaded = new Map<string, Promise<GardenerState>>();
 
 /** This vault's maintenance state. The file is read on the first call. */
-export function gardenerState(root: string): Promise<GardenerState> {
+export function gardenerState(root: string, today: string): Promise<GardenerState> {
   const known = loaded.get(root);
   if (known !== undefined) return known;
   loaded.clear();
-  const pending = GardenerState.load(root);
+  const pending = GardenerState.load(root, today);
   loaded.set(root, pending);
   return pending;
 }

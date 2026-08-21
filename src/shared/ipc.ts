@@ -671,6 +671,10 @@ export interface IpcRoutes {
   'gardener:dismiss': { req: { id: string }; res: void };
   /** Undo "looks fine": the finding counts again — and again against health. */
   'gardener:undismiss': { req: { id: string }; res: void };
+  /** Puts a finding away until it counts again — mirrors `reminders:snooze`. */
+  'gardener:snooze': { req: { id: string; days: number }; res: void };
+  /** Lift a snooze — the way back to `gardener:snooze`, otherwise there would be none. */
+  'gardener:unsnooze': { req: { id: string }; res: void };
   /**
    * `written` are the changed files, `open` are the ones the screen should
    * open (for `merge` and the `open-*` actions, this is the only effect —
@@ -908,6 +912,8 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'gardener:cancel',
   'gardener:dismiss',
   'gardener:undismiss',
+  'gardener:snooze',
+  'gardener:unsnooze',
   'gardener:applyFix',
   'gardener:undoFix',
   'gardener:discardPlan',

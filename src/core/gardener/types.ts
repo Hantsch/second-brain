@@ -147,6 +147,30 @@ export function findingId(kind: GardenerFindingKind, ...parts: readonly string[]
   return `${kind}:${sha256(parts.join('\n')).slice(0, 12)}`;
 }
 
+/**
+ * Die Art, die in einer Kennung steckt — der Teil vor dem ersten `:`. Damit
+ * laesst sich ueber einen gespeicherten Befund reden, von dem nur noch die
+ * Kennung da ist: eine abgelegte Entscheidung („passt so") ueberlebt den Lauf,
+ * der sie ausgeloest hat. Rueckgabe ist absichtlich `string` und keine
+ * Befundart: was in einer Datei steht, ist nicht typgeprueft.
+ */
+export function kindOf(id: string): string {
+  const cut = id.indexOf(':');
+  return cut < 0 ? id : id.slice(0, cut);
+}
+
+/**
+ * Befundarten, die ein Lauf **ohne Modell** nicht hervorbringen kann.
+ *
+ * Wer aus „der Lauf hat den Befund nicht wiedergefunden" schliessen will „die
+ * Sache ist erledigt", braucht diese Liste: nach diesen Arten hat ein Lauf ohne
+ * Modell nie gesucht, sein Schweigen sagt zu ihnen also nichts.
+ *
+ * Eine benannte Liste und kein Vergleich auf eine einzelne Art: die naechste
+ * modellgebundene Befundart haengt sich hier mit einer Zeile an.
+ */
+export const LLM_ONLY_KINDS: readonly GardenerFindingKind[] = ['contradiction'];
+
 /** Ein Befund, wie die Checks ihn bauen. `id` und `foundAt` kommen von hier. */
 export interface FindingInput {
   kind: GardenerFindingKind;

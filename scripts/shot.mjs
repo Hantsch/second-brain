@@ -382,11 +382,90 @@ function createBrokenVault(dir) {
   return dir;
 }
 
+/**
+ * 017 D6: Damit das Foto des Pflege-Screens einen weggelegten Befund und die
+ * Gesundheitszeile zeigt, statt nur einen frischen, leeren Lauf — über
+ * dieselben Kanäle, die auch ein Klick in der App nimmt: ein echter Lauf,
+ * „passt so" auf einem Befund, „nicht jetzt" auf einem zweiten, dann der
+ * Zustandsfilter auf „Alle", damit beide Karten im Bild stehen.
+ */
+async function prepareGardenerHidden(session, log, skipped) {
+  const report = await session.page.evaluate(() => window.sb?.invoke('gardener:run', {}));
+  if (!report || report.findings.length === 0) {
+    skipped.push('Pflege-Foto: der Demo-Vault lieferte keinen Befund zum Wegzulegen');
+    return;
+  }
+  /* Wiederholte Läufe von `npm run shot` ohne erneutes Seed sollen nicht bei
+     jedem Aufruf einen weiteren Befund wegräumen — sonst wüchse die Zahl der
+     weggelegten Befunde mit jedem Aufruf. Steht schon etwas ausgeblendet
+     (aus einem früheren Lauf dieses Skripts oder dem Seed selbst), bleibt es
+     dabei. */
+  if ((report.hidden ?? []).length > 0) {
+    log('  Pflege: schon ein weggelegter Befund vorhanden, nichts Neues weggelegt');
+  } else {
+    const [dismissTarget, snoozeTarget] = report.findings;
+    await session.page.evaluate(
+      (id) => window.sb?.invoke('gardener:dismiss', { id }),
+      dismissTarget.id,
+    );
+    if (snoozeTarget) {
+      await session.page.evaluate(
+        (id) => window.sb?.invoke('gardener:snooze', { id, days: 14 }),
+        snoozeTarget.id,
+      );
+    }
+  }
+  const noted = await session.page
+    .getByText('ausgeklammert', { exact: false })
+    .first()
+    .waitFor({ state: 'visible', timeout: 6000 })
+    .then(
+      () => true,
+      () => false,
+    );
+  if (!noted) {
+    skipped.push('Pflege-Foto: die Gesundheitszeile nannte keine ausgeklammerten Befunde');
+  }
+  const select = session.page.getByLabel('Zustand');
+  if ((await select.count()) > 0) {
+    await select.selectOption('all');
+    await settle(session.page);
+  } else {
+    skipped.push('Pflege-Foto: der Zustandsfilter stand nicht im Screen');
+  }
+  log('  Pflege: ein weggelegter Befund vorbereitet, Zustandsfilter auf „Alle"');
+}
+
+/**
+ * Zweite Aufnahme des Pflege-Screens, ans Ende gerollt: die erste Aufnahme
+ * zeigt die Gesundheitszeile mit „ausgeklammert", diese hier die weggelegte
+ * Karte selbst — sichtbar am Rückweg „Wieder anzeigen" (nur eine weggelegte
+ * Karte trägt diesen Knopf). Beide gehören zur Aussage von 017 D6, aber nicht
+ * beide passen in ein Fenster.
+ */
+async function shootGardenerHidden(session, shooter, log, skipped) {
+  const scrolled = await session.page.evaluate(() => {
+    const card = [...document.querySelectorAll('.sb-finding')].find((element) =>
+      element.textContent?.includes('Wieder anzeigen'),
+    );
+    if (!card) return false;
+    card.scrollIntoView({ block: 'center' });
+    return true;
+  });
+  if (!scrolled) {
+    skipped.push('Pflege-Foto: keine weggelegte Karte mit „Wieder anzeigen" gefunden');
+    return;
+  }
+  await settle(session.page);
+  log(`  Pflege, weggelegte Karte → ${await shooter.shotAs('garden-hidden.png', session.page)}`);
+}
+
 /** Die Rail-Screens, breit — der Kern des Durchlaufs. */
-async function shootScreens(session, shooter, screens, log) {
+async function shootScreens(session, shooter, screens, log, skipped) {
   const rows = [];
   for (const [position, screen] of screens.entries()) {
     const via = await gotoScreen(session.page, screen);
+    if (screen === 'garden') await prepareGardenerHidden(session, log, skipped);
     const heading = await screenHeading(session.page);
     const file = await shooter.shot(screen, session.page);
     rows.push({ screen, via, heading, file });
@@ -394,6 +473,7 @@ async function shootScreens(session, shooter, screens, log) {
       `  ${String(position + 1).padStart(2, ' ')}/${screens.length} ${screen.padEnd(10)} ` +
         `${(heading ?? 'ohne Überschrift').padEnd(24)} über ${via} → ${file}`,
     );
+    if (screen === 'garden') await shootGardenerHidden(session, shooter, log, skipped);
   }
   return rows;
 }
@@ -1302,7 +1382,7 @@ async function main() {
   try {
     await session.resize(WIDE.width, WIDE.height);
     await settle(session.page);
-    const rows = await shootScreens(session, shooter, options.screens, log);
+    const rows = await shootScreens(session, shooter, options.screens, log, skipped);
     await shootOverlays(session, shooter, log, skipped);
     if (options.screens.includes('dashboard')) {
       await shootDashboard(session, shooter, log, skipped);

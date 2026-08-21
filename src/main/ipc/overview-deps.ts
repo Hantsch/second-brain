@@ -20,7 +20,7 @@ import { ClaudeSessionReader, linkSessions, nodeClaudeFileSystem } from '@core/c
 import type { OverviewIndex } from '@core/overview';
 import type { ClaudeSession, OverviewSettings } from '@shared/types';
 import { fail } from './errors';
-import { gardenerStateFor } from './gardener-deps';
+import { gardenerStateFor, gardenerToday } from './gardener-deps';
 import { applyExternalTouches } from '../claude-touches';
 import type { IndexLike } from '../contracts';
 import { recentWorkLabels } from '../messages';
@@ -93,7 +93,7 @@ export function overviewStateFor(services: Services, today: string): Promise<Ove
 export async function gardenerSummary(
   services: Services,
 ): Promise<{ health: number; findingCount: number } | null> {
-  const report = (await gardenerStateFor(services)).present();
+  const report = (await gardenerStateFor(services)).present(gardenerToday());
   if (report === null || report.healthKnown === false) return null;
   return { health: report.health, findingCount: report.findings.length };
 }

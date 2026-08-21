@@ -12,7 +12,8 @@
  *   Zeile, was ein Modell zusätzlich fände — mit Weg in die Einstellung.
  * - Jeder Fix-Typ zeigt vorher, was geschrieben wird, und schickt genau seinen
  *   Befund. Was nichts schreibt, sagt das.
- * - „Passt so" ist zurücknehmbar.
+ * - „Ist kein Problem" ist zurücknehmbar — und nicht dasselbe wie „habe ich in
+ *   den Dateien erledigt", das nur neu prüft.
  * - Der Widerspruch bietet drei Wege und löst nichts automatisch auf.
  * - Die Kachel zeigt Zahlen nur, wenn ein Lauf vorliegt.
  * - Die Snooze-Auswahl schickt den Abstand zu dem Tag, den sie anzeigt.
@@ -27,16 +28,33 @@ import axe from 'axe-core';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { IpcChannel, IpcEventName, IpcEvents, IpcRequest, IpcResponse } from '@shared/ipc';
-import type { GardenerFinding, GardenerReport, Reminder, VaultDoc, WikiPage } from '@shared/types';
+import type {
+  GardenerFinding,
+  GardenerHiddenFinding,
+  GardenerReport,
+  Reminder,
+  VaultDoc,
+  WikiPage,
+} from '@shared/types';
 import { GardenScreen } from '@renderer/screens/garden/GardenScreen';
 import { GardenerTile } from '@renderer/components/tiles/GardenerTile';
 import { DeadlinesTile } from '@renderer/components/tiles/DeadlinesTile';
 import { ToastHost } from '@renderer/components/ToastHost';
-import { applyFilter, groupByKind, kindCounts } from '@renderer/screens/garden/filter';
+import { exitsOf } from '@renderer/screens/garden/exits';
+import {
+  ALL_FILTERS,
+  applyFilter,
+  groupByKind,
+  isFiltered,
+  kindCounts,
+  poolForState,
+  stateCounts,
+} from '@renderer/screens/garden/filter';
 import { writeTargetOf } from '@renderer/screens/garden/fixes';
 import { contradictionPassage } from '@renderer/screens/garden/sections';
 import { targetFor } from '@renderer/screens/garden/targets';
 import { setLanguage } from '@renderer/i18n';
+import { formatDate } from '@renderer/lib/format';
 import { clearToasts } from '@renderer/lib/toast';
 import type { SbBridge } from '@renderer/lib/bridge';
 
@@ -281,6 +299,52 @@ const REPORT: GardenerReport = {
   advice: [],
 };
 
+/* 017 D4: a report with hidden findings, disjoint from `REPORT` — a dismissed
+   and a snoozed one, each of a kind not already in `REPORT` so a test can
+   tell "found via the state filter" from "found via the kind group". */
+const HIDDEN_DISMISSED = finding({
+  id: 'f-hidden-dismissed',
+  kind: 'missing-page',
+  title: 'Begriff ohne Seite: Altlast',
+  paths: [PAGE_A],
+});
+
+const HIDDEN_UNTIL = '2026-09-01';
+
+const HIDDEN_SNOOZED = finding({
+  id: 'f-hidden-snoozed',
+  kind: 'unprocessed-source',
+  title: 'Unverdichtete Quelle: Workshop-Mitschnitt',
+  paths: [PAGE_B],
+});
+
+const REPORT_WITH_HIDDEN: GardenerReport = {
+  ranAt: NOW,
+  usedLlm: false,
+  findings: [BROKEN],
+  hidden: [
+    { finding: HIDDEN_DISMISSED, state: 'dismissed' },
+    { finding: HIDDEN_SNOOZED, state: 'snoozed', until: HIDDEN_UNTIL },
+  ],
+  health: 90,
+  healthKnown: true,
+  healthContributions: [{ kind: 'broken-link', count: 1, points: 5 }],
+  advice: [],
+};
+
+/* Every finding put away — the empty-state short-circuit must not swallow
+   the panel here (017 D4). */
+const ALL_HIDDEN_REPORT: GardenerReport = {
+  ranAt: NOW,
+  usedLlm: false,
+  findings: [],
+  hidden: [{ finding: HIDDEN_DISMISSED, state: 'dismissed' }],
+  health: 95,
+  healthKnown: true,
+  healthContributions: [],
+  advice: [],
+};
+
 const REMINDER: Reminder = {
   id: 'reminder-1',
   source: 'project-deadline',
@@ -343,6 +407,8 @@ function handlers(report: GardenerReport | null, extra: SbHandlers = {}): SbHand
     'gardener:cancel': () => undefined,
     'gardener:dismiss': () => undefined,
     'gardener:undismiss': () => undefined,
+    'gardener:snooze': () => undefined,
+    'gardener:unsnooze': () => undefined,
     'gardener:applyFix': () => ({ written: [CATALOG], undoToken: 'undo-1' }),
     'gardener:undoFix': () => ({ restored: [CATALOG], kept: [] }),
     /* Kein Modell konfiguriert — der Normalfall dieses Nutzers. */
@@ -427,7 +493,12 @@ afterEach(() => {
 
 describe('Ordnung der Befunde', () => {
   it('filtert, gruppiert und zählt dieselbe Liste', () => {
-    const shown = applyFilter(REPORT.findings, { kind: 'all', module: MODULE, severity: 'all' });
+    const shown = applyFilter(REPORT.findings, {
+      kind: 'all',
+      module: MODULE,
+      severity: 'all',
+      state: 'open',
+    });
     expect(shown.every((entry) => entry.module === MODULE)).toBe(true);
     expect(shown).not.toContain(DUMP);
 
@@ -446,8 +517,34 @@ describe('Ordnung der Befunde', () => {
       kind: 'stale-page',
       module: 'all',
       severity: 'all',
+      state: 'open',
     });
     expect(counts.get('broken-link')).toBe(1);
+  });
+
+  it('legt die vierte Achse an: offen vorausgewählt, mit Zahlen für jeden Zustand', () => {
+    const hidden: GardenerHiddenFinding[] = [
+      { finding: BROKEN, state: 'dismissed' },
+      { finding: STALE, state: 'snoozed', until: '2026-09-01' },
+    ];
+    expect(ALL_FILTERS.state).toBe('open');
+    expect(isFiltered(ALL_FILTERS)).toBe(false);
+    expect(isFiltered({ ...ALL_FILTERS, state: 'all' })).toBe(true);
+
+    expect(poolForState(REPORT.findings, hidden, 'open')).toEqual(REPORT.findings);
+    expect(poolForState(REPORT.findings, hidden, 'dismissed')).toEqual([BROKEN]);
+    expect(poolForState(REPORT.findings, hidden, 'snoozed')).toEqual([STALE]);
+    expect(poolForState(REPORT.findings, hidden, 'all')).toEqual([
+      ...REPORT.findings,
+      BROKEN,
+      STALE,
+    ]);
+
+    const counts = stateCounts(REPORT.findings, hidden, ALL_FILTERS);
+    expect(counts.get('open')).toBe(REPORT.findings.length);
+    expect(counts.get('dismissed')).toBe(1);
+    expect(counts.get('snoozed')).toBe(1);
+    expect(counts.get('all')).toBe(REPORT.findings.length + 2);
   });
 
   it('nennt die Datei, in die ein Fix schreibt — und keine, wenn er nichts schreibt', () => {
@@ -712,16 +809,363 @@ describe('Fixes', () => {
     expect(await screen.findByText('Zurückgedreht.')).toBeTruthy();
   });
 
-  it('nimmt „passt so" zurück', async () => {
+  it('nimmt „ist kein Problem" zurück', async () => {
     installMock(handlers(REPORT));
     wrap(<GardenScreen />);
     await screen.findByText('72');
 
-    await userEvent.click(screen.getAllByRole('button', { name: 'Passt so' })[0] as HTMLElement);
+    await userEvent.click(
+      screen.getAllByRole('button', { name: 'Ist kein Problem' })[0] as HTMLElement,
+    );
 
     expect(calls('gardener:dismiss')).toEqual([{ id: CONTRADICTION.id }]);
     await userEvent.click(await screen.findByRole('button', { name: 'Wieder anzeigen' }));
     expect(calls('gardener:undismiss')).toEqual([{ id: CONTRADICTION.id }]);
+  });
+});
+
+// ── Wege aus einem Befund ─────────────────────────────────────────
+
+/* 017 D3: eine Karte nennt ihre Wege hinaus, und keine endet beim
+   Wegwisch-Knopf. Der Prüfstein ist der Unterschied zwischen zwei Sätzen:
+   „ist kein Problem" ist eine Aussage über die Sache und legt den Befund
+   dauerhaft weg; „habe ich in den Dateien erledigt" behauptet nichts, schreibt
+   nichts und lässt den nächsten Lauf entscheiden. */
+
+describe('Wege aus einem Befund', () => {
+  /** Die Karte zu einem Befund — die Wege stehen je Karte, nicht je Screen. */
+  function cardOf(title: string): HTMLElement {
+    return screen.getByText(title).closest('.sb-finding') as HTMLElement;
+  }
+
+  /** Derselbe Tag, den die Auswahl anzeigt: heute plus `days`. */
+  function isoIn(days: number): string {
+    const now = new Date();
+    const target = new Date(now.getFullYear(), now.getMonth(), now.getDate() + days);
+    return `${target.getFullYear()}-${String(target.getMonth() + 1).padStart(2, '0')}-${String(
+      target.getDate(),
+    ).padStart(2, '0')}`;
+  }
+
+  it('nennt die Wege, statt sie aus der Karte abzuleiten', () => {
+    /* Ohne Fix bleiben die allgemeinen Wege — „erledigt" gibt es immer. */
+    expect(exitsOf(BROKEN)).toEqual(['handled', 'snooze', 'dismiss', 'open']);
+    expect(exitsOf(DRIFT)).toEqual(['fix', 'handled', 'snooze', 'dismiss', 'open']);
+    /* Wer schon weggelegt hat, braucht den Rückweg und nicht zweimal hinaus. */
+    expect(exitsOf(BROKEN, 'snoozed')).toEqual(['handled', 'restore', 'open']);
+    expect(exitsOf(BROKEN, 'dismissed')).toEqual(['handled', 'restore', 'open']);
+  });
+
+  it('lässt einen Befund ohne Fix nicht beim Wegwisch-Knopf enden', async () => {
+    installMock(handlers(REPORT));
+    wrap(<GardenScreen />);
+    await screen.findByText('72');
+
+    const card = cardOf(BROKEN.title);
+    /* Der ruhige Satz statt einer erfundenen Vorschau. */
+    expect(
+      within(card).getByText(
+        'Von selbst richten lässt sich hier nichts. Die Wege daraus stehen darunter.',
+      ),
+    ).toBeTruthy();
+    expect(
+      within(card).getByRole('button', { name: 'Habe ich in den Dateien erledigt' }),
+    ).toBeTruthy();
+    expect(
+      within(card).getByRole('button', { name: `Nicht jetzt: „${BROKEN.title}"` }),
+    ).toBeTruthy();
+    expect(within(card).getByRole('button', { name: 'Im Editor öffnen' })).toBeTruthy();
+    /* „Ist kein Problem" ist einer von vier Wegen, nicht der einzige. */
+    const actions = card.querySelector('.sb-finding-actions') as HTMLElement;
+    expect(within(actions).getAllByRole('button')).toHaveLength(4);
+    expect(within(actions).getByRole('button', { name: 'Ist kein Problem' })).toBeTruthy();
+  });
+
+  it('legt bei „ist kein Problem" den Befund weg — und prüft nichts neu', async () => {
+    installMock(handlers(REPORT));
+    wrap(<GardenScreen />);
+    await screen.findByText('72');
+
+    await userEvent.click(
+      within(cardOf(BROKEN.title)).getByRole('button', { name: 'Ist kein Problem' }),
+    );
+
+    expect(calls('gardener:dismiss')).toEqual([{ id: BROKEN.id }]);
+    expect(
+      await screen.findByText('Kein Problem. Der Befund zählt nicht mehr gegen die Gesundheit.'),
+    ).toBeTruthy();
+    /* Die Aussage über die Sache löst keinen Lauf aus. */
+    expect(calls('gardener:run')).toEqual([]);
+  });
+
+  it('prüft bei „in den Dateien erledigt" neu, schreibt keinen Zustand und sagt, dass der Befund noch steht', async () => {
+    installMock(handlers(REPORT));
+    wrap(<GardenScreen />);
+    await screen.findByText('72');
+
+    await userEvent.click(
+      within(cardOf(BROKEN.title)).getByRole('button', {
+        name: 'Habe ich in den Dateien erledigt',
+      }),
+    );
+
+    /* Genau der Lauf, den der Kopf auch startet — und kein eigener Zustand. */
+    expect(calls('gardener:run')).toEqual([{}]);
+    expect(calls('gardener:dismiss')).toEqual([]);
+    expect(calls('gardener:snooze')).toEqual([]);
+    expect(
+      await screen.findByText(
+        'Neu geprüft: der Befund steht noch. In den Dateien hat sich daran nichts geändert.',
+      ),
+    ).toBeTruthy();
+  });
+
+  it('sagt nach dem Neuprüfen, dass der Befund weg ist — wenn er weg ist', async () => {
+    const without: GardenerReport = {
+      ...REPORT,
+      findings: REPORT.findings.filter((entry) => entry.id !== BROKEN.id),
+      hidden: [],
+    };
+    installMock(handlers(REPORT, { 'gardener:run': () => without }));
+    wrap(<GardenScreen />);
+    await screen.findByText('72');
+
+    await userEvent.click(
+      within(cardOf(BROKEN.title)).getByRole('button', {
+        name: 'Habe ich in den Dateien erledigt',
+      }),
+    );
+
+    expect(await screen.findByText('Neu geprüft: der Befund ist weg.')).toBeTruthy();
+    await waitFor(() => expect(screen.queryByText(BROKEN.title)).toBeNull());
+  });
+
+  /* Ein weggelegter Befund ist nicht weg: er kommt an einem Tag wieder, und die
+     Meldung nennt ihn — genau wie bei den Erinnerungen. */
+  it('legt bei „nicht jetzt" auf den Tag zurück, den die Auswahl zeigt, und bietet den Rückweg', async () => {
+    installMock(handlers(REPORT));
+    wrap(<GardenScreen />);
+    await screen.findByText('72');
+
+    await userEvent.click(
+      within(cardOf(BROKEN.title)).getByRole('button', {
+        name: `Nicht jetzt: „${BROKEN.title}"`,
+      }),
+    );
+    const panel = screen.getByRole('group', { name: 'Wieder erinnern' });
+    await userEvent.click(within(panel).getByRole('button', { name: /Nächste Woche/ }));
+
+    expect(calls('gardener:snooze')).toEqual([{ id: BROKEN.id, days: 7 }]);
+    expect(
+      await screen.findByText(
+        `Nicht jetzt. Der Befund kommt am ${formatDate(isoIn(7), 'de')} wieder.`,
+      ),
+    ).toBeTruthy();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Wieder anzeigen' }));
+    expect(calls('gardener:unsnooze')).toEqual([{ id: BROKEN.id }]);
+    expect(await screen.findByText('Der Befund zählt wieder.')).toBeTruthy();
+  });
+});
+
+// ── Weggelegte Befunde bleiben sichtbar (017 D4) ─────────────────────────────
+
+describe('Weggelegte Befunde', () => {
+  it('zeigt den Zustands-Filter mit offen vorausgewählt und den Zahlen je Wert', async () => {
+    installMock(handlers(REPORT_WITH_HIDDEN));
+    wrap(<GardenScreen />);
+    await screen.findByText('90');
+
+    const select = screen.getByLabelText('Zustand') as HTMLSelectElement;
+    expect(select.value).toBe('open');
+    expect(within(select).getByText('Offen (1)')).toBeTruthy();
+    expect(within(select).getByText('Kein Problem (1)')).toBeTruthy();
+    expect(within(select).getByText('Nicht jetzt (1)')).toBeTruthy();
+    expect(within(select).getByText('Alle (3)')).toBeTruthy();
+  });
+
+  it('nennt in der Meta-Zeile die Zahl der weggelegten Befunde', async () => {
+    installMock(handlers(REPORT_WITH_HIDDEN));
+    wrap(<GardenScreen />);
+    await screen.findByText('90');
+
+    expect(screen.getByText(/2 weggelegt/)).toBeTruthy();
+  });
+
+  it('sagt bei einer weggelegten Karte, warum sie weg ist', async () => {
+    installMock(handlers(REPORT_WITH_HIDDEN));
+    wrap(<GardenScreen />);
+    await screen.findByText('90');
+
+    await userEvent.selectOptions(screen.getByLabelText('Zustand'), 'all');
+
+    const dismissedCard = screen
+      .getByText(HIDDEN_DISMISSED.title)
+      .closest('.sb-finding') as HTMLElement;
+    expect(within(dismissedCard).getByText('Ist kein Problem.')).toBeTruthy();
+    expect(within(dismissedCard).getByRole('button', { name: 'Wieder anzeigen' })).toBeTruthy();
+
+    const snoozedCard = screen
+      .getByText(HIDDEN_SNOOZED.title)
+      .closest('.sb-finding') as HTMLElement;
+    expect(
+      within(snoozedCard).getByText(`Kommt am ${formatDate(HIDDEN_UNTIL, 'de')} wieder.`),
+    ).toBeTruthy();
+  });
+
+  it('stellt einen weggelegten Befund über "Wieder anzeigen" direkt wieder her — ohne den Streifen', async () => {
+    installMock(handlers(REPORT_WITH_HIDDEN));
+    wrap(<GardenScreen />);
+    await screen.findByText('90');
+
+    await userEvent.selectOptions(screen.getByLabelText('Zustand'), 'dismissed');
+    const card = screen.getByText(HIDDEN_DISMISSED.title).closest('.sb-finding') as HTMLElement;
+    await userEvent.click(within(card).getByRole('button', { name: 'Wieder anzeigen' }));
+
+    expect(calls('gardener:undismiss')).toEqual([{ id: HIDDEN_DISMISSED.id }]);
+    /* Kein Ausgabe-Streifen: der direkte Weg meldet sich nicht über ihn. */
+    expect(screen.queryByRole('status')).toBeNull();
+  });
+
+  it('stellt einen weggelegten, ehemals ruhig gestellten Befund über "unsnooze" wieder her', async () => {
+    installMock(handlers(REPORT_WITH_HIDDEN));
+    wrap(<GardenScreen />);
+    await screen.findByText('90');
+
+    await userEvent.selectOptions(screen.getByLabelText('Zustand'), 'snoozed');
+    const card = screen.getByText(HIDDEN_SNOOZED.title).closest('.sb-finding') as HTMLElement;
+    await userEvent.click(within(card).getByRole('button', { name: 'Wieder anzeigen' }));
+
+    expect(calls('gardener:unsnooze')).toEqual([{ id: HIDDEN_SNOOZED.id }]);
+    expect(screen.queryByRole('status')).toBeNull();
+  });
+
+  it('zeigt das Panel und seinen Filter, auch wenn jeder Befund weggelegt ist', async () => {
+    installMock(handlers(ALL_HIDDEN_REPORT));
+    wrap(<GardenScreen />);
+    await screen.findByText('95');
+
+    expect(screen.getByRole('heading', { name: 'Befunde' })).toBeTruthy();
+    expect(screen.getByLabelText('Zustand')).toBeTruthy();
+    expect(screen.queryByText('Keine Befunde.')).toBeNull();
+
+    await userEvent.selectOptions(screen.getByLabelText('Zustand'), 'dismissed');
+    expect(await screen.findByText(HIDDEN_DISMISSED.title)).toBeTruthy();
+  });
+});
+
+// ── Der ganze Screen ohne Modell (017 D6) ────────────────────────────────────
+
+/* Guardrail 1 gilt nicht nur für einzelne Sätze, sondern für den Screen als
+   Ganzes: `handlers()` simuliert „kein Modell konfiguriert" schon als
+   Normalfall jedes Tests hier (`llm:routing` liefert kein Routing) — dieser
+   Test bindet das zusammen und prüft in einem Zug, dass nichts tot bleibt,
+   weil kein Modell da ist: die Karte mit ihren Wegen, die weggelegte Liste
+   über den Zustandsfilter, und die Gesundheitszeile. */
+describe('Der ganze Screen ohne Modell', () => {
+  it('zeigt Karten mit ihren Wegen, die weggelegte Liste und die Gesundheitszeile ganz ohne Modell', async () => {
+    installMock(handlers(REPORT_WITH_HIDDEN));
+    wrap(<GardenScreen />);
+    await screen.findByText('90');
+
+    /* Ehrlich über das fehlende Modell, mit dem Weg in die Einstellung. */
+    expect(screen.getByText('ohne Modell, nur die maschinellen Prüfungen')).toBeTruthy();
+    expect(screen.getByText('Was ein Modell zusätzlich fände:')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Routing einrichten' })).toBeTruthy();
+
+    /* Die offene Karte mit allen ihren Wegen hinaus. */
+    const card = screen.getByText(BROKEN.title).closest('.sb-finding') as HTMLElement;
+    expect(
+      within(card).getByRole('button', { name: 'Habe ich in den Dateien erledigt' }),
+    ).toBeTruthy();
+    expect(
+      within(card).getByRole('button', { name: `Nicht jetzt: „${BROKEN.title}"` }),
+    ).toBeTruthy();
+    expect(within(card).getByRole('button', { name: 'Ist kein Problem' })).toBeTruthy();
+    expect(within(card).getByRole('button', { name: 'Im Editor öffnen' })).toBeTruthy();
+
+    /* Die weggelegte Liste ist über den Zustandsfilter erreichbar, nicht tot. */
+    await userEvent.selectOptions(screen.getByLabelText('Zustand'), 'all');
+    expect(await screen.findByText(HIDDEN_DISMISSED.title)).toBeTruthy();
+    expect(screen.getByText(HIDDEN_SNOOZED.title)).toBeTruthy();
+
+    /* Die Gesundheitszeile nennt, was ausgeklammert bleibt — auch ohne Modell. */
+    expect(
+      screen.getByText(
+        '2 Befunde bleiben bei diesem Wert ausgeklammert: 1 als kein Problem markiert, 1 nicht jetzt.',
+      ),
+    ).toBeTruthy();
+  });
+});
+
+// ── Die Kachel sagt, was sie ausließ (017 D5) ────────────────────────────────
+
+/* Ein Bericht mit einer 100 und trotzdem etwas weggelegt: der Prüfstein für
+   diese Deliverable — `garden.health.perfect` darf hier nicht erscheinen,
+   obwohl der sichtbare Wert makellos ist. Ohne diesen Fall würde die Karte
+   still behaupten, es gäbe nichts, das den Wert drücken könnte. */
+const PERFECT_BUT_HIDDEN_REPORT: GardenerReport = {
+  ranAt: NOW,
+  usedLlm: false,
+  findings: [],
+  hidden: [{ finding: HIDDEN_DISMISSED, state: 'dismissed' }],
+  health: 100,
+  healthKnown: true,
+  healthContributions: [],
+  advice: [],
+};
+
+describe('Gesundheit nennt, was sie ausließ', () => {
+  it('nennt Gesamtzahl und Aufteilung, wenn etwas weggelegt ist', async () => {
+    installMock(handlers(REPORT_WITH_HIDDEN));
+    wrap(<GardenScreen />);
+    await screen.findByText('90');
+
+    expect(
+      screen.getByText(
+        '2 Befunde bleiben bei diesem Wert ausgeklammert: 1 als kein Problem markiert, 1 nicht jetzt.',
+      ),
+    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Ausgeklammerte Befunde zeigen' })).toBeTruthy();
+  });
+
+  it('zeigt „Nichts drückt den Wert" nie, solange etwas weggelegt ist — auch bei 100', async () => {
+    installMock(handlers(PERFECT_BUT_HIDDEN_REPORT));
+    wrap(<GardenScreen />);
+    await screen.findByText('100');
+
+    expect(
+      screen.queryByText('Nichts drückt den Wert: Die Prüfung hat keine Befunde ergeben.'),
+    ).toBeNull();
+    expect(
+      screen.getByText(
+        '1 Befund bleibt bei diesem Wert ausgeklammert: 1 als kein Problem markiert, 0 nicht jetzt.',
+      ),
+    ).toBeTruthy();
+  });
+
+  it('bleibt unverändert, wenn nichts weggelegt ist', async () => {
+    installMock(handlers(REPORT));
+    wrap(<GardenScreen />);
+    await screen.findByText('72');
+
+    expect(screen.queryByRole('button', { name: 'Ausgeklammerte Befunde zeigen' })).toBeNull();
+    expect(screen.queryByText(/ausgeklammert/)).toBeNull();
+  });
+
+  it('springt über die Kachel auf den Zustandsfilter „Alle"', async () => {
+    installMock(handlers(REPORT_WITH_HIDDEN));
+    wrap(<GardenScreen />);
+    await screen.findByText('90');
+
+    const select = screen.getByLabelText('Zustand') as HTMLSelectElement;
+    expect(select.value).toBe('open');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Ausgeklammerte Befunde zeigen' }));
+
+    expect(select.value).toBe('all');
+    expect(await screen.findByText(HIDDEN_DISMISSED.title)).toBeTruthy();
+    expect(await screen.findByText(HIDDEN_SNOOZED.title)).toBeTruthy();
   });
 });
 
@@ -733,8 +1177,11 @@ describe('Widerspruch', () => {
     wrap(<GardenScreen />);
     await screen.findByText('72');
 
-    /* Beide Seiten mit ihrer Stelle: die benannte und der Ausschnitt. */
-    expect(await screen.findByRole('button', { name: /Token-Lebensdauer/ })).toBeTruthy();
+    /* Beide Seiten mit ihrer Stelle: die benannte und der Ausschnitt. Erst wenn
+       beide gelesen sind, steht der „überholt"-Weg da — darauf wartet das. */
+    expect(
+      await screen.findByRole('button', { name: /^„Token-Lebensdauer" überholt/ }),
+    ).toBeTruthy();
     expect(screen.getByText('- [[scim]] nennt eine Stunde.')).toBeTruthy();
     expect(screen.getByText('Abschnitt „Widersprüche" dieser Seite')).toBeTruthy();
     expect(
@@ -753,8 +1200,8 @@ describe('Widerspruch', () => {
       name: '„Token-Lebensdauer" überholt „SCIM"',
     });
     expect(screen.getByText('+ supersedes: [scim]')).toBeTruthy();
-    /* Weg 3: passt so. */
-    expect(screen.getAllByRole('button', { name: 'Passt so' }).length).toBeGreaterThan(0);
+    /* Weg 3: ist kein Problem. */
+    expect(screen.getAllByRole('button', { name: 'Ist kein Problem' }).length).toBeGreaterThan(0);
 
     await userEvent.click(supersede);
 
@@ -945,6 +1392,42 @@ describe('Beinahe-Dublette', () => {
     expect(await screen.findByText('Zurückgedreht.')).toBeTruthy();
   });
 
+  /* 017 D6: derselbe Konflikt wie bei 016s Hash-Wache im Main, hier über den
+     generischen Karten-Weg (`extraActions`, `exits.ts`) ausgelöst, den D3
+     zusammensetzt — nicht ein eigener, an der Karte vorbei gebauter Pfad. Der
+     Screen darf hier nie den Erfolgs-Streifen zeigen. */
+  it('zeigt bei „überholt" einen Konflikt statt eines Erfolgs-Streifens, wenn der Hash veraltet ist', async () => {
+    installMock(
+      handlers(NDUP_REPORT, {
+        'gardener:supersede': () => {
+          throw Object.assign(new Error('conflict'), { code: 'conflict' });
+        },
+      }),
+    );
+    wrap(<GardenScreen />);
+    await screen.findByText(NDUP.title);
+
+    const radioA = (await screen.findByRole('radio', {
+      name: `„${NDUP_A_FILE}" ist die neuere Seite`,
+    })) as HTMLInputElement;
+    await waitFor(() => expect(radioA.disabled).toBe(false));
+    await userEvent.click(radioA);
+
+    await userEvent.click(
+      screen.getByRole('button', { name: `Überholt: ${NDUP_B_FILE} → ${NDUP_A_FILE}` }),
+    );
+
+    /* Der Fehler steht sichtbar da... */
+    expect(
+      await screen.findByText(
+        'Die Datei wurde zwischenzeitlich geändert. Nichts wurde überschrieben.',
+      ),
+    ).toBeTruthy();
+    /* ...und nicht der Erfolgs-Streifen, den ein gelungenes Schreiben zeigen würde. */
+    expect(screen.queryByText(/^Geschrieben:/)).toBeNull();
+    expect(screen.queryByRole('status')).toBeNull();
+  });
+
   it('behauptet nicht „schon benannt", wenn eine der beiden Seiten nicht lesbar ist', async () => {
     installMock(
       handlers(NDUP_REPORT, {
@@ -985,7 +1468,7 @@ describe('Beinahe-Dublette', () => {
 });
 
 describe('Verwaiste Seite: Ziel wählen', () => {
-  it('bietet die Modulübersicht als Ein-Klick-Weg und eine Auswahl für den Rest — nie nur "Passt so"', async () => {
+  it('bietet die Modulübersicht als Ein-Klick-Weg und eine Auswahl für den Rest — nie nur "ist kein Problem"', async () => {
     installMock(handlers(ORPHAN_REPORT, { 'gardener:orphanTargets': () => ORPHAN_TARGETS_SMALL }));
     wrap(<GardenScreen />);
 
@@ -996,8 +1479,8 @@ describe('Verwaiste Seite: Ziel wählen', () => {
       }),
     ).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Andere Seite wählen' })).toBeTruthy();
-    /* „Passt so" bleibt stehen, ist aber nicht die einzige Handlung auf der Karte. */
-    expect(screen.getByRole('button', { name: 'Passt so' })).toBeTruthy();
+    /* Der Wegwisch-Knopf bleibt stehen, ist aber nicht die einzige Handlung. */
+    expect(screen.getByRole('button', { name: 'Ist kein Problem' })).toBeTruthy();
   });
 
   it('zeigt beim Ein-Klick-Weg Zeile und Zieldatei vor jedem Schreiben — und schreibt erst nach dem Bestätigen', async () => {
@@ -1063,10 +1546,10 @@ describe('Verwaiste Seite: Ziel wählen', () => {
     ).toBeTruthy();
     expect(screen.queryByRole('button', { name: /verlinken/ })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Andere Seite wählen' })).toBeNull();
-    /* „Passt so" steht da, ist aber selbst hier — ganz ohne Kandidaten — nicht
-       die einzige Handlung: das Verwerfen (016 D6) bleibt eine echte
+    /* „Ist kein Problem" steht da, ist aber selbst hier — ganz ohne Kandidaten
+       — nicht die einzige Handlung: das Verwerfen (016 D6) bleibt eine echte
        Alternative, kein bloßer Wegwisch-Knopf. */
-    expect(screen.getByRole('button', { name: 'Passt so' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Ist kein Problem' })).toBeTruthy();
     expect(screen.getByRole('button', { name: `„${ORPHAN_FILE}" verwerfen` })).toBeTruthy();
   });
 

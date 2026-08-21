@@ -52,8 +52,6 @@ export interface GardenerFinding {
   hashes?: Record<string, string>;
   /** Suggestion the user can accept with a click. */
   fix: GardenerFix | null;
-  /** Marked by the user as "fine as is" — won't reappear. */
-  dismissed?: boolean;
 }
 
 export interface GardenerFix {
@@ -77,11 +75,30 @@ export interface GardenerHealthContribution {
   points: number;
 }
 
+/**
+ * A finding the user has taken out of the list, with the reason it is out.
+ * `until` is the day a snooze runs out — the day from which the finding counts
+ * again; a dismissal has no end and carries no day.
+ */
+export interface GardenerHiddenFinding {
+  finding: GardenerFinding;
+  state: 'dismissed' | 'snoozed';
+  until?: string;
+}
+
 export interface GardenerReport {
   ranAt: string;
   /** Was an LLM used, or only the deterministic checks? */
   usedLlm: boolean;
+  /** The open findings — and only those. */
   findings: GardenerFinding[];
+  /**
+   * Dismissed findings plus the ones still snoozed. Deliberately **not** in
+   * `findings`: the dashboard tile and the per-module counts read that field,
+   * and they must not count what the user has put away. They are carried along
+   * rather than dropped so the screen can show and undo them without a new run.
+   */
+  hidden?: GardenerHiddenFinding[];
   /** Health score 0..100, derived from the count and severity of findings. */
   health: number;
   /**

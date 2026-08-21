@@ -43,3 +43,18 @@
 - 2026-08-21 23:05 · 016 · D8 the case exists in the demo vault, and the flow is smoked · done
 - 2026-08-21 23:20 · 016 · review-fix cycle 1 (misleading test comment) · done
 - 2026-08-21 23:20 · 016 · live smoke (pick/preview/confirm/undo, discard) + Done section · done
+- 2026-08-21 23:19 · 017 · D1 the state knows snoozed, hidden and how to forget · started
+- 2026-08-21 23:31 · 017 · D1 the state knows snoozed, hidden and how to forget · done
+- 2026-08-21 23:31 · 017 · D2 snooze and unsnooze have a channel · started
+- 2026-08-21 23:37 · 017 · D2 snooze and unsnooze have a channel · done
+- 2026-08-21 23:37 · 017 · D3 a card names its ways out; not now and handled in the files · started
+- 2026-08-21 23:51 · 017 · D3 a card names its ways out; not now and handled in the files · done
+- 2026-08-21 23:51 · 017 · D4 what I hid stays visible and reversible · started
+- 2026-08-22 00:08 · 017 · D4 what I hid stays visible and reversible · done
+- 2026-08-22 00:08 · 017 · D5 the health card says what it ignored · started
+- 2026-08-22 00:14 · 017 · D5 the health card says what it ignored · done
+- 2026-08-22 00:14 · 017 · D6 the guardrails are asserted, and the flow runs in the app · started
+- 2026-08-22 00:29 · 017 · D6 the guardrails are asserted, and the flow runs in the app · done
+- 2026-08-22 00:40 · 017 · review-fix cycle 1 (prettier F1, prune asymmetry F3) · started
+- 2026-08-22 00:49 · 017 · review-fix cycle 1 (prettier F1, prune asymmetry F3, exits.ts comments) · done
+- 2026-08-22 00:49 · 017 · verify green + live smoke (screenshots) + Done section, moved to done/ · done

@@ -39,6 +39,11 @@ export const deGarden = {
   'garden.health.ranAt': 'Zuletzt geprüft',
   'garden.health.withModel': 'mit Modell gedeutet',
   'garden.health.withoutModel': 'ohne Modell, nur die maschinellen Prüfungen',
+  'garden.health.hiddenOne':
+    '1 Befund bleibt bei diesem Wert ausgeklammert: {dismissed} als kein Problem markiert, {snoozed} nicht jetzt.',
+  'garden.health.hidden':
+    '{total} Befunde bleiben bei diesem Wert ausgeklammert: {dismissed} als kein Problem markiert, {snoozed} nicht jetzt.',
+  'garden.health.showHidden': 'Ausgeklammerte Befunde zeigen',
 
   // ── Rat ───────────────────────────────────────────────────────────────────
   'garden.advice.label': 'Was als nächstes',
@@ -68,12 +73,18 @@ export const deGarden = {
     'Geprüft wurden Wiki-Seiten und Kataloge, Rohquellen, Dumps in der Inbox und Projekte ohne nächsten Schritt.',
   'garden.findings.filtered': 'Kein Befund passt zu diesem Filter.',
   'garden.checkedAt': 'Zuletzt geprüft: {when}',
+  'garden.findings.hiddenOne': '1 weggelegt',
+  'garden.findings.hidden': '{count} weggelegt',
 
   // ── Filter ────────────────────────────────────────────────────────────────
   'garden.filter.label': 'Befunde filtern',
   'garden.filter.kind': 'Art',
   'garden.filter.module': 'Modul',
   'garden.filter.severity': 'Schwere',
+  'garden.filter.state': 'Zustand',
+  'garden.filter.stateOpen': 'Offen',
+  'garden.filter.stateDismissed': 'Kein Problem',
+  'garden.filter.stateSnoozed': 'Nicht jetzt',
   'garden.filter.all': 'Alle',
   'garden.filter.noModule': 'Ohne Modul',
   'garden.filter.reset': 'Filter zurücksetzen',
@@ -120,8 +131,17 @@ export const deGarden = {
   'garden.card.openThis': '„{path}" öffnen',
   'garden.card.preview': 'Geschrieben wird in {file}:',
   'garden.card.previewNothing': 'Schreibt nichts. Öffnet nur, wo es weitergeht.',
-  'garden.card.dismiss': 'Passt so',
-  'garden.card.dismissed': 'Passt so. Der Befund zählt nicht mehr gegen die Gesundheit.',
+  'garden.card.noFix':
+    'Von selbst richten lässt sich hier nichts. Die Wege daraus stehen darunter.',
+  'garden.card.dismiss': 'Ist kein Problem',
+  'garden.card.dismissed': 'Kein Problem. Der Befund zählt nicht mehr gegen die Gesundheit.',
+  'garden.card.handled': 'Habe ich in den Dateien erledigt',
+  'garden.card.recheckGone': 'Neu geprüft: der Befund ist weg.',
+  'garden.card.recheckStill':
+    'Neu geprüft: der Befund steht noch. In den Dateien hat sich daran nichts geändert.',
+  'garden.card.snooze': 'Nicht jetzt: „{title}"',
+  'garden.card.snoozed': 'Nicht jetzt. Der Befund kommt am {date} wieder.',
+  'garden.card.unsnoozed': 'Der Befund zählt wieder.',
   'garden.card.undismiss': 'Wieder anzeigen',
   'garden.card.written': 'Geschrieben: {file}',
   'garden.card.discarded': '„{file}" liegt jetzt im Papierkorb.',
@@ -132,6 +152,10 @@ export const deGarden = {
   'garden.card.opened': 'Geöffnet: {path}',
   'garden.card.alsoOpen': 'Die zweite Datei: {path}',
   'garden.card.openSecond': 'Zweite Datei öffnen',
+
+  // ── Weggelegt ─────────────────────────────────────────────────────────────
+  'garden.hidden.dismissed': 'Ist kein Problem.',
+  'garden.hidden.snoozed': 'Kommt am {date} wieder.',
 
   // ── Widerspruch ───────────────────────────────────────────────────────────
   'garden.contradiction.never': 'Nie automatisch aufgelöst: beide Fassungen bleiben stehen.',

@@ -11,19 +11,57 @@
    how many remain after its own selection — otherwise everything would show
    (0) as soon as something else is selected. */
 
-import type { FindingSeverity, GardenerFinding, GardenerFindingKind } from '@shared/types';
+import type {
+  FindingSeverity,
+  GardenerFinding,
+  GardenerFindingKind,
+  GardenerHiddenFinding,
+} from '@shared/types';
+
+/** Open findings, one hidden state, or open and hidden together. */
+export type FindingStateFilter = 'open' | 'dismissed' | 'snoozed' | 'all';
 
 export interface FindingFilterState {
   kind: GardenerFindingKind | 'all';
   /** Module slug, `'none'` for findings without a module, `'all'` for all. */
   module: string | 'all' | 'none';
   severity: FindingSeverity | 'all';
+  state: FindingStateFilter;
 }
 
-export const ALL_FILTERS: FindingFilterState = { kind: 'all', module: 'all', severity: 'all' };
+export const ALL_FILTERS: FindingFilterState = {
+  kind: 'all',
+  module: 'all',
+  severity: 'all',
+  state: 'open',
+};
 
 export function isFiltered(filter: FindingFilterState): boolean {
-  return filter.kind !== 'all' || filter.module !== 'all' || filter.severity !== 'all';
+  return (
+    filter.kind !== 'all' ||
+    filter.module !== 'all' ||
+    filter.severity !== 'all' ||
+    filter.state !== 'open'
+  );
+}
+
+/**
+ * Which pool the state axis selects from — open findings, the hidden ones in
+ * one state, or open and every hidden finding together ("all"). A plain list
+ * of `GardenerFinding`, so it drops straight into `applyFilter`/`groupByKind`;
+ * the hidden reason (state, `until`) lives in the report's `hidden` array and
+ * a caller that needs it looks the finding's id up there.
+ */
+export function poolForState(
+  findings: readonly GardenerFinding[],
+  hidden: readonly GardenerHiddenFinding[],
+  state: FindingStateFilter,
+): GardenerFinding[] {
+  if (state === 'open') return [...findings];
+  const hiddenFindings = hidden
+    .filter((entry) => state === 'all' || entry.state === state)
+    .map((entry) => entry.finding);
+  return state === 'all' ? [...findings, ...hiddenFindings] : hiddenFindings;
 }
 
 function matchesKind(finding: GardenerFinding, filter: FindingFilterState): boolean {
@@ -102,5 +140,34 @@ export function severityCounts(
   for (const finding of applyFilter(findings, { ...filter, severity: 'all' })) {
     counts.set(finding.severity, (counts.get(finding.severity) ?? 0) + 1);
   }
+  return counts;
+}
+
+/**
+ * How many findings each state value would show — kind/module/severity
+ * applied, the state axis itself ignored, exactly like the other counts.
+ * Unlike them, the state axis switches between two different lists (`findings`
+ * and `hidden`) rather than filtering one, so it does its own counting instead
+ * of going through `applyFilter` with `state` reset.
+ */
+export function stateCounts(
+  findings: readonly GardenerFinding[],
+  hidden: readonly GardenerHiddenFinding[],
+  filter: FindingFilterState,
+): Map<FindingStateFilter, number> {
+  const open = applyFilter(findings, filter).length;
+  const dismissed = applyFilter(
+    hidden.filter((entry) => entry.state === 'dismissed').map((entry) => entry.finding),
+    filter,
+  ).length;
+  const snoozed = applyFilter(
+    hidden.filter((entry) => entry.state === 'snoozed').map((entry) => entry.finding),
+    filter,
+  ).length;
+  const counts = new Map<FindingStateFilter, number>();
+  counts.set('open', open);
+  counts.set('dismissed', dismissed);
+  counts.set('snoozed', snoozed);
+  counts.set('all', open + dismissed + snoozed);
   return counts;
 }

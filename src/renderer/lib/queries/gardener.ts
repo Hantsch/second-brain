@@ -79,6 +79,10 @@ export function useGardenerCancel(): UseMutationResult<void, unknown, void> {
 export interface GardenerMutations {
   dismiss: UseMutationResult<void, unknown, string>;
   undismiss: UseMutationResult<void, unknown, string>;
+  /** Puts a finding away until it counts again — mirrors `useSnoozeReminder`. */
+  snooze: UseMutationResult<void, unknown, { id: string; days: number }>;
+  /** The reverse path to `snooze`, otherwise there would be none. */
+  unsnooze: UseMutationResult<void, unknown, string>;
   fix: UseMutationResult<FixResult, unknown, GardenerFinding>;
   undoFix: UseMutationResult<UndoFixResult, unknown, string>;
   /**
@@ -108,6 +112,12 @@ export function useGardenerMutations(): GardenerMutations {
   return {
     dismiss: useMutation({ mutationFn: api.gardener.dismiss, onSuccess: done, retry: false }),
     undismiss: useMutation({ mutationFn: api.gardener.undismiss, onSuccess: done, retry: false }),
+    snooze: useMutation({
+      mutationFn: ({ id, days }: { id: string; days: number }) => api.gardener.snooze(id, days),
+      onSuccess: done,
+      retry: false,
+    }),
+    unsnooze: useMutation({ mutationFn: api.gardener.unsnooze, onSuccess: done, retry: false }),
     fix: useMutation({ mutationFn: api.gardener.applyFix, onSuccess: done, retry: false }),
     undoFix: useMutation({ mutationFn: api.gardener.undoFix, onSuccess: done, retry: false }),
     discardPlan: useMutation({ mutationFn: api.gardener.discardPlan, retry: false }),

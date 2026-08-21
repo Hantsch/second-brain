@@ -44,7 +44,7 @@ import { FindingList } from './FindingList';
 import { HealthCard } from './HealthCard';
 import { OutcomeStrip } from './OutcomeStrip';
 import { RunBar } from './RunBar';
-import { useGardenOutcome } from './useGardenOutcome';
+import { useFindingActions } from './useFindingActions';
 import { ALL_FILTERS } from './filter';
 import type { FindingFilterState } from './filter';
 import { targetFor } from './targets';
@@ -82,12 +82,15 @@ export function GardenScreen() {
     cancelled,
     applyFix,
     dismiss,
+    snooze,
+    restore,
+    recheck,
     supersede,
     supersedeDuplicate,
     discarded,
     linkOrphan,
     undo,
-  } = useGardenOutcome(mutations, pages, openPath);
+  } = useFindingActions(mutations, pages, run, openPath);
 
   const start = (): void => {
     reset();
@@ -118,6 +121,8 @@ export function GardenScreen() {
     mutations.fix.error ??
     mutations.dismiss.error ??
     mutations.undismiss.error ??
+    mutations.snooze.error ??
+    mutations.unsnooze.error ??
     mutations.undoFix.error ??
     mutations.supersede.error ??
     mutations.linkOrphan.error ??
@@ -136,7 +141,10 @@ export function GardenScreen() {
         <OutcomeStrip
           outcome={outcome}
           busy={
-            mutations.undoFix.isPending || mutations.undismiss.isPending || pages.savePage.isPending
+            mutations.undoFix.isPending ||
+            mutations.undismiss.isPending ||
+            mutations.unsnooze.isPending ||
+            pages.savePage.isPending
           }
           {...(undoable ? { onUndo: undo } : {})}
           onOpenSecond={openPath}
@@ -186,7 +194,10 @@ export function GardenScreen() {
     <div className="sb-screen sb-screen--wide">
       {header}
       {notes}
-      <HealthCard report={data} />
+      <HealthCard
+        report={data}
+        onShowHidden={() => setFilter((prev) => ({ ...prev, state: 'all' }))}
+      />
 
       {modelRouted === false ? (
         <div className="sb-gllm">
@@ -198,7 +209,7 @@ export function GardenScreen() {
         </div>
       ) : null}
 
-      {data.findings.length === 0 ? (
+      {data.findings.length === 0 && (data.hidden ?? []).length === 0 ? (
         <EmptyState
           icon="circle-check-big"
           title={t('garden.findings.none')}
@@ -209,17 +220,21 @@ export function GardenScreen() {
       ) : (
         <FindingList
           findings={data.findings}
+          hidden={data.hidden ?? []}
           filter={filter}
           onFilter={setFilter}
           busyId={busyId}
           onFix={applyFix}
           onDismiss={dismiss}
+          onSnooze={snooze}
+          onRecheck={recheck}
           onOpenPath={openPath}
           onOpenFile={openFile}
           onSupersede={supersede}
           onSupersedeDuplicate={supersedeDuplicate}
           onDiscarded={discarded}
           onLinkOrphan={linkOrphan}
+          onRestore={restore}
         />
       )}
     </div>

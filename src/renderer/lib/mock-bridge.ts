@@ -504,6 +504,8 @@ const RESPONSES: MockResponses = {
   'gardener:cancel': () => undefined,
   'gardener:dismiss': () => undefined,
   'gardener:undismiss': () => undefined,
+  'gardener:snooze': () => undefined,
+  'gardener:unsnooze': () => undefined,
   /* The mock writes nothing — it returns what a fix would return. */
   'gardener:applyFix': ({ finding }) => ({
     written: finding.fix === null ? [] : [finding.paths[0] ?? fx.wikiPage.path],

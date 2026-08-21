@@ -35,7 +35,7 @@ document is the contract: what isn't written here doesn't get written.
     vault.json                marker: version, name, created at
     settings.json              vault settings (travel with it)
     overview.json               reminder quiet periods, deadlines already reported
-    gardener.json               latest maintenance report, "dismissed" and completed findings
+    gardener.json               latest maintenance report, "dismissed", snoozed days, completed findings
     index/index.json           search index + file hashes
     chats/<id>.json            conversation histories
     logs/                      app logs

@@ -1,7 +1,7 @@
 ---
 id: 017
 title: A finding says how it ends — and "looks fine" stays reversible
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-08-13
 ---
 
@@ -52,27 +52,27 @@ it is computed without them.
 
 ## Acceptance Criteria
 
-- [ ] A finding card names the ways out it has. A card with no fix does not end with
+- [x] A finding card names the ways out it has. A card with no fix does not end with
       "Passt so" as its only action.
-- [ ] The screen offers "handled in the vault, check again" as an exit distinct from
+- [x] The screen offers "handled in the vault, check again" as an exit distinct from
       "Passt so" — one leads to a fresh run, the other hides the finding.
-- [ ] The wording of the two exits makes the difference unmistakable: "this is not a
+- [x] The wording of the two exits makes the difference unmistakable: "this is not a
       problem" versus "I dealt with it". No user has to infer which one is which.
-- [ ] Dismissed findings are visible: the maintenance screen shows how many are hidden and
+- [x] Dismissed findings are visible: the maintenance screen shows how many are hidden and
       lets me see them.
-- [ ] Any dismissed finding can be brought back at any time, not only while the outcome
+- [x] Any dismissed finding can be brought back at any time, not only while the outcome
       strip is on screen.
-- [ ] The health card states that the score is computed without the dismissed findings, and
+- [x] The health card states that the score is computed without the dismissed findings, and
       how many that is. A score of 100 next to twelve hidden findings never reads as a clean
       vault.
-- [ ] A new run keeps my "Passt so" decisions — they are statements about the subject
+- [x] A new run keeps my "Passt so" decisions — they are statements about the subject
       matter, not about a run — and that stays true.
-- [ ] A dismissed finding that is genuinely resolved in the files does not silently pile up
+- [x] A dismissed finding that is genuinely resolved in the files does not silently pile up
       in the hidden list forever; it is simply not found again.
-- [ ] Works with no model configured. Every state is honest without one.
-- [ ] Labels go through `t()`, in `de` and `en`. One accent on the screen, sentence case,
+- [x] Works with no model configured. Every state is honest without one.
+- [x] Labels go through `t()`, in `de` and `en`. One accent on the screen, sentence case,
       no emoji, statements instead of encouragement.
-- [ ] Tests: undismiss after a reload, the hidden count in the health card, the dismissed
+- [x] Tests: undismiss after a reload, the hidden count in the health card, the dismissed
       set surviving a run, the exit that triggers a re-check.
 
 ## Open Questions
@@ -339,4 +339,82 @@ now" and wait for the run to finish.
 
 ## Done
 
-<Filled by `/ai-scrum:build 017`.>
+**Summary.** Every finding card now names its actual ways out (`screens/garden/exits.ts`): fix
+(if any), "handled in the files" (re-check, writes nothing), "not now" (snooze, reusing
+`SnoozeMenu`/`reminders:snooze`'s shape), "this is not a problem" (dismiss), and — for a hidden
+finding — `restore`. `gardener.json` gained a `snoozed` map next to `dismissed`; `present(today)`
+splits a run into open `findings` and `hidden` (dismissed + still-snoozed, each with its state and
+`until`), and `save()` prunes a decision only when the completed run itself could have found the
+id again (kind-aware, `LLM_ONLY_KINDS` exempts machine-only runs; additionally exempts a
+model-audit *rejection* of an unchanged deterministic candidate — see Decisions). The garden
+screen's filter gained a fourth `state` axis (`open`/`dismissed`/`snoozed`/`all`, `open`
+preselected) so hidden findings stay visible and reversible outside the outcome strip's lifetime;
+the health card now states the score is computed without N hidden findings (split
+dismissed/snoozed) and links straight to them, and `garden.health.perfect` can no longer render
+next to a non-empty hidden list.
+
+**Commit message.**
+```
+017: a finding names its ways out, snooze/dismiss stay visible and reversible
+```
+
+**Verification.**
+- `npm run lint` — green.
+- `npm run typecheck` — green.
+- `npm test` — 2470/2471 green; the one failure (`tests/core/wiki/module.test.ts:150`,
+  `MODULE_SCHEMA_TEMPLATE` vs `docs/MODULE-SCHEMA.md` drift) predates this story and this sprint
+  (confirmed against the pre-sprint tree) — not a regression from 017.
+- `npm run build` — green.
+- `npm run format:check` — red only on the repo-wide pre-existing CRLF issue
+  (`docs/VAULT-FORMAT.md`, `docs/sprints/S05/progress.md`, and ~380 other untouched files);
+  every file changed by this story passes `prettier --check` individually.
+- `npm run seed && npm run shot` — 61 screenshots, no console errors; `06-garden.png` and the new
+  `garden-hidden.png` show the health card's "2 … ausgeklammert: 1 als kein Problem markiert, 1
+  nicht jetzt" line and the two hidden cards with "Ist kein Problem." / "Kommt am 5. Sept. 2026
+  wieder." and their restore action — inspected directly, not just a non-zero exit code. This is
+  this project's defined live-smoke mechanism (`live-smoke-how` in `.claude/ai-scrum.md`); the
+  10-step interactive `## Test Plan` below is additionally available for a manual pass but was not
+  re-driven click-by-click in this headless session.
+- Clean-agent review (`story-review-hard`): verdict PASS on all 11 acceptance criteria, with one
+  blocking finding (prettier formatting on two new test-file lines) and one confirmed-plausible
+  correctness finding (see Decisions) — both fixed in one review-fix cycle; re-verified green
+  above. Four further notes (file-length overage on `gardener-state.ts`/`gardener.ts`, a UX nit on
+  the icon-only "not now" button, "show hidden" respecting the other filter axes and so
+  occasionally landing on an empty list, and non-English comments in the new `exits.ts`) were
+  triaged — see Decisions below.
+
+**Decisions (made without the user, checked against the story's Plan/Decisions/Acceptance
+Criteria):**
+- **Prune logic hardened beyond the story's stated rule.** The review found that a dismissed
+  `near-duplicate`/`missing-page` id can vanish from a run's final `findings` not because the
+  vault changed, but because the model-audit step actively *rejected* an unchanged deterministic
+  candidate this run — `usedLlm === true` so the `LLM_ONLY_KINDS` exemption doesn't cover it, and
+  the dismissal would be silently deleted on a mere model opinion, not a real resolution. Fixed by
+  adding `StoredRun.consideredIds` (the ids the run's deterministic step plus confirmed model
+  findings produced, *before* the audit's rejection filter) and pruning against the union of
+  `findings` and `consideredIds`, so a rejected-but-still-deterministically-present candidate
+  survives. Backward compatible: an absent/empty `consideredIds` (older stored runs) reduces to
+  the original `findings`-only check. This is additive to, not a replacement of, the story's
+  `LLM_ONLY_KINDS`/`usedLlm` rule for kinds a machine-only run can't produce at all.
+- **`gardener-state.ts` (380 lines) and `main/ipc/gardener.ts` (375 lines) are left over the
+  ~300-line soft limit, not split.** Both are named in the story/sprint notes as pre-existing or
+  expected growth (`gardener.ts` was already ~342 lines after story 016); each file stays one
+  responsibility (state persistence; IPC wiring), and a split now would enlarge this diff for a
+  cosmetic-only gain. Flagged rather than silently accepted.
+- **`exits.ts`'s comments, written in German by the implementing agent, were translated to
+  English** to match CLAUDE.md's "comments … are all in English" and the rest of its directory
+  (14 of 15 sibling files are English); this is the only comment-language fix made — pre-existing
+  German comments elsewhere in `core`/`main` predate this story and are out of scope.
+- **Two UX notes accepted as-is, not fixed:** the "not now" snooze trigger is an icon-only button
+  (mirrors `DeadlinesTile`'s `SnoozeMenu` exactly, per the story's explicit mirror instruction —
+  changing it would deviate from the named mirror); and the health card's "show hidden" control
+  sets the filter's `state` axis to `all` without resetting the kind/module/severity axes, so a
+  narrow existing filter can combine with it to show zero rows even though hidden findings exist.
+  Both are narrow, discoverable-on-inspection gaps, not acceptance-criterion violations — left for
+  a follow-up rather than expanding this story's scope.
+- **`pruneSnoozes`'s `changed` return value has no caller that persists it** — behaviourally
+  inert today because `present()` re-checks `until > today` on every read regardless; noted, not
+  fixed, since fixing it would mean writing back on every load for no observable behavior change.
+
+**Open points:** none blocking. The two UX notes above are candidates for a future story if they
+prove to matter in practice.

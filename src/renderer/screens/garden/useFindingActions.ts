@@ -6,16 +6,26 @@
    confirmation says is decided by the result, not the button's label —
    without a written file, nothing was "written", even if the click sounded
    like it (`applyFix`), and a page that went to the trash is never
-   "written" either (`discarded`). */
+   "written" either (`discarded`). `recheck` is that rule at its purest: it
+   writes nothing at all, so the only honest thing it can say afterwards is
+   whether the finding is still in the new report. */
 
 import { useState } from 'react';
 import type { GardenerFinding } from '@shared/types';
-import type { DiscardPageResult, GardenerMutations } from '../../lib/queries/gardener';
+import type {
+  DiscardPageResult,
+  GardenerMutations,
+  useGardenerRun,
+} from '../../lib/queries/gardener';
 import type { ModuleMutations } from '../../lib/queries/modules';
 import type { SupersedeWrite } from './ContradictionCard';
 import type { NearDuplicateSupersedeWrite } from './NearDuplicateCard';
 import type { OrphanLinkWrite } from './OrphanCard';
+import type { HiddenState } from './exits';
 import type { Outcome } from './OutcomeStrip';
+
+/** The run this screen already owns — `recheck` starts exactly that one. */
+type GardenerRun = ReturnType<typeof useGardenerRun>;
 
 /** The `undoFix` mark of an outcome that can go back that way — `null` for
     every other kind, `superseded`'s own manual undo included. */
@@ -25,7 +35,7 @@ function undoTokenOf(outcome: Outcome): string | null {
   return null;
 }
 
-export interface GardenOutcome {
+export interface FindingActions {
   outcome: Outcome | null;
   busyId: string | null;
   undoable: boolean;
@@ -33,6 +43,12 @@ export interface GardenOutcome {
   cancelled: () => void;
   applyFix: (finding: GardenerFinding) => void;
   dismiss: (finding: GardenerFinding) => void;
+  /** `until` is the day the finding returns — the strip names it. */
+  snooze: (finding: GardenerFinding, days: number, until: string) => void;
+  /** The way back into the list, from either kind of putting away. */
+  restore: (finding: GardenerFinding, state: Exclude<HiddenState, null>) => void;
+  /** "Dealt with in the files": a fresh run, no state of its own. */
+  recheck: (finding: GardenerFinding) => void;
   supersede: (write: SupersedeWrite) => void;
   supersedeDuplicate: (write: NearDuplicateSupersedeWrite) => void;
   discarded: (result: DiscardPageResult) => void;
@@ -43,12 +59,14 @@ export interface GardenOutcome {
 /** `pages.savePage` (the contradiction's own path — untouched, story 015's
     recorded follow-up) and `mutations` (the D6/D7 gardener writes) between
     them cover every action a finding card can trigger. */
-export function useGardenOutcome(
+export function useFindingActions(
   mutations: GardenerMutations,
   pages: ModuleMutations,
+  /** The screen's own run — `recheck` starts it, it invents no second one. */
+  run: GardenerRun,
   /** Where an "opens only" fix leads — the same path the finding cards use. */
   openPath: (path: string) => void,
-): GardenOutcome {
+): FindingActions {
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
@@ -78,6 +96,49 @@ export function useGardenOutcome(
     mutations.dismiss.mutate(finding.id, {
       onSettled: () => setBusyId(null),
       onSuccess: () => setOutcome({ kind: 'dismissed', id: finding.id }),
+    });
+  };
+
+  /* "Not now" — one click after the day is picked, exactly like dismissing;
+     `until` comes from the menu that showed that day, so the strip and the
+     menu can't disagree about it. */
+  const snooze = (finding: GardenerFinding, days: number, until: string): void => {
+    setBusyId(finding.id);
+    mutations.snooze.mutate(
+      { id: finding.id, days },
+      {
+        onSettled: () => setBusyId(null),
+        onSuccess: () => setOutcome({ kind: 'snoozed', id: finding.id, until }),
+      },
+    );
+  };
+
+  /* Both ways of putting a finding away have the same way back, and which
+     channel undoes it is decided by the state the report carries. This is
+     the hidden list's own "show it again" (017 D4) — a direct action, not a
+     write the outcome strip announces: the mutation's own success handler
+     already refreshes the report, so the list re-renders on its own and no
+     outcome appears. The strip's "show it again" after a fresh dismiss/snooze
+     goes through `undo` below instead, which does set one. */
+  const restore = (finding: GardenerFinding, state: Exclude<HiddenState, null>): void => {
+    setBusyId(finding.id);
+    const mutation = state === 'snoozed' ? mutations.unsnooze : mutations.undismiss;
+    mutation.mutate(finding.id, { onSettled: () => setBusyId(null) });
+  };
+
+  /* "I dealt with it in the files": nothing is written and nothing is hidden —
+     the run decides. Still in the new report (hidden counts as still there, the
+     file didn't change): the finding stands. Gone: it's gone. */
+  const recheck = (finding: GardenerFinding): void => {
+    setBusyId(finding.id);
+    run.mutate(undefined, {
+      onSettled: () => setBusyId(null),
+      onSuccess: (report) => {
+        const stillThere =
+          report.findings.some((entry) => entry.id === finding.id) ||
+          (report.hidden ?? []).some((entry) => entry.finding.id === finding.id);
+        setOutcome({ kind: 'rechecked', gone: !stillThere });
+      },
     });
   };
 
@@ -142,6 +203,14 @@ export function useGardenOutcome(
       mutations.undismiss.mutate(outcome.id, { onSuccess: () => setOutcome(null) });
       return;
     }
+    /* A snooze goes back the way `DeadlinesTile` does it: the reminder — here
+       the finding — counts again right away. */
+    if (outcome.kind === 'snoozed') {
+      mutations.unsnooze.mutate(outcome.id, {
+        onSuccess: () => setOutcome({ kind: 'unsnoozed' }),
+      });
+      return;
+    }
     /* `fixed` (a normal write, including a supersede) and `discarded` (a page
        moved to the trash) both leave an `undoFix` journal behind them — same
        token, same way back. */
@@ -170,6 +239,7 @@ export function useGardenOutcome(
   const undoable =
     outcome !== null &&
     (outcome.kind === 'dismissed' ||
+      outcome.kind === 'snoozed' ||
       outcome.kind === 'superseded' ||
       outcome.kind === 'discarded' ||
       (outcome.kind === 'fixed' && outcome.undoToken !== null));
@@ -182,6 +252,9 @@ export function useGardenOutcome(
     cancelled: () => setOutcome({ kind: 'cancelled' }),
     applyFix,
     dismiss,
+    snooze,
+    restore,
+    recheck,
     supersede,
     supersedeDuplicate,
     discarded,

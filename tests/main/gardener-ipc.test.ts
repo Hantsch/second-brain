@@ -22,13 +22,13 @@
  *     Schreiben ändert, und `invalid`, wenn das Ziel kein Kandidat mehr ist.
  */
 
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { IpcChannel, IpcEventName, IpcEvents, IpcRequest, IpcResponse } from '@shared/ipc';
 import type { GardenerFinding } from '@shared/types';
-import { FsVaultStore } from '@core/vault';
+import { FsVaultStore, sha256 } from '@core/vault';
 import { toIpcError } from '../../src/main/ipc/errors';
 import { IPC_ERROR_PREFIX, encodeIpcError } from '../../src/preload/ipc-error-wire';
 import { createTempVault } from '../helpers/vault';
@@ -152,6 +152,31 @@ async function addScimMention(vault: TempVault, harness: Harness): Promise<strin
   );
   await harness.services.requireIndex().refresh?.();
   return SCIM_MENTION;
+}
+
+/**
+ * Jede Markdown-Datei im Vault (nie `.secondbrain/`), als Pfad → sha256 ihres
+ * Inhalts. Der Beweis für D6, dass „passt so", „nicht jetzt" und der Rückweg
+ * nur `.secondbrain/gardener.json` anfassen: dieselbe Menge davor und danach.
+ */
+async function snapshotMarkdown(vault: TempVault): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  async function walk(relDir: string): Promise<void> {
+    const entries = await readdir(vault.absolute(relDir === '' ? '.' : relDir), {
+      withFileTypes: true,
+    });
+    for (const entry of entries) {
+      if (entry.name === '.secondbrain') continue;
+      const relPath = relDir === '' ? entry.name : `${relDir}/${entry.name}`;
+      if (entry.isDirectory()) {
+        await walk(relPath);
+      } else if (entry.name.endsWith('.md')) {
+        out.set(relPath, sha256((await vault.read(relPath)) ?? ''));
+      }
+    }
+  }
+  await walk('');
+  return out;
 }
 
 describe('Pflege-Kanäle im Main', () => {
@@ -299,6 +324,143 @@ describe('Pflege-Kanäle im Main', () => {
         code: 'not-found',
       },
     );
+  });
+
+  // ── Ruhezeit ───────────────────────────────────────────────────────────────
+
+  it('legt einen Befund für einen Zeitraum still, zeigt ihn im Bericht als ausgeblendet — und hebt es wieder auf', async () => {
+    const report = await harness.call('gardener:run', {});
+    const target = findingOfKind(report.findings, 'orphan');
+    harness.sent.length = 0;
+
+    await harness.call('gardener:snooze', { id: target.id, days: 3 });
+
+    /* Dasselbe Aufwecken wie bei „Passt so" — sonst müsste der Schirm auf
+       eine erneute Anfrage warten, um die Ruhezeit zu sehen. */
+    expect(harness.sent.some((entry) => entry.name === 'event:vault-changed')).toBe(true);
+
+    const after = await harness.call('gardener:report', undefined);
+    expect(after?.findings.some((finding) => finding.id === target.id)).toBe(false);
+    const hidden = after?.hidden?.find((entry) => entry.finding.id === target.id);
+    expect(hidden).toMatchObject({ state: 'snoozed', until: day(3) });
+    const state = JSON.parse((await vault.read('.secondbrain/gardener.json')) ?? '{}') as {
+      snoozed: Record<string, string>;
+    };
+    expect(state.snoozed[target.id]).toBe(day(3));
+
+    await harness.call('gardener:unsnooze', { id: target.id });
+    const back = await harness.call('gardener:report', undefined);
+    expect(back?.findings.some((finding) => finding.id === target.id)).toBe(true);
+    expect(back?.hidden?.some((entry) => entry.finding.id === target.id)).toBe(false);
+  });
+
+  it('weist eine unbekannte Kennung beim Stillstellen ab', async () => {
+    await harness.call('gardener:run', {});
+    await expect(
+      harness.call('gardener:snooze', { id: 'gibt-es-nicht', days: 3 }),
+    ).rejects.toMatchObject({ code: 'not-found' });
+  });
+
+  it('weist eine Ruhezeit außerhalb von 1 bis 365 Tagen ab', async () => {
+    const report = await harness.call('gardener:run', {});
+    const target = findingOfKind(report.findings, 'orphan');
+
+    await expect(harness.call('gardener:snooze', { id: target.id, days: 0 })).rejects.toMatchObject(
+      { code: 'invalid' },
+    );
+    await expect(
+      harness.call('gardener:snooze', { id: target.id, days: 366 }),
+    ).rejects.toMatchObject({ code: 'invalid' });
+  });
+
+  it('weist ab, eine Ruhezeit aufzuheben, die es nicht gibt', async () => {
+    const report = await harness.call('gardener:run', {});
+    const target = findingOfKind(report.findings, 'orphan');
+
+    await expect(harness.call('gardener:unsnooze', { id: target.id })).rejects.toMatchObject({
+      code: 'not-found',
+    });
+    await expect(harness.call('gardener:unsnooze', { id: 'gibt-es-nicht' })).rejects.toMatchObject({
+      code: 'not-found',
+    });
+  });
+
+  it('lässt einen Befund wieder auftauchen, sobald seine Ruhezeit abgelaufen ist', async () => {
+    const report = await harness.call('gardener:run', {});
+    const target = findingOfKind(report.findings, 'orphan');
+    await harness.call('gardener:snooze', { id: target.id, days: 1 });
+    const stillHidden = await harness.call('gardener:report', undefined);
+    expect(stillHidden?.findings.some((finding) => finding.id === target.id)).toBe(false);
+
+    /* Der Tag, ab dem die Ruhezeit nicht mehr gilt — dieselbe Uhr, die
+       `gardenerToday()` liest. */
+    vi.setSystemTime(Date.parse(`${day(1)}T09:00:00+02:00`));
+
+    const later = await harness.call('gardener:report', undefined);
+    expect(later?.findings.some((finding) => finding.id === target.id)).toBe(true);
+    expect(later?.hidden?.some((entry) => entry.finding.id === target.id)).toBe(false);
+  });
+
+  // ── Guardrail: nur gardener.json (017 D6) ───────────────────────────────────
+
+  /* Das Kernversprechen von 017: „passt so", „nicht jetzt" und der Rückweg sind
+     abgeleiteter Zustand, keine Änderung an der Sache selbst. Anders als die
+     Schreibwege aus 015/016 (Verwerfen, Überholen, Verweis eintragen), die
+     bewusst eine Vault-Datei anfassen und deshalb hash-gewacht sind, dürfen
+     diese vier Kanäle *nie* eine Markdown-Datei berühren — nur die eine JSON
+     neben ihr. */
+  it('D6: „passt so", „nicht jetzt" und der Rückweg ändern keine Markdown-Datei im Vault', async () => {
+    const report = await harness.call('gardener:run', {});
+    const dismissTarget = findingOfKind(report.findings, 'orphan');
+    const snoozeTarget = findingOfKind(report.findings, 'broken-link');
+
+    const before = await snapshotMarkdown(vault);
+
+    await harness.call('gardener:dismiss', { id: dismissTarget.id });
+    await harness.call('gardener:snooze', { id: snoozeTarget.id, days: 3 });
+
+    expect(await snapshotMarkdown(vault)).toEqual(before);
+    expect(await vault.exists('.secondbrain/gardener.json')).toBe(true);
+    const afterHide = (await vault.read('.secondbrain/gardener.json')) ?? '';
+
+    await harness.call('gardener:undismiss', { id: dismissTarget.id });
+    await harness.call('gardener:unsnooze', { id: snoozeTarget.id });
+
+    expect(await snapshotMarkdown(vault)).toEqual(before);
+    /* Zur Kontrolle: `gardener.json` selbst hat sich zwischen den beiden
+       Momentaufnahmen sehr wohl bewegt — sonst würde dieser Test nichts über
+       den Unterschied zu einer Markdown-Datei aussagen. */
+    const afterRestore = (await vault.read('.secondbrain/gardener.json')) ?? '';
+    expect(afterRestore).not.toBe(afterHide);
+  });
+
+  // ── Übersteht einen frischen Lauf (017 D6) ──────────────────────────────────
+
+  it('D6: ein weggelegter Befund übersteht einen frischen Lauf und bleibt danach zurückholbar', async () => {
+    const report = await harness.call('gardener:run', {});
+    const target = findingOfKind(report.findings, 'orphan');
+    await harness.call('gardener:dismiss', { id: target.id });
+
+    /* Ein vollständiger, neuer Lauf — nicht nur ein weiterer `gardener:report`. */
+    const rerun = await harness.call('gardener:run', {});
+    expect(rerun.findings.some((finding) => finding.id === target.id)).toBe(false);
+    expect(rerun.hidden).toContainEqual({
+      finding: expect.objectContaining({ id: target.id }),
+      state: 'dismissed',
+    });
+
+    /* Ein frischer Bericht danach — wie nach einem Neuladen des Screens —
+       kennt die Ausblendung immer noch, nicht nur direkt nach dem Lauf. */
+    const reloaded = await harness.call('gardener:report', undefined);
+    const hiddenAfterReload = reloaded?.hidden?.find((entry) => entry.finding.id === target.id);
+    expect(hiddenAfterReload).toMatchObject({ state: 'dismissed' });
+
+    /* Und der Rückweg funktioniert nach diesem frischen Lauf genauso wie
+       vorher. */
+    await harness.call('gardener:undismiss', { id: target.id });
+    const restored = await harness.call('gardener:report', undefined);
+    expect(restored?.findings.some((finding) => finding.id === target.id)).toBe(true);
+    expect(restored?.hidden?.some((entry) => entry.finding.id === target.id)).toBe(false);
   });
 
   // ── Fixes ──────────────────────────────────────────────────────────────────
