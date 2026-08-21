@@ -34,8 +34,11 @@ function toMb(bytes: number): number | null {
   return Number.isFinite(bytes) ? Math.round(bytes / 1024 / 1024) : null;
 }
 
-/** Free space on the volume that would hold local models. Never throws. */
-async function detectFreeDiskMb(): Promise<number | null> {
+/** Free space on the volume that would hold local models. Never throws.
+    Exported for `ollama-install.ts` (019c, D2): the runtime install plan needs
+    the same free-disk fact this scan already gathers, and duplicating the
+    `statfs` probe would be the kind of copy the project's own rules forbid. */
+export async function detectFreeDiskMb(): Promise<number | null> {
   const candidates = [ollamaModelsDir(), os.homedir(), os.tmpdir()];
   for (const dir of candidates) {
     try {

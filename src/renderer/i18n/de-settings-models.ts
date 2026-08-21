@@ -6,7 +6,9 @@
    technical and terse. `settings.fallback.*` states, per task, what still
    works without a model — honest, not sugar-coated. */
 
-export const deSettingsModels = {
+import { deSettingsRuntime } from './de-settings-runtime';
+
+const own = {
   'settings.models.start.title': 'Noch kein Modell eingerichtet',
   'settings.models.start.body':
     'Drei Wege stehen offen, und du kannst jederzeit wechseln. Ohne Modell bleibt die App benutzbar.',
@@ -32,10 +34,10 @@ export const deSettingsModels = {
   'settings.detect.configured': '{label} ist schon als Provider eingerichtet.',
   'settings.detect.adopt': 'Als Provider übernehmen',
   'settings.detect.none': 'Kein lokales Modell gefunden.',
-  'settings.detect.guide':
-    'Anleitung: ollama.com öffnen, Ollama installieren, dann im Terminal das Modell holen.',
+  'settings.detect.runtimeCardHint':
+    'Geführte Einrichtung samt Download und Fortschritt steht weiter unten unter „Lokale Laufzeit".',
+  'settings.detect.goToRuntimeCard': 'Zur Karte „Lokale Laufzeit"',
   'settings.detect.guideLink': 'ollama.com öffnen',
-  'settings.detect.command': 'ollama pull llama3.1:8b',
   'settings.detect.recheck': 'Erneut suchen',
   'settings.detect.failed': 'Die Suche ist fehlgeschlagen.',
 
@@ -213,5 +215,7 @@ export const deSettingsModels = {
   'settings.recommend.tradeoff.cheaper-alternative-available':
     'Eine günstigere oder lokale Alternative wäre auch möglich: {alternatives}.',
 } as const;
+
+export const deSettingsModels = { ...own, ...deSettingsRuntime } as const;
 
 export type SettingsModelsKey = keyof typeof deSettingsModels;

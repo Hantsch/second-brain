@@ -553,3 +553,61 @@
     overflow-x: auto;
   }
 }
+
+/* ── Local runtime (019c) ───────────────────────────────────────────────── */
+
+.sb-runtime-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-body);
+}
+
+/* A slim, generic progress bar — shared by the install-download dialog and
+   the pull list, since both are "bytes so far out of bytes total". */
+.sb-progress {
+  width: 100%;
+}
+.sb-progress-track {
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--surface-sunken);
+  overflow: hidden;
+}
+.sb-progress-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: var(--accent);
+  transition: width var(--duration-fast) var(--ease-out);
+}
+
+.sb-runtime-pull {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-subtle);
+}
+.sb-runtime-pull-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.sb-runtime-pull-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+.sb-runtime-pull-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}

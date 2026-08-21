@@ -15,6 +15,7 @@ import { Spinner } from '../../atoms/Spinner';
 import { useT } from '../../i18n';
 import { api } from '../../lib/api';
 import type { LocalRuntime } from '../../lib/queries/llm';
+import { LOCAL_RUNTIME_CARD_ID } from './LocalRuntimeCard';
 
 const OLLAMA_URL = 'https://ollama.com';
 
@@ -97,11 +98,26 @@ export function StartCard({
         ) : (
           <div className="sb-start-found">
             <p>{t('settings.detect.none')}</p>
-            <p className="sb-start-hint">{t('settings.detect.guide')}</p>
-            <p className="sb-mono">{t('settings.detect.command')}</p>
+            {/* The guided flow (get it, watch the download, pull a model) lives
+                in `LocalRuntimeCard` below — this used to be a raw terminal
+                command instead, which the guided flow makes obsolete rather
+                than a second, competing path (guardrail 1: one honest way). */}
+            <p className="sb-start-hint">{t('settings.detect.runtimeCardHint')}</p>
             <div className="sb-setting-actions">
               <Button
                 variant="secondary"
+                size="sm"
+                icon="arrow-right"
+                onClick={() =>
+                  document
+                    .getElementById(LOCAL_RUNTIME_CARD_ID)
+                    ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                }
+              >
+                {t('settings.detect.goToRuntimeCard')}
+              </Button>
+              <Button
+                variant="ghost"
                 size="sm"
                 icon="external-link"
                 onClick={() => void api.shell.openExternal(OLLAMA_URL).catch(() => undefined)}

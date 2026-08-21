@@ -19,12 +19,20 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import axe from 'axe-core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ModelRef, ProviderConfig, Routing, SettingsSnapshot, TaskKind } from '@shared/types';
+import type {
+  LocalRuntimeStatus,
+  ModelRef,
+  ProviderConfig,
+  Routing,
+  SettingsSnapshot,
+  TaskKind,
+} from '@shared/types';
 import { App } from '@renderer/App';
 import type { SbBridge } from '@renderer/lib/bridge';
 import { mockBridge } from '@renderer/lib/mock-bridge';
 import { settingsSnapshot, tasks as TASKS } from '@renderer/lib/mock-settings';
 import { setLanguage } from '@renderer/i18n';
+import { appendPull, clearPull } from '@renderer/lib/pullStore';
 
 /* Der Aufgabenkatalog des Vertrags (`TaskKind` in src/shared/types/llm.ts). Der
    Renderer darf `src/core` nicht importieren, deshalb steht die Liste hier — und
@@ -64,6 +72,7 @@ interface State {
   routing: Routing;
   snapshot: SettingsSnapshot;
   detected: { running: boolean; models: string[] };
+  runtimeStatus: LocalRuntimeStatus;
 }
 
 let state: State;
@@ -107,6 +116,8 @@ const invoke = vi.fn(async (channel: string, payload?: unknown): Promise<unknown
       for (const kind of TASK_KINDS) suggested.tasks[kind] = ref;
       return suggested;
     }
+    case 'llm:localRuntimeStatus':
+      return state.runtimeStatus;
     case 'llm:detectLocal':
       return [
         {
@@ -193,6 +204,7 @@ beforeEach(() => {
     routing: { tasks: {}, defaults: {} },
     snapshot: JSON.parse(JSON.stringify(settingsSnapshot)) as SettingsSnapshot,
     detected: { running: false, models: [] },
+    runtimeStatus: 'absent',
   };
   window.sb = { invoke, on: () => () => undefined, off: () => undefined } as unknown as SbBridge;
 });
@@ -515,7 +527,10 @@ describe('Einstellungen: ohne jeden Provider', () => {
     expect(screen.getByText(/API-Schlüssel/)).toBeTruthy();
     expect(screen.getByText('Ohne Modell weiterarbeiten')).toBeTruthy();
     expect(await screen.findByText('Kein lokales Modell gefunden.')).toBeTruthy();
-    expect(screen.getByText('ollama pull llama3.1:8b')).toBeTruthy();
+    /* Kein Terminal-Befehl mehr — der geführte Weg lebt in der Karte
+       „Lokale Laufzeit", auf die hier nur noch verwiesen wird. */
+    expect(screen.queryByText('ollama pull llama3.1:8b')).toBeNull();
+    expect(screen.getByRole('button', { name: /Zur Karte „Lokale Laufzeit"/ })).toBeTruthy();
     /* Die Tabelle bleibt trotzdem da: sie zeigt, was welche Aufgabe bräuchte. */
     expect(screen.getByRole('table')).toBeTruthy();
   });
@@ -545,6 +560,96 @@ describe('Einstellungen: ohne jeden Provider', () => {
   it('hat auch im Einstiegszustand keinen A11y-Verstoß', async () => {
     const { container } = await openTab('models');
     await screen.findByText('Noch kein Modell eingerichtet');
+    await expectNoViolations(container);
+  });
+});
+
+/* Die Karte „Lokale Laufzeit" (019c D6): drei Zustände, ohne dass irgendetwas
+   ohne Zustimmung passiert. `llm:runtimeInstallPlan`/`llm:startLocalRuntime`
+   fallen unten im `invoke`-Switch durch zur echten Attrappe
+   (`mock-bridge.ts`), die absichtlich ehrlich meldet: blockiert
+   (`unsupported-platform`) bzw. nicht startbar (`spawn-failed`) — im
+   Browser-Modus gibt es ja tatsächlich keine echte Laufzeit. */
+describe('Einstellungen: Lokale Laufzeit', () => {
+  it('bietet im Zustand „fehlt" das Holen an und nennt den Blockierungsgrund', async () => {
+    state.runtimeStatus = 'absent';
+    await openTab('models');
+
+    expect(
+      await screen.findByText('Auf diesem Rechner ist keine lokale Laufzeit installiert.'),
+    ).toBeTruthy();
+    await userEvent.click(screen.getByRole('button', { name: 'Jetzt holen' }));
+
+    expect(
+      await screen.findByText(/App-interne Installation deckt nur Windows und macOS ab/),
+    ).toBeTruthy();
+    /* Blockiert heißt: kein Download-Dialog wurde geöffnet. */
+    expect(screen.queryByText('Lokale Laufzeit holen')).toBeNull();
+    /* Der manuelle Pfad steht trotzdem da. */
+    expect(screen.getByRole('button', { name: 'ollama.com öffnen' })).toBeTruthy();
+  });
+
+  it('bietet im Zustand „installiert, gestoppt" das Starten an und meldet einen Fehlschlag', async () => {
+    state.runtimeStatus = 'installed-stopped';
+    await openTab('models');
+
+    expect(
+      await screen.findByText('Ollama ist installiert, läuft aber gerade nicht.'),
+    ).toBeTruthy();
+    await userEvent.click(screen.getByRole('button', { name: 'Jetzt starten' }));
+
+    expect(
+      await screen.findByText(
+        'Ollama ließ sich auf diesem Rechner nicht starten. Selbst starten, dann erneut prüfen.',
+      ),
+    ).toBeTruthy();
+  });
+
+  it('zeigt im Zustand „läuft" die Pull-Liste mit Downloadgröße', async () => {
+    state.runtimeStatus = 'running';
+    await openTab('models');
+
+    expect(await screen.findByText('Ollama läuft auf diesem Rechner.')).toBeTruthy();
+    /* Aus der Attrappe von `recommendModels` (`mock-bridge.ts`): der
+       `wiki-ingest`-Pick ist ein lokales, noch nicht installiertes Modell
+       mit 18 GB. */
+    expect(await screen.findByText('qwen2.5:32b')).toBeTruthy();
+    expect(screen.getByText('18 GB')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'qwen2.5:32b holen' })).toBeTruthy();
+  });
+
+  /* F3: `pull.progress` must read in human units, not raw byte integers —
+     the acceptance criterion is "shows the total size and what is left",
+     and a ten-digit byte count communicates neither. The bridge's `on()` is
+     a no-op in this test file, so `event:pull-progress` chunks are pushed
+     into `pullStore` directly instead of routed through it. */
+  it('zeigt den Pull-Fortschritt in lesbaren Einheiten statt Rohbytes', async () => {
+    state.runtimeStatus = 'running';
+    const completedBytes = 3 * 1024 * 1024 * 1024;
+    const totalBytes = 5 * 1024 * 1024 * 1024;
+    appendPull('test-pull-1', {
+      modelId: 'qwen2.5:32b',
+      status: 'downloading',
+      completed: completedBytes,
+      total: totalBytes,
+      done: false,
+    });
+    try {
+      await openTab('models');
+      expect(await screen.findByText('qwen2.5:32b')).toBeTruthy();
+      expect(await screen.findByText(/3 GB von 5 GB/)).toBeTruthy();
+      expect(screen.queryByText(String(completedBytes))).toBeNull();
+      expect(screen.queryByText(String(totalBytes))).toBeNull();
+    } finally {
+      clearPull('test-pull-1'); // module-level store — must not leak into other tests
+    }
+  });
+
+  it('hat in keinem Zustand einen A11y-Verstoß', async () => {
+    state.runtimeStatus = 'running';
+    const { container } = await openTab('models');
+    await screen.findByText('Ollama läuft auf diesem Rechner.');
+    await screen.findByText('qwen2.5:32b');
     await expectNoViolations(container);
   });
 });

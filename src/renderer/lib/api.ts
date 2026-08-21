@@ -164,6 +164,15 @@ export const api = {
     testTask: (task: IpcRequest<'llm:testTask'>['task']) => call('llm:testTask', { task }),
     scanMachine: () => call('llm:scanMachine'),
     recommendModels: () => call('llm:recommendModels'),
+    localRuntimeStatus: () => call('llm:localRuntimeStatus'),
+    runtimeInstallPlan: () => call('llm:runtimeInstallPlan'),
+    downloadRuntime: () => call('llm:downloadRuntime'),
+    cancelRuntimeDownload: (downloadId: string) =>
+      call('llm:cancelRuntimeDownload', { downloadId }),
+    openRuntimeInstaller: () => call('llm:openRuntimeInstaller'),
+    startLocalRuntime: () => call('llm:startLocalRuntime'),
+    pullModel: (modelId: string) => call('llm:pullModel', { modelId }),
+    cancelPull: (pullId: string) => call('llm:cancelPull', { pullId }),
   },
   dashboard: {
     data: () => call('dashboard:data'),

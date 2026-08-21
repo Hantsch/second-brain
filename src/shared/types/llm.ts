@@ -214,6 +214,56 @@ export interface MachineScanResult {
 }
 
 /**
+ * Status of the Ollama runtime on this machine (019c, "a local runtime
+ * without typing a command"): `'running'` if its endpoint answers,
+ * `'installed-stopped'` if the binary is found (on `PATH` or at the known
+ * per-platform default location) but the endpoint doesn't, `'absent'` if
+ * neither. Lives in `@shared/types` so `src/shared/ipc.ts` can type the
+ * `llm:localRuntimeStatus` channel without pulling in
+ * `main/ipc/llm-detect.ts` — only main may import and run the detection
+ * itself. Distinct from `llm:detectLocal`, which checks every local preset's
+ * endpoint at once; this one is specific to guiding the "get a runtime" flow.
+ */
+export type LocalRuntimeStatus = 'absent' | 'installed-stopped' | 'running';
+
+/**
+ * Why an in-app install of the local runtime isn't possible on this machine.
+ * Closed set. Lives in `@shared/types` (not in `core/llm/runtime-plan.ts`),
+ * following the same convention as `LimitingFactor` — the renderer types the
+ * plan without pulling in the rest of `core/llm`.
+ *
+ * - `'unsupported-platform'` — Ollama ships an official downloadable GUI
+ *   installer only for Windows and macOS. Linux's official install path is a
+ *   shell script (`curl | sh`), which this app's guardrails forbid running as
+ *   a constructed shell command — a deliberate, documented scope decision.
+ * - `'insufficient-disk'` — free disk space is below the installer size plus
+ *   a safety margin.
+ * - `'no-write-permission'` — the target temp directory refused a probe
+ *   write. Main determines this (it is the one thing this judgement cannot
+ *   stay pure and still know); `planRuntimeInstall` only reacts to it.
+ */
+export type RuntimeBlockedReason =
+  'unsupported-platform' | 'insufficient-disk' | 'no-write-permission';
+
+/**
+ * Precondition judgement for getting the local runtime installed in-app
+ * (019c, D1): whether an install can even be attempted here, and if so, what
+ * it would cost and where things would go. Re-exported from
+ * `core/llm/runtime-plan.ts` for that module's own callers, the same pattern
+ * `capacity.ts` uses for `CapacityVerdict`.
+ */
+export interface RuntimePlan {
+  canInstall: boolean;
+  blockedReason: RuntimeBlockedReason | null;
+  /** Size of the installer download, in MB. */
+  downloadMb: number;
+  /** Where the installer would be saved — a hint string, not a guarantee. */
+  installerPath: string;
+  /** Where Ollama would store pulled models on this machine. */
+  modelDirHint: string;
+}
+
+/**
  * Why this target was picked, or why nothing was picked. Closed set. Lives in
  * `@shared/types` (not in `core/llm/recommend.ts`), so `src/shared/ipc.ts` —
  * used by the renderer via preload — can type the `llm:recommendModels`

@@ -5,8 +5,10 @@
 import type { QueryClient } from '@tanstack/react-query';
 import { bridge } from './bridge';
 import { appendStream } from './llm-stream';
+import { appendPull } from './pullStore';
 import { pushToast } from './toast';
 import { qk, VAULT_DEPENDENT_ROOTS } from './queries/keys';
+import { invalidateProviders } from './queries/llm';
 import { setLanguage } from '../i18n';
 
 function invalidateVaultDependent(client: QueryClient): void {
@@ -89,6 +91,21 @@ export function wireEvents(client: QueryClient): () => void {
         void client.invalidateQueries({ queryKey: qk.chat.thread(chunk.threadId) });
         void client.invalidateQueries({ queryKey: qk.chat.threads() });
       }
+    }),
+  );
+
+  /* Progress lives in `pullStore`, not the query cache — many events per
+     second, and nothing here needs re-fetching until the pull is done. Once
+     it finishes *successfully*, though, a model just became installed —
+     the same "provider models" picture `invalidateProviders` already
+     refreshes for every other provider-changing action, so the routing
+     table's model list re-probes and picks the new model up on its next
+     natural refresh (019c, F6) instead of staying silently stale. A
+     cancelled or failed pull changes nothing installed, so it skips this. */
+  unsubscribes.push(
+    sb.on('event:pull-progress', (chunk) => {
+      appendPull(chunk.pullId, chunk);
+      if (chunk.done && chunk.error === undefined) invalidateProviders(client);
     }),
   );
 

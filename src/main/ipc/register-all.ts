@@ -17,8 +17,12 @@ import { indexHandlers } from './index';
 import { ingestHandlers } from './ingest';
 import { journalHandlers } from './journal';
 import { llmHandlers } from './llm';
+import { runtimeStatusHandlers } from './llm-detect';
 import { machineScanHandlers } from './machine-scan';
 import { moduleHandlers } from './modules';
+import { createInstallerPathTracker, ollamaInstallHandlers } from './ollama-install';
+import { ollamaPullHandlers } from './ollama-pull';
+import { ollamaRuntimeHandlers } from './ollama-runtime';
 import { projectHandlers } from './projects';
 import { reminderHandlers } from './reminders';
 import { searchHandlers } from './search';
@@ -29,6 +33,9 @@ import { vaultHandlers } from './vault';
 import { windowHandlers } from './window';
 
 export function buildHandlers(services: Services): HandlerMap {
+  // Shared between D2's download handlers and D3's runtime-lifecycle
+  // handlers so both see the same "installer just downloaded" fact.
+  const installerPathTracker = createInstallerPathTracker();
   return {
     ...vaultHandlers(services),
     ...indexHandlers(services),
@@ -42,7 +49,11 @@ export function buildHandlers(services: Services): HandlerMap {
     ...chatHandlers(services),
     ...ingestHandlers(services),
     ...llmHandlers(services),
+    ...runtimeStatusHandlers(services),
     ...machineScanHandlers(services),
+    ...ollamaInstallHandlers(services, { installerPathTracker }),
+    ...ollamaRuntimeHandlers(services, installerPathTracker),
+    ...ollamaPullHandlers(services),
     ...dashboardHandlers(services),
     ...reminderHandlers(services),
     ...gardenerHandlers(services),

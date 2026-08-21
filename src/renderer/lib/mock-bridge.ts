@@ -395,6 +395,38 @@ const RESPONSES: MockResponses = {
       configured: false,
     },
   ],
+  'llm:localRuntimeStatus': () => 'absent',
+  /* Honest like `llm:scanMachine` above: the browser-mode mock has no real
+     platform or disk facts, so it reports the install as blocked rather than
+     pretending a download would work. */
+  'llm:runtimeInstallPlan': () => ({
+    canInstall: false,
+    blockedReason: 'unsupported-platform',
+    downloadMb: 0,
+    installerPath: '',
+    modelDirHint: '',
+  }),
+  'llm:downloadRuntime': () => {
+    throw encodeIpcError({
+      code: 'invalid',
+      message: 'im Browser-Modus ist keine App-interne Installation möglich',
+    });
+  },
+  'llm:cancelRuntimeDownload': () => undefined,
+  /* Same honesty as `llm:downloadRuntime` above: nothing was ever downloaded
+     or started in browser mode, so both report the "nothing to do" case
+     rather than pretending a runtime exists. */
+  'llm:openRuntimeInstaller': () => ({ opened: false, reason: 'no-installer-downloaded' }),
+  'llm:startLocalRuntime': () => ({ started: false, status: 'absent', reason: 'spawn-failed' }),
+  /* And for the same reason there is no runtime to pull a model into: a fake
+     progress stream would be the one thing this mock must not invent. */
+  'llm:pullModel': () => {
+    throw encodeIpcError({
+      code: 'invalid',
+      message: 'im Browser-Modus läuft keine lokale Laufzeit',
+    });
+  },
+  'llm:cancelPull': () => undefined,
   'llm:tasks': () => st.tasks,
   'llm:routing': () => st.routing,
   'llm:setRoute': () => st.routing,

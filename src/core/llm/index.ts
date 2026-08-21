@@ -33,6 +33,20 @@ export {
 } from './tasks';
 export { judgeCapacity, type CapacityVerdict, type LimitingFactor } from './capacity';
 export {
+  planRuntimeInstall,
+  type RuntimePlan,
+  type RuntimePlanInput,
+  type RuntimeBlockedReason,
+} from './runtime-plan';
+export {
+  createPullProgress,
+  parsePullLines,
+  type PullLine,
+  type PullLineResult,
+  type PullProgress,
+  type PullProgressTracker,
+} from './pull-parser';
+export {
   TIER_ORDER,
   classifyModelTier,
   collectCandidates,

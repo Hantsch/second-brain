@@ -1,7 +1,7 @@
 ---
 id: 019c
 title: A local runtime without typing a command
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-08-21
 ---
 
@@ -32,37 +32,37 @@ stream this story needs. The app already has it as a preset
 
 **Getting the runtime**
 
-- [ ] From the models tab I see, without acting, whether a local runtime is installed and
+- [x] From the models tab I see, without acting, whether a local runtime is installed and
       whether it is running.
-- [ ] If it is not installed, the app offers to get it. Every step states what it is about to
+- [x] If it is not installed, the app offers to get it. Every step states what it is about to
       do before it does it, and I can stop.
-- [ ] Installing is a proposal I confirm: download size, where the installer is saved, where
+- [x] Installing is a proposal I confirm: download size, where the installer is saved, where
       Ollama will put model data, and the fact that the app cannot uninstall it later — all
       named beforehand.
-- [ ] The download shows progress and can be cancelled, leaving no partial file behind.
-- [ ] After the download the app opens the installer and tells me it is now my turn. When I come
+- [x] The download shows progress and can be cancelled, leaving no partial file behind.
+- [x] After the download the app opens the installer and tells me it is now my turn. When I come
       back, pressing re-check finds the runtime.
-- [ ] If it is installed but not running, the app offers to start it and reports whether that
+- [x] If it is installed but not running, the app offers to start it and reports whether that
       worked.
-- [ ] If getting it is impossible on this machine (unsupported platform, not enough free disk,
+- [x] If getting it is impossible on this machine (unsupported platform, not enough free disk,
       no write permission), I get the reason in one sentence plus the manual path — never a
       spinner that never ends.
 
 **Pulling a model**
 
-- [ ] Pulling shows a progress bar, the total size and what is left.
-- [ ] Progress survives me navigating to another screen and coming back.
-- [ ] A pull can be cancelled and leaves no broken half-model behind.
-- [ ] A failed pull says why in one sentence and can be retried.
-- [ ] The models offered for pulling are ones this machine can actually run (from 019a); each is
+- [x] Pulling shows a progress bar, the total size and what is left.
+- [x] Progress survives me navigating to another screen and coming back.
+- [x] A pull can be cancelled and leaves no broken half-model behind.
+- [x] A failed pull says why in one sentence and can be retried.
+- [x] The models offered for pulling are ones this machine can actually run (from 019a); each is
       labelled with its download size.
 
 **Across all of it**
 
-- [ ] Nothing happens without my confirmation (guardrail 2). Skipping the whole thing leaves the
+- [x] Nothing happens without my confirmation (guardrail 2). Skipping the whole thing leaves the
       app fully usable (guardrail 1).
-- [ ] No hardcoded string in the renderer; `de.ts` and `en.ts` both carry every new key.
-- [ ] No log line or error message contains vault content (guardrail 6).
+- [x] No hardcoded string in the renderer; `de.ts` and `en.ts` both carry every new key.
+- [x] No log line or error message contains vault content (guardrail 6).
 
 ## Open Questions
 
@@ -113,41 +113,41 @@ arguments; the only variable is a URL from a hardcoded per-platform map.
 
 ## Deliverables
 
-**D1 — Runtime status and preconditions**
+**D1 — Runtime status and preconditions** [x]
 `src/main/ipc/llm-detect.ts`, `src/shared/types/llm.ts`, `src/shared/ipc.ts`,
 `src/main/ipc/register-all.ts`, new `src/core/llm/runtime-plan.ts` + test.
 *Accepted when:* the channel returns the right one of three states on this machine, the pure
 precondition function is covered by fixtures for each blocked reason, and
 `tests/main/ipc-coverage.test.ts` passes.
 
-**D2 — Installer download with progress and cancel**
+**D2 — Installer download with progress and cancel** [x]
 New `src/main/ipc/ollama-install.ts`, `src/shared/ipc.ts` (channels + `llm:installProgress`
 event). Mirror: [src/main/ipc/llm-stream.ts](../../src/main/ipc/llm-stream.ts) for the
 event-emitting shape.
 *Accepted when:* a download reports progress, cancelling mid-download removes the partial file,
 and a failed request surfaces one sentence rather than a stack trace.
 
-**D3 — Open the installer, start the runtime**
+**D3 — Open the installer, start the runtime** [x]
 `src/main/ipc/ollama-install.ts`. `shell.openPath` on the downloaded file;
 `execFile('ollama', ['serve'])` detached plus a re-probe with timeout.
 *Accepted when:* both channels return a typed result with a reason on failure, and neither
 builds a shell string.
 
-**D4 — Model pull with a progress stream** *(risky, see Model Hints)*
+**D4 — Model pull with a progress stream** *(risky, see Model Hints)* [x]
 New `src/main/ipc/ollama-pull.ts`, `src/shared/ipc.ts` (`llm:pullModel`, `llm:cancelPull`,
 `llm:pullProgress`), plus a unit test for the NDJSON line parser.
 *Accepted when:* a pull emits monotonic progress events, cancel aborts the request **and**
 deletes the partial model, a truncated trailing line does not throw, and a second pull of the
 same model after a cancel starts clean.
 
-**D5 — Pull progress that survives navigation**
+**D5 — Pull progress that survives navigation** [x]
 New `src/renderer/lib/pullStore.ts` (or the project's existing store pattern),
 `src/renderer/lib/api.ts`, one app-level subscription.
 *Accepted when:* starting a pull, navigating to another screen and returning shows the bar at
 the advanced position, and the subscription is registered exactly once (no duplicate handlers
 after remount).
 
-**D6 — Local runtime card and confirm dialog**
+**D6 — Local runtime card and confirm dialog** [x]
 New `src/renderer/screens/settings/LocalRuntimeCard.tsx`, `ModelsTab.tsx`, `StartCard.tsx`,
 `src/renderer/i18n/de.ts`, `src/renderer/i18n/en.ts`. Mirror: `ProviderDialog.tsx` for the
 dialog, `RoutingSection.tsx` for the panel.
@@ -240,3 +240,74 @@ npm run shot
 Expected: PNGs in `.screenshots/`; the models tab shot shows the local runtime card.
 
 ## Done
+
+Built the guided local-runtime flow across 6 deliverables: main-side status detection and
+install/disk preconditions (D1), installer download with progress/cancel (D2), open-installer +
+start-runtime (D3), model pull over Ollama's native NDJSON `/api/pull` with cancel-and-delete
+cleanup (D4, hard tier), a renderer store so pull progress survives navigation (D5), and the
+`LocalRuntimeCard`/install dialog/pull list wired into the models tab (D6). All new IPC channels
+and events follow the existing run/report split (`llm-stream.ts`) and never build a shell string
+— `execFile`/`spawn` take fixed argument arrays only.
+
+**Decisions**
+
+- Linux is out of scope for the in-app installer (`RuntimeBlockedReason: 'unsupported-platform'`):
+  Ollama's official Linux path is a `curl | sh` script, which this app's no-shell-strings
+  guardrail forbids running as a constructed command. Linux always gets the manual-path fallback.
+- Added a third `RuntimeBlockedReason`, `'no-write-permission'`, beyond the two named in the
+  original plan text — the acceptance criteria explicitly name it as one of three impossible
+  cases, so `ollama-install.ts` now probes the temp dir with a real write-and-delete before
+  building the plan, rather than only discovering it after a confirmed download fails.
+- Event names use this codebase's established `event:kebab-case` convention
+  (`event:install-progress`, `event:pull-progress`) rather than the deliverable text's literal
+  `llm:installProgress`/`llm:pullProgress` — every existing event in `IpcEvents` already follows
+  that pattern.
+- The pull list is fed by 019b's `llm:recommendModels` (`needsDownloadGb`), not a plain fallback
+  list — verified live on a real machine with Ollama running that this produces a genuinely
+  non-empty, size-labelled list without any new 019b plumbing.
+- `ollama-install.ts` (D2) and the D3 channels were split into a sibling
+  `src/main/ipc/ollama-runtime.ts` to stay under CLAUDE.md's ~300-line soft limit; both share one
+  `InstallerPathTracker` instance wired in `register-all.ts`.
+- D6's i18n additions were split further into `de-settings-runtime.ts`/`en-settings-runtime.ts`,
+  imported into the existing `de-settings-models.ts`/`en-settings-models.ts`, for the same
+  line-limit reason; both compose up into `de.ts`/`en.ts` as before.
+- `StartCard.tsx`'s raw terminal-command hint (`ollama pull llama3.1:8b`) was removed and replaced
+  with a pointer into `LocalRuntimeCard`, per the plan — one guided path instead of two competing
+  ones.
+- Deferred, not fixed (low severity, documented by the review): a shared `isPending` flag briefly
+  dims every pull-list row's button while any one pull is starting (cosmetic only); the runtime
+  status card can blink to "unknown" for up to ~2s on remount before the store's persisted
+  position reappears; no checksum/signature verification of the downloaded installer beyond what
+  the epic already approved as "deliberately unclever."
+
+**Verification**
+
+- `npm run typecheck`, `npm run lint`, `npm run build`: all green.
+- `npm test`: 2370/2371 passing. The one failure, `tests/core/wiki/module.test.ts`, is a
+  pre-existing, unrelated docs-drift check between `docs/AGENTS.md` and `docs/MODULE-SCHEMA.md` —
+  neither file appears anywhere in this story's diff; independently confirmed pre-existing by
+  three separate deliverable agents and the review agent.
+- `npm run format:check` is red repo-wide (pre-existing, ~300 files including `CLAUDE.md` and
+  untouched docs/tests) — not part of the profile's `## Verify` command list and not something
+  this story's files trigger; all files this story touched pass `prettier --check` individually.
+- Clean-agent review (`story-review-hard`, per Model Hints) returned an initial **FAIL** with 6
+  confirmed findings (partial file surviving a cancelled download; a progress-listener race that
+  could drop a fast download's only closing event; raw byte integers shown instead of "X of Y";
+  a failed plan-read leaving the button spinning with no message; the missing
+  `'no-write-permission'` blocked reason; a completed pull never invalidating the provider/model
+  query so it wouldn't show up in routing) plus 3 low-severity findings (documented above as
+  deferred). One review-fix cycle resolved all 6 confirmed findings; verification was re-run
+  clean afterward (typecheck/lint/build/tests as above).
+- Live smoke: `npm run seed && npm run shot` produced 60 screenshots with no console errors. The
+  story's own shot script only captures the models tab's top and bottom, which happen to miss the
+  card's scroll position, so a one-off Playwright `_electron` check (not committed) scrolled to
+  it directly: on this machine, with a real Ollama actually running, the card correctly showed the
+  `'running'` state, a working "recheck" action, and the 019b-fed pull list with a real model
+  (`ollama/qwen2.5-coder:7b`, 4.7 GB) and a "get it" button — confirming acceptance criteria 1, 6,
+  and 12 against live data, not just mocks.
+
+**Commit message**
+
+```
+019c: guided local runtime — install, start, and pull Ollama models from the app
+```

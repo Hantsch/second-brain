@@ -110,3 +110,10 @@ second roadmap.
   only, `unknown` refused) with per-request OpenRouter enforcement, cost-per-run and
   needs-download labelling; accept-row/accept-all commit through the existing routing writer.
   Two clean-agent review-fix cycles, including a privacy-relevant reachability fix.
+- 019c — A local runtime without typing a command · S06 · New "Local runtime (Ollama)" card in
+  the models tab: install/start/pull entirely through confirmed proposals (download size,
+  installer path, model dir, no-uninstall fact named upfront), progress and clean cancel for both
+  the installer download and the NDJSON model-pull stream, pull list fed by 019b's
+  reachable-after-download models. `story-review-hard` returned FAIL with 6 confirmed findings
+  (partial file on cancel, dropped progress event, raw byte counts, silent plan-read failure,
+  missing "no write permission" case, stale routing after a pull); one fix cycle resolved all six.

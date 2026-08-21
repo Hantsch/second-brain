@@ -67,6 +67,11 @@ export const qk = {
     tasks: () => ['llm', 'tasks'] as const,
     routing: () => ['llm', 'routing'] as const,
     machineScan: () => ['llm', 'machineScan'] as const,
+    recommendations: () => ['llm', 'recommendations'] as const,
+    /* Whether Ollama is installed/running (019c) — distinct from `detect()`,
+       which probes every local preset's endpoint at once. */
+    runtimeStatus: () => ['llm', 'runtimeStatus'] as const,
+    runtimeInstallPlan: () => ['llm', 'runtimeInstallPlan'] as const,
   },
   dashboard: {
     data: () => ['dashboard', 'data'] as const,

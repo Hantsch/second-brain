@@ -35,6 +35,7 @@ import type {
   IngestKind,
   JournalDay,
   KnowledgeModule,
+  LocalRuntimeStatus,
   MachineScanResult,
   ModelRef,
   Project,
@@ -48,6 +49,7 @@ import type {
   RecommendationSet,
   Reminder,
   Routing,
+  RuntimePlan,
   Scope,
   SearchHit,
   SearchQuery,
@@ -554,6 +556,77 @@ export interface IpcRoutes {
       configured: boolean;
     }[];
   };
+  /**
+   * Status of the Ollama runtime specifically (019c): whether it's running,
+   * installed but stopped, or absent. Feeds the guided "get a local runtime"
+   * flow — distinct from `llm:detectLocal`'s multi-preset running check.
+   */
+  'llm:localRuntimeStatus': { req: void; res: LocalRuntimeStatus };
+  /**
+   * The precondition judgement for an in-app runtime install (019c, D2): size,
+   * where the installer would land, where models would end up. A plain read
+   * with no side effect — the same shape as `llm:scanMachine` — so the
+   * confirmation dialog can show real numbers before anything downloads.
+   */
+  'llm:runtimeInstallPlan': { req: void; res: RuntimePlan };
+  /**
+   * Starts the installer download after the user has confirmed the plan from
+   * `llm:runtimeInstallPlan`. Takes no request payload: what to fetch and
+   * where to put it both come from the plan, not from anything the renderer
+   * supplies. Progress and completion arrive over `event:install-progress`,
+   * keyed by the returned `downloadId` — the same run/report split
+   * `journal:coach`/`event:llm-stream` uses for a streamed operation. Throws
+   * (closed `IpcError` code `invalid`) instead of starting a download if the
+   * plan turns out blocked at this moment (a race with `llm:scanMachine`,
+   * e.g. disk filled up between reading the plan and confirming it) — by the
+   * time this channel is called, the renderer has already shown the plan and
+   * only offers the button when `canInstall` was true.
+   */
+  'llm:downloadRuntime': { req: void; res: { downloadId: string } };
+  /** Cancels a running installer download; an unknown id changes nothing. */
+  'llm:cancelRuntimeDownload': { req: { downloadId: string }; res: void };
+  /**
+   * Opens the installer file the most recently *completed* `llm:downloadRuntime`
+   * run produced, in its OS default handler (019c, D3) — so the user doesn't
+   * have to go find the file themselves. No request payload: the handler
+   * tracks the last completed download's path itself, the same way
+   * `llm:downloadRuntime` already tracks its running downloads — it never
+   * trusts a filesystem path the renderer might supply. `shell.openPath` never
+   * throws; a non-empty return is the OS's own human-readable failure reason,
+   * carried through as `reason` (this is OS/installer-path info, not vault
+   * content, so it's fine to surface as-is). `reason: 'no-installer-downloaded'`
+   * if no download has completed yet this run.
+   */
+  'llm:openRuntimeInstaller': { req: void; res: { opened: boolean; reason?: string } };
+  /**
+   * Starts `ollama serve` detached, so it keeps running after this call
+   * returns, then polls the same detection `llm:localRuntimeStatus` uses
+   * until it reports `'running'` or a few seconds pass (019c, D3) — the
+   * "start it for me" step once the runtime is installed but not running.
+   * `reason` is closed: `'timeout'` if the server never answered in time,
+   * `'spawn-failed'` if the `ollama` binary itself couldn't be started (e.g.
+   * a race with an uninstall) — never a thrown error either way.
+   */
+  'llm:startLocalRuntime': {
+    req: void;
+    res: { started: boolean; status: LocalRuntimeStatus; reason?: 'timeout' | 'spawn-failed' };
+  };
+  /**
+   * Pulls a model into the local Ollama runtime (019c, D4) — the last step of
+   * the guided flow, once a runtime is running but empty. Returns immediately
+   * with a `pullId`; the pull itself runs on in the background and reports over
+   * `event:pull-progress`, the same run/report split `llm:downloadRuntime`
+   * uses. Throws (closed code `invalid`) on an empty model id, nothing else:
+   * an unreachable runtime or a model Ollama doesn't know surfaces as a
+   * closing event with an `error`, not as a rejected call.
+   */
+  'llm:pullModel': { req: { modelId: string }; res: { pullId: string } };
+  /**
+   * Cancels a running pull; an unknown id changes nothing. The partial model is
+   * removed from Ollama before the run's closing event goes out, so a repeat
+   * pull of the same model starts clean.
+   */
+  'llm:cancelPull': { req: { pullId: string }; res: void };
   'llm:tasks': { req: void; res: TaskDefinition[] };
   'llm:routing': { req: void; res: Routing };
   'llm:setRoute': { req: { task: TaskKind; ref: ModelRef | null }; res: Routing };
@@ -750,6 +823,14 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'llm:probe',
   'llm:models',
   'llm:detectLocal',
+  'llm:localRuntimeStatus',
+  'llm:runtimeInstallPlan',
+  'llm:downloadRuntime',
+  'llm:cancelRuntimeDownload',
+  'llm:openRuntimeInstaller',
+  'llm:startLocalRuntime',
+  'llm:pullModel',
+  'llm:cancelPull',
   'llm:tasks',
   'llm:routing',
   'llm:setRoute',
@@ -820,6 +901,41 @@ export interface IpcEvents {
     total: number;
     running: boolean;
   };
+  /**
+   * Progress of an installer download started via `llm:downloadRuntime`
+   * (019c, D2). `downloadId` matches the id that channel returned — so a
+   * stale listener from a previous attempt can tell it isn't its own.
+   * `done: true` is always the last event for a given `downloadId`, whether
+   * it finished, was cancelled (`error: 'cancelled'`), or failed (`error`
+   * holds an `IpcError['code']`, never a raw message).
+   */
+  'event:install-progress': {
+    downloadId: string;
+    downloadedMb: number;
+    totalMb: number;
+    done: boolean;
+    error?: string;
+  };
+  /**
+   * Progress of a model pull started via `llm:pullModel` (019c, D4). `pullId`
+   * matches the id that channel returned, so a stale listener can tell it
+   * isn't its own. `status` is Ollama's own phase wording (`pulling manifest`,
+   * `downloading`, `verifying sha256 digest`) — a foreign string, shown as-is
+   * next to the bar rather than translated. `completed`/`total` are bytes,
+   * summed over all layers, so `completed` never walks backwards.
+   * `done: true` is always the last event for a given `pullId`, whether it
+   * finished, was cancelled (`error: 'cancelled'`), or failed (`error` holds an
+   * `IpcError['code']`, never a raw message).
+   */
+  'event:pull-progress': {
+    pullId: string;
+    modelId: string;
+    status: string;
+    completed: number;
+    total: number;
+    done: boolean;
+    error?: string;
+  };
   'event:reminder': Reminder;
   'event:toast': { kind: 'info' | 'success' | 'warn' | 'error'; message: string };
   /** The user pressed the quick-capture hotkey. */
@@ -836,6 +952,8 @@ export const IPC_EVENTS: readonly IpcEventName[] = [
   'event:ingest-progress',
   'event:llm-stream',
   'event:gardener-progress',
+  'event:install-progress',
+  'event:pull-progress',
   'event:reminder',
   'event:toast',
   'event:capture-focus',

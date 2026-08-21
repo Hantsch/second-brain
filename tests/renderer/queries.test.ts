@@ -117,4 +117,54 @@ describe('Ereignisse', () => {
     expect(keys).toContain(JSON.stringify(qk.dashboard.data()));
     expect(keys).toContain(JSON.stringify(qk.modules.list()));
   });
+
+  /* 019c, F6: without this, a freshly pulled model never becomes visible as
+     a routing target — nothing re-probes the provider/model list the
+     routing table reads from, so the models tab stays silently stale after
+     a successful pull even though the manual test plan expects the model
+     to show up there. */
+  it('zieht nach einem erfolgreich beendeten Pull die Provider und die lokale Erkennung nach', async () => {
+    const { client, emit } = await wire();
+    const invalidate = vi.spyOn(client, 'invalidateQueries');
+
+    emit('event:pull-progress', {
+      pullId: 'pull-1',
+      modelId: 'qwen2.5:32b',
+      status: 'downloading',
+      completed: 512,
+      total: 1024,
+      done: false,
+    });
+    expect(invalidate).not.toHaveBeenCalled(); // no re-fetch mid-progress
+
+    emit('event:pull-progress', {
+      pullId: 'pull-1',
+      modelId: 'qwen2.5:32b',
+      status: 'success',
+      completed: 1024,
+      total: 1024,
+      done: true,
+    });
+
+    const keys = invalidate.mock.calls.map(([filter]) => JSON.stringify(filter?.queryKey));
+    expect(keys).toContain(JSON.stringify(qk.llm.providers()));
+    expect(keys).toContain(JSON.stringify(qk.llm.detect()));
+  });
+
+  it('zieht nach einem abgebrochenen oder fehlgeschlagenen Pull nichts nach — nichts wurde installiert', async () => {
+    const { client, emit } = await wire();
+    const invalidate = vi.spyOn(client, 'invalidateQueries');
+
+    emit('event:pull-progress', {
+      pullId: 'pull-2',
+      modelId: 'qwen2.5:32b',
+      status: 'cancelled',
+      completed: 256,
+      total: 1024,
+      done: true,
+      error: 'cancelled',
+    });
+
+    expect(invalidate).not.toHaveBeenCalled();
+  });
 });

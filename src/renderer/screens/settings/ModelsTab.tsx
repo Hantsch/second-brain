@@ -33,6 +33,7 @@ import {
   useTasks,
   type LocalRuntime,
 } from '../../lib/queries/llm';
+import { LocalRuntimeCard } from './LocalRuntimeCard';
 import { MachineCard } from './MachineCard';
 import { ProviderDialog } from './ProviderDialog';
 import { RecommendationSection } from './RecommendationSection';
@@ -152,6 +153,8 @@ export function ModelsTab() {
       ) : null}
 
       <MachineCard />
+
+      <LocalRuntimeCard />
 
       <Panel
         title={t('settings.providers.title')}

@@ -26,3 +26,16 @@
 - 2026-08-21 11:03 · 019b · D9 Recommendation section in models tab · started
 - 2026-08-21 11:42 · 019b · D9 Recommendation section in models tab · done
 - 2026-08-21 13:19 · 019b · story · done (2 review-fix cycles)
+- 2026-08-21 13:26 · 019c · D1 Runtime status and preconditions · started
+- 2026-08-21 13:36 · 019c · D1 Runtime status and preconditions · done
+- 2026-08-21 13:36 · 019c · D2 Installer download with progress and cancel · started
+- 2026-08-21 13:53 · 019c · D2 Installer download with progress and cancel · done
+- 2026-08-21 13:53 · 019c · D3 Open the installer, start the runtime · started
+- 2026-08-21 14:03 · 019c · D3 Open the installer, start the runtime · done
+- 2026-08-21 14:03 · 019c · D4 Model pull with a progress stream · started
+- 2026-08-21 14:18 · 019c · D4 Model pull with a progress stream · done
+- 2026-08-21 14:18 · 019c · D5 Pull progress that survives navigation · started
+- 2026-08-21 14:22 · 019c · D5 Pull progress that survives navigation · done
+- 2026-08-21 14:22 · 019c · D6 Local runtime card and confirm dialog · started
+- 2026-08-21 14:49 · 019c · D6 Local runtime card and confirm dialog · done
+- 2026-08-21 15:24 · 019c · story · done (1 review-fix cycle)

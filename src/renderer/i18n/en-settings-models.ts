@@ -2,8 +2,9 @@
    enforced by the type in `en-settings.ts`. */
 
 import type { SettingsModelsKey } from './de-settings-models';
+import { enSettingsRuntime } from './en-settings-runtime';
 
-export const enSettingsModels: Record<SettingsModelsKey, string> = {
+const own = {
   'settings.models.start.title': 'No model set up yet',
   'settings.models.start.body':
     'Three ways are open, and you can switch at any time. Without a model the app stays usable.',
@@ -28,10 +29,10 @@ export const enSettingsModels: Record<SettingsModelsKey, string> = {
   'settings.detect.configured': '{label} is already set up as a provider.',
   'settings.detect.adopt': 'Take it as a provider',
   'settings.detect.none': 'No local model found.',
-  'settings.detect.guide':
-    'How to: open ollama.com, install Ollama, then pull the model in your terminal.',
+  'settings.detect.runtimeCardHint':
+    'Guided setup, including the download and its progress, is further below under "Local runtime".',
+  'settings.detect.goToRuntimeCard': 'Go to the "Local runtime" card',
   'settings.detect.guideLink': 'Open ollama.com',
-  'settings.detect.command': 'ollama pull llama3.1:8b',
   'settings.detect.recheck': 'Look again',
   'settings.detect.failed': 'The search failed.',
 
@@ -199,4 +200,9 @@ export const enSettingsModels: Record<SettingsModelsKey, string> = {
     'This task reads personal content, and no reachable model meets the rule for it — the task stays without a model.',
   'settings.recommend.tradeoff.cheaper-alternative-available':
     'A cheaper or local alternative exists: {alternatives}.',
+};
+
+export const enSettingsModels: Record<SettingsModelsKey, string> = {
+  ...own,
+  ...enSettingsRuntime,
 };
