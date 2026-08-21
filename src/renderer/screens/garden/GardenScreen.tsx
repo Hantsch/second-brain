@@ -85,6 +85,7 @@ export function GardenScreen() {
     supersede,
     supersedeDuplicate,
     discarded,
+    linkOrphan,
     undo,
   } = useGardenOutcome(mutations, pages, openPath);
 
@@ -119,6 +120,7 @@ export function GardenScreen() {
     mutations.undismiss.error ??
     mutations.undoFix.error ??
     mutations.supersede.error ??
+    mutations.linkOrphan.error ??
     pages.savePage.error ??
     null;
 
@@ -217,6 +219,7 @@ export function GardenScreen() {
           onSupersede={supersede}
           onSupersedeDuplicate={supersedeDuplicate}
           onDiscarded={discarded}
+          onLinkOrphan={linkOrphan}
         />
       )}
     </div>

@@ -4,9 +4,17 @@
    Modulgrenze, Katalog als Ziel). */
 
 import { describe, expect, it } from 'vitest';
-import { brokenLinkCheck, orphanCheck } from '@core/gardener';
+import { applyFix, brokenLinkCheck, orphanCheck, orphanTargets } from '@core/gardener';
+import { NOW_MS } from '../../helpers/time';
 import { DEMO } from './demo-vault';
-import { SETTINGS, demoFixture, gardenerFixture, moduleFiles, moduleFixture } from './fixtures';
+import {
+  SETTINGS,
+  demoFixture,
+  gardenerFixture,
+  moduleFiles,
+  moduleFixture,
+  pagePathOf,
+} from './fixtures';
 
 const SOURCE_SLUG = 's-2026-07-01-vortrag';
 
@@ -44,6 +52,68 @@ describe('orphanCheck', () => {
     /* Keine Seite nennt den Namen im Text — also keine bestimmbare Stelle, also
        kein Fix. Ein Fix, der raten müsste, wird nicht angeboten. */
     expect(findings[0]?.fix).toBeNull();
+  });
+
+  it('meldet eine verlinkte Seite in einem frischen Lauf nicht mehr — der Picker darf auf ein Ziel zeigen, das den Namen gar nicht nennt', async () => {
+    const fixture = await moduleFixture('wissen', [
+      {
+        type: 'concept',
+        slug: 'verwaist',
+        title: 'Verwaiste Seite',
+        summary: 'Niemand verlinkt hierher',
+        body: 'Diese Seite steht für sich allein.',
+      },
+      {
+        type: 'overview',
+        slug: 'overview',
+        title: 'Synthese',
+        summary: 'Der rote Faden',
+        body: 'Der Faden führt über nichts Verwandtes.',
+      },
+    ]);
+    const orphanPath = pagePathOf('wissen', { type: 'concept', slug: 'verwaist' });
+
+    const before = orphanCheck.run(fixture.ctx({ settings: SETTINGS }));
+    expect(before).toHaveLength(1);
+    expect(before[0]?.paths).toEqual([orphanPath]);
+    /* Niemand nennt „Verwaiste Seite" im Text — kein bestimmbarer Ort, also
+       kein automatischer Fix; ein Mensch muss ein Ziel wählen. */
+    expect(before[0]?.fix).toBeNull();
+
+    /* Genau die Rechnung, die der Picker anstellt: `orphanTargets` ordnet die
+       Überblicksseite zuerst ein — sie erwähnt den Namen der verwaisten Seite
+       nirgends, ist aber ein gültiges Ziel. Darum geht es in dieser Story. */
+    const pages = fixture.index.pages();
+    const orphan = pages.find((page) => page.path === orphanPath);
+    if (orphan === undefined) throw new Error(`Keine Wiki-Seite: ${orphanPath}`);
+    const candidates = orphanTargets(pages, orphan, 'de');
+    const target = candidates.targets[0]?.path;
+    if (target === undefined) throw new Error('Kein Ziel für die verwaiste Seite.');
+    expect(target).toBe(pagePathOf('wissen', { type: 'overview', slug: 'overview' }));
+
+    /* Derselbe Schreibvorgang wie `gardener:linkOrphan` (`src/main/ipc/gardener.ts`):
+       `paths[0]` die verwaiste Seite, `paths[1]` das gewählte Ziel, die Vorschau
+       aus derselben Berechnung, die die Kandidaten geliefert hat. */
+    await applyFix(
+      { store: fixture.store, docLanguage: 'de', now: NOW_MS },
+      {
+        id: before[0]?.id ?? 'orphan',
+        kind: 'orphan',
+        severity: 'warn',
+        title: before[0]?.title ?? '',
+        detail: '',
+        paths: [orphanPath, target],
+        module: 'wissen',
+        foundAt: before[0]?.foundAt ?? new Date(NOW_MS).toISOString(),
+        fix: { action: 'add-links', label: 'Verweis eintragen', preview: candidates.line },
+      },
+    );
+    await fixture.refresh();
+
+    /* Ein frischer Kontext, ein frischer Lauf: nichts wurde versteckt oder
+       sondergestellt, der Graph selbst hat sich geändert. */
+    const after = orphanCheck.run(fixture.ctx({ settings: SETTINGS }));
+    expect(after.some((finding) => finding.paths[0] === orphanPath)).toBe(false);
   });
 
   it('meldet weder die Synthese noch eine nur im Frontmatter belegte Quelle', async () => {

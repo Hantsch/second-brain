@@ -172,7 +172,12 @@ export function checkVault(root, today = new Date()) {
 /** Was der Seed absichtlich einbaut. Abweichungen sind Fehler, nicht Zufall. */
 export const EXPECTED_FINDINGS = {
   broken: 1,
-  orphans: 1,
+  /* Two, deliberately: `scim` (identity-management, exactly one unambiguous
+     mention — the regression case for the unchanged one-click fix) and
+     `notiz-communities-interview` (second-brain-methodik, zero mention
+     candidates — 016 D8's picker fixture). See the comment in
+     module-methodik.mjs for why the second one stays at zero candidates. */
+  orphans: 2,
   missingFromIndex: 1,
   stalePages: 1,
   contradictions: 2,

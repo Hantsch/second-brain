@@ -150,6 +150,17 @@ export const enGarden = {
   'garden.nearDuplicate.pageMissing':
     'One of the two pages cannot be read — it may already be in the trash. The next run says what is left of the pair.',
 
+  // ── Orphaned page: choose a target ────────────────────────────────────────
+  'garden.orphan.targetLabel': 'Target page',
+  'garden.orphan.empty': 'No other page in this module to link it from.',
+  'garden.orphan.fromOverview': 'Link from the “{module}” module overview',
+  'garden.orphan.pickToggle': 'Choose a different page',
+  'garden.orphan.searchLabel': 'Search pages',
+  'garden.orphan.pickPlaceholder': 'Choose a page',
+  'garden.orphan.pickAria': 'Choose the target page',
+  'garden.orphan.noMatch': 'No page matches “{query}”.',
+  'garden.orphan.confirm': 'Add the reference to “{file}”',
+
   // ── Discard ───────────────────────────────────────────────────────────────
   'garden.discard.action': 'Discard “{file}”',
   'garden.discard.title': 'Discard “{file}”?',

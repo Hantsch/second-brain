@@ -199,6 +199,9 @@ export const api = {
     discardPage: (request: IpcRequest<'gardener:discardPage'>) =>
       call('gardener:discardPage', request),
     supersede: (request: IpcRequest<'gardener:supersede'>) => call('gardener:supersede', request),
+    orphanTargets: (findingId: string) => call('gardener:orphanTargets', { findingId }),
+    linkOrphan: (request: IpcRequest<'gardener:linkOrphan'>) =>
+      call('gardener:linkOrphan', request),
   },
   claude: {
     sessions: (limit?: number) => call('claude:sessions', limit === undefined ? {} : { limit }),

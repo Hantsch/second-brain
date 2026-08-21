@@ -17,6 +17,9 @@
  *   - `gardener.runOnOpen` wird wirklich gelesen.
  *   - `reminders:unsnooze` nimmt eine Ruhezeit zurück — sonst wäre „ruhig stellen"
  *     eine Aktion ohne Rückgängig.
+ *   - Beim gewählten Ziel einer verwaisten Seite bleiben zwei Absagen
+ *     unterscheidbar: `conflict`, wenn die Datei sich zwischen Lesen und
+ *     Schreiben ändert, und `invalid`, wenn das Ziel kein Kandidat mehr ist.
  */
 
 import { mkdtemp, rm } from 'node:fs/promises';
@@ -25,6 +28,9 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { IpcChannel, IpcEventName, IpcEvents, IpcRequest, IpcResponse } from '@shared/ipc';
 import type { GardenerFinding } from '@shared/types';
+import { FsVaultStore } from '@core/vault';
+import { toIpcError } from '../../src/main/ipc/errors';
+import { IPC_ERROR_PREFIX, encodeIpcError } from '../../src/preload/ipc-error-wire';
 import { createTempVault } from '../helpers/vault';
 import type { TempVault } from '../helpers/vault';
 import { NOW, TODAY, day, freezeTime } from '../helpers/time';
@@ -114,6 +120,38 @@ function findingOfKind(findings: readonly GardenerFinding[], kind: string): Gard
   const found = findings.find((finding) => finding.kind === kind);
   expect(found, `Befund der Art ${kind}`).toBeDefined();
   return found as GardenerFinding;
+}
+
+const SCIM = 'modules/identity-management/wiki/entities/scim.md';
+const SCIM_MENTION = 'modules/identity-management/wiki/entities/scim-erwaehnung.md';
+const MODULE_LOG = 'modules/identity-management/wiki/log.md';
+
+/**
+ * Eine zusaetzliche Seite, die „SCIM" im Text nennt, ohne dorthin zu verlinken —
+ * genau die eine Stelle, die `singleMention` (`checks/orphan.ts`) braucht, damit
+ * der Verwaisten-Befund einen automatischen Fix bekommt.
+ */
+async function addScimMention(vault: TempVault, harness: Harness): Promise<string> {
+  await vault.write(
+    SCIM_MENTION,
+    [
+      '---',
+      'type: entity',
+      'title: SCIM-Erwähnung',
+      'module: identity-management',
+      'created: 2026-04-15',
+      'updated: 2026-04-15',
+      'reviewed: 2026-04-15',
+      'tags: [auth]',
+      'lang: de',
+      '---',
+      '',
+      'Dieser Text erwähnt SCIM 2.0, ohne dorthin zu verlinken.',
+      '',
+    ].join('\n'),
+  );
+  await harness.services.requireIndex().refresh?.();
+  return SCIM_MENTION;
 }
 
 describe('Pflege-Kanäle im Main', () => {
@@ -462,6 +500,371 @@ describe('Pflege-Kanäle im Main', () => {
     expect(findingOfKind(again.findings, 'orphan').paths[0]).toBe(path);
     const plan = await harness.call('gardener:discardPlan', { path });
     expect(plan.target.path).toBe(path);
+  });
+
+  // ── Verwaiste Seite: Ziel wählen (016 D2) ───────────────────────────────────
+
+  it('nennt Ziele für eine verwaiste Seite ohne automatischen Fix, ohne zu schreiben', async () => {
+    const report = await harness.call('gardener:run', {});
+    const orphan = findingOfKind(report.findings, 'orphan');
+    expect(orphan.fix).toBeNull();
+    const path = orphan.paths[0] as string;
+    const before = await vault.read(path);
+
+    const result = await harness.call('gardener:orphanTargets', { findingId: orphan.id });
+
+    expect(result.line).toBe('Bezug: [[scim]]');
+    /* Überblicksseite zuerst, der Rest alphabetisch nach Titel — die mittlere
+       Gruppe (Titel teilt ein Wort mit dem der verwaisten Seite) bleibt leer,
+       weil kein anderer Titel ein Wort mit "SCIM" teilt. */
+    expect(result.targets.map((target) => target.slug)).toEqual([
+      'overview',
+      's-2026-08-04-token-lifetimes-blog',
+      'oauth2',
+      'token-lebensdauer',
+    ]);
+    /* Rein lesend. */
+    expect(await vault.read(path)).toBe(before);
+  });
+
+  it('weist eine unbekannte Befundkennung ab', async () => {
+    await harness.call('gardener:run', {});
+    await expect(
+      harness.call('gardener:orphanTargets', { findingId: 'gibt-es-nicht' }),
+    ).rejects.toMatchObject({ code: 'not-found' });
+  });
+
+  it('weist einen Befund ab, der kein verwaister ist', async () => {
+    const report = await harness.call('gardener:run', {});
+    const brokenLink = findingOfKind(report.findings, 'broken-link');
+
+    await expect(
+      harness.call('gardener:orphanTargets', { findingId: brokenLink.id }),
+    ).rejects.toMatchObject({ code: 'invalid' });
+  });
+
+  it('weist eine verwaiste Seite ab, die schon einen automatischen Fix hat', async () => {
+    /* Eine zusätzliche Seite, die "SCIM" im Text nennt, ohne zu verlinken —
+       genau die eine Stelle, die `singleMention` braucht, damit der Befund
+       einen Fix bekommt und diese Kanal-Vorbedingung nicht mehr gilt. */
+    await vault.write(
+      'modules/identity-management/wiki/entities/scim-erwaehnung.md',
+      [
+        '---',
+        'type: entity',
+        'title: SCIM-Erwähnung',
+        'module: identity-management',
+        'created: 2026-04-15',
+        'updated: 2026-04-15',
+        'reviewed: 2026-04-15',
+        'tags: [auth]',
+        'lang: de',
+        '---',
+        '',
+        'Dieser Text erwähnt SCIM 2.0, ohne dorthin zu verlinken.',
+        '',
+      ].join('\n'),
+    );
+    await harness.services.requireIndex().refresh?.();
+
+    const scimPath = 'modules/identity-management/wiki/entities/scim.md';
+    const report = await harness.call('gardener:run', {});
+    const orphan = report.findings.find(
+      (finding) => finding.kind === 'orphan' && finding.paths[0] === scimPath,
+    );
+    expect(orphan?.fix).not.toBeNull();
+
+    await expect(
+      harness.call('gardener:orphanTargets', { findingId: (orphan as GardenerFinding).id }),
+    ).rejects.toMatchObject({ code: 'invalid' });
+  });
+
+  // ── Verwaiste Seite: Ziel bestätigen (016 D3) ───────────────────────────────
+
+  it('schreibt die Zeile aus der Vorschau in das gewählte Ziel — und dreht sie zurück', async () => {
+    const report = await harness.call('gardener:run', {});
+    const orphan = findingOfKind(report.findings, 'orphan');
+    expect(orphan.paths[0]).toBe(SCIM);
+    expect(orphan.fix).toBeNull();
+    const preview = await harness.call('gardener:orphanTargets', { findingId: orphan.id });
+    const target = 'modules/identity-management/wiki/entities/oauth2.md';
+    expect(preview.targets.map((entry) => entry.path)).toContain(target);
+    const before = (await vault.read(target)) ?? '';
+
+    const result = await harness.call('gardener:linkOrphan', { findingId: orphan.id, target });
+
+    expect(result.written).toEqual([target]);
+    expect(result.undoToken).toBeDefined();
+    /* Genau eine Zeile dazu — und das `updated`, das jeder Schreibweg setzt.
+       Nichts anderes an der Seite darf sich bewegt haben. */
+    const beforeLines = before.split('\n');
+    const after = (await vault.read(target)) ?? '';
+    const added = after
+      .split('\n')
+      .filter((line) => line.length > 0 && !beforeLines.includes(line));
+    expect(added).toEqual([`updated: ${TODAY}`, preview.line]);
+    expect(preview.line).toBe('Bezug: [[scim]]');
+    /* Die Chronik des Moduls bekommt ihren `lint`-Eintrag. */
+    expect((await vault.read(MODULE_LOG)) ?? '').toContain('orphan (add-links)');
+    /* Der erledigte Befund verschwindet aus der Liste, ohne neuen Lauf. */
+    const done = await harness.call('gardener:report', undefined);
+    expect(done?.findings.some((finding) => finding.id === orphan.id)).toBe(false);
+
+    const undone = await harness.call('gardener:undoFix', {
+      undoToken: result.undoToken as string,
+    });
+    expect(undone.restored).toEqual([target]);
+    expect(await vault.read(target)).toBe(before);
+  });
+
+  /* 016 D7: dieser Testbestand läuft überall ohne konfiguriertes Modell
+     (Guardrail 1) — hier steht das ausdrücklich hin, statt nebenbei zu gelten.
+     Ein Fund, den nur eine deterministische Prüfung erzeugt hat, wird durch
+     eine menschliche Wahl behoben, ohne dass irgendein Schritt dazwischen ein
+     Modell braucht oder fragt. */
+  it('kommt vom Fund bis zum geschriebenen Verweis ganz ohne Modell aus', async () => {
+    const report = await harness.call('gardener:run', { useLlm: true });
+    expect(report.usedLlm).toBe(false);
+    const orphan = findingOfKind(report.findings, 'orphan');
+    const target = 'modules/identity-management/wiki/entities/oauth2.md';
+
+    const preview = await harness.call('gardener:orphanTargets', { findingId: orphan.id });
+    expect(preview.targets.map((entry) => entry.path)).toContain(target);
+
+    const result = await harness.call('gardener:linkOrphan', { findingId: orphan.id, target });
+
+    expect(result.written).toEqual([target]);
+    expect(result.undoToken).toBeDefined();
+    const after = await harness.call('gardener:report', undefined);
+    expect(after?.usedLlm).toBe(false);
+    expect(after?.findings.some((finding) => finding.id === orphan.id)).toBe(false);
+  });
+
+  /* Der Kern der Sache: der Renderer schickt einen nackten Pfad zurück, und das
+     Main rechnet die erlaubte Menge neu, statt ihm zu glauben. Alles, was ein
+     Angreifer wie ein Versehen nennen könnte — eine und dieselbe Absage. */
+  it('weist jedes Ziel ab, das nicht in der neu gerechneten Auswahl steht', async () => {
+    const report = await harness.call('gardener:run', {});
+    const orphan = findingOfKind(report.findings, 'orphan');
+
+    /* Eine Seite in einem anderen Modul — und eine, die die verwaiste Seite
+       inzwischen selbst verlinkt: `orphanTargets` schließt beide aus, also ist
+       die Auswahl frisch gerechnet und nicht aus dem Lauf übernommen. */
+    await vault.write(
+      'modules/zweites-modul/module.md',
+      '---\ntype: note\ntitle: Zweites Modul\nslug: zweites-modul\ndescription: Ein zweites Modul\ncreated: 2026-05-01\nupdated: 2026-05-01\ntags: []\nlang: de\n---\n\nEin zweites Modul.\n',
+    );
+    const foreign = 'modules/zweites-modul/wiki/concepts/fremd.md';
+    await vault.write(
+      foreign,
+      '---\ntype: concept\ntitle: Fremde Seite\nmodule: zweites-modul\ncreated: 2026-05-01\nupdated: 2026-05-01\nreviewed: 2026-05-01\ntags: []\nlang: de\n---\n\nEine Seite in einem anderen Modul.\n',
+    );
+    const linking = 'modules/identity-management/wiki/concepts/verlinkt-scim.md';
+    await vault.write(
+      linking,
+      '---\ntype: concept\ntitle: Verlinkt SCIM\nmodule: identity-management\ncreated: 2026-05-01\nupdated: 2026-05-01\nreviewed: 2026-05-01\ntags: []\nlang: de\n---\n\nDiese Seite verlinkt [[scim]] schon.\n',
+    );
+    await harness.services.requireIndex().refresh?.();
+
+    const rejected = [
+      /* Die verwaiste Seite selbst. */
+      SCIM,
+      /* Ein anderes Modul. */
+      foreign,
+      /* Verlinkt schon — der Lauf wusste das noch nicht, die Auswahl schon. */
+      linking,
+      /* Struktur, keine Seite (VAULT-FORMAT.md). */
+      CATALOG,
+      MODULE_LOG,
+      /* Und irgendein Vault-Pfad, der gar keine Wiki-Seite ist. */
+      'journal/2026/08/2026-08-10.md',
+      'projects/work/kundenportal-relaunch/project.md',
+      'raw/web/2026-08-06-digital-gardening-ueberblick.md',
+    ];
+    for (const target of rejected) {
+      const before = await vault.read(target);
+      await expect(
+        harness.call('gardener:linkOrphan', { findingId: orphan.id, target }),
+      ).rejects.toMatchObject({ code: 'invalid' });
+      /* Abgewiesen heißt: nicht angefasst. */
+      expect(await vault.read(target)).toBe(before);
+    }
+  });
+
+  it('weist eine unbekannte Befundkennung beim Bestätigen ab', async () => {
+    await harness.call('gardener:run', {});
+    await expect(
+      harness.call('gardener:linkOrphan', {
+        findingId: 'gibt-es-nicht',
+        target: 'modules/identity-management/wiki/entities/oauth2.md',
+      }),
+    ).rejects.toMatchObject({ code: 'not-found' });
+  });
+
+  it('bestätigt nur für einen Verwaisten-Befund ohne automatischen Fix', async () => {
+    const report = await harness.call('gardener:run', {});
+    const brokenLink = findingOfKind(report.findings, 'broken-link');
+    await expect(
+      harness.call('gardener:linkOrphan', {
+        findingId: brokenLink.id,
+        target: 'modules/identity-management/wiki/entities/oauth2.md',
+      }),
+    ).rejects.toMatchObject({ code: 'invalid' });
+
+    /* Und eine verwaiste Seite, die schon einen automatischen Fix hat: dafür ist
+       `gardener:applyFix` da, nicht dieser Kanal. */
+    const mention = await addScimMention(vault, harness);
+    const again = await harness.call('gardener:run', {});
+    const withFix = again.findings.find(
+      (finding) => finding.kind === 'orphan' && finding.paths[0] === SCIM,
+    ) as GardenerFinding;
+    expect(withFix.fix).not.toBeNull();
+    await expect(
+      harness.call('gardener:linkOrphan', { findingId: withFix.id, target: mention }),
+    ).rejects.toMatchObject({ code: 'invalid' });
+  });
+
+  /* Regression: der eindeutige Ein-Kandidaten-Fall geht weiter über
+     `gardener:applyFix` und ist von einem gewählten Ziel nicht zu unterscheiden —
+     dieselbe Aktion, dieselbe Zeile, dieselbe Zieldatei. */
+  it('schreibt den eindeutigen Verweis weiter über applyFix', async () => {
+    const mention = await addScimMention(vault, harness);
+    const report = await harness.call('gardener:run', {});
+    const orphan = report.findings.find(
+      (finding) => finding.kind === 'orphan' && finding.paths[0] === SCIM,
+    ) as GardenerFinding;
+    expect(orphan.fix?.action).toBe('add-links');
+    expect(orphan.paths[1]).toBe(mention);
+
+    const result = await harness.call('gardener:applyFix', { finding: orphan });
+
+    expect(result.written).toEqual([mention]);
+    expect(result.undoToken).toBeDefined();
+    expect((await vault.read(mention)) ?? '').toContain(orphan.fix?.preview ?? 'x');
+  });
+
+  // ── Verwaiste Seite: Hash-Wache und ehrliches Scheitern (016 D4) ───────────
+
+  /* Der Unterschied, der hier festgeschrieben wird, ist der ganze Punkt dieser
+     drei Tests:
+
+     - **`conflict`** heißt „jemand war schneller": die Datei hat sich zwischen
+       dem frischen Lesen und dem Schreiben *innerhalb desselben Aufrufs*
+       geändert. Nur das ist ein Konflikt — eine Änderung *vor* dem Aufruf liest
+       `addLinks` einfach mit (dritter Test).
+     - **`invalid`** heißt „die Auswahl passt nicht mehr": das Ziel steht in der
+       neu gerechneten Kandidatenliste nicht mehr. Nichts wurde versucht.
+
+     Verschwimmt die Grenze, wird aus einem ehrlichen „bitte neu prüfen" ein
+     stilles Überschreiben — oder umgekehrt eine Absage, die nach Datenverlust
+     klingt, obwohl nur die Vorschau veraltet war. */
+  it('meldet einen Konflikt, wenn das Ziel zwischen Lesen und Schreiben von außen wächst', async () => {
+    const report = await harness.call('gardener:run', {});
+    const orphan = findingOfKind(report.findings, 'orphan');
+    const target = 'modules/identity-management/wiki/entities/oauth2.md';
+    const preview = await harness.call('gardener:orphanTargets', { findingId: orphan.id });
+    expect(preview.targets.map((entry) => entry.path)).toContain(target);
+    const foreign = 'Von einem anderen Prozess geschrieben.';
+    const raced = `${(await vault.read(target)) ?? ''}\n${foreign}\n`;
+
+    /* Die Fremdänderung muss **während** des Aufrufs landen: `addLinks` hat den
+       alten Inhalt und dessen Hash dann schon gelesen, geschrieben wird erst
+       danach. Der Store gehört dem Kanal (`wikiStore`), also ist das Lesen am
+       Prototyp die einzige Stelle, an der diese Lücke zu treffen ist. Der Aufruf
+       sieht weiter den alten Inhalt — genau so sieht ein echtes Wettrennen aus. */
+    const readOriginal = FsVaultStore.prototype.readText;
+    const plain = new FsVaultStore(vault.root);
+    let injected = false;
+    const spy = vi
+      .spyOn(FsVaultStore.prototype, 'readText')
+      .mockImplementation(async (path: string) => {
+        const content = await readOriginal.call(plain, path);
+        if (path === target && !injected) {
+          injected = true;
+          /* Am Store vorbei, wie ein Editor von außen. */
+          await vault.write(target, raced);
+        }
+        return content;
+      });
+
+    const failed: unknown = await harness
+      .call('gardener:linkOrphan', { findingId: orphan.id, target })
+      .then(
+        () => null,
+        (error: unknown) => error,
+      )
+      .finally(() => spy.mockRestore());
+
+    expect(injected).toBe(true);
+    /* Der Wortlaut sagt, woher die Absage kommt: aus `assertWritable`
+       (`core/vault/compose.ts`), also von der Hash-Wache selbst — nicht aus einer
+       Vorprüfung im Kanal, die ein Wettrennen gar nicht sehen kann. */
+    expect(failed).toMatchObject({
+      code: 'conflict',
+      message: expect.stringContaining('Konflikt in'),
+    });
+    /* Und der Code überlebt jeden Sprung: `registry.ts` verpackt jeden Fehler
+       mit `toIpcError`, das Preload steckt ihn als JSON in die Nachricht. Der
+       Renderer packt in `decodeIpcError` genau dieses JSON wieder aus — dieselbe
+       Vorsilbe, dieselbe Codeliste; importieren darf ein Main-Test ihn nicht
+       (tsconfig-Grenze), also wird hier ausgepackt wie dort. */
+    const wire = encodeIpcError(toIpcError(failed));
+    expect(wire.message.startsWith(IPC_ERROR_PREFIX)).toBe(true);
+    const decoded: unknown = JSON.parse(wire.message.slice(IPC_ERROR_PREFIX.length));
+    expect(decoded).toMatchObject({ code: 'conflict' });
+
+    /* Nicht überschrieben: Zeichen für Zeichen das, was der andere Prozess
+       geschrieben hat — und kein Verweis auf die verwaiste Seite. */
+    expect(await vault.read(target)).toBe(raced);
+    expect(raced).not.toContain(preview.line);
+    /* Nichts erledigt heißt: der Befund steht noch offen. */
+    const still = await harness.call('gardener:report', undefined);
+    expect(still?.findings.some((finding) => finding.id === orphan.id)).toBe(true);
+  });
+
+  it('weist ein Ziel als „nicht mehr wählbar" ab, nicht als Konflikt', async () => {
+    const report = await harness.call('gardener:run', {});
+    const orphan = findingOfKind(report.findings, 'orphan');
+    const target = 'modules/identity-management/wiki/entities/oauth2.md';
+    const preview = await harness.call('gardener:orphanTargets', { findingId: orphan.id });
+    expect(preview.targets.map((entry) => entry.path)).toContain(target);
+
+    /* Jemand hat den Verweis von Hand gesetzt: damit ist das Ziel kein Kandidat
+       mehr — `orphanTargets` schließt jede Seite aus, die die verwaiste Seite
+       schon verlinkt. Die Datei ist geändert, aber das ist hier nicht die
+       Nachricht: der Klick macht keinen Sinn mehr. */
+    const byHand = `${(await vault.read(target)) ?? ''}\n${preview.line}\n`;
+    await vault.write(target, byHand);
+    await harness.services.requireIndex().refresh?.();
+
+    const again = await harness.call('gardener:orphanTargets', { findingId: orphan.id });
+    expect(again.targets.map((entry) => entry.path)).not.toContain(target);
+    await expect(
+      harness.call('gardener:linkOrphan', { findingId: orphan.id, target }),
+    ).rejects.toMatchObject({ code: 'invalid' });
+
+    /* Abgewiesen heißt: nicht angefasst — die Zeile des Nutzers steht genau
+       einmal da. */
+    expect(await vault.read(target)).toBe(byHand);
+  });
+
+  it('liest das gewählte Ziel frisch und hängt den Verweis unter eine Fremdänderung', async () => {
+    const report = await harness.call('gardener:run', {});
+    const orphan = findingOfKind(report.findings, 'orphan');
+    const target = 'modules/identity-management/wiki/entities/oauth2.md';
+    const preview = await harness.call('gardener:orphanTargets', { findingId: orphan.id });
+    const byHand = 'Eine Zeile, die der Nutzer in Obsidian geschrieben hat.';
+    await vault.write(target, `${(await vault.read(target)) ?? ''}\n${byHand}\n`);
+
+    const result = await harness.call('gardener:linkOrphan', { findingId: orphan.id, target });
+
+    expect(result.written).toEqual([target]);
+    const after = (await vault.read(target)) ?? '';
+    /* Kein Wort verloren, und der Verweis steht **unter** der Fremdänderung:
+       geschrieben wurde auf dem Stand, der beim Klick auf der Platte lag. */
+    expect(after).toContain(byHand);
+    expect(after.indexOf(preview.line)).toBeGreaterThan(after.indexOf(byHand));
+    expect(after).toContain(`updated: ${TODAY}`);
   });
 
   // ── Dashboard ──────────────────────────────────────────────────────────────

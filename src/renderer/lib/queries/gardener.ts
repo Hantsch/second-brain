@@ -30,6 +30,8 @@ export type UndoFixResult = IpcResponse<'gardener:undoFix'>;
 export type DiscardPlanResult = IpcResponse<'gardener:discardPlan'>;
 export type DiscardPageResult = IpcResponse<'gardener:discardPage'>;
 export type SupersedeResult = IpcResponse<'gardener:supersede'>;
+export type OrphanTargetsResult = IpcResponse<'gardener:orphanTargets'>;
+export type LinkOrphanResult = IpcResponse<'gardener:linkOrphan'>;
 
 /** The last report. `null` means: there is none — not "all fine". */
 export function useGardenerReport(): UseQueryResult<GardenerReport | null> {
@@ -86,6 +88,17 @@ export interface GardenerMutations {
   discardPlan: UseMutationResult<DiscardPlanResult, unknown, IpcRequest<'gardener:discardPlan'>>;
   discardPage: UseMutationResult<DiscardPageResult, unknown, IpcRequest<'gardener:discardPage'>>;
   supersede: UseMutationResult<SupersedeResult, unknown, IpcRequest<'gardener:supersede'>>;
+  /**
+   * Candidates for an orphan finding with no unambiguous fix (016 D2) — a
+   * fetch-on-demand read, like `discardPlan`: nothing is written until
+   * `linkOrphan` confirms a pick.
+   */
+  orphanTargets: UseMutationResult<OrphanTargetsResult, unknown, string>;
+  /**
+   * Confirms a pick (016 D3) — this one writes, so the report, the dashboard and
+   * the module counts are invalidated exactly as after `discardPage`.
+   */
+  linkOrphan: UseMutationResult<LinkOrphanResult, unknown, IpcRequest<'gardener:linkOrphan'>>;
 }
 
 /** The screen's write paths. Each has its undo path alongside it. */
@@ -104,6 +117,8 @@ export function useGardenerMutations(): GardenerMutations {
       retry: false,
     }),
     supersede: useMutation({ mutationFn: api.gardener.supersede, onSuccess: done, retry: false }),
+    orphanTargets: useMutation({ mutationFn: api.gardener.orphanTargets, retry: false }),
+    linkOrphan: useMutation({ mutationFn: api.gardener.linkOrphan, onSuccess: done, retry: false }),
   };
 }
 

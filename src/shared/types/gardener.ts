@@ -157,3 +157,23 @@ export interface GardenerSupersedeResult {
   /** The chronicle entry with the `lint` mark; it is not rolled back. */
   logged: string | null;
 }
+
+/** A page the user could pick as the target of an orphan's "add a reference" fix. */
+export interface OrphanTarget {
+  path: string;
+  title: string;
+  slug: string;
+}
+
+/**
+ * Ranked, filtered candidates for an orphan with no unambiguous target (story
+ * 016) — the user picks one instead of the automatic single-candidate fix.
+ */
+export interface OrphanTargets {
+  /** The exact line a pick would append — from `relatedLine`, same builder the
+   *  existing single-candidate fix uses. */
+  line: string;
+  /** Candidate pages, ordered: overview page first, then pages sharing a mention
+   *  word with the orphan, then the rest — titles ascending within each group. */
+  targets: OrphanTarget[];
+}

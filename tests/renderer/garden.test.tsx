@@ -191,6 +191,80 @@ const NDUP_REPORT: GardenerReport = {
   advice: [],
 };
 
+/* Der Verwaisungs-Befund ohne eindeutigen Kandidaten (016 D5): die Übersicht
+   des Moduls plus ein paar weitere Seiten, ausgedacht als das, was
+   `gardener:orphanTargets` schon geordnet und gefiltert zurückgäbe. */
+const ORPHAN_PAGE = `modules/${MODULE}/wiki/concepts/verwaiste-seite.md`;
+const ORPHAN_FILE = ORPHAN_PAGE.split('/').pop() as string;
+const ORPHAN_SLUG = ORPHAN_FILE.replace('.md', '');
+const OVERVIEW_PATH = `modules/${MODULE}/wiki/overview.md`;
+const OTHER_A = `modules/${MODULE}/wiki/concepts/andere-seite-a.md`;
+const OTHER_B = `modules/${MODULE}/wiki/concepts/andere-seite-b.md`;
+const ORPHAN_LINE = '- [[verwaiste-seite]] wird hier erwähnt.';
+
+const ORPHAN = finding({
+  id: 'f-orphan',
+  kind: 'orphan',
+  title: 'Verwaiste Seite: Verwaiste Seite',
+  detail: 'Keine andere Seite verweist auf diese Seite.',
+  paths: [ORPHAN_PAGE],
+  fix: null,
+});
+
+const ORPHAN_TARGETS_SMALL = {
+  line: ORPHAN_LINE,
+  targets: [
+    { path: OVERVIEW_PATH, title: 'Übersicht', slug: 'overview' },
+    { path: OTHER_A, title: 'Andere Seite A', slug: 'andere-seite-a' },
+    { path: OTHER_B, title: 'Andere Seite B', slug: 'andere-seite-b' },
+  ],
+};
+
+/* Acht weitere Seiten — ab dieser Zahl zeigt die Auswahl ein Suchfeld
+   (`SEARCH_FROM` in `OrphanCard.tsx`, derselbe Schwellwert wie `SessionLink`). */
+const MANY_OTHERS = Array.from({ length: 8 }, (_, index) => ({
+  path: `modules/${MODULE}/wiki/concepts/andere-seite-${index + 1}.md`,
+  title: `Andere Seite ${index + 1}`,
+  slug: `andere-seite-${index + 1}`,
+}));
+
+const ORPHAN_TARGETS_MANY = {
+  line: ORPHAN_LINE,
+  targets: [{ path: OVERVIEW_PATH, title: 'Übersicht', slug: 'overview' }, ...MANY_OTHERS],
+};
+
+const ORPHAN_TARGETS_EMPTY = { line: ORPHAN_LINE, targets: [] };
+
+const ORPHAN_REPORT: GardenerReport = {
+  ranAt: NOW,
+  usedLlm: false,
+  findings: [ORPHAN],
+  health: 95,
+  healthKnown: true,
+  healthContributions: [{ kind: 'orphan', count: 1, points: 5 }],
+  advice: [],
+};
+
+/* Der Gegenfall: genau ein Kandidat, also `fix` bereits gesetzt — die Karte
+   bleibt die gewöhnliche `FindingCard`, ohne jede Auswahl. */
+const ORPHAN_SINGLE = finding({
+  id: 'f-orphan-single',
+  kind: 'orphan',
+  title: 'Verwaiste Seite: Andere verwaiste Seite',
+  paths: [ORPHAN_PAGE],
+  fix: { action: 'add-links', label: 'Verweis eintragen', preview: ORPHAN_LINE },
+});
+
+const ORPHAN_SINGLE_REPORT: GardenerReport = {
+  ranAt: NOW,
+  usedLlm: false,
+  findings: [ORPHAN_SINGLE],
+  health: 98,
+  healthKnown: true,
+  healthContributions: [{ kind: 'orphan', count: 1, points: 2 }],
+  advice: [],
+};
+
 const REPORT: GardenerReport = {
   ranAt: NOW,
   usedLlm: false,
@@ -907,6 +981,205 @@ describe('Beinahe-Dublette', () => {
     /* Und geschrieben wird nichts: es gibt keinen Knopf dafür. */
     expect(screen.queryByRole('button', { name: /^Überholt:/ })).toBeNull();
     expect(calls('gardener:supersede')).toEqual([]);
+  });
+});
+
+describe('Verwaiste Seite: Ziel wählen', () => {
+  it('bietet die Modulübersicht als Ein-Klick-Weg und eine Auswahl für den Rest — nie nur "Passt so"', async () => {
+    installMock(handlers(ORPHAN_REPORT, { 'gardener:orphanTargets': () => ORPHAN_TARGETS_SMALL }));
+    wrap(<GardenScreen />);
+
+    await screen.findByText(ORPHAN.title);
+    expect(
+      await screen.findByRole('button', {
+        name: `Von der Übersicht des Moduls „${MODULE}" aus verlinken`,
+      }),
+    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Andere Seite wählen' })).toBeTruthy();
+    /* „Passt so" bleibt stehen, ist aber nicht die einzige Handlung auf der Karte. */
+    expect(screen.getByRole('button', { name: 'Passt so' })).toBeTruthy();
+  });
+
+  it('zeigt beim Ein-Klick-Weg Zeile und Zieldatei vor jedem Schreiben — und schreibt erst nach dem Bestätigen', async () => {
+    installMock(
+      handlers(ORPHAN_REPORT, {
+        'gardener:orphanTargets': () => ORPHAN_TARGETS_SMALL,
+        'gardener:linkOrphan': () => ({ written: [OVERVIEW_PATH], undoToken: 'undo-orphan-1' }),
+      }),
+    );
+    wrap(<GardenScreen />);
+
+    await userEvent.click(
+      await screen.findByRole('button', {
+        name: `Von der Übersicht des Moduls „${MODULE}" aus verlinken`,
+      }),
+    );
+
+    /* Die Vorschau steht, bevor irgendetwas geschrieben wird. */
+    expect(await screen.findByText(`Geschrieben wird in ${OVERVIEW_PATH}:`)).toBeTruthy();
+    expect(screen.getByText(`+ ${ORPHAN_LINE}`)).toBeTruthy();
+    expect(calls('gardener:linkOrphan')).toEqual([]);
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Verweis in „overview.md" eintragen' }),
+    );
+
+    expect(calls('gardener:linkOrphan')).toEqual([{ findingId: ORPHAN.id, target: OVERVIEW_PATH }]);
+    expect(await screen.findByText(`Geschrieben: ${OVERVIEW_PATH}`)).toBeTruthy();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Rückgängig' }));
+    expect(calls('gardener:undoFix')).toEqual([{ undoToken: 'undo-orphan-1' }]);
+    expect(await screen.findByText('Zurückgedreht.')).toBeTruthy();
+  });
+
+  it('schränkt die Auswahl per Suche nach Titel ein — eine Anfrage ohne Treffer sagt das, statt eine leere Liste zu zeigen', async () => {
+    installMock(handlers(ORPHAN_REPORT, { 'gardener:orphanTargets': () => ORPHAN_TARGETS_MANY }));
+    wrap(<GardenScreen />);
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Andere Seite wählen' }));
+
+    const search = await screen.findByLabelText('Seite suchen');
+    const select = screen.getByRole('combobox', { name: 'Zielseite wählen' });
+    expect(within(select).getAllByRole('option')).toHaveLength(1 + MANY_OTHERS.length);
+
+    await userEvent.type(search, 'Seite 3');
+    const narrowed = within(select).getAllByRole('option');
+    expect(narrowed).toHaveLength(2);
+    expect(within(select).getByText('Andere Seite 3')).toBeTruthy();
+
+    await userEvent.clear(search);
+    await userEvent.type(search, 'nichts passendes');
+    expect(await screen.findByText('Keine Seite passt zu „nichts passendes".')).toBeTruthy();
+  });
+
+  it('sagt ehrlich, dass es in diesem Modul nichts zu verlinken gibt, statt eine leere Auswahl zu zeigen', async () => {
+    installMock(handlers(ORPHAN_REPORT, { 'gardener:orphanTargets': () => ORPHAN_TARGETS_EMPTY }));
+    wrap(<GardenScreen />);
+
+    expect(
+      await screen.findByText(
+        'Keine andere Seite in diesem Modul, auf die verwiesen werden könnte.',
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /verlinken/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Andere Seite wählen' })).toBeNull();
+    /* „Passt so" steht da, ist aber selbst hier — ganz ohne Kandidaten — nicht
+       die einzige Handlung: das Verwerfen (016 D6) bleibt eine echte
+       Alternative, kein bloßer Wegwisch-Knopf. */
+    expect(screen.getByRole('button', { name: 'Passt so' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: `„${ORPHAN_FILE}" verwerfen` })).toBeTruthy();
+  });
+
+  it('lässt den Einzelkandidaten-Befund unverändert: gewöhnliche Karte, ein Klick, keine Auswahl', async () => {
+    installMock(handlers(ORPHAN_SINGLE_REPORT));
+    wrap(<GardenScreen />);
+
+    await screen.findByText(ORPHAN_SINGLE.title);
+    expect(screen.getByRole('button', { name: ORPHAN_SINGLE.fix?.label as string })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Andere Seite wählen' })).toBeNull();
+    expect(calls('gardener:orphanTargets')).toEqual([]);
+  });
+
+  /* 016 D6: derselbe geteilte Verwerfen-Weg aus 015 als dritter Ausweg —
+     dieselbe Beschriftung, kein zweiter Dialog. Ohne `keep`, weil eine
+     verwaiste Seite per Definition nichts hat, worauf umzubiegen wäre. */
+  it('bietet das Verwerfen als dritten Weg — ehrlich, dass nichts umzubiegen ist', async () => {
+    installMock(
+      handlers(ORPHAN_REPORT, {
+        'gardener:orphanTargets': () => ORPHAN_TARGETS_SMALL,
+        'gardener:discardPlan': () => ({
+          target: {
+            path: ORPHAN_PAGE,
+            module: MODULE,
+            slug: ORPHAN_SLUG,
+            type: 'concept',
+            title: 'Verwaiste Seite',
+            hash: `hash-${ORPHAN_PAGE}`,
+          },
+          inbound: [],
+          catalogPath: CATALOG,
+          catalogLine: null,
+          repoints: [],
+        }),
+        'gardener:discardPage': () => ({
+          discarded: ORPHAN_PAGE,
+          written: [],
+          undoToken: 'undo-orphan-discard-1',
+          logged: null,
+        }),
+      }),
+    );
+    wrap(<GardenScreen />);
+
+    await screen.findByText(ORPHAN.title);
+    const discardButton = await screen.findByRole('button', {
+      name: `„${ORPHAN_FILE}" verwerfen`,
+    });
+    await userEvent.click(discardButton);
+
+    /* Die verwaiste Seite hat per Definition keine eingehenden Verweise —
+       und ohne `keep` gibt es kein Kästchen zum Umbiegen. */
+    expect(await screen.findByText('Keine andere Seite verlinkt darauf.')).toBeTruthy();
+    expect(screen.queryByRole('checkbox')).toBeNull();
+    expect(calls('gardener:discardPage')).toEqual([]);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Verwerfen' }));
+
+    /* Kein `keep` im Aufruf: nichts, worauf umgebogen werden könnte. */
+    expect(calls('gardener:discardPage')).toEqual([
+      { path: ORPHAN_PAGE, expectedHash: `hash-${ORPHAN_PAGE}` },
+    ]);
+    expect(await screen.findByText(`„${ORPHAN_PAGE}" liegt jetzt im Papierkorb.`)).toBeTruthy();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Rückgängig' }));
+    expect(calls('gardener:undoFix')).toEqual([{ undoToken: 'undo-orphan-discard-1' }]);
+    expect(await screen.findByText('Zurückgedreht.')).toBeTruthy();
+  });
+
+  it('verschweigt nicht, wenn seit dem Lauf doch etwas auf die verwaiste Seite verweist', async () => {
+    installMock(
+      handlers(ORPHAN_REPORT, {
+        'gardener:orphanTargets': () => ORPHAN_TARGETS_SMALL,
+        'gardener:discardPlan': () => ({
+          target: {
+            path: ORPHAN_PAGE,
+            module: MODULE,
+            slug: ORPHAN_SLUG,
+            type: 'concept',
+            title: 'Verwaiste Seite',
+            hash: `hash-${ORPHAN_PAGE}`,
+          },
+          inbound: [
+            {
+              path: OTHER_A,
+              module: MODULE,
+              slug: 'andere-seite-a',
+              type: 'concept',
+              title: 'Andere Seite A',
+            },
+          ],
+          catalogPath: CATALOG,
+          catalogLine: `- [[${ORPHAN_SLUG}]] — Verwaiste Seite.`,
+          repoints: [],
+        }),
+      }),
+    );
+    wrap(<GardenScreen />);
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: `„${ORPHAN_FILE}" verwerfen` }),
+    );
+
+    /* Ohne `keep` gibt es nichts, worauf die Karte umbiegen könnte — die Karte
+       verschweigt das nicht, sondern sagt es offen, statt ein Kästchen
+       anzubieten, das hier keinen Sinn ergäbe. */
+    expect(await screen.findByText('1 Seite verlinkt auf diese Seite.')).toBeTruthy();
+    expect(
+      screen.getByText(
+        'Diese Links würden brechen — es gibt keine Zielseite, auf die sie umgebogen werden.',
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByRole('checkbox')).toBeNull();
   });
 });
 

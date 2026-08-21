@@ -41,7 +41,7 @@ function isOrphan(page: WikiPage, cited: ReadonlySet<string>): boolean {
 }
 
 /** Woerter, unter denen eine Seite im Text erwaehnt wird: Titel, sonst Slug. */
-function mentionWords(page: WikiPage): string[] {
+export function mentionWords(page: WikiPage): string[] {
   const fromTitle = contentWords(page.title);
   return fromTitle.length > 0 ? fromTitle : contentWords(page.slug.replace(/-/g, ' '));
 }

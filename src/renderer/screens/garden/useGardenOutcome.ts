@@ -14,6 +14,7 @@ import type { DiscardPageResult, GardenerMutations } from '../../lib/queries/gar
 import type { ModuleMutations } from '../../lib/queries/modules';
 import type { SupersedeWrite } from './ContradictionCard';
 import type { NearDuplicateSupersedeWrite } from './NearDuplicateCard';
+import type { OrphanLinkWrite } from './OrphanCard';
 import type { Outcome } from './OutcomeStrip';
 
 /** The `undoFix` mark of an outcome that can go back that way — `null` for
@@ -35,6 +36,7 @@ export interface GardenOutcome {
   supersede: (write: SupersedeWrite) => void;
   supersedeDuplicate: (write: NearDuplicateSupersedeWrite) => void;
   discarded: (result: DiscardPageResult) => void;
+  linkOrphan: (write: OrphanLinkWrite) => void;
   undo: () => void;
 }
 
@@ -121,6 +123,19 @@ export function useGardenOutcome(
     setOutcome({ kind: 'discarded', file: result.discarded, undoToken: result.undoToken });
   };
 
+  /* The picked target from `OrphanCard` (016 D5) — same `add-links` fix the
+     automatic single-candidate case uses under the hood, so the result reads
+     as an ordinary "fixed" outcome, exactly like `supersedeDuplicate`. */
+  const linkOrphan = (write: OrphanLinkWrite): void => {
+    mutations.linkOrphan.mutate(
+      { findingId: write.findingId, target: write.target },
+      {
+        onSuccess: (result) =>
+          setOutcome({ kind: 'fixed', files: result.written, undoToken: result.undoToken ?? null }),
+      },
+    );
+  };
+
   const undo = (): void => {
     if (outcome === null) return;
     if (outcome.kind === 'dismissed') {
@@ -170,6 +185,7 @@ export function useGardenOutcome(
     supersede,
     supersedeDuplicate,
     discarded,
+    linkOrphan,
     undo,
   };
 }

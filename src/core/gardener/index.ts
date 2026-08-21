@@ -70,6 +70,7 @@ export {
   type DiscardWriteInput,
 } from './discard-page';
 export { applyFix, type FixDeps, type FixResult } from './fixes';
+export { orphanTargets } from './orphan-targets';
 export {
   supersede,
   type SupersedeDeps,

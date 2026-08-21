@@ -20,13 +20,22 @@
      (`core/gardener/fixes.ts`). Afterward the finding is hidden rather than
      deleted — `gardener:undoFix` reverses both. */
 
-import { applyFix, discardPage, discardPlan, supersede, undoFix } from '@core/gardener';
-import type { GardenerFinding } from '@shared/types';
+import {
+  applyFix,
+  discardPage,
+  discardPlan,
+  orphanTargets,
+  supersede,
+  undoFix,
+} from '@core/gardener';
+import type { GardenerFinding, OrphanTargets } from '@shared/types';
 import type { HandlerMap } from './registry';
 import { defineHandlers, fail } from './registry';
-import { gardenerStateFor, runWithProgress } from './gardener-deps';
+import { gardenerIndex, gardenerStateFor, runWithProgress } from './gardener-deps';
 import { docLanguage, settle, wikiIndex, wikiStore } from './wiki-bridge';
+import { gardenerLabels } from '../gardener-labels';
 import { GARDENER_STATE_FILE } from '../gardener-state';
+import type { GardenerState } from '../gardener-state';
 import type { Services } from '../services';
 
 /* One run per process. That's all that's needed: there's one open vault, and
@@ -113,6 +122,54 @@ async function assertActionable(services: Services, ...paths: readonly string[])
       throw fail('conflict', `„${path}" wurde seit dem Pflegelauf geändert. Bitte erneut prüfen.`);
     }
   }
+}
+
+interface OrphanPick {
+  state: GardenerState;
+  finding: GardenerFinding;
+  /** Der Pfad der verwaisten Seite, aus dem Index — nicht aus dem Renderer. */
+  orphanPath: string;
+  candidates: OrphanTargets;
+}
+
+/**
+ * Ein Verwaisten-Befund, der eine Auswahl braucht, samt **frisch gerechneter**
+ * Kandidatenliste — die eine Quelle fuer beide Kanaele, Vorschau (`orphanTargets`)
+ * und Bestaetigung (`linkOrphan`).
+ *
+ * Zwei Gruende, das nicht zweimal zu schreiben:
+ *
+ * 1. **Vorschau und Klick duerfen sich nicht widersprechen.** Wuerden beide
+ *    Kanaele die Menge je selbst zusammenstellen, koennte der Waehler ein Ziel
+ *    anbieten, das die Bestaetigung dann ablehnt.
+ * 2. **Der Renderer schickt einen nackten Pfad zurueck.** Derselbe Grund wie bei
+ *    `add-to-index` in `core/gardener/fixes.ts`: ein Pfad von aussen darf nicht
+ *    selbst entscheiden, in welche Datei geschrieben wird. Also rechnet das Main
+ *    die erlaubte Menge neu und prueft die Zugehoerigkeit — statt der Angabe zu
+ *    glauben.
+ */
+async function orphanPick(services: Services, findingId: string): Promise<OrphanPick> {
+  const state = await gardenerStateFor(services);
+  const findings = state.present()?.findings ?? [];
+  const finding = findings.find((entry) => entry.id === findingId);
+  if (finding === undefined) throw fail('not-found', 'diesen Befund gibt es nicht');
+  if (finding.kind !== 'orphan' || finding.fix !== null) {
+    throw fail('invalid', 'dieser Befund braucht keine Auswahl');
+  }
+  /* Only the finding's own module — never the whole vault: the candidates
+     are a pick among that module's pages, same scope as the automatic
+     `singleMention` fix in `checks/orphan.ts`. */
+  const modulePages = gardenerIndex(services)
+    .pages()
+    .filter((page) => page.module === finding.module);
+  const orphanPage = modulePages.find((page) => page.path === finding.paths[0]);
+  if (orphanPage === undefined) throw fail('not-found', 'die verwaiste Seite gibt es nicht mehr');
+  return {
+    state,
+    finding,
+    orphanPath: orphanPage.path,
+    candidates: orphanTargets(modulePages, orphanPage, docLanguage(services)),
+  };
 }
 
 export function gardenerHandlers(services: Services): HandlerMap {
@@ -239,6 +296,47 @@ export function gardenerHandlers(services: Services): HandlerMap {
       );
       await settle(services, [result.written], 'gardener');
       return result;
+    },
+
+    'gardener:orphanTargets': async ({ findingId }) =>
+      (await orphanPick(services, findingId)).candidates,
+
+    'gardener:linkOrphan': async ({ findingId, target }) => {
+      const pick = await orphanPick(services, findingId);
+      /* Der eine Test, der alles abdeckt: `orphanTargets` schliesst die verwaiste
+         Seite selbst, fremde Module, schon verlinkende Seiten und alles, was gar
+         keine Wiki-Seite ist, bereits aus. Wer nicht in dieser Liste steht, ist
+         kein Ziel — ein zweiter, eigener Pfad-Test waere eine zweite Wahrheit. */
+      if (!pick.candidates.targets.some((candidate) => candidate.path === target)) {
+        throw fail('invalid', `„${target}" ist kein wählbares Ziel für diesen Befund.`);
+      }
+      /* Genau die Form, die der automatische Ein-Kandidaten-Fix hat: `paths[0]`
+         die verwaiste Seite, `paths[1]` das Ziel, und als Vorschau die Zeile aus
+         demselben Aufruf, der die Kandidaten geliefert hat. Damit ist „die
+         Vorschau ist die Zeile" nicht zugesagt, sondern gebaut — und `fixes.ts`
+         kann gewaehltes und gefundenes Ziel nicht unterscheiden. */
+      const result = await applyFix(
+        { store: wikiStore(services), docLanguage: docLanguage(services) },
+        {
+          ...pick.finding,
+          paths: [pick.orphanPath, target],
+          fix: {
+            action: 'add-links',
+            label: gardenerLabels(services.settings.uiLanguage()).fix('add-links'),
+            preview: pick.candidates.line,
+          },
+        },
+      );
+      if (result.written.length > 0) {
+        await settle(services, result.written, 'gardener');
+        if (result.undoToken !== null)
+          await pick.state.markFixed(pick.finding.id, result.undoToken);
+        wake(services);
+      }
+      return {
+        written: result.written,
+        ...(result.undoToken === null ? {} : { undoToken: result.undoToken }),
+      };
     },
   });
 }

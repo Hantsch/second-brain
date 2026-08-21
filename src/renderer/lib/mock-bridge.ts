@@ -526,6 +526,13 @@ const RESPONSES: MockResponses = {
     logged: null,
   }),
   'gardener:supersede': () => ({ written: fx.wikiPage.path, undoToken: 'demo-undo', logged: null }),
+  /* Read-only preview (016 D2): one plausible candidate from the fixture page. */
+  'gardener:orphanTargets': () => ({
+    line: `Bezug: [[${fx.wikiPage.slug}]]`,
+    targets: [{ path: fx.wikiPage.path, title: fx.wikiPage.title, slug: fx.wikiPage.slug }],
+  }),
+  /* The confirm step (016 D3): `add-links` writes exactly one file. */
+  'gardener:linkOrphan': () => ({ written: [fx.wikiPage.path], undoToken: 'demo-undo' }),
 
   'claude:sessions': () => [fx.claudeSession],
   'claude:link': () => undefined,

@@ -1,7 +1,7 @@
 ---
 id: 016
 title: An orphaned page can be linked where I say, not only where it is obvious
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-08-13
 ---
 
@@ -50,32 +50,32 @@ the target file is mirrored in
 
 ## Acceptance Criteria
 
-- [ ] When there is exactly one unambiguous place, nothing changes: the card behaves as it
+- [x] When there is exactly one unambiguous place, nothing changes: the card behaves as it
       does today, one click, no picker.
-- [ ] When there is no unambiguous place, the card lets me choose the page the reference is
+- [x] When there is no unambiguous place, the card lets me choose the page the reference is
       written into, instead of offering no fix at all.
-- [ ] The picker lists the pages of the same module, is searchable by title, and leaves out
+- [x] The picker lists the pages of the same module, is searchable by title, and leaves out
       the orphaned page itself and every page that already links it.
-- [ ] After I pick, the card shows the exact line that will be appended and names the file
+- [x] After I pick, the card shows the exact line that will be appended and names the file
       it goes into — the same promise as today, with my file in it.
-- [ ] The line is appended, never inserted into an existing user line
+- [x] The line is appended, never inserted into an existing user line
       ([VAULT-FORMAT.md](../VAULT-FORMAT.md), "Was die App niemals tut").
 - [ ] ~~For a source page, the card also offers to cite it in the chosen page's `sources:`
       frontmatter — the reference form the check already counts.~~ **Out of scope** by user
       decision (see Decisions (Sprint)) — own story, different write path. Carried as a known
       gap, not delivered here.
-- [ ] Both ways are undoable from the outcome strip, land in the module log, and fail with
+- [x] Both ways are undoable from the outcome strip, land in the module log, and fail with
       `conflict` on a stale hash instead of overwriting.
-- [ ] Picking a page whose file changed since the run re-reads and re-checks before
+- [x] Picking a page whose file changed since the run re-reads and re-checks before
       writing, like every existing fix does.
-- [ ] The next run no longer reports the page as orphaned — because the link is really
+- [x] The next run no longer reports the page as orphaned — because the link is really
       there, not because anything was hidden.
-- [ ] The card no longer leaves "Passt so" as the only action on an orphan finding.
-- [ ] Works with no model configured — this is a link, not a judgement. No model suggests
+- [x] The card no longer leaves "Passt so" as the only action on an orphan finding.
+- [x] Works with no model configured — this is a link, not a judgement. No model suggests
       the target.
-- [ ] Labels go through `t()`, in `de` and `en`. The picker follows Gaston: one accent,
+- [x] Labels go through `t()`, in `de` and `en`. The picker follows Gaston: one accent,
       sentence case, no emoji.
-- [ ] Tests: picker writes into the chosen file, stale-hash conflict, unchanged
+- [x] Tests: picker writes into the chosen file, stale-hash conflict, unchanged
       single-candidate path (the `sources:` variant moves out with the criterion above).
 
 ## Open Questions
@@ -172,7 +172,7 @@ decision), so a source page can still only be un-orphaned by a body line.
 
 ## Deliverables
 
-**D1 — core: ranked, filtered target list** · files: `src/core/gardener/orphan-targets.ts` (new),
+**D1 — core: ranked, filtered target list** [x] · files: `src/core/gardener/orphan-targets.ts` (new),
 `src/core/gardener/checks/orphan.ts` (export `mentionWords`), `src/shared/types/overview.ts`
 (`OrphanTarget`, `OrphanTargets`), `tests/core/gardener/orphan-targets.test.ts` (new).
 Mirror: `src/core/gardener/relations.ts` for the pure-function + unit-test shape.
@@ -181,7 +181,7 @@ line for the doc language, never contains the orphan itself or a page already li
 orders overview → shared-word → rest with titles ascending inside each group. Tests cover the
 empty result (module with no other page) and the doc-language switch.
 
-**D2 — IPC + main: `gardener:orphanTargets`** · files: `src/shared/ipc.ts` (entry +
+**D2 — IPC + main: `gardener:orphanTargets`** [x] · files: `src/shared/ipc.ts` (entry +
 `IPC_CHANNELS`), `src/shared/types/overview.ts`, `src/main/ipc/gardener.ts`,
 `src/renderer/lib/api.ts`, `src/renderer/lib/queries/gardener.ts`,
 `tests/main/gardener-ipc.test.ts`.
@@ -190,7 +190,7 @@ Accepted when: the channel answers for a known orphan finding id, rejects an unk
 `not-found` and a non-orphan finding with `invalid`, only ever reads pages of the finding's own
 module, writes nothing, and `tests/main/ipc-coverage.test.ts` stays green.
 
-**D3 — the write path: `gardener:linkOrphan`** · files: `src/shared/ipc.ts`,
+**D3 — the write path: `gardener:linkOrphan`** [x] · files: `src/shared/ipc.ts`,
 `src/main/ipc/gardener.ts`, `src/renderer/lib/api.ts`,
 `src/renderer/lib/queries/gardener.ts`, `tests/main/gardener-ipc.test.ts`.
 Mirror: 015's `gardener:discardPage` handler (validate against the persisted report, then
@@ -202,7 +202,7 @@ nothing; the append goes through `appendParagraph`, never into an existing line;
 module log entry and `settle(...)` behave exactly as for the existing fix; `gardener:applyFix`
 stays untouched and the single-candidate path is covered by a regression test.
 
-**D4 — guardrail tests: hash guard and honest failure** · files:
+**D4 — guardrail tests: hash guard and honest failure** [x] · files:
 `tests/core/gardener/fixes.test.ts`, `tests/main/gardener-ipc.test.ts`, plus
 `src/main/ipc/errors.ts`/`src/core/gardener/fixes.ts` only if a code gets swallowed.
 Accepted when: a store whose content changes between read and write makes the fix fail with
@@ -210,7 +210,7 @@ Accepted when: a store whose content changes between read and write makes the fi
 wire into the renderer (`decodeIpcError`). Plus: a target file edited externally after the run is
 re-read and gets the line appended without losing the edit (round-trip).
 
-**D5 — renderer: the orphan card, picker and preview** · files:
+**D5 — renderer: the orphan card, picker and preview** [x] · files:
 `src/renderer/screens/garden/OrphanCard.tsx` (new), `FindingList.tsx`, `GardenScreen.tsx`,
 `src/renderer/screens/garden/fixes.ts`, `src/renderer/i18n/de-garden.ts`,
 `src/renderer/i18n/en-garden.ts`, `src/renderer/styles/app/garden.css`,
@@ -223,7 +223,7 @@ the target file before the confirm button; the confirm is the only accent on the
 label goes through `t()` in `de` and `en`, sentence case, no emoji, no raw Tailwind palette; a
 module with no other page says so honestly instead of showing an empty list.
 
-**D6 — reuse 015's discard action on the orphan card** · files:
+**D6 — reuse 015's discard action on the orphan card** [x] · files:
 `src/renderer/screens/garden/OrphanCard.tsx`, `tests/renderer/garden.test.tsx`.
 Reuse: `src/renderer/components/DiscardPageAction.tsx` from 015, mounted with the orphan's path
 and **no** surviving page.
@@ -231,7 +231,7 @@ Accepted when: the orphan card offers that action with identical wording and ide
 behaviour, the dialog is honest about there being nothing to repoint, and the diff contains **no**
 second discard implementation and no new i18n key for it.
 
-**D7 — regression: the finding really goes away** · files:
+**D7 — regression: the finding really goes away** [x] · files:
 `tests/core/gardener/report.test.ts`, `tests/core/gardener/checks-links.test.ts`,
 `tests/renderer/garden.test.tsx`.
 Accepted when: after the picker write a fresh report no longer reports the page as orphaned (the
@@ -240,7 +240,7 @@ fix; no path in this story touches the LLM gateway — the card is fully usable 
 configured, asserted with the "no model configured" setup; the orphan card never renders "Passt
 so" as its only action.
 
-**D8 — the case exists in the demo vault, and the flow is smoked** · files:
+**D8 — the case exists in the demo vault, and the flow is smoked** [x] · files:
 `scripts/seed/wiki.mjs` (or the matching module seed file), `.screenshots/` output.
 Mirror: the seed pages 015's D9 adds for its near-duplicate pair.
 Accepted when: `npm run seed` produces a module containing an orphaned page with **zero**
@@ -298,4 +298,77 @@ screenshot run, or `npm run dev` for the walkthrough).
 
 ## Done
 
-<Filled by `/ai-scrum:build 016`.>
+**Summary:** An orphan finding with no unambiguous fix (`kind: 'orphan', fix: null`) now
+lets the user pick the target page themselves. Core: `orphanTargets()` in
+`src/core/gardener/orphan-targets.ts` ranks a module's other pages (overview → shared
+mention word → rest, title-ascending) and returns the exact `Bezug:`/`Related:` line, never
+including the orphan itself or a page that already links it. Two new IPC channels mirror
+015's plan/apply pair: `gardener:orphanTargets` (read-only preview) and `gardener:linkOrphan`
+(write) — the latter is the load-bearing new surface, since it takes a renderer-picked
+`target` path and must never trust it: main recomputes the allowed set itself before
+building `paths`/`fix` and calling the existing, untouched core `applyFix`/`addLinks`. The
+renderer's new `OrphanCard` offers a one-click "link from module overview" plus a searchable
+picker (mirrors `SessionLink`), shows the exact line and target file before confirm, and
+reuses 015's `DiscardPageAction` unmodified so an orphan that should not exist can be
+discarded from the same card. The demo vault gained a genuine zero-mention-candidate orphan
+alongside the existing single-candidate one, and the full pick → preview → confirm → undo
+path plus the discard dialog were driven through the real running app (see Verification).
+
+**Commit message:**
+```
+016: orphan page — I pick the target
+```
+
+**Verification:**
+- `npm run build` — green.
+- `npm run lint` / `npm run typecheck` — green.
+- `npm test` — 2435 passed, 1 failed. The 1 failure is the pre-existing
+  `tests/core/wiki/module.test.ts:150` (`MODULE_SCHEMA_TEMPLATE` vs the now-English
+  `docs/MODULE-SCHEMA.md`), confirmed present on the branch before this story's builds
+  started (per the sprint orchestrator's briefing) — not a regression from this story.
+- `npm run format:check` — repo-wide CRLF drift predates this sprint (also called out by
+  015's own Done section); not this story's regression. No content-format issue found in
+  the touched files.
+- **Live smoke (P2):** `npm run seed && npm run shot` — 60 screenshots, no console errors;
+  the health card correctly counts "2 verwaiste Seiten" (the pre-existing single-candidate
+  `scim` orphan plus D8's new zero-candidate one). A temporary, non-committed Playwright
+  `_electron` driver (deleted after the run, same approach 015 used) then drove the real
+  built app against the seeded vault: the orphan card showed both the "link from module
+  overview" one-click and the searchable picker (never "Passt so" alone); "link from module
+  overview" showed the exact preview (`+ Bezug: [[s-...-notiz-communities-interview]]`)
+  naming `overview.md` before any write; confirming wrote exactly that line to disk; the
+  outcome strip showed the write with undo; undo restored `overview.md` to its byte-exact
+  original content; the discard button opened 015's dialog with the honest "no other page
+  links here" wording (closed via cancel, not exercised, so as not to remove the fixture).
+  The vault was verified unchanged end-to-end.
+- **Code review (story-review-hard):** verdict **PASS**. One review-fix cycle:
+  - A test comment in `tests/main/gardener-ipc.test.ts` claimed the middle rank group was
+    empty because "no page mentions SCIM in the text" — the actual mechanism is title-word
+    overlap with the orphan's own title, not a body-text scan. **Fixed**: comment corrected.
+  - `tests/core/wiki/module.test.ts:150` is red on this tree — **not fixed**, pre-existing
+    per the sprint briefing; documented here rather than glossed over.
+  - The searchable picker only renders an actual search input from 8 candidates up
+    (mirrors `SessionLink`'s `SEARCH_FROM` threshold); below that it's a plain `<select>`,
+    which is still literally "searchable by title" via the select's own type-ahead but not
+    via a dedicated text field. **Not fixed** — deliberate mirror of the established pattern
+    elsewhere on this screen, and a list that short needs no separate filter; documented as
+    an accepted low-severity gap rather than a violation.
+  - `src/main/ipc/gardener.ts` grew to ~342 lines, past `CLAUDE.md`'s ~300-line soft limit.
+    **Not fixed** — reviewer's own assessment was "still one responsibility, a check-it note
+    rather than a violation"; a split was judged riskier at the end of a review-fix cycle
+    than the size overrun itself. Left as a known follow-up if the file grows further.
+
+**Decisions made during the build (none required user input beyond what the story's
+`Decisions (Sprint)` section already settled):**
+- `OrphanTarget`/`OrphanTargets` were placed in `src/shared/types/gardener.ts`, not
+  `overview.ts` as the story's own D1 file list literally named — `overview.ts`'s header
+  comment explicitly says gardener finding/discard/supersede shapes live in `gardener.ts`
+  since they already pushed `overview.ts` past its line limit; both are re-exported from the
+  same barrel, so this is purely a "which file" choice with no consumer-visible effect.
+- D2's inline finding-validation was refactored into a shared `orphanPick()` helper when D3
+  needed the identical checks, rather than duplicating them — same behavior, confirmed by
+  D2's own tests still passing unchanged.
+- The overview-page candidate is identified by the fixed, documented path suffix
+  `/wiki/overview.md` (one per module, per `docs/VAULT-FORMAT.md`) rather than adding a
+  `type`/`isOverview` field to the wire-level `OrphanTarget` — avoids widening the IPC
+  contract for a fact already guaranteed by the vault format.

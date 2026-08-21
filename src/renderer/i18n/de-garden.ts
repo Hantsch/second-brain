@@ -164,6 +164,17 @@ export const deGarden = {
   'garden.nearDuplicate.pageMissing':
     'Eine der beiden Seiten lässt sich nicht lesen — vielleicht liegt sie schon im Papierkorb. Der nächste Lauf sagt, was von dem Paar bleibt.',
 
+  // ── Verwaiste Seite: Ziel wählen ──────────────────────────────────────────
+  'garden.orphan.targetLabel': 'Zielseite',
+  'garden.orphan.empty': 'Keine andere Seite in diesem Modul, auf die verwiesen werden könnte.',
+  'garden.orphan.fromOverview': 'Von der Übersicht des Moduls „{module}" aus verlinken',
+  'garden.orphan.pickToggle': 'Andere Seite wählen',
+  'garden.orphan.searchLabel': 'Seite suchen',
+  'garden.orphan.pickPlaceholder': 'Seite wählen',
+  'garden.orphan.pickAria': 'Zielseite wählen',
+  'garden.orphan.noMatch': 'Keine Seite passt zu „{query}".',
+  'garden.orphan.confirm': 'Verweis in „{file}" eintragen',
+
   // ── Verwerfen ─────────────────────────────────────────────────────────────
   'garden.discard.action': '„{file}" verwerfen',
   'garden.discard.title': '„{file}" verwerfen?',

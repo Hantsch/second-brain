@@ -41,6 +41,7 @@ import type {
   LocalRuntimeStatus,
   MachineScanResult,
   ModelRef,
+  OrphanTargets,
   Project,
   ProjectFrontmatter,
   ProjectStatus,
@@ -715,6 +716,33 @@ export interface IpcRoutes {
     req: { newerPath: string; olderPath: string; expectedHash?: string };
     res: GardenerSupersedeResult;
   };
+  /**
+   * Ranked candidates for an orphan finding that has no unambiguous fix (016
+   * D2): reads the finding's own module and returns pages the user could pick
+   * as the "add a reference" target, plus the exact line a pick would append.
+   * Read-only — nothing is written. Rejects a finding id the current report
+   * doesn't know (`not-found`) or one that isn't an orphan-without-fix
+   * (`invalid`): this channel only makes sense for the case the automatic fix
+   * left undecided.
+   */
+  'gardener:orphanTargets': { req: { findingId: string }; res: OrphanTargets };
+  /**
+   * Confirms a pick from `gardener:orphanTargets` (016 D3): appends the very
+   * line the preview showed to `target`, through the same `add-links` fix the
+   * automatic single-candidate case uses — so a picked target and a found one
+   * are indistinguishable to `core/gardener/fixes.ts`.
+   *
+   * `target` is a bare path from the renderer and is therefore **not** trusted:
+   * main recomputes the candidate set for the finding and rejects anything not
+   * in it (`invalid`) — another module, the orphan itself, a page that already
+   * links it, or any non-wiki path. Same finding checks as `orphanTargets`.
+   * `undoToken` is optional exactly as in `applyFix`; `add-links` writes one
+   * file, so `written` names it.
+   */
+  'gardener:linkOrphan': {
+    req: { findingId: string; target: string };
+    res: { written: string[]; undoToken?: string };
+  };
 
   // ── Claude sessions ──────────────────────────────────────────────────────
   'claude:sessions': { req: { limit?: number }; res: ClaudeSession[] };
@@ -885,6 +913,8 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'gardener:discardPlan',
   'gardener:discardPage',
   'gardener:supersede',
+  'gardener:orphanTargets',
+  'gardener:linkOrphan',
   'claude:sessions',
   'claude:link',
   'agents:projects',

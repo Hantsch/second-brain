@@ -25,3 +25,21 @@
 - 2026-08-21 21:26 · 015 · review-fix cycle 1 (AC10 stale-run gap, card bug, format) · started
 - 2026-08-21 21:39 · 015 · review-fix cycle 1 (AC10 stale-run gap, card bug, format) · done
 - 2026-08-21 21:47 · 015 · live smoke (discard+undo) + review-fix + Done section · done
+- 2026-08-21 21:50 · 016 · D1 core: ranked, filtered target list · started
+- 2026-08-21 21:54 · 016 · D1 core: ranked, filtered target list · done
+- 2026-08-21 21:54 · 016 · D2 IPC + main: gardener:orphanTargets · started
+- 2026-08-21 22:02 · 016 · D2 IPC + main: gardener:orphanTargets · done
+- 2026-08-21 22:02 · 016 · D3 the write path: gardener:linkOrphan · started
+- 2026-08-21 22:10 · 016 · D3 the write path: gardener:linkOrphan · done
+- 2026-08-21 22:10 · 016 · D4 guardrail tests: hash guard and honest failure · started
+- 2026-08-21 22:23 · 016 · D4 guardrail tests: hash guard and honest failure · done
+- 2026-08-21 22:23 · 016 · D5 renderer: the orphan card, picker and preview · started
+- 2026-08-21 22:40 · 016 · D5 renderer: the orphan card, picker and preview · done
+- 2026-08-21 22:40 · 016 · D6 reuse 015's discard action on the orphan card · started
+- 2026-08-21 22:47 · 016 · D6 reuse 015's discard action on the orphan card · done
+- 2026-08-21 22:47 · 016 · D7 regression: the finding really goes away · started
+- 2026-08-21 22:53 · 016 · D7 regression: the finding really goes away · done
+- 2026-08-21 22:53 · 016 · D8 demo vault case and smoke test · started
+- 2026-08-21 23:05 · 016 · D8 the case exists in the demo vault, and the flow is smoked · done
+- 2026-08-21 23:20 · 016 · review-fix cycle 1 (misleading test comment) · done
+- 2026-08-21 23:20 · 016 · live smoke (pick/preview/confirm/undo, discard) + Done section · done

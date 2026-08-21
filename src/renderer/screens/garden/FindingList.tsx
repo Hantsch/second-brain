@@ -20,6 +20,8 @@ import { ContradictionCard } from './ContradictionCard';
 import type { SupersedeWrite } from './ContradictionCard';
 import { NearDuplicateCard } from './NearDuplicateCard';
 import type { NearDuplicateSupersedeWrite } from './NearDuplicateCard';
+import { OrphanCard } from './OrphanCard';
+import type { OrphanLinkWrite } from './OrphanCard';
 import {
   ALL_FILTERS,
   applyFilter,
@@ -44,6 +46,7 @@ export interface FindingListProps {
   onSupersede: (write: SupersedeWrite) => void;
   onSupersedeDuplicate: (write: NearDuplicateSupersedeWrite) => void;
   onDiscarded: (result: DiscardPageResult) => void;
+  onLinkOrphan: (write: OrphanLinkWrite) => void;
 }
 
 export function FindingList({
@@ -58,6 +61,7 @@ export function FindingList({
   onSupersede,
   onSupersedeDuplicate,
   onDiscarded,
+  onLinkOrphan,
 }: FindingListProps) {
   const t = useT();
   const shown = applyFilter(findings, filter);
@@ -125,6 +129,17 @@ export function FindingList({
                       onOpenPath={onOpenPath}
                       onOpenFile={onOpenFile}
                       onSupersede={onSupersedeDuplicate}
+                      onDiscarded={onDiscarded}
+                    />
+                  ) : finding.kind === 'orphan' && finding.fix === null ? (
+                    <OrphanCard
+                      finding={finding}
+                      busy={busyId === finding.id}
+                      onFix={onFix}
+                      onDismiss={onDismiss}
+                      onOpenPath={onOpenPath}
+                      onOpenFile={onOpenFile}
+                      onLink={onLinkOrphan}
                       onDiscarded={onDiscarded}
                     />
                   ) : (
