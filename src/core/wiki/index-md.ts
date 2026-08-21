@@ -175,6 +175,36 @@ export function upsertEntries(
   return prefix.length > 0 ? `${prefix}\n${text}\n` : `${text}\n`;
 }
 
+/** Reserviert fuer spaetere Deliverables (D3/D4) — bislang ohne Wirkung. */
+export type RemoveOptions = Record<string, never>;
+
+/**
+ * Eintraege herausnehmen. Genau die Zeilen der gegebenen Slugs verschwinden,
+ * jede andere Zeile — Ueberschrift, Leerzeile oder von Hand geschrieben —
+ * bleibt stehen. Ist keiner der Slugs im Katalog, kommt der Inhalt unveraendert
+ * zurueck, statt neu formatiert zu werden.
+ */
+export function removeEntries(
+  content: string,
+  slugs: readonly string[],
+  // Unused for now: reserved for symmetry with UpsertOptions, until a later deliverable needs it.
+  _options: RemoveOptions = {},
+): string {
+  const wanted = new Set(slugs);
+  if (wanted.size === 0) return content ?? '';
+
+  const { prefix, body } = splitFrontmatterBlock(content ?? '');
+  const lines = body.split('\n');
+  const kept = lines.filter((line) => {
+    const found = slugOfLine(line);
+    return found === null || !wanted.has(found.slug);
+  });
+  if (kept.length === lines.length) return content ?? '';
+
+  const text = kept.join('\n').replace(/\s+$/, '');
+  return prefix.length > 0 ? `${prefix}\n${text}\n` : `${text}\n`;
+}
+
 function trimLeadingBlank(lines: readonly string[]): string[] {
   const result = [...lines];
   while (result.length > 0 && (result[0] ?? '').trim().length === 0) result.shift();

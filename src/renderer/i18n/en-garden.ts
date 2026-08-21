@@ -111,6 +111,7 @@ export const enGarden = {
   'garden.card.dismissed': 'Fine as it is. The result no longer counts against the health score.',
   'garden.card.undismiss': 'Show it again',
   'garden.card.written': 'Written: {file}',
+  'garden.card.discarded': '“{file}” is now in the trash.',
   'garden.card.undo': 'Undo',
   'garden.card.undone': 'Rolled back.',
   'garden.card.keptOne': '1 file was left alone: it has been edited since.',
@@ -133,6 +134,34 @@ export const enGarden = {
   'garden.contradiction.named':
     'The contradiction is named on the page. There is nothing to write.',
   'garden.contradiction.superseded': 'Written into {file}.',
+
+  // ── Near duplicate ────────────────────────────────────────────────────────
+  'garden.nearDuplicate.created': 'Created',
+  'garden.nearDuplicate.neverMerged':
+    'Never merged automatically: “Compare both pages” only opens the two files.',
+  'garden.nearDuplicate.directionLabel': 'Which page is the newer one?',
+  'garden.nearDuplicate.noDefault':
+    'No suggestion: one page has no created date, or both carry the same one. A human decides here.',
+  'garden.nearDuplicate.optionNewer': '“{file}” is the newer page',
+  'garden.nearDuplicate.supersede': 'Supersede: {older} → {newer}',
+  'garden.nearDuplicate.supersedeHint':
+    'Writes supersedes: [{slug}] into {file}. Both pages stay; the older one is marked as superseded.',
+  'garden.nearDuplicate.alreadyNamed': 'This relation is already named. There is nothing to write.',
+  'garden.nearDuplicate.pageMissing':
+    'One of the two pages cannot be read — it may already be in the trash. The next run says what is left of the pair.',
+
+  // ── Discard ───────────────────────────────────────────────────────────────
+  'garden.discard.action': 'Discard “{file}”',
+  'garden.discard.title': 'Discard “{file}”?',
+  'garden.discard.inboundNone': 'No other page links to it.',
+  'garden.discard.inboundOne': '1 page links to this page.',
+  'garden.discard.inboundMany': '{count} pages link to this page.',
+  'garden.discard.catalogPreview': 'This catalogue line would be removed:',
+  'garden.discard.catalogNone': 'No catalogue line to remove.',
+  'garden.discard.repoint': 'Repoint links at “{file}” instead',
+  'garden.discard.willBreak':
+    'These links would break — there is no surviving page to repoint them at.',
+  'garden.discard.confirm': 'Discard',
 
   // ── Without a model ───────────────────────────────────────────────────────
   'garden.llm.title': 'What a model would also find',

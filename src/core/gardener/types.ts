@@ -160,7 +160,27 @@ export interface FindingInput {
   fix?: GardenerFix | null;
 }
 
+/**
+ * Die Hashes der genannten Dateien, wie der Index sie zum Laufzeitpunkt kennt —
+ * dieselbe Quelle, aus der die Checks rechnen (`IndexedDoc.hash`, sha256 des
+ * ganzen Dateiinhalts). Kein zweites Hash-Verfahren: wer spaeter fragt „ist die
+ * Datei seit dem Lauf bearbeitet worden?", vergleicht `store.hash(path)` damit.
+ *
+ * Pfade ohne Eintrag im Index (Verzeichnisse, Rohquellen ohne Datei) bekommen
+ * keinen Hash — dann ist die Frage unbeantwortbar und wird nicht beantwortet.
+ */
+function hashesOf(ctx: GardenerContext, paths: readonly string[]): Record<string, string> {
+  const { byPath } = ctx.index.index();
+  const hashes: Record<string, string> = {};
+  for (const path of paths) {
+    const hash = byPath.get(path)?.hash;
+    if (hash !== undefined && hash.length > 0) hashes[path] = hash;
+  }
+  return hashes;
+}
+
 export function buildFinding(ctx: GardenerContext, input: FindingInput): GardenerFinding {
+  const hashes = hashesOf(ctx, input.paths);
   return {
     id: findingId(input.kind, ...input.key),
     kind: input.kind,
@@ -170,6 +190,7 @@ export function buildFinding(ctx: GardenerContext, input: FindingInput): Gardene
     paths: [...input.paths],
     module: input.module,
     foundAt: ctx.ranAt,
+    ...(Object.keys(hashes).length > 0 ? { hashes } : {}),
     fix: input.fix ?? null,
   };
 }

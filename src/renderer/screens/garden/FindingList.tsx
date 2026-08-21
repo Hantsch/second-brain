@@ -15,8 +15,11 @@ import { FindingFilter } from '../../components/FindingFilter';
 import { Panel } from '../../components/Panel';
 import { useT } from '../../i18n';
 import { plural } from '../../lib/format';
+import type { DiscardPageResult } from '../../lib/queries/gardener';
 import { ContradictionCard } from './ContradictionCard';
 import type { SupersedeWrite } from './ContradictionCard';
+import { NearDuplicateCard } from './NearDuplicateCard';
+import type { NearDuplicateSupersedeWrite } from './NearDuplicateCard';
 import {
   ALL_FILTERS,
   applyFilter,
@@ -39,6 +42,8 @@ export interface FindingListProps {
   onOpenPath: (path: string) => void;
   onOpenFile: (path: string) => void;
   onSupersede: (write: SupersedeWrite) => void;
+  onSupersedeDuplicate: (write: NearDuplicateSupersedeWrite) => void;
+  onDiscarded: (result: DiscardPageResult) => void;
 }
 
 export function FindingList({
@@ -51,6 +56,8 @@ export function FindingList({
   onOpenPath,
   onOpenFile,
   onSupersede,
+  onSupersedeDuplicate,
+  onDiscarded,
 }: FindingListProps) {
   const t = useT();
   const shown = applyFilter(findings, filter);
@@ -108,6 +115,17 @@ export function FindingList({
                       onOpenPath={onOpenPath}
                       onOpenFile={onOpenFile}
                       onSupersede={onSupersede}
+                    />
+                  ) : finding.kind === 'near-duplicate' ? (
+                    <NearDuplicateCard
+                      finding={finding}
+                      busy={busyId === finding.id}
+                      onFix={onFix}
+                      onDismiss={onDismiss}
+                      onOpenPath={onOpenPath}
+                      onOpenFile={onOpenFile}
+                      onSupersede={onSupersedeDuplicate}
+                      onDiscarded={onDiscarded}
                     />
                   ) : (
                     <FindingCard

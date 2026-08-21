@@ -22,7 +22,6 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { GardenerFinding } from '@shared/types';
 import { Button } from '../../atoms/Button';
 import { EmptyState } from '../../components/EmptyState';
 import { ErrorState } from '../../components/ErrorState';
@@ -41,12 +40,11 @@ import {
 } from '../../lib/queries/gardener';
 import { useTaskRouted } from '../../lib/queries/llm';
 import { useModuleMutations } from '../../lib/queries/modules';
-import type { SupersedeWrite } from './ContradictionCard';
 import { FindingList } from './FindingList';
 import { HealthCard } from './HealthCard';
 import { OutcomeStrip } from './OutcomeStrip';
-import type { Outcome } from './OutcomeStrip';
 import { RunBar } from './RunBar';
+import { useGardenOutcome } from './useGardenOutcome';
 import { ALL_FILTERS } from './filter';
 import type { FindingFilterState } from './filter';
 import { targetFor } from './targets';
@@ -64,8 +62,6 @@ export function GardenScreen() {
   const modelRouted = useTaskRouted('gardener-audit');
 
   const [filter, setFilter] = useState<FindingFilterState>(ALL_FILTERS);
-  const [outcome, setOutcome] = useState<Outcome | null>(null);
-  const [busyId, setBusyId] = useState<string | null>(null);
 
   /* A path leads to where the file lives in the app — otherwise to the file. */
   const openPath = (path: string): void => {
@@ -78,102 +74,28 @@ export function GardenScreen() {
     void api.shell.openPath(path).catch(() => undefined);
   };
 
+  const {
+    outcome,
+    busyId,
+    undoable,
+    reset,
+    cancelled,
+    applyFix,
+    dismiss,
+    supersede,
+    supersedeDuplicate,
+    discarded,
+    undo,
+  } = useGardenOutcome(mutations, pages, openPath);
+
   const start = (): void => {
-    setOutcome(null);
+    reset();
     run.mutate(undefined);
   };
 
   const stop = (): void => {
-    cancel.mutate(undefined, { onSuccess: () => setOutcome({ kind: 'cancelled' }) });
+    cancel.mutate(undefined, { onSuccess: cancelled });
   };
-
-  const applyFix = (finding: GardenerFinding): void => {
-    setBusyId(finding.id);
-    mutations.fix.mutate(finding, {
-      onSettled: () => setBusyId(null),
-      /* What the confirmation says is decided by the result: without a
-         written file, nothing was written, even if the button sounded
-         like it. */
-      onSuccess: (result) => {
-        const opened = result.open ?? [];
-        if (result.written.length === 0) {
-          if (opened.length > 0) {
-            setOutcome({ kind: 'opened', paths: opened });
-            openPath(opened[0] ?? '');
-          }
-          return;
-        }
-        setOutcome({
-          kind: 'fixed',
-          files: result.written,
-          undoToken: result.undoToken ?? null,
-        });
-      },
-    });
-  };
-
-  const dismiss = (finding: GardenerFinding): void => {
-    setBusyId(finding.id);
-    mutations.dismiss.mutate(finding.id, {
-      onSettled: () => setBusyId(null),
-      onSuccess: () => setOutcome({ kind: 'dismissed', id: finding.id }),
-    });
-  };
-
-  /* The value and the hash were frozen when the card loaded; if someone has
-     touched the file since, `conflict` comes back and appears as a card. */
-  const supersede = (write: SupersedeWrite): void => {
-    pages.savePage.mutate(
-      {
-        path: write.path,
-        frontmatter: { supersedes: write.supersedes },
-        expectedHash: write.expectedHash,
-      },
-      {
-        /* The way back needs the earlier state and the current hash. */
-        onSuccess: (written) =>
-          setOutcome({
-            kind: 'superseded',
-            file: write.path,
-            before: write.before,
-            hash: written.hash,
-          }),
-      },
-    );
-  };
-
-  const undo = (): void => {
-    if (outcome === null) return;
-    if (outcome.kind === 'dismissed') {
-      mutations.undismiss.mutate(outcome.id, { onSuccess: () => setOutcome(null) });
-      return;
-    }
-    if (outcome.kind === 'fixed' && outcome.undoToken !== null) {
-      mutations.undoFix.mutate(outcome.undoToken, {
-        onSuccess: (result) => setOutcome({ kind: 'undone', kept: result.kept }),
-      });
-      return;
-    }
-    if (outcome.kind === 'superseded') {
-      /* Back to the earlier state. If the field was empty, an empty list
-         remains: a field can't be removed via the merge, and
-         `supersedes: []` says the same thing as "supersedes nothing". */
-      pages.savePage.mutate(
-        {
-          path: outcome.file,
-          frontmatter: { supersedes: outcome.before },
-          expectedHash: outcome.hash,
-        },
-        { onSuccess: () => setOutcome({ kind: 'undone', kept: [] }) },
-      );
-    }
-  };
-
-  const undoable =
-    outcome !== null &&
-    (outcome.kind === 'dismissed' ||
-      outcome.kind === 'superseded' ||
-      (outcome.kind === 'fixed' && outcome.undoToken !== null));
 
   const header = (
     <ScreenHeader
@@ -196,6 +118,7 @@ export function GardenScreen() {
     mutations.dismiss.error ??
     mutations.undismiss.error ??
     mutations.undoFix.error ??
+    mutations.supersede.error ??
     pages.savePage.error ??
     null;
 
@@ -292,6 +215,8 @@ export function GardenScreen() {
           onOpenPath={openPath}
           onOpenFile={openFile}
           onSupersede={supersede}
+          onSupersedeDuplicate={supersedeDuplicate}
+          onDiscarded={discarded}
         />
       )}
     </div>

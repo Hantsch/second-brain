@@ -47,6 +47,15 @@ const PAGE_A = `modules/${MODULE}/wiki/concepts/token-lebensdauer.md`;
 const PAGE_B = `modules/${MODULE}/wiki/entities/scim.md`;
 const CATALOG = `modules/${MODULE}/wiki/index.md`;
 
+/* Das Beinahe-Dubletten-Paar (015 D9): dieselbe Quelle, zweimal aufgenommen —
+   der reale Fall aus der Story, hier als zwei Quellseiten desselben Moduls. */
+const NDUP_A = `modules/${MODULE}/wiki/sources/s-2026-01-01-video-workshop.md`;
+const NDUP_B = `modules/${MODULE}/wiki/sources/s-2026-01-01-video-workshop-2.md`;
+const NDUP_A_FILE = NDUP_A.split('/').pop() as string;
+const NDUP_B_FILE = NDUP_B.split('/').pop() as string;
+const NDUP_A_SLUG = NDUP_A_FILE.replace('.md', '');
+const NDUP_B_SLUG = NDUP_B_FILE.replace('.md', '');
+
 type SbHandlers = Partial<{
   [K in IpcChannel]: (payload: IpcRequest<K>) => IpcResponse<K> | Promise<IpcResponse<K>>;
 }>;
@@ -159,6 +168,29 @@ const CONTRADICTION = finding({
   },
 });
 
+const NDUP = finding({
+  id: 'f-ndup',
+  kind: 'near-duplicate',
+  severity: 'info',
+  title: 'Beinahe-Dublette: Workshop-Aufzeichnung (Video) und Workshop-Aufzeichnung (Video)',
+  detail: 'Fast derselbe Wortlaut auf beiden Seiten.',
+  paths: [NDUP_A, NDUP_B],
+  fix: { action: 'merge', label: 'Beide Seiten vergleichen', preview: null },
+});
+
+/* Ein eigener, kleiner Bericht statt NDUP in `REPORT` aufzunehmen — sonst
+   verschieben sich die vielen auf `REPORT.findings.length` gestützten Zahlen
+   in jedem Test oberhalb, der REPORT unverändert erwartet. */
+const NDUP_REPORT: GardenerReport = {
+  ranAt: NOW,
+  usedLlm: false,
+  findings: [NDUP],
+  health: 97,
+  healthKnown: true,
+  healthContributions: [{ kind: 'near-duplicate', count: 1, points: 3 }],
+  advice: [],
+};
+
 const REPORT: GardenerReport = {
   ranAt: NOW,
   usedLlm: false,
@@ -253,15 +285,27 @@ function handlers(report: GardenerReport | null, extra: SbHandlers = {}): SbHand
         structured: true,
       },
     ],
-    'modules:page': ({ path }) =>
-      path === PAGE_A
-        ? pageDoc(
-            PAGE_A,
-            'Token-Lebensdauer',
-            'Access-Token leben 15 Minuten.\n\n## Widersprüche\n\n- [[scim]] nennt eine Stunde.\n',
-            '2026-08-09',
-          )
-        : pageDoc(PAGE_B, 'SCIM', 'Nutzer werden über SCIM verwaltet.\n', '2026-08-01'),
+    'modules:page': ({ path }) => {
+      if (path === PAGE_A) {
+        return pageDoc(
+          PAGE_A,
+          'Token-Lebensdauer',
+          'Access-Token leben 15 Minuten.\n\n## Widersprüche\n\n- [[scim]] nennt eine Stunde.\n',
+          '2026-08-09',
+        );
+      }
+      /* Beide Seiten des Beinahe-Dubletten-Paars: derselbe Titel, derselbe
+         Rumpf — eine Quelle, zweimal aufgenommen. */
+      if (path === NDUP_A || path === NDUP_B) {
+        return pageDoc(
+          path,
+          'Workshop-Aufzeichnung (Video)',
+          'Mitschrift, 40 Minuten. Rollen und Mandanten.\n',
+          '2026-01-01',
+        );
+      }
+      return pageDoc(PAGE_B, 'SCIM', 'Nutzer werden über SCIM verwaltet.\n', '2026-08-01');
+    },
     'modules:savePage': () => ({ path: PAGE_A, hash: 'hash-neu', created: false }),
     'shell:openPath': () => undefined,
     ...extra,
@@ -674,6 +718,195 @@ describe('Widerspruch', () => {
     );
 
     expect(await screen.findByText(/zwischenzeitlich geändert/)).toBeTruthy();
+  });
+});
+
+// ── Beinahe-Dublette ────────────────────────────────────────────────────────
+
+describe('Beinahe-Dublette', () => {
+  it('verwirft eine der beiden Seiten und bietet danach den Rückweg', async () => {
+    installMock(
+      handlers(NDUP_REPORT, {
+        'gardener:discardPlan': () => ({
+          target: {
+            path: NDUP_A,
+            module: MODULE,
+            slug: NDUP_A_SLUG,
+            type: 'source',
+            title: 'Workshop-Aufzeichnung (Video)',
+            hash: `hash-${NDUP_A}`,
+          },
+          inbound: [],
+          catalogPath: CATALOG,
+          catalogLine: `- [[${NDUP_A_SLUG}]] — Mitschrift, 40 Minuten.`,
+          repoints: [],
+        }),
+        'gardener:discardPage': () => ({
+          discarded: NDUP_A,
+          written: [CATALOG],
+          undoToken: 'undo-ndup-1',
+          logged: null,
+        }),
+      }),
+    );
+    wrap(<GardenScreen />);
+
+    /* Der Dateiname steht auf dem Knopf — nie „diese Seite verwerfen", sonst
+       wüsste man bei zwei Seiten auf einer Karte nicht, welche gemeint ist. */
+    const discardButtonA = await screen.findByRole('button', {
+      name: `„${NDUP_A_FILE}" verwerfen`,
+    });
+    await userEvent.click(discardButtonA);
+
+    /* Die Vorschau steht, bevor irgendetwas geschrieben wird: keine Verweise,
+       die abbrechen würden, und die Katalogzeile, die verschwindet. */
+    expect(await screen.findByText('Keine andere Seite verlinkt darauf.')).toBeTruthy();
+    expect(screen.getByText(`- - [[${NDUP_A_SLUG}]] — Mitschrift, 40 Minuten.`)).toBeTruthy();
+    expect(calls('gardener:discardPage')).toEqual([]);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Verwerfen' }));
+
+    expect(calls('gardener:discardPage')).toEqual([
+      { path: NDUP_A, expectedHash: `hash-${NDUP_A}` },
+    ]);
+    /* Nie „geschrieben" für eine Seite, die im Papierkorb liegt. */
+    expect(await screen.findByText(`„${NDUP_A}" liegt jetzt im Papierkorb.`)).toBeTruthy();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Rückgängig' }));
+    expect(calls('gardener:undoFix')).toEqual([{ undoToken: 'undo-ndup-1' }]);
+    expect(await screen.findByText('Zurückgedreht.')).toBeTruthy();
+  });
+
+  it('zeigt eine Fremdänderung im Verwerfen-Dialog, statt sie zu verschweigen', async () => {
+    installMock(
+      handlers(NDUP_REPORT, {
+        'gardener:discardPlan': () => ({
+          target: {
+            path: NDUP_A,
+            module: MODULE,
+            slug: NDUP_A_SLUG,
+            type: 'source',
+            title: 'Workshop-Aufzeichnung (Video)',
+            hash: `hash-${NDUP_A}`,
+          },
+          inbound: [],
+          catalogPath: CATALOG,
+          catalogLine: `- [[${NDUP_A_SLUG}]] — Mitschrift, 40 Minuten.`,
+          repoints: [],
+        }),
+        'gardener:discardPage': () => {
+          throw Object.assign(new Error('conflict'), { code: 'conflict' });
+        },
+      }),
+    );
+    wrap(<GardenScreen />);
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: `„${NDUP_A_FILE}" verwerfen` }),
+    );
+    await screen.findByText('Keine andere Seite verlinkt darauf.');
+    await userEvent.click(screen.getByRole('button', { name: 'Verwerfen' }));
+
+    /* Sichtbar im Dialog, mit dem Dateinamen als Subjekt — nicht irgendwo
+       verschluckt und nicht als stiller Fehlschlag. */
+    expect(
+      await screen.findByText(
+        `„${NDUP_A_FILE}" wurde zwischenzeitlich geändert. Nichts wurde überschrieben.`,
+      ),
+    ).toBeTruthy();
+    /* Der Dialog bleibt offen: nichts wurde verwerfen, der Nutzer entscheidet neu. */
+    expect(screen.getByRole('button', { name: 'Verwerfen' })).toBeTruthy();
+  });
+
+  it('benennt "überholt" mit Datei und Feld vor dem Klick, schreibt danach und bietet den Rückweg', async () => {
+    installMock(
+      handlers(NDUP_REPORT, {
+        'gardener:supersede': () => ({
+          written: NDUP_A,
+          undoToken: 'undo-ndup-2',
+          logged: null,
+        }),
+      }),
+    );
+    wrap(<GardenScreen />);
+
+    await screen.findByText(NDUP.title);
+    /* Beide Seiten tragen dasselbe Anlegedatum (die Attrappe für `modules:page`
+       gibt beiden `2026-01-01`) — deshalb gibt es keinen Vorschlag, und ein
+       Mensch muss zuerst wählen. */
+    expect(
+      screen.getByText(
+        'Kein Vorschlag: Bei einer Seite fehlt das Erstelldatum, oder beide tragen dasselbe. Ein Mensch entscheidet hier.',
+      ),
+    ).toBeTruthy();
+
+    /* Der Radio-Knopf steht von Anfang an da, aber gesperrt, solange die Seite
+       noch lädt — erst wenn beide Seiten geladen sind, darf man wählen. */
+    const radioA = (await screen.findByRole('radio', {
+      name: `„${NDUP_A_FILE}" ist die neuere Seite`,
+    })) as HTMLInputElement;
+    await waitFor(() => expect(radioA.disabled).toBe(false));
+    await userEvent.click(radioA);
+
+    /* Die Vorschau nennt Datei und Feld, bevor irgendetwas geschrieben wird. */
+    expect(
+      screen.getByText(
+        `Trägt supersedes: [${NDUP_B_SLUG}] in ${NDUP_A} ein. Beide Seiten bleiben stehen, die ältere ist damit als überholt markiert.`,
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText(`+ supersedes: [${NDUP_B_SLUG}]`)).toBeTruthy();
+
+    const supersedeButton = screen.getByRole('button', {
+      name: `Überholt: ${NDUP_B_FILE} → ${NDUP_A_FILE}`,
+    });
+    await userEvent.click(supersedeButton);
+
+    expect(calls('gardener:supersede')).toEqual([
+      { newerPath: NDUP_A, olderPath: NDUP_B, expectedHash: `hash-${NDUP_A}` },
+    ]);
+    expect(await screen.findByText(`Geschrieben: ${NDUP_A}`)).toBeTruthy();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Rückgängig' }));
+    expect(calls('gardener:undoFix')).toEqual([{ undoToken: 'undo-ndup-2' }]);
+    expect(await screen.findByText('Zurückgedreht.')).toBeTruthy();
+  });
+
+  it('behauptet nicht „schon benannt", wenn eine der beiden Seiten nicht lesbar ist', async () => {
+    installMock(
+      handlers(NDUP_REPORT, {
+        /* Der Zustand nach einem Verwerfen auf dieser Karte: die Seite ist weg,
+           der Befund steht bis zum nächsten Lauf weiter da. */
+        'modules:page': ({ path }) => {
+          if (path === NDUP_A) throw Object.assign(new Error('nicht da'), { code: 'not-found' });
+          return pageDoc(
+            path,
+            'Workshop-Aufzeichnung (Video)',
+            'Mitschrift, 40 Minuten. Rollen und Mandanten.\n',
+            '2026-01-01',
+          );
+        },
+      }),
+    );
+    wrap(<GardenScreen />);
+    await screen.findByText(NDUP.title);
+
+    /* Die noch lesbare Seite darf gewählt werden — die fehlende ist gesperrt. */
+    const radioB = (await screen.findByRole('radio', {
+      name: `„${NDUP_B_FILE}" ist die neuere Seite`,
+    })) as HTMLInputElement;
+    await waitFor(() => expect(radioB.disabled).toBe(false));
+    await userEvent.click(radioB);
+
+    /* Über das Frontmatter einer Seite, die sie nicht lesen konnte, weiß die Karte
+       nichts — „schon eingetragen" wäre eine Behauptung über eine Datei, die sie
+       nie gesehen hat. */
+    expect(
+      screen.queryByText('Diese Beziehung ist schon eingetragen. Es gibt nichts zu schreiben.'),
+    ).toBeNull();
+    expect(screen.getByText(/vielleicht liegt sie schon im Papierkorb/)).toBeTruthy();
+    /* Und geschrieben wird nichts: es gibt keinen Knopf dafür. */
+    expect(screen.queryByRole('button', { name: /^Überholt:/ })).toBeNull();
+    expect(calls('gardener:supersede')).toEqual([]);
   });
 });
 

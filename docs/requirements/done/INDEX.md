@@ -127,3 +127,4 @@ second roadmap.
   plan without prior approval; OpenAI documents no path for a third party to drive a
   ChatGPT-plan session. Full research record kept in the file for a future reopen.
 - 014 — The maintenance run reports findings, not results · S05 · Renamed "Ergebnis" to "Befund"/"Befunde" across the German maintenance UI (screen, health card, dashboard tile, module view, settings, task label); English untouched; verified with a live smoke run.
+- 015 — A near-duplicate can be resolved, not only compared · S05 · Discard-to-trash and supersede added as two honest ways out, both undoable, hash-guarded against stale runs; the check silences a pair once either page names the other; verified with a live smoke run of discard, undo and the stale-run conflict.

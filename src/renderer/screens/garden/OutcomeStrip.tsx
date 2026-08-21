@@ -20,6 +20,8 @@ export type Outcome =
   | { kind: 'dismissed'; id: string }
   /** The supersedes relationship is in the frontmatter. */
   | { kind: 'superseded'; file: string; before: string[]; hash: string }
+  /** A page went to the trash (015 D7/D8) — never "written", it wasn't. */
+  | { kind: 'discarded'; file: string; undoToken: string }
   /** A fix was reverted; `kept` was left untouched. */
   | { kind: 'undone'; kept: string[] }
   /** A run was cancelled. */
@@ -43,6 +45,9 @@ function sentence(outcome: Outcome): { key: string; values?: Record<string, stri
   if (outcome.kind === 'dismissed') return { key: 'garden.card.dismissed' };
   if (outcome.kind === 'superseded') {
     return { key: 'garden.contradiction.superseded', values: { file: outcome.file } };
+  }
+  if (outcome.kind === 'discarded') {
+    return { key: 'garden.card.discarded', values: { file: outcome.file } };
   }
   if (outcome.kind === 'undone') return { key: 'garden.card.undone' };
   if (outcome.kind === 'cancelled') return { key: 'garden.run.cancelled' };

@@ -124,6 +124,7 @@ export const deGarden = {
   'garden.card.dismissed': 'Passt so. Der Befund zählt nicht mehr gegen die Gesundheit.',
   'garden.card.undismiss': 'Wieder anzeigen',
   'garden.card.written': 'Geschrieben: {file}',
+  'garden.card.discarded': '„{file}" liegt jetzt im Papierkorb.',
   'garden.card.undo': 'Rückgängig',
   'garden.card.undone': 'Zurückgedreht.',
   'garden.card.keptOne': '1 Datei blieb unberührt: sie wurde seither bearbeitet.',
@@ -146,6 +147,35 @@ export const deGarden = {
   'garden.contradiction.named':
     'Der Widerspruch ist auf der Seite benannt. Zu schreiben ist nichts.',
   'garden.contradiction.superseded': 'Eingetragen in {file}.',
+
+  // ── Beinahe-Dublette ──────────────────────────────────────────────────────
+  'garden.nearDuplicate.created': 'Angelegt',
+  'garden.nearDuplicate.neverMerged':
+    'Zusammengeführt wird nie automatisch: „Beide Seiten vergleichen" öffnet nur beide Dateien.',
+  'garden.nearDuplicate.directionLabel': 'Welche Seite ist die neuere?',
+  'garden.nearDuplicate.noDefault':
+    'Kein Vorschlag: Bei einer Seite fehlt das Erstelldatum, oder beide tragen dasselbe. Ein Mensch entscheidet hier.',
+  'garden.nearDuplicate.optionNewer': '„{file}" ist die neuere Seite',
+  'garden.nearDuplicate.supersede': 'Überholt: {older} → {newer}',
+  'garden.nearDuplicate.supersedeHint':
+    'Trägt supersedes: [{slug}] in {file} ein. Beide Seiten bleiben stehen, die ältere ist damit als überholt markiert.',
+  'garden.nearDuplicate.alreadyNamed':
+    'Diese Beziehung ist schon eingetragen. Es gibt nichts zu schreiben.',
+  'garden.nearDuplicate.pageMissing':
+    'Eine der beiden Seiten lässt sich nicht lesen — vielleicht liegt sie schon im Papierkorb. Der nächste Lauf sagt, was von dem Paar bleibt.',
+
+  // ── Verwerfen ─────────────────────────────────────────────────────────────
+  'garden.discard.action': '„{file}" verwerfen',
+  'garden.discard.title': '„{file}" verwerfen?',
+  'garden.discard.inboundNone': 'Keine andere Seite verlinkt darauf.',
+  'garden.discard.inboundOne': '1 Seite verlinkt auf diese Seite.',
+  'garden.discard.inboundMany': '{count} Seiten verlinken auf diese Seite.',
+  'garden.discard.catalogPreview': 'Diese Katalogzeile würde entfernt:',
+  'garden.discard.catalogNone': 'Keine Katalogzeile zu entfernen.',
+  'garden.discard.repoint': 'Verweise auf „{file}" statt darauf umbiegen',
+  'garden.discard.willBreak':
+    'Diese Links würden brechen — es gibt keine Zielseite, auf die sie umgebogen werden.',
+  'garden.discard.confirm': 'Verwerfen',
 
   // ── Ohne Modell ───────────────────────────────────────────────────────────
   'garden.llm.title': 'Was ein Modell zusätzlich fände',

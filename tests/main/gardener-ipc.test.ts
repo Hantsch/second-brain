@@ -348,6 +348,122 @@ describe('Pflege-Kanäle im Main', () => {
     });
   });
 
+  // ── Discard & Supersede (015 D6) ────────────────────────────────────────────
+
+  it('weist einen Pfad ab, den kein aktueller Lauf kennt', async () => {
+    await harness.call('gardener:run', {});
+    const unknown = 'modules/identity-management/wiki/entities/nicht-da.md';
+
+    await expect(harness.call('gardener:discardPlan', { path: unknown })).rejects.toMatchObject({
+      code: 'not-found',
+    });
+    await expect(harness.call('gardener:discardPage', { path: unknown })).rejects.toMatchObject({
+      code: 'not-found',
+    });
+    await expect(
+      harness.call('gardener:supersede', { newerPath: unknown, olderPath: unknown }),
+    ).rejects.toMatchObject({ code: 'not-found' });
+  });
+
+  it('zeigt die Vorschau eines Verwerfens, ohne etwas zu schreiben', async () => {
+    const report = await harness.call('gardener:run', {});
+    const orphan = findingOfKind(report.findings, 'orphan');
+    const path = orphan.paths[0] as string;
+    const before = await vault.read(path);
+
+    const plan = await harness.call('gardener:discardPlan', { path });
+
+    expect(plan.target.path).toBe(path);
+    expect(plan.catalogPath).toBe(CATALOG);
+    /* Rein lesend — die Vorschau darf die Seite nicht verändern. */
+    expect(await vault.read(path)).toBe(before);
+  });
+
+  it('verwirft eine Seite, meldet den Papierkorb-Pfad an settle — und macht es rückgängig', async () => {
+    const report = await harness.call('gardener:run', {});
+    const orphan = findingOfKind(report.findings, 'orphan');
+    const path = orphan.paths[0] as string;
+    harness.sent.length = 0;
+
+    const result = await harness.call('gardener:discardPage', { path });
+
+    expect(result.discarded).toBe(path);
+    expect(result.undoToken).toBeDefined();
+    expect(await vault.exists(path)).toBe(false);
+    /* `settle` trägt sowohl die geänderten Dateien als auch den gelöschten Pfad —
+       sonst würde der Schirm die verworfene Seite weiter für vorhanden halten. */
+    const wake = harness.sent.find((entry) => entry.name === 'event:vault-changed');
+    expect(wake?.payload).toMatchObject({
+      paths: expect.arrayContaining([path, ...result.written]),
+    });
+
+    const undone = await harness.call('gardener:undoFix', { undoToken: result.undoToken });
+    expect(undone.restored).toContain(path);
+    expect(await vault.exists(path)).toBe(true);
+  });
+
+  it('benennt, dass eine Seite eine andere abloest — und macht es rückgängig', async () => {
+    const report = await harness.call('gardener:run', {});
+    /* `scim.md` fehlt im Katalog (index-drift) *und* hat keinen Verweis von
+       woanders (orphan); `oauth2.md` trägt den toten Verweis (broken-link) —
+       zwei verschiedene, echte Wiki-Seiten aus demselben Bericht. */
+    const newer = findingOfKind(report.findings, 'index-drift').paths[0] as string;
+    const older = findingOfKind(report.findings, 'broken-link').paths[0] as string;
+    expect(newer).not.toBe(older);
+
+    const result = await harness.call('gardener:supersede', { newerPath: newer, olderPath: older });
+
+    expect(result.written).toBe(newer);
+    expect(result.undoToken).toBeDefined();
+    expect(await vault.read(newer)).toContain('supersedes:');
+
+    const undone = await harness.call('gardener:undoFix', { undoToken: result.undoToken });
+    expect(undone.restored).toContain(newer);
+    expect(await vault.read(newer)).not.toContain('supersedes:');
+  });
+
+  /* AC 10, zweiter Satz: „eine Datei, die seit dem Lauf bearbeitet wurde, wird
+     auch nicht stillschweigend verworfen". Der Hash-Vergleich im Kern kann das
+     nicht leisten — die Vorschau liest die schon bearbeitete Datei und stimmt
+     mit sich selbst ueberein. Deshalb haelt jeder Befund den Hash seiner Dateien
+     zum Laufzeitpunkt fest, und die drei Kanaele vergleichen dagegen. */
+  it('meldet einen Konflikt, wenn die Datei seit dem Lauf bearbeitet wurde — vor jedem Schreiben', async () => {
+    const report = await harness.call('gardener:run', {});
+    const orphan = findingOfKind(report.findings, 'orphan');
+    const path = orphan.paths[0] as string;
+    const other = findingOfKind(report.findings, 'broken-link').paths[0] as string;
+    /* Der Lauf hat den Hash festgehalten — ohne ihn gäbe es nichts zu vergleichen. */
+    expect(orphan.hashes?.[path]).toBeTypeOf('string');
+
+    /* Der Nutzer schreibt in Obsidian, ohne danach neu zu prüfen. */
+    await vault.write(path, `${(await vault.read(path)) ?? ''}\nVon Hand ergänzt.\n`);
+
+    /* Schon die Vorschau sagt es: sonst zeigte der Dialog einen Plan, den der
+       Klick nicht halten kann. */
+    await expect(harness.call('gardener:discardPlan', { path })).rejects.toMatchObject({
+      code: 'conflict',
+    });
+    await expect(harness.call('gardener:discardPage', { path })).rejects.toMatchObject({
+      code: 'conflict',
+    });
+    await expect(
+      harness.call('gardener:supersede', { newerPath: path, olderPath: other }),
+    ).rejects.toMatchObject({ code: 'conflict' });
+
+    /* Die Datei steht noch da, mit der Änderung des Nutzers. */
+    expect(await vault.exists(path)).toBe(true);
+    expect((await vault.read(path)) ?? '').toContain('Von Hand ergänzt.');
+
+    /* Und nach einem neuen Lauf geht es wieder — der Konflikt hängt am veralteten
+       Bericht, nicht an der Datei. Der Lauf rechnet auf dem Index, also muss der
+       die Fremdänderung erst gesehen haben; in der App macht das der Watcher. */
+    await harness.services.requireIndex().refresh?.();
+    const again = await harness.call('gardener:run', {});
+    expect(findingOfKind(again.findings, 'orphan').paths[0]).toBe(path);
+    const plan = await harness.call('gardener:discardPlan', { path });
+    expect(plan.target.path).toBe(path);
+  });
+
   // ── Dashboard ──────────────────────────────────────────────────────────────
 
   it('gibt dem Dashboard den Wert des letzten Laufs, vorher keinen', async () => {

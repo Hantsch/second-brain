@@ -20,11 +20,16 @@
  * - **Sehr kurze Seiten** liefern zu wenige Wortfolgen fuer ein Urteil.
  *
  * Zusammengefuehrt wird nie etwas. Der Fix oeffnet beide Seiten zum Vergleich.
+ *
+ * Ein Paar, das schon eine benannte Beziehung traegt (`contradicts`, `supersedes`,
+ * `extends` — siehe `../relations.ts`), ist kein unbemerkter Zufall mehr, sondern
+ * eine Entscheidung, die schon getroffen wurde. Solche Paare werden nicht gemeldet.
  */
 
 import type { GardenerFinding, WikiPage, WikiPageType } from '@shared/types';
 import { buildFinding, buildFix } from '../types';
 import type { Check, GardenerContext } from '../types';
+import { namesContradiction } from '../relations';
 import { contentWords, jaccard, shingles } from '../similarity';
 
 /** Ab hier gilt ein Paar als Kandidat. */
@@ -133,6 +138,15 @@ export const nearDuplicateCheck: Check = {
             pair.first.path <= pair.second.path
               ? [pair.first, pair.second]
               : [pair.second, pair.first];
+          const docFirst = byPath.get(first.path);
+          const docSecond = byPath.get(second.path);
+          if (
+            docFirst !== undefined &&
+            docSecond !== undefined &&
+            (namesContradiction(docFirst, second.slug) || namesContradiction(docSecond, first.slug))
+          ) {
+            continue;
+          }
           const text = ctx.labels.nearDuplicate(first.title, second.title, pair.similarity);
           findings.push(
             buildFinding(ctx, {

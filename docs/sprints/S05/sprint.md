@@ -19,7 +19,7 @@ along in the same sprint: the journal notices what I announced and never followe
 <!-- Order = the order the build phase works through. Dependent stories go last. -->
 
 - [x] 014 — The maintenance run reports findings, not results
-- [ ] 015 — A near-duplicate can be resolved, not only compared
+- [x] 015 — A near-duplicate can be resolved, not only compared
 - [ ] 016 — An orphaned page can be linked where I say, not only where it is obvious
 - [ ] 017 — A finding says how it ends — and "looks fine" stays reversible
 - [ ] 020 — Journal — announced and never followed up

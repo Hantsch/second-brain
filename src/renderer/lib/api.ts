@@ -194,6 +194,11 @@ export const api = {
     applyFix: (finding: IpcRequest<'gardener:applyFix'>['finding']) =>
       call('gardener:applyFix', { finding }),
     undoFix: (undoToken: string) => call('gardener:undoFix', { undoToken }),
+    discardPlan: (request: IpcRequest<'gardener:discardPlan'>) =>
+      call('gardener:discardPlan', request),
+    discardPage: (request: IpcRequest<'gardener:discardPage'>) =>
+      call('gardener:discardPage', request),
+    supersede: (request: IpcRequest<'gardener:supersede'>) => call('gardener:supersede', request),
   },
   claude: {
     sessions: (limit?: number) => call('claude:sessions', limit === undefined ? {} : { limit }),

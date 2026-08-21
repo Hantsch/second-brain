@@ -35,9 +35,11 @@ export {
   diffIndex,
   entryLine,
   parseIndex,
+  removeEntries,
   upsertEntries,
   type IndexDiff,
   type IndexDiffPage,
+  type RemoveOptions,
   type UpsertOptions,
   type WikiIndexEntry,
 } from './index-md';

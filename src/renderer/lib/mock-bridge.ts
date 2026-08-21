@@ -510,6 +510,22 @@ const RESPONSES: MockResponses = {
     undoToken: 'demo-undo',
   }),
   'gardener:undoFix': () => ({ restored: [fx.wikiPage.path], kept: [] }),
+  /* Preview and confirm read/write nothing real in the mock — same fixture
+     page both times, so a screen wiring the two calls sees a consistent path. */
+  'gardener:discardPlan': () => ({
+    target: { ...fx.wikiPage, hash: 'demo-hash' },
+    inbound: [],
+    catalogPath: `modules/${fx.wikiPage.module}/wiki/index.md`,
+    catalogLine: `- [[${fx.wikiPage.slug}]] — ${fx.wikiPage.excerpt}`,
+    repoints: [],
+  }),
+  'gardener:discardPage': () => ({
+    discarded: fx.wikiPage.path,
+    written: [`modules/${fx.wikiPage.module}/wiki/index.md`],
+    undoToken: 'demo-undo',
+    logged: null,
+  }),
+  'gardener:supersede': () => ({ written: fx.wikiPage.path, undoToken: 'demo-undo', logged: null }),
 
   'claude:sessions': () => [fx.claudeSession],
   'claude:link': () => undefined,

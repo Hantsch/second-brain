@@ -20,12 +20,12 @@
      (`core/gardener/fixes.ts`). Afterward the finding is hidden rather than
      deleted — `gardener:undoFix` reverses both. */
 
-import { applyFix, undoFix } from '@core/gardener';
+import { applyFix, discardPage, discardPlan, supersede, undoFix } from '@core/gardener';
 import type { GardenerFinding } from '@shared/types';
 import type { HandlerMap } from './registry';
 import { defineHandlers, fail } from './registry';
 import { gardenerStateFor, runWithProgress } from './gardener-deps';
-import { docLanguage, settle, wikiStore } from './wiki-bridge';
+import { docLanguage, settle, wikiIndex, wikiStore } from './wiki-bridge';
 import { GARDENER_STATE_FILE } from '../gardener-state';
 import type { Services } from '../services';
 
@@ -60,6 +60,59 @@ function findingOf(value: unknown): GardenerFinding {
     throw fail('invalid', 'kein Befund');
   }
   return finding;
+}
+
+/** Der Hash, den der letzte Lauf fuer `path` festgehalten hat; `null`, wenn keiner
+    der Befunde einen kennt. */
+function recordedHash(findings: readonly GardenerFinding[], path: string): string | null {
+  for (const finding of findings) {
+    const hash = finding.hashes?.[path];
+    /* Der Bericht ist eine Datei im Vault: was drinsteht, ist nicht typgeprueft. */
+    if (typeof hash === 'string' && hash.length > 0) return hash;
+  }
+  return null;
+}
+
+/**
+ * Darf auf `path` gehandelt werden — nennt ihn ein Befund des aktuellen Berichts,
+ * und ist die Datei seither unberuehrt?
+ *
+ * Zwei Zusagen in einer Pruefung, weil beide dieselbe Quelle brauchen:
+ *
+ * 1. **Nur ein genannter Pfad.** Die Kanaele fuer Verwerfen und Ueberholen nehmen
+ *    einen nackten Pfad aus dem Renderer, nicht einen ganzen `GardenerFinding`
+ *    wie `applyFix` — es gilt also dieselbe Begruendung wie bei `add-to-index` in
+ *    `core/gardener/fixes.ts`: ein Pfad von aussen darf nicht selbst entscheiden,
+ *    welche Datei die App fuer betroffen haelt.
+ * 2. **Nur ein aktueller Befund.** Der Hash-Vergleich im Kern (`discard-page.ts`,
+ *    `supersede.ts`) faengt eine Aenderung *zwischen Vorschau und Klick*; er kann
+ *    keine fangen, die *zwischen Lauf und Klick* passiert ist, denn die Vorschau
+ *    liest die schon bearbeitete Datei als Wahrheit. Deshalb vergleicht diese
+ *    Pruefung gegen den Hash, den der Lauf festgehalten hat (AC 10, zweiter Satz):
+ *    wer seit dem Lauf editiert hat, bekommt `conflict` und prueft neu — statt
+ *    stillschweigend eine Fassung zu verwerfen, die nie geprueft wurde.
+ *
+ * Beides steht **vor** jedem Kernaufruf, auch vor der rein lesenden Vorschau:
+ * so sagt schon der Dialog, dass der Lauf veraltet ist, statt eine Vorschau zu
+ * zeigen, die der Klick nicht halten kann.
+ *
+ * Kein Hash im Befund heisst „unbekannt", nicht „geaendert" — ein Bericht aus
+ * einer aelteren Version verhaelt sich wie bisher. Und eine Datei, die es nicht
+ * mehr gibt, ist kein Konflikt: dafuer meldet der Kern `not-found`.
+ */
+async function assertActionable(services: Services, ...paths: readonly string[]): Promise<void> {
+  const state = await gardenerStateFor(services);
+  const findings = state.present()?.findings ?? [];
+  for (const path of paths) {
+    const named = findings.filter((finding) => finding.paths.includes(path));
+    if (named.length === 0) throw fail('not-found', `„${path}" steht in keinem aktuellen Befund.`);
+    const recorded = recordedHash(named, path);
+    if (recorded === null) continue;
+    const live = await wikiStore(services).hash(path);
+    if (live !== null && live !== recorded) {
+      throw fail('conflict', `„${path}" wurde seit dem Pflegelauf geändert. Bitte erneut prüfen.`);
+    }
+  }
 }
 
 export function gardenerHandlers(services: Services): HandlerMap {
@@ -146,6 +199,45 @@ export function gardenerHandlers(services: Services): HandlerMap {
       await state.undoFixed(undoToken);
       if (result.restored.length > 0) await settle(services, result.restored, 'gardener');
       wake(services);
+      return result;
+    },
+
+    'gardener:discardPlan': async ({ path, keep }) => {
+      await assertActionable(services, path);
+      return discardPlan(
+        { store: wikiStore(services), index: wikiIndex(services) },
+        { path, ...(keep === undefined ? {} : { keep }) },
+      );
+    },
+
+    'gardener:discardPage': async ({ path, keep, expectedHash }) => {
+      await assertActionable(services, path);
+      const result = await discardPage(
+        {
+          store: wikiStore(services),
+          index: wikiIndex(services),
+          docLanguage: docLanguage(services),
+        },
+        {
+          path,
+          ...(keep === undefined ? {} : { keep }),
+          ...(expectedHash === undefined ? {} : { expectedHash }),
+        },
+      );
+      /* Both the content changes and the deleted page belong in the same
+         settle: only then does the module the page belonged to recompute
+         with the page actually gone. */
+      await settle(services, [...result.written, result.discarded], 'gardener');
+      return result;
+    },
+
+    'gardener:supersede': async ({ newerPath, olderPath, expectedHash }) => {
+      await assertActionable(services, newerPath, olderPath);
+      const result = await supersede(
+        { store: wikiStore(services), docLanguage: docLanguage(services) },
+        { newerPath, olderPath, ...(expectedHash === undefined ? {} : { expectedHash }) },
+      );
+      await settle(services, [result.written], 'gardener');
       return result;
     },
   });

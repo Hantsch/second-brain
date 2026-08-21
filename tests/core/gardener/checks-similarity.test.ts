@@ -56,6 +56,13 @@ describe('nearDuplicateCheck', () => {
       label: 'Beide Seiten vergleichen',
       preview: null,
     });
+    /* Der Befund hält den Hash beider Dateien zum Laufzeitpunkt fest — dieselben
+       Hashes, aus denen der Index rechnet. Ohne sie könnte später niemand mehr
+       sagen, ob die Datei seit dem Lauf bearbeitet wurde (AC 10, zweiter Satz). */
+    const { byPath } = fixture.index.index();
+    for (const path of findings[0]?.paths ?? []) {
+      expect(findings[0]?.hashes?.[path]).toBe(byPath.get(path)?.hash);
+    }
   });
 
   it('schweigt bei zwei Seiten zum selben Thema mit eigenem Text', async () => {
@@ -88,6 +95,50 @@ describe('nearDuplicateCheck', () => {
         title: 'Ladezeiten',
         summary: 'Verdichtet',
         body: LIST_AGAIN,
+      },
+    ]);
+
+    expect(nearDuplicateCheck.run(fixture.ctx({ settings: SETTINGS }))).toEqual([]);
+  });
+
+  it('schweigt bei einem Paar, das per `supersedes` schon benannt ist', async () => {
+    const fixture = await moduleFixture('wissen', [
+      {
+        type: 'concept',
+        slug: 'ladezeiten',
+        title: 'Ladezeiten',
+        summary: 'Erste',
+        body: LIST,
+        extra: { supersedes: ['ladezeiten-notiz'] },
+      },
+      {
+        type: 'concept',
+        slug: 'ladezeiten-notiz',
+        title: 'Ladezeiten (Notiz)',
+        summary: 'Zweite',
+        body: LIST_AGAIN,
+      },
+    ]);
+
+    expect(nearDuplicateCheck.run(fixture.ctx({ settings: SETTINGS }))).toEqual([]);
+  });
+
+  it('schweigt bei einem Paar, das per `contradicts` schon benannt ist — in der anderen Richtung', async () => {
+    const fixture = await moduleFixture('wissen', [
+      {
+        type: 'concept',
+        slug: 'ladezeiten',
+        title: 'Ladezeiten',
+        summary: 'Erste',
+        body: LIST,
+      },
+      {
+        type: 'concept',
+        slug: 'ladezeiten-notiz',
+        title: 'Ladezeiten (Notiz)',
+        summary: 'Zweite',
+        body: LIST_AGAIN,
+        extra: { contradicts: ['ladezeiten'] },
       },
     ]);
 

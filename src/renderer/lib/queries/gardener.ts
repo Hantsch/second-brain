@@ -17,7 +17,7 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { QueryClient, UseMutationResult, UseQueryResult } from '@tanstack/react-query';
-import type { IpcEvents, IpcResponse } from '@shared/ipc';
+import type { IpcEvents, IpcRequest, IpcResponse } from '@shared/ipc';
 import type { GardenerFinding, GardenerReport } from '@shared/types';
 import { api } from '../api';
 import { bridge } from '../bridge';
@@ -27,6 +27,9 @@ import { useVaultReady } from './data';
 export type GardenerProgress = IpcEvents['event:gardener-progress'];
 export type FixResult = IpcResponse<'gardener:applyFix'>;
 export type UndoFixResult = IpcResponse<'gardener:undoFix'>;
+export type DiscardPlanResult = IpcResponse<'gardener:discardPlan'>;
+export type DiscardPageResult = IpcResponse<'gardener:discardPage'>;
+export type SupersedeResult = IpcResponse<'gardener:supersede'>;
 
 /** The last report. `null` means: there is none — not "all fine". */
 export function useGardenerReport(): UseQueryResult<GardenerReport | null> {
@@ -76,9 +79,16 @@ export interface GardenerMutations {
   undismiss: UseMutationResult<void, unknown, string>;
   fix: UseMutationResult<FixResult, unknown, GardenerFinding>;
   undoFix: UseMutationResult<UndoFixResult, unknown, string>;
+  /**
+   * Only fetches the preview (015 D6) — nothing is written until `discardPage`
+   * confirms it, same trade-off as `projects:suggestStatus` (guardrail 2).
+   */
+  discardPlan: UseMutationResult<DiscardPlanResult, unknown, IpcRequest<'gardener:discardPlan'>>;
+  discardPage: UseMutationResult<DiscardPageResult, unknown, IpcRequest<'gardener:discardPage'>>;
+  supersede: UseMutationResult<SupersedeResult, unknown, IpcRequest<'gardener:supersede'>>;
 }
 
-/** The screen's four write paths. Each has its undo path alongside it. */
+/** The screen's write paths. Each has its undo path alongside it. */
 export function useGardenerMutations(): GardenerMutations {
   const client = useQueryClient();
   const done = (): void => refresh(client);
@@ -87,6 +97,13 @@ export function useGardenerMutations(): GardenerMutations {
     undismiss: useMutation({ mutationFn: api.gardener.undismiss, onSuccess: done, retry: false }),
     fix: useMutation({ mutationFn: api.gardener.applyFix, onSuccess: done, retry: false }),
     undoFix: useMutation({ mutationFn: api.gardener.undoFix, onSuccess: done, retry: false }),
+    discardPlan: useMutation({ mutationFn: api.gardener.discardPlan, retry: false }),
+    discardPage: useMutation({
+      mutationFn: api.gardener.discardPage,
+      onSuccess: done,
+      retry: false,
+    }),
+    supersede: useMutation({ mutationFn: api.gardener.supersede, onSuccess: done, retry: false }),
   };
 }
 

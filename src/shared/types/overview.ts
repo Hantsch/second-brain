@@ -165,86 +165,9 @@ export interface RecentWorkItem {
   scope: Scope | null;
 }
 
-/** A finding from the maintenance run — the antidote to a rotting wiki. */
-export type GardenerFindingKind =
-  /** Page that nobody links to. */
-  | 'orphan'
-  /** Wikilink pointing at nothing. */
-  | 'broken-link'
-  /** Page is missing from the module's `index.md`, or listed there wrongly. */
-  | 'index-drift'
-  /** Page is old and was never reviewed. */
-  | 'stale-page'
-  /** Two pages claim contradictory things. */
-  | 'contradiction'
-  /** Frequently mentioned term without its own page. */
-  | 'missing-page'
-  /** Two pages are almost the same. */
-  | 'near-duplicate'
-  /** Dump has been sitting unfiled in the inbox for too long. */
-  | 'unfiled-dump'
-  /** Source sits in `raw/` but was never condensed. */
-  | 'unprocessed-source'
-  /** Project without a next step. */
-  | 'project-without-next-step';
-
-export type FindingSeverity = 'info' | 'warn' | 'high';
-
-export interface GardenerFinding {
-  id: string;
-  kind: GardenerFindingKind;
-  severity: FindingSeverity;
-  title: string;
-  detail: string;
-  /** Affected files. */
-  paths: string[];
-  module: string | null;
-  foundAt: string;
-  /** Suggestion the user can accept with a click. */
-  fix: GardenerFix | null;
-  /** Marked by the user as "fine as is" — won't reappear. */
-  dismissed?: boolean;
-}
-
-export interface GardenerFix {
-  /** What the click does. */
-  action:
-    'add-to-index' | 'add-links' | 'mark-reviewed' | 'open-classify' | 'open-ingest' | 'merge';
-  label: string;
-  /** Preview of the change, if it can be generated mechanically. */
-  preview: string | null;
-}
-
-/**
- * Where the health score comes from. A number without justification is a
- * claim — with this breakdown, the screen can say **why** the score is what
- * it is. The points add up to `100 − health`.
- */
-export interface GardenerHealthContribution {
-  kind: GardenerFindingKind;
-  count: number;
-  /** Points lost in this category, rounded. */
-  points: number;
-}
-
-export interface GardenerReport {
-  ranAt: string;
-  /** Was an LLM used, or only the deterministic checks? */
-  usedLlm: boolean;
-  findings: GardenerFinding[];
-  /** Health score 0..100, derived from the count and severity of findings. */
-  health: number;
-  /**
-   * Is there any stock at all for the score to refer to? `false` means:
-   * `health` is unknown, not 0 — an empty vault has no health. Same contract
-   * as `DashboardData.healthKnown`.
-   */
-  healthKnown?: boolean;
-  /** Contributions per category, largest first. */
-  healthContributions?: GardenerHealthContribution[];
-  /** What the user should do next, at most three sentences. */
-  advice: string[];
-}
+/* Maintenance findings (`GardenerFinding`, `GardenerReport`, discard/supersede
+   plans and results) live in `./gardener` — the report/discard/supersede
+   shapes together pushed this file past the soft line limit. */
 
 /** Everything the dashboard needs in one go. */
 export interface DashboardData {

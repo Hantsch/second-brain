@@ -4,7 +4,16 @@
 
    Die Quelle `s-...-ai-second-brain-rotting` gehört zum YouTube-Ordner unter
    `raw/youtube/`; die Web-Quelle unter `raw/web/` ist absichtlich nicht
-   verdichtet und hat deshalb hier keine Seite. */
+   verdichtet und hat deshalb hier keine Seite.
+
+   Eine Ausnahme von „nichts ist überholt", absichtlich (015 D9): dasselbe
+   Video wurde zweimal aufgenommen — `video` und `video2` (Slug mit `-2`) tragen
+   denselben Rumpf, wortgleich. Das ist genau der Fall, den [[wissensverfall]]
+   selbst als eine der drei Verfallsformen nennt ("doppelte Seiten zum selben
+   Begriff") — hier als reales Beispiel im Modul, nicht nur als Behauptung im
+   Text. Der Gardener meldet das Paar als Beinahe-Dublette
+   (`near-duplicate.ts`); die Karte im Pflege-Screen bietet Verwerfen oder
+   Benennen als überholt an. */
 
 import { methodikPages } from './module-methodik-pages.mjs';
 
@@ -13,6 +22,8 @@ export function methodikModule(clock) {
   const vergleich = `s-${day(-45)}-notizsysteme-vergleich`;
   const werkstatt = `s-${day(-30)}-zettelkasten-werkstattbericht`;
   const video = `s-${day(-9)}-ai-second-brain-rotting`;
+  /* Versehentliche Zweitaufnahme derselben Quelle — der reale Fall aus 015. */
+  const video2 = `${video}-2`;
 
   return {
     slug: 'second-brain-methodik',
@@ -49,6 +60,16 @@ ich behalten will, als eine ganze Quelle, die niemand wieder liest.`,
         summary: `wiki/sources/${video}.md`,
         touched: ['[[wissensverfall]]', '[[belegpflicht]]', '[[karpathy-wiki]]', 'index.md'],
         notes: 'Rohquelle: raw/youtube/xOFkpf9KgKg — Transkript und Metadaten liegen dort',
+      },
+      {
+        day: -9,
+        kind: 'ingest',
+        title: 'Your AI Second Brain Is Slowly Rotting (Video) — versehentlich erneut aufgenommen',
+        summary: `wiki/sources/${video2}.md`,
+        touched: ['[[wissensverfall]]'],
+        notes:
+          'Dieselbe Rohquelle raw/youtube/xOFkpf9KgKg ein zweites Mal verdichtet — ' +
+          'Duplikat, keine neue Erkenntnis. Kandidat für den Pflege-Screen.',
       },
       {
         day: -9,
@@ -137,8 +158,42 @@ verdichtete Seiten, 12 Seiten, die tatsächlich wiederverwendet wurden.
 
 > If you cannot cite it, you do not know it. (11:48)`,
       },
+      {
+        /* Wortgleiche Zweitaufnahme derselben Quelle (015 D9) — Titel, Rumpf und
+           Beleg-Origin bleiben identisch, nur der Slug trägt die `-2`, exakt wie
+           im Beispiel aus der Story: „dasselbe Video, zweimal aufgenommen". */
+        type: 'source',
+        slug: video2,
+        title: 'Your AI Second Brain Is Slowly Rotting (Video)',
+        summary: 'Wie KI-gestützte Sammlungen verfallen, wenn niemand pflegt',
+        tags: ['wissen', 'video'],
+        created: -9,
+        updated: -9,
+        reviewed: -9,
+        extra: {
+          origin: 'https://www.youtube.com/watch?v=xOFkpf9KgKg',
+          raw: 'raw/youtube/xOFkpf9KgKg',
+        },
+        body: `Video, 18 Minuten. Rohquelle mit Transkript liegt unter
+\`raw/youtube/xOFkpf9KgKg\`; Zitate mit Zeitmarke stehen in
+\`transcript.timestamped.md\`.
 
-      ...methodikPages({ vergleich, werkstatt, video }),
+## Was drinsteht
+
+- Automatisch gefüllte Sammlungen wachsen schneller, als ein Mensch sie prüfen kann.
+- Drei Verfallsformen: verwaiste Seiten, veraltete Aussagen, doppelte Seiten
+  zum selben Begriff.
+- Gegenmittel ist kein Werkzeug, sondern ein wiederkehrender Pflegelauf mit
+  sichtbaren Befunden.
+
+## Wörtliche Stellen
+
+> An unmaintained knowledge base is a landfill with good intentions. (07:12)
+
+> If you cannot cite it, you do not know it. (11:48)`,
+      },
+
+      ...methodikPages({ vergleich, werkstatt, video, video2 }),
     ],
   };
 }

@@ -1,7 +1,7 @@
 ---
 id: 015
 title: A near-duplicate can be resolved, not only compared
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-08-13
 ---
 
@@ -60,32 +60,32 @@ token ([vault.ts:58-61](../../src/main/ipc/vault.ts#L58-L61)), client
 
 ## Acceptance Criteria
 
-- [ ] The near-duplicate card offers, per page, a way to discard **that** page — the file
+- [x] The near-duplicate card offers, per page, a way to discard **that** page — the file
       name is visible on the action, so I never discard the wrong one by mistake.
-- [ ] Before I discard, the card says how many other pages link to that page. If it is
+- [x] Before I discard, the card says how many other pages link to that page. If it is
       linked, discarding is still possible — but not by accident.
-- [ ] Discarding moves the file to the trash and is undoable from the outcome strip, with
+- [x] Discarding moves the file to the trash and is undoable from the outcome strip, with
       the same guarantees as every other maintenance write.
-- [ ] The card offers "the newer one supersedes the older one" as the second way out: it
+- [x] The card offers "the newer one supersedes the older one" as the second way out: it
       writes `supersedes` into the newer page's frontmatter, both files stay, and the
       preview names the file and the field before I click.
-- [ ] The near-duplicate check does not report a pair again once one page names the other
+- [x] The near-duplicate check does not report a pair again once one page names the other
       via `contradicts`, `supersedes`, or `extends` — using the answer
       [relations.ts](../../src/core/gardener/relations.ts) already gives, not a second
       notion of "settled".
-- [ ] A relation typed into the file by hand in Obsidian silences the finding exactly like
+- [x] A relation typed into the file by hand in Obsidian silences the finding exactly like
       a click in the app does.
-- [ ] Nothing is merged, and the app never chooses which page goes. Every action names its
+- [x] Nothing is merged, and the app never chooses which page goes. Every action names its
       target file before it runs.
-- [ ] Every action that writes or deletes lands in the module log, like the existing fixes
+- [x] Every action that writes or deletes lands in the module log, like the existing fixes
       ([fixes.ts](../../src/core/gardener/fixes.ts)).
-- [ ] After the file is gone, a new run no longer reports the pair — the run recomputes
+- [x] After the file is gone, a new run no longer reports the pair — the run recomputes
       from the files, and that stays the source of truth.
-- [ ] Writing with a stale hash gets a `conflict` instead of overwriting; a file edited
+- [x] Writing with a stale hash gets a `conflict` instead of overwriting; a file edited
       since the run was made is not silently discarded either.
-- [ ] Works with no model configured — this is a decision over files, no judgement.
-- [ ] Labels go through `t()`, in `de` and `en`. Sentence case, no emoji, one accent.
-- [ ] Tests: discard with undo, supersede with undo, the check staying quiet on a named
+- [x] Works with no model configured — this is a decision over files, no judgement.
+- [x] Labels go through `t()`, in `de` and `en`. Sentence case, no emoji, one accent.
+- [x] Tests: discard with undo, supersede with undo, the check staying quiet on a named
       relation, and the stale-hash conflict.
 
 ## Open Questions
@@ -332,4 +332,85 @@ Prerequisite: `npm run seed`, then start the app with `npm run dev`.
 
 ## Done
 
-<Filled by `/ai-scrum:build 015`.>
+**Summary:** Both new ways out of a near-duplicate are built end to end: `discardPage`
+(hash-guarded repoint + catalog removal + trash-delete, one undo token) and `supersede`
+(hash-guarded `supersedes` frontmatter write). The near-duplicate check now silences a pair
+once either page names the other via `namesContradiction`, reusing `relations.ts`. Three new
+IPC channels (`gardener:discardPlan`, `gardener:discardPage`, `gardener:supersede`) wire the
+core into a shared `DiscardPageAction` component (`components/`, reusable by 016) and a new
+`NearDuplicateCard`. Discard/supersede findings now carry a check-time hash per named page so
+a file edited after the run — even before the user opens the dialog — surfaces `conflict`
+instead of being silently discarded (this closed a real gap found in review, see below). Demo
+vault seeds a real near-duplicate pair.
+
+**Commit message:**
+```
+015: resolve a near-duplicate — discard or supersede, undoable
+```
+
+**Verification:**
+- `npm run build` — green.
+- `npm run lint` / `npm run typecheck` — green.
+- `npm test` — 2405 passed, 1 failed. The 1 failure is the pre-existing
+  `tests/core/wiki/module.test.ts:150` (`MODULE_SCHEMA_TEMPLATE` vs `docs/MODULE-SCHEMA.md`
+  drift), confirmed present on a clean tree before this story started; not a regression.
+- `npm run format:check` — repo-wide CRLF drift predates this sprint (confirmed via
+  `git stash`); not this story's regression. One genuine content-format issue the review
+  caught in `tests/renderer/garden.test.tsx` was fixed during the review-fix cycle.
+- **Live smoke (P2):** drove the built app through Playwright `_electron` against a seeded
+  demo vault (`npm run seed`, then a custom driver script, deleted afterward — not part of
+  the repo). Confirmed live: the health card reports "1 Beinahe-Dublette"; the discard dialog
+  names the file, shows the inbound count (1 page links to it), the exact catalog line that
+  would be removed, and a pre-checked repoint option; confirming actually deletes the file
+  from disk and removes the catalog entry (document count 79 → 78); the outcome strip says
+  the file went to the trash and offers undo; clicking undo restores both the file and the
+  catalog line (79 documents again). Also confirmed the review-cycle fix live: right after a
+  discard, before the next check run, the card correctly says "one of the two pages can't be
+  read — it may already be in the trash" instead of the old false "already named" claim.
+  Also ran `npm run seed && npm run shot` (the project's standard screenshot gate) — 60
+  screenshots, no console errors. Supersede's confirm/undo path was verified through the
+  automated renderer/core tests (not separately hand-driven live) — its write is
+  frontmatter-only and lower-risk than discard's delete path, which got the full live pass.
+- **Code review (story-review-hard):** one review-fix cycle. Findings and outcomes:
+  - AC 10 second clause (file edited since the run, before opening the dialog, was silently
+    discarded) — **fixed**: findings now carry a per-page hash from check time; the IPC
+    handlers compare it against the live hash before any core call and raise `conflict`.
+  - `NearDuplicateCard`'s `alreadyNamed` logic falsely reported "already named" when a page
+    had simply failed to load (e.g. just discarded, finding not yet refreshed) — **fixed**:
+    the card now distinguishes "page unavailable" from "relation already named".
+  - Prettier violation in `tests/renderer/garden.test.tsx` independent of the repo-wide CRLF
+    issue — **fixed**.
+  - `keep` (the surviving page) is not validated against the persisted report the way the
+    discarded path is — **not fixed**, documented as a low-severity hardening gap: `keep`
+    never becomes a filesystem path deleted or written outside its own page, only wikilink
+    text is rewritten in already-validated inbound pages, so no wrong file can be
+    deleted or created; a follow-up could still validate it belongs to the same pair.
+  - Journal write for the delete token happens after `store.delete` returns (the store mints
+    its own trash token) — **not fixed** (inherent to the `VaultStore` shape, not a design
+    error): if that second journal write itself failed, the file is still recoverable via its
+    own trash token, just not through the single combined `undoFix` token. Noted as a known
+    edge case, not a story gap.
+  - Catalog-line preview renders a doubled `- - [[slug]] — …` in the discard dialog (visible
+    in the live screenshot) — reviewer's verdict: a genuine but purely cosmetic display
+    defect, not a correctness bug (the underlying text and target are correct). Left as is;
+    a follow-up can switch the removal marker from `-` to something unambiguous.
+  - Minor test-coverage gaps (`keep` only tested as a bare slug, not a full path; `extends`
+    not separately tested; seed's own findings summary text not updated to announce the new
+    near-duplicate pair) — accepted as noted, non-blocking.
+
+**Decisions made during the build (beyond what `## Decisions (Sprint)` already recorded):**
+- `discardPlan`/`discardPage`/`supersede` take a `deps: { store, index, ... }` object rather
+  than a bare `store` — the plan's suggested `(store, { path, keep })` signature couldn't
+  reach the index graph for inbound links, which `fixes.ts`'s helpers never needed.
+- `discard.ts` was split into `discard.ts` (plan) and `discard-page.ts` (write) to stay under
+  the ~300-line soft limit — mirrors the same split later reused by `supersede.ts`.
+- `GardenScreen.tsx`'s outcome/write-path plumbing was extracted into
+  `useGardenOutcome.ts` for the same line-limit reason.
+- `src/shared/types/gardener.ts` was split out of `overview.ts` for the same reason.
+- The per-page hash needed to close the AC 10 gap was added once, generically, in
+  `buildFinding` (`src/core/gardener/types.ts`) rather than per-check, so 016's orphan-page
+  discard inherits the same stale-run protection without extra work.
+
+**Open follow-up (not blocking, not fixed here):** the catalog-line preview's `-` removal
+marker is ambiguous against the markdown bullet it prefixes (cosmetic only); `keep` path
+validation could be tightened to require it be the finding's other named page.

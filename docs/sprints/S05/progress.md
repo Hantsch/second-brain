@@ -4,3 +4,24 @@
 - 2026-08-21 19:38 · 014 · D2 dashboard, module view, projects, settings, task label say Befund · started
 - 2026-08-21 19:42 · 014 · D2 dashboard, module view, projects, settings, task label say Befund · done
 - 2026-08-21 19:52 · 014 · review + live smoke + Done section · done
+- 2026-08-21 19:50 · 015 · D1 catalog line can be removed again · started
+- 2026-08-21 19:53 · 015 · D1 catalog line can be removed again · done
+- 2026-08-21 19:53 · 015 · D2 named relation silences the pair · started
+- 2026-08-21 19:56 · 015 · D2 named relation silences the pair · done
+- 2026-08-21 19:56 · 015 · D3 discarding says what it costs (proposal only) · started
+- 2026-08-21 20:04 · 015 · D3 discarding says what it costs (proposal only) · done
+- 2026-08-21 20:04 · 015 · D4 discarding a page, undoable · started
+- 2026-08-21 20:16 · 015 · D4 discarding a page, undoable · done
+- 2026-08-21 20:16 · 015 · D5 the newer page supersedes the older one · started
+- 2026-08-21 20:23 · 015 · D5 the newer page supersedes the older one · done
+- 2026-08-21 20:23 · 015 · D6 the three IPC channels · started
+- 2026-08-21 20:38 · 015 · D6 the three IPC channels · done
+- 2026-08-21 20:38 · 015 · D7 the shared discard this page action · started
+- 2026-08-21 20:47 · 015 · D7 the shared discard this page action · done
+- 2026-08-21 20:47 · 015 · D8 the near-duplicate card · started
+- 2026-08-21 20:59 · 015 · D8 the near-duplicate card · done
+- 2026-08-21 20:59 · 015 · D9 demo vault pair and tests · started
+- 2026-08-21 21:15 · 015 · D9 demo vault pair and tests · done
+- 2026-08-21 21:26 · 015 · review-fix cycle 1 (AC10 stale-run gap, card bug, format) · started
+- 2026-08-21 21:39 · 015 · review-fix cycle 1 (AC10 stale-run gap, card bug, format) · done
+- 2026-08-21 21:47 · 015 · live smoke (discard+undo) + review-fix + Done section · done

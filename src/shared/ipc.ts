@@ -28,9 +28,12 @@ import type {
   DumpItem,
   FilingProposal,
   FilingResult,
+  GardenerDiscardPlan,
+  GardenerDiscardResult,
   GardenerFinding,
   GardenerFindingKind,
   GardenerReport,
+  GardenerSupersedeResult,
   IngestJob,
   IngestKind,
   JournalDay,
@@ -685,6 +688,33 @@ export interface IpcRoutes {
     req: { undoToken: string };
     res: { restored: string[]; kept: string[] };
   };
+  /**
+   * Preview of discarding a page (015 D6): what would disappear and what would
+   * be repointed, computed fresh — nothing is written. `path` must be named by
+   * a finding in the current persisted report; a path the report doesn't
+   * currently know is rejected (`not-found`) instead of trusted from the
+   * caller — the same stance `add-to-index` takes in `core/gardener/fixes.ts`.
+   */
+  'gardener:discardPlan': { req: { path: string; keep?: string }; res: GardenerDiscardPlan };
+  /**
+   * Confirms a discard: repoints inbound wikilinks at `keep`, drops the
+   * catalog line, moves the page to the trash. Same path check as
+   * `discardPlan`. `expectedHash` is the hash the confirm step was shown
+   * (`plan.target.hash`); given, a page edited since raises `conflict`.
+   */
+  'gardener:discardPage': {
+    req: { path: string; keep?: string; expectedHash?: string };
+    res: GardenerDiscardResult;
+  };
+  /**
+   * Confirms that `newerPath` supersedes `olderPath` — one frontmatter field,
+   * both pages stay. Same path check as `discardPlan`, applied to both paths.
+   * `expectedHash` guards `newerPath` exactly as in `discardPage`.
+   */
+  'gardener:supersede': {
+    req: { newerPath: string; olderPath: string; expectedHash?: string };
+    res: GardenerSupersedeResult;
+  };
 
   // ── Claude sessions ──────────────────────────────────────────────────────
   'claude:sessions': { req: { limit?: number }; res: ClaudeSession[] };
@@ -852,6 +882,9 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'gardener:undismiss',
   'gardener:applyFix',
   'gardener:undoFix',
+  'gardener:discardPlan',
+  'gardener:discardPage',
+  'gardener:supersede',
   'claude:sessions',
   'claude:link',
   'agents:projects',

@@ -6,6 +6,9 @@
  *   `audit`    die optionale LLM-Deutung, hart gegen den Index geprueft
  *   `health`   der Gesundheitswert 0..100 mit seiner Aufschluesselung
  *   `fixes`    die Ein-Klick-Korrekturen — jede rueckgaengig machbar
+ *   `discard`  Vorschau, was ein Verwerfen kostet — liest, schreibt nichts
+ *   `discard-page`  wendet genau diese Vorschau an: Inhalte zuerst, dann Papierkorb
+ *   `supersede`  benennt „die neuere Seite loest die aeltere ab" — nur Frontmatter
  *   `labels`   die einsetzbaren Beschriftungen, Vorgabe Deutsch
  *
  * Der Kern liest den Bestand nur ueber den Index und schreibt nur ueber den Store.
@@ -51,7 +54,28 @@ export {
   unfiledDumpCheck,
   unprocessedSourceCheck,
 } from './checks';
+export {
+  discardPlan,
+  type DiscardDeps,
+  type DiscardIndexView,
+  type DiscardInput,
+  type DiscardPlan,
+  type DiscardRepoint,
+  type DiscardTarget,
+} from './discard';
+export {
+  discardPage,
+  type DiscardResult,
+  type DiscardWriteDeps,
+  type DiscardWriteInput,
+} from './discard-page';
 export { applyFix, type FixDeps, type FixResult } from './fixes';
+export {
+  supersede,
+  type SupersedeDeps,
+  type SupersedeInput,
+  type SupersedeResult,
+} from './supersede';
 export { FULL_ROT_PENALTY_PER_UNIT, healthScore, vaultSize, type HealthResult } from './health';
 export {
   GERMAN_GARDENER_LABELS,
@@ -112,8 +136,12 @@ export {
   parseFixJournal,
   undoFix,
   writeFixJournal,
+  type FixDelete,
   type FixJournal,
+  type FixJournalAction,
+  type FixJournalKind,
   type FixStep,
   type UndoFixResult,
+  type UndoStore,
 } from './undo';
 export { WordIndex } from './word-index';
