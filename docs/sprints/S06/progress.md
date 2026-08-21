@@ -1,0 +1,9 @@
+- 2026-08-21 09:32 · 019a · D1 MachineFacts type, channel, cheap facts · started
+- 2026-08-21 09:37 · 019a · D1 MachineFacts type, channel, cheap facts · done
+- 2026-08-21 09:38 · 019a · D2 GPU/VRAM detection per platform · started
+- 2026-08-21 09:49 · 019a · D2 GPU/VRAM detection per platform · done
+- 2026-08-21 09:49 · 019a · D3 Capacity judgement in core · started
+- 2026-08-21 09:53 · 019a · D3 Capacity judgement in core · done
+- 2026-08-21 09:53 · 019a · D4 Machine card in the models tab · started
+- 2026-08-21 10:06 · 019a · D4 Machine card in the models tab · done
+- 2026-08-21 10:20 · 019a · story · done

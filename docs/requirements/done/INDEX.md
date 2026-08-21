@@ -99,3 +99,8 @@ second roadmap.
   (`close-proposal.ts`) that survives navigating away and back but not an app restart.
   Apply/discard/run-again all wire through unchanged write paths (`expectedHash` guard,
   undo affordance); live smoke confirmed day text and proposal visible together.
+- 019a — The app looks at my machine and tells me what it can carry · S06 · Permanent "This
+  machine" card in the models tab: main detects RAM/VRAM/GPU/CPU/disk with per-platform
+  timeouts degrading to "unknown", core's `judgeCapacity` turns facts into a heuristic
+  capacity verdict, renderer assembles the plain-language sentence; passed clean-agent
+  review with no fix cycle.

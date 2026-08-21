@@ -12,6 +12,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { UseMutationResult, UseQueryResult } from '@tanstack/react-query';
 import type { IpcRequest, IpcResponse } from '@shared/ipc';
 import type {
+  MachineScanResult,
   ModelRef,
   ModelTier,
   ProviderConfig,
@@ -117,6 +118,15 @@ export function useProviderMutations(): ProviderMutations {
     probe: useMutation({ mutationFn: api.llm.probe, onSuccess: done }),
     models: useMutation({ mutationFn: api.llm.models, onSuccess: done }),
   };
+}
+
+/**
+ * Scans this machine for RAM/VRAM/CPU/disk facts. Triggered by hand from the
+ * models tab — no caching, no staleness: every press is a fresh look at the
+ * machine, so this is a mutation rather than a query.
+ */
+export function useMachineScan(): UseMutationResult<MachineScanResult, unknown, void> {
+  return useMutation({ mutationKey: qk.llm.machineScan(), mutationFn: api.llm.scanMachine });
 }
 
 export interface RoutingMutations {

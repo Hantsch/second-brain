@@ -17,6 +17,7 @@ import { indexHandlers } from './index';
 import { ingestHandlers } from './ingest';
 import { journalHandlers } from './journal';
 import { llmHandlers } from './llm';
+import { machineScanHandlers } from './machine-scan';
 import { moduleHandlers } from './modules';
 import { projectHandlers } from './projects';
 import { reminderHandlers } from './reminders';
@@ -41,6 +42,7 @@ export function buildHandlers(services: Services): HandlerMap {
     ...chatHandlers(services),
     ...ingestHandlers(services),
     ...llmHandlers(services),
+    ...machineScanHandlers(services),
     ...dashboardHandlers(services),
     ...reminderHandlers(services),
     ...gardenerHandlers(services),

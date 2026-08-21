@@ -162,6 +162,7 @@ export const api = {
     setDefault: (request: IpcRequest<'llm:setDefault'>) => call('llm:setDefault', request),
     suggestRouting: () => call('llm:suggestRouting'),
     testTask: (task: IpcRequest<'llm:testTask'>['task']) => call('llm:testTask', { task }),
+    scanMachine: () => call('llm:scanMachine'),
   },
   dashboard: {
     data: () => call('dashboard:data'),

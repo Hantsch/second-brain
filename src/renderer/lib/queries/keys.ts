@@ -66,6 +66,7 @@ export const qk = {
     detect: () => ['llm', 'detect'] as const,
     tasks: () => ['llm', 'tasks'] as const,
     routing: () => ['llm', 'routing'] as const,
+    machineScan: () => ['llm', 'machineScan'] as const,
   },
   dashboard: {
     data: () => ['dashboard', 'data'] as const,

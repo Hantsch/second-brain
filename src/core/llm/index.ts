@@ -31,6 +31,7 @@ export {
   suggestedTier,
   taskDefinition,
 } from './tasks';
+export { judgeCapacity, type CapacityVerdict, type LimitingFactor } from './capacity';
 export {
   TIER_ORDER,
   classifyModelTier,

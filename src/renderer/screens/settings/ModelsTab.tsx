@@ -33,6 +33,7 @@ import {
   useTasks,
   type LocalRuntime,
 } from '../../lib/queries/llm';
+import { MachineCard } from './MachineCard';
 import { ProviderDialog } from './ProviderDialog';
 import { RoutingSection } from './RoutingSection';
 import { StartCard } from './StartCard';
@@ -148,6 +149,8 @@ export function ModelsTab() {
           onSkip={() => void navigate('/dashboard')}
         />
       ) : null}
+
+      <MachineCard />
 
       <Panel
         title={t('settings.providers.title')}

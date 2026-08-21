@@ -147,4 +147,27 @@ export const enSettingsModels: Record<SettingsModelsKey, string> = {
   'settings.fallback.journal-chat': 'the day entry can still be written',
   'settings.fallback.project-status': 'status and next step stay handwork',
   'settings.fallback.gardener-audit': 'the deterministic checks keep running',
+
+  'settings.machine.title': 'This machine',
+  'settings.machine.scan': 'Scan this machine',
+  'settings.machine.rescan': 'Scan again',
+  'settings.machine.idle':
+    'No scan has run yet. It reads RAM, graphics memory, CPU cores and free disk space — nothing is sent or stored.',
+  'settings.machine.disclaimer':
+    'A rule of thumb, not a measurement: actual throughput depends on the model, its quantization, and the runtime.',
+  'settings.machine.unknown': 'unknown',
+  'settings.machine.unknowns': "Couldn't be determined: {list}.",
+  'settings.machine.tiers': 'Sizes that should fit comfortably: {tiers}.',
+  'settings.machine.verdict.ram':
+    'RAM is the limit: comfortably around {comfortable}B parameters, {possible}B at most.',
+  'settings.machine.verdict.vram':
+    'Graphics memory (VRAM) is the limit: comfortably around {comfortable}B parameters, {possible}B at most.',
+  'settings.machine.verdict.cpu':
+    'The number of CPU cores is the limit: comfortably around {comfortable}B parameters, and answers get noticeably slow beyond that.',
+  'settings.machine.verdict.unknown': "Can't be judged — too many facts are missing.",
+  'settings.machine.fact.ram': 'RAM',
+  'settings.machine.fact.vram': 'Graphics memory (VRAM)',
+  'settings.machine.fact.gpu': 'GPU',
+  'settings.machine.fact.cpu': 'CPU cores',
+  'settings.machine.fact.disk': 'Free disk space',
 };

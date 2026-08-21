@@ -35,6 +35,7 @@ import type {
   IngestKind,
   JournalDay,
   KnowledgeModule,
+  MachineScanResult,
   ModelRef,
   Project,
   ProjectFrontmatter,
@@ -568,6 +569,8 @@ export interface IpcRoutes {
     req: { task: TaskKind };
     res: { ok: boolean; latencyMs: number; sample: string; error?: string };
   };
+  /** Cheap machine facts (RAM, CPU, disk, GPU) for judging local-model capacity. */
+  'llm:scanMachine': { req: void; res: MachineScanResult };
 
   // ── Dashboard, reminders, maintenance ────────────────────────────────────
   'dashboard:data': { req: void; res: DashboardData };
@@ -746,6 +749,7 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'llm:setDefault',
   'llm:suggestRouting',
   'llm:testTask',
+  'llm:scanMachine',
   'dashboard:data',
   'dashboard:layout',
   'dashboard:setLayout',

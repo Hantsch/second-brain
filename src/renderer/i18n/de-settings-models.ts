@@ -155,6 +155,30 @@ export const deSettingsModels = {
   'settings.fallback.journal-chat': 'Tageseintrag lässt sich weiter schreiben',
   'settings.fallback.project-status': 'Stand und nächster Schritt bleiben Handarbeit',
   'settings.fallback.gardener-audit': 'Die deterministischen Prüfungen laufen weiter',
+
+  'settings.machine.title': 'Diese Maschine',
+  'settings.machine.scan': 'Diesen Rechner scannen',
+  'settings.machine.rescan': 'Erneut scannen',
+  'settings.machine.idle':
+    'Noch kein Scan gelaufen. Er liest RAM, Grafikspeicher, CPU-Kerne und freien Speicherplatz — nichts wird gesendet oder gespeichert.',
+  'settings.machine.disclaimer':
+    'Faustregel, keine Messung: der tatsächliche Durchsatz hängt vom Modell, der Quantisierung und der Software ab.',
+  'settings.machine.unknown': 'unbekannt',
+  'settings.machine.unknowns': 'Nicht zu ermitteln: {list}.',
+  'settings.machine.tiers': 'Größen, die bequem passen sollten: {tiers}.',
+  'settings.machine.verdict.ram':
+    'Der Arbeitsspeicher setzt die Grenze: bequem etwa {comfortable} Mrd. Parameter, höchstens {possible} Mrd.',
+  'settings.machine.verdict.vram':
+    'Der Grafikspeicher (VRAM) setzt die Grenze: bequem etwa {comfortable} Mrd. Parameter, höchstens {possible} Mrd.',
+  'settings.machine.verdict.cpu':
+    'Die Anzahl der CPU-Kerne setzt die Grenze: bequem etwa {comfortable} Mrd. Parameter, darüber werden Antworten spürbar langsam.',
+  'settings.machine.verdict.unknown':
+    'Lässt sich nicht einschätzen — dafür fehlen zu viele Angaben.',
+  'settings.machine.fact.ram': 'Arbeitsspeicher (RAM)',
+  'settings.machine.fact.vram': 'Grafikspeicher (VRAM)',
+  'settings.machine.fact.gpu': 'Grafikkarte',
+  'settings.machine.fact.cpu': 'CPU-Kerne',
+  'settings.machine.fact.disk': 'Freier Speicherplatz',
 } as const;
 
 export type SettingsModelsKey = keyof typeof deSettingsModels;

@@ -276,6 +276,30 @@ const RESPONSES: MockResponses = {
   'llm:setDefault': () => st.routing,
   'llm:suggestRouting': () => st.routing,
   'llm:testTask': () => ({ ok: false, latencyMs: 0, sample: '', error: 'llm-unavailable' }),
+  'llm:scanMachine': () => ({
+    facts: {
+      totalRamMb: null,
+      cpuCores: null,
+      platform: null,
+      arch: null,
+      freeDiskMb: null,
+      vramMb: null,
+      gpuName: null,
+      gpuDetection: 'not-attempted',
+    },
+    /* No real facts in the mock bridge, so `judgeCapacity` (main-side, D3)
+       would come back unable to judge anything — mirrored here by hand since
+       this fake has no access to `core/llm`. */
+    verdict: {
+      limitingFactor: 'unknown',
+      maxComfortableParamsB: null,
+      maxPossibleParamsB: null,
+      tiersThatFit: [],
+      heuristic: true,
+      unknowns: ['ram', 'cpu'],
+    },
+    scannedAt: fx.NOW,
+  }),
 
   'dashboard:data': () => ({
     reminders: [fx.reminder],

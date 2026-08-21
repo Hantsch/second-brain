@@ -145,3 +145,66 @@ export interface LlmUnavailable {
   task: TaskKind;
   detail?: string;
 }
+
+/** Whether a platform-specific fact could be determined. */
+export type MachineDetection = 'not-attempted' | 'detected' | 'unknown';
+
+/**
+ * A flat snapshot of what this machine can carry for a local model. Deliberately
+ * a flat object, not a nested one: every field is independently fillable and
+ * fixture-able in tests, and there are no nested surprises for a later verdict
+ * step to unpack. Numeric facts are `number | null` — `null` means "couldn't be
+ * determined", never a guessed zero. Facts main can't detect cheaply (GPU/VRAM)
+ * carry a `detection` marker next to the value so callers can tell "unknown" from
+ * "detected as absent".
+ */
+export interface MachineFacts {
+  totalRamMb: number | null;
+  cpuCores: number | null;
+  platform: string | null;
+  arch: string | null;
+  freeDiskMb: number | null;
+  /** Dedicated VRAM, in MB. Filled in by platform-specific detection (D2). */
+  vramMb: number | null;
+  /** Name of the detected GPU, if any. Filled in by platform-specific detection (D2). */
+  gpuName: string | null;
+  /** Whether GPU detection (vramMb/gpuName) was attempted and, if so, whether it succeeded. */
+  gpuDetection: MachineDetection;
+  /** Why GPU detection didn't produce a value, if `gpuDetection` isn't `'detected'`. */
+  gpuDetectionReason?: string;
+}
+
+/**
+ * What ultimately capped the capacity estimate for a local model on this
+ * machine. Lives in `@shared/types`, not in `core/llm/capacity.ts`, so the
+ * renderer (a separate TypeScript project, see `tsconfig.web.json`) can read
+ * the shape of `MachineScanResult.verdict` without pulling in the rest of
+ * `core/llm` — only main is allowed to import and run `judgeCapacity` itself.
+ */
+export type LimitingFactor = 'ram' | 'vram' | 'cpu' | 'unknown';
+
+/**
+ * Structured result of the capacity judgement. Deliberately data, not a
+ * sentence: the renderer assembles the actual copy from `t()` fragments plus
+ * these fields, per guardrail 7 (no hardcoded language in core or renderer).
+ */
+export interface CapacityVerdict {
+  limitingFactor: LimitingFactor;
+  /** Conservative ceiling — leaves headroom for context and OS/app overhead. */
+  maxComfortableParamsB: number | null;
+  /** Optimistic ceiling — weights alone, no headroom. Above this, don't try. */
+  maxPossibleParamsB: number | null;
+  /** Coarse open-weight size buckets that fit under `maxComfortableParamsB`. */
+  tiersThatFit: string[];
+  /** Always true: this is a rule of thumb, never a measurement. */
+  heuristic: true;
+  /** Which input facts were missing or unusable for this judgement. */
+  unknowns: string[];
+}
+
+/** Result of a machine scan: the facts, main's capacity verdict on them, and when they were taken. */
+export interface MachineScanResult {
+  facts: MachineFacts;
+  verdict: CapacityVerdict;
+  scannedAt: string;
+}
