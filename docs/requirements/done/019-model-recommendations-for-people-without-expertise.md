@@ -1,7 +1,7 @@
 ---
 id: 019
 title: Models without expertise — guided install, a machine scan, and recommendations I can trust
-status: in-progress # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-08-21
 ---
 
@@ -104,16 +104,17 @@ explicitly not allowed, so it has to be the sanctioned one.
 - [ ] A test proves the rule: with only a trains-on-input cloud model available, the sensitive
       tasks come back unrouted.
 
-**Subscriptions instead of keys**
+**Subscriptions instead of keys** — **dropped on 2026-08-21**, not deferred. No officially
+permitted path exists (see [019d](019d-subscription-providers.md) for the sources read at the
+time and the reasoning). The reduced "say plainly that it is not possible" variant was offered
+and declined as well.
 
-- [ ] The models tab tells me, in one sentence each, whether my Claude plan and my ChatGPT
-      plan can be used here, on what terms, and what it costs against the plan.
-- [ ] Where a sanctioned path exists, setting it up is as guided as the rest: sign in, see
-      that it answered, done — no key pasting, no token copied out of another tool's config.
-- [ ] Where no sanctioned path exists, the app says that plainly instead of offering a
-      workaround.
-- [ ] What I have used against a plan is visible before it runs out, not only when requests
-      start failing.
+- ~~The models tab tells me, in one sentence each, whether my Claude plan and my ChatGPT plan
+  can be used here, on what terms, and what it costs against the plan.~~
+- ~~Where a sanctioned path exists, setting it up is as guided as the rest.~~
+- ~~Where no sanctioned path exists, the app says that plainly instead of offering a
+  workaround.~~
+- ~~What I have used against a plan is visible before it runs out.~~
 
 **Across all of it**
 
@@ -157,11 +158,17 @@ All resolved on 2026-08-21. Kept here as the record of what was decided and why.
    shown. The month figure becomes "what you actually spent in the last 30 days", from the
    app's own request log, not a forecast. This narrows the acceptance criterion below.
 
-6. **Subscription terms — still open, deliberately.** Carried into 019d as a research task, to
-   be read at the source when 019d is refined, not now.
+6. **~~Subscription terms.~~** → Read at the source on 2026-08-21 during the 019d refine.
+   Anthropic forbids it outright without prior approval ("Unless previously approved, Anthropic
+   does not allow third party developers to offer claude.ai login or rate limits for their
+   products, including agents built on the Claude Agent SDK"); OpenAI's "Sign in with ChatGPT"
+   is identity only and partner-gated, and nothing documents a third party driving a
+   ChatGPT-plan Codex session. → **019d rejected**, cluster dropped. Full record in
+   [019d](019d-subscription-providers.md).
 
-7. **Does a subscription target fit `LlmGateway`?** — still open, carried into 019d. Guardrail
-   4 says the interface holds, so the burden of proof is on "it fits".
+7. **~~Does a subscription target fit `LlmGateway`?~~** → Yes, at the inward `LlmProvider` seam
+   with an injected process runner — no `CLAUDE.md` exception needed. Moot: 019d is rejected.
+   The answer is recorded in 019d in case the question ever comes back.
 
 8. **~~Only for the first five minutes?~~** → **No.** The machine card and the recommendation
    section live permanently in the models tab, not inside `StartCard`. Re-checking is always
@@ -177,7 +184,7 @@ criteria and the decision record; the buildable work lives in four child stories
 | [019a](019a-machine-scan.md) | Machine scan: facts from main, verdict from core, card in the models tab | — |
 | [019b](019b-model-recommendations.md) | Catalogue, reachability, per-task recommendation, sensitive-task rule | 019a |
 | [019c](019c-guided-local-runtime.md) | Guided Ollama install and model pull with progress | 019a |
-| [019d](019d-subscription-providers.md) | Claude / ChatGPT plan instead of a metered key | 019b, research |
+| ~~[019d](019d-subscription-providers.md)~~ | Claude / ChatGPT plan instead of a metered key — **rejected 2026-08-21**, no permitted path | — |
 
 Coverage of the criteria above:
 
@@ -185,7 +192,7 @@ Coverage of the criteria above:
 - **Machine scan** → 019a
 - **Recommendations per task** → 019b
 - **Personal tasks** → 019b
-- **Subscriptions instead of keys** → 019d
+- **Subscriptions instead of keys** → dropped with 019d, no successor story
 - **Across all of it** → each child story repeats it as its own criterion
 
 ## Deliverables
@@ -202,8 +209,11 @@ None. Acceptance happens per child story.
 
 ## Done
 
-**Partial — 3 of 4 child stories done.** 019a, 019b, 019c built in
-[sprint S06](../sprints/done/S06/sprint.md), accepted by the user on 2026-08-21. 019d
-(subscription providers) stays `draft`, deliberately not part of this pass — see its own file
-for the still-open research questions. This epic file stays open (`in-progress`) and in this
-folder rather than `done/` until 019d is refined and built.
+**Complete — 3 built, 1 rejected.** 019a, 019b and 019c were built in
+[sprint S06](../sprints/done/S06/sprint.md) and accepted by the user on 2026-08-21.
+[019d](019d-subscription-providers.md) (subscriptions instead of keys) was refined the same day:
+the research it was waiting on was done at the source and the answer closed the story instead of
+unblocking it — Anthropic forbids third-party apps from using a Claude plan without prior
+approval, and OpenAI documents no path either. The user rejected the story, including the
+reduced "state it plainly in the UI" variant. The **"Subscriptions instead of keys"** criteria
+above are therefore **dropped, not deferred**, and this epic is done.

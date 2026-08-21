@@ -117,3 +117,12 @@ second roadmap.
   reachable-after-download models. `story-review-hard` returned FAIL with 6 confirmed findings
   (partial file on cancel, dropped progress event, raw byte counts, silent plan-read failure,
   missing "no write permission" case, stale routing after a pull); one fix cycle resolved all six.
+- 019 — Models without expertise (epic) · S06 · Umbrella for 019a–019d: machine scan,
+  per-task recommendation with the sensitive-task rule, and guided local Ollama install all
+  built and accepted; 019d (Claude/ChatGPT plan instead of a metered key) refined and
+  **rejected** on 2026-08-21 — neither vendor permits or documents the path, so the epic closes
+  with the API-key route as the only one.
+- 019d — Use my Claude and ChatGPT plans instead of a second metered bill · — · **Rejected**,
+  not built. Terms read at the source: Anthropic forbids third-party apps from using a Claude
+  plan without prior approval; OpenAI documents no path for a third party to drive a
+  ChatGPT-plan session. Full research record kept in the file for a future reopen.

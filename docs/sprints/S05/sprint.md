@@ -11,7 +11,8 @@ milestone: M4 — A finding can be acted on
 
 Every maintenance finding names a real way out, not just "Passt so". A near-duplicate can be
 discarded or marked as superseded, an orphaned page can be linked wherever the user says, and
-every card is honest about what happened to the findings that got hidden along the way.
+every card is honest about what happened to the findings that got hidden along the way. Riding
+along in the same sprint: the journal notices what I announced and never followed up on.
 
 ## Stories (in build order)
 
@@ -21,6 +22,7 @@ every card is honest about what happened to the findings that got hidden along t
 - [ ] 015 — A near-duplicate can be resolved, not only compared
 - [ ] 016 — An orphaned page can be linked where I say, not only where it is obvious
 - [ ] 017 — A finding says how it ends — and "looks fine" stays reversible
+- [ ] 020 — Journal — announced and never followed up
 
 ## Notes
 
@@ -37,6 +39,14 @@ in the abstract.
 **No concept behind M4.** Cut straight from the stories, by decision on 2026-08-14 (see
 [ROADMAP.md](../../ROADMAP.md)).
 
+**020 rides along, not part of M4.** Added to this sprint on 2026-08-21 by direct user decision
+— the app has no next sprint queued and the user wanted 020 in the very next one, without
+cutting a fresh sprint for a single story. It belongs to its own milestone (see ROADMAP.md);
+tracked here for scheduling only. It goes **last**: its own Open Questions ask whether "the one
+place" for a loose end should be the Maintenance finding surface that 014 and 017 build in this
+same sprint — 020's refine round should look at 017's finished "ways out" framework (accept/
+dismiss, exits, reversibility) before deciding whether to reuse it or build a separate surface.
+
 **Open questions to resolve in the clarification round** (from the story files):
 
 - 015 — does discarding also remove the catalog line in `wiki/index.md`? What happens to inbound
@@ -49,6 +59,11 @@ in the abstract.
   findings live in the UI (filter value, collapsed section, own view)? Does listing them need a
   new IPC channel? Does "handled in the vault" re-check everything or just this finding? What
   happens to a dismissed finding whose file was deleted?
+- 020 — where does "the one place" live (journal filter, dashboard section, or the Maintenance
+  finding surface from 014/017)? Where does the answer get written (announcing day, actual day,
+  or today with a back-reference)? Where does answered/dismissed state persist? Is there an
+  expiry horizon? How specific may the app's question get without asserting a claim? Does
+  closing a day (009) suppress its loose ends?
 
 **Acceptance.** `ui-acceptance-required` and `live-smoke-required` are both true: all four
 stories are user-facing and need a real path through the running app

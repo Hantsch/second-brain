@@ -173,22 +173,23 @@ M4 was chosen next at the 2026-08-20 `/ai-scrum:roadmap plan`, now that M3 is ac
 Sprints:
 
 - [sprints/S05/sprint.md](sprints/S05/sprint.md) — a finding can be acted on (014, 015, 016,
-  017), `planned`
+  017), `planned`. Story 020 (M6) rides along in the same sprint by direct user decision on
+  2026-08-21 — see M6 below and the sprint's own note.
 
 ### M5 — Models without expertise — accepted
 
-Requirement: [019-model-recommendations-for-people-without-expertise.md](../requirements/019-model-recommendations-for-people-without-expertise.md)
+Requirement: [019-model-recommendations-for-people-without-expertise.md](../requirements/done/019-model-recommendations-for-people-without-expertise.md)
 (epic, not buildable itself — split by `/refine` on 2026-08-21 into four child stories after a
 requirements interview covering the split, the install shape, the catalogue source and the
 cost-estimate scope).
 
 Stories: 019a (machine scan), 019b (per-task recommendation, in money, with the sensitive-task
 rule), 019c (guided local Ollama install and pull). All three built and accepted by the user on
-2026-08-21, [sprints/done/S06/testplan.md](sprints/done/S06/testplan.md) walked end to end. 019d
-(Claude/ChatGPT plan instead of a metered key) stays `draft`, deliberately outside this
-milestone — its open questions need primary-source reading and an architecture decision that a
-build must not make on the fly; the epic itself therefore stays open in the requirements folder
-until 019d is refined and built.
+2026-08-21, [sprints/done/S06/testplan.md](sprints/done/S06/testplan.md) walked end to end.
+019d (Claude/ChatGPT plan instead of a metered key) was refined on 2026-08-21 and **rejected**:
+the terms were read at the source and Anthropic forbids third-party apps from using a Claude
+subscription without prior approval, while OpenAI documents no path for a third party to drive a
+ChatGPT-plan session. The milestone is complete with 019a–019c; the epic is `done`.
 
 Cut directly to a sprint on 2026-08-21, without a separate `/roadmap plan` round.
 
@@ -200,9 +201,12 @@ Sprints:
 
 Gaps/notes:
 
-- 019d (subscription providers instead of a metered key) stays `draft`, deliberately not built
-  this sprint — its open questions still need primary-source reading and an `LlmGateway`
-  architecture decision.
+- 019d (subscription providers instead of a metered key) is **rejected**, not postponed. Using a
+  Claude or ChatGPT plan from this app is not officially permitted or documented, so the API-key
+  path stays the only way to reach those models. Sources and reasoning:
+  [requirements/019d-subscription-providers.md](../requirements/done/019d-subscription-providers.md).
+  Reopening needs an external trigger (an Anthropic approval, or OpenAI documenting third-party
+  plan sessions) — the terms were read on 2026-08-21 and change often.
 - Windows VRAM detection (019a) is a known, permanent limitation, not a bug: WMI's 32-bit
   `AdapterRAM` field misreports any card ≥4 GB, so `vramMb` is reported `null` for such cards
   rather than a wrong number. A real fix needs a second data source (registry
@@ -214,6 +218,23 @@ Gaps/notes:
   path is `curl | sh`, which the app's no-shell-strings guardrail forbids constructing.
 - **M5 accepted by the user on 2026-08-21**, S06's test plan walked end to end, including the
   steps needing a configured OpenRouter key or a real Ollama install.
+
+### M6 — Journal loose ends — planned
+
+Requirement: [020-journal-loose-ends.md](../requirements/020-journal-loose-ends.md). A
+forward-looking sentence in the journal ("tomorrow is the notary appointment") whose day has
+passed with no later entry speaking to it becomes a visible, answerable loose end — surfaced in
+the journal conversation and as a reminder, closing itself once a later entry addresses it.
+
+No concept behind M6 — a single user-written story, not cut from a milestone-sized concept.
+Six open questions remain in the story (surface location, where the answer is written, where
+state persists, expiry horizon, how specific the app's own question may get, interaction with a
+closed day) — left for `/refine`'s clarification round, not decided here.
+
+Bundled into **S05** (M4) for scheduling by direct user decision on 2026-08-21, rather than
+cutting a fifth sprint for one story — see [sprints/S05/sprint.md](sprints/S05/sprint.md).
+Tracked as its own milestone here because it is not part of M4's "a finding can be acted on"
+scope.
 
 ---
 
