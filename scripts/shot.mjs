@@ -790,6 +790,66 @@ async function shootInterview(session, shooter, log, skipped) {
 }
 
 /**
+ * Der Tagesabschluss als Karte neben dem Tag (018): "Tag abschließen" auf dem
+ * heutigen Eintrag (offset 0 in `scripts/seed/journal.mjs`, hat Text und ist
+ * nicht geschlossen, also steht der Knopf) — danach steht `.sb-close-proposal`
+ * direkt unter den Fakten, während der Tagestext darüber weiter sichtbar
+ * bleibt. Genau das ist die Aussage der Story: kein Dialog, der den Text
+ * verdeckt, sondern eine Karte daneben. Ohne Modell im Demo-Vault ist das
+ * Ergebnis die heuristische Fundstelle (`journal.close.heuristic`-Hinweis).
+ */
+async function shootDayClose(session, shooter, log, skipped) {
+  await gotoScreen(session.page, 'journal');
+  const button = session.page.getByRole('button', { name: 'Tag abschließen' });
+  const there = await button.waitFor({ state: 'visible', timeout: 4000 }).then(
+    () => true,
+    () => false,
+  );
+  if (!there) {
+    skipped.push('Tagesabschluss: der Knopf „Tag abschließen" stand nicht auf dem Tag');
+    return;
+  }
+  await button.click();
+  const card = session.page.locator('.sb-close-proposal').first();
+  const open = await card.waitFor({ state: 'visible', timeout: 8000 }).then(
+    () => true,
+    () => false,
+  );
+  await settle(session.page);
+
+  /* The composer/close-out bar is sticky at the bottom of `.sb-journal-main`
+     (`.sb-journal-footer`, journal.css) — it stays glued to the bottom of
+     whatever window height is given, no matter the scroll position. At the
+     window's normal 900 px it eats so much of the column that the day's own
+     text (the "Verlauf" section built from `EntryStream`, below the facts
+     and the proposal in `DayEntry.tsx`) ends up entirely below the fold —
+     no scroll position shows facts, proposal AND the day's prose together,
+     because the sticky bar always covers the last ~300 px. Taking this one
+     screenshot in a taller window sidesteps that: nothing about the layout
+     changes, there's just enough room above the sticky bar to fit the whole
+     column at once. Restored to the normal height right after. */
+  if (open) {
+    const needed = await session.page.evaluate(() => {
+      const main = document.querySelector('.sb-journal-main');
+      if (main === null) return null;
+      return window.innerHeight - main.clientHeight + main.scrollHeight;
+    });
+    if (typeof needed === 'number') {
+      await session.resize(WIDE.width, Math.min(Math.max(needed + 40, WIDE.height), 2400));
+      await settle(session.page);
+    }
+  }
+
+  if (open) {
+    log(`  Tagesabschluss-Karte → ${await shooter.shot('journal-close-proposal', session.page)}`);
+    await session.resize(WIDE.width, WIDE.height);
+  } else {
+    skipped.push('Tagesabschluss: der Knopf öffnete keine Karte');
+    process.exitCode = 1;
+  }
+}
+
+/**
  * Ein beantwortetes Gespräch: der Demo-Vault trägt eine Runde mit drei geprüften
  * Belegen (`scripts/seed/chats.mjs`). Genau dieser Zustand — Prosa mit
  * Belegmarken — entsteht nur mit Modell und war deshalb in keiner Aufnahme.
@@ -1244,6 +1304,7 @@ async function main() {
 
     if (options.screens.includes('journal')) {
       await shootInterview(session, shooter, log, skipped);
+      await shootDayClose(session, shooter, log, skipped);
     }
     await checkLlmMissing(session, shooter, log, skipped);
     await shootAskAnswer(session, shooter, log, skipped);

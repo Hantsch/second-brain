@@ -148,6 +148,8 @@ export const enJournal = {
   'journal.close.mood': 'Mood {label}',
   'journal.close.energy': 'Energy {label}',
   'journal.close.apply': 'Apply',
+  'journal.close.discard': 'Discard',
+  'journal.close.runAgain': 'Run again',
   'journal.close.dueOf': 'Due date for „{text}"',
   'journal.close.done': 'Applied to',
   'journal.close.doneMore': 'and {count} more',

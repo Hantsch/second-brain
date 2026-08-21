@@ -158,6 +158,8 @@ export const deJournal = {
   'journal.close.mood': 'Stimmung {label}',
   'journal.close.energy': 'Energie {label}',
   'journal.close.apply': 'Übernehmen',
+  'journal.close.discard': 'Verwerfen',
+  'journal.close.runAgain': 'Erneut ausführen',
   'journal.close.dueOf': 'Frist für „{text}"',
   'journal.close.done': 'Übernommen in',
   'journal.close.doneMore': 'und {count} weitere',

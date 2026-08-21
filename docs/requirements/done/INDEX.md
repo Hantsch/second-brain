@@ -93,3 +93,9 @@ second roadmap.
   marker show per cell, a future day is only unselectable without an entry. Passed
   story-review-hard after one fix cycle (a wide-layout toolbar overflow plus five smaller
   findings); a narrow-layout overflow found during live smoke was fixed separately.
+- 018 — Day close: a proposal I can check, not a dialog that hides the day · — · The
+  blocking `CloseDialog` is gone; day-close now leaves its result as a non-modal
+  `CloseProposal` card next to the day's own text, backed by a session store
+  (`close-proposal.ts`) that survives navigating away and back but not an app restart.
+  Apply/discard/run-again all wire through unchanged write paths (`expectedHash` guard,
+  undo affordance); live smoke confirmed day text and proposal visible together.

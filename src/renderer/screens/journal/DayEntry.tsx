@@ -75,6 +75,14 @@ export interface DayEntryProps {
       day still has a legacy `## Conversation` (`view.turns.length > 0`). */
   legacy: { busy: boolean; error: unknown; onFold: () => void };
   facts: ReactNode;
+  /** The open day-close proposal (018), or `undefined` while there is none.
+      Sits between the facts and the stream — directly below the day's own
+      text, so a finding and the sentence it was computed from are on screen
+      at the same time, which is the whole point of the story: the proposal
+      is checkable, not a modal that hides its own evidence. Built by the
+      screen (`JournalScreen.tsx`), which owns the store lookup and the
+      apply/discard/run-again wiring. */
+  proposal?: ReactNode;
   /** Field and stance — a direct child of `.sb-dayentry`, so its sticky
       frame (`position: sticky`, only in the wide window) covers the whole
       detail column and not just the rest of the stream section
@@ -101,6 +109,7 @@ export function DayEntry({
   dialogue,
   legacy,
   facts,
+  proposal,
   composer,
   closeAction,
 }: DayEntryProps) {
@@ -233,6 +242,11 @@ export function DayEntry({
       </section>
 
       {facts}
+      {/* Proposal and trigger are mutually exclusive by construction: the
+          screen stops rendering `closeAction` as soon as a proposal exists
+          for this day, so there is never a "close the day" button below an
+          open proposal (018, decision 3). */}
+      {proposal}
       {closeAction === undefined ? null : (
         <div className="sb-dayentry-closewrap">{closeAction}</div>
       )}

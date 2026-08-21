@@ -35,6 +35,11 @@ import { MonthCalendar } from '../../components/MonthCalendar';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { Skeleton } from '../../components/Skeleton';
 import { useT } from '../../i18n';
+import {
+  clear as clearProposal,
+  set as setProposal,
+  useCloseProposal,
+} from '../../lib/close-proposal';
 import { plural } from '../../lib/format';
 import { setOpenOnly, useOpenOnly } from '../../lib/journal-filter';
 import { countOpenDays } from '../../lib/journal-open';
@@ -47,7 +52,7 @@ import {
   useJournalMutations,
   useJournalSettings,
 } from '../../lib/queries/journal';
-import { CloseDialog } from './CloseDialog';
+import { CloseProposal } from './CloseProposal';
 import { CoachComposer } from './CoachComposer';
 import { DayEntry } from './DayEntry';
 import { EntryStream } from './EntryStream';
@@ -128,10 +133,16 @@ export function JournalScreen() {
   const [pending, setPending] = useState<Pending | null>(null);
   const [textSaved, setTextSaved] = useState(false);
   const [moodSaved, setMoodSaved] = useState(false);
-  const [closeOpen, setCloseOpen] = useState(false);
-  const [suggestion, setSuggestion] = useState<JournalCloseSuggestion | null>(null);
   const [applied, setApplied] = useState<AppliedClose | null>(null);
   const [interviewOpen, setInterviewOpen] = useState(false);
+
+  /* 018: the open day-close proposal no longer lives in this component. It
+     sits in `lib/close-proposal.ts`, keyed by date — which is what lets it
+     survive leaving the screen and coming back (AC 3) and what keeps a
+     proposal for one day from ever showing up on another. Read here for
+     exactly two decisions: whether the panel renders, and whether the "close
+     the day" trigger still does. */
+  const proposal = useCloseProposal(date);
 
   /* 010, D2: the shown month is the calendar's own state, seeded from the
      selected date once, then left alone — paging the grid must not get
@@ -243,16 +254,44 @@ export function JournalScreen() {
     });
   };
 
+  /* Runs the close-out and leaves its result in the store — this is both the
+     first run and "run again" (018): `set` replaces the whole entry, edits
+     included, so a second run is a fresh proposal and never a merge of two.
+     `date` is captured here, at click time, and the store is keyed with the
+     same value the request was made for — a day switch mid-run therefore
+     files the result under the day it was actually computed for, not under
+     whatever day is on screen when it lands.
+     A `null` result means the run found nothing worth proposing; then nothing
+     goes into the store and no panel appears (the old dialog rendered nothing
+     in that case either). A stale error from an earlier apply is reset, so
+     the fresh proposal doesn't inherit it. */
   const closeDay = (): void => {
     setApplied(null);
+    mutations.applyClose.reset();
     mutations.close.mutate(date, {
       onSuccess: (result) => {
-        setSuggestion(result);
-        setCloseOpen(true);
+        if (result === null) return;
+        setProposal(date, result);
       },
     });
   };
 
+  /* The one write path of this story — unchanged in payload and in hash guard
+     (011/009 pattern): without a loaded day there is nothing to guard against,
+     so `expectedHash` is only added once one exists, and a stale hash surfaces
+     as `conflict` instead of overwriting the user's own edit.
+
+     Why the hash provably belongs to the day being applied, now that the
+     proposal outlives the component: `date` is this render's single source for
+     the day, `view` is `useJournalDay(date)` from the same render, and it
+     carries no previous day's data across a key change (no `placeholderData`
+     in `queries/journal.ts`) — so `view.data` is either this day's document or
+     nothing at all. On top of that the panel is only rendered for the shown
+     day, so no proposal for another date can even reach this function.
+
+     On success the store entry for this day is cleared — the proposal has
+     become a written fact, and `applied` takes over as the affordance
+     (`FactsSection`'s undo strip, untouched by this story). */
   const apply = (input: {
     todos: ProposedTodo[];
     frontmatter: JournalCloseSuggestion['frontmatter'];
@@ -268,11 +307,18 @@ export function JournalScreen() {
       },
       {
         onSuccess: (result) => {
-          setCloseOpen(false);
+          clearProposal(date);
           setApplied(result);
         },
       },
     );
+  };
+
+  /* Discard: nothing is written, the proposal is simply gone. The error of a
+     previously failed apply goes with it — it belonged to that panel. */
+  const discardProposal = (): void => {
+    mutations.applyClose.reset();
+    clearProposal(date);
   };
 
   const failed =
@@ -280,7 +326,13 @@ export function JournalScreen() {
     mutations.setMood.error ??
     mutations.setClosed.error ??
     mutations.close.error ??
-    mutations.applyClose.error ??
+    /* `applyClose.error` deliberately isn't in this chain any more (018): the
+       proposal panel shows it itself, right next to the "apply" button that
+       caused it. While it was in a dialog, the screen-level card sat hidden
+       behind the modal; without the modal both would show the same error
+       twice and both would call `scrollIntoView` on it. The panel can't be
+       gone while the error is live — a successful apply has no error, and
+       discard/run again reset the mutation. */
     mutations.undo.error ??
     mutations.foldDay.error ??
     view.error ??
@@ -295,19 +347,24 @@ export function JournalScreen() {
      tab to place it in any more (011, D7 removed it). `narrow` decides
      which of the two paths actually gets the button; the other stays
      `undefined`. The action remains secondary either way — this screen's
-     one teal point is the stream, and in the dialog, its "apply". */
-  const closeAction = (
-    <Button
-      variant="secondary"
-      size="sm"
-      icon="circle-check-big"
-      loading={mutations.close.isPending}
-      disabled={view.data === null || view.data === undefined}
-      onClick={closeDay}
-    >
-      {t('journal.close.action')}
-    </Button>
-  );
+     one teal point is the stream.
+
+     018, decision 3: while a proposal for the shown day is open, neither
+     spot gets it. Two triggers for the same run is one too many, and the
+     panel's "run again" is the one with the context. */
+  const closeAction =
+    proposal !== undefined ? undefined : (
+      <Button
+        variant="secondary"
+        size="sm"
+        icon="circle-check-big"
+        loading={mutations.close.isPending}
+        disabled={view.data === null || view.data === undefined}
+        onClick={closeDay}
+      >
+        {t('journal.close.action')}
+      </Button>
+    );
 
   /* 012, D6: the entry point on the day itself. `dayEmpty` reuses exactly the
      check `DayText.tsx` already treats as authoritative for "has this day
@@ -493,6 +550,22 @@ export function JournalScreen() {
                   onOpenDay={(day) => select(day)}
                 />
               }
+              proposal={
+                proposal === undefined ? undefined : (
+                  <CloseProposal
+                    date={date}
+                    projects={projects.data ?? []}
+                    /* Both runs make the panel busy: while a re-run is in
+                       flight, applying the proposal that is about to be
+                       replaced must not be possible. */
+                    busy={mutations.applyClose.isPending || mutations.close.isPending}
+                    error={mutations.applyClose.error}
+                    onApply={apply}
+                    onDiscard={discardProposal}
+                    onRunAgain={closeDay}
+                  />
+                )
+              }
               facts={
                 <FactsSection
                   facts={view.data?.facts ?? ''}
@@ -524,22 +597,6 @@ export function JournalScreen() {
           )}
         </div>
       </div>
-
-      {closeOpen && suggestion !== null ? (
-        <CloseDialog
-          key={suggestion.proposal.createdAt}
-          open={closeOpen}
-          suggestion={suggestion}
-          projects={projects.data ?? []}
-          busy={mutations.applyClose.isPending}
-          error={mutations.applyClose.error}
-          onClose={() => {
-            mutations.applyClose.reset();
-            setCloseOpen(false);
-          }}
-          onApply={apply}
-        />
-      ) : null}
 
       {/* Unmounted while closed, per the remount-per-opening contract
           `InterviewDialog.tsx`'s own header comment asks callers to honour —

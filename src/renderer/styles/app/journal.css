@@ -631,6 +631,18 @@
   color: var(--text-muted);
 }
 
+/* The proposal card (018, D2): sits on the day itself, not in a dialog — so
+   unlike `.sb-proposal` in inbox.css it does not scroll or clip its own
+   height, and its action bar (`.sb-close-actions`) is not sticky either.
+   The card grows with the page instead of opening a second scroll area next
+   to the day's text. */
+.sb-close-proposal {
+  overflow: visible;
+}
+.sb-close-actions {
+  position: static;
+}
+
 /* In the narrow window (the threshold is checked by `npm run shot` at
    1152 px, hence 1200 and not 1100 — otherwise the rule wouldn't apply at
    exactly the width being checked), the day with its stream and composer

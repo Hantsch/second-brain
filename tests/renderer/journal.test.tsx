@@ -42,6 +42,7 @@ import type {
 } from '@shared/types';
 import { JournalScreen } from '@renderer/screens/journal/JournalScreen';
 import type { SbBridge } from '@renderer/lib/bridge';
+import { clear as clearProposal } from '@renderer/lib/close-proposal';
 import { wireEvents } from '@renderer/lib/events';
 import { clearStream } from '@renderer/lib/llm-stream';
 import { setOpenOnly } from '@renderer/lib/journal-filter';
@@ -333,6 +334,11 @@ interface Rendered {
   sb: Mock;
   container: HTMLElement;
   unwire: () => void;
+  /* RTL's own unmount — kept distinct from `unwire` (the query-event
+     listeners) so a test can tear down just the DOM tree and remount it,
+     the same way navigating away from the journal screen and back does
+     (018, D4: exercises `close-proposal.ts` surviving a real unmount). */
+  unmount: () => void;
 }
 
 function renderJournal(extra: Handlers = {}): Rendered {
@@ -371,14 +377,14 @@ function renderJournal(extra: Handlers = {}): Rendered {
   });
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const unwire = wireEvents(client);
-  const { container } = render(
+  const { container, unmount } = render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
         <JournalScreen />
       </MemoryRouter>
     </QueryClientProvider>,
   );
-  return { sb, container, unwire };
+  return { sb, container, unwire, unmount };
 }
 
 let cleanup: (() => void) | null = null;
@@ -967,39 +973,100 @@ describe('Tagebuch: altes Gespräch (011, D9)', () => {
 });
 
 describe('Tagebuch: Tagesabschluss', () => {
-  /** Öffnet den Vorschlag über den Knopf bei den Fakten. */
-  async function openClose(extra: Handlers = {}): Promise<Mock> {
+  /* 018 turned the close-out from a blocking `CloseDialog` into a non-modal
+     `CloseProposal` card that sits next to the day's own text — a `gs-card`
+     without a dialog role, so it is found by its content, not by role
+     `dialog`. Its edit state lives in `lib/close-proposal.ts`, module-scoped
+     and keyed by date; without resetting it here, one test's edits would
+     leak into the next. */
+  beforeEach(() => clearProposal(TODAY));
+  afterEach(() => clearProposal(TODAY));
+
+  /** Öffnet den Vorschlag über den Knopf bei den Fakten und liefert die
+   * gerenderte Karte selbst zurück, statt eines Dialog-Elements. */
+  async function openClose(extra: Handlers = {}): Promise<{ sb: Mock; panel: HTMLElement }> {
     const { sb } = open(extra);
     await userEvent.click(await screen.findByRole('button', { name: 'Tag abschließen' }));
-    await screen.findByRole('dialog', { name: 'Tagesabschluss' });
-    return sb;
+    const reason = await screen.findByText(suggestion.proposal.reason);
+    const panel = reason.closest('.sb-close-proposal') as HTMLElement;
+    return { sb, panel };
   }
 
   it('zeigt den Vorschlag mit Ziel, Grund und Fristen — und schreibt noch nichts', async () => {
-    const sb = await openClose();
+    const { sb, panel } = await openClose();
 
     expect(sb.payloadOf('journal:close')).toEqual({ date: TODAY });
-    const dialog = screen.getByRole('dialog', { name: 'Tagesabschluss' });
-    expect(dialog.textContent).toContain('Ohne Modell im Tageseintrag erkannt');
-    expect(within(dialog).getByLabelText('Ladezeiten der Angebotsliste messen')).toBeTruthy();
+    expect(panel.textContent).toContain('Ohne Modell im Tageseintrag erkannt');
+    expect(within(panel).getByLabelText('Ladezeiten der Angebotsliste messen')).toBeTruthy();
     /* Das Ziel steht dabei: ein Todo mit Projekt geht in dessen Datei. */
-    expect(dialog.textContent).toContain('in Projekt Kundenportal Relaunch');
-    expect(dialog.textContent).toContain('in Tageseintrag, Abschnitt Fakten');
+    expect(panel.textContent).toContain('in Projekt Kundenportal Relaunch');
+    expect(panel.textContent).toContain('in Tageseintrag, Abschnitt Fakten');
     /* Das Warte-auf sagt, in welcher Form es notiert wird. */
-    expect(within(dialog).getByLabelText('Freigabe des Rollenkonzepts')).toBeTruthy();
-    expect(dialog.textContent).toContain('als Todo mit @wait im Tageseintrag');
-    expect(dialog.textContent).toContain('Stimmung Gedrückt');
+    expect(within(panel).getByLabelText('Freigabe des Rollenkonzepts')).toBeTruthy();
+    expect(panel.textContent).toContain('als Todo mit @wait im Tageseintrag');
+    expect(panel.textContent).toContain('Stimmung Gedrückt');
     /* Und bis hierher ist nichts geschrieben. */
     expect(sb.payloadsOf('journal:applyClose')).toEqual([]);
   });
 
-  it('übernimmt nur das Ausgewählte und bietet danach den Rückweg', async () => {
-    const sb = await openClose();
-    const dialog = screen.getByRole('dialog', { name: 'Tagesabschluss' });
+  it('steht neben dem Tagestext statt ihn zu verdecken — kein Dialog mehr, beides gleichzeitig sichtbar', async () => {
+    const { panel } = await openClose();
 
-    await userEvent.click(within(dialog).getByLabelText('Belege 2025 sortieren'));
-    await userEvent.click(within(dialog).getByLabelText('Personen'));
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Übernehmen' }));
+    /* Die ganze Story: es gibt keine Modal-Ebene mehr, die den Text
+       verdeckt — beides ist gleichzeitig da, ohne dass irgendetwas
+       geschlossen oder weggeklickt werden muss. */
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.getAllByText(DAY_TEXT).length).toBeGreaterThan(0);
+    expect(within(panel).getByText(suggestion.proposal.reason)).toBeTruthy();
+  });
+
+  it('übersteht ein Verlassen und Zurückkommen des Bildschirms mitsamt den eigenen Änderungen', async () => {
+    const first = open();
+    await userEvent.click(await screen.findByRole('button', { name: 'Tag abschließen' }));
+    const reason = await screen.findByText(suggestion.proposal.reason);
+    const panelBefore = reason.closest('.sb-close-proposal') as HTMLElement;
+
+    /* Ein Todo abwählen — das ist die Änderung, die den Neustart überstehen muss. */
+    await userEvent.click(within(panelBefore).getByLabelText('Belege 2025 sortieren'));
+    expect(
+      (within(panelBefore).getByLabelText('Belege 2025 sortieren') as HTMLInputElement).checked,
+    ).toBe(false);
+    expect(
+      (
+        within(panelBefore).getByLabelText(
+          'Ladezeiten der Angebotsliste messen',
+        ) as HTMLInputElement
+      ).checked,
+    ).toBe(true);
+
+    /* Der Screen wird komplett unmontiert und frisch neu gerendert — wie ein
+       Wechsel auf einen anderen Screen und zurück. Der Vorschlag lebt in
+       `close-proposal.ts`, nicht in diesem Bildschirm, und muss deshalb ohne
+       neuen Lauf sofort wieder da sein. */
+    act(() => first.unmount());
+
+    const second = open();
+    const panelAfter = (await screen.findByText(suggestion.proposal.reason)).closest(
+      '.sb-close-proposal',
+    ) as HTMLElement;
+
+    expect(
+      (within(panelAfter).getByLabelText('Belege 2025 sortieren') as HTMLInputElement).checked,
+    ).toBe(false);
+    expect(
+      (within(panelAfter).getByLabelText('Ladezeiten der Angebotsliste messen') as HTMLInputElement)
+        .checked,
+    ).toBe(true);
+    /* Kein zweiter Lauf, nur die alten, in der Sitzung gehaltenen Daten. */
+    expect(second.sb.payloadsOf('journal:close')).toEqual([]);
+  });
+
+  it('übernimmt nur das Ausgewählte und bietet danach den Rückweg', async () => {
+    const { sb, panel } = await openClose();
+
+    await userEvent.click(within(panel).getByLabelText('Belege 2025 sortieren'));
+    await userEvent.click(within(panel).getByLabelText('Personen'));
+    await userEvent.click(within(panel).getByRole('button', { name: 'Übernehmen' }));
 
     await waitFor(() => {
       const payload = sb.payloadOf('journal:applyClose') as IpcRequest<'journal:applyClose'>;
@@ -1013,8 +1080,10 @@ describe('Tagebuch: Tagesabschluss', () => {
       expect(payload.expectedHash).toBe('hash-1');
     });
 
-    /* Danach steht da, was passiert ist — mit Rückgängig. */
+    /* Danach steht da, was passiert ist — mit Rückgängig. Der Vorschlag selbst
+       ist weg, weil er zu einer geschriebenen Tatsache geworden ist (018). */
     expect(await screen.findByText('Übernommen in')).toBeTruthy();
+    expect(screen.queryByText(suggestion.proposal.reason)).toBeNull();
     /* Der Pfad steht in der Leiste — und oben am Kopf des Tages. */
     expect(screen.getAllByText(DAY_PATH).length).toBeGreaterThan(1);
     await userEvent.click(screen.getByRole('button', { name: 'Rückgängig' }));
@@ -1028,8 +1097,56 @@ describe('Tagebuch: Tagesabschluss', () => {
     await waitFor(() => expect(screen.queryByText('Übernommen in')).toBeNull());
   });
 
+  it('Verwerfen nimmt den Vorschlag weg und schreibt nichts', async () => {
+    const { sb, panel } = await openClose();
+
+    await userEvent.click(within(panel).getByRole('button', { name: 'Verwerfen' }));
+
+    await waitFor(() => expect(screen.queryByText(suggestion.proposal.reason)).toBeNull());
+    expect(sb.payloadsOf('journal:applyClose')).toEqual([]);
+    /* Der Auslöser-Knopf ist wieder da — nichts hindert einen neuen Lauf. */
+    expect(await screen.findByRole('button', { name: 'Tag abschließen' })).toBeTruthy();
+  });
+
+  it('Erneut ausführen ersetzt den Fund vollständig statt ihn mit dem alten zu vermischen', async () => {
+    const rerun: JournalCloseSuggestion = {
+      ...suggestion,
+      proposal: {
+        ...suggestion.proposal,
+        reason: 'Zweiter Lauf: nur noch eine Sache offen.',
+        todos: [
+          {
+            text: 'Nur diese eine Sache',
+            scope: 'work',
+            due: null,
+            waitingFor: null,
+            priority: 0,
+            project: null,
+          },
+        ],
+        waitingOn: [],
+      },
+    };
+    let calls = 0;
+    const { sb, panel } = await openClose({
+      'journal:close': () => (calls++ === 0 ? suggestion : rerun),
+    });
+
+    await userEvent.click(within(panel).getByRole('button', { name: 'Erneut ausführen' }));
+
+    const panelAfter = (await screen.findByText(rerun.proposal.reason)).closest(
+      '.sb-close-proposal',
+    ) as HTMLElement;
+    expect(within(panelAfter).getByLabelText('Nur diese eine Sache')).toBeTruthy();
+    /* Der alte Fund ist weg, nicht bloß ergänzt. */
+    expect(screen.queryByText(suggestion.proposal.reason)).toBeNull();
+    expect(screen.queryByLabelText('Ladezeiten der Angebotsliste messen')).toBeNull();
+    expect(screen.queryByLabelText('Belege 2025 sortieren')).toBeNull();
+    expect(sb.payloadsOf('journal:close')).toEqual([{ date: TODAY }, { date: TODAY }]);
+  });
+
   it('sagt vorher, wenn nichts übernommen würde, statt einen Schreibvorgang zu behaupten', async () => {
-    await openClose({
+    const { panel } = await openClose({
       'journal:close': () => ({
         ...suggestion,
         proposal: { ...suggestion.proposal, todos: [], waitingOn: [] },
@@ -1037,17 +1154,41 @@ describe('Tagebuch: Tagesabschluss', () => {
       }),
     });
 
-    const dialog = screen.getByRole('dialog', { name: 'Tagesabschluss' });
-    expect(dialog.textContent).toContain('Im Tagestext war nichts zu holen');
-    expect(
-      within(dialog).getByRole('button', { name: 'Übernehmen' }).hasAttribute('disabled'),
-    ).toBe(true);
+    expect(panel.textContent).toContain('Im Tagestext war nichts zu holen');
+    expect(within(panel).getByRole('button', { name: 'Übernehmen' }).hasAttribute('disabled')).toBe(
+      true,
+    );
+  });
+
+  it('zeigt den Heuristik-Hinweis, wenn ohne Modell (heuristisch) gefunden wurde', async () => {
+    const { panel } = await openClose();
+    expect(within(panel).getByText('Ohne Modell gefunden — Regeln statt Verstehen.')).toBeTruthy();
+  });
+
+  it('liefert auch ohne konfiguriertes Modell einen Vorschlag mit dem Heuristik-Hinweis', async () => {
+    /* Kein Provider, keine Routing-Zuordnung — „kein Modell konfiguriert".
+       Der Kanal selbst liefert (wie im echten Hauptprozess) trotzdem einen
+       heuristischen Vorschlag statt gar nichts (Guardrail 1). */
+    const noModelSettings: SettingsSnapshot = {
+      ...settings,
+      vault: {
+        ...(settings.vault as NonNullable<SettingsSnapshot['vault']>),
+        providers: [],
+        routing: { tasks: {}, defaults: {} },
+      },
+    };
+    const { panel } = await openClose({
+      'settings:get': () => noModelSettings,
+    });
+
+    expect(within(panel).getByText('Ohne Modell gefunden — Regeln statt Verstehen.')).toBeTruthy();
+    expect(within(panel).getByLabelText('Ladezeiten der Angebotsliste messen')).toBeTruthy();
   });
 
   it('ist im Vorschlag frei von A11y-Verstößen', async () => {
     const { container } = open();
     await userEvent.click(await screen.findByRole('button', { name: 'Tag abschließen' }));
-    await screen.findByRole('dialog', { name: 'Tagesabschluss' });
+    await screen.findByText(suggestion.proposal.reason);
     await expectNoViolations(container);
   });
 });
