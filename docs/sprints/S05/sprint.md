@@ -1,7 +1,7 @@
 ---
 sprint: S05
-status: planned # planned | in-progress | done
-branch: # set by /sprint
+status: in-progress # planned | in-progress | done
+branch: sprint/S05
 milestone: M4 — A finding can be acted on
 ---
 
