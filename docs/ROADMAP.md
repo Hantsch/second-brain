@@ -175,7 +175,7 @@ Sprints:
 - [sprints/S05/sprint.md](sprints/S05/sprint.md) — a finding can be acted on (014, 015, 016,
   017), `planned`
 
-### M5 — Models without expertise — planned
+### M5 — Models without expertise — built, acceptance pending
 
 Requirement: [019-model-recommendations-for-people-without-expertise.md](../requirements/019-model-recommendations-for-people-without-expertise.md)
 (epic, not buildable itself — split by `/refine` on 2026-08-21 into four child stories after a
@@ -193,7 +193,26 @@ M4/S05, not yet started.
 Sprints:
 
 - [sprints/S06/sprint.md](sprints/S06/sprint.md) — a machine scan, a recommendation, a guided
-  local runtime (019a, 019b, 019c), `planned`
+  local runtime (019a, 019b, 019c), `done` — see
+  [S06/review.md](sprints/S06/review.md) and [S06/testplan.md](sprints/S06/testplan.md)
+
+Gaps/notes:
+
+- 019d (subscription providers instead of a metered key) stays `draft`, deliberately not built
+  this sprint — its open questions still need primary-source reading and an `LlmGateway`
+  architecture decision.
+- Windows VRAM detection (019a) is a known, permanent limitation, not a bug: WMI's 32-bit
+  `AdapterRAM` field misreports any card ≥4 GB, so `vramMb` is reported `null` for such cards
+  rather than a wrong number. A real fix needs a second data source (registry
+  `HardwareInformation.qwMemorySize`).
+- OpenRouter policy attribution (019b) is applied per catalogue entry rather than per configured
+  provider instance — latent only against the current bundled catalogue; flagged for a follow-up
+  rather than a mid-sprint redesign.
+- Linux is out of scope for the in-app Ollama installer (019c) by design — the official install
+  path is `curl | sh`, which the app's no-shell-strings guardrail forbids constructing.
+- Milestone marked "built, acceptance pending", not "accepted" — live UI acceptance (per
+  `docs/sprints/S06/testplan.md`) is the user's call, especially the steps needing a configured
+  OpenRouter key or a real Ollama install.
 
 ---
 

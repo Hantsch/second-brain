@@ -1,6 +1,6 @@
 ---
 sprint: S06
-status: in-progress # planned | in-progress | done
+status: done # planned | in-progress | done
 branch: sprint/S06
 milestone: M5 — Models without expertise
 ---
@@ -18,8 +18,8 @@ endpoint for a sensitive task — and gets me a working local runtime without a 
 <!-- Order = the order the build phase works through. Dependent stories go last. -->
 
 - [x] 019a — The app looks at my machine and tells me what it can carry
-- [ ] 019b — One recommended model per task, in plain language and in money
-- [ ] 019c — A local runtime without typing a command
+- [x] 019b — One recommended model per task, in plain language and in money
+- [x] 019c — A local runtime without typing a command
 
 ## Notes
 
