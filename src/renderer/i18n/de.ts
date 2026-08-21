@@ -183,7 +183,7 @@ export const de = {
   'task.project-status.label': 'Projekt-Stand',
   'task.project-status.hint':
     'Leitet Status und nächsten Schritt aus der Projekthistorie ab — als Vorschlag.',
-  'task.gardener-audit.label': 'Ergebnisse deuten',
+  'task.gardener-audit.label': 'Befunde deuten',
   'task.gardener-audit.hint':
     'Findet Widersprüche, veraltete Aussagen und fehlende Seiten. Braucht Urteilsvermögen.',
 

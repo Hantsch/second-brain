@@ -736,7 +736,7 @@ describe('Einstellungen: Verhalten und Info', () => {
       }),
     );
 
-    await userEvent.click(screen.getByLabelText(/Ergebnisse von einem Modell deuten lassen/));
+    await userEvent.click(screen.getByLabelText(/Befunde von einem Modell deuten lassen/));
     await waitFor(() =>
       expect(invoke).toHaveBeenCalledWith('settings:setVault', {
         patch: { gardener: { useLlm: false } },

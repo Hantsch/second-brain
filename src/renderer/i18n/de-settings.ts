@@ -126,7 +126,7 @@ const own = {
   'settings.behavior.review.label': 'Eine Seite gilt als angestaubt nach',
   'settings.behavior.review.hint':
     'Tage seit dem letzten „reviewed" im Frontmatter. Die Prüfung nennt die Seite dann, sie ändert sie nicht.',
-  'settings.behavior.gardenerLlm.label': 'Ergebnisse von einem Modell deuten lassen',
+  'settings.behavior.gardenerLlm.label': 'Befunde von einem Modell deuten lassen',
   'settings.behavior.gardenerLlm.hint':
     'Zusätzlich zu den Prüfungen: Widersprüche zwischen Seiten, Beinahe-Dubletten, Begriffe ohne Seite. Ohne Route bleibt die Prüfung deterministisch und kostet nichts.',
 

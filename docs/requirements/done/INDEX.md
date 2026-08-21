@@ -126,3 +126,4 @@ second roadmap.
   not built. Terms read at the source: Anthropic forbids third-party apps from using a Claude
   plan without prior approval; OpenAI documents no path for a third party to drive a
   ChatGPT-plan session. Full research record kept in the file for a future reopen.
+- 014 — The maintenance run reports findings, not results · S05 · Renamed "Ergebnis" to "Befund"/"Befunde" across the German maintenance UI (screen, health card, dashboard tile, module view, settings, task label); English untouched; verified with a live smoke run.

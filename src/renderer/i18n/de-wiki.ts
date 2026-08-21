@@ -18,8 +18,8 @@ export const deWiki = {
   'modules.counts': '{sources} Quellen · {entities} Entitäten · {concepts} Konzepte',
   'modules.lastIngest': 'zuletzt verdichtet {date}',
   'modules.neverIngested': 'noch nichts verdichtet',
-  'modules.findings': '{count} Ergebnisse aus der Pflege',
-  'modules.findingsOne': 'ein Ergebnis aus der Pflege',
+  'modules.findings': '{count} Befunde aus der Pflege',
+  'modules.findingsOne': 'ein Befund aus der Pflege',
   'modules.open': 'Modul {title} öffnen',
   'modules.back': 'Alle Module',
   'modules.noDescription': 'Ohne Beschreibung.',
@@ -116,7 +116,7 @@ export const deWiki = {
   'log.notes': 'Notiz',
   'log.answeredFrom': 'Beantwortet aus',
   'log.filedBack': 'Abgelegt als',
-  'log.findings': 'Ergebnisse',
+  'log.findings': 'Befunde',
 
   'modules.sourcesTab.empty':
     'Für dieses Modul ist noch keine Rohquelle verdichtet. Quellen kommen über den Screen „Quellen" herein.',

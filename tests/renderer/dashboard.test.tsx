@@ -886,7 +886,7 @@ describe('Kacheln', () => {
     mount({ data: { ...dashboardFixture, healthKnown: true, health: 84, findingCount: 3 } });
     wrap(<GardenerTile />);
     expect(await screen.findByText('84')).toBeTruthy();
-    expect(screen.getByText('3 Ergebnisse')).toBeTruthy();
+    expect(screen.getByText('3 Befunde')).toBeTruthy();
   });
 
   it('zeigt die Serie und den Stimmungsverlauf mit Textalternative', async () => {

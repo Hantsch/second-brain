@@ -45,7 +45,7 @@ export const deProjects = {
   'projects.new.statusField': 'Status',
   'projects.new.stepField': 'Erster nächster Schritt',
   'projects.new.stepPlaceholder': 'Womit fängst du an?',
-  'projects.new.stepHint': 'Freiwillig. Fehlt er, erscheint das in den Ergebnissen der Pflege.',
+  'projects.new.stepHint': 'Freiwillig. Fehlt er, erscheint das in den Befunden der Pflege.',
   'projects.new.submit': 'Anlegen',
   'projects.new.pathHint': 'Angelegt wird {path}.',
 
