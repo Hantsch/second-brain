@@ -1,7 +1,7 @@
 # Roadmap
 
 **The** one source of status and planning: where we stand, what comes next, what is not planned
-at all yet. As of: 2026-08-20.
+at all yet. As of: 2026-08-21.
 
 Rules (so this document does not drift):
 
@@ -175,7 +175,7 @@ Sprints:
 - [sprints/S05/sprint.md](sprints/S05/sprint.md) — a finding can be acted on (014, 015, 016,
   017), `planned`
 
-### M5 — Models without expertise — built, acceptance pending
+### M5 — Models without expertise — accepted
 
 Requirement: [019-model-recommendations-for-people-without-expertise.md](../requirements/019-model-recommendations-for-people-without-expertise.md)
 (epic, not buildable itself — split by `/refine` on 2026-08-21 into four child stories after a
@@ -183,18 +183,20 @@ requirements interview covering the split, the install shape, the catalogue sour
 cost-estimate scope).
 
 Stories: 019a (machine scan), 019b (per-task recommendation, in money, with the sensitive-task
-rule), 019c (guided local Ollama install and pull). 019d (Claude/ChatGPT plan instead of a
-metered key) stays `draft` — its open questions need primary-source reading and an architecture
-decision that a build must not make on the fly.
+rule), 019c (guided local Ollama install and pull). All three built and accepted by the user on
+2026-08-21, [sprints/done/S06/testplan.md](sprints/done/S06/testplan.md) walked end to end. 019d
+(Claude/ChatGPT plan instead of a metered key) stays `draft`, deliberately outside this
+milestone — its open questions need primary-source reading and an architecture decision that a
+build must not make on the fly; the epic itself therefore stays open in the requirements folder
+until 019d is refined and built.
 
-Cut directly to a sprint on 2026-08-21, without a separate `/roadmap plan` round — queued behind
-M4/S05, not yet started.
+Cut directly to a sprint on 2026-08-21, without a separate `/roadmap plan` round.
 
 Sprints:
 
-- [sprints/S06/sprint.md](sprints/S06/sprint.md) — a machine scan, a recommendation, a guided
-  local runtime (019a, 019b, 019c), `done` — see
-  [S06/review.md](sprints/S06/review.md) and [S06/testplan.md](sprints/S06/testplan.md)
+- [sprints/done/S06/sprint.md](sprints/done/S06/sprint.md) — a machine scan, a recommendation, a
+  guided local runtime (019a, 019b, 019c), `done` — accepted
+  ([review](sprints/done/S06/review.md) · [testplan](sprints/done/S06/testplan.md))
 
 Gaps/notes:
 
@@ -210,9 +212,8 @@ Gaps/notes:
   rather than a mid-sprint redesign.
 - Linux is out of scope for the in-app Ollama installer (019c) by design — the official install
   path is `curl | sh`, which the app's no-shell-strings guardrail forbids constructing.
-- Milestone marked "built, acceptance pending", not "accepted" — live UI acceptance (per
-  `docs/sprints/S06/testplan.md`) is the user's call, especially the steps needing a configured
-  OpenRouter key or a real Ollama install.
+- **M5 accepted by the user on 2026-08-21**, S06's test plan walked end to end, including the
+  steps needing a configured OpenRouter key or a real Ollama install.
 
 ---
 

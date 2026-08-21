@@ -1,7 +1,7 @@
 ---
 id: 019
 title: Models without expertise — guided install, a machine scan, and recommendations I can trust
-status: draft # draft -> ready -> in-progress -> done
+status: in-progress # draft -> ready -> in-progress -> done
 created: 2026-08-21
 ---
 
@@ -201,3 +201,9 @@ None. Set per child story.
 None. Acceptance happens per child story.
 
 ## Done
+
+**Partial — 3 of 4 child stories done.** 019a, 019b, 019c built in
+[sprint S06](../sprints/done/S06/sprint.md), accepted by the user on 2026-08-21. 019d
+(subscription providers) stays `draft`, deliberately not part of this pass — see its own file
+for the still-open research questions. This epic file stays open (`in-progress`) and in this
+folder rather than `done/` until 019d is refined and built.
