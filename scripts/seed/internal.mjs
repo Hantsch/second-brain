@@ -4,6 +4,7 @@
 
 import { join } from 'node:path';
 import { CLAUDE_DIR } from './claude.mjs';
+import { CODEX_DIR } from './codex.mjs';
 
 const STRUCTURE_DIRS = [
   'inbox',
@@ -46,12 +47,14 @@ const DASHBOARD_TILES = [
 export const VAULT_NAME = 'Demo-Vault';
 
 /**
- * Die Verlaufsablage des Demo-Vaults, absolut. `claudeProjectsDir` nimmt nur
- * absolute Pfade — und ohne diesen Eintrag läse der Demo-Lauf das echte
- * `~/.claude/projects` (siehe Kopf von scripts/seed/claude.mjs).
+ * Die Verlaufsablage eines CLI-Verlaufs im Demo-Vault, absolut. Sowohl
+ * `claudeProjectsDir` als auch `codexSessionsDir` nehmen nur absolute Pfade —
+ * und ohne diesen Eintrag läse der Demo-Lauf den echten `~/.claude/projects`
+ * bzw. `~/.codex/sessions` (siehe Kopf von scripts/seed/claude.mjs und
+ * scripts/seed/codex.mjs).
  */
-function claudeDirOf(seeder) {
-  return join(seeder.root, CLAUDE_DIR).replace(/\\/g, '/');
+function absoluteDirOf(seeder, dir) {
+  return join(seeder.root, dir).replace(/\\/g, '/');
 }
 
 export function seedInternal(seeder, clock) {
@@ -79,7 +82,9 @@ export function seedInternal(seeder, clock) {
       deadlineHorizonDays: 14,
       waitingNudgeDays: 5,
       useClaudeSessions: true,
-      claudeProjectsDir: claudeDirOf(seeder),
+      claudeProjectsDir: absoluteDirOf(seeder, CLAUDE_DIR),
+      useCodexSessions: true,
+      codexSessionsDir: absoluteDirOf(seeder, CODEX_DIR),
       notifications: true,
     },
     journal: { mode: 'tips' },

@@ -6,3 +6,13 @@
 - 2026-08-22 14:58 · 023 · D3 The decision is written down where the next reader looks · done
 - 2026-08-22 14:58 · 023 · D4 The gate is green · started
 - 2026-08-22 15:04 · 023 · D4 The gate is green · done
+- 2026-08-22 15:11 · 025 · D1 demo Codex sessions in the seed · started
+- 2026-08-22 15:14 · 025 · D1 demo Codex sessions in the seed · done
+- 2026-08-22 15:14 · 025 · D2 both CLIs pinned from one place · started
+- 2026-08-22 15:19 · 025 · D2 both CLIs pinned from one place · done
+- 2026-08-22 15:19 · 025 · D3 seed guard against outward-pointing settings · started
+- 2026-08-22 15:26 · 025 · D3 seed guard against outward-pointing settings · done
+- 2026-08-22 15:26 · 025 · D4 the guard is locked by a test · started
+- 2026-08-22 15:34 · 025 · D4 the guard is locked by a test · done
+- 2026-08-22 15:34 · 025 · D5 comments truthful and the run proven · started
+- 2026-08-22 15:41 · 025 · D5 comments truthful and the run proven · done

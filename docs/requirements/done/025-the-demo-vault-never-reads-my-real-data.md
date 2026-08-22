@@ -1,7 +1,7 @@
 ---
 id: 025
 title: A screenshot run never reads my real session data
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-08-22
 ---
 
@@ -28,15 +28,15 @@ demo vault. Not "probably nothing" — the run should be able to tell me.
 
 ## Acceptance Criteria
 
-- [ ] After `npm run seed`, a screenshot or smoke run reads Codex sessions from inside the demo
+- [x] After `npm run seed`, a screenshot or smoke run reads Codex sessions from inside the demo
       vault only. My real `~/.codex/sessions` is never opened.
-- [ ] The Sessions tab in a screenshot run shows demo sessions for **both** CLIs, so the tab is
+- [x] The Sessions tab in a screenshot run shows demo sessions for **both** CLIs, so the tab is
       actually screenshotable without my data on it.
-- [ ] Both CLIs are seeded from the same place in the script — no second, differently-shaped
+- [x] Both CLIs are seeded from the same place in the script — no second, differently-shaped
       mechanism for the second one.
-- [ ] If a future setting points outside the demo vault, the seed run says so instead of
+- [x] If a future setting points outside the demo vault, the seed run says so instead of
       silently reading it.
-- [ ] Nothing about how the app behaves against a real vault changes — this is the seed and
+- [x] Nothing about how the app behaves against a real vault changes — this is the seed and
       screenshot path only.
 
 ## Open Questions
@@ -95,7 +95,7 @@ Scripts only — no file under `src/` is touched (AC 5).
 
 ## Deliverables
 
-**D1 — demo Codex sessions in the seed** — `scripts/seed/codex.mjs` (new),
+**D1 — demo Codex sessions in the seed** (done) — `scripts/seed/codex.mjs` (new),
 `scripts/seed-vault.mjs`. Mirror: `scripts/seed/claude.mjs` (structure, German comments, exported
 `CODEX_DIR`); fixture shape: `tests/fixtures/codex/sessions/2026/08/12/*.jsonl` and
 `tests/core/codex/fixtures.ts:118-170`.
@@ -104,24 +104,24 @@ _Acceptance:_ `npm run seed` writes three rollout files under
 tolerance, as `leer.jsonl` does for Claude) and `.../codex-demo/session_index.jsonl`; the summary
 line reports the count; every `cwd` is a demo repo from `projects-work.mjs`.
 
-**D2 — both CLIs pinned from one place** — `scripts/seed/internal.mjs`.
+**D2 — both CLIs pinned from one place** (done) — `scripts/seed/internal.mjs`.
 _Acceptance:_ the seeded `.secondbrain/settings.json` holds absolute in-vault paths for
 `overview.claudeProjectsDir` **and** `overview.codexSessionsDir` plus both `use*Sessions: true`,
 produced by a single shared helper; no second, differently-shaped mechanism for the second CLI.
 
-**D3 — seed guard against outward-pointing settings** — `scripts/seed/settings-guard.mjs` (new),
+**D3 — seed guard against outward-pointing settings** (done) — `scripts/seed/settings-guard.mjs` (new),
 `scripts/seed-vault.mjs`. Mirror: `scripts/seed/check.mjs` (returns problem strings, no throw).
 _Acceptance:_ with the seed as shipped the guard reports nothing; if `codexSessionsDir` is emptied
 or set to a path outside the vault root, `npm run seed` prints the problem and exits non-zero.
 
-**D4 — the guard is locked by a test** — `tests/scripts/seed-settings-guard.test.ts` (new),
+**D4 — the guard is locked by a test** (done) — `tests/scripts/seed-settings-guard.test.ts` (new),
 `scripts/seed/settings-guard.d.mts` (new, so the `.mjs` import typechecks — `scripts/` is outside
 `tsconfig.node.json`'s `include`, so the declaration sits next to the module).
 _Acceptance:_ four cases green — in-vault settings pass; an empty session dir fails; a
 home-directory path fails; an unrelated absolute path outside the root in any other setting fails.
 `npm test` and `npm run typecheck` green.
 
-**D5 — comments truthful and the run proven** — `scripts/lib/screens.mjs` (the `agents` deep state
+**D5 — comments truthful and the run proven** (done) — `scripts/lib/screens.mjs` (the `agents` deep state
 comment), `scripts/seed/internal.mjs` (README text).
 _Acceptance:_ `npm run seed && npm run build && npm run shot` runs green, the Sessions screenshot
 shows demo sessions in the Codex tab as well, `git diff --name-only` lists no file under `src/`
@@ -161,3 +161,42 @@ expensive reviewer.
 - AC 5 (real-vault behaviour unchanged) → D5 (no `src/` file in the diff, `npm run verify` green)
 
 ## Done
+
+Codex sessions now get the same treatment Claude sessions already had: a new
+`scripts/seed/codex.mjs` writes three believable demo rollout files plus one empty
+tolerance file under `.secondbrain/codex-demo/sessions/YYYY/MM/DD/`, with
+`session_index.jsonl` sitting as a sibling of `sessions/` exactly where
+`defaultSessionIndexPath` (`src/core/codex/reader.ts`) expects it. `scripts/seed/internal.mjs`
+pins `overview.codexSessionsDir`/`useCodexSessions` the same way it already pinned
+`claudeProjectsDir`/`useClaudeSessions`, through one shared `absoluteDirOf` helper — no
+second mechanism. A new `scripts/seed/settings-guard.mjs`, wired into the seed's existing
+`problems` gate, fails the run if a required session dir is missing, empty, or outside the
+vault root, and sweeps every other setting string for the same "points outside the vault"
+shape, locked by four unit tests (`tests/scripts/seed-settings-guard.test.ts`) plus a
+`.d.mts` so the `.mjs` import typechecks. The stale `agents` screen comment in
+`scripts/lib/screens.mjs` was corrected to state that both CLIs now show seeded demo
+content, never the real machine's `~/.claude`/`~/.codex`. No file under `src/` was touched.
+
+**Decisions:**
+- The settings-guard's generic sweep skips the two dedicated session-dir fields by
+  matching on their *value*, not their key path (flagged by review as a latent,
+  low-probability finding: a future unrelated setting whose value happened to equal one
+  of the two session-dir paths would be silently skipped by the sweep too). Left unfixed:
+  the settings schema is small and known, no such collision exists today, and tracking by
+  key path through the recursive walk would add real complexity for a risk that doesn't
+  currently exist. Worth a key-based rewrite if the settings schema grows enough that a
+  coincidental value collision becomes plausible.
+- The story's status line and empty `## Done` section flagged by review as "process
+  incompleteness, not a code defect" are exactly what this section closes out.
+
+Commit message: `025: demo vault seeds and guards Codex sessions too`
+
+**Verification:** `npm run typecheck`, `npm run lint`, `npm test` (185 files / 2645 tests),
+and `npm run build` all green. Manual smoke (`npm run seed && npm run build && npm run shot`)
+ran green during D5, plus a separate negative-path smoke (temporarily emptied
+`codexSessionsDir`, confirmed non-zero exit with the guard's message, then reverted).
+Clean-agent review verdict: **PASS**, no blocking findings; one PLAUSIBLE low-probability
+finding (see Decisions above) left deliberately unfixed. Per the sprint's Acceptance note,
+this story has no UI surface of its own (it is the seed/screenshot harness itself) and is
+exempt from `ui-acceptance-required`/`live-smoke-required` — the D5 smoke run stands in
+for that gate.

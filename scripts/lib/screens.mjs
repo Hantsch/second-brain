@@ -116,9 +116,12 @@ export const DEEP_STATES = [
   /* Story 008: Der Sitzungsbrowser ist kein eigener Screen mehr, sondern hängt
      unter Projekte (`/projects/sessions`) — ohne Rail-Ziffer, erreichbar über
      die Kachel auf dem Dashboard und die Befehlspalette. `.gs-tabs` ist die
-     Claude/Codex-Umschaltung und steht in jedem Zustand (lädt, aus, leer,
-     Liste); der Beleg hält also unabhängig davon, was auf der aufnehmenden
-     Maschine wirklich in `~/.claude`/`~/.codex` liegt. */
+     Claude/Codex-Umschaltung. Seit Story 025 pinnt der Seed sowohl
+     `overview.claudeProjectsDir` als auch `overview.codexSessionsDir` auf
+     Demo-Verzeichnisse in `.demo-vault/` und legt für beide echte Demo-
+     Sitzungen an (scripts/seed/claude.mjs, scripts/seed/codex.mjs); der
+     Screenshot zeigt also in beiden Reitern echte Demo-Sitzungen, nie den
+     echten Inhalt von `~/.claude`/`~/.codex` auf der aufnehmenden Maschine. */
   { id: 'agents', hash: '/projects/sessions', wait: '.gs-tabs' },
   {
     /* Story 008: derselbe Stoff je Projekt — der Sitzungen-Reiter im
