@@ -1290,13 +1290,13 @@ describe('Tagebuch: loses Ende am Tag (022, D6)', () => {
   it('zeigt das lose Ende der Ankündigung direkt am Tag, ohne den Umweg über die Wartung', async () => {
     await openOnEarlierDay();
 
-    expect(await screen.findByText(`„${LOOSE_END.quote}"`)).toBeTruthy();
+    expect(await screen.findByText(`„${LOOSE_END.quote}“`)).toBeTruthy();
   });
 
   it('beantwortet das lose Ende über journal:answerLooseEnd, mit dem Hash von heute statt vom betrachteten Tag', async () => {
     const { sb } = await openOnEarlierDay();
 
-    await screen.findByText(`„${LOOSE_END.quote}"`);
+    await screen.findByText(`„${LOOSE_END.quote}“`);
     await userEvent.type(screen.getByLabelText('Antwort'), 'Erledigt, alles gut.');
     await userEvent.click(screen.getByRole('button', { name: 'Eintragen' }));
 
@@ -1328,12 +1328,12 @@ describe('Tagebuch: loses Ende am Tag (022, D6)', () => {
       },
     });
 
-    await screen.findByText(`„${LOOSE_END.quote}"`);
+    await screen.findByText(`„${LOOSE_END.quote}“`);
     await userEvent.type(screen.getByLabelText('Antwort'), 'Erledigt.');
     await userEvent.click(screen.getByRole('button', { name: 'Eintragen' }));
 
     await waitFor(() => expect(sb.payloadOf('journal:answerLooseEnd')).toBeTruthy());
-    await waitFor(() => expect(screen.queryByText(`„${LOOSE_END.quote}"`)).toBeNull());
+    await waitFor(() => expect(screen.queryByText(`„${LOOSE_END.quote}“`)).toBeNull());
   });
 
   it('zeigt keine Zeile, solange kein loses Ende am Tag offen ist', async () => {

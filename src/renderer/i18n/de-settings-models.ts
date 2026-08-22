@@ -35,8 +35,8 @@ const own = {
   'settings.detect.adopt': 'Als Provider übernehmen',
   'settings.detect.none': 'Kein lokales Modell gefunden.',
   'settings.detect.runtimeCardHint':
-    'Geführte Einrichtung samt Download und Fortschritt steht weiter unten unter „Lokale Laufzeit".',
-  'settings.detect.goToRuntimeCard': 'Zur Karte „Lokale Laufzeit"',
+    'Geführte Einrichtung samt Download und Fortschritt steht weiter unten unter „Lokale Laufzeit“.',
+  'settings.detect.goToRuntimeCard': 'Zur Karte „Lokale Laufzeit“',
   'settings.detect.guideLink': 'ollama.com öffnen',
   'settings.detect.recheck': 'Erneut suchen',
   'settings.detect.failed': 'Die Suche ist fehlgeschlagen.',
@@ -96,7 +96,7 @@ const own = {
      above the table — nobody reads it there. */
   'settings.routing.withoutRow': 'Ohne Modell: {fallback}',
   'settings.routing.callToAction':
-    'Ein Provider mit Modellen ist eingerichtet. „Automatisch zuordnen" schlägt zu jeder Aufgabe ein Modell vor; gespeichert wird erst nach deiner Zustimmung.',
+    'Ein Provider mit Modellen ist eingerichtet. „Automatisch zuordnen“ schlägt zu jeder Aufgabe ein Modell vor; gespeichert wird erst nach deiner Zustimmung.',
   'settings.routing.allRouted': 'Jede Aufgabe hat ein Modell.',
   'settings.routing.empty':
     'Sobald ein Provider Modelle hat, lässt sich hier jede Aufgabe einzeln zuordnen.',

@@ -19,7 +19,7 @@
 import type { JournalDay } from '@shared/types';
 import { Icon } from '../atoms/Icon';
 import { useLanguage, useT } from '../i18n';
-import { plural } from '../lib/format';
+import { locale, plural } from '../lib/format';
 import { isDayOpen } from '../lib/journal-open';
 
 /** One row of the list: a day with a file, or a named gap. */
@@ -121,9 +121,9 @@ export interface DayListProps {
 export function DayList({ rows, selected, onSelect, rowRef }: DayListProps) {
   const t = useT();
   const language = useLanguage();
-  const locale = language === 'de' ? 'de-DE' : 'en-GB';
-  const short = new Intl.DateTimeFormat(locale, { day: '2-digit', month: '2-digit' });
-  const weekday = new Intl.DateTimeFormat(locale, { weekday: 'short' });
+  const localeName = locale(language);
+  const short = new Intl.DateTimeFormat(localeName, { day: '2-digit', month: '2-digit' });
+  const weekday = new Intl.DateTimeFormat(localeName, { weekday: 'short' });
 
   return (
     <ul className="sb-daylist" aria-label={t('journal.list.title')}>

@@ -104,19 +104,19 @@ export const de = {
   /* The same cases with a subject. An error without an object leaves the user
      guessing what was meant — "Couldn't open the vault 'broken-vault'" says
      it. The caller passes the subject along when it knows it. */
-  'error.about.no-vault': 'Für „{subject}" ist kein Vault geöffnet.',
-  'error.about.not-found': '„{subject}" gibt es nicht (mehr).',
+  'error.about.no-vault': 'Für „{subject}“ ist kein Vault geöffnet.',
+  'error.about.not-found': '„{subject}“ gibt es nicht (mehr).',
   'error.about.conflict':
-    '„{subject}" wurde zwischenzeitlich geändert. Nichts wurde überschrieben.',
-  'error.about.llm-unavailable': 'Für „{subject}" ist kein Sprachmodell erreichbar.',
-  'error.about.invalid': '„{subject}" passt nicht.',
-  'error.about.io': '„{subject}" ließ sich nicht öffnen — der Ordner ist nicht beschreibbar.',
-  'error.about.cancelled': '„{subject}" wurde abgebrochen.',
-  'error.about.unknown': 'Bei „{subject}" ist etwas Unerwartetes passiert.',
+    '„{subject}“ wurde zwischenzeitlich geändert. Nichts wurde überschrieben.',
+  'error.about.llm-unavailable': 'Für „{subject}“ ist kein Sprachmodell erreichbar.',
+  'error.about.invalid': '„{subject}“ passt nicht.',
+  'error.about.io': '„{subject}“ ließ sich nicht öffnen — der Ordner ist nicht beschreibbar.',
+  'error.about.cancelled': '„{subject}“ wurde abgebrochen.',
+  'error.about.unknown': 'Bei „{subject}“ ist etwas Unerwartetes passiert.',
 
   'llm.missing.title': 'Für diesen Schritt fehlt ein Modell',
   'llm.missing.body':
-    'Die Aufgabe „{task}" braucht ein Sprachmodell. Alles, was ohne Modell geht, bleibt benutzbar.',
+    'Die Aufgabe „{task}“ braucht ein Sprachmodell. Alles, was ohne Modell geht, bleibt benutzbar.',
   'llm.missing.action': 'Routing einrichten',
   'llm.note.query-answer':
     'Belegte Antworten in Prosa brauchen ein Modell — die Fundstellen zeigt die App auch ohne.',

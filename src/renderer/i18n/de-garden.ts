@@ -33,15 +33,15 @@ export const deGarden = {
   'garden.run.elapsed': 'Laufzeit {elapsed}',
   /* 021a D6: steht nur, wenn der Stufenplan dieses Laufs gar keine
      Modell-Stufe enthält — nicht, wenn sie nur noch nicht dran war. Absichtlich
-     ohne Ursache: der Renderer kann „kein Modell konfiguriert" nicht von
-     „für diesen Lauf abgeschaltet" unterscheiden. */
+     ohne Ursache: der Renderer kann „kein Modell konfiguriert“ nicht von
+     „für diesen Lauf abgeschaltet“ unterscheiden. */
   'garden.run.noModelStage':
     'Keine Modell-Stufe — Widersprüche und lose Enden werden nicht geprüft.',
   'garden.run.disabledWhileRunning': 'Ein Pflegelauf läuft schon.',
-  /* 021b, D4: der Knopf neben „jetzt prüfen" — nur da, wenn der letzte Lauf
+  /* 021b, D4: der Knopf neben „jetzt prüfen“ — nur da, wenn der letzte Lauf
      vorzeitig stoppte und noch Stufen offen sind. */
   'garden.run.continue': 'Prüfung fortsetzen',
-  /* 021c, D3: „nur dies prüfen" neben dem Filter — genau dann da, wenn Art
+  /* 021c, D3: „nur dies prüfen“ neben dem Filter — genau dann da, wenn Art
      oder Modul die Ansicht einschränken, und benennt, was geprüft würde. */
   'garden.run.checkOnlyKind': 'Nur {kind} prüfen',
   'garden.run.checkOnlyModule': 'Nur Modul {module} prüfen',
@@ -50,7 +50,7 @@ export const deGarden = {
   // ── Umfang des letzten Laufs (021c, D4) ──────────────────────────────────────
   /* Benennt, was ein Teil-Lauf geprüft hat — neben 021b's eingefrorenem Stand,
      nicht statt dessen. Ein Teil-Lauf ist nie `complete`, darf sich aber nicht
-     wie „vorzeitig gestoppt" lesen: hier wurde nichts abgebrochen, der Lauf
+     wie „vorzeitig gestoppt“ lesen: hier wurde nichts abgebrochen, der Lauf
      wollte nie mehr abdecken. */
   'garden.scope.kind': 'Letzte Prüfung: nur {kind}',
   'garden.scope.module': 'Letzte Prüfung: nur Modul {module}',
@@ -184,7 +184,7 @@ export const deGarden = {
   // ── Karte ─────────────────────────────────────────────────────────────────
   'garden.card.files': 'Betroffene Dateien',
   'garden.card.openFile': 'Datei öffnen',
-  'garden.card.openThis': '„{path}" öffnen',
+  'garden.card.openThis': '„{path}“ öffnen',
   'garden.card.preview': 'Geschrieben wird in {file}:',
   'garden.card.previewNothing': 'Schreibt nichts. Öffnet nur, wo es weitergeht.',
   'garden.card.noFix':
@@ -195,12 +195,12 @@ export const deGarden = {
   'garden.card.recheckGone': 'Neu geprüft: der Befund ist weg.',
   'garden.card.recheckStill':
     'Neu geprüft: der Befund steht noch. In den Dateien hat sich daran nichts geändert.',
-  'garden.card.snooze': 'Nicht jetzt: „{title}"',
+  'garden.card.snooze': 'Nicht jetzt: „{title}“',
   'garden.card.snoozed': 'Nicht jetzt. Der Befund kommt am {date} wieder.',
   'garden.card.unsnoozed': 'Der Befund zählt wieder.',
   'garden.card.undismiss': 'Wieder anzeigen',
   'garden.card.written': 'Geschrieben: {file}',
-  'garden.card.discarded': '„{file}" liegt jetzt im Papierkorb.',
+  'garden.card.discarded': '„{file}“ liegt jetzt im Papierkorb.',
   'garden.card.undo': 'Rückgängig',
   'garden.card.undone': 'Zurückgedreht.',
   'garden.card.keptOne': '1 Datei blieb unberührt: sie wurde seither bearbeitet.',
@@ -215,11 +215,11 @@ export const deGarden = {
 
   // ── Widerspruch ───────────────────────────────────────────────────────────
   'garden.contradiction.never': 'Nie automatisch aufgelöst: beide Fassungen bleiben stehen.',
-  'garden.contradiction.section': 'Abschnitt „Widersprüche" dieser Seite',
+  'garden.contradiction.section': 'Abschnitt „Widersprüche“ dieser Seite',
   'garden.contradiction.excerpt': 'Anfang der Seite — die Stelle ist in der Datei nicht benannt',
   'garden.contradiction.updated': 'Stand',
   'garden.contradiction.name': 'Beide behalten und benennen',
-  'garden.contradiction.supersede': '„{newer}" überholt „{older}"',
+  'garden.contradiction.supersede': '„{newer}“ überholt „{older}“',
   'garden.contradiction.supersedeHint':
     'Trägt supersedes: [{slug}] in {file} ein. Beide Seiten bleiben stehen, die ältere ist damit als überholt markiert.',
   'garden.contradiction.sameDate':
@@ -231,11 +231,11 @@ export const deGarden = {
   // ── Beinahe-Dublette ──────────────────────────────────────────────────────
   'garden.nearDuplicate.created': 'Angelegt',
   'garden.nearDuplicate.neverMerged':
-    'Zusammengeführt wird nie automatisch: „Beide Seiten vergleichen" öffnet nur beide Dateien.',
+    'Zusammengeführt wird nie automatisch: „Beide Seiten vergleichen“ öffnet nur beide Dateien.',
   'garden.nearDuplicate.directionLabel': 'Welche Seite ist die neuere?',
   'garden.nearDuplicate.noDefault':
     'Kein Vorschlag: Bei einer Seite fehlt das Erstelldatum, oder beide tragen dasselbe. Ein Mensch entscheidet hier.',
-  'garden.nearDuplicate.optionNewer': '„{file}" ist die neuere Seite',
+  'garden.nearDuplicate.optionNewer': '„{file}“ ist die neuere Seite',
   'garden.nearDuplicate.supersede': 'Überholt: {older} → {newer}',
   'garden.nearDuplicate.supersedeHint':
     'Trägt supersedes: [{slug}] in {file} ein. Beide Seiten bleiben stehen, die ältere ist damit als überholt markiert.',
@@ -247,30 +247,30 @@ export const deGarden = {
   // ── Verwaiste Seite: Ziel wählen ──────────────────────────────────────────
   'garden.orphan.targetLabel': 'Zielseite',
   'garden.orphan.empty': 'Keine andere Seite in diesem Modul, auf die verwiesen werden könnte.',
-  'garden.orphan.fromOverview': 'Von der Übersicht des Moduls „{module}" aus verlinken',
+  'garden.orphan.fromOverview': 'Von der Übersicht des Moduls „{module}“ aus verlinken',
   'garden.orphan.pickToggle': 'Andere Seite wählen',
   'garden.orphan.searchLabel': 'Seite suchen',
   'garden.orphan.pickPlaceholder': 'Seite wählen',
   'garden.orphan.pickAria': 'Zielseite wählen',
-  'garden.orphan.noMatch': 'Keine Seite passt zu „{query}".',
-  'garden.orphan.confirm': 'Verweis in „{file}" eintragen',
+  'garden.orphan.noMatch': 'Keine Seite passt zu „{query}“.',
+  'garden.orphan.confirm': 'Verweis in „{file}“ eintragen',
 
   // ── Verwerfen ─────────────────────────────────────────────────────────────
-  'garden.discard.action': '„{file}" verwerfen',
-  'garden.discard.title': '„{file}" verwerfen?',
+  'garden.discard.action': '„{file}“ verwerfen',
+  'garden.discard.title': '„{file}“ verwerfen?',
   'garden.discard.inboundNone': 'Keine andere Seite verlinkt darauf.',
   'garden.discard.inboundOne': '1 Seite verlinkt auf diese Seite.',
   'garden.discard.inboundMany': '{count} Seiten verlinken auf diese Seite.',
   'garden.discard.catalogPreview': 'Diese Katalogzeile würde entfernt:',
   'garden.discard.catalogNone': 'Keine Katalogzeile zu entfernen.',
-  'garden.discard.repoint': 'Verweise auf „{file}" statt darauf umbiegen',
+  'garden.discard.repoint': 'Verweise auf „{file}“ statt darauf umbiegen',
   'garden.discard.willBreak':
     'Diese Links würden brechen — es gibt keine Zielseite, auf die sie umgebogen werden.',
   'garden.discard.confirm': 'Verwerfen',
 
   // ── Loses Ende ────────────────────────────────────────────────────────────
   'garden.looseEnd.empty': 'Keine losen Enden.',
-  'garden.looseEnd.quote': '„{quote}"',
+  'garden.looseEnd.quote': '„{quote}“',
   'garden.looseEnd.announced': 'Angekündigt am {day}. Seitdem nichts dazu.',
   'garden.looseEnd.foundByHeuristic': 'Von der eingebauten Prüfung gefunden.',
   'garden.looseEnd.foundByModel': 'Vom Modell gefunden.',

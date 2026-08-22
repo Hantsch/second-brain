@@ -348,7 +348,7 @@ describe('Inbox', () => {
     await waitForProposal();
 
     const group = screen.getByRole('group', {
-      name: 'Frist für „Sammelaufruf für Berechtigungen bauen"',
+      name: 'Frist für „Sammelaufruf für Berechtigungen bauen“',
     });
     expect(within(group).getByRole('button', { name: 'heute' })).toBeTruthy();
     await userEvent.click(within(group).getByRole('button', { name: 'morgen' }));
@@ -374,7 +374,7 @@ describe('Inbox', () => {
     await waitForProposal();
 
     const group = screen.getByRole('group', {
-      name: 'Frist für „Ladezeiten der Angebotsliste prüfen"',
+      name: 'Frist für „Ladezeiten der Angebotsliste prüfen“',
     });
     await userEvent.click(within(group).getByRole('button', { name: 'Datum …' }));
     const field = within(group).getByLabelText('Datum …');
@@ -389,7 +389,7 @@ describe('Inbox', () => {
     await waitForProposal();
 
     const group = screen.getByRole('group', {
-      name: 'Frist für „Sammelaufruf für Berechtigungen bauen"',
+      name: 'Frist für „Sammelaufruf für Berechtigungen bauen“',
     });
     const today = within(group).getByRole('button', { name: 'heute' });
     await userEvent.click(today);

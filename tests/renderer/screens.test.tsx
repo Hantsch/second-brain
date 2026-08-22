@@ -210,7 +210,7 @@ describe('Fragen', () => {
     );
     /* Das Gespräch der Attrappe steht in der Liste, nicht ein leerer Kasten. */
     expect(
-      await screen.findByRole('button', { name: `Gespräch „${fx.chatThread.title}" öffnen` }),
+      await screen.findByRole('button', { name: `Gespräch „${fx.chatThread.title}“ öffnen` }),
     ).toBeTruthy();
   });
 

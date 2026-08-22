@@ -27,7 +27,7 @@ import { dateOf, todayIso } from '../../components/DayList';
 import { MoodPicker } from '../../components/MoodPicker';
 import { useLanguage, useT } from '../../i18n';
 import { api } from '../../lib/api';
-import { formatDate } from '../../lib/format';
+import { formatDate, locale } from '../../lib/format';
 import { DayText } from './DayText';
 import { LegacyConversation } from './LegacyConversation';
 
@@ -115,7 +115,7 @@ export function DayEntry({
 }: DayEntryProps) {
   const t = useT();
   const language = useLanguage();
-  const long = new Intl.DateTimeFormat(language === 'de' ? 'de-DE' : 'en-GB', {
+  const long = new Intl.DateTimeFormat(locale(language), {
     weekday: 'long',
     day: 'numeric',
     month: 'long',

@@ -1,7 +1,7 @@
 ---
 id: 026
 title: German text closes its quotes, and three journal papercuts
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-08-22
 ---
 
@@ -39,16 +39,16 @@ the next time the helper learns something the ternary does not.
 
 ## Acceptance Criteria
 
-- [ ] German text in the app closes its quotes the way German typography does — consistently,
+- [x] German text in the app closes its quotes the way German typography does — consistently,
       in every `de-*.ts` file, with no mixed pairs left.
-- [ ] No English string file contains a German quotation mark.
-- [ ] Whatever the quote convention ends up being, it is written down where the next person
+- [x] No English string file contains a German quotation mark.
+- [x] Whatever the quote convention ends up being, it is written down where the next person
       adding a German string will read it, so the catalogue does not drift back.
-- [ ] Clicking a loose end on the dashboard always lands on a real journal day, or the link is
+- [x] Clicking a loose end on the dashboard always lands on a real journal day, or the link is
       not offered.
-- [ ] The two journal date formats are produced by the same helper as every other date in the
+- [x] The two journal date formats are produced by the same helper as every other date in the
       app, and read exactly as they do today in both languages.
-- [ ] Nothing in this story changes what any screen can do — only how it reads.
+- [x] Nothing in this story changes what any screen can do — only how it reads.
 
 ## Open Questions
 
@@ -123,6 +123,8 @@ the test plan are the proof.
 
 ## Deliverables
 
+- [x] D1
+
 **D1 — The German catalogue closes its quotes.** *(renderer strings only)*
 
 - `src/renderer/i18n/de.ts`, `de-agents.ts`, `de-dashboard.ts`, `de-garden.ts`, `de-journal.ts`,
@@ -134,12 +136,16 @@ count is 100 as well; no ASCII `"` closes a `„` any more; the existing `tests/
 (same key set, no duplicate keys, keys match the sources) stays green; the diff carries glyph
 changes only — no key, no `{placeholder}`, no wording.
 
+- [x] D2
+
 **D2 — No German quote in an English file.** *(renderer strings only)*
 
 - `src/renderer/i18n/en-journal.ts` (string on line 153, section comment on line 52).
 
 Acceptance: no `en*.ts` file in `src/renderer/i18n/` contains U+201E any more; the English string
 reads `Due date for “{text}”`.
+
+- [x] D3
 
 **D3 — The convention is written down and guarded.** *(docs + test)*
 
@@ -152,6 +158,8 @@ Acceptance: the new test goes red when a `„…"` (ASCII closer) is introduced 
 when a `„` is introduced into an `en` file — demonstrated once with a local scratch edit that is
 reverted again.
 
+- [x] D4
+
 **D4 — A loose end links to a real day, or not at all.** *(renderer, one tile)*
 
 - `src/renderer/components/tiles/LooseEndsTile.tsx` (the `day === null` branch around lines
@@ -161,6 +169,8 @@ reverted again.
 Acceptance: with a resolvable day the row is still a button that navigates to `/journal?d=<iso>`;
 for a reminder whose `path` carries no ISO date the title renders as text, with no `button` role
 and no navigation. A `?d=` with an empty value can no longer be produced.
+
+- [x] D5
 
 **D5 — Journal and health dates use `locale()`.** *(renderer, three lines)*
 
@@ -199,3 +209,50 @@ P1/P2 apply — the visible change has to be seen in the running app.
    (`10. Aug. 2026` / `10 Aug 2026`), likewise the timestamp on the Maintenance health card.
 
 ## Done
+
+Summary: the German i18n catalogue (13 `de*.ts` files, 100 occurrences) now closes every `„`
+opener with the correct `“` (U+201C) instead of a straight `"`; `en-journal.ts` no longer carries
+a German `„`. The convention is written down in `src/renderer/i18n/index.ts`'s header comment and
+CLAUDE.md guardrail 7, and guarded by a new test in `tests/renderer/i18n.test.ts`. A loose end
+whose day cannot be resolved now renders as plain text instead of a button with an empty `?d=`
+link. `DayList.tsx`, `DayEntry.tsx` and `HealthCard.tsx` now format dates via the shared `locale()`
+helper instead of their own inline `de-DE`/`en-GB` ternaries.
+
+Commit message: `026: German catalogue closes its quotes, loose-end dead link, date-locale drift`
+
+Verification:
+
+- build/test/lint/typecheck: all green (`npm run build`, `npx vitest run` → 190 files / 2707 tests
+  passed, `npm run lint`, `npm run typecheck`).
+- `npm run format:check`: flags the pre-existing project-wide CRLF-vs-prettier issue (documented
+  in earlier sprints); confirmed via a scratch copy inside the repo (so the project's `.prettierrc`
+  still applies) that every changed line in `de.ts`, `garden.test.tsx` and the touched CLAUDE.md
+  line is prettier-clean once line endings are normalized — the only non-CRLF prettier finding in
+  CLAUDE.md is a pre-existing markdown table (guardrail table, untouched by this diff).
+- Code review (clean agent, default tier): PASS on all 6 acceptance criteria, no findings under
+  weakened tests / scope creep / correctness / guardrail violations.
+- Live smoke (`npm run seed && npm run shot`, plus a one-off `_electron` script deleted after use):
+  Settings → Sprachen shows `der Bereich heißt „Erfassen“ statt „Capture“` live, with correct
+  opening/closing glyphs. The Dashboard "Lose Enden" tile, enabled live, showed 2 rows — both
+  resolvable in the seeded demo vault, both rendered as buttons, and clicking one navigated to
+  `#/journal?d=2026-08-16`. The demo vault contains no loose end with an unresolvable day (matches
+  the story's own observation that this is defensive-only in a real vault), so the `day === null`
+  branch itself was only exercised live at the code level via the D4 unit tests (button→span,
+  `getByRole` absence, no-op click) — those were independently confirmed by the reviewer, not just
+  by the implementer. `journal.close.dueOf` / `inbox.proposal.dueOf` render as an `aria-label`, not
+  visible text, so the English curly-quote fix (`Due date for "..."`) isn't screenshot-visible;
+  verified instead via source diff, the i18n test suite, and the code review's explicit check for
+  zero U+201E across `en*.ts`.
+
+Decisions:
+
+- Test fallout from D1's intentional glyph change (8 renderer test files whose assertions matched
+  the old ASCII-quote-closed strings) was fixed as a mechanical follow-up glyph-for-glyph update,
+  not treated as a separate deliverable or a blocker — it's the same rule D1 already applied,
+  just also due in test literals that mirror rendered text.
+- An implementation slip during my own verification (an errant `git checkout -- de.ts` while
+  probing whether a prettier warning was content or CRLF) reverted D1's fix on `de.ts` alone; caught
+  immediately via a diff/grep check and repaired by hand with exact string edits, re-verified
+  against the same D1 acceptance (100/100 glyph counts, placeholders intact, full suite green
+  afterward). No other file was affected; documented here for honesty, not because it's still open.
+

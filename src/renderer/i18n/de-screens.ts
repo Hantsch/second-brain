@@ -56,7 +56,7 @@ export const deScreens = {
   'capture.toProposal': 'In der Inbox ansehen',
 
   /* Kein Kopfpaar mehr: die Inbox ist kein eigener Screen, sondern der Filter
-     „nicht abgelegt" auf Notizen (Story 006). Den einen `ScreenHeader` dieses
+     „nicht abgelegt“ auf Notizen (Story 006). Den einen `ScreenHeader` dieses
      Screens stellt `NotesScreen`; der Leerzustand unten gehört weiter der
      Arbeitsfläche (`UnfiledWorkspace`). */
   'screen.inbox.empty.title': 'Die Inbox ist leer',
@@ -80,12 +80,12 @@ export const deScreens = {
   'inbox.proposal.heuristic': 'Ohne Modell eingeordnet — Regeln statt Verstehen.',
   'inbox.proposal.section': 'Landet unter',
   'inbox.proposal.exact': 'Das wird geschrieben',
-  /* „Bleibt in der Inbox" schreibt nichts. Die Beschriftung muss das sagen,
+  /* „Bleibt in der Inbox“ schreibt nichts. Die Beschriftung muss das sagen,
      sonst behauptet das Feld einen Schreibvorgang, den es nicht gibt. */
   'inbox.proposal.nothing': 'Nichts wird geschrieben — der Dump bleibt liegen',
   'inbox.proposal.todos': 'Erkannte Todos',
   'inbox.proposal.waiting': 'Warte auf',
-  'inbox.proposal.dueOf': 'Frist für „{text}"',
+  'inbox.proposal.dueOf': 'Frist für „{text}“',
   'inbox.proposal.due': 'Frist',
   'inbox.proposal.dueToday': 'heute',
   'inbox.proposal.dueTomorrow': 'morgen',
@@ -97,7 +97,7 @@ export const deScreens = {
   'inbox.action.file': 'Ablegen',
   'inbox.action.fileHint': 'legt ab',
   'inbox.action.other': 'Anderes Ziel',
-  /* Was der Knopf tut, wenn das Ziel „Bleibt in der Inbox" ist: nichts
+  /* Was der Knopf tut, wenn das Ziel „Bleibt in der Inbox“ ist: nichts
      schreiben, den Dump als bewusst behalten markieren. */
   'inbox.action.leave': 'Liegen lassen',
   'inbox.action.leaveHint': 'lässt liegen',
@@ -179,15 +179,15 @@ export const deScreens = {
 
   'ask.examples.title': 'Fang hiermit an',
   'ask.example.module': 'Was weiß ich über {title}?',
-  'ask.example.project': 'Woran habe ich bei „{title}" zuletzt gearbeitet?',
+  'ask.example.project': 'Woran habe ich bei „{title}“ zuletzt gearbeitet?',
   'ask.example.waiting': 'Worauf warte ich bei {who}?',
 
   'ask.threads.title': 'Gespräche',
   'ask.threads.search': 'Im Verlauf suchen',
   'ask.threads.empty': 'Noch kein Gespräch. Die erste Frage legt eines an.',
   'ask.threads.noMatch': 'Kein Gespräch passt dazu.',
-  'ask.threads.open': 'Gespräch „{title}" öffnen',
-  'ask.threads.delete': 'Gespräch „{title}" löschen',
+  'ask.threads.open': 'Gespräch „{title}“ öffnen',
+  'ask.threads.delete': 'Gespräch „{title}“ löschen',
   'ask.threads.deleteTitle': 'Gespräch löschen?',
   'ask.threads.deleteBody':
     'Der Verlauf wandert in den Papierkorb des Vaults. Abgelegte Wiki-Seiten bleiben.',
@@ -203,7 +203,7 @@ export const deScreens = {
   'ask.fileBack.newModulePlaceholder': 'Identity management',
   'ask.fileBack.pageTitle': 'Titel der Seite',
   'ask.fileBack.preview':
-    'Geschrieben wird eine neue Konzept-Seite im Modul „{module}", dazu ein Eintrag im Katalog und in der Chronik. {count} Belege kommen mit.',
+    'Geschrieben wird eine neue Konzept-Seite im Modul „{module}“, dazu ein Eintrag im Katalog und in der Chronik. {count} Belege kommen mit.',
   'ask.fileBack.confirm': 'Ablegen',
   'ask.fileBack.done': 'Abgelegt in',
 

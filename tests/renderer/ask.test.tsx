@@ -265,7 +265,7 @@ describe('Fragen: Leerzustand', () => {
       name: 'Was weiß ich über Identity management?',
     });
     expect(
-      screen.getByRole('button', { name: /Woran habe ich bei „Kundenportal Relaunch"/ }),
+      screen.getByRole('button', { name: /Woran habe ich bei „Kundenportal Relaunch“/ }),
     ).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Worauf warte ich bei Miriam?' })).toBeTruthy();
 
@@ -420,7 +420,7 @@ describe('Fragen: eine Antwort entsteht', () => {
     open({ ...handlers(state), 'chat:threads': () => [state.thread] });
 
     await userEvent.click(
-      await screen.findByRole('button', { name: `Gespräch „${QUESTION}" öffnen` }),
+      await screen.findByRole('button', { name: `Gespräch „${QUESTION}“ öffnen` }),
     );
     const mark = await screen.findByRole('button', { name: 'Beleg 1 anzeigen' });
     expect(mark.textContent).toBe('[1]');
@@ -462,7 +462,7 @@ describe('Fragen: eine Antwort entsteht', () => {
     });
 
     await userEvent.click(
-      await screen.findByRole('button', { name: `Gespräch „${QUESTION}" öffnen` }),
+      await screen.findByRole('button', { name: `Gespräch „${QUESTION}“ öffnen` }),
     );
     const mark = await screen.findByRole('button', { name: 'Beleg 1 anzeigen' });
     await userEvent.click(mark);
@@ -500,7 +500,7 @@ describe('Fragen: ehrliche Zustände', () => {
     });
 
     await userEvent.click(
-      await screen.findByRole('button', { name: `Gespräch „${QUESTION}" öffnen` }),
+      await screen.findByRole('button', { name: `Gespräch „${QUESTION}“ öffnen` }),
     );
 
     expect(await screen.findByText(/Ich kann daraus keine Antwort formulieren/)).toBeTruthy();
@@ -532,7 +532,7 @@ describe('Fragen: ehrliche Zustände', () => {
     open({ 'chat:threads': () => [answered], 'chat:thread': () => answered });
 
     await userEvent.click(
-      await screen.findByRole('button', { name: `Gespräch „${QUESTION}" öffnen` }),
+      await screen.findByRole('button', { name: `Gespräch „${QUESTION}“ öffnen` }),
     );
 
     expect(await screen.findByText('Dazu steht nichts im Vault.')).toBeTruthy();
@@ -559,7 +559,7 @@ describe('Fragen: ehrliche Zustände', () => {
     open({ 'chat:threads': () => [answered], 'chat:thread': () => answered });
 
     await userEvent.click(
-      await screen.findByRole('button', { name: `Gespräch „${QUESTION}" öffnen` }),
+      await screen.findByRole('button', { name: `Gespräch „${QUESTION}“ öffnen` }),
     );
     expect(await screen.findByText(/ließen sich nicht belegen/)).toBeTruthy();
   });
@@ -597,7 +597,7 @@ describe('Fragen: Gespräche und Ablegen', () => {
   it('legt die Antwort mit Modul und Titel als Wiki-Seite ab', async () => {
     const { sb } = open(base);
     await userEvent.click(
-      await screen.findByRole('button', { name: `Gespräch „${QUESTION}" öffnen` }),
+      await screen.findByRole('button', { name: `Gespräch „${QUESTION}“ öffnen` }),
     );
 
     await userEvent.click(await screen.findByRole('button', { name: 'Als Wiki-Seite ablegen' }));
@@ -605,7 +605,7 @@ describe('Fragen: Gespräche und Ablegen', () => {
     /* Der Titel ist aus der Frage vorbelegt, das Modul gewählt. */
     const title = within(dialog).getByLabelText('Titel der Seite') as HTMLInputElement;
     expect(title.value).toBe('Wie lange leben Access-Token');
-    expect(within(dialog).getByText(/Konzept-Seite im Modul „Identity management"/)).toBeTruthy();
+    expect(within(dialog).getByText(/Konzept-Seite im Modul „Identity management“/)).toBeTruthy();
     await userEvent.click(within(dialog).getByRole('button', { name: 'Ablegen' }));
 
     await waitFor(() =>
@@ -629,7 +629,7 @@ describe('Fragen: Gespräche und Ablegen', () => {
   it('legt in ein neu benanntes Modul ab', async () => {
     const { sb } = open(base);
     await userEvent.click(
-      await screen.findByRole('button', { name: `Gespräch „${QUESTION}" öffnen` }),
+      await screen.findByRole('button', { name: `Gespräch „${QUESTION}“ öffnen` }),
     );
     await userEvent.click(await screen.findByRole('button', { name: 'Als Wiki-Seite ablegen' }));
     const dialog = await screen.findByRole('dialog', { name: 'Antwort als Wiki-Seite ablegen' });
@@ -648,10 +648,10 @@ describe('Fragen: Gespräche und Ablegen', () => {
 
   it('fragt vor dem Löschen nach und sucht im Verlauf', async () => {
     const { sb } = open(base);
-    const row = await screen.findByRole('button', { name: `Gespräch „${QUESTION}" öffnen` });
+    const row = await screen.findByRole('button', { name: `Gespräch „${QUESTION}“ öffnen` });
     expect(row.textContent).toContain(QUESTION);
 
-    await userEvent.click(screen.getByRole('button', { name: `Gespräch „${QUESTION}" löschen` }));
+    await userEvent.click(screen.getByRole('button', { name: `Gespräch „${QUESTION}“ löschen` }));
     const dialog = await screen.findByRole('dialog', { name: 'Gespräch löschen?' });
     expect(sb.calls.some((call) => call.channel === 'chat:delete')).toBe(false);
     await userEvent.click(within(dialog).getByRole('button', { name: 'Löschen' }));
@@ -745,10 +745,10 @@ describe('Fragen: Bedienbarkeit', () => {
       'chat:thread': () => answered,
     });
 
-    await screen.findByRole('button', { name: `Gespräch „${QUESTION}" öffnen` });
+    await screen.findByRole('button', { name: `Gespräch „${QUESTION}“ öffnen` });
     await expectNoViolations(container);
 
-    await userEvent.click(screen.getByRole('button', { name: `Gespräch „${QUESTION}" öffnen` }));
+    await userEvent.click(screen.getByRole('button', { name: `Gespräch „${QUESTION}“ öffnen` }));
     await screen.findByRole('list', { name: 'Belege' });
     await expectNoViolations(container);
   });

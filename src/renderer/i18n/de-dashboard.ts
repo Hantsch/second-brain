@@ -15,12 +15,12 @@ export const deDashboard = {
   'dashboard.summary.waitingOne': '1 Antwort ausstehend',
   'dashboard.summary.waitingMany': '{count} Antworten ausstehend',
   'dashboard.summary.clear': 'Nichts ist heute fällig, niemand hält etwas auf.',
-  'dashboard.summary.jump': 'Zu „{module}" springen',
+  'dashboard.summary.jump': 'Zu „{module}“ springen',
 
-  // ── Der „nicht abgelegt"-Streifen (Story 006) ─────────────────────────────
+  // ── Der „nicht abgelegt“-Streifen (Story 006) ─────────────────────────────
   /* Über dem Gitter, nicht Teil der Tageszusammenfassung — bei 0 fehlt er
-     ganz, statt „nichts unabgelegt" zu behaupten. Ein Key genügt, wie bei
-     `notes.filter.unfiled`: „1 nicht abgelegt" und „3 nicht abgelegt" beugen
+     ganz, statt „nichts unabgelegt“ zu behaupten. Ein Key genügt, wie bei
+     `notes.filter.unfiled`: „1 nicht abgelegt“ und „3 nicht abgelegt“ beugen
      im Deutschen gleich. */
   'dashboard.unfiled.strip': '{count} nicht abgelegt',
 
@@ -46,8 +46,8 @@ export const deDashboard = {
   'dashboard.move.status': 'Verschieben',
   'dashboard.move.bar':
     '{title}, Position {position} von {total} · Pfeile verschieben · Enter legt ab · Esc bricht ab',
-  'dashboard.tile.hidden': '„{title}" ausgeblendet',
-  'dashboard.tile.hiddenWhere': 'Die Kachel steht weiter in der Auswahl unter „Module".',
+  'dashboard.tile.hidden': '„{title}“ ausgeblendet',
+  'dashboard.tile.hiddenWhere': 'Die Kachel steht weiter in der Auswahl unter „Module“.',
   'dashboard.layout.saveFailed': 'Die Anordnung ließ sich nicht speichern.',
 
   // ── Module selection ───────────────────────────────────────────────────
@@ -112,19 +112,19 @@ export const deDashboard = {
   'tile.claude.messages': '{count} Nachrichten',
   'tile.claude.unlinked': 'Ohne Projekt',
   'tile.claude.link': 'Projekt zuordnen',
-  'tile.claude.linkFor': 'Sitzung „{name}" einem Projekt zuordnen',
-  'tile.claude.linkHint': 'Der Pfad der Sitzung wandert in „repos" des Projekts.',
-  'tile.claude.linked': 'Zugeordnet. Der Pfad steht jetzt in „repos".',
-  'tile.claude.linkedTo': 'Sitzung „{name}" zugeordnet',
+  'tile.claude.linkFor': 'Sitzung „{name}“ einem Projekt zuordnen',
+  'tile.claude.linkHint': 'Der Pfad der Sitzung wandert in „repos“ des Projekts.',
+  'tile.claude.linked': 'Zugeordnet. Der Pfad steht jetzt in „repos“.',
+  'tile.claude.linkedTo': 'Sitzung „{name}“ zugeordnet',
   'tile.claude.linkSearch': 'Projekt suchen',
-  'tile.claude.linkNoMatch': 'Kein Projekt passt zu „{query}".',
+  'tile.claude.linkNoMatch': 'Kein Projekt passt zu „{query}“.',
   'tile.claude.openBrowser': 'Alle Agent-Sitzungen öffnen',
 
   'tile.stale.empty': 'Kein Projekt liegt länger als die eingestellte Schwelle brach.',
   'tile.stale.days': 'seit {count} Tagen',
   'tile.active.empty':
-    'Kein laufendes Projekt. Ein Projekt auf „läuft" zu setzen, macht es hier sichtbar.',
-  'tile.project.open': 'Projekt „{title}" öffnen',
+    'Kein laufendes Projekt. Ein Projekt auf „läuft“ zu setzen, macht es hier sichtbar.',
+  'tile.project.open': 'Projekt „{title}“ öffnen',
   'tile.projects.all': 'Zu den Projekten',
 
   'tile.todos.emptyWork': 'Kein offenes Todo im Arbeitsbereich.',
@@ -147,7 +147,7 @@ export const deDashboard = {
   'tile.deadlines.empty': 'Keine Frist in den nächsten {days} Tagen.',
   'tile.deadlines.project': 'Projektfrist',
   'tile.deadlines.todo': 'Todo',
-  'tile.deadlines.snooze': '„{title}" ruhig stellen',
+  'tile.deadlines.snooze': '„{title}“ ruhig stellen',
 
   /* Snoozing means: don't nag until a given day. That's why every choice
      states the day the reminder returns — "for three days" is a calculation
@@ -200,6 +200,6 @@ export const deDashboard = {
   'tile.looseEnds.empty': 'Kein loses Ende. Jede Ankündigung im Tagebuch hat einen Ausgang.',
   'tile.looseEnds.announced': 'Angekündigt am {date}',
   'tile.looseEnds.for': 'für {date}',
-  'tile.looseEnds.snooze': '„{title}" ruhig stellen',
+  'tile.looseEnds.snooze': '„{title}“ ruhig stellen',
   'tile.looseEnds.open': 'Tageseintrag vom {date} öffnen',
 } as const;

@@ -317,7 +317,7 @@ describe('Einstellungen: Aufgaben-Routing', () => {
     await openTab('models');
     await screen.findByRole('table');
 
-    expect(screen.getByText(/„Automatisch zuordnen" schlägt zu jeder Aufgabe/)).toBeTruthy();
+    expect(screen.getByText(/„Automatisch zuordnen“ schlägt zu jeder Aufgabe/)).toBeTruthy();
     expect(screen.getByRole('button', { name: /Automatisch zuordnen/ }).className).toContain(
       'gs-btn--primary',
     );
@@ -554,7 +554,7 @@ describe('Einstellungen: ohne jeden Provider', () => {
     /* Kein Terminal-Befehl mehr — der geführte Weg lebt in der Karte
        „Lokale Laufzeit", auf die hier nur noch verwiesen wird. */
     expect(screen.queryByText('ollama pull llama3.1:8b')).toBeNull();
-    expect(screen.getByRole('button', { name: /Zur Karte „Lokale Laufzeit"/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Zur Karte „Lokale Laufzeit“/ })).toBeTruthy();
     /* Die Tabelle bleibt trotzdem da: sie zeigt, was welche Aufgabe bräuchte. */
     expect(screen.getByRole('table')).toBeTruthy();
   });

@@ -50,6 +50,7 @@ import { DeadlinesTile } from '@renderer/components/tiles/DeadlinesTile';
 import { GardenerTile } from '@renderer/components/tiles/GardenerTile';
 import { InboxTile } from '@renderer/components/tiles/InboxTile';
 import { JournalStreakTile } from '@renderer/components/tiles/JournalStreakTile';
+import { LooseEndsTile } from '@renderer/components/tiles/LooseEndsTile';
 import { QuickCaptureTile } from '@renderer/components/tiles/QuickCaptureTile';
 import { RecentWorkTile } from '@renderer/components/tiles/RecentWorkTile';
 import { StaleProjectsTile } from '@renderer/components/tiles/StaleProjectsTile';
@@ -569,7 +570,7 @@ describe('Dashboard-Gitter', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Menü von Inbox' }));
     await userEvent.click(screen.getByRole('menuitem', { name: 'Ausblenden' }));
 
-    expect(await screen.findByText('„Inbox" ausgeblendet')).toBeTruthy();
+    expect(await screen.findByText('„Inbox“ ausgeblendet')).toBeTruthy();
     expect(screen.getByText(/steht weiter in der Auswahl/)).toBeTruthy();
 
     await userEvent.click(screen.getByRole('button', { name: 'Rückgängig' }));
@@ -1155,6 +1156,79 @@ describe('Warte auf — loses Ende gehört nicht mehr hierher', () => {
     wrap(<WaitingOnTile />);
     await screen.findByText('Stefan');
     expect(screen.queryByText('Notartermin')).toBeNull();
+  });
+});
+
+// ── Lose Enden: Link nur bei bekanntem Tag (Story 026, D4) ─────────────────
+
+describe('Lose Enden — Link nur, wenn der Tag feststeht', () => {
+  const resolvable: Reminder = {
+    id: 'loose-end:resolvable',
+    source: 'loose-end',
+    urgency: 'open',
+    title: 'Notartermin',
+    date: day(-4),
+    daysOut: -4,
+    scope: 'private',
+    path: `journal/${day(-6).slice(0, 4)}/${day(-6).slice(5, 7)}/${day(-6)}.md`,
+    project: null,
+    who: null,
+  };
+
+  /* Kein Tagesdatum im Pfad — in einem echten Vault kommt das bei losen Enden
+     nicht vor (die Quelle liest immer aus einer Tagesdatei), aber der Code muss
+     trotzdem keinen Link auf ein leeres Datum anbieten. */
+  const unresolvable: Reminder = {
+    id: 'loose-end:unresolvable',
+    source: 'loose-end',
+    urgency: 'open',
+    title: 'Ohne Tagesdatum',
+    date: day(-4),
+    daysOut: -4,
+    scope: 'private',
+    path: 'journal/notiz-ohne-datum.md',
+    project: null,
+    who: null,
+  };
+
+  it('bleibt mit bekanntem Tag ein Knopf und springt zum Tageseintrag', async () => {
+    mount({ extra: { 'reminders:list': () => [resolvable] } });
+    wrap(
+      <>
+        <LooseEndsTile />
+        <Location />
+      </>,
+    );
+
+    const opener = await screen.findByText('Notartermin');
+    expect(opener.tagName).toBe('BUTTON');
+
+    await userEvent.click(opener);
+    expect(screen.getByTestId('location').textContent).toBe(`/journal?d=${day(-6)}`);
+  });
+
+  it('zeigt den Titel als Text ohne Knopf und ohne Sprung, wenn der Pfad kein Tagesdatum trägt', async () => {
+    mount({ extra: { 'reminders:list': () => [unresolvable] } });
+    wrap(
+      <>
+        <LooseEndsTile />
+        <Location />
+      </>,
+    );
+
+    const label = await screen.findByText('Ohne Tagesdatum');
+    expect(label.tagName).toBe('SPAN');
+
+    /* Die Zeile behält ihren Knopf für "ruhig stellen" — nur der Titel selbst
+       ist keiner mehr, also bleibt genau einer statt zwei übrig. */
+    const row = label.closest('.sb-line');
+    if (row === null) throw new Error('Zeile ohne Rahmen: Ohne Tagesdatum');
+    expect(within(row as HTMLElement).getAllByRole('button')).toHaveLength(1);
+    expect(within(row as HTMLElement).queryByRole('link')).toBeNull();
+
+    /* Ein Klick auf den Text tut nichts — kein `?d=` mit leerem Wert. */
+    await userEvent.click(label);
+    expect(screen.getByTestId('location').textContent).toBe('/');
   });
 });
 

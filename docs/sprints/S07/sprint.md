@@ -21,7 +21,7 @@ backlog of things every previous sprint had to say "pre-existing, unrelated" abo
 - [x] 023 — The module schema says one thing, not two
 - [x] 025 — A screenshot run never reads my real session data
 - [x] 024 — Filing writes headings in my document language
-- [ ] 026 — German text closes its quotes, and three journal papercuts
+- [x] 026 — German text closes its quotes, and three journal papercuts
 - [ ] 027 — The maintenance run state stops being one big file
 
 ## Notes

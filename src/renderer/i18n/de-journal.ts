@@ -54,13 +54,13 @@ export const deJournal = {
   'journal.file.open': 'Datei im Editor öffnen',
   /* Der manuelle Schalter (009, D3/D6) — unabhängig vom Tagesabschluss weiter
      unten (`journal.close.*`), der Fakten und Todos herauszieht: hier geht es
-     nur um das eine Feld „offen/abgeschlossen", das auch den Listenfilter
+     nur um das eine Feld „offen/abgeschlossen“, das auch den Listenfilter
      speist (009, D5). */
   'journal.finish.markFinished': 'Als abgeschlossen markieren',
   'journal.finish.reopen': 'Wieder öffnen',
   'journal.finish.badge': 'Abgeschlossen am {date}',
 
-  // ── Abschnitt „Tag" ───────────────────────────────────────────────────────
+  // ── Abschnitt „Tag“ ───────────────────────────────────────────────────────
   'journal.day.title': 'Tag',
   'journal.day.placeholder': 'Was ist passiert?',
   'journal.day.write': 'Tagestext schreiben',
@@ -82,8 +82,8 @@ export const deJournal = {
   'journal.day.conflict.overwrite': 'Trotzdem speichern',
 
   // ── Conversation ───────────────────────────────────────────────────────────
-  /* Heißt bewusst nicht mehr „Gespräch" (011, D10): der Stream zeigt meist
-     nur meinen eigenen Text ohne jede Antwort — „Zuhören" fragt nie ein
+  /* Heißt bewusst nicht mehr „Gespräch“ (011, D10): der Stream zeigt meist
+     nur meinen eigenen Text ohne jede Antwort — „Zuhören“ fragt nie ein
      Modell — und eine Überschrift, die Dialog verspricht, wäre dann falsch. */
   'journal.dialogue.title': 'Verlauf',
   'journal.dialogue.empty': 'Was du hier schreibst, steht wörtlich im Tageseintrag — und nur dort.',
@@ -132,7 +132,7 @@ export const deJournal = {
   'journal.legacy.fold.action': 'In den Eintrag übernehmen',
   'journal.legacy.fold.title': 'Gespräch in den Eintrag übernehmen',
   'journal.legacy.fold.body':
-    'Was sich als Gesprächsrunde lesen lässt, wandert der Reihe nach in den Tagestext — deine Worte als Absatz, die Antworten der App als Zitat. Zeilen im alten Abschnitt, die sich keiner Runde zuordnen lassen, gehen dabei verloren. Das Kapitel „Gespräch" verschwindet danach aus der Datei, und es gibt keinen Weg zurück.',
+    'Was sich als Gesprächsrunde lesen lässt, wandert der Reihe nach in den Tagestext — deine Worte als Absatz, die Antworten der App als Zitat. Zeilen im alten Abschnitt, die sich keiner Runde zuordnen lassen, gehen dabei verloren. Das Kapitel „Gespräch“ verschwindet danach aus der Datei, und es gibt keinen Weg zurück.',
   'journal.legacy.fold.confirm': 'Übernehmen',
 
   // ── Fakten und Tagesabschluss ─────────────────────────────────────────────
@@ -160,7 +160,7 @@ export const deJournal = {
   'journal.close.apply': 'Übernehmen',
   'journal.close.discard': 'Verwerfen',
   'journal.close.runAgain': 'Erneut ausführen',
-  'journal.close.dueOf': 'Frist für „{text}"',
+  'journal.close.dueOf': 'Frist für „{text}“',
   'journal.close.done': 'Übernommen in',
   'journal.close.doneMore': 'und {count} weitere',
   'journal.close.doneNothing': 'Nichts ausgewählt — nichts geschrieben.',
@@ -188,9 +188,9 @@ export const deJournal = {
   /* Die eine Zusatzfrage zu einem noch offenen losen Ende (020, D8): eine
      Nachfrage, keine Behauptung — sie zitiert nur den eigenen Satz von
      damals zurück, ohne zu unterstellen, was daraus geworden ist. */
-  'journal.interview.looseEnd.question': 'Wie ist es ausgegangen: „{quote}"?',
+  'journal.interview.looseEnd.question': 'Wie ist es ausgegangen: „{quote}“?',
   // ── Lose Ende am Tag selbst (022, D6) ────────────────────────────────────
-  'journal.looseEnd.quote': '„{quote}"',
+  'journal.looseEnd.quote': '„{quote}“',
   'journal.looseEnd.answerLabel': 'Antwort',
   'journal.looseEnd.answerPlaceholder': 'Was ist daraus geworden?',
   'journal.looseEnd.answerSubmit': 'Eintragen',

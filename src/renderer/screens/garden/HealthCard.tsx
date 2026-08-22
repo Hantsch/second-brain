@@ -28,7 +28,7 @@ import { Button } from '../../atoms/Button';
 import { Card } from '../../atoms/Card';
 import { HealthMeter } from '../../components/HealthMeter';
 import { useLanguage, useT } from '../../i18n';
-import { formatDate, plural } from '../../lib/format';
+import { formatDate, locale, plural } from '../../lib/format';
 import { adviceFor } from './advice';
 import { scopeLabel } from './scope';
 
@@ -45,7 +45,7 @@ function hiddenNote(hidden: readonly GardenerHiddenFinding[], t: ReturnType<type
 function stamp(iso: string, language: 'de' | 'en'): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return iso;
-  const time = new Intl.DateTimeFormat(language === 'de' ? 'de-DE' : 'en-GB', {
+  const time = new Intl.DateTimeFormat(locale(language), {
     hour: '2-digit',
     minute: '2-digit',
   }).format(date);

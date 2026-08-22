@@ -42,3 +42,22 @@
 - 2026-08-22 18:05 · 024 · live smoke (seed + shot) · started
 - 2026-08-22 18:07 · 024 · live smoke (seed + shot + targeted _electron drive of proposal heading + migration card) · done
 - 2026-08-22 18:09 · 024 · Done section filled, ACs ticked, status done, moved to done/ + INDEX.md · done
+- 2026-08-22 18:11 · 026 · D1 rewrite German closers · started
+- 2026-08-22 18:13 · 026 · D1 rewrite German closers · done
+- 2026-08-22 18:13 · 026 · D2 clean en-journal.ts · started
+- 2026-08-22 18:15 · 026 · D2 clean en-journal.ts · done
+- 2026-08-22 18:15 · 026 · D3 write down convention + guard test · started
+- 2026-08-22 18:19 · 026 · D3 write down convention + guard test · done
+- 2026-08-22 18:19 · 026 · D4 LooseEndsTile unresolvable-day branch · started
+- 2026-08-22 18:19 · 026 · D5 journal/health dates use locale() · started
+- 2026-08-22 18:33 · 026 · D4 LooseEndsTile unresolvable-day branch · done
+- 2026-08-22 18:33 · 026 · D5 journal/health dates use locale() · done
+- 2026-08-22 18:33 · 026 · fallout fix: renderer test assertions with stale ASCII quote closer · started
+- 2026-08-22 18:43 · 026 · fallout fix: renderer test assertions with stale ASCII quote closer · done
+- 2026-08-22 18:43 · 026 · verify gate (typecheck/lint/build) · started
+- 2026-08-22 18:52 · 026 · verify gate (typecheck/lint/test/build) green; format:check pre-existing CRLF issue confirmed via scratch-copy diff, changed lines are prettier-clean · done
+- 2026-08-22 18:53 · 026 · code review (clean agent) · started
+- 2026-08-22 19:00 · 026 · code review (clean agent) · done (PASS, no findings)
+- 2026-08-22 19:00 · 026 · live smoke (seed + shot) · started
+- 2026-08-22 19:05 · 026 · live smoke (seed + shot + targeted _electron drive of Lose-Enden tile + Settings-Sprachen quote rendering) · done
+- 2026-08-22 19:12 · 026 · Done section filled, ACs ticked, status done, moved to done/ + INDEX.md · done

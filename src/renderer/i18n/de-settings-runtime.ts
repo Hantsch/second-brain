@@ -41,7 +41,7 @@ export const deSettingsRuntime = {
   'settings.runtime.dialog.done': 'Download abgeschlossen.',
   'settings.runtime.dialog.openInstaller': 'Installer öffnen',
   'settings.runtime.dialog.yourTurn':
-    'Der Installer ist offen — durchklicken, dann hierher zurückkommen und „Erneut prüfen" drücken.',
+    'Der Installer ist offen — durchklicken, dann hierher zurückkommen und „Erneut prüfen“ drücken.',
   'settings.runtime.dialog.openFailed.no-installer-downloaded':
     'Es wurde noch kein Installer heruntergeladen.',
 

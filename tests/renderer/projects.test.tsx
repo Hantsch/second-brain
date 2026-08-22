@@ -549,7 +549,7 @@ describe('Projektliste', () => {
 
     await userEvent.clear(screen.getByLabelText('Projekt suchen'));
     await userEvent.type(screen.getByLabelText('Projekt suchen'), 'zebra');
-    expect(await screen.findByText(/Kein Projekt passt zu „zebra"/)).toBeTruthy();
+    expect(await screen.findByText(/Kein Projekt passt zu „zebra“/)).toBeTruthy();
   });
 
   it('zeigt offene Todos, Frist und Alter in der Zeile', async () => {
@@ -659,7 +659,7 @@ describe('Projektdetail', () => {
         { slug: portal.slug, patch: { status: 'paused' }, expectedHash: 'hash-portal' },
       ]),
     );
-    expect(await screen.findByText('Status steht jetzt auf „Pausiert".')).toBeTruthy();
+    expect(await screen.findByText('Status steht jetzt auf „Pausiert“.')).toBeTruthy();
   });
 
   /* Der Prüfstein: eine Bestätigung darf nie behaupten, was nicht passiert ist. */
@@ -790,7 +790,7 @@ describe('Projektdetail', () => {
     /* Ein Haken im selben Projekt schreibt die Datei — der Screen zieht nach. */
     docHash = 'hash-portal-2';
     await userEvent.click(
-      screen.getByRole('checkbox', { name: '„Testmandant aufsetzen" abhaken' }),
+      screen.getByRole('checkbox', { name: '„Testmandant aufsetzen“ abhaken' }),
     );
     await waitFor(() => expect(callsTo(sb, 'todos:toggle')).toHaveLength(1));
 
@@ -844,7 +844,7 @@ describe('Projektdetail', () => {
 
     expect(await screen.findByText('Warten auf Miriam steht jetzt auf erledigt.')).toBeTruthy();
     /* Die Meldung sagt auch, wo der Eintrag jetzt steht — er ist nicht weg. */
-    expect(screen.getByText(/bleibt mit „resolved: true" in der Projektdatei/)).toBeTruthy();
+    expect(screen.getByText(/bleibt mit „resolved: true“ in der Projektdatei/)).toBeTruthy();
 
     await userEvent.click(screen.getByRole('button', { name: 'Rückgängig' }));
 
@@ -1561,7 +1561,7 @@ describe('Sitzungen-Tab: verbergen und hervorholen', () => {
 
     /* Der Tab sagt, was fehlt — und wo es behoben wird. */
     expect(await screen.findByText('Kein Arbeitsverzeichnis zugeordnet')).toBeTruthy();
-    expect(screen.getByText(/Unter „Alle Sitzungen" ordnest du diesem Projekt/)).toBeTruthy();
+    expect(screen.getByText(/Unter „Alle Sitzungen“ ordnest du diesem Projekt/)).toBeTruthy();
 
     await userEvent.click(screen.getByRole('button', { name: 'Verzeichnis zuordnen' }));
     expect(screen.getByTestId('location').textContent).toBe('/projects/sessions');
@@ -1647,7 +1647,7 @@ describe('Todos im Projekt', () => {
     await detailReady();
 
     await userEvent.click(
-      await screen.findByRole('checkbox', { name: '„Testmandant aufsetzen" abhaken' }),
+      await screen.findByRole('checkbox', { name: '„Testmandant aufsetzen“ abhaken' }),
     );
 
     await waitFor(() => expect(callsTo(sb, 'todos:toggle')).toEqual([{ id: someday.id }]));
@@ -1957,7 +1957,7 @@ describe('Alle Todos', () => {
     await openTab({ todos: [] });
 
     expect(await screen.findByText('Kein Todo im Vault')).toBeTruthy();
-    expect(screen.getByText(/@wait:Name für „warte auf"/)).toBeTruthy();
+    expect(screen.getByText(/@wait:Name für „warte auf“/)).toBeTruthy();
   });
 });
 
@@ -2004,7 +2004,7 @@ describe('Tastatur', () => {
     const { sb } = mount({ extra: { 'todos:toggle': () => ({ ...someday, state: 'done' }) } });
     await detailReady();
 
-    const box = await screen.findByRole('checkbox', { name: '„Testmandant aufsetzen" abhaken' });
+    const box = await screen.findByRole('checkbox', { name: '„Testmandant aufsetzen“ abhaken' });
     box.focus();
     await userEvent.keyboard('x');
 

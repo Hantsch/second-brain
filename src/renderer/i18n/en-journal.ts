@@ -49,7 +49,7 @@ export const enJournal = {
   'journal.finish.reopen': 'Reopen',
   'journal.finish.badge': 'Closed on {date}',
 
-  // ── Section „Day" ─────────────────────────────────────────────────────────
+  // ── Section "Day" ─────────────────────────────────────────────────────────
   'journal.day.title': 'Day',
   'journal.day.placeholder': 'What happened?',
   'journal.day.write': 'Write the day',
@@ -150,7 +150,7 @@ export const enJournal = {
   'journal.close.apply': 'Apply',
   'journal.close.discard': 'Discard',
   'journal.close.runAgain': 'Run again',
-  'journal.close.dueOf': 'Due date for „{text}"',
+  'journal.close.dueOf': 'Due date for “{text}”',
   'journal.close.done': 'Applied to',
   'journal.close.doneMore': 'and {count} more',
   'journal.close.doneNothing': 'Nothing selected — nothing written.',

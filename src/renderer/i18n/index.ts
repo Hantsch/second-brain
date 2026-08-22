@@ -1,6 +1,8 @@
 /* Translation. No German string is hardcoded in the renderer — everything
    goes through `t()`. The language comes from the settings (`languages.ui`);
-   without a vault, the app language applies. */
+   without a vault, the app language applies. Quote convention: German values
+   use „…“ (U+201E opener, U+201C closer), never a straight `"` closer; English
+   values never contain U+201E. */
 
 import { useSyncExternalStore } from 'react';
 import type { UiLanguage } from '@shared/types';

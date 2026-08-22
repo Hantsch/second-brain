@@ -58,7 +58,7 @@ const own = {
     'Drei Einstellungen, die nichts miteinander zu tun haben müssen: die Oberfläche darf deutsch sein, während die Notizen englisch entstehen.',
   'settings.lang.ui.label': 'Oberfläche',
   'settings.lang.ui.hint': 'Sprache der Knöpfe, Titel und Meldungen. Wirkt sofort, ohne Neustart.',
-  'settings.lang.ui.example': 'Beispiel: der Bereich heißt „Erfassen" statt „Capture".',
+  'settings.lang.ui.example': 'Beispiel: der Bereich heißt „Erfassen“ statt „Capture“.',
   'settings.lang.documents.label': 'Dokumentsprache',
   'settings.lang.documents.hint':
     'In dieser Sprache schreibt das Modell Notizen, Wiki-Seiten und Zusammenfassungen in den Vault.',
@@ -143,7 +143,7 @@ const own = {
     'Findet verwaiste Seiten, kaputte Links und liegengebliebene Dumps.',
   'settings.behavior.review.label': 'Eine Seite gilt als angestaubt nach',
   'settings.behavior.review.hint':
-    'Tage seit dem letzten „reviewed" im Frontmatter. Die Prüfung nennt die Seite dann, sie ändert sie nicht.',
+    'Tage seit dem letzten „reviewed“ im Frontmatter. Die Prüfung nennt die Seite dann, sie ändert sie nicht.',
   'settings.behavior.gardenerLlm.label': 'Befunde von einem Modell deuten lassen',
   'settings.behavior.gardenerLlm.hint':
     'Zusätzlich zu den Prüfungen: Widersprüche zwischen Seiten, Beinahe-Dubletten, Begriffe ohne Seite. Ohne Route bleibt die Prüfung deterministisch und kostet nichts.',

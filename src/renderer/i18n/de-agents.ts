@@ -59,9 +59,9 @@ export const deAgents = {
 
   // Ein Arbeitsverzeichnis einem Vault-Projekt zuordnen (AC8).
   'agents.link.action': 'Vault-Projekt zuordnen',
-  'agents.link.for': 'Projekt „{name}" einem Vault-Projekt zuordnen',
-  'agents.link.done': 'Arbeitsverzeichnis dem Projekt „{name}" zugeordnet',
-  'agents.link.hint': 'Das Arbeitsverzeichnis steht jetzt in „repos" des Projekts.',
+  'agents.link.for': 'Projekt „{name}“ einem Vault-Projekt zuordnen',
+  'agents.link.done': 'Arbeitsverzeichnis dem Projekt „{name}“ zugeordnet',
+  'agents.link.hint': 'Das Arbeitsverzeichnis steht jetzt in „repos“ des Projekts.',
   'agents.link.failed': 'Die Zuordnung konnte nicht geschrieben werden.',
 
   'agents.sessions.empty': 'Für dieses Projekt sind (noch) keine Sitzungen erfasst.',

@@ -9,13 +9,13 @@ export const deJournalCalendar = {
   'journal.calendar.today': 'Heute',
   'journal.calendar.expand': 'Kalender ausklappen',
   'journal.calendar.collapse': 'Kalender einklappen',
-  /* Bewusst nicht „Eintrag vom {date} öffnen" — das ist wortgleich mit
+  /* Bewusst nicht „Eintrag vom {date} öffnen“ — das ist wortgleich mit
      `journal.open` (die Zeile der Tagesliste) für denselben Tag, und seit
      010/D2 stehen beide Bedienelemente auf demselben Bildschirm: zwei
      Elemente mit demselben barrierefreien Namen wären für Screenreader wie
      für `getByRole` nicht mehr unterscheidbar. */
   'journal.calendar.open': 'Kalendertag {date} öffnen',
-  /* Der Grund, warum der Tag nicht klickbar ist — nicht nur „deaktiviert". */
+  /* Der Grund, warum der Tag nicht klickbar ist — nicht nur „deaktiviert“. */
   'journal.calendar.future': 'Liegt in der Zukunft, noch kein Eintrag',
   'journal.calendar.hasEntry': 'Hat einen Eintrag',
   /* 010/D3: der sichtbare Hinweis auf die Tasten des Gitters — die

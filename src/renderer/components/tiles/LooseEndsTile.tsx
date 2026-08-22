@@ -69,19 +69,21 @@ export function LooseEndsTile() {
           const day = announcedDay(reminder.path);
           return (
             <li key={reminder.id} className="sb-line">
-              <button
-                type="button"
-                className="sb-line-open"
-                title={reminder.title}
-                aria-label={
-                  day === null
-                    ? reminder.title
-                    : t('tile.looseEnds.open', { date: formatDate(day, language) })
-                }
-                onClick={() => void navigate(`/journal?d=${day ?? ''}`)}
-              >
-                {reminder.title}
-              </button>
+              {day === null ? (
+                <span className="sb-line-name" title={reminder.title}>
+                  {reminder.title}
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  className="sb-line-open"
+                  title={reminder.title}
+                  aria-label={t('tile.looseEnds.open', { date: formatDate(day, language) })}
+                  onClick={() => void navigate(`/journal?d=${day}`)}
+                >
+                  {reminder.title}
+                </button>
+              )}
               <span className="sb-line-detail">
                 {day === null
                   ? t('reminder.urgency.open')

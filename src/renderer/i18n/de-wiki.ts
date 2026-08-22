@@ -57,7 +57,7 @@ export const deWiki = {
   'pages.filter': 'Kategorie',
   'pages.count': '{count} Seiten',
   'pages.countOne': 'eine Seite',
-  'pages.noMatch': 'Keine Seite passt zu „{query}".',
+  'pages.noMatch': 'Keine Seite passt zu „{query}“.',
   'pages.empty': 'Dieses Modul hat noch keine Seite. Nimm eine Quelle auf, dann entstehen sie.',
   'pages.words': '{count} Wörter',
   'pages.choose': 'Wähle links eine Seite.',
@@ -119,7 +119,7 @@ export const deWiki = {
   'log.findings': 'Befunde',
 
   'modules.sourcesTab.empty':
-    'Für dieses Modul ist noch keine Rohquelle verdichtet. Quellen kommen über den Screen „Quellen" herein.',
+    'Für dieses Modul ist noch keine Rohquelle verdichtet. Quellen kommen über den Screen „Quellen“ herein.',
   'modules.sourcesTab.ingest': 'Quelle in dieses Modul aufnehmen',
 
   // ── Quellen: Eingang ──────────────────────────────────────────────────────
@@ -141,14 +141,14 @@ export const deWiki = {
   'sources.drop.title': 'Datei hier fallen lassen',
   'sources.drop.body': 'Text und Markdown werden übernommen.',
   'sources.drop.unsupported':
-    'Diese Dateiart lässt sich nicht hineinziehen: {names}. Über „Dateien wählen" wandert das Original unverändert nach raw/.',
+    'Diese Dateiart lässt sich nicht hineinziehen: {names}. Über „Dateien wählen“ wandert das Original unverändert nach raw/.',
   'sources.drop.unreadable': 'Diese Datei ließ sich nicht lesen: {names}',
 
   'sources.ytdlp.present': 'yt-dlp vorhanden',
   'sources.ytdlp.missing': 'yt-dlp fehlt',
   'sources.ytdlp.checking': 'yt-dlp wird geprüft',
   'sources.ytdlp.what':
-    'Ohne yt-dlp bleibt der Ersatzweg: Untertitel ja, Kapitelmarken und manuelle Spuren nein. „Automatisch holen" legt das eigenständige Binary in den Anwendungsordner — kein Python, keine Installation im System.',
+    'Ohne yt-dlp bleibt der Ersatzweg: Untertitel ja, Kapitelmarken und manuelle Spuren nein. „Automatisch holen“ legt das eigenständige Binary in den Anwendungsordner — kein Python, keine Installation im System.',
   'sources.ytdlp.install': 'Automatisch holen',
   'sources.ytdlp.installing': 'Wird geholt',
 
@@ -176,11 +176,11 @@ export const deWiki = {
   'sources.job.noModule': 'ohne Modul',
   'sources.awaiting.title': 'Quelle liegt im Vault, die Verdichtung braucht ein Modell',
   'sources.awaiting.body':
-    'Die Rohquelle ist unverändert gespeichert. Sobald ein Modell für „Quelle verdichten" eingerichtet ist, entstehen daraus Wiki-Seiten.',
+    'Die Rohquelle ist unverändert gespeichert. Sobald ein Modell für „Quelle verdichten“ eingerichtet ist, entstehen daraus Wiki-Seiten.',
   'sources.awaiting.model': 'Modell einrichten',
   'sources.unfiled.title': 'Quelle liegt im Vault, noch keinem Modul zugeordnet',
   'sources.unfiled.body':
-    'So gewollt bei „später einordnen": die Rohquelle steht, verdichtet wird sie später — die Prüfung meldet sie als unverdichtet.',
+    'So gewollt bei „später einordnen“: die Rohquelle steht, verdichtet wird sie später — die Prüfung meldet sie als unverdichtet.',
   'sources.duplicate':
     'Diese Quelle liegt bereits unter {path}. Es wurde nichts doppelt importiert.',
   'sources.duplicate.title': 'Quelle bereits im Vault',

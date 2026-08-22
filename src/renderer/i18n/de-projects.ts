@@ -21,13 +21,13 @@ export const deProjects = {
   'projects.sort.priority': 'Priorität',
   'projects.sort.name': 'Name',
   'projects.search': 'Projekt suchen',
-  'projects.searchEmpty': 'Kein Projekt passt zu „{query}".',
+  'projects.searchEmpty': 'Kein Projekt passt zu „{query}“.',
   'projects.filterEmpty': 'Kein Projekt passt zu diesem Filter.',
   'projects.stalled.title': 'Lange nicht angefasst — {count}',
   'projects.list.aria': 'Projekte',
-  'projects.open': 'Projekt „{title}" öffnen',
-  'projects.favorite.add': '„{title}" mit Stern markieren',
-  'projects.favorite.remove': 'Stern von „{title}" entfernen',
+  'projects.open': 'Projekt „{title}“ öffnen',
+  'projects.favorite.add': '„{title}“ mit Stern markieren',
+  'projects.favorite.remove': 'Stern von „{title}“ entfernen',
   'projects.lastWorkedOn': 'Zuletzt bearbeitet',
   'projects.waitingMark': 'wartet',
   'projects.openTodos': '{count} offen',
@@ -54,7 +54,7 @@ export const deProjects = {
   'project.priority': 'Priorität {value}',
   'project.deadlineNone': 'Keine Frist',
   'project.statusLabel': 'Status',
-  'project.statusSaved': 'Status steht jetzt auf „{status}".',
+  'project.statusSaved': 'Status steht jetzt auf „{status}“.',
   'project.openFile': 'Projektdatei öffnen',
 
   // ── Herkunft ─────────────────────────────────────────────────────────────
@@ -69,7 +69,7 @@ export const deProjects = {
   'project.nextStep.hint': 'Enter speichert, Esc bricht ab',
   'project.nextStep.saved': 'Gespeichert.',
   'project.nextStep.external':
-    'Der nächste Schritt wurde außerhalb geändert: „{value}". Speichern überschreibt das.',
+    'Der nächste Schritt wurde außerhalb geändert: „{value}“. Speichern überschreibt das.',
   'project.nextStep.externalEmpty':
     'Der nächste Schritt wurde außerhalb entfernt. Speichern trägt deine Fassung ein.',
   'project.nextStep.take': 'Fremde Fassung übernehmen',
@@ -98,7 +98,7 @@ export const deProjects = {
   'project.waiting.resolveAria': 'Warten auf {who} als erledigt markieren',
   'project.waiting.resolved': 'Warten auf {who} steht jetzt auf erledigt.',
   'project.waiting.resolvedWhere':
-    'Der Eintrag bleibt mit „resolved: true" in der Projektdatei stehen, nur die Liste zeigt ihn nicht mehr.',
+    'Der Eintrag bleibt mit „resolved: true“ in der Projektdatei stehen, nur die Liste zeigt ihn nicht mehr.',
   'project.waiting.added': 'Warten auf {who} eingetragen.',
   'project.waiting.new.action': 'Warten auf hinzufügen',
   'project.waiting.new.who': 'Auf wen wird gewartet',
@@ -112,11 +112,11 @@ export const deProjects = {
 
   'project.todos.title': 'Todos',
   'project.todos.empty':
-    'Keine Checkbox in dieser Datei. Im Text gelten @due:2026-08-20 für die Frist, @wait:Name für „warte auf" und !! für die Priorität — auch in Obsidian getippt.',
+    'Keine Checkbox in dieser Datei. Im Text gelten @due:2026-08-20 für die Frist, @wait:Name für „warte auf“ und !! für die Priorität — auch in Obsidian getippt.',
 
   'project.state.title': 'Stand',
   'project.state.empty':
-    'Kein Stand notiert. Der erste Absatz unter „## Stand" ist der Wiedereinstieg nach einer Pause.',
+    'Kein Stand notiert. Der erste Absatz unter „## Stand“ ist der Wiedereinstieg nach einer Pause.',
   'project.notes.title': 'Notizen',
   'project.notes.empty': 'Noch keine eingeordneten Dumps.',
   'project.notes.added': 'Notiz eingetragen.',
@@ -142,7 +142,7 @@ export const deProjects = {
   'project.sessions.notFound.title': 'Sitzung nicht gefunden',
   'project.sessions.unlinked.title': 'Kein Arbeitsverzeichnis zugeordnet',
   'project.sessions.unlinked.where':
-    'Unter „Alle Sitzungen" ordnest du diesem Projekt ein Arbeitsverzeichnis zu.',
+    'Unter „Alle Sitzungen“ ordnest du diesem Projekt ein Arbeitsverzeichnis zu.',
   'project.sessions.unlinked.action': 'Verzeichnis zuordnen',
 
   // ── Todos ────────────────────────────────────────────────────────────────
@@ -157,12 +157,12 @@ export const deProjects = {
   'todos.showDone': 'Erledigte zeigen',
   'todos.empty.title': 'Kein Todo im Vault',
   'todos.empty.body':
-    'Ein Todo ist eine Checkbox in einer beliebigen Datei. Im Text gelten @due:2026-08-20 für die Frist, @wait:Name für „warte auf" und !! für die Priorität — du kannst sie auch in Obsidian tippen.',
+    'Ein Todo ist eine Checkbox in einer beliebigen Datei. Im Text gelten @due:2026-08-20 für die Frist, @wait:Name für „warte auf“ und !! für die Priorität — du kannst sie auch in Obsidian tippen.',
   'todos.scopeEmpty': 'Hier ist nichts offen.',
 
-  'todo.toggle': '„{text}" abhaken',
-  'todo.untoggle': 'Häkchen bei „{text}" entfernen',
-  'todo.dueEdit': 'Frist von „{text}" ändern',
+  'todo.toggle': '„{text}“ abhaken',
+  'todo.untoggle': 'Häkchen bei „{text}“ entfernen',
+  'todo.dueEdit': 'Frist von „{text}“ ändern',
   'todo.waitingFor': 'wartet auf {who}',
   'todo.neededBy': 'Antwort bis {date}',
   'todo.priorityMark': 'Priorität {value}',

@@ -60,7 +60,9 @@ enough; vector search only arrives once a concrete requirement needs it.
    (`journal-chat`, `classify-dump`) recommend local models.
 7. **Two languages, separately configurable.** UI language and document language are
    independent (`languages.ui`, `languages.documents`). No German string hardcoded
-   in the renderer — everything goes through `t()` from `src/renderer/i18n/`.
+   in the renderer — everything goes through `t()` from `src/renderer/i18n/`. German
+   strings use the low-high quote pair `„…“` (U+201E opener, U+201C closer), never a
+   straight `"` closer; English strings never contain U+201E.
 
 ## Directories
 

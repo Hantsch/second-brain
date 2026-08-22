@@ -1232,7 +1232,7 @@ describe('Wege aus einem Befund', () => {
       within(card).getByRole('button', { name: 'Habe ich in den Dateien erledigt' }),
     ).toBeTruthy();
     expect(
-      within(card).getByRole('button', { name: `Nicht jetzt: „${BROKEN.title}"` }),
+      within(card).getByRole('button', { name: `Nicht jetzt: „${BROKEN.title}“` }),
     ).toBeTruthy();
     expect(within(card).getByRole('button', { name: 'Im Editor öffnen' })).toBeTruthy();
     /* „Ist kein Problem" ist einer von vier Wegen, nicht der einzige. */
@@ -1309,7 +1309,7 @@ describe('Wege aus einem Befund', () => {
 
     await userEvent.click(
       within(cardOf(BROKEN.title)).getByRole('button', {
-        name: `Nicht jetzt: „${BROKEN.title}"`,
+        name: `Nicht jetzt: „${BROKEN.title}“`,
       }),
     );
     const panel = screen.getByRole('group', { name: 'Wieder erinnern' });
@@ -1439,7 +1439,7 @@ describe('Der ganze Screen ohne Modell', () => {
       within(card).getByRole('button', { name: 'Habe ich in den Dateien erledigt' }),
     ).toBeTruthy();
     expect(
-      within(card).getByRole('button', { name: `Nicht jetzt: „${BROKEN.title}"` }),
+      within(card).getByRole('button', { name: `Nicht jetzt: „${BROKEN.title}“` }),
     ).toBeTruthy();
     expect(within(card).getByRole('button', { name: 'Ist kein Problem' })).toBeTruthy();
     expect(within(card).getByRole('button', { name: 'Im Editor öffnen' })).toBeTruthy();
@@ -1731,10 +1731,10 @@ describe('Widerspruch', () => {
     /* Beide Seiten mit ihrer Stelle: die benannte und der Ausschnitt. Erst wenn
        beide gelesen sind, steht der „überholt"-Weg da — darauf wartet das. */
     expect(
-      await screen.findByRole('button', { name: /^„Token-Lebensdauer" überholt/ }),
+      await screen.findByRole('button', { name: /^„Token-Lebensdauer“ überholt/ }),
     ).toBeTruthy();
     expect(screen.getByText('- [[scim]] nennt eine Stunde.')).toBeTruthy();
-    expect(screen.getByText('Abschnitt „Widersprüche" dieser Seite')).toBeTruthy();
+    expect(screen.getByText('Abschnitt „Widersprüche“ dieser Seite')).toBeTruthy();
     expect(
       screen.getByText('Anfang der Seite — die Stelle ist in der Datei nicht benannt'),
     ).toBeTruthy();
@@ -1748,7 +1748,7 @@ describe('Widerspruch', () => {
     ).toBeTruthy();
     /* Weg 2: die ältere als überholt markieren, mit der Frontmatter-Zeile. */
     const supersede = screen.getByRole('button', {
-      name: '„Token-Lebensdauer" überholt „SCIM"',
+      name: '„Token-Lebensdauer“ überholt „SCIM“',
     });
     expect(screen.getByText('+ supersedes: [scim]')).toBeTruthy();
     /* Weg 3: ist kein Problem. */
@@ -1786,7 +1786,7 @@ describe('Widerspruch', () => {
 
     /* Erst wenn beide Seiten geladen sind, kennt die Karte Alter und Hash. */
     await userEvent.click(
-      await screen.findByRole('button', { name: '„Token-Lebensdauer" überholt „SCIM"' }),
+      await screen.findByRole('button', { name: '„Token-Lebensdauer“ überholt „SCIM“' }),
     );
 
     expect(await screen.findByText(/zwischenzeitlich geändert/)).toBeTruthy();
@@ -1826,7 +1826,7 @@ describe('Beinahe-Dublette', () => {
     /* Der Dateiname steht auf dem Knopf — nie „diese Seite verwerfen", sonst
        wüsste man bei zwei Seiten auf einer Karte nicht, welche gemeint ist. */
     const discardButtonA = await screen.findByRole('button', {
-      name: `„${NDUP_A_FILE}" verwerfen`,
+      name: `„${NDUP_A_FILE}“ verwerfen`,
     });
     await userEvent.click(discardButtonA);
 
@@ -1842,7 +1842,7 @@ describe('Beinahe-Dublette', () => {
       { path: NDUP_A, expectedHash: `hash-${NDUP_A}` },
     ]);
     /* Nie „geschrieben" für eine Seite, die im Papierkorb liegt. */
-    expect(await screen.findByText(`„${NDUP_A}" liegt jetzt im Papierkorb.`)).toBeTruthy();
+    expect(await screen.findByText(`„${NDUP_A}“ liegt jetzt im Papierkorb.`)).toBeTruthy();
 
     await userEvent.click(screen.getByRole('button', { name: 'Rückgängig' }));
     expect(calls('gardener:undoFix')).toEqual([{ undoToken: 'undo-ndup-1' }]);
@@ -1874,7 +1874,7 @@ describe('Beinahe-Dublette', () => {
     wrap(<GardenScreen />);
 
     await userEvent.click(
-      await screen.findByRole('button', { name: `„${NDUP_A_FILE}" verwerfen` }),
+      await screen.findByRole('button', { name: `„${NDUP_A_FILE}“ verwerfen` }),
     );
     await screen.findByText('Keine andere Seite verlinkt darauf.');
     await userEvent.click(screen.getByRole('button', { name: 'Verwerfen' }));
@@ -1883,7 +1883,7 @@ describe('Beinahe-Dublette', () => {
        verschluckt und nicht als stiller Fehlschlag. */
     expect(
       await screen.findByText(
-        `„${NDUP_A_FILE}" wurde zwischenzeitlich geändert. Nichts wurde überschrieben.`,
+        `„${NDUP_A_FILE}“ wurde zwischenzeitlich geändert. Nichts wurde überschrieben.`,
       ),
     ).toBeTruthy();
     /* Der Dialog bleibt offen: nichts wurde verwerfen, der Nutzer entscheidet neu. */
@@ -1915,7 +1915,7 @@ describe('Beinahe-Dublette', () => {
     /* Der Radio-Knopf steht von Anfang an da, aber gesperrt, solange die Seite
        noch lädt — erst wenn beide Seiten geladen sind, darf man wählen. */
     const radioA = (await screen.findByRole('radio', {
-      name: `„${NDUP_A_FILE}" ist die neuere Seite`,
+      name: `„${NDUP_A_FILE}“ ist die neuere Seite`,
     })) as HTMLInputElement;
     await waitFor(() => expect(radioA.disabled).toBe(false));
     await userEvent.click(radioA);
@@ -1959,7 +1959,7 @@ describe('Beinahe-Dublette', () => {
     await screen.findByText(NDUP.title);
 
     const radioA = (await screen.findByRole('radio', {
-      name: `„${NDUP_A_FILE}" ist die neuere Seite`,
+      name: `„${NDUP_A_FILE}“ ist die neuere Seite`,
     })) as HTMLInputElement;
     await waitFor(() => expect(radioA.disabled).toBe(false));
     await userEvent.click(radioA);
@@ -2000,7 +2000,7 @@ describe('Beinahe-Dublette', () => {
 
     /* Die noch lesbare Seite darf gewählt werden — die fehlende ist gesperrt. */
     const radioB = (await screen.findByRole('radio', {
-      name: `„${NDUP_B_FILE}" ist die neuere Seite`,
+      name: `„${NDUP_B_FILE}“ ist die neuere Seite`,
     })) as HTMLInputElement;
     await waitFor(() => expect(radioB.disabled).toBe(false));
     await userEvent.click(radioB);
@@ -2026,7 +2026,7 @@ describe('Verwaiste Seite: Ziel wählen', () => {
     await screen.findByText(ORPHAN.title);
     expect(
       await screen.findByRole('button', {
-        name: `Von der Übersicht des Moduls „${MODULE}" aus verlinken`,
+        name: `Von der Übersicht des Moduls „${MODULE}“ aus verlinken`,
       }),
     ).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Andere Seite wählen' })).toBeTruthy();
@@ -2045,7 +2045,7 @@ describe('Verwaiste Seite: Ziel wählen', () => {
 
     await userEvent.click(
       await screen.findByRole('button', {
-        name: `Von der Übersicht des Moduls „${MODULE}" aus verlinken`,
+        name: `Von der Übersicht des Moduls „${MODULE}“ aus verlinken`,
       }),
     );
 
@@ -2055,7 +2055,7 @@ describe('Verwaiste Seite: Ziel wählen', () => {
     expect(calls('gardener:linkOrphan')).toEqual([]);
 
     await userEvent.click(
-      screen.getByRole('button', { name: 'Verweis in „overview.md" eintragen' }),
+      screen.getByRole('button', { name: 'Verweis in „overview.md“ eintragen' }),
     );
 
     expect(calls('gardener:linkOrphan')).toEqual([{ findingId: ORPHAN.id, target: OVERVIEW_PATH }]);
@@ -2083,7 +2083,7 @@ describe('Verwaiste Seite: Ziel wählen', () => {
 
     await userEvent.clear(search);
     await userEvent.type(search, 'nichts passendes');
-    expect(await screen.findByText('Keine Seite passt zu „nichts passendes".')).toBeTruthy();
+    expect(await screen.findByText('Keine Seite passt zu „nichts passendes“.')).toBeTruthy();
   });
 
   it('sagt ehrlich, dass es in diesem Modul nichts zu verlinken gibt, statt eine leere Auswahl zu zeigen', async () => {
@@ -2101,7 +2101,7 @@ describe('Verwaiste Seite: Ziel wählen', () => {
        — nicht die einzige Handlung: das Verwerfen (016 D6) bleibt eine echte
        Alternative, kein bloßer Wegwisch-Knopf. */
     expect(screen.getByRole('button', { name: 'Ist kein Problem' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: `„${ORPHAN_FILE}" verwerfen` })).toBeTruthy();
+    expect(screen.getByRole('button', { name: `„${ORPHAN_FILE}“ verwerfen` })).toBeTruthy();
   });
 
   it('lässt den Einzelkandidaten-Befund unverändert: gewöhnliche Karte, ein Klick, keine Auswahl', async () => {
@@ -2147,7 +2147,7 @@ describe('Verwaiste Seite: Ziel wählen', () => {
 
     await screen.findByText(ORPHAN.title);
     const discardButton = await screen.findByRole('button', {
-      name: `„${ORPHAN_FILE}" verwerfen`,
+      name: `„${ORPHAN_FILE}“ verwerfen`,
     });
     await userEvent.click(discardButton);
 
@@ -2163,7 +2163,7 @@ describe('Verwaiste Seite: Ziel wählen', () => {
     expect(calls('gardener:discardPage')).toEqual([
       { path: ORPHAN_PAGE, expectedHash: `hash-${ORPHAN_PAGE}` },
     ]);
-    expect(await screen.findByText(`„${ORPHAN_PAGE}" liegt jetzt im Papierkorb.`)).toBeTruthy();
+    expect(await screen.findByText(`„${ORPHAN_PAGE}“ liegt jetzt im Papierkorb.`)).toBeTruthy();
 
     await userEvent.click(screen.getByRole('button', { name: 'Rückgängig' }));
     expect(calls('gardener:undoFix')).toEqual([{ undoToken: 'undo-orphan-discard-1' }]);
@@ -2201,7 +2201,7 @@ describe('Verwaiste Seite: Ziel wählen', () => {
     wrap(<GardenScreen />);
 
     await userEvent.click(
-      await screen.findByRole('button', { name: `„${ORPHAN_FILE}" verwerfen` }),
+      await screen.findByRole('button', { name: `„${ORPHAN_FILE}“ verwerfen` }),
     );
 
     /* Ohne `keep` gibt es nichts, worauf die Karte umbiegen könnte — die Karte
@@ -2266,7 +2266,7 @@ describe('Loses Ende', () => {
     expect(screen.queryByText('Keine losen Enden.')).toBeNull();
 
     const card = looseEndCard(LOOSE_END.title);
-    expect(within(card).getByText(`„${LOOSE_END_QUOTE}"`)).toBeTruthy();
+    expect(within(card).getByText(`„${LOOSE_END_QUOTE}“`)).toBeTruthy();
     expect(
       within(card).getByText(
         `Angekündigt am ${formatDate(LOOSE_END_DAY, 'de')}. Seitdem nichts dazu.`,
@@ -2275,7 +2275,7 @@ describe('Loses Ende', () => {
     expect(within(card).getByText('Von der eingebauten Prüfung gefunden.')).toBeTruthy();
     /* Der Pfad ist der generischen `FindingCard` überlassen — keine zweite,
        eigens gebaute Pfadfläche daneben. */
-    expect(within(card).getByRole('button', { name: `„${LOOSE_END_PATH}" öffnen` })).toBeTruthy();
+    expect(within(card).getByRole('button', { name: `„${LOOSE_END_PATH}“ öffnen` })).toBeTruthy();
   });
 
   it('nennt statt der Heuristik das Modell, wenn das Modell es gefunden hat', async () => {
@@ -2438,7 +2438,7 @@ describe('Ruhig stellen', () => {
     await screen.findByText(REMINDER.title);
 
     await userEvent.click(
-      screen.getByRole('button', { name: `„${REMINDER.title}" ruhig stellen` }),
+      screen.getByRole('button', { name: `„${REMINDER.title}“ ruhig stellen` }),
     );
     const panel = screen.getByRole('group', { name: 'Wieder erinnern' });
     expect(within(panel).getAllByRole('button')).toHaveLength(4);
@@ -2453,7 +2453,7 @@ describe('Ruhig stellen', () => {
     wrap(<DeadlinesTile />);
     await screen.findByText(REMINDER.title);
     await userEvent.click(
-      screen.getByRole('button', { name: `„${REMINDER.title}" ruhig stellen` }),
+      screen.getByRole('button', { name: `„${REMINDER.title}“ ruhig stellen` }),
     );
 
     const now = new Date();
@@ -2477,7 +2477,7 @@ describe('Ruhig stellen', () => {
     wrap(<DeadlinesTile />);
     await screen.findByText(REMINDER.title);
     await userEvent.click(
-      screen.getByRole('button', { name: `„${REMINDER.title}" ruhig stellen` }),
+      screen.getByRole('button', { name: `„${REMINDER.title}“ ruhig stellen` }),
     );
 
     await userEvent.click(screen.getByRole('button', { name: 'Ruhig stellen' }));
@@ -2514,7 +2514,7 @@ describe('Bedienbarkeit', () => {
     const tile = wrap(<DeadlinesTile />);
     await screen.findByText(REMINDER.title);
     await userEvent.click(
-      screen.getByRole('button', { name: `„${REMINDER.title}" ruhig stellen` }),
+      screen.getByRole('button', { name: `„${REMINDER.title}“ ruhig stellen` }),
     );
     await expectNoViolations(tile.container);
   });
