@@ -1,7 +1,7 @@
 ---
 id: 021
 title: A maintenance run I can see, stop and continue
-status: draft # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-08-22
 ---
 
@@ -143,3 +143,16 @@ See the child stories.
 See the child stories.
 
 ## Done
+
+All eleven acceptance criteria delivered across the three child stories:
+
+- [[021a-a-run-i-can-see]] — progress visible from any screen, mid-run mount, weighted bar,
+  autorun visibility (AC 1–5, 11).
+- [[021b-stop-and-continue]] — stopping keeps findings, continuing resumes at stage
+  granularity, frozen health score (AC 6–8).
+- [[021c-check-only-a-part]] — scoped runs by kind/module, merged over the previous run's
+  findings (AC 9).
+
+AC 10 (works without a model) held throughout, verified per child story. This container file
+was not built directly; see the child stories for deliverables, review findings and
+verification.

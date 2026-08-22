@@ -1,7 +1,7 @@
 ---
 id: 021b
 title: Stopping keeps what was found, and I can continue
-status: in-progress # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-08-22
 ---
 
@@ -274,9 +274,5 @@ untouched by this story) due to CRLF/LF churn from the Windows checkout — conf
 on a clean `dev` tree via `git stash`, not introduced here. Review verdict after the fix cycle:
 the 3 confirmed findings are resolved; no weakened tests, no scope creep.
 
-**Open:** `live-smoke-required: true` and this story has a visible UI surface (maintenance
-screen, dashboard tile), so per the project profile a green build/test is not enough — the real
-stop → continue flow needs to be driven through the running app (`npm run seed && npm run shot`,
-or by hand) before this can be marked `done`. This session cannot drive the live Electron app, so
-status stays `in-progress`; the "Test Plan (manual acceptance)" section above has the exact
-steps. Handing over for that manual acceptance.
+**Manual acceptance:** confirmed by the user against the "Test Plan (manual acceptance)" steps
+above.
