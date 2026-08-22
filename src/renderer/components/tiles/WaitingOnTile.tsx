@@ -29,6 +29,15 @@ import { TileFrame } from '../TileFrame';
 
 const LIMIT = 4;
 
+/** `journal/2026/08/2026-08-10.md` → `2026-08-10` — the announcing day, the
+    one day of the pair that actually has a file to open. */
+const DAY_IN_LEAF = /^(\d{4}-\d{2}-\d{2})\.md$/;
+
+function announcingDayOf(reminder: Reminder): string | null {
+  const leaf = reminder.path.split('/').pop() ?? '';
+  return DAY_IN_LEAF.exec(leaf)?.[1] ?? null;
+}
+
 /**
  * Die Erinnerung hinter einem Warte-auf, wenn es eine gibt. Verglichen werden
  * Projekt, Person und der Gegenstand; den Titel setzt der Kern als
@@ -70,18 +79,66 @@ export function WaitingOnTile() {
   });
   const rows = entries.slice(0, LIMIT);
 
+  /* Loose ends (020, D7): their own reminder source, not a `waitingOn` entry —
+     the frontmatter never carries one. Shown as their own rows, the same way
+     `DeadlinesTile` renders reminders directly instead of going through a
+     project field. */
+  const looseEnds = (reminders.data ?? []).filter((reminder) => reminder.source === 'loose-end');
+  const total = entries.length + looseEnds.length;
+
   return (
     <TileFrame
       id="waiting-on"
       title={t('module.waiting-on.name')}
-      count={entries.length > 0 ? entries.length : null}
+      count={total > 0 ? total : null}
       pending={isPending}
       error={error}
       onRetry={() => void refetch()}
-      isEmpty={rows.length === 0}
+      isEmpty={rows.length === 0 && looseEnds.length === 0}
       empty={{ body: t('tile.waiting.empty') }}
     >
       <ul className="sb-lines">
+        {looseEnds.map((reminder) => (
+          <li key={reminder.id} className="sb-line">
+            <button
+              type="button"
+              className="sb-line-open"
+              title={reminder.title}
+              onClick={() => {
+                const day = announcingDayOf(reminder);
+                void navigate(day === null ? '/journal' : `/journal?d=${day}`);
+              }}
+            >
+              {reminder.title}
+            </button>
+            <span className="sb-line-detail">
+              {t('tile.waiting.looseEnd', { date: formatDate(reminder.date, language) })}
+            </span>
+            <SnoozeMenu
+              label={t('tile.deadlines.snooze', { title: reminder.title })}
+              disabled={snooze.isPending}
+              onSnooze={(days, until) =>
+                snooze.mutate(
+                  { id: reminder.id, days },
+                  {
+                    onSuccess: () =>
+                      pushToast('info', {
+                        message: 'reminder.snooze.done',
+                        values: { date: formatDate(until, language) },
+                        action: {
+                          label: 'reminder.snooze.undo',
+                          run: () =>
+                            unsnooze.mutate(reminder.id, {
+                              onSuccess: () => pushToast('info', 'reminder.snooze.undone'),
+                            }),
+                        },
+                      }),
+                  },
+                )
+              }
+            />
+          </li>
+        ))}
         {rows.map((entry, index) => {
           const late =
             entry.due !== undefined && dayDiff(now, new Date(`${entry.due}T00:00:00`)) < 0;

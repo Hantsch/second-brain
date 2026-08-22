@@ -31,6 +31,7 @@ import { timeOf } from './dialog';
 import { formatAnswer, parseStream } from './stream';
 import { INTERVIEW_TOPICS, JournalError } from './types';
 import type {
+  InterviewLooseEnd,
   InterviewMode,
   InterviewPlan,
   InterviewStep,
@@ -129,18 +130,30 @@ function answeredTopics(blocks: readonly JournalBlock[]): Set<InterviewTopic> {
  * about the running app's configuration, and this module — like every file
  * under `core/journal/` — knows nothing about `LlmGateway` (guardrail 4). The
  * IPC layer (D4) is the one place that can honestly answer it.
+ *
+ * `looseEnds` (020, D8) works the same way: whatever is still genuinely open
+ * — re-derived, minus what's already answered/dismissed/snoozed elsewhere —
+ * is the IPC layer's own composition (`main/ipc/journal.ts`, mirroring
+ * `main/ipc/reminders.ts`'s exclusion), because that answer depends on state
+ * this module has no business reading (`.secondbrain/loose-ends.json`,
+ * `.secondbrain/gardener.json`). At most one question is appended per
+ * session (Decisions): the **first** entry of the list handed in — the
+ * caller already sorts oldest-first (the same order `findLooseEnds` itself
+ * returns), so "first in the list" and "oldest open one" are the same
+ * choice, made once, in one place.
  */
 export function planInterview(
   { day, doc }: JournalDayDoc,
   docLanguage: DocLanguage,
   mode: InterviewMode,
+  looseEnds: readonly InterviewLooseEnd[] = [],
 ): InterviewPlan {
   const table = INTERVIEW_QUESTIONS[docLanguage] ?? INTERVIEW_QUESTIONS.de;
   const answered = answeredTopics(parseStream(doc.body));
   const steps: InterviewStep[] = INTERVIEW_TOPICS.filter(
     (topic) => !coveredByFrontmatter(day, topic) && !answered.has(topic),
   ).map((topic) => ({ topic, question: table[topic] }));
-  return { steps, mode, finished: steps.length === 0 };
+  return { steps, mode, finished: steps.length === 0, looseEnd: looseEnds[0] ?? null };
 }
 
 /**

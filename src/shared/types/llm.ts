@@ -76,6 +76,8 @@ export type TaskKind =
   | 'query-rerank'
   /** Journal/coaching dialogue. */
   | 'journal-chat'
+  /** Find things announced in the journal and never followed up on. */
+  | 'journal-loose-ends'
   /** Project status, next step, stagnation diagnosis. */
   | 'project-status'
   /** Maintenance run: find contradictions, stale claims, gaps. */

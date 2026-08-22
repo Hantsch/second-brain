@@ -25,9 +25,11 @@ import type {
   GardenerFindingKind,
   GardenerFix,
   GardenerSettings,
+  JournalDay,
   OverviewSettings,
   Project,
   RawSource,
+  Todo,
   UiLanguage,
   WikiPage,
 } from '@shared/types';
@@ -53,6 +55,8 @@ export interface GardenerIndexView {
   projects(): readonly Project[];
   sources(): readonly RawSource[];
   dumps(): readonly DumpItem[];
+  journal(): readonly JournalDay[];
+  todos(): readonly Todo[];
 }
 
 /** Ein Modul mit seinen Seiten und seinem Katalog — einmal je Lauf gruppiert. */
@@ -169,7 +173,7 @@ export function kindOf(id: string): string {
  * Eine benannte Liste und kein Vergleich auf eine einzelne Art: die naechste
  * modellgebundene Befundart haengt sich hier mit einer Zeile an.
  */
-export const LLM_ONLY_KINDS: readonly GardenerFindingKind[] = ['contradiction'];
+export const LLM_ONLY_KINDS: readonly GardenerFindingKind[] = ['contradiction', 'loose-end'];
 
 /** Ein Befund, wie die Checks ihn bauen. `id` und `foundAt` kommen von hier. */
 export interface FindingInput {

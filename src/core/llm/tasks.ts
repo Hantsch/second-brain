@@ -18,6 +18,7 @@ export const TASK_KINDS: readonly TaskKind[] = [
   'summarize-source',
   'wiki-ingest',
   'journal-chat',
+  'journal-loose-ends',
   'project-status',
   'gardener-audit',
 ];
@@ -90,6 +91,15 @@ export const TASK_DEFINITIONS: readonly TaskDefinition[] = [
     'balanced',
     { in: 2500, out: 400 },
     { sensitive: true, streams: true },
+  ),
+  // Reads journal prose to find things once announced and never mentioned
+  // again — resolving a relative date and judging "was this addressed
+  // later" needs more than a cheap model, and the input is personal.
+  definition(
+    'journal-loose-ends',
+    'balanced',
+    { in: 3000, out: 500 },
+    { sensitive: true, structured: true },
   ),
   // Judgment on a project's history, presented as a proposal — a project's
   // notes/todos in, a structured status verdict out.

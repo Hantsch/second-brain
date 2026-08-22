@@ -2,12 +2,13 @@
  * „Was muss ich noch tun, bis wann, und auf wen warte ich?" — Teil zwei der drei
  * Fragen, als Liste von Erinnerungen.
  *
- * Vier Quellen, jede mit einem eigenen `source`, damit die Oberflaeche sagen kann,
+ * Fuenf Quellen, jede mit einem eigenen `source`, damit die Oberflaeche sagen kann,
  * **warum** etwas mahnt:
  *   `todo-due`          eine Checkbox mit Frist (`@due:`, ersatzweise `@needed:`)
  *   `project-deadline`  die harte Frist eines Projekts
  *   `waiting-overdue`   eine Antwort, die ueberfaellig ist
  *   `stale-project`     ein Projekt ohne Spur, das noch laeuft
+ *   `loose-end`         eine Ankuendigung im Tagebuch, deren Tag vorbei ist (020 D1)
  *
  * Zwei Grundsaetze:
  * - **Nichts erfinden.** Ohne Datum keine Frist. `waiting-overdue` erscheint nur,
@@ -20,6 +21,11 @@
 
 import type { Project, Reminder, ReminderUrgency, Todo, WaitingOn } from '@shared/types';
 import { daysBetween } from '@core/index/dates';
+import { deriveJournalDays } from '@core/index/journal';
+import { scopeFromPath } from '@core/index/todos';
+import type { IndexedDoc } from '@core/index/types';
+import { findLooseEnds } from '@core/journal';
+import type { LooseEndDay, LooseEndTodo } from '@core/journal';
 import { sha256 } from '@core/vault/hash';
 import { isoDay } from '@core/vault/paths';
 import type { DateLike } from '@core/vault/paths';
@@ -192,6 +198,61 @@ function fromStale(projects: readonly Project[], today: string, staleDays: numbe
   return reminders;
 }
 
+/**
+ * Tage des Index, so wie `findLooseEnds` sie braucht — dieselbe Umformung wie
+ * `core/gardener/checks/loose-end.ts`'s `looseEndInput`, nur ueber die schmale
+ * `OverviewIndex`-Sicht statt des Pflegelauf-Kontexts: `deriveJournalDays`
+ * liefert Datum und Pfad, der Rumpf kommt aus demselben `docs`-Array (bereits
+ * das Muster von `dashboard.ts`'s `journalStreak`).
+ */
+function looseEndDaysOf(docs: readonly IndexedDoc[]): LooseEndDay[] {
+  const byPath = new Map(docs.map((doc) => [doc.path, doc] as const));
+  const days: LooseEndDay[] = [];
+  for (const entry of deriveJournalDays(docs)) {
+    const doc = byPath.get(entry.path);
+    if (doc === undefined) continue;
+    days.push({
+      day: { date: entry.date, path: entry.path },
+      doc: { body: doc.body, bodyLine: doc.bodyLine },
+    });
+  }
+  return days;
+}
+
+/**
+ * Erinnerungen aus losen Enden (020, D1): eine Ankuendigung im Tagebuch, deren
+ * Tag vorbei ist und niemand seitdem etwas dazu gesagt hat. Die Erkennung
+ * selbst steckt vollstaendig in `findLooseEnds` — hier wird nur abgebildet,
+ * nichts neu entschieden. Eine Ankuendigung, deren Gegenstand schon ein Todo
+ * mit Frist traegt, taucht dank `findLooseEnds`'s eigener Subtraktion gar
+ * nicht erst auf — keine doppelte Mahnung ueber zwei Kacheln.
+ *
+ * Kein Modell hier: dieselbe Heuristik, die auch der Pflegelauf ohne Modell
+ * faehrt. Die Kennung ist bewusst `idFor('loose-end', looseEnd.id)` — exakt
+ * dieselbe Formel wie `findingId('loose-end', looseEnd.id)` im Pflegelauf
+ * (`core/gardener/types.ts`), damit ein und dieselbe Ankuendigung auf beiden
+ * Oberflaechen dieselbe Kennung traegt: nur so zaehlt ein „beantwortet" aus
+ * D5 oder ein „passt so"/„ruhen" aus 017 auch hier.
+ */
+function fromLooseEnds(
+  days: readonly LooseEndDay[],
+  todos: readonly LooseEndTodo[],
+  today: string,
+): Reminder[] {
+  return findLooseEnds(days, todos, today).map((looseEnd) => ({
+    id: idFor('loose-end', looseEnd.id),
+    source: 'loose-end',
+    urgency: 'overdue',
+    title: looseEnd.subject.length > 0 ? looseEnd.subject : looseEnd.quote,
+    date: looseEnd.refDate,
+    daysOut: daysBetween(today, looseEnd.refDate) ?? 0,
+    scope: scopeFromPath(looseEnd.path) ?? 'private',
+    path: looseEnd.path,
+    project: null,
+    who: null,
+  }));
+}
+
 /** Ruht diese Erinnerung noch? `until` ist der Tag, ab dem sie wieder mahnt. */
 function snoozed(
   id: string,
@@ -220,12 +281,18 @@ export function reminders(
   const day = isoDay(today);
   const { staleAfterDays, deadlineHorizonDays, waitingNudgeDays } = limits(settings);
   const projects = index.projects();
+  const todos = index.todos();
 
   const all = [
-    ...fromTodos(index.todos(), day, deadlineHorizonDays, closedProjects(projects)),
+    ...fromTodos(todos, day, deadlineHorizonDays, closedProjects(projects)),
     ...fromDeadlines(projects, day, deadlineHorizonDays),
     ...fromWaiting(projects, day, waitingNudgeDays),
     ...fromStale(projects, day, staleAfterDays),
+    ...fromLooseEnds(
+      looseEndDaysOf(index.index().docs),
+      todos.map((todo) => ({ text: todo.text, due: todo.due })),
+      day,
+    ),
   ].filter((reminder) => !snoozed(reminder.id, day, snoozes));
 
   all.sort(

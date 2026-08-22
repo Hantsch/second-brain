@@ -120,6 +120,8 @@ export const en: Record<TranslationKey, string> = {
     'Filing proposals need a model — capturing and filing work without one.',
   'llm.note.project-status':
     'A reasoned suggestion needs a model — the rule-based one works without.',
+  'llm.note.journal-loose-ends':
+    'Finding loose ends needs a model — the journal stays writable without one.',
   'llm.note.gardener-audit':
     'Contradictions, near duplicates and terms without a page need a model — the machine checks run without one.',
   'llm.note.action': 'Set up routing',
@@ -172,6 +174,9 @@ export const en: Record<TranslationKey, string> = {
   'task.journal-chat.label': 'Journal conversation',
   'task.journal-chat.hint':
     'The most personal conversation in the app. A local model is explicitly recommended.',
+  'task.journal-loose-ends.label': 'Find loose ends',
+  'task.journal-loose-ends.hint':
+    'Reads journal prose to find things you announced and never followed up on. Personal content — a local model is explicitly recommended.',
   'task.project-status.label': 'Project status',
   'task.project-status.hint':
     'Derives status and next step from the project history — as a proposal.',

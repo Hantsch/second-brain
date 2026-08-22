@@ -108,7 +108,8 @@ export const DEFAULT_DASHBOARD_TILES: readonly DashboardTile[] = [
 ];
 
 /** What triggers a reminder. */
-export type ReminderSource = 'todo-due' | 'project-deadline' | 'waiting-overdue' | 'stale-project';
+export type ReminderSource =
+  'todo-due' | 'project-deadline' | 'waiting-overdue' | 'stale-project' | 'loose-end';
 
 export type ReminderUrgency = 'overdue' | 'today' | 'soon' | 'upcoming';
 

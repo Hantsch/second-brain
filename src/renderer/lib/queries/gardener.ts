@@ -32,6 +32,7 @@ export type DiscardPageResult = IpcResponse<'gardener:discardPage'>;
 export type SupersedeResult = IpcResponse<'gardener:supersede'>;
 export type OrphanTargetsResult = IpcResponse<'gardener:orphanTargets'>;
 export type LinkOrphanResult = IpcResponse<'gardener:linkOrphan'>;
+export type AnswerLooseEndResult = IpcResponse<'journal:answerLooseEnd'>;
 
 /** The last report. `null` means: there is none — not "all fine". */
 export function useGardenerReport(): UseQueryResult<GardenerReport | null> {
@@ -103,6 +104,19 @@ export interface GardenerMutations {
    * the module counts are invalidated exactly as after `discardPage`.
    */
   linkOrphan: UseMutationResult<LinkOrphanResult, unknown, IpcRequest<'gardener:linkOrphan'>>;
+  /**
+   * Answers a loose end (020 D5/D6). Unlike every other mutation here, the
+   * write touches no persisted report state — `journal:answerLooseEnd` only
+   * records the id in its own file (`main/loose-end-state.ts`) — so a
+   * `gardener:report` refetch would bring the very same finding straight
+   * back. The finding is therefore removed from the cached report directly
+   * (`onSuccess` below), not through `refresh()`.
+   */
+  answerLooseEnd: UseMutationResult<
+    AnswerLooseEndResult,
+    unknown,
+    IpcRequest<'journal:answerLooseEnd'>
+  >;
 }
 
 /** The screen's write paths. Each has its undo path alongside it. */
@@ -129,6 +143,20 @@ export function useGardenerMutations(): GardenerMutations {
     supersede: useMutation({ mutationFn: api.gardener.supersede, onSuccess: done, retry: false }),
     orphanTargets: useMutation({ mutationFn: api.gardener.orphanTargets, retry: false }),
     linkOrphan: useMutation({ mutationFn: api.gardener.linkOrphan, onSuccess: done, retry: false }),
+    answerLooseEnd: useMutation({
+      mutationFn: (request: IpcRequest<'journal:answerLooseEnd'>) =>
+        api.journal.answerLooseEnd(request),
+      /* Direct removal, not `refresh()`: invalidating `gardener.report()` would
+         only refetch the same stale finding — see the interface comment above. */
+      onSuccess: (_, variables) => {
+        client.setQueryData<GardenerReport | null>(qk.gardener.report(), (prev) =>
+          prev === null || prev === undefined
+            ? prev
+            : { ...prev, findings: prev.findings.filter((entry) => entry.id !== variables.id) },
+        );
+      },
+      retry: false,
+    }),
   };
 }
 

@@ -25,7 +25,9 @@ export type GardenerFindingKind =
   /** Source sits in `raw/` but was never condensed. */
   | 'unprocessed-source'
   /** Project without a next step. */
-  | 'project-without-next-step';
+  | 'project-without-next-step'
+  /** A day announced something for a later day that never got a follow-up. */
+  | 'loose-end';
 
 export type FindingSeverity = 'info' | 'warn' | 'high';
 
@@ -52,6 +54,12 @@ export interface GardenerFinding {
   hashes?: Record<string, string>;
   /** Suggestion the user can accept with a click. */
   fix: GardenerFix | null;
+  /**
+   * Which detector found this: the heuristic check, or the model pass over its
+   * candidates (020, D4). Optional so a report persisted before this field
+   * existed still reads back cleanly.
+   */
+  origin?: 'heuristic' | 'model';
 }
 
 export interface GardenerFix {

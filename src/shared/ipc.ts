@@ -173,6 +173,25 @@ export interface JournalInterviewStep {
 }
 
 /**
+ * The interview's optional extra question about a still-open loose end (020,
+ * D8) — mirrors `InterviewLooseEnd` from `@core/journal`. Unlike
+ * `JournalInterviewStep`, `question` is not part of this shape: nothing here
+ * gets written into the day file (`journal:answerLooseEnd` only writes the
+ * typed answer, never this prompt), so the wording is the renderer's own UI
+ * text (`journal.interview.looseEnd.question`, UI language), built from
+ * `quote` — the same reasoning `CloseLabels` already applies to the day
+ * close's reasoning text.
+ */
+export interface JournalInterviewLooseEnd {
+  /** Passed straight through to `journal:answerLooseEnd`'s `id`. */
+  id: string;
+  /** Passed straight through to `journal:answerLooseEnd`'s `day`. */
+  day: string;
+  /** The announcing sentence, verbatim — never a claim, always a quote. */
+  quote: string;
+}
+
+/**
  * The interview plan for one day (012): which of the five topics are still
  * open, and whether a model is routed for the optional follow-up (`mode`).
  * Mirrors `InterviewPlan` from `@core/journal`.
@@ -183,6 +202,8 @@ export interface JournalInterviewPlan {
   /** 'model': a route exists for `journal-chat`, so a follow-up can be asked. */
   mode: 'model' | 'fixed';
   finished: boolean;
+  /** The one optional loose-end question (020, D8) — `null` when none is open. */
+  looseEnd: JournalInterviewLooseEnd | null;
 }
 
 /**
@@ -423,6 +444,18 @@ export interface IpcRoutes {
    * is used, but the write is never unguarded.
    */
   'journal:foldDay': { req: { date: string; expectedHash?: string }; res: WriteResult };
+
+  /**
+   * Answers a loose end (020, D5): my own words about what happened, appended
+   * into today's "Day" stream, preceded by a back-reference wikilink to the
+   * day that made the announcement. `expectedHash` guards today's file
+   * exactly like `journal:setDay` — stale, and the write fails with
+   * `conflict` instead of overwriting.
+   */
+  'journal:answerLooseEnd': {
+    req: { id: string; day: string; text: string; expectedHash?: string };
+    res: { path: string; hash: string };
+  };
 
   /**
    * The interview (012): which of the five fixed topics still have no answer
@@ -850,6 +883,7 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'journal:close',
   'journal:applyClose',
   'journal:foldDay',
+  'journal:answerLooseEnd',
   'journal:interviewPlan',
   'journal:interviewAnswer',
   'journal:interviewFollowUp',

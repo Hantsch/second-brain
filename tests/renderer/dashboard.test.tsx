@@ -28,6 +28,7 @@ import type {
   DashboardLayout,
   OverviewSettings,
   Project,
+  Reminder,
   VaultSettings,
 } from '@shared/types';
 import { DashboardScreen } from '@renderer/screens/dashboard/DashboardScreen';
@@ -62,6 +63,7 @@ import {
   NOW,
   TODAY,
   dashboardFixture,
+  day,
   emptyDashboard,
   layoutOf,
   projects,
@@ -934,6 +936,37 @@ describe('Kacheln', () => {
     mount({ data: emptyDashboard });
     wrap(<InboxTile />);
     expect(await screen.findByText(/Die Inbox ist leer/)).toBeTruthy();
+  });
+});
+
+// ── „Warte auf" mit einem losen Ende (020, D7) ──────────────────────────────
+
+describe('Warte auf — loses Ende', () => {
+  const looseEndReminder: Reminder = {
+    id: 'loose-end:abc123',
+    source: 'loose-end',
+    urgency: 'overdue',
+    title: 'Notartermin',
+    date: day(-4),
+    daysOut: -4,
+    scope: 'private',
+    path: `journal/${day(-6).slice(0, 4)}/${day(-6).slice(5, 7)}/${day(-6)}.md`,
+    project: null,
+    who: null,
+  };
+
+  it('zeigt ein loses Ende einmal, mit einer Begründung, warum es mahnt', async () => {
+    mount({ extra: { 'reminders:list': () => [...reminders, looseEndReminder] } });
+    wrap(<WaitingOnTile />);
+    expect((await screen.findAllByText('Notartermin')).length).toBe(1);
+    expect(screen.getByText(/Angekündigt am/)).toBeTruthy();
+  });
+
+  it('zeigt nichts, wenn die Erinnerungs-Liste kein loses Ende enthält', async () => {
+    mount({ extra: { 'reminders:list': () => reminders } });
+    wrap(<WaitingOnTile />);
+    await screen.findByText('Stefan');
+    expect(screen.queryByText('Notartermin')).toBeNull();
   });
 });
 

@@ -184,6 +184,14 @@ export interface InterviewMutations {
     unknown,
     { step: JournalInterviewStep; answer: string }
   >;
+  /** The interview's loose-end question (020, D8): goes through D5's own
+      channel, not `interviewAnswer` — nothing about the question itself is
+      written, only the typed answer. */
+  answerLooseEnd: UseMutationResult<
+    { path: string; hash: string },
+    unknown,
+    { id: string; day: string; text: string; expectedHash?: string }
+  >;
 }
 
 export function useInterviewMutations(date: string): InterviewMutations {
@@ -199,6 +207,20 @@ export function useInterviewMutations(date: string): InterviewMutations {
     followUp: useMutation({
       mutationFn: ({ step, answer }: { step: JournalInterviewStep; answer: string }) =>
         api.journal.interviewFollowUp(date, step, answer),
+    }),
+    answerLooseEnd: useMutation({
+      mutationFn: ({
+        id,
+        day,
+        text,
+        expectedHash,
+      }: {
+        id: string;
+        day: string;
+        text: string;
+        expectedHash?: string;
+      }) => api.journal.answerLooseEnd({ id, day, text, expectedHash }),
+      onSuccess: done,
     }),
   };
 }

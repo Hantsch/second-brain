@@ -9,6 +9,7 @@
    - **Der Widerspruch bekommt seine eigene Karte.** Er ist der einzige Befund, bei
      dem man beide Seiten lesen muss, um zu entscheiden. */
 
+import type { ReactNode } from 'react';
 import type { GardenerFinding, GardenerHiddenFinding } from '@shared/types';
 import { FindingFilter } from '../../components/FindingFilter';
 import { Panel } from '../../components/Panel';
@@ -52,6 +53,7 @@ export interface FindingListProps {
   onSupersedeDuplicate: (write: NearDuplicateSupersedeWrite) => void;
   onDiscarded: (result: DiscardPageResult) => void;
   onLinkOrphan: (write: OrphanLinkWrite) => void;
+  onAnswerLooseEnd: (finding: GardenerFinding, day: string, text: string) => void;
   /** The way back for a hidden finding — direct, no outcome strip involved. */
   onRestore: (finding: GardenerFinding, state: Exclude<HiddenState, null>) => void;
 }
@@ -72,6 +74,7 @@ export function FindingList({
   onSupersedeDuplicate,
   onDiscarded,
   onLinkOrphan,
+  onAnswerLooseEnd,
   onRestore,
 }: FindingListProps) {
   const t = useT();
@@ -81,6 +84,26 @@ export function FindingList({
   const pool = poolForState(findings, hidden, filter.state);
   const shown = applyFilter(pool, filter);
   const groups = groupByKind(shown);
+  /* The loose-end group renders whenever a report exists, count or "no loose
+     ends" line — unlike every other kind, whose group only appears when it has
+     at least one match (`groupByKind` above). Handled on its own here rather
+     than folded into `groups`, and hidden only when the kind axis itself has
+     picked something else — the same restraint every other kind already gets
+     from that filter. */
+  const otherGroups = groups.filter((group) => group.kind !== 'loose-end');
+  const looseEndVisible = filter.kind === 'all' || filter.kind === 'loose-end';
+  const looseEndFindings = looseEndVisible
+    ? applyFilter(pool, { ...filter, kind: 'loose-end' })
+    : [];
+  /* How many loose ends there are at all — open plus hidden, across every
+     filter. Only this number may say "no loose ends" (AC 3); if there are some
+     and the current filter shows none, the group says that instead, in the same
+     words the list itself uses. An empty line that claims zero while a severity
+     or module filter is hiding three would be the same kind of untruth the
+     health score is careful about. */
+  const looseEndTotal =
+    findings.filter((finding) => finding.kind === 'loose-end').length +
+    hidden.filter((entry) => entry.finding.kind === 'loose-end').length;
   const modules = [...moduleCounts(pool, filter).entries()]
     .sort((a, b) => b[1] - a[1])
     .map(([module, count]) => ({ module, count }));
@@ -103,6 +126,44 @@ export function FindingList({
     hidden.length === 0
       ? null
       : plural(hidden.length, 'garden.findings.hiddenOne', 'garden.findings.hidden');
+
+  /* One finding, one card — hidden or open, shared by every group below so
+     the loose-end section and the generic per-kind groups never diverge on
+     how a card is picked. */
+  const renderFinding = (finding: GardenerFinding): ReactNode => {
+    const hiddenEntry = hiddenById.get(finding.id);
+    return hiddenEntry !== undefined ? (
+      <HiddenFindingCard
+        finding={finding}
+        entry={hiddenEntry}
+        language={language}
+        busy={busyId === finding.id}
+        onFix={onFix}
+        onDismiss={onDismiss}
+        onSnooze={onSnooze}
+        onRecheck={onRecheck}
+        onOpenPath={onOpenPath}
+        onOpenFile={onOpenFile}
+        onRestore={onRestore}
+      />
+    ) : (
+      <OpenFindingCard
+        finding={finding}
+        busy={busyId === finding.id}
+        onFix={onFix}
+        onDismiss={onDismiss}
+        onSnooze={onSnooze}
+        onRecheck={onRecheck}
+        onOpenPath={onOpenPath}
+        onOpenFile={onOpenFile}
+        onSupersede={onSupersede}
+        onSupersedeDuplicate={onSupersedeDuplicate}
+        onDiscarded={onDiscarded}
+        onLinkOrphan={onLinkOrphan}
+        onAnswerLooseEnd={onAnswerLooseEnd}
+      />
+    );
+  };
 
   return (
     <Panel
@@ -128,54 +189,40 @@ export function FindingList({
           ) : null}
         </div>
       ) : (
-        groups.map((group) => (
+        otherGroups.map((group) => (
           <section key={group.kind} className="sb-ggroup">
             <h3 className="sb-ggroup-title">
               {t(`garden.kind.${group.kind}`)}
               <span className="sb-mono sb-ggroup-count">{group.findings.length}</span>
             </h3>
             <ul className="sb-glist">
-              {group.findings.map((finding) => {
-                const hiddenEntry = hiddenById.get(finding.id);
-                return (
-                  <li key={finding.id}>
-                    {hiddenEntry !== undefined ? (
-                      <HiddenFindingCard
-                        finding={finding}
-                        entry={hiddenEntry}
-                        language={language}
-                        busy={busyId === finding.id}
-                        onFix={onFix}
-                        onDismiss={onDismiss}
-                        onSnooze={onSnooze}
-                        onRecheck={onRecheck}
-                        onOpenPath={onOpenPath}
-                        onOpenFile={onOpenFile}
-                        onRestore={onRestore}
-                      />
-                    ) : (
-                      <OpenFindingCard
-                        finding={finding}
-                        busy={busyId === finding.id}
-                        onFix={onFix}
-                        onDismiss={onDismiss}
-                        onSnooze={onSnooze}
-                        onRecheck={onRecheck}
-                        onOpenPath={onOpenPath}
-                        onOpenFile={onOpenFile}
-                        onSupersede={onSupersede}
-                        onSupersedeDuplicate={onSupersedeDuplicate}
-                        onDiscarded={onDiscarded}
-                        onLinkOrphan={onLinkOrphan}
-                      />
-                    )}
-                  </li>
-                );
-              })}
+              {group.findings.map((finding) => (
+                <li key={finding.id}>{renderFinding(finding)}</li>
+              ))}
             </ul>
           </section>
         ))
       )}
+
+      {looseEndVisible ? (
+        <section className="sb-ggroup">
+          <h3 className="sb-ggroup-title">
+            {t('garden.kind.loose-end')}
+            <span className="sb-mono sb-ggroup-count">{looseEndFindings.length}</span>
+          </h3>
+          {looseEndFindings.length === 0 ? (
+            <div className="sb-panel-empty">
+              <p>{t(looseEndTotal === 0 ? 'garden.looseEnd.empty' : 'garden.findings.filtered')}</p>
+            </div>
+          ) : (
+            <ul className="sb-glist">
+              {looseEndFindings.map((finding) => (
+                <li key={finding.id}>{renderFinding(finding)}</li>
+              ))}
+            </ul>
+          )}
+        </section>
+      ) : null}
     </Panel>
   );
 }

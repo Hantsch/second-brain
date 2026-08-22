@@ -89,6 +89,7 @@ export function GardenScreen() {
     supersedeDuplicate,
     discarded,
     linkOrphan,
+    answerLooseEnd,
     undo,
   } = useFindingActions(mutations, pages, run, openPath);
 
@@ -126,6 +127,7 @@ export function GardenScreen() {
     mutations.undoFix.error ??
     mutations.supersede.error ??
     mutations.linkOrphan.error ??
+    mutations.answerLooseEnd.error ??
     pages.savePage.error ??
     null;
 
@@ -234,6 +236,7 @@ export function GardenScreen() {
           onSupersedeDuplicate={supersedeDuplicate}
           onDiscarded={discarded}
           onLinkOrphan={linkOrphan}
+          onAnswerLooseEnd={answerLooseEnd}
           onRestore={restore}
         />
       )}

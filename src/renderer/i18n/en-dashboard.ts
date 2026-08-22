@@ -126,6 +126,9 @@ export const enDashboard = {
   'tile.waiting.since': 'since {date}',
   'tile.waiting.due': 'by {date}',
   'tile.waiting.overdue': 'overdue',
+  /* Why a loose end nags here: the journal announced something for the named
+     day, and nothing since has said how it went. */
+  'tile.waiting.looseEnd': 'Announced on {date}, nothing since',
 
   'tile.deadlines.empty': 'No deadline within the next {days} days.',
   'tile.deadlines.project': 'Project deadline',

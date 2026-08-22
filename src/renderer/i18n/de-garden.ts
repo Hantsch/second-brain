@@ -62,6 +62,8 @@ export const deGarden = {
   'garden.advice.near-duplicate':
     'Beinahe-Dubletten vergleichen und zusammenlegen, wo es dasselbe ist.',
   'garden.advice.missing-page': 'Für häufig genannte Begriffe eigene Seiten anlegen.',
+  'garden.advice.loose-end':
+    'Angekündigte Sätze aufgreifen — beantworten oder als erledigt weglegen.',
 
   // ── Befunde ───────────────────────────────────────────────────────────────
   'garden.findings.label': 'Befunde',
@@ -103,6 +105,7 @@ export const deGarden = {
   'garden.kind.unfiled-dump': 'Liegengebliebene Dumps',
   'garden.kind.unprocessed-source': 'Unverdichtete Quellen',
   'garden.kind.project-without-next-step': 'Projekte ohne nächsten Schritt',
+  'garden.kind.loose-end': 'Lose Enden',
 
   'garden.countOne.orphan': '1 verwaiste Seite',
   'garden.countMany.orphan': '{count} verwaiste Seiten',
@@ -124,6 +127,8 @@ export const deGarden = {
   'garden.countMany.unprocessed-source': '{count} unverdichtete Quellen',
   'garden.countOne.project-without-next-step': '1 Projekt ohne nächsten Schritt',
   'garden.countMany.project-without-next-step': '{count} Projekte ohne nächsten Schritt',
+  'garden.countOne.loose-end': '1 loses Ende',
+  'garden.countMany.loose-end': '{count} lose Enden',
 
   // ── Karte ─────────────────────────────────────────────────────────────────
   'garden.card.files': 'Betroffene Dateien',
@@ -211,6 +216,16 @@ export const deGarden = {
   'garden.discard.willBreak':
     'Diese Links würden brechen — es gibt keine Zielseite, auf die sie umgebogen werden.',
   'garden.discard.confirm': 'Verwerfen',
+
+  // ── Loses Ende ────────────────────────────────────────────────────────────
+  'garden.looseEnd.empty': 'Keine losen Enden.',
+  'garden.looseEnd.quote': '„{quote}"',
+  'garden.looseEnd.announced': 'Angekündigt am {day}. Seitdem nichts dazu.',
+  'garden.looseEnd.foundByHeuristic': 'Von der eingebauten Prüfung gefunden.',
+  'garden.looseEnd.foundByModel': 'Vom Modell gefunden.',
+  'garden.looseEnd.answerLabel': 'Antwort',
+  'garden.looseEnd.answerPlaceholder': 'Was ist daraus geworden?',
+  'garden.looseEnd.answerSubmit': 'Eintragen',
 
   // ── Ohne Modell ───────────────────────────────────────────────────────────
   'garden.llm.title': 'Was ein Modell zusätzlich fände',

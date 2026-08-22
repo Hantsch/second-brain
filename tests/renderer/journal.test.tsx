@@ -248,6 +248,7 @@ const INTERVIEW_PLAN: JournalInterviewPlan = {
   steps: [{ topic: 'work', question: 'Was hast du heute gearbeitet?' }],
   mode: 'fixed',
   finished: false,
+  looseEnd: null,
 };
 
 const LOCAL_PROVIDER: ProviderConfig = {

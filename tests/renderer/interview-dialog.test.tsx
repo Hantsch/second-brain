@@ -13,7 +13,13 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { IpcChannel, IpcRequest, IpcResponse, JournalInterviewPlan } from '@shared/ipc';
+import type {
+  IpcChannel,
+  IpcRequest,
+  IpcResponse,
+  JournalDayView,
+  JournalInterviewPlan,
+} from '@shared/ipc';
 import type { ProviderConfig, Routing, TaskDefinition, VaultStatus } from '@shared/types';
 import { InterviewDialog } from '@renderer/screens/journal/InterviewDialog';
 import type { SbBridge } from '@renderer/lib/bridge';
@@ -101,6 +107,7 @@ function routing(providerId: string | null): Routing {
 function plan(
   steps: JournalInterviewPlan['steps'],
   mode?: JournalInterviewPlan['mode'],
+  looseEnd: JournalInterviewPlan['looseEnd'] = null,
 ): JournalInterviewPlan {
   return {
     steps,
@@ -110,11 +117,58 @@ function plan(
        IPC handler would (012, F3 review fix). */
     mode: mode ?? (steps.length === 0 ? 'fixed' : 'model'),
     finished: steps.length === 0,
+    looseEnd,
   };
 }
 
 const WORK_STEP = { topic: 'work' as const, question: 'What did you work on today?' };
 const EVENTS_STEP = { topic: 'events' as const, question: 'What happened today that stood out?' };
+
+const LOOSE_END = {
+  id: 'loose-end:abcd1234ef00',
+  day: '2026-08-05',
+  quote: 'Tomorrow I have the notary appointment.',
+};
+
+/* The loose-end answer always writes into *today*'s file (020, D5), never
+   into `DATE` (the day the dialog happens to be open on) — so the dialog's
+   own guard needs today's current hash, fetched via the same `journal:get`
+   query `useJournalDay` uses everywhere else. The fixture below stands in
+   for "today", whatever the real wall clock says when the test runs — the
+   handler ignores the requested date, exactly like the other fixtures here
+   ignore which day was asked for. */
+const TODAY_HASH = 'hash-today-1';
+
+function todayView(): JournalDayView {
+  return {
+    day: {
+      path: 'journal/2026/08/today.md',
+      date: '2026-08-11',
+      title: 'today',
+      closed: null,
+      mood: null,
+      energy: null,
+      people: [],
+      projects: [],
+      tags: [],
+      excerpt: '',
+      wordCount: 0,
+      turns: 0,
+    },
+    doc: {
+      path: 'journal/2026/08/today.md',
+      frontmatter: { type: 'journal', title: 'today', created: new Date().toISOString() },
+      body: '',
+      hash: TODAY_HASH,
+      modified: new Date().toISOString(),
+      size: 0,
+    },
+    text: '',
+    stream: [],
+    turns: [],
+    facts: '',
+  };
+}
 
 interface Rendered {
   sb: Mock;
@@ -131,6 +185,8 @@ function open(extra: Handlers = {}): Rendered {
     'journal:interviewPlan': () => plan([WORK_STEP, EVENTS_STEP]),
     'journal:interviewAnswer': () => ({ path: 'x', hash: 'h-2', at: '10:00' }),
     'journal:interviewFollowUp': () => ({ question: null, noModel: false }),
+    'journal:answerLooseEnd': () => ({ path: 'x', hash: 'h-3' }),
+    'journal:get': () => todayView(),
     ...extra,
   });
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -302,6 +358,108 @@ describe('Interview-Overlay', () => {
     open({ 'journal:interviewPlan': () => plan([WORK_STEP]) });
 
     await screen.findByText(WORK_STEP.question);
+    await userEvent.click(screen.getByRole('button', { name: 'Skip' }));
+
+    expect(
+      await screen.findByText(
+        'The interview is done for today — anything skipped stays open. Mood and energy still wait on the pickers at the top of the day.',
+      ),
+    ).toBeTruthy();
+  });
+
+  // ── Die eine Zusatzfrage zu einem losen Ende (020, D8) ────────────────────
+
+  it('haengt die Frage zu einem losen Ende an, als Frage formuliert und den eigenen Satz zitierend', async () => {
+    setLanguage('en');
+    open({ 'journal:interviewPlan': () => plan([WORK_STEP], undefined, LOOSE_END) });
+
+    await screen.findByText(WORK_STEP.question);
+    await userEvent.click(screen.getByRole('button', { name: 'Skip' }));
+
+    const question = await screen.findByText(`How did it go: "${LOOSE_END.quote}"?`);
+    expect(question).toBeTruthy();
+    /* Zwei Schritte insgesamt: der eine feste Themen-Schritt plus die eine
+       Zusatzfrage — der Nenner zaehlt beide. */
+    expect(screen.getByText('2 / 2')).toBeTruthy();
+  });
+
+  it('beantwortet die Frage zum losen Ende ueber journal:answerLooseEnd, nicht ueber journal:interviewAnswer', async () => {
+    setLanguage('en');
+    const { sb } = open({ 'journal:interviewPlan': () => plan([], undefined, LOOSE_END) });
+
+    await screen.findByText(`How did it go: "${LOOSE_END.quote}"?`);
+    await userEvent.type(screen.getByLabelText('Your answer'), 'Done, all fine.');
+    await userEvent.click(screen.getByRole('button', { name: 'Answer and continue' }));
+
+    await waitFor(() =>
+      expect(sb.payloadOf('journal:answerLooseEnd')).toEqual({
+        id: LOOSE_END.id,
+        day: LOOSE_END.day,
+        text: 'Done, all fine.',
+        /* Proves the guard is actually armed (F3 review fix): the hash comes
+           from today's own `journal:get` fixture, not from `LOOSE_END.day`
+           or `DATE`. */
+        expectedHash: TODAY_HASH,
+      }),
+    );
+    expect(sb.payloadsOf('journal:interviewAnswer')).toEqual([]);
+    expect(
+      await screen.findByText(
+        'The interview is done for today — anything skipped stays open. Mood and energy still wait on the pickers at the top of the day.',
+      ),
+    ).toBeTruthy();
+  });
+
+  it('meldet eine Fremdaenderung an heute statt sie zu ueberschreiben (F3: der Hash ist scharf geschaltet)', async () => {
+    setLanguage('en');
+    const { sb } = open({
+      'journal:interviewPlan': () => plan([], undefined, LOOSE_END),
+      'journal:answerLooseEnd': () => {
+        throw Object.assign(new Error('conflict'), { code: 'conflict' });
+      },
+    });
+
+    await screen.findByText(`How did it go: "${LOOSE_END.quote}"?`);
+    await userEvent.type(screen.getByLabelText('Your answer'), 'Done, all fine.');
+    await userEvent.click(screen.getByRole('button', { name: 'Answer and continue' }));
+
+    /* The dialog stays on the loose-end question — nothing advances on a
+       failed write, same as a failed backbone answer. */
+    expect(
+      await screen.findByText('“2026-08-10” changed in the meantime. Nothing was overwritten.'),
+    ).toBeTruthy();
+    expect(sb.payloadOf('journal:answerLooseEnd')).toEqual({
+      id: LOOSE_END.id,
+      day: LOOSE_END.day,
+      text: 'Done, all fine.',
+      expectedHash: TODAY_HASH,
+    });
+  });
+
+  it('ueberspringt die Frage zum losen Ende ohne jeden Schreibaufruf', async () => {
+    setLanguage('en');
+    const { sb } = open({ 'journal:interviewPlan': () => plan([], undefined, LOOSE_END) });
+
+    await screen.findByText(`How did it go: "${LOOSE_END.quote}"?`);
+    await userEvent.click(screen.getByRole('button', { name: 'Skip' }));
+
+    expect(
+      await screen.findByText(
+        'The interview is done for today — anything skipped stays open. Mood and energy still wait on the pickers at the top of the day.',
+      ),
+    ).toBeTruthy();
+    expect(sb.payloadsOf('journal:answerLooseEnd')).toEqual([]);
+    expect(sb.payloadsOf('journal:interviewAnswer')).toEqual([]);
+  });
+
+  it('zeigt ohne loses Ende genau die fuenf Themen, unveraendert', async () => {
+    setLanguage('en');
+    open({ 'journal:interviewPlan': () => plan([WORK_STEP, EVENTS_STEP]) });
+
+    await screen.findByText(WORK_STEP.question);
+    expect(screen.getByText('1 / 2')).toBeTruthy();
+    await userEvent.click(screen.getByRole('button', { name: 'Skip' }));
+    await screen.findByText(EVENTS_STEP.question);
     await userEvent.click(screen.getByRole('button', { name: 'Skip' }));
 
     expect(

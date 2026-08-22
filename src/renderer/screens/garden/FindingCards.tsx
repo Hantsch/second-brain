@@ -18,6 +18,7 @@ import type { DiscardPageResult } from '../../lib/queries/gardener';
 import { ContradictionCard } from './ContradictionCard';
 import type { SupersedeWrite } from './ContradictionCard';
 import type { HiddenState } from './exits';
+import { LooseEndCard } from './LooseEndCard';
 import { NearDuplicateCard } from './NearDuplicateCard';
 import type { NearDuplicateSupersedeWrite } from './NearDuplicateCard';
 import { OrphanCard } from './OrphanCard';
@@ -92,6 +93,9 @@ export interface OpenFindingCardProps extends FindingCardCommonProps {
   onSupersedeDuplicate: (write: NearDuplicateSupersedeWrite) => void;
   onDiscarded: (result: DiscardPageResult) => void;
   onLinkOrphan: (write: OrphanLinkWrite) => void;
+  /** The one way out a loose end has: my own words about what happened
+      (020 D5/D6), through 017's `extraActions` slot. */
+  onAnswerLooseEnd: (finding: GardenerFinding, day: string, text: string) => void;
 }
 
 export function OpenFindingCard({
@@ -107,7 +111,23 @@ export function OpenFindingCard({
   onSupersedeDuplicate,
   onDiscarded,
   onLinkOrphan,
+  onAnswerLooseEnd,
 }: OpenFindingCardProps) {
+  if (finding.kind === 'loose-end') {
+    return (
+      <LooseEndCard
+        finding={finding}
+        busy={busy}
+        onFix={onFix}
+        onDismiss={onDismiss}
+        onSnooze={onSnooze}
+        onRecheck={onRecheck}
+        onOpenPath={onOpenPath}
+        onOpenFile={onOpenFile}
+        onAnswer={onAnswerLooseEnd}
+      />
+    );
+  }
   if (finding.kind === 'contradiction') {
     return (
       <ContradictionCard

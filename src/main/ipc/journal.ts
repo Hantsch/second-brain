@@ -24,12 +24,15 @@
  */
 
 import { newMessageId } from '@core/chat';
+import { findingId, looseEndInput } from '@core/gardener';
 import {
+  answerLooseEnd,
   appendEntry,
   closeDay,
   coach,
   dayOf,
   ensureDay,
+  findLooseEnds,
   interviewFollowup,
   journalTitle,
   newDayBody,
@@ -41,13 +44,21 @@ import {
   setMood,
   INTERVIEW_TOPICS,
 } from '@core/journal';
-import type { CoachDeps, InterviewMode, JournalDayDoc, JournalIndexView } from '@core/journal';
+import type {
+  CoachDeps,
+  InterviewLooseEnd,
+  InterviewMode,
+  JournalDayDoc,
+  JournalIndexView,
+} from '@core/journal';
 import { toVaultDoc } from '@core/vault';
+import { isoDay } from '@core/vault/paths';
 import { COACH_MODES } from '@shared/types';
 import type { Citation, DocLanguage, JournalDay, JournalFrontmatter } from '@shared/types';
 import type { IpcRequest } from '@shared/ipc';
 import type { HandlerMap } from './registry';
 import { defineHandlers, fail } from './registry';
+import { gardenerIndex, gardenerStateFor, gardenerToday } from './gardener-deps';
 import { applyClose, foldDay, journalStore, toView, withDayText } from './journal-day';
 import { llmStreams } from './llm-stream';
 import type { StreamRun } from './llm-stream';
@@ -55,6 +66,7 @@ import { requireLists } from './lists';
 import { docLanguage, replyLanguage, settle } from './wiki-bridge';
 import { createGateway } from '../llm-bridge';
 import type { IndexLike } from '../contracts';
+import { looseEndState } from '../loose-end-state';
 import type { Services } from '../services';
 
 /** What the journal core needs from the index — `IndexService` satisfies it. */
@@ -117,6 +129,43 @@ function emptyDayDoc(date: string, language: DocLanguage): JournalDayDoc {
     modified: new Date().toISOString(),
   });
   return { day, doc };
+}
+
+/**
+ * The loose ends the interview's one extra question (020, D8) may draw from:
+ * `findLooseEnds` re-derived over the index, oldest first (its own sort),
+ * minus whatever's already dealt with on another surface — answered (D5,
+ * `main/loose-end-state.ts`), or "looks fine"/snoozed on the maintenance
+ * screen (017, `main/gardener-state.ts`). Mirrors `reminders.ts`'s
+ * `excludeAnsweredLooseEnds` and `gardener-deps.ts`'s `rejected` composition:
+ * both filter the very same two states for the very same reason, so this is
+ * the third and last copy of that particular check, not a fourth invention.
+ *
+ * `id` is rewritten to `findingId('loose-end', looseEnd.id)` before it ever
+ * reaches `planInterview` — the id under which the maintenance screen and the
+ * reminders list already track this same loose end, and the one
+ * `journal:answerLooseEnd` must record it under so answering here makes it
+ * disappear from those surfaces too, not just from this one dialog.
+ */
+async function openLooseEnds(services: Services): Promise<InterviewLooseEnd[]> {
+  const { days, todos } = looseEndInput({ index: gardenerIndex(services) });
+  const today = gardenerToday();
+  const found = findLooseEnds(days, todos, today);
+  if (found.length === 0) return [];
+
+  const answered = (await looseEndState(services.requireVaultRoot())).answeredIds();
+  const gardener = await gardenerStateFor(services);
+  const dismissed = gardener.dismissed();
+
+  const open: InterviewLooseEnd[] = [];
+  for (const looseEnd of found) {
+    const id = findingId('loose-end', looseEnd.id);
+    if (answered.has(id) || dismissed.has(id)) continue;
+    const snoozedUntil = gardener.snoozedUntil(id);
+    if (snoozedUntil !== null && snoozedUntil > today) continue;
+    open.push({ id, day: looseEnd.day, quote: looseEnd.quote });
+  }
+  return open;
 }
 
 /**
@@ -295,6 +344,27 @@ export function journalHandlers(services: Services): HandlerMap {
       return result;
     },
 
+    'journal:answerLooseEnd': async ({ id, day, text, expectedHash }) => {
+      const store = journalStore(services);
+      const today = isoDay(new Date());
+      const written = await answerLooseEnd(store, today, day, text, {
+        docLanguage: docLanguage(services),
+        ...(expectedHash === undefined ? {} : { expectedHash }),
+      });
+      /* Recorded only once the write actually succeeded — a stale hash throws
+         above and nothing here runs, so a `conflict` never gets remembered as
+         answered. */
+      const state = await looseEndState(services.requireVaultRoot());
+      await state.recordAnswered({
+        id,
+        day,
+        path: written.path,
+        answeredAt: new Date().toISOString(),
+      });
+      await settle(services, [written.path], 'journal');
+      return written;
+    },
+
     'journal:interviewPlan': async ({ date }) => {
       /* Throws on a date that isn't a calendar day — before anything runs,
          same as `journal:coach`. */
@@ -307,7 +377,8 @@ export function journalHandlers(services: Services): HandlerMap {
       const mode: InterviewMode = createGateway(services).isAvailable('journal-chat')
         ? 'model'
         : 'fixed';
-      return planInterview(found ?? emptyDayDoc(day, language), language, mode);
+      const looseEnds = await openLooseEnds(services);
+      return planInterview(found ?? emptyDayDoc(day, language), language, mode, looseEnds);
     },
 
     'journal:interviewAnswer': async ({ date, step, answer }) => {

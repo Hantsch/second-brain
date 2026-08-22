@@ -39,6 +39,16 @@ export {
 } from './journal-chat';
 export { journalClosePrompt, JOURNAL_CLOSE_SCHEMA, type JournalCloseInput } from './journal-close';
 export {
+  journalLooseEndsPrompt,
+  JOURNAL_LOOSE_ENDS_SCHEMA,
+  MAX_LOOSE_END_DAY_CHARS,
+  MAX_LOOSE_END_PROPOSALS,
+  MAX_LOOSE_END_SUBJECT_WORDS,
+  type JournalLooseEndsInput,
+  type KnownLooseEndInput,
+  type LooseEndDayInput,
+} from './journal-loose-ends';
+export {
   journalInterviewFollowupPrompt,
   type JournalInterviewFollowupInput,
 } from './journal-interview';

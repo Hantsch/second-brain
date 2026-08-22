@@ -175,4 +175,8 @@ export const enJournal = {
     'Follow-up questions go to {provider} — a local model stays on this machine.',
   'journal.interview.done.body':
     'The interview is done for today — anything skipped stays open. Mood and energy still wait on the pickers at the top of the day.',
+  /* The one extra question about a still-open loose end (020, D8): an
+     inquiry, not a claim — it only quotes the earlier sentence back, never
+     asserting what became of it. */
+  'journal.interview.looseEnd.question': 'How did it go: "{quote}"?',
 } as const;

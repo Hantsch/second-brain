@@ -136,6 +136,9 @@ export const deDashboard = {
   'tile.waiting.since': 'seit {date}',
   'tile.waiting.due': 'bis {date}',
   'tile.waiting.overdue': 'überfällig',
+  /* Warum ein loses Ende hier mahnt: am genannten Tag stand eine Ankündigung
+     im Tagebuch, seitdem hat niemand gesagt, wie es ausging. */
+  'tile.waiting.looseEnd': 'Angekündigt am {date}, seitdem nichts dazu',
 
   'tile.deadlines.empty': 'Keine Frist in den nächsten {days} Tagen.',
   'tile.deadlines.project': 'Projektfrist',

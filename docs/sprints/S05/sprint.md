@@ -22,7 +22,7 @@ along in the same sprint: the journal notices what I announced and never followe
 - [x] 015 — A near-duplicate can be resolved, not only compared
 - [x] 016 — An orphaned page can be linked where I say, not only where it is obvious
 - [x] 017 — A finding says how it ends — and "looks fine" stays reversible
-- [ ] 020 — Journal — announced and never followed up
+- [x] 020 — Journal — announced and never followed up
 
 ## Notes
 

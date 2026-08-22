@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { reminders, urgencyFor } from '@core/overview';
-import { NOW, TODAY, day, indexFrom, projectDoc, stamp } from './fixtures';
+import { NOW, TODAY, day, indexFrom, journalDoc, projectDoc, stamp } from './fixtures';
 
 const LIMITS = { staleAfterDays: 14, deadlineHorizonDays: 14, waitingNudgeDays: 5 };
 
@@ -221,6 +221,58 @@ describe('reminders — stagnierende Projekte', () => {
     const docs = [projectDoc({ slug: 'liegt', updated: stamp(-10) })];
     expect(reminders(indexFrom(docs), LIMITS, TODAY)).toEqual([]);
     expect(reminders(indexFrom(docs), { ...LIMITS, staleAfterDays: 7 }, TODAY)).toHaveLength(1);
+  });
+});
+
+describe('reminders — lose Enden (020, D7)', () => {
+  /* Notar-Termin, angekündigt am day(-6) für day(-5) — beide vor TODAY, damit
+     der Tag als vorbei gilt (dieselbe Konstellation wie
+     `tests/core/gardener/checks-journal.test.ts`). */
+  const notary = () =>
+    journalDoc(-6, { body: ['## Tag', '', 'Morgen bin ich beim Notar.', ''].join('\n') });
+
+  it('meldet ein unbeantwortetes loses Ende einmal, mit Quelle `loose-end`', () => {
+    const index = indexFrom([notary()]);
+    const list = reminders(index, LIMITS, TODAY).filter((entry) => entry.source === 'loose-end');
+    expect(list).toHaveLength(1);
+    expect(list[0]).toMatchObject({
+      source: 'loose-end',
+      urgency: 'overdue',
+      date: day(-5),
+      scope: 'private',
+    });
+    // Der Titel nennt den Gegenstand — die Begründung, warum es mahnt.
+    expect(list[0]!.title.length).toBeGreaterThan(0);
+  });
+
+  it('mahnt nicht, wenn der Gegenstand schon ein Todo mit Frist ist — `findLooseEnds` zieht das selbst ab', () => {
+    const withTodo = indexFrom([
+      notary(),
+      projectDoc({
+        slug: 'privat',
+        scope: 'private',
+        body: todoBody(`- [ ] Notar Termin vorbereiten @due:${day(-1)}`),
+      }),
+    ]);
+    const list = reminders(withTodo, LIMITS, TODAY).filter((entry) => entry.source === 'loose-end');
+    expect(list).toEqual([]);
+  });
+
+  it('haelt dieselbe Kennung wie der Pflegelauf-Befund — `loose-end:` plus derselbe Hash', () => {
+    const index = indexFrom([notary()]);
+    const list = reminders(index, LIMITS, TODAY).filter((entry) => entry.source === 'loose-end');
+    expect(list[0]!.id).toMatch(/^loose-end:[0-9a-f]{12}$/);
+  });
+
+  it('laesst sich wie jede andere Erinnerung ruhig stellen', () => {
+    const index = indexFrom([notary()]);
+    const before = reminders(index, LIMITS, TODAY).find((entry) => entry.source === 'loose-end')!;
+
+    const ruht = reminders(index, LIMITS, TODAY, new Map([[before.id, day(2)]]));
+    expect(ruht.some((entry) => entry.id === before.id)).toBe(false);
+
+    const wiederDa = reminders(index, LIMITS, TODAY, new Map([[before.id, TODAY]]));
+    expect(wiederDa.some((entry) => entry.id === before.id)).toBe(true);
   });
 });
 

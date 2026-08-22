@@ -216,11 +216,21 @@ describe('the mandated rule: only a trains-on-input cloud model available', () =
     expect(candidates).toHaveLength(1);
   });
 
-  it('the sensitive task list is exactly the three personal-content tasks', () => {
-    expect(sensitiveTasks().sort()).toEqual(['classify-dump', 'extract-tasks', 'journal-chat']);
+  it('the sensitive task list is exactly the four personal-content tasks', () => {
+    expect(sensitiveTasks().sort()).toEqual([
+      'classify-dump',
+      'extract-tasks',
+      'journal-chat',
+      'journal-loose-ends',
+    ]);
   });
 
-  const sensitiveKinds: TaskKind[] = ['classify-dump', 'extract-tasks', 'journal-chat'];
+  const sensitiveKinds: TaskKind[] = [
+    'classify-dump',
+    'extract-tasks',
+    'journal-chat',
+    'journal-loose-ends',
+  ];
 
   for (const kind of sensitiveKinds) {
     it(`${kind} comes back unrouted, with a reason`, () => {

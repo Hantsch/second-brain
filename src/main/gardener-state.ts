@@ -255,8 +255,15 @@ export class GardenerState {
    * yet: left running past midnight, the file is a day behind the calendar.
    * Findings a fix has resolved are in neither list — they aren't a decision to
    * review, they're done until the next run.
+   *
+   * `resolved` are ids that a write outside this file has settled — today only
+   * the answered loose ends (020, D5), whose record lives in
+   * `.secondbrain/loose-ends.json`. They're treated exactly like a fixed
+   * finding: gone from both lists, because an answer isn't a decision to
+   * review, and gone here rather than at each caller, so no reader of a stored
+   * run can miss it (`ipc/gardener-deps.ts`, `gardenerReport`).
    */
-  present(today: string): GardenerReport | null {
+  present(today: string, resolved: ReadonlySet<string> = new Set()): GardenerReport | null {
     const run = this.data.run;
     if (run === null) return null;
     const dismissed = this.dismissed();
@@ -264,7 +271,7 @@ export class GardenerState {
     const findings: GardenerFinding[] = [];
     const hidden: GardenerHiddenFinding[] = [];
     for (const finding of run.findings) {
-      if (fixed.has(finding.id)) continue;
+      if (fixed.has(finding.id) || resolved.has(finding.id)) continue;
       const until = this.data.snoozed[finding.id];
       if (dismissed.has(finding.id)) hidden.push({ finding, state: 'dismissed' });
       else if (until !== undefined && until > today) {

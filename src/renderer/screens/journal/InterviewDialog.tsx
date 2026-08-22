@@ -31,14 +31,20 @@
  */
 
 import { useState } from 'react';
-import type { JournalInterviewStep } from '@shared/ipc';
+import type { JournalInterviewLooseEnd, JournalInterviewStep } from '@shared/ipc';
 import { Button } from '../../atoms/Button';
 import { Dialog } from '../../atoms/Dialog';
 import { Icon } from '../../atoms/Icon';
+import { todayIso } from '../../components/DayList';
 import { DialogTurn } from '../../components/DialogTurn';
 import { ErrorState } from '../../components/ErrorState';
 import { useT } from '../../i18n';
-import { useCoachRoute, useInterviewMutations, useInterviewPlan } from '../../lib/queries/journal';
+import {
+  useCoachRoute,
+  useInterviewMutations,
+  useInterviewPlan,
+  useJournalDay,
+} from '../../lib/queries/journal';
 
 export interface InterviewDialogProps {
   open: boolean;
@@ -46,13 +52,17 @@ export interface InterviewDialogProps {
   onClose: () => void;
 }
 
-/** One step in the running order. `isFollowUp` marks a question the model
-    inserted after a backbone answer — it never gets a follow-up of its own
-    in turn (Decisions: "at most one follow-up per backbone answer"). */
-interface RunStep {
-  step: JournalInterviewStep;
-  isFollowUp: boolean;
-}
+/**
+ * One step in the running order. Either one of the five fixed topics (or a
+ * model follow-up inserted after one, `isFollowUp`), or the interview's one
+ * optional loose-end question (020, D8) — the latter never gets a follow-up
+ * and answers through a different channel entirely (`journal:answerLooseEnd`
+ * rather than `journal:interviewAnswer`), so it is its own branch rather than
+ * a `JournalInterviewStep` in disguise.
+ */
+type RunStep =
+  | { kind: 'topic'; step: JournalInterviewStep; isFollowUp: boolean }
+  | { kind: 'loose-end'; looseEnd: JournalInterviewLooseEnd };
 
 interface Session {
   steps: RunStep[];
@@ -67,6 +77,14 @@ export function InterviewDialog({ open, date, onClose }: InterviewDialogProps) {
   const route = useCoachRoute();
   const plan = useInterviewPlan(date, open);
   const mutations = useInterviewMutations(date);
+  /* The loose-end answer (020, D5) always writes into *today*'s file, even
+     when this dialog is open on an earlier day (`date` here) — the interview
+     button has no "only on today" guard, so that can happen. `today`'s
+     current hash is therefore what the guard needs, not `date`'s. Reused
+     query key: when `date` already *is* today this is the same cache entry
+     `JournalScreen`'s own `useJournalDay(date)` already holds — no second
+     fetch. */
+  const today = useJournalDay(todayIso());
   const [session, setSession] = useState<Session | null>(null);
   const [answer, setAnswer] = useState('');
 
@@ -79,15 +97,40 @@ export function InterviewDialog({ open, date, onClose }: InterviewDialogProps) {
     (plan.data === undefined
       ? null
       : {
-          steps: plan.data.steps.map((step) => ({ step, isFollowUp: false })),
+          /* The one optional loose-end question (020, D8) is appended after
+             the five fixed topics — it never displaces or reorders them, it
+             is purely an addition, exactly as the story's own wording says
+             ("appends"). Built once here, from the plan this run opened
+             with — same reasoning as the topics themselves not re-fetching
+             mid-run. */
+          steps: [
+            ...plan.data.steps.map((step): RunStep => ({ kind: 'topic', step, isFollowUp: false })),
+            ...(plan.data.looseEnd === null
+              ? []
+              : [{ kind: 'loose-end', looseEnd: plan.data.looseEnd } as RunStep]),
+          ],
           index: 0,
-          total: plan.data.steps.length,
+          total: plan.data.steps.length + (plan.data.looseEnd === null ? 0 : 1),
         });
 
   const current =
     active !== null && active.index < active.steps.length ? active.steps[active.index] : undefined;
   const finished = active !== null && current === undefined;
-  const busy = mutations.answer.isPending || mutations.followUp.isPending;
+  const busy =
+    mutations.answer.isPending ||
+    mutations.followUp.isPending ||
+    mutations.answerLooseEnd.isPending;
+
+  /** The question text on screen, verbatim for a fixed topic (Decisions: it's
+      document-language content, not UI chrome), built through `t()` for the
+      loose-end step (nothing about its wording is ever written to a file —
+      only the typed answer is, through `journal:answerLooseEnd`), quoting the
+      user's own sentence back rather than asserting anything happened. */
+  function questionOf(entry: RunStep): string {
+    return entry.kind === 'topic'
+      ? entry.step.question
+      : t('journal.interview.looseEnd.question', { quote: entry.looseEnd.quote });
+  }
 
   async function handleAnswer(): Promise<void> {
     /* Guards against a fast double Ctrl+Enter re-entering this function with
@@ -98,6 +141,27 @@ export function InterviewDialog({ open, date, onClose }: InterviewDialogProps) {
     if (active === null || current === undefined || busy) return;
     const text = answer.trim();
     if (text.length === 0) return;
+
+    /* The loose-end question's own path (020, D5): it writes through
+       `journal:answerLooseEnd`, never through `journal:interviewAnswer` — no
+       question text lands in the file, and there's no follow-up round for it. */
+    if (current.kind === 'loose-end') {
+      try {
+        await mutations.answerLooseEnd.mutateAsync({
+          id: current.looseEnd.id,
+          day: current.looseEnd.day,
+          text,
+          expectedHash: today.data?.doc.hash,
+        });
+      } catch {
+        /* Surfaced via `mutations.answerLooseEnd.error` below — the run does
+           not advance on a failed write, same as the fixed topics. */
+        return;
+      }
+      setAnswer('');
+      setSession({ steps: active.steps, index: active.index + 1, total: active.total });
+      return;
+    }
 
     try {
       await mutations.answer.mutateAsync({ step: current.step, answer: text });
@@ -118,6 +182,7 @@ export function InterviewDialog({ open, date, onClose }: InterviewDialogProps) {
         const result = await mutations.followUp.mutateAsync({ step: current.step, answer: text });
         if (result.question !== null) {
           const inserted: RunStep = {
+            kind: 'topic',
             step: { topic: current.step.topic, question: result.question },
             isFollowUp: true,
           };
@@ -137,11 +202,15 @@ export function InterviewDialog({ open, date, onClose }: InterviewDialogProps) {
   }
 
   /* The backbone question number: follow-ups don't move it — answering a
-     follow-up still reads as "on backbone question N", not N+1. */
+     follow-up still reads as "on backbone question N", not N+1. The
+     loose-end step counts as its own question (it's neither a follow-up nor
+     one of the five topics, but still a step you answer or skip). */
   const backboneNumber =
     active === null
       ? 0
-      : active.steps.slice(0, active.index + 1).filter((entry) => !entry.isFollowUp).length;
+      : active.steps
+          .slice(0, active.index + 1)
+          .filter((entry) => entry.kind !== 'topic' || !entry.isFollowUp).length;
 
   return (
     <Dialog
@@ -217,13 +286,16 @@ export function InterviewDialog({ open, date, onClose }: InterviewDialogProps) {
               })}
             </span>
 
-            {/* The question, verbatim as `interviewPlan` returned it — never
-                through `t()` (Decisions: the question texts are a
-                document-language table in the core, not UI chrome). Rendered
-                through `DialogTurn` purely for the existing visual: legible
-                as the app's turn, exactly as it will look once written into
-                the day stream (D2). */}
-            <DialogTurn turn={{ role: 'assistant', text: current.step.question, at: null }} />
+            {/* A fixed topic's question is verbatim as `interviewPlan`
+                returned it — never through `t()` (Decisions: the question
+                texts are a document-language table in the core, not UI
+                chrome). The loose-end question is the one exception
+                (`questionOf`): nothing about its wording is ever written to a
+                file, so it is genuinely UI text, built with the user's own
+                quoted sentence. Both render through `DialogTurn` purely for
+                the existing visual: legible as the app's turn, exactly as a
+                fixed topic will look once written into the day stream (D2). */}
+            <DialogTurn turn={{ role: 'assistant', text: questionOf(current), at: null }} />
 
             <label className="gs-label" htmlFor="sb-interview-field">
               {t('journal.interview.field.label')}
@@ -249,6 +321,12 @@ export function InterviewDialog({ open, date, onClose }: InterviewDialogProps) {
 
             {mutations.answer.error ? (
               <ErrorState error={mutations.answer.error} variant="secondary" subject={date} />
+            ) : mutations.answerLooseEnd.error ? (
+              <ErrorState
+                error={mutations.answerLooseEnd.error}
+                variant="secondary"
+                subject={date}
+              />
             ) : null}
           </>
         )}

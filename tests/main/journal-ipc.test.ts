@@ -18,6 +18,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { parseStream } from '@core/journal';
+import { isoDay, journalPath } from '@core/vault/paths';
 import type { IpcChannel, IpcEvents, IpcRequest, IpcResponse } from '@shared/ipc';
 import { createFetchFake, jsonResponse, sseChunks, sseResponse } from '../fakes/llm';
 import type { FetchResponder } from '../fakes/llm';
@@ -905,6 +906,98 @@ describe('Tagebuch-Kanäle im Main', () => {
     });
 
     expect(result).toEqual({ question: null, noModel: true });
+  });
+
+  // ── Lose Enden (020, D5) ───────────────────────────────────────────────────
+
+  describe('journal:answerLooseEnd', () => {
+    const TODAY = isoDay(new Date());
+    const TODAY_PATH = journalPath(TODAY);
+    const ANNOUNCING_DAY = '2026-08-05';
+
+    async function looseEndState() {
+      const { LooseEndState } = await import('../../src/main/loose-end-state');
+      return LooseEndState.load(vault.root);
+    }
+
+    it('schreibt den Rückverweis und den Text unverändert in den heutigen Strom', async () => {
+      const result = await harness.call('journal:answerLooseEnd', {
+        id: 'loose-end:abc123',
+        day: ANNOUNCING_DAY,
+        text: 'War in zehn Minuten erledigt, alles unterschrieben.',
+      });
+
+      expect(result.path).toBe(TODAY_PATH);
+      const file = (await vault.read(TODAY_PATH)) ?? '';
+      expect(file).toContain(
+        `[[${ANNOUNCING_DAY}]] War in zehn Minuten erledigt, alles unterschrieben.`,
+      );
+      expect(harness.changed.some((event) => event.paths.includes(TODAY_PATH))).toBe(true);
+    });
+
+    it('legt den heutigen Tag an, wenn er noch keine Datei hat', async () => {
+      expect(await vault.exists(TODAY_PATH)).toBe(false);
+
+      await harness.call('journal:answerLooseEnd', {
+        id: 'loose-end:abc123',
+        day: ANNOUNCING_DAY,
+        text: 'Erledigt.',
+      });
+
+      expect(await vault.exists(TODAY_PATH)).toBe(true);
+    });
+
+    it('lehnt einen veralteten Hash ab, statt eine fremde Änderung zu überschreiben', async () => {
+      const first = await harness.call('journal:answerLooseEnd', {
+        id: 'loose-end:abc123',
+        day: ANNOUNCING_DAY,
+        text: 'Erste Antwort.',
+      });
+      const raw = (await vault.read(TODAY_PATH)) ?? '';
+      await vault.write(
+        TODAY_PATH,
+        raw.replace('Erste Antwort.', 'Erste Antwort (extern geändert).'),
+      );
+
+      await expect(
+        harness.call('journal:answerLooseEnd', {
+          id: 'loose-end:different456',
+          day: ANNOUNCING_DAY,
+          text: 'Zweite Antwort.',
+          expectedHash: first.hash,
+        }),
+      ).rejects.toMatchObject({ code: 'conflict' });
+
+      const file = (await vault.read(TODAY_PATH)) ?? '';
+      expect(file).toContain('extern geändert');
+      expect(file).not.toContain('Zweite Antwort.');
+      /* Kein Schreibversuch für die zweite Antwort, also auch keine Ablage
+         ihrer Kennung — nur die erste, erfolgreich geschriebene, steht drin. */
+      expect([...(await looseEndState()).answeredIds()]).toEqual(['loose-end:abc123']);
+    });
+
+    it('legt die beantwortete Kennung in .secondbrain/loose-ends.json ab und übersteht einen Neustart der Ablage', async () => {
+      const written = await harness.call('journal:answerLooseEnd', {
+        id: 'loose-end:abc123',
+        day: ANNOUNCING_DAY,
+        text: 'Erledigt, hat gepasst.',
+      });
+
+      const state = await looseEndState();
+      expect([...state.answeredIds()]).toEqual(['loose-end:abc123']);
+      expect(state.answered()).toEqual([
+        {
+          id: 'loose-end:abc123',
+          day: ANNOUNCING_DAY,
+          path: written.path,
+          answeredAt: expect.any(String),
+        },
+      ]);
+
+      /* "Neustart": eine frische Instanz liest dieselbe Datei erneut. */
+      const reloaded = await looseEndState();
+      expect([...reloaded.answeredIds()]).toEqual(['loose-end:abc123']);
+    });
   });
 
   // ── Ohne Vault ─────────────────────────────────────────────────────────────

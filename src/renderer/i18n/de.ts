@@ -124,6 +124,8 @@ export const de = {
     'Ablage-Vorschläge brauchen ein Modell — Erfassen und Ablegen gehen ohne.',
   'llm.note.project-status':
     'Ein gedeuteter Vorschlag braucht ein Modell — der aus Regeln kommt auch ohne.',
+  'llm.note.journal-loose-ends':
+    'Losen Enden nachgehen braucht ein Modell — das Tagebuch bleibt ohne eines schreibbar.',
   'llm.note.gardener-audit':
     'Widersprüche, Beinahe-Dubletten und Begriffe ohne Seite braucht ein Modell — die maschinellen Prüfungen laufen ohne.',
   'llm.note.action': 'Routing einrichten',
@@ -180,6 +182,9 @@ export const de = {
   'task.journal-chat.label': 'Tagebuch-Gespräch',
   'task.journal-chat.hint':
     'Das persönlichste Gespräch der App. Ein lokales Modell ist ausdrücklich empfohlen.',
+  'task.journal-loose-ends.label': 'Losen Enden nachgehen',
+  'task.journal-loose-ends.hint':
+    'Liest Tagebuchtext, um Angekündigtes zu finden, das nie wieder auftaucht. Persönlicher Inhalt — ein lokales Modell ist ausdrücklich empfohlen.',
   'task.project-status.label': 'Projekt-Stand',
   'task.project-status.hint':
     'Leitet Status und nächsten Schritt aus der Projekthistorie ab — als Vorschlag.',

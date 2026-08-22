@@ -49,6 +49,7 @@ export const enGarden = {
   'garden.advice.contradiction': 'Name contradictions — both versions stay.',
   'garden.advice.near-duplicate': 'Compare near duplicates and merge where it is the same thing.',
   'garden.advice.missing-page': 'Give frequently named terms their own pages.',
+  'garden.advice.loose-end': 'Follow up on announced sentences — answer or mark them done.',
 
   // ── Findings ──────────────────────────────────────────────────────────────
   'garden.findings.label': 'Results',
@@ -90,6 +91,7 @@ export const enGarden = {
   'garden.kind.unfiled-dump': 'Dumps left lying around',
   'garden.kind.unprocessed-source': 'Undistilled sources',
   'garden.kind.project-without-next-step': 'Projects without a next step',
+  'garden.kind.loose-end': 'Loose ends',
 
   'garden.countOne.orphan': '1 orphaned page',
   'garden.countMany.orphan': '{count} orphaned pages',
@@ -111,6 +113,8 @@ export const enGarden = {
   'garden.countMany.unprocessed-source': '{count} undistilled sources',
   'garden.countOne.project-without-next-step': '1 project without a next step',
   'garden.countMany.project-without-next-step': '{count} projects without a next step',
+  'garden.countOne.loose-end': '1 loose end',
+  'garden.countMany.loose-end': '{count} loose ends',
 
   // ── Card ──────────────────────────────────────────────────────────────────
   'garden.card.files': 'Files affected',
@@ -196,6 +200,16 @@ export const enGarden = {
   'garden.discard.willBreak':
     'These links would break — there is no surviving page to repoint them at.',
   'garden.discard.confirm': 'Discard',
+
+  // ── Loose end ─────────────────────────────────────────────────────────────
+  'garden.looseEnd.empty': 'No loose ends.',
+  'garden.looseEnd.quote': '“{quote}”',
+  'garden.looseEnd.announced': 'Announced on {day}. Nothing since.',
+  'garden.looseEnd.foundByHeuristic': 'Found by the built-in check.',
+  'garden.looseEnd.foundByModel': 'Found by the model.',
+  'garden.looseEnd.answerLabel': 'Answer',
+  'garden.looseEnd.answerPlaceholder': 'What came of it?',
+  'garden.looseEnd.answerSubmit': 'Record',
 
   // ── Without a model ───────────────────────────────────────────────────────
   'garden.llm.title': 'What a model would also find',

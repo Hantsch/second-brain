@@ -58,3 +58,23 @@
 - 2026-08-22 00:40 · 017 · review-fix cycle 1 (prettier F1, prune asymmetry F3) · started
 - 2026-08-22 00:49 · 017 · review-fix cycle 1 (prettier F1, prune asymmetry F3, exits.ts comments) · done
 - 2026-08-22 00:49 · 017 · verify green + live smoke (screenshots) + Done section, moved to done/ · done
+- 2026-08-22 00:50 · 020 · D1 the loose-end rule as a pure module · started
+- 2026-08-22 01:01 · 020 · D1 the loose-end rule as a pure module · done
+- 2026-08-22 01:02 · 020 · D2 a loose end is a finding of the maintenance run · started
+- 2026-08-22 01:08 · 020 · D2 a loose end is a finding of the maintenance run · done
+- 2026-08-22 01:08 · 020 · D3 detection is a sensitive task that recommends a local model · started
+- 2026-08-22 01:13 · 020 · D3 detection is a sensitive task that recommends a local model · done
+- 2026-08-22 01:13 · 020 · D4 the model finds what the heuristic misses, and invents nothing · started
+- 2026-08-22 01:29 · 020 · D4 the model finds what the heuristic misses, and invents nothing · done
+- 2026-08-22 01:26 · 020 · D5 answering a loose end writes my own words into today, hash-guarded · started
+- 2026-08-22 01:48 · 020 · D5 answering a loose end writes my own words into today, hash-guarded · done
+- 2026-08-22 01:38 · 020 · D6 the loose end has a card in the maintenance surface · started
+- 2026-08-22 02:04 · 020 · D6 the loose end has a card in the maintenance surface · done
+- 2026-08-22 02:06 · 020 · D7 the same loose ends reach me as reminders · started
+- 2026-08-22 02:06 · 020 · D7 the same loose ends reach me as reminders · done
+- 2026-08-22 02:06 · 020 · D8 the journal conversation may ask about a loose end · started
+- 2026-08-22 02:35 · 020 · D8 the journal conversation may ask about a loose end · done
+- 2026-08-22 02:35 · 020 · D9 the demo vault shows it · started
+- 2026-08-22 02:36 · 020 · D9 the demo vault shows it (+ fixed missing garden.advice.loose-end i18n key) · done
+- 2026-08-22 03:13 · 020 · review-fix cycle 1 (F1 model pass unwired, F2 answered-id leak, F3 hash guard unarmed, F4 model skips subtraction, F6 filtered empty state) · done
+- 2026-08-22 03:13 · 020 · verify green + live smoke (seed/shot) + Done section, moved to done/ · done

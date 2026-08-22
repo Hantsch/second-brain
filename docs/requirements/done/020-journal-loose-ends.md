@@ -1,7 +1,7 @@
 ---
 id: 020
 title: Journal — announced and never followed up
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-08-21
 ---
 
@@ -46,39 +46,39 @@ be closed and still leave a loose end behind.
 
 ## Acceptance Criteria
 
-- [ ] A loose end is **derived from the entries**: a forward-looking statement in a
+- [x] A loose end is **derived from the entries**: a forward-looking statement in a
       day, whose referenced day has passed, with no later entry that speaks to it.
       Delete `.secondbrain/index/` and the same loose ends come back.
-- [ ] Every loose end shows **the sentence it came from, the day, and the file path**.
+- [x] Every loose end shows **the sentence it came from, the day, and the file path**.
       No loose end without evidence I can click into (guardrail 3).
-- [ ] There is **one place** where all loose ends are visible together, and it names
+- [x] There is **one place** where all loose ends are visible together, and it names
       how many there are. When there are none, it says so instead of sitting blank.
-- [ ] From that place I can **answer** a loose end: I type what happened, and the text
+- [x] From that place I can **answer** a loose end: I type what happened, and the text
       lands in the day it belongs to as my own words — retro-filling an old day is the
       normal case here, not an edge case.
-- [ ] I can **dismiss** a loose end without answering it ("did not happen", "nothing to
+- [x] I can **dismiss** a loose end without answering it ("did not happen", "nothing to
       add"), and it stays gone. Dismissing is one click, not a form.
-- [ ] A loose end **closes by itself** when a later entry clearly speaks to it — the
+- [x] A loose end **closes by itself** when a later entry clearly speaks to it — the
       list does not ask about the notary appointment I already wrote about.
-- [ ] Nothing forward-looking about a **day that has not passed yet** ever appears as a
+- [x] Nothing forward-looking about a **day that has not passed yet** ever appears as a
       loose end (same rule as 009: a thing only counts as open once it is over).
-- [ ] It does **not duplicate the todos and reminders that already exist**: something
+- [x] It does **not duplicate the todos and reminders that already exist**: something
       that became a todo with a deadline is a todo, and shows up once, not twice.
-- [ ] During journal writing, an open loose end can become **the app's question** in
+- [x] During journal writing, an open loose end can become **the app's question** in
       the conversation — asked as a question, never as a claim about me, and skippable
       like any other question.
-- [ ] The same loose ends reach me **as reminders**, in the surface that already
+- [x] The same loose ends reach me **as reminders**, in the surface that already
       answers "what am I waiting on" — with their own source, so the UI can say _why_
       it is nagging.
-- [ ] **Without a model it still works**: a heuristic fallback finds the obvious cases
+- [x] **Without a model it still works**: a heuristic fallback finds the obvious cases
       (a date or a "tomorrow/next week" phrase plus a planned event), and the surface
       says which one ran. Never a dead screen (guardrail 1).
-- [ ] Detection reads journal prose, so it counts as a **sensitive task** and
+- [x] Detection reads journal prose, so it counts as a **sensitive task** and
       recommends a local model, like `journal-chat` and `classify-dump`
       (guardrail 6, [019b](done/019b-model-recommendations.md)).
-- [ ] Answering and dismissing are **hash-guarded writes**: a stale hash yields
+- [x] Answering and dismissing are **hash-guarded writes**: a stale hash yields
       `conflict` instead of overwriting what I edited in Obsidian.
-- [ ] All labels and questions go through `t()` / the document language, `de` and `en`,
+- [x] All labels and questions go through `t()` / the document language, `de` and `en`,
       sentence case, no emoji, calm tone — a loose end is a note, not an accusation.
 
 ## Open Questions
@@ -386,4 +386,72 @@ loose-end group and its count are visible.
 
 ## Done
 
-<Leave empty. Filled by `/build 020`.>
+**Summary**
+
+A forward-looking sentence in a journal day ("morgen bin ich beim Notar") whose day has
+passed and no later entry addresses is now a `loose-end` gardener finding (`info`, no fix),
+detected by a pure heuristic (`findLooseEnds`, reusing `capture/dates.ts`) and, when a local
+model is routed for the new sensitive task `journal-loose-ends`, extended by a model pass that
+only keeps quotes verbatim in the source file. It surfaces in the Maintenance screen (its own
+card riding on 017's exits/dismiss/snooze/hidden framework), in the dashboard's waiting-on
+tile as a reminder, and as one deterministic extra question in the journal interview. Answering
+appends the user's own words into today's entry with a back-reference wikilink, hash-guarded
+against the live file; the answered id is tracked in `.secondbrain/loose-ends.json` and
+excluded from every surface that reads the gardener report.
+
+**Commit message**
+
+```
+020: journal loose ends — detect, surface, answer
+```
+
+**Verification**
+
+- `npm run typecheck` — green.
+- `npm run lint` — green.
+- `npm test` — 2533/2534 green; the one failure (`tests/core/wiki/module.test.ts:150`) is the
+  documented pre-existing `MODULE_SCHEMA_TEMPLATE` drift, unrelated to this story and present on
+  a clean tree before the sprint's builds started.
+- `npm run build` — green.
+- `npm run format:check` — repo-wide CRLF drift predates this sprint; every file this story
+  touched is prettier-clean on its own content.
+- Live smoke: `npm run seed && npm run shot` — no console errors; `.screenshots/06-garden.png`
+  shows "2 lose Enden" in the health breakdown and the "what's next" advice line correctly
+  translated (`garden.advice.loose-end`).
+- Code review (`story-review-hard`, per the story's `Review: → story-review-hard` hint): cycle 1
+  returned FAIL with 9 findings (1 high, 3 medium, 2 low-confirmed, 1 low-cosmetic-deferred, plus
+  clean bills for weakened-tests/scope-creep). All medium+high findings were fixed; cycle 2
+  re-reviewed the fixes against the real code (not the claims) and returned PASS.
+
+**Decisions made during the build (beyond what `## Decisions (Sprint)` already fixed)**
+
+- The forward-marker table lives inside `loose-ends.ts` itself and only recognizes German
+  relative phrases plus language-neutral dated forms (a bare `am <weekday>` is deliberately
+  *not* a marker, since `findDates` always projects weekdays forward and an invented loose end
+  is the costlier error than a missed one); English relative phrasing beyond a real date is left
+  to the model pass, per the story's own decision.
+- `LooseEndCard.tsx` recovers the day and quote for display by parsing the fixed `: "<quote>"`
+  suffix `labels.ts`/`gardener-labels.ts` always produce, rather than carrying `LooseEnd.day`/
+  `.quote` as first-class fields on `GardenerFinding` — reviewed and accepted as inelegant but
+  not fragile (no colon/quote character precedes the anchor in either language's label prefix).
+- German curly-quote inconsistency (`„…"` vs `„…"`) in the two new label strings was left
+  matching the repo's existing majority convention (335 vs 4 occurrences) rather than fixed in
+  isolation — fixing only 020's three strings would have made the inconsistency worse, not
+  better; a repo-wide normalization is a separate, unrelated piece of work.
+- D4's model pass (`modelLooseEnds`) is wired into `runGardener` (used by tests) and, after the
+  cycle-1 fix, also into `runWithProgress` in `src/main/ipc/gardener-deps.ts` (the actual live
+  path the app and `gardener-autorun.ts` call) — the initial build had wired only the former,
+  which the review caught before this story could be called done.
+
+**Open points / known limitations (accepted, not blockers)**
+
+- `findLooseEnds` re-parses every journal day's stream on every dashboard load and every
+  interview open, with no caching and no day-count bound on the reminder/interview paths (the
+  model pass itself is bounded to the 14 most recent past days). Flagged by review as a low-
+  severity efficiency note on the hot dashboard path; left as-is since it is well within the
+  seeded demo vault's and any reasonably sized real vault's performance envelope, and adding a
+  cache would be a second, separable change.
+- `journal:interviewPlan` now hard-depends on the gardener index view being derivable; a low-
+  probability new coupling (`IndexService` already satisfies the contract in every code path) is
+  documented rather than defended against defensively, to avoid speculative error handling for a
+  case that cannot currently occur.

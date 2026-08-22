@@ -227,3 +227,29 @@ export interface JournalDay {
   /** Anzahl Dialog-Runden mit dem Coach an diesem Tag. */
   turns: number;
 }
+
+/** Who found a loose end: this repo's own rule, or a model pass over the same days. */
+export type LooseEndOrigin = 'heuristic' | 'model';
+
+/**
+ * A loose end: a day announced something for a later date, that date has come
+ * and gone, and no day since says how it went. Derived, never stored — the id is
+ * a hash of the day plus the sentence, so it survives a deleted index.
+ */
+export interface LooseEnd {
+  /** sha256 of day + quote, shortened. Stable across runs, never time-based. */
+  id: string;
+  /** The day the sentence stands in, 'YYYY-MM-DD'. */
+  day: string;
+  /** Vault-relative path of that day's file. */
+  path: string;
+  /** 1-based line in the file the sentence starts on. */
+  line: number;
+  /** The announcing sentence, as it stands in the entry (whitespace collapsed). */
+  quote: string;
+  /** What was announced, in the sentence's own words. Empty when the sentence names nothing. */
+  subject: string;
+  /** The calendar day the sentence pointed at — before today, or it is no loose end. */
+  refDate: string;
+  origin: LooseEndOrigin;
+}

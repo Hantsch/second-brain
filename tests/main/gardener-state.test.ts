@@ -120,6 +120,22 @@ describe('Pflegezustand: ausblenden, vertagen, vergessen', () => {
     expect(report?.healthContributions?.map((entry) => entry.kind)).toEqual(['broken-link']);
   });
 
+  it('haelt eine anderswo erledigte Kennung aus beiden Listen heraus', async () => {
+    /* Ein beantwortetes loses Ende (020, D5) steht in seiner eigenen Datei, nicht
+       in `dismissed`. Es hier zu filtern und nicht erst beim naechsten Lauf ist
+       der Unterschied zwischen „kommt nie wieder" und „kommt bis zum naechsten
+       Lauf wieder" — die Gesundheit rechnet ohne es weiter. */
+    const state = await GardenerState.load(root, TODAY);
+    await state.save(run([ORPHAN, BROKEN]));
+
+    const report = state.present(TODAY, new Set([ORPHAN.id]));
+
+    expect(report?.findings.map((entry) => entry.id)).toEqual([BROKEN.id]);
+    expect(report?.hidden).toEqual([]);
+    /* Ohne die Menge bleibt alles wie bisher. */
+    expect(state.present(TODAY)?.findings.map((entry) => entry.id)).toEqual([ORPHAN.id, BROKEN.id]);
+  });
+
   it('lässt einen Aufschub ab seinem Tag wieder mitzählen', async () => {
     const state = await GardenerState.load(root, TODAY);
     await state.save(run([ORPHAN]));

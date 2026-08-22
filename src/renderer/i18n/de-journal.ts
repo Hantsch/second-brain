@@ -185,4 +185,8 @@ export const deJournal = {
     'Rückfragen gehen an {provider} — ein lokales Modell bleibt auf diesem Rechner.',
   'journal.interview.done.body':
     'Das Interview ist für heute durch — Übersprungenes bleibt offen. Stimmung und Energie warten noch auf die Regler oben im Tag.',
+  /* Die eine Zusatzfrage zu einem noch offenen losen Ende (020, D8): eine
+     Nachfrage, keine Behauptung — sie zitiert nur den eigenen Satz von
+     damals zurück, ohne zu unterstellen, was daraus geworden ist. */
+  'journal.interview.looseEnd.question': 'Wie ist es ausgegangen: „{quote}"?',
 } as const;

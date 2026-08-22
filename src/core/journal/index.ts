@@ -8,6 +8,11 @@
  *   `stream`    „Tag" als ein Block-Strom: eigene Worte und Antworten der App,
  *               in Schreibreihenfolge (011) — lesen mit `parseStream`, schreiben
  *               mit `appendEntry`/`appendAnswer`
+ *   `loose-ends` was ein Tag angekuendigt hat und niemand mehr erwaehnt hat
+ *               (`findLooseEnds`) — reine Ableitung ueber Tage und Todos, ohne Uhr
+ *   `loose-ends-llm` die optionale Modellstufe darauf (`modelLooseEnds`): findet,
+ *               was die Regel nicht sieht, und verwirft jedes Zitat, das nicht
+ *               wortwoertlich in der genannten Tagesdatei steht
  *   `interview` Fragebogen als Starthilfe (012): `planInterview` bestimmt, was
  *               von den fuenf festen Themen an einem Tag noch offen ist,
  *               `recordAnswer` schreibt eine beantwortete Frage als Paar
@@ -55,6 +60,24 @@ export {
   type AppendAnswerOptions,
   type AppendEntryOptions,
 } from './stream';
+export {
+  findLooseEnds,
+  looseEndId,
+  sentencesOf,
+  subjectTerms,
+  type LooseEndDay,
+  type LooseEndTodo,
+} from './loose-ends';
+export {
+  MAX_LOOSE_END_DAYS,
+  MAX_LOOSE_END_QUOTE_CHARS,
+  MAX_TRACKED_TODOS,
+  modelLooseEnds,
+  type LooseEndModelInput,
+  type LooseEndModelOptions,
+  type LooseEndModelResult,
+} from './loose-ends-llm';
+export { answerLooseEnd, type AnswerLooseEndOptions } from './loose-end-answer';
 export { planInterview, recordAnswer, type RecordAnswerOptions } from './interview';
 export {
   interviewFollowup,
@@ -110,6 +133,7 @@ export {
   type DialogRole,
   type DialogTurn,
   type EnsureDayResult,
+  type InterviewLooseEnd,
   type InterviewMode,
   type InterviewPlan,
   type InterviewStep,

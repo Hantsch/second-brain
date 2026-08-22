@@ -175,4 +175,54 @@ describe('planInterview', () => {
     const day = await readInterviewDay(body);
     expect(topicsOf(planInterview(day, 'de', 'fixed').steps)).toContain('events');
   });
+
+  // ── Die eine Zusatzfrage zu einem losen Ende (020, D8) ───────────────────
+
+  const LOOSE_END_A = {
+    id: 'loose-end:aaaa',
+    day: '2026-08-05',
+    quote: 'Morgen bin ich beim Notar.',
+  };
+  const LOOSE_END_B = {
+    id: 'loose-end:bbbb',
+    day: '2026-08-03',
+    quote: 'Übermorgen ruf ich Klara an.',
+  };
+
+  it('haengt genau eine Frage zu einem offenen losen Ende an, ohne die fuenf Themen anzutasten', async () => {
+    const day = await readInterviewDay(journalFile(DATE, ''));
+
+    const plan = planInterview(day, 'de', 'fixed', [LOOSE_END_A]);
+
+    expect(topicsOf(plan.steps)).toEqual([...INTERVIEW_TOPICS]);
+    expect(plan.looseEnd).toEqual(LOOSE_END_A);
+    /* Die feste Themenmenge bleibt unberuehrt: weder `finished` noch die
+       Schrittzahl haengen von der Zusatzfrage ab. */
+    expect(plan.finished).toBe(false);
+  });
+
+  it('haengt bei mehreren offenen losen Enden nur eine Frage an — die erste der uebergebenen Liste', async () => {
+    const day = await readInterviewDay(journalFile(DATE, ''));
+
+    const plan = planInterview(day, 'de', 'fixed', [LOOSE_END_A, LOOSE_END_B]);
+
+    expect(plan.looseEnd).toEqual(LOOSE_END_A);
+  });
+
+  it('haengt keine Frage an, wenn keine losen Enden uebergeben werden', async () => {
+    const day = await readInterviewDay(journalFile(DATE, ''));
+
+    expect(planInterview(day, 'de', 'fixed').looseEnd).toBeNull();
+    expect(planInterview(day, 'de', 'fixed', []).looseEnd).toBeNull();
+  });
+
+  it('gibt das Zitat wortwoertlich weiter, ohne es umzuformulieren', async () => {
+    const day = await readInterviewDay(journalFile(DATE, ''));
+
+    const plan = planInterview(day, 'en', 'fixed', [LOOSE_END_A]);
+
+    expect(plan.looseEnd?.quote).toBe(LOOSE_END_A.quote);
+    expect(plan.looseEnd?.id).toBe(LOOSE_END_A.id);
+    expect(plan.looseEnd?.day).toBe(LOOSE_END_A.day);
+  });
 });

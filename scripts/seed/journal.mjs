@@ -99,6 +99,21 @@ Ladezeiten der Angebotsliste.`,
       ],
     },
     {
+      /* 020 D9: offenes loses Ende — eine Ankündigung, die kein späterer Tag
+         aufgreift, damit die Gärtner-Prüfung im Demo-Vault einen echten Fund
+         zeigt. Andere Vorlage, anderes Thema als das Notar-Paar unten (-10/
+         -12), damit sich beide im Screenshot klar unterscheiden. */
+      offset: -3,
+      mood: 3,
+      energy: 3,
+      people: [],
+      projects: [],
+      tags: [],
+      time: '19:40',
+      tag: `Morgen habe ich einen Termin beim Zahnarzt, wegen der Krone, die seit Wochen
+wackelt. Sonst ein ruhiger Tag ohne besondere Vorkommnisse.`,
+    },
+    {
       offset: -4,
       mood: 3,
       energy: 4,
@@ -233,6 +248,20 @@ jede Aufräumaktion später.`,
       facts: [`- [ ] Übersichtsseite in second-brain-methodik verdichten @due:${day(4)} #wissen`],
     },
     {
+      /* 020 D9: beantwortetes loses Ende, zweite Hälfte — verlinkt den
+         Ankündigungstag (-12) und greift dessen Thema ("Notar") wieder auf,
+         damit `findLooseEnds` es als geschlossen erkennt. */
+      offset: -10,
+      mood: 3,
+      energy: 3,
+      people: [],
+      projects: [],
+      tags: [],
+      time: '20:05',
+      tag: `Beim Notar war alles in einer Viertelstunde erledigt, siehe [[${day(-12)}]]. Eine
+Sorge weniger.`,
+    },
+    {
       offset: -11,
       mood: 3,
       energy: 3,
@@ -243,6 +272,20 @@ jede Aufräumaktion später.`,
       tag: `Rollenkonzept an Tobias geschickt. Die offene Frage darin: erben Unterorganisationen
 die Rollen der Elternorganisation? Davon hängt ab, ob wir zwölf oder vierzig Gruppen
 anlegen. Im Modul steht dazu ein älterer Stand, der dem Whitepaper widerspricht.`,
+    },
+    {
+      /* 020 D9: beantwortetes loses Ende, erste Hälfte — Ankündigung, die
+         Tag -10 später aufgreift und verlinkt (siehe dort). Wörtlich dieselbe
+         Ankündigungsform wie im Unit-Test von `findLooseEnds` ("Morgen bin
+         ich beim Notar."), damit sie sicher als Fund erkannt wird. */
+      offset: -12,
+      mood: 3,
+      energy: 3,
+      people: [],
+      projects: [],
+      tags: [],
+      time: '08:30',
+      tag: `Morgen bin ich beim Notar. Sonst nichts Besonderes heute.`,
     },
     {
       offset: -13,

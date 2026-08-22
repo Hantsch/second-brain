@@ -1,4 +1,4 @@
-/* Reminders: deadlines, overdue replies, stagnating projects.
+/* Reminders: deadlines, overdue replies, stagnating projects, loose ends.
 
    The calculation happens in `core/overview/reminders`. The channel adds two
    things the core doesn't know about: the sessions (otherwise a project
@@ -7,13 +7,24 @@
 
    `reminders:snooze` checks that the reminder actually exists. Snoozing a
    marker nobody knows about would be a button that reports success and does
-   nothing. */
+   nothing.
+
+   A `loose-end` reminder gets one more filter (`excludeAnsweredLooseEnds`):
+   the same announcement also surfaces as a maintenance finding (020, D2),
+   with the same id (`core/overview/reminders.ts`'s `fromLooseEnds` uses the
+   same `idFor('loose-end', ...)` formula as `findingId` there). Whoever
+   answered it (D5), dismissed it, or snoozed it on the maintenance screen
+   (017) has already dealt with it — it must not nag a second time from here.
+   Mirrors `gardener-deps.ts`'s `rejected` composition for the same reason. */
 
 import { reminders } from '@core/overview';
+import type { Reminder } from '@shared/types';
 import { isoDay } from '@core/vault/paths';
 import type { HandlerMap } from './registry';
 import { defineHandlers, fail } from './registry';
+import { gardenerStateFor, gardenerToday } from './gardener-deps';
 import { claudeSessions, overviewIndex, overviewSettings, overviewStateFor } from './overview-deps';
+import { looseEndState } from '../loose-end-state';
 import { OVERVIEW_STATE_FILE } from '../overview-state';
 import type { Services } from '../services';
 
@@ -26,6 +37,31 @@ function shiftDay(day: string, offset: number): string {
   return date.toISOString().slice(0, 10);
 }
 
+/**
+ * Filters out `loose-end` reminders already dealt with on another surface:
+ * answered (020, D5's `.secondbrain/loose-ends.json`), or "looks fine"/
+ * snoozed on the maintenance screen (017's `.secondbrain/gardener.json`).
+ * Every other source passes through untouched — those decisions live only
+ * here, in `.secondbrain/overview.json` (`snoozes`, already applied by
+ * `reminders()` itself).
+ */
+async function excludeAnsweredLooseEnds(
+  services: Services,
+  list: readonly Reminder[],
+): Promise<Reminder[]> {
+  if (!list.some((reminder) => reminder.source === 'loose-end')) return [...list];
+  const answered = (await looseEndState(services.requireVaultRoot())).answeredIds();
+  const gardener = await gardenerStateFor(services);
+  const dismissed = gardener.dismissed();
+  const today = gardenerToday();
+  return list.filter((reminder) => {
+    if (reminder.source !== 'loose-end') return true;
+    if (answered.has(reminder.id) || dismissed.has(reminder.id)) return false;
+    const snoozedUntil = gardener.snoozedUntil(reminder.id);
+    return snoozedUntil === null || snoozedUntil <= today;
+  });
+}
+
 export function reminderHandlers(services: Services): HandlerMap {
   return defineHandlers({
     'reminders:list': async () => {
@@ -33,7 +69,13 @@ export function reminderHandlers(services: Services): HandlerMap {
       const today = isoDay(now);
       const state = await overviewStateFor(services, today);
       await claudeSessions(services);
-      return reminders(overviewIndex(services), overviewSettings(services), now, state.snoozes());
+      const list = reminders(
+        overviewIndex(services),
+        overviewSettings(services),
+        now,
+        state.snoozes(),
+      );
+      return excludeAnsweredLooseEnds(services, list);
     },
 
     'reminders:snooze': async ({ id, days }) => {
@@ -45,11 +87,9 @@ export function reminderHandlers(services: Services): HandlerMap {
       const today = isoDay(now);
       const state = await overviewStateFor(services, today);
       await claudeSessions(services);
-      const current = reminders(
-        overviewIndex(services),
-        overviewSettings(services),
-        now,
-        state.snoozes(),
+      const current = await excludeAnsweredLooseEnds(
+        services,
+        reminders(overviewIndex(services), overviewSettings(services), now, state.snoozes()),
       );
       if (!current.some((reminder) => reminder.id === id)) {
         throw fail('not-found', 'diese Erinnerung gibt es nicht');

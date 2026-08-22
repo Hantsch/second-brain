@@ -27,7 +27,14 @@ import userEvent from '@testing-library/user-event';
 import axe from 'axe-core';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { IpcChannel, IpcEventName, IpcEvents, IpcRequest, IpcResponse } from '@shared/ipc';
+import type {
+  IpcChannel,
+  IpcEventName,
+  IpcEvents,
+  IpcRequest,
+  IpcResponse,
+  JournalDayView,
+} from '@shared/ipc';
 import type {
   GardenerFinding,
   GardenerHiddenFinding,
@@ -283,6 +290,89 @@ const ORPHAN_SINGLE_REPORT: GardenerReport = {
   advice: [],
 };
 
+/* Ein loses Ende (020): die Ankündigung eines vergangenen Tages, seitdem
+   nichts dazu. Titel und Detail im genauen Format von
+   `core/gardener/labels.ts#looseEnd` — die Karte liest Tag und Zitat aus
+   genau dieser Form zurück (Pfad-Blatt bzw. Titel-Ende), nicht aus eigenen
+   Feldern, die es auf `GardenerFinding` nicht gibt. */
+const LOOSE_END_DAY = '2026-08-01';
+const LOOSE_END_QUOTE = 'Ich gehe morgen zum Notar.';
+const LOOSE_END_PATH = 'journal/2026/08/2026-08-01.md';
+
+/* The answer always writes into *today*'s file (020, D5) — `LOOSE_END_DAY`
+   only supplies the back-reference link. So the guard this screen (which has
+   no other reason to load today's day) needs is today's current hash, from
+   the same `journal:get` query every other hash-guarded write in this
+   codebase reads. The fixture stands in for "today", whatever the real wall
+   clock says when the test runs — the handler below ignores the requested
+   date, same as `LOOSE_END`'s other fixtures ignore which day was asked for. */
+const TODAY_HASH = 'hash-today-1';
+
+function todayView(): JournalDayView {
+  return {
+    day: {
+      path: 'journal/2026/08/today.md',
+      date: '2026-08-11',
+      title: 'today',
+      closed: null,
+      mood: null,
+      energy: null,
+      people: [],
+      projects: [],
+      tags: [],
+      excerpt: '',
+      wordCount: 0,
+      turns: 0,
+    },
+    doc: {
+      path: 'journal/2026/08/today.md',
+      frontmatter: { type: 'journal', title: 'today', created: NOW },
+      body: '',
+      hash: TODAY_HASH,
+      modified: NOW,
+      size: 0,
+    },
+    text: '',
+    stream: [],
+    turns: [],
+    facts: '',
+  };
+}
+
+const LOOSE_END = finding({
+  id: 'f-looseend',
+  kind: 'loose-end',
+  severity: 'info',
+  title: `Loses Ende vom ${LOOSE_END_DAY}: „${LOOSE_END_QUOTE}"`,
+  detail: `Am ${LOOSE_END_DAY} angekündigt, seitdem nichts dazu. Der Tag ist vorbei, die Sache nicht sichtbar erledigt.`,
+  paths: [LOOSE_END_PATH],
+  module: null,
+  fix: null,
+  origin: 'heuristic',
+});
+
+const LOOSE_END_MODEL = finding({
+  id: 'f-looseend-model',
+  kind: 'loose-end',
+  severity: 'info',
+  title: `Loses Ende vom ${LOOSE_END_DAY}: „Zweite Ankündigung."`,
+  detail: `Am ${LOOSE_END_DAY} angekündigt, seitdem nichts dazu. Der Tag ist vorbei, die Sache nicht sichtbar erledigt.`,
+  paths: [LOOSE_END_PATH],
+  module: null,
+  fix: null,
+  origin: 'model',
+});
+
+const LOOSE_END_REPORT: GardenerReport = {
+  ranAt: NOW,
+  usedLlm: false,
+  findings: [LOOSE_END],
+  health: 99,
+  healthKnown: true,
+  healthContributions: [{ kind: 'loose-end', count: 1, points: 1 }],
+  advice: [],
+};
+
 const REPORT: GardenerReport = {
   ranAt: NOW,
   usedLlm: false,
@@ -447,6 +537,11 @@ function handlers(report: GardenerReport | null, extra: SbHandlers = {}): SbHand
       return pageDoc(PAGE_B, 'SCIM', 'Nutzer werden über SCIM verwaltet.\n', '2026-08-01');
     },
     'modules:savePage': () => ({ path: PAGE_A, hash: 'hash-neu', created: false }),
+    'journal:answerLooseEnd': () => ({
+      path: 'journal/2026/08/2026-08-10.md',
+      hash: 'hash-answer-1',
+    }),
+    'journal:get': () => todayView(),
     'shell:openPath': () => undefined,
     ...extra,
   };
@@ -1663,6 +1758,152 @@ describe('Verwaiste Seite: Ziel wählen', () => {
       ),
     ).toBeTruthy();
     expect(screen.queryByRole('checkbox')).toBeNull();
+  });
+});
+
+// ── Loses Ende (020 D6) ───────────────────────────────────────────────────
+
+describe('Loses Ende', () => {
+  function looseEndCard(title: string): HTMLElement {
+    return screen.getByText(title).closest('.sb-finding') as HTMLElement;
+  }
+
+  it('nennt die Zahl der losen Enden und zeigt bei null die leere Zeile', async () => {
+    installMock(handlers(REPORT));
+    wrap(<GardenScreen />);
+    await screen.findByText('72');
+
+    /* REPORT trägt kein loses Ende — die Gruppe steht trotzdem, mit 0 und der
+       ruhigen Zeile statt gar keiner Gruppe. */
+    const heading = screen.getByRole('heading', { name: /Lose Enden/ });
+    expect(within(heading).getByText('0')).toBeTruthy();
+    expect(screen.getByText('Keine losen Enden.')).toBeTruthy();
+  });
+
+  it('sagt unter einem Filter nicht, es gaebe keine losen Enden', async () => {
+    /* Es gibt eines — es ist nur weggelegt und der Zustandsfilter steht auf
+       „offen". „Keine losen Enden." waere hier schlicht falsch (AC 3), also
+       steht dieselbe Zeile da, die die Liste sonst auch benutzt. */
+    installMock(
+      handlers({
+        ...LOOSE_END_REPORT,
+        findings: [BROKEN],
+        hidden: [{ finding: LOOSE_END, state: 'dismissed' }],
+      }),
+    );
+    wrap(<GardenScreen />);
+    await screen.findByText(BROKEN.title);
+
+    const heading = screen.getByRole('heading', { name: /Lose Enden/ });
+    expect(within(heading).getByText('0')).toBeTruthy();
+    expect(screen.queryByText('Keine losen Enden.')).toBeNull();
+    expect(screen.getByText('Kein Befund passt zu diesem Filter.')).toBeTruthy();
+  });
+
+  it('zeigt das Zitat, den Tag, die Herkunft und den anklickbaren Pfad', async () => {
+    installMock(handlers(LOOSE_END_REPORT));
+    wrap(<GardenScreen />);
+    await screen.findByText(LOOSE_END.title);
+
+    const heading = screen.getByRole('heading', { name: /Lose Enden/ });
+    expect(within(heading).getByText('1')).toBeTruthy();
+    expect(screen.queryByText('Keine losen Enden.')).toBeNull();
+
+    const card = looseEndCard(LOOSE_END.title);
+    expect(within(card).getByText(`„${LOOSE_END_QUOTE}"`)).toBeTruthy();
+    expect(
+      within(card).getByText(
+        `Angekündigt am ${formatDate(LOOSE_END_DAY, 'de')}. Seitdem nichts dazu.`,
+      ),
+    ).toBeTruthy();
+    expect(within(card).getByText('Von der eingebauten Prüfung gefunden.')).toBeTruthy();
+    /* Der Pfad ist der generischen `FindingCard` überlassen — keine zweite,
+       eigens gebaute Pfadfläche daneben. */
+    expect(within(card).getByRole('button', { name: `„${LOOSE_END_PATH}" öffnen` })).toBeTruthy();
+  });
+
+  it('nennt statt der Heuristik das Modell, wenn das Modell es gefunden hat', async () => {
+    installMock(
+      handlers({
+        ...LOOSE_END_REPORT,
+        findings: [LOOSE_END_MODEL],
+      }),
+    );
+    wrap(<GardenScreen />);
+    await screen.findByText(LOOSE_END_MODEL.title);
+
+    const card = looseEndCard(LOOSE_END_MODEL.title);
+    expect(within(card).getByText('Vom Modell gefunden.')).toBeTruthy();
+    expect(within(card).queryByText('Von der eingebauten Prüfung gefunden.')).toBeNull();
+  });
+
+  it('schreibt die Antwort über den D5-Kanal und die Karte verlässt die Liste ohne Neuladen', async () => {
+    installMock(handlers(LOOSE_END_REPORT));
+    wrap(<GardenScreen />);
+    await screen.findByText(LOOSE_END.title);
+
+    const card = looseEndCard(LOOSE_END.title);
+    await userEvent.type(within(card).getByLabelText('Antwort'), 'War beim Notar, alles erledigt.');
+    await userEvent.click(within(card).getByRole('button', { name: 'Eintragen' }));
+
+    expect(calls('journal:answerLooseEnd')).toEqual([
+      {
+        id: LOOSE_END.id,
+        day: LOOSE_END_DAY,
+        text: 'War beim Notar, alles erledigt.',
+        /* Proves the guard is actually armed (F3 review fix): the hash comes
+           from today's own `journal:get` fixture, not from `LOOSE_END_DAY`. */
+        expectedHash: TODAY_HASH,
+      },
+    ]);
+    /* Kein neuer Lauf: das Verlassen der Liste kommt aus der lokalen
+       Entfernung, nicht aus einem frischen Bericht. */
+    expect(calls('gardener:run')).toEqual([]);
+    await waitFor(() => expect(screen.queryByText(LOOSE_END.title)).toBeNull());
+    expect(await screen.findByText('Geschrieben: journal/2026/08/2026-08-10.md')).toBeTruthy();
+  });
+
+  it('meldet eine Fremdänderung, statt sie zu überschreiben', async () => {
+    installMock(
+      handlers(LOOSE_END_REPORT, {
+        'journal:answerLooseEnd': () => {
+          throw Object.assign(new Error('conflict'), { code: 'conflict' });
+        },
+      }),
+    );
+    wrap(<GardenScreen />);
+    await screen.findByText(LOOSE_END.title);
+
+    const card = looseEndCard(LOOSE_END.title);
+    await userEvent.type(within(card).getByLabelText('Antwort'), 'Erledigt.');
+    await userEvent.click(within(card).getByRole('button', { name: 'Eintragen' }));
+
+    expect(
+      await screen.findByText(
+        'Die Datei wurde zwischenzeitlich geändert. Nichts wurde überschrieben.',
+      ),
+    ).toBeTruthy();
+    /* Weder verschwunden noch als Erfolg gemeldet. */
+    expect(screen.getByText(LOOSE_END.title)).toBeTruthy();
+    expect(screen.queryByText(/^Geschrieben:/)).toBeNull();
+  });
+
+  /* Leichter Rauchtest: 017s eigener Wegwisch-Pfad bleibt von dieser Karte
+     unberührt — ausführlich getestet ist er schon anderswo (`Fixes`,
+     `Wege aus einem Befund`). */
+  it('legt ein loses Ende über „ist kein Problem" genau wie jeden anderen Befund weg', async () => {
+    installMock(handlers(LOOSE_END_REPORT));
+    wrap(<GardenScreen />);
+    await screen.findByText(LOOSE_END.title);
+
+    await userEvent.click(
+      within(looseEndCard(LOOSE_END.title)).getByRole('button', { name: 'Ist kein Problem' }),
+    );
+
+    expect(calls('gardener:dismiss')).toEqual([{ id: LOOSE_END.id }]);
+    expect(
+      await screen.findByText('Kein Problem. Der Befund zählt nicht mehr gegen die Gesundheit.'),
+    ).toBeTruthy();
   });
 });
 

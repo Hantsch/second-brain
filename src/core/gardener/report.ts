@@ -7,6 +7,10 @@
  *    ohne LLM vollstaendig funktioniert (Guardrail 1).
  * 2. **Dann das Urteil**, wenn `gardener.useLlm` es erlaubt und eine Route steht.
  *    Es darf Kandidaten verwerfen und Widersprueche benennen — nichts anderes.
+ *    Danach, in derselben Bedingung und mit demselben `signal`, die zweite
+ *    Modellstufe: lose Enden, die die Heuristik nicht sieht (`modelLooseEnds`,
+ *    020 D4). Jedes Zitat, das nicht wortwoertlich in der genannten Tagesdatei
+ *    steht, faellt dort weg, bevor es hier ankommt.
  * 3. **Dann der Nutzerwille.** Was der Nutzer als „passt so" markiert hat, wird
  *    eingespeist und filtert. Ausgeblendete Befunde zaehlen auch nicht gegen die
  *    Gesundheit: sie sind entschieden, nicht offen.
@@ -22,10 +26,11 @@
 
 import type { DocLanguage, GardenerFinding, GardenerReport, UiLanguage } from '@shared/types';
 import type { LlmGateway } from '@core/llm';
+import { modelLooseEnds } from '@core/journal';
 import { isoDay, wikiIndexPath } from '@core/vault/paths';
 import type { DateLike } from '@core/vault/paths';
 import { auditFindings } from './audit';
-import { CHECKS } from './checks';
+import { CHECKS, looseEndFinding, looseEndInput } from './checks';
 import { healthScore, vaultSize } from './health';
 import { GERMAN_GARDENER_LABELS } from './labels';
 import type { GardenerLabels } from './labels';
@@ -144,10 +149,27 @@ export async function runGardener(
       })
     : null;
 
+  /* Zweite Modellstufe, nach der Deutung und mit derselben Verdrahtung: dasselbe
+     Gateway, dasselbe `signal`, dasselbe Tor (`isAvailable`). Nacheinander und
+     nicht gleichzeitig — zwei parallele Anfragen an ein lokales Modell sind
+     langsamer als zwei nacheinander, und die Reihenfolge bleibt nachvollziehbar.
+     Additiv: was hier herauskommt, kommt zu den deterministischen Befunden dazu
+     und ersetzt keinen. */
+  const looseEnds = useLlm
+    ? await modelLooseEnds(
+        { ...looseEndInput(ctx), today: ctx.today },
+        {
+          gateway: deps.gateway,
+          ...(deps.signal === undefined ? {} : { signal: deps.signal }),
+        },
+      )
+    : null;
+  const fromModel = (looseEnds?.looseEnds ?? []).map((looseEnd) => looseEndFinding(ctx, looseEnd));
+
   const rejected = new Set(audit?.rejected ?? []);
   const dismissed = new Set(options.dismissed ?? []);
   const findings = sortFindings(
-    [...deterministic, ...(audit?.contradictions ?? [])].filter(
+    [...deterministic, ...(audit?.contradictions ?? []), ...fromModel].filter(
       (finding) => !rejected.has(finding.id) && !dismissed.has(finding.id),
     ),
   );
@@ -155,7 +177,9 @@ export async function runGardener(
   const health = healthScore(findings, vaultSize(deps.index));
   return {
     ranAt: ctx.ranAt,
-    usedLlm: audit?.usedLlm ?? false,
+    /* Ein Modell hat mitgeredet, wenn **eine** der beiden Stufen geantwortet
+       hat. Welche es war, sagt der Bericht nicht — das sagt `origin` je Befund. */
+    usedLlm: audit?.usedLlm === true || looseEnds?.usedLlm === true,
     findings,
     /* `health` ist im Vertrag eine Zahl; ohne Bestand ist sie unbekannt, nicht 0 —
        deshalb sagt `healthKnown`, ob sie ueberhaupt etwas bedeutet. */

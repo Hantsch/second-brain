@@ -104,6 +104,8 @@ export const api = {
     applyClose: (request: IpcRequest<'journal:applyClose'>) => call('journal:applyClose', request),
     foldDay: (date: string, expectedHash?: string) =>
       call('journal:foldDay', { date, expectedHash }),
+    answerLooseEnd: (request: IpcRequest<'journal:answerLooseEnd'>) =>
+      call('journal:answerLooseEnd', request),
     interviewPlan: (date: string) => call('journal:interviewPlan', { date }),
     interviewAnswer: (
       date: string,

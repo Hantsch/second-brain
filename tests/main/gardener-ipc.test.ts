@@ -29,6 +29,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { IpcChannel, IpcEventName, IpcEvents, IpcRequest, IpcResponse } from '@shared/ipc';
 import type { GardenerFinding } from '@shared/types';
 import { FsVaultStore, sha256 } from '@core/vault';
+import { createFetchFake, jsonResponse } from '../fakes/llm';
 import { toIpcError } from '../../src/main/ipc/errors';
 import { IPC_ERROR_PREFIX, encodeIpcError } from '../../src/preload/ipc-error-wire';
 import { createTempVault } from '../helpers/vault';
@@ -194,6 +195,7 @@ describe('Pflege-Kanäle im Main', () => {
   });
 
   afterEach(async () => {
+    vi.unstubAllGlobals();
     await harness.services.closeVault();
     await vault.cleanup();
     await rm(userDataDir, { recursive: true, force: true });
@@ -243,6 +245,128 @@ describe('Pflege-Kanäle im Main', () => {
     /* Die Beiträge summieren sich auf den verlorenen Teil des Werts. */
     const lost = (report.healthContributions ?? []).reduce((sum, entry) => sum + entry.points, 0);
     expect(lost).toBe(100 - report.health);
+  });
+
+  // ── Lose Enden im echten Lauf (020, D4/D5) ─────────────────────────────────
+
+  /** Der Tag, der zwei Ankündigungen macht: eine deutsche, eine englische. */
+  const ANNOUNCING_DAY = day(-5);
+  const ANNOUNCING_PATH = `journal/2026/08/${ANNOUNCING_DAY}.md`;
+  /* Die englische Ankündigung — `findDates()` löst sie nicht auf, also ist sie
+     genau das, was nur die Modellstufe finden kann. */
+  const ENGLISH_QUOTE = 'Tomorrow I finally call the tax office.';
+
+  async function seedAnnouncingDay(): Promise<void> {
+    await vault.write(
+      ANNOUNCING_PATH,
+      [
+        '---',
+        'type: journal',
+        `title: 'Tag ${ANNOUNCING_DAY}'`,
+        `date: ${ANNOUNCING_DAY}`,
+        'lang: de',
+        '---',
+        '',
+        '## Tag',
+        '',
+        'Morgen bin ich beim Notar.',
+        '',
+        ENGLISH_QUOTE,
+        '',
+      ].join('\n'),
+    );
+    await harness.services.requireIndex().refresh?.();
+  }
+
+  /** Route nur für `journal-loose-ends` — die Deutung bleibt absichtlich ohne. */
+  async function routeLooseEndsTo(proposals: unknown) {
+    await harness.settings.setVaultSection('providers', [
+      {
+        id: 'local-1',
+        label: 'Lokal',
+        kind: 'openai-compatible',
+        baseUrl: 'http://localhost:11434/v1',
+        hasKey: false,
+        local: true,
+        enabled: true,
+        models: ['qwen2.5:14b'],
+        createdAt: '2026-08-10T12:00:00.000Z',
+      },
+    ]);
+    await harness.settings.setVaultSection('routing', {
+      tasks: { 'journal-loose-ends': { providerId: 'local-1', model: 'qwen2.5:14b' } },
+      defaults: {},
+    });
+    const fake = createFetchFake(() =>
+      jsonResponse({ choices: [{ message: { content: JSON.stringify(proposals) } }] }),
+    );
+    vi.stubGlobal('fetch', fake.fetch);
+    return fake;
+  }
+
+  it('findet lose Enden ohne Modell und meldet die Heuristik als Herkunft', async () => {
+    await seedAnnouncingDay();
+
+    const report = await harness.call('gardener:run', {});
+
+    const looseEnds = report.findings.filter((finding) => finding.kind === 'loose-end');
+    expect(looseEnds.length).toBeGreaterThan(0);
+    expect(looseEnds.every((finding) => finding.origin === 'heuristic')).toBe(true);
+    expect(report.usedLlm).toBe(false);
+  });
+
+  it('führt die Modellstufe für lose Enden im echten Lauf mit und sagt, dass ein Modell mitgeredet hat', async () => {
+    await seedAnnouncingDay();
+    const fake = await routeLooseEndsTo({
+      looseEnds: [
+        {
+          day: ANNOUNCING_DAY,
+          quote: ENGLISH_QUOTE,
+          subject: 'tax office',
+          refDate: day(-4),
+        },
+      ],
+    });
+
+    const report = await harness.call('gardener:run', { useLlm: true });
+
+    /* Die Stufe ist wirklich gelaufen — nicht nur „hätte laufen können". */
+    expect(fake.calls.length).toBe(1);
+    const fromModel = report.findings.filter((finding) => finding.origin === 'model');
+    expect(fromModel.map((finding) => finding.kind)).toEqual(['loose-end']);
+    expect(fromModel[0]?.paths).toEqual([ANNOUNCING_PATH]);
+    /* Ohne Route für `gardener-audit` gibt es keine Deutung — `usedLlm` hängt
+       hier allein an der zweiten Stufe (F1: das ODER, nicht nur der Audit). */
+    expect(report.advice).toEqual([]);
+    expect(report.usedLlm).toBe(true);
+    /* Und die Stufe meldet sich im Fortschritt, statt still zu laufen. */
+    expect(progress(harness).some((step) => step.phase === 'audit')).toBe(true);
+  });
+
+  it('lässt ein beantwortetes loses Ende auch aus dem abgelegten Bericht heraus — ohne neuen Lauf', async () => {
+    await seedAnnouncingDay();
+    const { forgetLooseEndState, looseEndState } = await import('../../src/main/loose-end-state');
+    const report = await harness.call('gardener:run', {});
+    const target = findingOfKind(report.findings, 'loose-end');
+
+    /* Beantwortet wird **nach** dem Lauf: der abgelegte Bericht kennt den Befund
+       noch, und nur der Lesepfad darf ihn jetzt noch fernhalten. */
+    const state = await looseEndState(vault.root);
+    await state.recordAnswered({
+      id: target.id,
+      day: ANNOUNCING_DAY,
+      path: ANNOUNCING_PATH,
+      answeredAt: `${TODAY}T12:00:00.000Z`,
+    });
+
+    const again = await harness.call('gardener:report', undefined);
+    expect(again?.findings.some((finding) => finding.id === target.id)).toBe(false);
+    expect(again?.hidden?.some((entry) => entry.finding.id === target.id)).toBe(false);
+
+    /* Auch nach einem Neustart der Ablage — die Datei trägt es, nicht der Cache. */
+    forgetLooseEndState();
+    const afterRestart = await harness.call('gardener:report', undefined);
+    expect(afterRestart?.findings.some((finding) => finding.id === target.id)).toBe(false);
   });
 
   it('meldet Fortschritt je Prüfung und ein Ende', async () => {

@@ -42,6 +42,7 @@ export interface GardenerLabels {
   stalePage(page: string, reviewed: string, ageDays: number): FindingText;
   unfiledDump(dump: string, ageDays: number): FindingText;
   unprocessedSource(source: string): FindingText;
+  looseEnd(quote: string, day: string): FindingText;
   projectWithoutNextStep(project: string, status: string): FindingText;
   nearDuplicate(first: string, second: string, similarity: number): FindingText;
   missingPage(term: string, pages: number): FindingText;
@@ -148,6 +149,13 @@ export const GERMAN_GARDENER_LABELS: GardenerLabels = {
       title: `Quelle ohne Verdichtung: ${source}`,
       detail:
         'Die Rohquelle liegt unter raw/, eine Source-Seite im Wiki gibt es nicht. Unverdichtet ist sie nicht zitierfähig.',
+    };
+  },
+
+  looseEnd(quote: string, day: string): FindingText {
+    return {
+      title: `Loses Ende vom ${day}: „${quote}"`,
+      detail: `Am ${day} angekündigt, seitdem nichts dazu. Der Tag ist vorbei, die Sache nicht sichtbar erledigt.`,
     };
   },
 

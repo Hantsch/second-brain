@@ -15,7 +15,7 @@ import { createModule, listModules, pageRefOf, readPage, writePage } from '@core
 import type { KnowledgeModule, VaultDoc, WikiPage } from '@shared/types';
 import type { HandlerMap } from './registry';
 import { defineHandlers, fail } from './registry';
-import { gardenerStateFor, gardenerToday } from './gardener-deps';
+import { gardenerReport } from './gardener-deps';
 import { requireLists } from './lists';
 import { docLanguage, settle, wikiIndex, wikiStore } from './wiki-bridge';
 import type { Services } from '../services';
@@ -33,7 +33,7 @@ async function withFindings(
   services: Services,
   modules: readonly KnowledgeModule[],
 ): Promise<KnowledgeModule[]> {
-  const report = (await gardenerStateFor(services)).present(gardenerToday());
+  const report = await gardenerReport(services);
   if (report === null) return [...modules];
   return modules.map((module) => ({
     ...module,

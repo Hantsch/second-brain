@@ -146,6 +146,28 @@ export interface InterviewStep {
   question: string;
 }
 
+/**
+ * Minimale Projektion eines losen Endes (020, D8), wie `planInterview` sie
+ * fuer ihre eine Zusatzfrage braucht. `id` ist absichtlich **nicht**
+ * `LooseEnd.id` (`@shared/types`, aus `findLooseEnds`): geschrieben wird die
+ * Antwort ueber `journal:answerLooseEnd` (D5) unter derselben Kennung, unter
+ * der der Pflegelauf und die Erinnerungen dasselbe lose Ende schon fuehren —
+ * `findingId('loose-end', looseEnd.id)` aus `@core/gardener`. Dieses Modul
+ * importiert `@core/gardener` nicht (das importiert bereits von hier,
+ * `checks/loose-end.ts` — ein Rueckeinstieg waere ein Zyklus), also rechnet
+ * der Aufrufer (`main/ipc/journal.ts`) die Kennung aus und reicht sie fertig
+ * herein.
+ */
+export interface InterviewLooseEnd {
+  /** `findingId('loose-end', looseEnd.id)` — die Kennung der Pflege- und
+      Erinnerungs-Oberflaeche, nicht `LooseEnd.id` selbst. */
+  id: string;
+  /** Der Tag, der die Ankuendigung gemacht hat, 'YYYY-MM-DD'. */
+  day: string;
+  /** Der ankuendigende Satz, wortwoertlich. */
+  quote: string;
+}
+
 /** Ergebnis von `planInterview`: was von der festen Themenmenge noch offen ist. */
 export interface InterviewPlan {
   /** Verbleibende Schritte, in der Reihenfolge von `INTERVIEW_TOPICS`. */
@@ -158,6 +180,16 @@ export interface InterviewPlan {
    * sondern immer ausdruecklich gemeldet wird.
    */
   finished: boolean;
+  /**
+   * Die eine optionale Zusatzfrage zu einem noch offenen losen Ende (020,
+   * D8) — `null`, wenn keins uebergeben wurde oder die Liste leer war.
+   * Beantworten laeuft **nicht** ueber `recordAnswer`, sondern ueber das
+   * eigene Schreibgleis von D5 (`answerLooseEnd`/`journal:answerLooseEnd`);
+   * das Feld zaehlt deshalb bewusst nicht zu `steps` und nicht zu `finished`
+   * — die fuenf festen Themen bleiben davon unberuehrt (Decisions: die
+   * Themenmenge wird nie erweitert, auch nicht um diese Frage).
+   */
+  looseEnd: InterviewLooseEnd | null;
 }
 
 /** Alles, was das Coaching-Gespraech braucht. */

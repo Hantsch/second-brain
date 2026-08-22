@@ -109,6 +109,13 @@ export const ENGLISH_GARDENER_LABELS: GardenerLabels = {
     };
   },
 
+  looseEnd(quote: string, day: string): FindingText {
+    return {
+      title: `Loose end from ${day}: "${quote}"`,
+      detail: `Announced on ${day}, nothing since. The day has come and gone, and it isn't visibly settled.`,
+    };
+  },
+
   projectWithoutNextStep(project: string, status: string): FindingText {
     return {
       title: `Project without a next step: ${project}`,

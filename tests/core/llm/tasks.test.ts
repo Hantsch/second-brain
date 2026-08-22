@@ -41,7 +41,12 @@ describe('Aufgabenkatalog', () => {
   });
 
   it('markiert genau die persönlichen Aufgaben als sensibel', () => {
-    expect(sensitiveTasks().sort()).toEqual(['classify-dump', 'extract-tasks', 'journal-chat']);
+    expect(sensitiveTasks().sort()).toEqual([
+      'classify-dump',
+      'extract-tasks',
+      'journal-chat',
+      'journal-loose-ends',
+    ]);
   });
 
   it('markiert genau die Gesprächsaufgaben als streamend', () => {
@@ -61,6 +66,7 @@ describe('Aufgabenkatalog', () => {
       'classify-dump',
       'extract-tasks',
       'gardener-audit',
+      'journal-loose-ends',
       'project-status',
       'query-rerank',
       'title-tags',
@@ -70,6 +76,13 @@ describe('Aufgabenkatalog', () => {
   it('liefert Definition und Klasse zu einer Aufgabe', () => {
     expect(taskDefinition('title-tags').suggested).toBe('cheap');
     expect(suggestedTier('gardener-audit')).toBe('strong');
+  });
+
+  it('empfiehlt für die losen Enden ein ausgewogenes, lokal empfohlenes Modell', () => {
+    const task = taskDefinition('journal-loose-ends');
+    expect(task.suggested).toBe('balanced');
+    expect(task.sensitive).toBe(true);
+    expect(task.structured).toBe(true);
   });
 
   it('wirft bei einer unbekannten Aufgabe', () => {

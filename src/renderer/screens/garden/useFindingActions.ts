@@ -12,11 +12,13 @@
 
 import { useState } from 'react';
 import type { GardenerFinding } from '@shared/types';
+import { todayIso } from '../../components/DayList';
 import type {
   DiscardPageResult,
   GardenerMutations,
   useGardenerRun,
 } from '../../lib/queries/gardener';
+import { useJournalDay } from '../../lib/queries/journal';
 import type { ModuleMutations } from '../../lib/queries/modules';
 import type { SupersedeWrite } from './ContradictionCard';
 import type { NearDuplicateSupersedeWrite } from './NearDuplicateCard';
@@ -53,6 +55,9 @@ export interface FindingActions {
   supersedeDuplicate: (write: NearDuplicateSupersedeWrite) => void;
   discarded: (result: DiscardPageResult) => void;
   linkOrphan: (write: OrphanLinkWrite) => void;
+  /** The loose end's one way out (020 D5/D6): my own words, written into
+      today's day. */
+  answerLooseEnd: (finding: GardenerFinding, day: string, text: string) => void;
   undo: () => void;
 }
 
@@ -69,6 +74,15 @@ export function useFindingActions(
 ): FindingActions {
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  /* `answerLooseEnd` always writes into *today*'s file (020, D5 — the
+     announcing day only supplies the back-reference link), regardless of
+     which finding is being answered — so the guard this screen needs is
+     today's current hash, not anything about the finding itself. This
+     screen has no other reason to load today's day; the same
+     `journal:get`-backed query `JournalScreen`/`InterviewDialog` use for the
+     day they have open is the only "current hash" source this codebase has,
+     so it is reused here rather than inventing a hash-only endpoint. */
+  const today = useJournalDay(todayIso());
 
   const applyFix = (finding: GardenerFinding): void => {
     setBusyId(finding.id);
@@ -197,6 +211,29 @@ export function useFindingActions(
     );
   };
 
+  /* Writes through 020 D5's channel. Success removes the finding from the
+     cached report right away (`useGardenerMutations.answerLooseEnd`) — no
+     fresh run, since answering never changes what a run would find. A stale
+     hash surfaces as `conflict`, the same generic `ErrorState` path every
+     other write on this screen already uses (`mutations.*.error` in
+     `GardenScreen`) — a second, bespoke conflict banner would just be a
+     second way of saying the same thing. */
+  const answerLooseEnd = (finding: GardenerFinding, day: string, text: string): void => {
+    setBusyId(finding.id);
+    mutations.answerLooseEnd.mutate(
+      {
+        id: finding.id,
+        day,
+        text,
+        ...(today.data?.doc.hash === undefined ? {} : { expectedHash: today.data.doc.hash }),
+      },
+      {
+        onSettled: () => setBusyId(null),
+        onSuccess: (result) => setOutcome({ kind: 'fixed', files: [result.path], undoToken: null }),
+      },
+    );
+  };
+
   const undo = (): void => {
     if (outcome === null) return;
     if (outcome.kind === 'dismissed') {
@@ -259,6 +296,7 @@ export function useFindingActions(
     supersedeDuplicate,
     discarded,
     linkOrphan,
+    answerLooseEnd,
     undo,
   };
 }

@@ -32,7 +32,13 @@ import { shiftDay } from '@core/overview';
 import type { GardenerFinding, OrphanTargets } from '@shared/types';
 import type { HandlerMap } from './registry';
 import { defineHandlers, fail } from './registry';
-import { gardenerIndex, gardenerStateFor, gardenerToday, runWithProgress } from './gardener-deps';
+import {
+  gardenerIndex,
+  gardenerReport,
+  gardenerStateFor,
+  gardenerToday,
+  runWithProgress,
+} from './gardener-deps';
 import { docLanguage, settle, wikiIndex, wikiStore } from './wiki-bridge';
 import { gardenerLabels } from '../gardener-labels';
 import { GARDENER_STATE_FILE } from '../gardener-state';
@@ -116,8 +122,7 @@ function recordedHash(findings: readonly GardenerFinding[], path: string): strin
  * mehr gibt, ist kein Konflikt: dafuer meldet der Kern `not-found`.
  */
 async function assertActionable(services: Services, ...paths: readonly string[]): Promise<void> {
-  const state = await gardenerStateFor(services);
-  const findings = state.present(gardenerToday())?.findings ?? [];
+  const findings = (await gardenerReport(services))?.findings ?? [];
   for (const path of paths) {
     const named = findings.filter((finding) => finding.paths.includes(path));
     if (named.length === 0) throw fail('not-found', `„${path}" steht in keinem aktuellen Befund.`);
@@ -156,7 +161,7 @@ interface OrphanPick {
  */
 async function orphanPick(services: Services, findingId: string): Promise<OrphanPick> {
   const state = await gardenerStateFor(services);
-  const findings = state.present(gardenerToday())?.findings ?? [];
+  const findings = (await gardenerReport(services, state))?.findings ?? [];
   const finding = findings.find((entry) => entry.id === findingId);
   if (finding === undefined) throw fail('not-found', 'diesen Befund gibt es nicht');
   if (finding.kind !== 'orphan' || finding.fix !== null) {
@@ -180,7 +185,7 @@ async function orphanPick(services: Services, findingId: string): Promise<Orphan
 
 export function gardenerHandlers(services: Services): HandlerMap {
   return defineHandlers({
-    'gardener:report': async () => (await gardenerStateFor(services)).present(gardenerToday()),
+    'gardener:report': async () => gardenerReport(services),
 
     'gardener:run': async ({ useLlm }) => {
       if (running !== null) throw fail('invalid', 'es läuft schon ein Pflegelauf');
@@ -197,7 +202,7 @@ export function gardenerHandlers(services: Services): HandlerMap {
           onProgress: (progress) => services.sendEvent('event:gardener-progress', progress),
         });
         await state.save(run);
-        const report = state.present(gardenerToday());
+        const report = await gardenerReport(services, state);
         if (report === null) throw fail('io', 'der Bericht ließ sich nicht ablegen');
         return report;
       } finally {

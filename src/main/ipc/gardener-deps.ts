@@ -4,7 +4,7 @@
    know about comes together: the index as a read view, the thresholds from the
    vault settings, the languages, the UI labels, and the gateway.
 
-   Two decisions that aren't otherwise visible in the code:
+   Three decisions that aren't otherwise visible in the code:
 
    - **The run calls the checks itself, instead of using `runGardener`.**
      Precisely because `runGardener` is a call with no intermediate state, and a
@@ -12,23 +12,38 @@
      cancellation. Between two checks, the event loop is given a turn —
      otherwise the progress event would only arrive once everything is already
      done, and a `cancel` would never land. The order (deterministic, then
-     interpretation, then sorting, then count) is the same as in
-     `core/gardener/report.ts`.
+     interpretation, then the loose-end model stage, then sorting, then count)
+     is the same as in `core/gardener/report.ts` — and every stage that lives
+     there has to be repeated here, or it never runs in the app.
+   - **The stored report is only read through `gardenerReport`.** A run filters
+     the loose ends already answered (020, D5) out of what it stores; an answer
+     given *after* a run would still be in the stored one, so the read filters
+     again. One function for it, so no consumer of a stored run can forget it.
    - **Hidden findings are *not* filtered out here.** The run records everything
      it found; "looks fine" only filters on read (`gardener-state.ts`).
      Otherwise a reversed "looks fine" would only become visible again with a
      new run. */
 
-import { CHECKS, auditFindings, buildContext, sortFindings, vaultSize } from '@core/gardener';
+import {
+  CHECKS,
+  auditFindings,
+  buildContext,
+  looseEndFinding,
+  looseEndInput,
+  sortFindings,
+  vaultSize,
+} from '@core/gardener';
 import type { GardenerDeps, GardenerIndexView } from '@core/gardener';
+import { modelLooseEnds } from '@core/journal';
 import { isoDay } from '@core/vault/paths';
-import type { DocLanguage, GardenerSettings, UiLanguage } from '@shared/types';
+import type { DocLanguage, GardenerReport, GardenerSettings, UiLanguage } from '@shared/types';
 import { fail } from './errors';
 import { docLanguage, replyLanguage } from './wiki-bridge';
 import { createGateway } from '../llm-bridge';
 import { gardenerLabels } from '../gardener-labels';
 import { gardenerState } from '../gardener-state';
 import type { GardenerState, StoredRun } from '../gardener-state';
+import { looseEndState } from '../loose-end-state';
 import type { IndexLike } from '../contracts';
 import type { Services } from '../services';
 
@@ -39,6 +54,8 @@ const GARDENER_INDEX_METHODS: readonly string[] = [
   'projects',
   'sources',
   'dumps',
+  'journal',
+  'todos',
 ];
 
 function knowsGardener(index: IndexLike): index is IndexLike & GardenerIndexView {
@@ -69,6 +86,30 @@ export function gardenerToday(): string {
 /** This vault's maintenance state, from `.secondbrain/gardener.json`. */
 export function gardenerStateFor(services: Services): Promise<GardenerState> {
   return gardenerState(services.requireVaultRoot(), gardenerToday());
+}
+
+/** The ids of loose ends already answered (020, D5) — from their own file. */
+export async function answeredLooseEnds(services: Services): Promise<ReadonlySet<string>> {
+  return (await looseEndState(services.requireVaultRoot())).answeredIds();
+}
+
+/**
+ * The stored report as **every** reader has to see it — the one place a
+ * persisted run turns into a report.
+ *
+ * `present()` alone hides what the user put away (017); an answered loose end
+ * (020, D5) is neither dismissed nor snoozed but resolved, and its id lives in
+ * its own file. Filtering it only in `runWithProgress` would keep it out of the
+ * run that just happened and let it come back from the stored one — an answer
+ * given after a run would resurface on the next read. So the two go together
+ * here, and nobody reads `present()` past this function.
+ */
+export async function gardenerReport(
+  services: Services,
+  state?: GardenerState,
+): Promise<GardenerReport | null> {
+  const loaded = state ?? (await gardenerStateFor(services));
+  return loaded.present(gardenerToday(), await answeredLooseEnds(services));
 }
 
 /** The maintenance settings of the open vault, as far as they're set. */
@@ -130,7 +171,12 @@ export async function runWithProgress(
      none is reachable would be exactly the claim this screen must not make. */
   const wanted = options.useLlm ?? settings?.gardener.useLlm ?? false;
   const useLlm = wanted && run.gateway.isAvailable('gardener-audit');
-  const total = CHECKS.length + (useLlm ? 1 : 0);
+  /* The second model stage (020, D4) has its own task and therefore its own
+     route: a vault that routes `journal-loose-ends` but not `gardener-audit`
+     still gets its loose ends read. Both stages are gated by the same wish —
+     no model is asked anything unless the run was asked to use one. */
+  const useLooseEnds = wanted && run.gateway.isAvailable('journal-loose-ends');
+  const total = CHECKS.length + (useLlm ? 1 : 0) + (useLooseEnds ? 1 : 0);
 
   const deterministic = [];
   let done = 0;
@@ -161,19 +207,49 @@ export async function runWithProgress(
     done += 1;
   }
 
+  /* The loose-end stage, after the interpretation and wired exactly like it:
+     same gateway, same signal, same order as in `core/gardener/report.ts`.
+     `phase: 'audit'` for it too — from the outside both are the same sentence,
+     "a model is reading now", and the progress contract knows no third phase. */
+  let looseEnds = null;
+  if (useLooseEnds) {
+    options.onProgress?.({ phase: 'audit', check: null, done, total, running: true });
+    await tick();
+    stopIfCancelled(options.signal);
+    looseEnds = await modelLooseEnds(
+      { ...looseEndInput(ctx), today: ctx.today },
+      {
+        gateway: run.gateway,
+        ...(options.signal === undefined ? {} : { signal: options.signal }),
+      },
+    );
+    done += 1;
+  }
+  const fromModel = (looseEnds?.looseEnds ?? []).map((looseEnd) => looseEndFinding(ctx, looseEnd));
+
   /* Everything this run re-derived. Kept separately from `findings`, because a
      candidate the audit rejects is still one the deterministic check produced
      again — the rejection says "don't show it now", not "the vault condition is
      gone". Only the second would justify forgetting a user decision, so
      `save` prunes against this list (see `gardener-state.ts`). */
-  const considered = [...deterministic, ...(audit?.contradictions ?? [])];
+  const considered = [...deterministic, ...(audit?.contradictions ?? []), ...fromModel];
   const rejected = new Set(audit?.rejected ?? []);
-  const findings = sortFindings(considered.filter((finding) => !rejected.has(finding.id)));
+  /* A loose end already answered (020, D5) must not resurface here — its id
+     lives in its own file (`main/loose-end-state.ts`), not in 017's
+     `dismissed` list, because it was never a "looks fine" click. Filtered at
+     the same point as `rejected`, for the same reason: both say "this run
+     re-derived it, but don't show it". */
+  const answered = await answeredLooseEnds(services);
+  const findings = sortFindings(
+    considered.filter((finding) => !rejected.has(finding.id) && !answered.has(finding.id)),
+  );
   options.onProgress?.({ phase: 'done', check: null, done, total, running: false });
 
   return {
     ranAt: ctx.ranAt,
-    usedLlm: audit?.usedLlm ?? false,
+    /* A model spoke if **one** of the two stages answered — which one is said
+       per finding by `origin`, not by the run. */
+    usedLlm: audit?.usedLlm === true || looseEnds?.usedLlm === true,
     findings,
     consideredIds: considered.map((finding) => finding.id),
     advice: audit?.advice ?? [],

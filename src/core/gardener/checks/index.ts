@@ -12,6 +12,7 @@
 import type { Check } from '../types';
 import { brokenLinkCheck } from './broken-link';
 import { indexDriftCheck } from './index-drift';
+import { looseEndCheck } from './loose-end';
 import { missingPageCheck } from './missing-page';
 import { nearDuplicateCheck } from './near-duplicate';
 import { orphanCheck } from './orphan';
@@ -30,6 +31,7 @@ export const CHECKS: readonly Check[] = [
   unprocessedSourceCheck,
   unfiledDumpCheck,
   projectWithoutNextStepCheck,
+  looseEndCheck,
 ];
 
 export { brokenLinkCheck } from './broken-link';
@@ -50,6 +52,7 @@ export {
   NEAR_DUPLICATE_THRESHOLD,
   nearDuplicateCheck,
 } from './near-duplicate';
+export { looseEndCheck, looseEndFinding, looseEndInput } from './loose-end';
 export { orphanCheck } from './orphan';
 export { projectWithoutNextStepCheck } from './project-without-next-step';
 export { checkedDay, stalePageCheck } from './stale-page';
