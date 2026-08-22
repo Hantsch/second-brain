@@ -43,7 +43,7 @@ import {
 import { docLanguage, settle, wikiIndex, wikiStore } from './wiki-bridge';
 import { gardenerLabels } from '../gardener-labels';
 import { beginGardenerRun, cancelGardenerRun, gardenerRunSnapshot } from '../gardener-run-state';
-import { GARDENER_STATE_FILE } from '../gardener-state';
+import { GARDENER_STATE_FILE, narrowedScope } from '../gardener-state';
 import type { GardenerState } from '../gardener-state';
 import type { Services } from '../services';
 
@@ -178,7 +178,7 @@ export function gardenerHandlers(services: Services): HandlerMap {
        single source of truth `event:gardener-progress` publishes from. */
     'gardener:runStatus': () => gardenerRunSnapshot(),
 
-    'gardener:run': async ({ useLlm, resume }) => {
+    'gardener:run': async ({ useLlm, resume, scope }) => {
       /* The slot is claimed **before** the first `await`, and from the one
          place that knows about the autostart too (021a, D3): otherwise two
          calls from the same keypress — or a click during the run on open —
@@ -197,9 +197,24 @@ export function gardenerHandlers(services: Services): HandlerMap {
            again. Without a stored run there is nothing to continue, so this
            is silently the same as a plain run. */
         const stored = resume === true ? state.run() : null;
+        /* Continuing a part-run keeps it a part-run (021c). The stop it
+           continues looked at one slice of the vault; its findings are this
+           run's base, and every stage still to come sees only that slice. Were
+           the scope dropped here, the resumed run would reach every planned
+           stage, read as a **complete** check of the whole vault, and then
+           recompute the health score and prune the user's decisions over
+           findings most of which nothing ever re-derived. A part-run must not
+           become "the whole vault, checked" by way of a continue.
+
+           Normalized before the fallback, not after: `{ kinds: [] }` from a
+           caller is not a scope (`narrowedScope`), and taking it as one would
+           launder exactly the run this guards. */
+        const inherited = stored === null ? undefined : narrowedScope(stored.scope);
+        const runScope = narrowedScope(scope) ?? inherited;
         const result = await runWithProgress(services, {
           ...(useLlm === undefined ? {} : { useLlm }),
           ...(stored === null ? {} : { resumeFrom: stored }),
+          ...(runScope === undefined ? {} : { scope: runScope }),
           signal: handle.signal,
           trigger: handle.trigger,
           onProgress: handle.publish,

@@ -1629,4 +1629,222 @@ describe('Pflege-Kanäle im Main', () => {
       },
     );
   });
+
+  // ── Geltungsbereich (021c) ───────────────────────────────────────────────────
+
+  it('lässt bei einem auf eine Art beschränkten Lauf nur die passende Prüfung laufen', async () => {
+    const report = await harness.call('gardener:run', { scope: { kinds: ['near-duplicate'] } });
+
+    /* Die vier absichtlichen Mängel des Fixture-Vaults wären ohne
+       Beschränkung da (siehe die erste `gardener:run`-Prüfung oben) — hier
+       darf keiner davon auftauchen, weil ihre Prüfungen nie liefen. */
+    const kinds = new Set(report.findings.map((finding) => finding.kind));
+    expect(kinds.has('orphan')).toBe(false);
+    expect(kinds.has('broken-link')).toBe(false);
+    expect(kinds.has('index-drift')).toBe(false);
+    expect(kinds.has('unprocessed-source')).toBe(false);
+    expect([...kinds].every((kind) => kind === 'near-duplicate')).toBe(true);
+    expect(report.scope).toEqual({ kinds: ['near-duplicate'] });
+    /* Ein beschränkter Lauf hat nie alles gesehen. */
+    expect(report.complete).toBe(false);
+  });
+
+  it('lässt die Deutung nur die Befunde im Geltungsbereich sehen', async () => {
+    await harness.settings.setVaultSection('providers', [
+      {
+        id: 'local-1',
+        label: 'Lokal',
+        kind: 'openai-compatible',
+        baseUrl: 'http://localhost:11434/v1',
+        hasKey: false,
+        local: true,
+        enabled: true,
+        models: ['qwen2.5:14b'],
+        createdAt: '2026-08-10T12:00:00.000Z',
+      },
+    ]);
+    await harness.settings.setVaultSection('routing', {
+      tasks: { 'gardener-audit': { providerId: 'local-1', model: 'qwen2.5:14b' } },
+      defaults: {},
+    });
+    const fake = createFetchFake(() => jsonResponse({ choices: [{ message: { content: '{}' } }] }));
+    vi.stubGlobal('fetch', fake.fetch);
+
+    /* `near-duplicate` steht mit im Bereich, weil die Deutung sonst gar nicht
+       erst läuft: über eine Art, zu der sie weder ein Urteil abgeben
+       (`AUDIT_CANDIDATE_KINDS`) noch einen Widerspruch beitragen darf, wird kein
+       Modell gefragt — siehe den Fall weiter unten. Geprüft wird hier trotzdem
+       genau dasselbe: was die Stufe zu sehen bekommt, ist der Bereich. */
+    await harness.call('gardener:run', {
+      useLlm: true,
+      scope: { kinds: ['orphan', 'near-duplicate'] },
+    });
+
+    /* Die Stufe hat wirklich gefragt — mit dem verwaisten Befund als Seite. */
+    expect(fake.calls.length).toBe(1);
+    const body = JSON.stringify(fake.calls[0]?.body ?? {});
+    expect(body).toContain('orphan');
+    /* Und nicht mit den übrigen deterministischen Befunden — die Prüfungen,
+       die sie gefunden hätten, sind für diesen Lauf gar nicht gelaufen. */
+    expect(body).not.toContain('| broken-link |');
+    expect(body).not.toContain('| index-drift |');
+    expect(body).not.toContain('| unprocessed-source |');
+  });
+
+  it('lässt einen auf ein Modul beschränkten Lauf keinen Befund außerhalb davon finden', async () => {
+    /* Ein Dump ohne Modul (`unfiled-dump` trägt immer `module: null`) — genau
+       das, was ein Modul-Geltungsbereich ausschließen muss. */
+    await vault.write(
+      'inbox/2026-07-11-0900-liegengeblieben.md',
+      `---\ntype: dump\ntitle: Liegengeblieben\ncreated: ${day(-30)}T09:00:00+02:00\norigin: window\nstatus: raw\ntags: []\nscope: null\n---\n\nEin Gedanke, den niemand eingeordnet hat.\n`,
+    );
+    await harness.services.requireIndex().refresh?.();
+
+    const report = await harness.call('gardener:run', {
+      scope: { module: 'identity-management' },
+    });
+
+    expect(report.findings.length).toBeGreaterThan(0);
+    expect(report.findings.every((finding) => finding.module === 'identity-management')).toBe(
+      true,
+    );
+    expect(report.scope).toEqual({ module: 'identity-management' });
+  });
+
+  it('schließt einen beschränkten Lauf ohne Modell trotzdem ab und findet die mechanischen Befunde', async () => {
+    /* `useLlm: true` ohne eine Route für `gardener-audit` — genau der
+       Pflichtfall „kein Modell konfiguriert" (Leitplanke 1), jetzt auch für
+       einen beschränkten Lauf. */
+    const report = await harness.call('gardener:run', {
+      useLlm: true,
+      scope: { kinds: ['orphan'] },
+    });
+
+    expect(report.usedLlm).toBe(false);
+    expect(report.findings.length).toBeGreaterThan(0);
+    expect(report.findings.every((finding) => finding.kind === 'orphan')).toBe(true);
+    expect(report.complete).toBe(false);
+  });
+
+  it('fragt die Stufe für lose Enden nicht, wenn der Bereich kein loses Ende halten kann', async () => {
+    await seedAnnouncingDay();
+    const fake = await routeModelStages();
+
+    /* Ein loses Ende trägt immer `module: null` (`looseEndFinding`), ein Bereich
+       über ein Modul kann also nie eins behalten. Dann darf die Stufe auch nicht
+       laufen: sie kostet einen vollen Modellaufruf und schickte den Inhalt jedes
+       Journaltags in eine Anfrage, für die dieser Lauf nicht gedacht war
+       (Leitplanke 6) — um ihr Ergebnis danach vollständig wegzufiltern. */
+    const report = await harness.call('gardener:run', {
+      useLlm: true,
+      scope: { module: 'identity-management' },
+    });
+
+    /* Genau ein Aufruf, und der gehört der Deutung. Nicht zwei. */
+    expect(fake.calls.length).toBe(1);
+    expect(progress(harness).some((step) => step.phase === 'loose-ends')).toBe(false);
+    /* Und sie steht auch nicht als „fehlend" da: sie war nie geplant, statt
+       geplant und übergangen. */
+    expect(report.missingStages).toEqual([]);
+    expect(report.findings.some((finding) => finding.kind === 'loose-end')).toBe(false);
+  });
+
+  it('fragt gar kein Modell, wenn keine Modellstufe im Bereich etwas beitragen kann', async () => {
+    await seedAnnouncingDay();
+    const fake = await routeModelStages();
+
+    const report = await harness.call('gardener:run', {
+      useLlm: true,
+      scope: { kinds: ['orphan'] },
+    });
+
+    /* Über `orphan` darf die Deutung nicht urteilen (`AUDIT_CANDIDATE_KINDS`),
+       und einen Widerspruch will dieser Bereich nicht — die Stufe für lose Enden
+       erst recht nicht. Beide bleiben ungefragt. */
+    expect(fake.calls.length).toBe(0);
+    expect(report.usedLlm).toBe(false);
+    expect(progress(harness).some((step) => step.phase === 'audit')).toBe(false);
+    expect(progress(harness).some((step) => step.phase === 'loose-ends')).toBe(false);
+    expect(report.missingStages).toEqual([]);
+    /* Nachgesehen wurde nach genau einer Art — und der Bericht sagt es, damit
+       der Screen „nachgesehen, nichts da" von „dafür hätte es eine Modellstufe
+       gebraucht" unterscheiden kann. */
+    expect(report.checkedKinds).toEqual(['orphan']);
+  });
+
+  it('löscht bei einem Bereich über eine nur vom Modell findbare Art keinen alten Befund', async () => {
+    const first = await harness.call('gardener:run', {});
+    expect(first.findings.length).toBeGreaterThan(0);
+
+    /* Kein Modell konfiguriert und ein Bereich allein über `contradiction`:
+       keine Stufe dieses Laufs kann so einen Befund hervorbringen. Sein leeres
+       Ergebnis heißt „nicht nachgesehen" — würde es als „alles weg" gelesen,
+       wäre der ganze letzte vollständige Lauf gelöscht. */
+    const scoped = await harness.call('gardener:run', {
+      useLlm: true,
+      scope: { kinds: ['contradiction'] },
+    });
+
+    expect(scoped.usedLlm).toBe(false);
+    expect(scoped.checkedKinds).toEqual([]);
+    expect(scoped.complete).toBe(false);
+    expect(scoped.findings.map((finding) => finding.id).sort()).toEqual(
+      first.findings.map((finding) => finding.id).sort(),
+    );
+    expect(scoped.health).toBe(first.health);
+
+    /* Nicht nur im Speicher: die Datei trägt sie alle noch. */
+    const stored = JSON.parse((await vault.read('.secondbrain/gardener.json')) ?? '{}') as {
+      run: { findings: { id: string }[]; checkedKinds?: string[] };
+    };
+    expect(stored.run.findings).toHaveLength(first.findings.length);
+    expect(stored.run.checkedKinds).toEqual([]);
+  });
+
+  it('bleibt beim Fortsetzen ein Lauf über den Teil, statt sich zum vollständigen zu machen', async () => {
+    const first = await harness.call('gardener:run', {});
+    const outside = first.findings.filter((finding) => finding.module !== 'identity-management');
+    expect(outside.length).toBeGreaterThan(0);
+    await routeModelStages();
+
+    /* Ein Lauf über ein Modul, abgebrochen bevor die Deutung ihren Aufruf
+       macht — genau der Zustand, aus dem „weitermachen" fortsetzt. */
+    const restore = cancelOn('audit', () => void harness.call('gardener:cancel', undefined));
+    const partial = await harness.call('gardener:run', {
+      useLlm: true,
+      scope: { module: 'identity-management' },
+    });
+    restore();
+    expect(partial.complete).toBe(false);
+    expect(partial.scope).toEqual({ module: 'identity-management' });
+
+    /* „Weitermachen" schickt keinen Bereich mit (GardenScreen), der Lauf muss
+       ihn selbst mitbringen. Sonst erreicht der fortgesetzte Lauf jede geplante
+       Stufe, gilt als vollständige Prüfung des ganzen Vaults — und rechnet den
+       Gesundheitswert über Befunde neu, die niemand neu abgeleitet hat, während
+       er die Entscheidungen dazu wegputzt. */
+    const resumed = await harness.call('gardener:run', { useLlm: true, resume: true });
+
+    expect(resumed.complete).toBe(false);
+    expect(resumed.scope).toEqual({ module: 'identity-management' });
+    /* Die Zahl bleibt die des letzten vollständigen Laufs, mit dessen Datum. */
+    expect(resumed.health).toBe(first.health);
+    expect(resumed.healthAsOf).toBe(first.ranAt);
+    /* Und was außerhalb des Moduls lag, hat den Fortsetzungslauf überlebt. */
+    for (const finding of outside) {
+      expect(resumed.findings.some((entry) => entry.id === finding.id)).toBe(true);
+    }
+  });
+
+  it('lässt keinen zweiten Lauf gleichzeitig zu, auch nicht mit Geltungsbereich', async () => {
+    const running = harness.call('gardener:run', { scope: { kinds: ['orphan'] } });
+    expect(gardenerRunSnapshot()).toMatchObject({ running: true, trigger: 'user' });
+
+    await expect(
+      harness.call('gardener:run', { scope: { kinds: ['near-duplicate'] } }),
+    ).rejects.toMatchObject({ code: 'invalid' });
+
+    await running;
+    expect(gardenerRunSnapshot()).toBeNull();
+  });
 });

@@ -25,12 +25,15 @@
    next to it. */
 
 import { join } from 'node:path';
-import { LLM_ONLY_KINDS, healthScore, kindOf } from '@core/gardener';
+import { LLM_ONLY_KINDS, healthScore, kindOf, sortFindings } from '@core/gardener';
+import { GARDENER_FINDING_KINDS } from '@shared/types';
 import type {
   GardenerFinding,
+  GardenerFindingKind,
   GardenerHealthContribution,
   GardenerHiddenFinding,
   GardenerReport,
+  GardenerRunScope,
   GardenerStageId,
 } from '@shared/types';
 import { readJson, writeJsonAtomic } from './fs-json';
@@ -82,14 +85,99 @@ export interface StoredRun {
     score: number;
     contributions: GardenerHealthContribution[];
   };
+  /**
+   * The part of the vault this run looked at (021c). Absent — the normal case
+   * — means it looked at all of it. A scoped run is never complete
+   * (`isRunComplete`), and its findings replace only its own slice of what the
+   * run before it found (`save`).
+   */
+  scope?: GardenerRunScope;
+  /**
+   * The finding kinds a stage of **this** run actually looked for (021c) — not
+   * the kinds its scope asked for. The difference is the whole point: a scope
+   * naming `contradiction` on a vault with no model routed asks for a kind no
+   * stage of that run can produce, so the run looked for nothing at all.
+   *
+   * `mergeScoped` stands on it. A kind nobody checked cannot be reported gone,
+   * so the previous run's findings of that kind survive the merge — otherwise
+   * one part-run over such a kind would silently delete every finding of it,
+   * together with the "fine as is" and the snooze pointing at its id.
+   *
+   * Absent — a run stored before this field existed — reads as "everything the
+   * scope named was looked at", which is what such a run did. An empty list is
+   * a different statement: it looked for nothing.
+   */
+  checkedKinds?: GardenerFindingKind[];
 }
 
 /**
- * Complete ⟺ `completed` covers every stage of `plan`. A run stored before
- * this field existed has no `plan` at all — it always ran start to finish, so
- * it reads as complete rather than as a run that is somehow always partial.
+ * The scope a run actually narrowed to, or `undefined` for a run over the whole
+ * vault. One definition for every reader — `isRunComplete`, `save`, `present`:
+ * a `scope` that narrows nothing is a full run, no matter which caller built
+ * it. Without this, a `{ kinds: [] }` from anywhere would be a run that is
+ * forever incomplete and yet covered everything.
+ */
+export function narrowedScope(scope: GardenerRunScope | undefined): GardenerRunScope | undefined {
+  if (scope === undefined) return undefined;
+  if ((scope.kinds ?? []).length === 0 && scope.module === undefined) return undefined;
+  return scope;
+}
+
+/**
+ * Did this run re-derive that finding — i.e. does it fall inside the scope? The
+ * axes narrow together, an axis the scope does not name narrows nothing.
+ *
+ * `module` is compared with `===` and not by truthiness: `null` is a value here
+ * ("the findings without a module"), `undefined` is the absent axis.
+ *
+ * This is the predicate the merge in `save` stands on, and the reason it is one
+ * named function: too wide and a part-run deletes findings nothing looked at,
+ * too narrow and the same finding ends up stored twice.
+ */
+export function inScope(finding: GardenerFinding, scope: GardenerRunScope): boolean {
+  return scopeAdmits(scope, finding.kind, finding.module);
+}
+
+/**
+ * Could a finding of this kind — and, where it is already known, of this module
+ * — fall inside the scope at all? The axes narrow together, an axis the scope
+ * does not name narrows nothing.
+ *
+ * An omitted `module` means "not known yet": that is the question a stage asks
+ * *before* it runs, when nobody can say which module its findings will land in,
+ * and then only the kind axis decides. Passing `null` is the opposite — a value,
+ * "the findings without a module".
+ *
+ * One predicate for three questions: may this stage run at all
+ * (`ipc/gardener-deps.ts`), does this finding belong to the run (`inScope`), and
+ * may the merge forget it (`rederivedBy`). Two of them differing by a line is
+ * exactly how a part-run starts deleting what nothing looked at.
+ */
+export function scopeAdmits(
+  scope: GardenerRunScope | undefined,
+  kind: GardenerFindingKind,
+  module?: string | null,
+): boolean {
+  if (scope === undefined) return true;
+  const kinds = scope.kinds ?? [];
+  if (kinds.length > 0 && !kinds.some((entry) => entry === kind)) return false;
+  return scope.module === undefined || module === undefined || scope.module === module;
+}
+
+/**
+ * Complete ⟺ `completed` covers every stage of `plan`, **and** the run looked
+ * at the whole vault. A run stored before this field existed has no `plan` at
+ * all — it always ran start to finish, so it reads as complete rather than as a
+ * run that is somehow always partial.
+ *
+ * A scoped run (021c) is never complete, however far through its stages it got:
+ * it re-derived one slice of the vault and said nothing about the rest. Hanging
+ * that off this one gate is the point — everything 021b built for a stopped run
+ * (no pruning of a decision the run never looked for, the frozen score instead
+ * of a number computed over a part) then applies to a part-run unchanged.
  */
 export function isRunComplete(run: StoredRun): boolean {
+  if (narrowedScope(run.scope) !== undefined) return false;
   if (run.plan === undefined) return true;
   const completed = new Set(run.completed ?? []);
   return run.plan.every((stage) => completed.has(stage));
@@ -192,6 +280,43 @@ function readHealthAsOf(value: unknown): StoredRun['healthAsOf'] {
   return { ranAt, score, contributions };
 }
 
+function isFindingKind(value: unknown): value is GardenerFindingKind {
+  return GARDENER_FINDING_KINDS.some((kind) => kind === value);
+}
+
+/**
+ * A stored scope. Unknown kinds are dropped, the same reasoning as
+ * `readStageIds`: a future version's finding kind must not make the file
+ * unreadable for this one.
+ *
+ * What is left of a scope naming nothing this build knows is not a narrower
+ * scope but **no** scope (`narrowedScope`) — reading it as one would leave a run
+ * permanently incomplete while being unable to say what it covered. The
+ * `module` axis survives on its own: an empty `kinds` next to a module is a
+ * module scope.
+ */
+function readScope(value: unknown): GardenerRunScope | undefined {
+  if (value === null || typeof value !== 'object') return undefined;
+  const record = value as Record<string, unknown>;
+  const kinds = Array.isArray(record['kinds']) ? record['kinds'].filter(isFindingKind) : [];
+  const module = record['module'];
+  return narrowedScope(
+    module === null || typeof module === 'string' ? { kinds, module } : { kinds },
+  );
+}
+
+/**
+ * The kinds a stored run recorded as looked-for. `undefined` — no such field —
+ * is **not** the same as `[]`: absent means the run predates the field and
+ * looked at whatever its scope named, `[]` means it looked for nothing. Unknown
+ * kinds drop out for the same reason as in `readScope`; the cost is a finding of
+ * that kind surviving one run longer, which is the harmless direction.
+ */
+function readCheckedKinds(value: unknown): GardenerFindingKind[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  return value.filter(isFindingKind);
+}
+
 function readFixed(value: unknown): FixedFinding[] {
   if (!Array.isArray(value)) return [];
   const result: FixedFinding[] = [];
@@ -223,6 +348,8 @@ function readRun(value: unknown): StoredRun | null {
     plan: readStageIds(record['plan']),
     completed: readStageIds(record['completed']),
     healthAsOf: readHealthAsOf(record['healthAsOf']),
+    scope: readScope(record['scope']),
+    checkedKinds: readCheckedKinds(record['checkedKinds']),
   };
 }
 
@@ -261,6 +388,98 @@ function consideredBy(run: StoredRun): ReadonlySet<string> {
   const ids = new Set(run.findings.map((finding) => finding.id));
   for (const id of run.consideredIds ?? []) ids.add(id);
   return ids;
+}
+
+/**
+ * May this run's silence about a stored finding be read as "it is gone"?
+ *
+ * Two conditions, and both are needed. The run has to have looked at that slice
+ * of the vault (`inScope`) — and it has to have had a stage that could produce
+ * that kind of finding at all (`checkedKinds`). A run scoped to `contradiction`
+ * on a vault with no model routed passes the first and fails the second: the
+ * scope *asked* for contradictions, but no stage of that run ever looked for
+ * one, so its empty result says nothing about them.
+ *
+ * Reading the scope alone here is the data-loss bug this predicate exists to
+ * prevent: it turns "we never looked" into "these are gone now" and deletes the
+ * findings, in the one file the user is invited to delete, without a word on
+ * screen — and leaves their `dismissed`/`snoozed` entries pointing at ids that
+ * exist nowhere anymore.
+ */
+function rederivedBy(run: StoredRun, scope: GardenerRunScope, finding: GardenerFinding): boolean {
+  if (!inScope(finding, scope)) return false;
+  const checked = run.checkedKinds;
+  return checked === undefined || checked.some((kind) => kind === finding.kind);
+}
+
+/**
+ * A scoped run laid over the run before it (021c) — the merge this story turns
+ * on. What the run looked at is replaced by what it found; everything outside
+ * its scope, and everything of a kind no stage of it looked for, stays exactly
+ * as the previous run left it, because nothing has looked at it since.
+ *
+ * Not a union with the old in-scope findings, and not a replacement of the whole
+ * list: the first would keep findings the run just proved gone, the second would
+ * delete findings the run never looked for — silently, in the one file the user
+ * is told they may delete.
+ *
+ * `advice` is inherited rather than merged: it is a statement about the whole
+ * vault, so a run over one module has no standing to rewrite it (021c, decision
+ * 2). Only when there is no previous run at all does the part-run's own advice
+ * stand — it is then the only statement in existence, and `complete: false`
+ * plus the scope beside it say what it is worth.
+ */
+function mergeScoped(
+  previous: StoredRun | null,
+  run: StoredRun,
+  scope: GardenerRunScope,
+): StoredRun {
+  if (previous === null) return run;
+  const rederived = new Set(run.findings.map((finding) => finding.id));
+  const kept = previous.findings.filter(
+    /* The id check is the second lock: a finding this run brought back itself
+       belongs to this run, never twice — whatever a caller believed its scope
+       to be. */
+    (finding) => !rederivedBy(run, scope, finding) && !rederived.has(finding.id),
+  );
+  return {
+    ...run,
+    /* Sorted as one list, not old-then-new: every reader takes the stored order
+       for "most severe first" (`core/gardener/report.ts#sortFindings`), and
+       appending would push this run's own findings behind the inherited ones. */
+    findings: sortFindings([...kept, ...run.findings]),
+    advice: previous.advice,
+  };
+}
+
+/**
+ * Which resolved findings a **scoped** run may not forget. A full run re-derives
+ * everything, so its silence about a fixed finding means the fix holds and the
+ * entry can go. A part-run's silence means nothing: dropping an entry outside
+ * its scope would put a finding the user already fixed back on the open list —
+ * the finding itself is still stored, inherited by the merge — and throw away
+ * the token that undoes the fix.
+ *
+ * An entry the previous run no longer carries is kept for the same reason:
+ * nothing here can place it inside or outside the scope, and keeping it only
+ * costs one hidden finding staying hidden until a full run looks again.
+ *
+ * The same predicate as the merge (`rederivedBy`), and that is the point: the
+ * merge keeps a finding of a kind nothing looked for, so this has to keep the
+ * fix that resolved it — otherwise the finding comes back on the open list with
+ * the token that would undo it thrown away.
+ */
+function keptFixed(
+  fixed: readonly FixedFinding[],
+  previous: StoredRun | null,
+  run: StoredRun,
+  scope: GardenerRunScope,
+): FixedFinding[] {
+  if (previous === null) return [...fixed];
+  return fixed.filter((entry) => {
+    const finding = previous.findings.find((candidate) => candidate.id === entry.id);
+    return finding === undefined || !rederivedBy(run, scope, finding);
+  });
 }
 
 /** What `save()` has to know about the run it is storing (021b, D3). */
@@ -367,6 +586,11 @@ export class GardenerState {
    * **unknown** (`healthKnown: false`), because there is no complete check to
    * point at yet. Falling back to a computed number there would be exactly the
    * lie the frozen score exists to prevent.
+   *
+   * A scoped run (021c) is partial through the same gate, so all of that holds
+   * for it too — the score it shows is the last complete one, never one derived
+   * from the part. `scope` says which part it was; the findings beside it are
+   * the merged list, this run's own plus everything it did not look at.
    */
   present(today: string, resolved: ReadonlySet<string> = new Set()): GardenerReport | null {
     const run = this.data.run;
@@ -398,6 +622,14 @@ export class GardenerState {
       complete,
       missingStages,
       healthAsOf: !complete ? run.healthAsOf?.ranAt : undefined,
+      /* Normalized, so no screen ever gets a scope that narrowed nothing. */
+      scope: narrowedScope(run.scope),
+      /* Only beside a scope, and only as the run itself recorded it: which
+         kinds a stage of it actually looked for. The screen needs it to tell
+         "looked, and there is nothing here" from "this scope needed a model
+         stage and no model was configured" (021c, AC 6) — the same distinction
+         the merge stands on, so both read it from the same field. */
+      checkedKinds: narrowedScope(run.scope) === undefined ? undefined : run.checkedKinds,
       findings,
       hidden,
       health: health.score ?? 0,
@@ -426,12 +658,22 @@ export class GardenerState {
    * A **partial** run (021b) prunes nothing: it stopped before reaching every
    * planned stage, so its silence about a finding says nothing about whether
    * that finding is still there — exactly the same reasoning `outlivesRun`
-   * already applies to a single missing kind, only here for the whole run.
+   * already applies to a single missing kind, only here for the whole run. A
+   * **scoped** run (021c) is partial by the same gate (`isRunComplete`), and on
+   * top of that keeps what it did not look at: its findings are laid over the
+   * previous run's instead of replacing them (`mergeScoped`), and the fixes
+   * outside its scope stay recorded (`keptFixed`). "Did not look at" is decided
+   * by `run.checkedKinds` and not by the scope — a scope may name a kind no
+   * stage of that run could produce (`rederivedBy`).
    */
   async save(run: StoredRun, options: SaveRunOptions = {}): Promise<void> {
     const considered = consideredBy(run);
-    this.data.run = run;
-    if (options.checksReran !== false) this.data.fixed = [];
+    const scope = narrowedScope(run.scope);
+    const previous = this.data.run;
+    this.data.run = scope === undefined ? run : mergeScoped(previous, run, scope);
+    if (options.checksReran !== false) {
+      this.data.fixed = scope === undefined ? [] : keptFixed(this.data.fixed, previous, run, scope);
+    }
     if (isRunComplete(run)) {
       this.data.dismissed = this.data.dismissed.filter((id) =>
         outlivesRun(id, considered, run.usedLlm),

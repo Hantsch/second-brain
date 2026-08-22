@@ -1001,6 +1001,105 @@ describe('Bericht', () => {
   });
 });
 
+// ── Nur dies prüfen (021c, D3) ───────────────────────────────────────────────
+
+describe('Nur dies prüfen', () => {
+  it('fehlt ohne aktiven Art- oder Modul-Filter', async () => {
+    installMock(handlers(REPORT));
+    wrap(<GardenScreen />);
+    await screen.findByText('72');
+
+    expect(screen.queryByRole('button', { name: /^Nur /u })).toBeNull();
+  });
+
+  it('nennt die Art und schickt den passenden Umfang', async () => {
+    installMock(handlers(REPORT, { 'gardener:run': () => REPORT }));
+    wrap(<GardenScreen />);
+    await screen.findByText('72');
+
+    await userEvent.selectOptions(screen.getByLabelText('Art'), 'stale-page');
+    const button = await screen.findByRole('button', { name: 'Nur Angestaubte Seiten prüfen' });
+
+    await userEvent.click(button);
+
+    expect(calls('gardener:run')).toEqual([{ scope: { kinds: ['stale-page'] } }]);
+  });
+
+  it('nennt das Modul und schickt den passenden Umfang', async () => {
+    installMock(handlers(REPORT, { 'gardener:run': () => REPORT }));
+    wrap(<GardenScreen />);
+    await screen.findByText('72');
+
+    await userEvent.selectOptions(screen.getByLabelText('Modul'), MODULE);
+    const button = await screen.findByRole('button', {
+      name: `Nur Modul ${MODULE} prüfen`,
+    });
+
+    await userEvent.click(button);
+
+    expect(calls('gardener:run')).toEqual([{ scope: { module: MODULE } }]);
+  });
+
+  it('bildet „ohne Modul" auf `module: null` ab', async () => {
+    installMock(handlers(REPORT, { 'gardener:run': () => REPORT }));
+    wrap(<GardenScreen />);
+    await screen.findByText('72');
+
+    /* DUMP ist der einzige Befund ohne Modul (`module: null` in `finding()`),
+       darum steht die Option in der Auswahl. */
+    await userEvent.selectOptions(screen.getByLabelText('Modul'), 'none');
+    const button = await screen.findByRole('button', { name: 'Nur Modul Ohne Modul prüfen' });
+
+    await userEvent.click(button);
+
+    expect(calls('gardener:run')).toEqual([{ scope: { module: null } }]);
+  });
+
+  it('kombiniert Art und Modul, wenn beide gesetzt sind', async () => {
+    installMock(handlers(REPORT, { 'gardener:run': () => REPORT }));
+    wrap(<GardenScreen />);
+    await screen.findByText('72');
+
+    await userEvent.selectOptions(screen.getByLabelText('Art'), 'stale-page');
+    await userEvent.selectOptions(screen.getByLabelText('Modul'), MODULE);
+    const button = await screen.findByRole('button', {
+      name: `Nur Angestaubte Seiten in Modul ${MODULE} prüfen`,
+    });
+
+    await userEvent.click(button);
+
+    expect(calls('gardener:run')).toEqual([{ scope: { kinds: ['stale-page'], module: MODULE } }]);
+  });
+
+  it('ist gesperrt, während ein Lauf schon geht', async () => {
+    installMock(
+      handlers(REPORT, {
+        'gardener:runStatus': () => ({
+          phase: 'checks',
+          check: 'broken-link',
+          done: 2,
+          total: 10,
+          running: true,
+          stage: 'checks',
+          percent: 20,
+          remaining: [],
+          startedAt: NOW,
+          trigger: 'auto',
+        }),
+      }),
+    );
+    wrap(<GardenScreen />);
+    await screen.findByText('72');
+
+    await userEvent.selectOptions(screen.getByLabelText('Art'), 'stale-page');
+    const button = (await screen.findByRole('button', {
+      name: 'Nur Angestaubte Seiten prüfen',
+    })) as HTMLButtonElement;
+
+    expect(button.disabled).toBe(true);
+  });
+});
+
 // ── Fixes ───────────────────────────────────────────────────────────────────
 
 describe('Fixes', () => {
@@ -1507,6 +1606,116 @@ describe('Prüfung sagt, dass sie eine Hälfte ist', () => {
     expect(screen.queryByText(/^Fehlende Stufen:/)).toBeNull();
     expect(screen.queryByText(/^Stand .*, letzte vollständige Prüfung$/)).toBeNull();
     expect(screen.queryByRole('button', { name: 'Prüfung fortsetzen' })).toBeNull();
+  });
+});
+
+// ── Ein Teil-Lauf sagt, was er geprüft hat (021c, D4) ────────────────────────
+
+/* Ein Teil-Lauf ist auch `complete: false` (021b's Maschinerie), trägt aber
+   zusätzlich `scope` — und muss sich von einem vorzeitig gestoppten Lauf
+   unterscheiden lesen: hier wurde nichts abgebrochen, es wurde nie mehr
+   geplant. */
+const SCOPED_KIND_REPORT: GardenerReport = {
+  ...REPORT,
+  complete: false,
+  scope: { kinds: ['stale-page'] },
+  healthAsOf: '2026-08-05T09:00:00+02:00',
+};
+
+const SCOPED_MODULE_REPORT: GardenerReport = {
+  ...REPORT,
+  complete: false,
+  scope: { module: MODULE },
+  healthAsOf: '2026-08-05T09:00:00+02:00',
+};
+
+/* Both at once: a run asked to look at only a part, that was then also
+   cancelled before its own (narrower) plan finished. The two notices answer
+   different questions and neither may swallow the other (021c review finding
+   4) — "check everything" and "continue check" must both be offered. */
+const SCOPED_AND_STOPPED_REPORT: GardenerReport = {
+  ...REPORT,
+  complete: false,
+  scope: { kinds: ['stale-page'] },
+  missingStages: ['audit', 'loose-ends'],
+  healthAsOf: '2026-08-05T09:00:00+02:00',
+};
+
+describe('Ein Teil-Lauf sagt, was er geprüft hat', () => {
+  it('nennt den Umfang statt „vorzeitig gestoppt" und bietet „alles prüfen"', async () => {
+    installMock(handlers(SCOPED_KIND_REPORT, { 'gardener:run': () => REPORT }));
+    wrap(<GardenScreen />);
+    await screen.findByText('72');
+
+    /* Der Umfang steht sowohl neben der Kopfzeile als auch bei der
+       eingefrorenen Gesundheit (021c, D4) — beide Stellen sagen dasselbe. */
+    expect(screen.getAllByText('Letzte Prüfung: nur Angestaubte Seiten').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Vorzeitig gestoppt.')).toBeNull();
+    expect(screen.queryByText(/^Fehlende Stufen:/)).toBeNull();
+    /* 021b's eingefrorener Stand bleibt daneben stehen, unverändert. */
+    expect(screen.getByText(/^Stand .*, letzte vollständige Prüfung$/)).toBeTruthy();
+
+    const button = screen.getByRole('button', { name: 'Alles prüfen' });
+    await userEvent.click(button);
+    expect(calls('gardener:run')).toEqual([{}]);
+  });
+
+  it('nennt das Modul, wenn der Umfang ein Modul ist', async () => {
+    installMock(handlers(SCOPED_MODULE_REPORT));
+    wrap(<GardenScreen />);
+    await screen.findByText('72');
+
+    expect(screen.getAllByText(`Letzte Prüfung: nur Modul ${MODULE}`).length).toBeGreaterThan(0);
+  });
+
+  it('zeigt bei einem angehaltenen, nicht eingegrenzten Lauf weiterhin die alte Meldung', async () => {
+    installMock(handlers(PARTIAL_REPORT));
+    wrap(<GardenScreen />);
+    await screen.findByText('72');
+
+    expect(screen.getByText('Vorzeitig gestoppt.')).toBeTruthy();
+    expect(screen.queryByText(/^Letzte Prüfung:/)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Alles prüfen' })).toBeNull();
+  });
+
+  it('zeigt bei einem vollständigen Bericht weder den Umfang noch „alles prüfen"', async () => {
+    installMock(handlers(REPORT));
+    wrap(<GardenScreen />);
+    await screen.findByText('72');
+
+    expect(screen.queryByText(/^Letzte Prüfung:/)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Alles prüfen' })).toBeNull();
+  });
+
+  it('nennt den Umfang auch ohne Modell, ohne eine Modell-Stufe zu behaupten', async () => {
+    /* `llm:routing` ist in `handlers()` bereits so gesetzt, dass kein Modell
+       geroutet ist — der Normalfall dieses Nutzers. */
+    installMock(handlers(SCOPED_KIND_REPORT));
+    wrap(<GardenScreen />);
+    await screen.findByText('72');
+
+    /* Der Umfang steht sowohl neben der Kopfzeile als auch bei der
+       eingefrorenen Gesundheit (021c, D4) — beide Stellen sagen dasselbe. */
+    expect(screen.getAllByText('Letzte Prüfung: nur Angestaubte Seiten').length).toBeGreaterThan(0);
+    expect(screen.getByText('ohne Modell, nur die maschinellen Prüfungen')).toBeTruthy();
+    expect(screen.queryByText(/Das Modell/)).toBeNull();
+  });
+
+  it('zeigt bei einem eingegrenzten UND angehaltenen Lauf beide Meldungen mit beiden Aktionen', async () => {
+    installMock(handlers(SCOPED_AND_STOPPED_REPORT, { 'gardener:run': () => REPORT }));
+    wrap(<GardenScreen />);
+    await screen.findByText('72');
+
+    /* Der Umfang ("was habe ich verlangt") … */
+    expect(screen.getAllByText('Letzte Prüfung: nur Angestaubte Seiten').length).toBeGreaterThan(0);
+    /* … und der Abbruch ("wurde es fertig") stehen nebeneinander, keiner
+       verdrängt den anderen. */
+    expect(screen.getByText('Vorzeitig gestoppt.')).toBeTruthy();
+    expect(screen.getByText('Fehlende Stufen: Widersprüche, lose Enden.')).toBeTruthy();
+
+    /* Beide Handlungen bleiben angeboten. */
+    expect(screen.getByRole('button', { name: 'Alles prüfen' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Prüfung fortsetzen' })).toBeTruthy();
   });
 });
 

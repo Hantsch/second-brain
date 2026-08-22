@@ -10,7 +10,8 @@
      dem man beide Seiten lesen muss, um zu entscheiden. */
 
 import type { ReactNode } from 'react';
-import type { GardenerFinding, GardenerHiddenFinding } from '@shared/types';
+import type { GardenerFinding, GardenerHiddenFinding, GardenerRunScope } from '@shared/types';
+import { Button } from '../../atoms/Button';
 import { FindingFilter } from '../../components/FindingFilter';
 import { Panel } from '../../components/Panel';
 import { useLanguage, useT } from '../../i18n';
@@ -34,6 +35,24 @@ import {
 } from './filter';
 import type { FindingFilterState } from './filter';
 
+/**
+ * The scope a "check only this" click would run (021c, D3) — the kind and
+ * module axes of the filter, `'none'` mapped to `null` exactly as
+ * `GardenerRunScope` defines it. Severity and state narrow what is *shown*,
+ * not what a run would check, so they play no part here.
+ */
+export function checkOnlyScope(filter: FindingFilterState): GardenerRunScope {
+  const scope: GardenerRunScope = {};
+  if (filter.kind !== 'all') scope.kinds = [filter.kind];
+  if (filter.module !== 'all') scope.module = filter.module === 'none' ? null : filter.module;
+  return scope;
+}
+
+/** Whether the kind or module axis narrows the view — the control's condition. */
+export function hasCheckOnlyScope(filter: FindingFilterState): boolean {
+  return filter.kind !== 'all' || filter.module !== 'all';
+}
+
 export interface FindingListProps {
   findings: readonly GardenerFinding[];
   /** Dismissed and still-snoozed findings (017 D4) — carried along instead of
@@ -41,6 +60,10 @@ export interface FindingListProps {
   hidden: readonly GardenerHiddenFinding[];
   filter: FindingFilterState;
   onFilter: (next: FindingFilterState) => void;
+  /** Starts a run scoped to the current kind/module filter (021c, D3). */
+  onCheckOnly: (scope: GardenerRunScope) => void;
+  /** A run is already going — mirrors "check now"'s own disabling (021a). */
+  checkOnlyDisabled: boolean;
   /** Welcher Befund arbeitet gerade? */
   busyId: string | null;
   onFix: (finding: GardenerFinding) => void;
@@ -63,6 +86,8 @@ export function FindingList({
   hidden,
   filter,
   onFilter,
+  onCheckOnly,
+  checkOnlyDisabled,
   busyId,
   onFix,
   onDismiss,
@@ -165,6 +190,27 @@ export function FindingList({
     );
   };
 
+  /* Names what "check only this" would run — kind, module, or both together
+     (021c, decision 1: both scope dimensions ship, and both narrow together
+     when set). `'none'` reads as the same "without a module" wording the
+     filter's own option uses, not the literal filter value. */
+  const scoped = hasCheckOnlyScope(filter);
+  const kindLabel = filter.kind === 'all' ? null : t(`garden.kind.${filter.kind}`);
+  const moduleLabel =
+    filter.module === 'all'
+      ? null
+      : filter.module === 'none'
+        ? t('garden.filter.noModule')
+        : filter.module;
+  const checkOnlyLabel =
+    kindLabel !== null && moduleLabel !== null
+      ? t('garden.run.checkOnlyBoth', { kind: kindLabel, module: moduleLabel })
+      : kindLabel !== null
+        ? t('garden.run.checkOnlyKind', { kind: kindLabel })
+        : moduleLabel !== null
+          ? t('garden.run.checkOnlyModule', { module: moduleLabel })
+          : '';
+
   return (
     <Panel
       title={t('garden.findings.label')}
@@ -178,6 +224,19 @@ export function FindingList({
         severities={severityCounts(pool, filter)}
         states={stateCounts(findings, hidden, filter)}
       />
+
+      {scoped ? (
+        <Button
+          variant="secondary"
+          size="sm"
+          icon="sprout"
+          disabled={checkOnlyDisabled}
+          title={checkOnlyDisabled ? t('garden.run.disabledWhileRunning') : undefined}
+          onClick={() => onCheckOnly(checkOnlyScope(filter))}
+        >
+          {checkOnlyLabel}
+        </Button>
+      ) : null}
 
       {shown.length === 0 ? (
         <div className="sb-panel-empty">

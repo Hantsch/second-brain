@@ -25,13 +25,25 @@
 
    If that stopped run was this vault's **first** check, there is no frozen
    score at all: `healthKnown` is then false and the tile falls back to "not
-   checked yet" — no number, and no "as of" line with nothing in it. */
+   checked yet" — no number, and no "as of" line with nothing in it.
+
+   021c D5: a run scoped to a kind or module (`report.scope`) is also
+   `complete: false`, but it is not the same story as a run that ran out of
+   time — it is a run that was *asked* to look at only a part. Selling that as
+   "the last check was stopped" would suggest the user should re-run it to get
+   the whole picture "for free"; the honest wording says what it did cover,
+   the same descriptor the findings screen's "check only this" button uses
+   (`garden.kind.*`, `garden.filter.noModule`) — via the shared `scopeLabel`
+   from `screens/garden/scope.ts`, not a second copy of that wording. Either
+   way the score stays the frozen one from the last *complete* run — a scoped
+   run's own findings never become the "N results" line. */
 
 import { useNavigate } from 'react-router-dom';
 import { useLanguage, useT } from '../../i18n';
 import { formatDate, plural } from '../../lib/format';
 import { useDashboardData } from '../../lib/queries/dashboard';
 import { useGardenerReport } from '../../lib/queries/gardener';
+import { scopeLabel } from '../../screens/garden/scope';
 import { HealthMeter } from '../HealthMeter';
 import { TileFrame } from '../TileFrame';
 
@@ -50,6 +62,11 @@ export function GardenerTile() {
   const worst = (report.data?.healthContributions ?? []).slice(0, WORST);
   const partial = report.data?.complete === false;
   const asOf = partial ? formatDate(report.data?.healthAsOf ?? null, language) : '';
+  /* A scoped run is a kind of partial run (both are `complete: false`), but it
+     must not share the "stopped" sentence — one says the run ran out of time,
+     the other says it was asked to look at only a part (021c D5). */
+  const scope = report.data?.scope;
+  const scoped = partial && scope !== undefined ? scopeLabel(scope, t) : null;
 
   return (
     <TileFrame
@@ -80,8 +97,8 @@ export function GardenerTile() {
                front of it (021b). */
             <span className="sb-tile-note">
               {asOf === ''
-                ? t('tile.gardener.stopped')
-                : `${t('tile.gardener.asOf', { date: asOf })} · ${t('tile.gardener.stopped')}`}
+                ? (scoped ?? t('tile.gardener.stopped'))
+                : `${t('tile.gardener.asOf', { date: asOf })} · ${scoped ?? t('tile.gardener.stopped')}`}
             </span>
           ) : (
             <span className="sb-tile-note">

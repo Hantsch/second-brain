@@ -33,6 +33,7 @@ import type {
   GardenerFinding,
   GardenerFindingKind,
   GardenerReport,
+  GardenerRunScope,
   GardenerRunTrigger,
   GardenerStageId,
   GardenerSupersedeResult,
@@ -714,8 +715,21 @@ export interface IpcRoutes {
    * asked again. Without a stored run, or with one that already reached every
    * planned stage, this is the same as a plain run (the latter a no-op that
    * still ends the same way a run does).
+   *
+   * `scope` narrows the run to part of the vault (021c): only checks whose
+   * kind is named run at all, a model stage whose every possible output lies
+   * outside it is not asked, and the ones that are see only the findings that
+   * fall inside it. Absent — the normal case — checks and re-derives
+   * everything, exactly as before this field existed.
+   *
+   * Resuming a run that was scoped keeps that scope, whether or not this
+   * request repeats it: a continue may finish a part-run, never turn it into a
+   * complete check of the whole vault.
    */
-  'gardener:run': { req: { useLlm?: boolean; resume?: boolean }; res: GardenerReport };
+  'gardener:run': {
+    req: { useLlm?: boolean; resume?: boolean; scope?: GardenerRunScope };
+    res: GardenerReport;
+  };
   /** Cancels a running maintenance pass; without a running pass, nothing happens. */
   'gardener:cancel': { req: void; res: void };
   'gardener:dismiss': { req: { id: string }; res: void };

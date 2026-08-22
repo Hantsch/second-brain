@@ -30,6 +30,7 @@ import { HealthMeter } from '../../components/HealthMeter';
 import { useLanguage, useT } from '../../i18n';
 import { formatDate, plural } from '../../lib/format';
 import { adviceFor } from './advice';
+import { scopeLabel } from './scope';
 
 /** Total plus the split, worded as one sentence — never a bare count. */
 function hiddenNote(hidden: readonly GardenerHiddenFinding[], t: ReturnType<typeof useT>): string {
@@ -135,6 +136,14 @@ export function HealthCard({ report, onShowHidden }: HealthCardProps) {
           {t(report.usedLlm ? 'garden.health.withModel' : 'garden.health.withoutModel')}
         </span>
       </p>
+
+      {/* 021c, D4: next to the frozen-score stamp above — not instead of it —
+          names the part of the vault the last run actually looked at, so the
+          findings below read as "just this scope" rather than "the whole
+          vault, some of it missing" (021b's stopped-run reading). */}
+      {report.scope === undefined ? null : (
+        <p className="sb-ghealth-note">{scopeLabel(report.scope, t)}</p>
+      )}
 
       {advice.sentences.length === 0 ? null : (
         <div className="sb-gadvice">

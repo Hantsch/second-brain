@@ -29,6 +29,22 @@ export const enGarden = {
   /* 021b, D4: the button next to "check now" — present only when the last
      run stopped partway and stages are still missing. */
   'garden.run.continue': 'Continue check',
+  /* 021c, D3: "check only this" next to the filter — active exactly when the
+     kind or module axis narrows the view, naming what it would run. */
+  'garden.run.checkOnlyKind': 'Check only {kind}',
+  'garden.run.checkOnlyModule': 'Check only module {module}',
+  'garden.run.checkOnlyBoth': 'Check only {kind} in module {module}',
+
+  // ── Scope of the last run (021c, D4) ────────────────────────────────────────
+  /* Names what a scoped run covered — next to 021b's frozen-score wording,
+     never replacing it. A scoped run is never `complete`, but it must not
+     read as the "stopped partway" sentence below: nothing was skipped, the
+     run just never intended to cover more. */
+  'garden.scope.kind': 'Last check: {kind} only',
+  'garden.scope.module': 'Last check: module {module} only',
+  'garden.scope.both': 'Last check: {kind} in module {module} only',
+  /* The way back to a full run, offered beside the scope wording. */
+  'garden.scope.checkEverything': 'Check everything',
 
   // ── Stopped partway ──────────────────────────────────────────────────────
   /* 021b, D4: the last run did not reach every stage it planned — the report

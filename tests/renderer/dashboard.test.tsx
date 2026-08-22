@@ -986,6 +986,85 @@ describe('Kacheln', () => {
     expect(screen.queryByText('0')).toBeNull();
   });
 
+  it('nennt einen Lauf mit Ausschnitt anders als einen gestoppten (021c D5)', async () => {
+    mount({
+      data: { ...dashboardFixture, healthKnown: true, health: 84, findingCount: 3 },
+      extra: {
+        'gardener:report': () => ({
+          ranAt: '2026-08-22T09:00:00.000Z',
+          usedLlm: false,
+          complete: false,
+          scope: { kinds: ['orphan'] },
+          healthAsOf: '2026-08-20T09:00:00.000Z',
+          findings: [],
+          health: 84,
+          healthKnown: true,
+          advice: [],
+        }),
+      },
+    });
+    wrap(<GardenerTile />);
+    /* Der eingefrorene Wert bleibt stehen, mit seinem Datum. */
+    expect(await screen.findByText('84')).toBeTruthy();
+    expect(screen.getByText(/Stand 20\. Aug\. 2026/)).toBeTruthy();
+    /* Der Wortlaut ist der eines Ausschnitts, nicht der eines Abbruchs — und
+       die drei Befunde dieses Teillaufs stehen nirgends als aktuelle Zahl. */
+    expect(screen.getByText(/Letzte Prüfung: nur Verwaiste Seiten/)).toBeTruthy();
+    expect(screen.queryByText(/Letzte Prüfung gestoppt/)).toBeNull();
+    expect(screen.queryByText('3 Befunde')).toBeNull();
+  });
+
+  it('nennt bei einem Ausschnitt über zwei Arten den Umfang, nicht „gestoppt" (021c review finding 5)', async () => {
+    /* Über die reguläre "check only this"-Kontrolle entsteht heute nur ein
+       Ein-Art-Umfang, aber die IPC-Vertrag erlaubt mehrere — und die Kachel
+       darf dafür nicht auf die Abbruch-Formulierung zurückfallen. */
+    mount({
+      data: { ...dashboardFixture, healthKnown: true, health: 84, findingCount: 7 },
+      extra: {
+        'gardener:report': () => ({
+          ranAt: '2026-08-22T09:00:00.000Z',
+          usedLlm: false,
+          complete: false,
+          scope: { kinds: ['orphan', 'stale-page'] },
+          healthAsOf: '2026-08-20T09:00:00.000Z',
+          findings: [],
+          health: 84,
+          healthKnown: true,
+          advice: [],
+        }),
+      },
+    });
+    wrap(<GardenerTile />);
+    expect(
+      await screen.findByText(/Letzte Prüfung: nur Verwaiste Seiten, Angestaubte Seiten/),
+    ).toBeTruthy();
+    expect(screen.queryByText(/Letzte Prüfung gestoppt/)).toBeNull();
+    expect(screen.queryByText('7 Befunde')).toBeNull();
+  });
+
+  it('nennt bei einem Modul-Ausschnitt das Modul, nicht die Art', async () => {
+    mount({
+      data: { ...dashboardFixture, healthKnown: true, health: 84, findingCount: 5 },
+      extra: {
+        'gardener:report': () => ({
+          ranAt: '2026-08-22T09:00:00.000Z',
+          usedLlm: false,
+          complete: false,
+          scope: { module: 'hochbeet' },
+          healthAsOf: '2026-08-20T09:00:00.000Z',
+          findings: [],
+          health: 84,
+          healthKnown: true,
+          advice: [],
+        }),
+      },
+    });
+    wrap(<GardenerTile />);
+    expect(await screen.findByText(/Letzte Prüfung: nur Modul hochbeet/)).toBeTruthy();
+    expect(screen.queryByText(/Letzte Prüfung gestoppt/)).toBeNull();
+    expect(screen.queryByText('5 Befunde')).toBeNull();
+  });
+
   it('lässt bei fehlendem Stand das Datum weg, statt es leer hinzuschreiben', async () => {
     mount({
       data: { ...dashboardFixture, healthKnown: true, health: 84, findingCount: 3 },

@@ -41,6 +41,22 @@ export const deGarden = {
   /* 021b, D4: der Knopf neben „jetzt prüfen" — nur da, wenn der letzte Lauf
      vorzeitig stoppte und noch Stufen offen sind. */
   'garden.run.continue': 'Prüfung fortsetzen',
+  /* 021c, D3: „nur dies prüfen" neben dem Filter — genau dann da, wenn Art
+     oder Modul die Ansicht einschränken, und benennt, was geprüft würde. */
+  'garden.run.checkOnlyKind': 'Nur {kind} prüfen',
+  'garden.run.checkOnlyModule': 'Nur Modul {module} prüfen',
+  'garden.run.checkOnlyBoth': 'Nur {kind} in Modul {module} prüfen',
+
+  // ── Umfang des letzten Laufs (021c, D4) ──────────────────────────────────────
+  /* Benennt, was ein Teil-Lauf geprüft hat — neben 021b's eingefrorenem Stand,
+     nicht statt dessen. Ein Teil-Lauf ist nie `complete`, darf sich aber nicht
+     wie „vorzeitig gestoppt" lesen: hier wurde nichts abgebrochen, der Lauf
+     wollte nie mehr abdecken. */
+  'garden.scope.kind': 'Letzte Prüfung: nur {kind}',
+  'garden.scope.module': 'Letzte Prüfung: nur Modul {module}',
+  'garden.scope.both': 'Letzte Prüfung: nur {kind} in Modul {module}',
+  /* Der Weg zurück zu einem vollständigen Lauf, neben dem Umfangs-Hinweis. */
+  'garden.scope.checkEverything': 'Alles prüfen',
 
   // ── Vorzeitig gestoppt ────────────────────────────────────────────────────
   /* 021b, D4: der letzte Lauf hat nicht jede geplante Stufe erreicht — der

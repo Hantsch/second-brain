@@ -25,6 +25,7 @@
      new run. */
 
 import {
+  AUDIT_CANDIDATE_KINDS,
   CHECKS,
   auditFindings,
   buildContext,
@@ -46,7 +47,9 @@ import { isoDay } from '@core/vault/paths';
 import type {
   DocLanguage,
   GardenerFinding,
+  GardenerFindingKind,
   GardenerReport,
+  GardenerRunScope,
   GardenerRunTrigger,
   GardenerSettings,
   UiLanguage,
@@ -55,7 +58,13 @@ import { fail } from './errors';
 import { docLanguage, replyLanguage } from './wiki-bridge';
 import { createGateway } from '../llm-bridge';
 import { gardenerLabels } from '../gardener-labels';
-import { gardenerState, isRunComplete } from '../gardener-state';
+import {
+  gardenerState,
+  inScope,
+  isRunComplete,
+  narrowedScope,
+  scopeAdmits,
+} from '../gardener-state';
 import type { GardenerState, StoredRun } from '../gardener-state';
 import { looseEndState } from '../loose-end-state';
 import type { IndexLike } from '../contracts';
@@ -178,6 +187,19 @@ export interface RunOptions {
    * `undefined` (the default) runs every stage of the plan, exactly as before.
    */
   resumeFrom?: StoredRun;
+  /**
+   * The part of the vault to run over (021c). A check whose kind is not
+   * named runs not at all — not run and filtered afterward, but skipped
+   * outright, which is where the saving actually is for the two expensive
+   * checks (`near-duplicate`, `missing-page`). What the checks stage does
+   * produce is filtered to the scope before either model stage sees it, so a
+   * scoped run also means a shorter model stage, not just a shorter list on
+   * screen — and a model stage whose every possible output lies outside the
+   * scope is not asked at all rather than asked and thrown away. A scope that
+   * narrows nothing (`narrowedScope`) is read as no scope at all — the same
+   * normalization `gardener-state.ts` applies.
+   */
+  scope?: GardenerRunScope;
 }
 
 /** What a run produced, and whether it got all the way there (021b, D2). */
@@ -248,17 +270,43 @@ export async function runWithProgress(
   const settings = services.settings.vault();
   const run = deps(services, options.signal);
   const ctx = buildContext(run, { ...(settings === null ? {} : { settings }) });
+
+  /* The normalized scope (021c) — `undefined` for a scope that narrows
+     nothing, the same reading `gardener-state.ts` applies everywhere else it
+     touches a scope. One definition, so a caller that hands in
+     `{ kinds: [] }` is a full run here exactly as it is on save. Read before
+     the stage gates below, because the scope decides which stages there are. */
+  const scope = narrowedScope(options.scope);
+
+  /* Could a model stage produce anything this run's scope would keep? A stage
+     whose every possible output falls outside the scope is not run at all — not
+     run and filtered afterwards, which would be the full model cost for a
+     result thrown away in its entirety, and for the journal stage the content of
+     every day in a request the scope says it was not meant for (guardrail 6).
+     That is the point of a part-run: a shorter model stage, not a faster guess.
+
+     Each stage is judged by what only it can produce. The audit: a
+     contradiction, or a verdict on a candidate it may reject
+     (`AUDIT_CANDIDATE_KINDS`) — neither admitted, nothing to ask about. The
+     loose-end stage: a loose end, and one certainty about it — a loose end never
+     carries a module (`looseEndFinding`), so a scope over some module can never
+     keep one, which is why this axis is answered here and not left open. */
+  const auditInScope =
+    scopeAdmits(scope, 'contradiction') ||
+    AUDIT_CANDIDATE_KINDS.some((kind) => scopeAdmits(scope, kind));
+  const looseEndsInScope = scopeAdmits(scope, 'loose-end', null);
+
   /* What's wanted is one thing, what's possible another: without a route for
      `gardener-audit` there is no interpretation phase — not even a reported
      one. Progress that says "the model is interpreting the findings" while
      none is reachable would be exactly the claim this screen must not make. */
   const wanted = options.useLlm ?? settings?.gardener.useLlm ?? false;
-  const useLlm = wanted && run.gateway.isAvailable('gardener-audit');
+  const useLlm = wanted && auditInScope && run.gateway.isAvailable('gardener-audit');
   /* The second model stage (020, D4) has its own task and therefore its own
      route: a vault that routes `journal-loose-ends` but not `gardener-audit`
      still gets its loose ends read. Both stages are gated by the same wish —
      no model is asked anything unless the run was asked to use one. */
-  const useLooseEnds = wanted && run.gateway.isAvailable('journal-loose-ends');
+  const useLooseEnds = wanted && looseEndsInScope && run.gateway.isAvailable('journal-loose-ends');
   const total = CHECKS.length + (useLlm ? 1 : 0) + (useLooseEnds ? 1 : 0);
 
   /* The weighted stage plan (021a, D1): the ten mechanical checks together
@@ -299,11 +347,40 @@ export async function runWithProgress(
   const resumeFrom = options.resumeFrom;
   const alreadyDone = new Set(resumeFrom?.completed ?? []);
 
+  /** Would a check of this kind produce anything the scope wants at all? The
+      module axis can't be judged before a check runs — a check doesn't know
+      which module its findings will land in until it looks — so only the
+      kind axis decides whether to run it in the first place. */
+  function kindInScope(kind: GardenerFindingKind): boolean {
+    return scopeAdmits(scope, kind);
+  }
+
   const deterministic: GardenerFinding[] = [];
+  /* Scope-filtered view of `deterministic` (021c) — declared here, outside the
+     try block, so it's still reachable after a stop. Its initial value is an
+     own empty list and deliberately **not** `deterministic` itself: an alias
+     would grow with every check and hand a stop inside the checks loop a list
+     that was never filtered to the scope. Whenever the checks stage finishes,
+     the assignment below replaces this; a stop before that leaves a run that
+     re-derived nothing, which is exactly what an empty list says. */
+  let scopedDeterministic: GardenerFinding[] = [];
   /* Which stages actually finished — a stage counts only once its result is in
      hand, so a stop *inside* one leaves it named in `plan` and absent here.
      A resumed stage counts too: it finished, only not in this call. */
   const completed: GardenerStageId[] = [];
+  /* Which kinds a stage of this run actually looked for (021c) — the record
+     `save` needs to tell "looked, and found nothing here" from "never looked
+     here at all". Filled as the stages run and never from the scope: a scope may
+     name a kind no stage of this particular run can produce — `contradiction`
+     without a routed model — and then this run looked for nothing.
+     A resumed run counts what the call it continues looked for: those findings
+     are its own base, and the stage that derived them did run, only not here. */
+  const checkedKinds = new Set<GardenerFindingKind>(
+    alreadyDone.has('checks')
+      ? (resumeFrom?.checkedKinds ??
+          CHECKS.filter((check) => kindInScope(check.kind)).map((check) => check.kind))
+      : [],
+  );
   let audit: AuditResult | null = null;
   let looseEnds: LooseEndResult | null = null;
   let done = 0;
@@ -320,14 +397,38 @@ export async function runWithProgress(
     } else {
       for (const check of CHECKS) {
         stopIfCancelled(options.signal);
+        /* Out of scope: not run, not even ticked over — the ten mechanical
+           checks are cheap, but `near-duplicate` and `missing-page` are not,
+           and skipping them outright is the actual point of a scoped run
+           (021c). `done` still advances, so the checks stage still reaches
+           100% at the same `done` count a full run would. */
+        if (!kindInScope(check.kind)) {
+          done += 1;
+          continue;
+        }
         emit('checks', check.kind, done, true, done / CHECKS.length);
         await tick();
         stopIfCancelled(options.signal);
         deterministic.push(...check.run(ctx));
+        /* Counted only once the check has actually run: a stop lands before
+           this line, and a check that never ran must not be recorded as one
+           that looked and found nothing. */
+        checkedKinds.add(check.kind);
         done += 1;
       }
       completed.push('checks');
     }
+
+    /* What this run may hand to the model stages (021c): a resumed run's
+       inherited findings can predate the scope, and a check that did run may
+       still have produced a finding in a module the scope doesn't want — the
+       kind axis is checked before a check runs, the module axis only once its
+       findings exist. Filtering here, before either model stage, is what
+       makes a scoped run's model stage shorter rather than just its display. */
+    scopedDeterministic =
+      scope === undefined
+        ? [...deterministic]
+        : deterministic.filter((finding) => inScope(finding, scope));
 
     if (useLlm) {
       if (alreadyDone.has('audit')) {
@@ -337,7 +438,7 @@ export async function runWithProgress(
         emit('audit', null, done, true, 0);
         await tick();
         stopIfCancelled(options.signal);
-        audit = await auditFindings(ctx, deterministic, {
+        audit = await auditFindings(ctx, scopedDeterministic, {
           gateway: run.gateway,
           ...(options.signal === undefined ? {} : { signal: options.signal }),
         });
@@ -375,6 +476,14 @@ export async function runWithProgress(
     stopped = true;
   }
 
+  /* The two model stages, each recorded by what only it can produce: a
+     contradiction comes from the audit alone, a loose end the heuristic never
+     saw from the loose-end stage alone. Read off `completed`, so a resumed run
+     that merely inherits a stage counts it too, and a stage stopped mid-request
+     counts for nothing — its silence is not a statement. */
+  if (completed.includes('audit')) checkedKinds.add('contradiction');
+  if (completed.includes('loose-ends')) checkedKinds.add('loose-end');
+
   const fromModel = (looseEnds?.looseEnds ?? []).map((looseEnd) => looseEndFinding(ctx, looseEnd));
 
   /* Everything this run re-derived. Kept separately from `findings`, because a
@@ -382,7 +491,7 @@ export async function runWithProgress(
      again — the rejection says "don't show it now", not "the vault condition is
      gone". Only the second would justify forgetting a user decision, so
      `save` prunes against this list (see `gardener-state.ts`). */
-  const considered = [...deterministic, ...(audit?.contradictions ?? []), ...fromModel];
+  const considered = [...scopedDeterministic, ...(audit?.contradictions ?? []), ...fromModel];
   const rejected = new Set(audit?.rejected ?? []);
   /* A loose end already answered (020, D5) must not resurface here — its id
      lives in its own file (`main/loose-end-state.ts`), not in 017's
@@ -391,7 +500,17 @@ export async function runWithProgress(
      re-derived it, but don't show it". */
   const answered = await answeredLooseEnds(services);
   const findings = sortFindings(
-    considered.filter((finding) => !rejected.has(finding.id) && !answered.has(finding.id)),
+    considered.filter(
+      (finding) =>
+        !rejected.has(finding.id) &&
+        !answered.has(finding.id) &&
+        /* A safety net beside the input-side filter above: a contradiction
+           the audit names, or a loose end the model finds, comes from the
+           model rather than from `scopedDeterministic` — so it is checked
+           against the scope here, the one point every source of a finding
+           passes through on the way out (021c). */
+        (scope === undefined || inScope(finding, scope)),
+    ),
   );
   /* Only a run that got there reports being done — the terminating snapshot of
      a stopped run comes from the run slot's `finish()` instead (021a), which
@@ -424,6 +543,15 @@ export async function runWithProgress(
     size: vaultSize(run.index),
     plan: plan.map((entry) => entry.stage),
     completed,
+    /* Set exactly when the run was scoped (021c) — absent for a full run, so
+       `isRunComplete`/`present()` read this run exactly like one predating
+       the field. */
+    ...(scope === undefined ? {} : { scope }),
+    /* What this run looked for, always recorded — a full run's list is simply
+       everything it could reach. The merge of a scoped run stands on it
+       (`gardener-state.ts`, `rederivedBy`): without it, a scope naming a kind no
+       stage of this run could produce would read as "that kind is gone now". */
+    checkedKinds: [...checkedKinds],
   };
   /* Not `!stopped`: the storage contract decides what complete means (021b,
      D1), so the run and everyone who later reads it from the file answer the

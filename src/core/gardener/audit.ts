@@ -43,8 +43,17 @@ import { buildFinding, buildFix } from './types';
 import type { GardenerContext } from './types';
 import { contradictionLine, namesContradiction, relationSlugs } from './relations';
 
-/** Kandidaten-Arten, ueber die das Modell urteilen darf. */
-const CANDIDATE_KINDS: readonly GardenerFindingKind[] = ['near-duplicate', 'missing-page'];
+/**
+ * Kandidaten-Arten, ueber die das Modell urteilen darf.
+ *
+ * Exportiert, weil ein Lauf mit Geltungsbereich (021c) vorher wissen muss, ob
+ * die Deutungsstufe fuer ihn ueberhaupt etwas hervorbringen kann: ausser einem
+ * Widerspruch ist ihr einziges Ergebnis ein Urteil ueber genau diese Arten.
+ */
+export const AUDIT_CANDIDATE_KINDS: readonly GardenerFindingKind[] = [
+  'near-duplicate',
+  'missing-page',
+];
 
 /** Hoechstzahl an Seiten, die in einen Audit-Prompt gehen. */
 export const MAX_AUDIT_PAGES = 24;
@@ -236,7 +245,7 @@ export async function auditFindings(
   if (!options.gateway.isAvailable('gardener-audit')) return emptyResult();
 
   const candidateIds = findings
-    .filter((finding) => CANDIDATE_KINDS.includes(finding.kind))
+    .filter((finding) => AUDIT_CANDIDATE_KINDS.includes(finding.kind))
     .map((finding) => finding.id);
   const pages = auditPages(ctx, findings);
   /* Ohne Seiten gibt es nichts zu deuten: kein Aufruf, keine Kosten, kein Datenabfluss. */

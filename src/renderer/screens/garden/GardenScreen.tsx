@@ -22,7 +22,7 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { GardenerStageId } from '@shared/types';
+import type { GardenerRunScope, GardenerStageId } from '@shared/types';
 import { Button } from '../../atoms/Button';
 import { EmptyState } from '../../components/EmptyState';
 import { ErrorState } from '../../components/ErrorState';
@@ -48,6 +48,7 @@ import { RunBar } from './RunBar';
 import { useFindingActions } from './useFindingActions';
 import { ALL_FILTERS } from './filter';
 import type { FindingFilterState } from './filter';
+import { scopeLabel } from './scope';
 import { targetFor } from './targets';
 
 /* 021b, D4: names a missing stage in the "stopped partway" notice — the same
@@ -121,6 +122,13 @@ export function GardenScreen() {
   const missingStages = data?.missingStages ?? [];
   const canContinue = data?.complete === false && missingStages.length > 0;
   const missingStagesLabel = missingStages.map((stage) => t(STAGE_LABEL_KEYS[stage])).join(', ');
+  /* 021c, D4: a scoped run is a kind of incomplete run (021b's machinery), but
+     it must not read as the same "stopped partway" sentence — that would
+     claim stages were skipped rather than deliberately left for later. Keyed
+     off `scope` itself, not `missingStages`, since a scoped run's own plan
+     completes in full. */
+  const scope = data?.scope;
+  const scopedLabel = scope === undefined ? null : scopeLabel(scope, t);
 
   const start = (): void => {
     if (running) return;
@@ -138,6 +146,15 @@ export function GardenScreen() {
 
   const stop = (): void => {
     cancel.mutate(undefined, { onSuccess: cancelled });
+  };
+
+  /* 021c, D3: "check only this" — the same run mutation as "check now", just
+     scoped to whatever the filter currently narrows to. Guarded the same way
+     `start`/`resume` are: a run already going must not accept a second one. */
+  const checkOnly = (scope: GardenerRunScope): void => {
+    if (running) return;
+    reset();
+    run.mutate({ scope });
   };
 
   const header = (
@@ -250,7 +267,31 @@ export function GardenScreen() {
     <div className="sb-screen sb-screen--wide">
       {header}
       {notes}
-      {data.complete === false ? (
+      {/* 021c, D4 finding 4: a run can be both scoped and stopped mid-stage —
+          e.g. "check only module X" cancelled before its own plan finished.
+          The two notices answer different questions ("what did I ask for"
+          vs. "did it finish") and stand beside each other rather than one
+          replacing the other, so "continue check" stays offered whenever it
+          is actually possible. */}
+      {data.complete === false && scopedLabel !== null ? (
+        <div className="sb-gllm" role="status">
+          <p className="sb-ghealth-note">
+            <span className="sb-gllm-title">{scopedLabel}</span>
+          </p>
+          <Button
+            variant="secondary"
+            size="sm"
+            icon="sprout"
+            loading={run.isPending}
+            disabled={running}
+            title={running ? t('garden.run.disabledWhileRunning') : undefined}
+            onClick={start}
+          >
+            {t('garden.scope.checkEverything')}
+          </Button>
+        </div>
+      ) : null}
+      {canContinue ? (
         <div className="sb-gllm" role="status">
           <p className="sb-ghealth-note">
             <span className="sb-gllm-title">{t('garden.stopped.title')}</span>
@@ -289,6 +330,8 @@ export function GardenScreen() {
           hidden={data.hidden ?? []}
           filter={filter}
           onFilter={setFilter}
+          onCheckOnly={checkOnly}
+          checkOnlyDisabled={running}
           busyId={busyId}
           onFix={applyFix}
           onDismiss={dismiss}

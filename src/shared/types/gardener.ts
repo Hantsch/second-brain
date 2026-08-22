@@ -29,6 +29,29 @@ export type GardenerFindingKind =
   /** A day announced something for a later day that never got a follow-up. */
   | 'loose-end';
 
+/**
+ * Every finding kind this build knows, as a list. Needed wherever a kind
+ * arrives from outside the type system and has to be checked against what is
+ * known — today the run scope read back from `.secondbrain/gardener.json`
+ * (`main/gardener-state.ts`).
+ *
+ * Must name every member of `GardenerFindingKind`; the state test guards that,
+ * because a kind missing here would silently read as unknown.
+ */
+export const GARDENER_FINDING_KINDS: readonly GardenerFindingKind[] = [
+  'orphan',
+  'broken-link',
+  'index-drift',
+  'stale-page',
+  'contradiction',
+  'missing-page',
+  'near-duplicate',
+  'unfiled-dump',
+  'unprocessed-source',
+  'project-without-next-step',
+  'loose-end',
+];
+
 export type FindingSeverity = 'info' | 'warn' | 'high';
 
 /**
@@ -104,6 +127,26 @@ export interface GardenerHiddenFinding {
   until?: string;
 }
 
+/**
+ * The part of the vault a run looked at (021c). Absent means: all of it.
+ *
+ * The two axes narrow **together** — `{ kinds: ['orphan'], module: 'demo' }` is
+ * "orphans in module demo", not "orphans anywhere plus everything in demo".
+ * An axis the scope does not name narrows nothing.
+ *
+ * `module: null` are the findings **without** a module (dumps, projects,
+ * sources) — the same distinction the screen's filter draws with `'none'`. It
+ * is a `null` and not an absent key because the difference matters: absent is
+ * "every module", `null` is "the ones that have none".
+ *
+ * A scope that narrows nothing — no `module`, and no or an empty `kinds` — is
+ * not a narrower scope but no scope: it reads as a full run everywhere.
+ */
+export interface GardenerRunScope {
+  kinds?: GardenerFindingKind[];
+  module?: string | null;
+}
+
 export interface GardenerReport {
   ranAt: string;
   /** Was an LLM used, or only the deterministic checks? */
@@ -124,6 +167,26 @@ export interface GardenerReport {
    * number for stages that never ran.
    */
   healthAsOf?: string;
+  /**
+   * The part of the vault this run looked at (021c) — set exactly when the run
+   * was scoped, absent when it checked everything. A scoped run is never
+   * `complete`, so the screen can say both what was checked now and where the
+   * numbers and findings beside it still come from.
+   */
+  scope?: GardenerRunScope;
+  /**
+   * Beside a `scope`: which finding kinds a stage of that run actually looked
+   * for. Not the same as the kinds the scope named — a scope over
+   * `contradiction` or `loose-end` on a vault with no model routed names a kind
+   * nothing in the run could produce, and this list is then empty for it.
+   *
+   * The screen needs the difference to stay honest (AC 6): "checked, nothing
+   * here" and "this scope needed a model stage that did not run" are two
+   * different statements, and only one of them may be made without a model.
+   * Absent beside an absent `scope` — a full run says what it says through
+   * `complete` and `usedLlm`.
+   */
+  checkedKinds?: GardenerFindingKind[];
   /** The open findings — and only those. */
   findings: GardenerFinding[];
   /**

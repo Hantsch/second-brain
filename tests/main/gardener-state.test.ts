@@ -29,7 +29,13 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { findingId } from '@core/gardener';
-import type { FindingSeverity, GardenerFinding, GardenerFindingKind } from '@shared/types';
+import { GARDENER_FINDING_KINDS } from '@shared/types';
+import type {
+  FindingSeverity,
+  GardenerFinding,
+  GardenerFindingKind,
+  GardenerRunScope,
+} from '@shared/types';
 import { GARDENER_STATE_FILE, GardenerState } from '../../src/main/gardener-state';
 import type { StoredRun } from '../../src/main/gardener-state';
 import { TODAY, day, stamp } from '../helpers/time';
@@ -39,6 +45,7 @@ function finding(
   kind: GardenerFindingKind,
   key: string,
   severity: FindingSeverity = 'warn',
+  module: string | null = 'demo',
 ): GardenerFinding {
   return {
     id: findingId(kind, key),
@@ -46,8 +53,8 @@ function finding(
     severity,
     title: `${kind} ${key}`,
     detail: '',
-    paths: [`modules/demo/wiki/concepts/${key}.md`],
-    module: 'demo',
+    paths: [module === null ? `inbox/${key}.md` : `modules/${module}/wiki/concepts/${key}.md`],
+    module,
     foundAt: stamp(),
     fix: null,
   };
@@ -74,9 +81,34 @@ function partialRun(
   };
 }
 
+/**
+ * Ein Lauf über einen Teil (021c). Er erreicht **jede** geplante Stufe — dass er
+ * trotzdem nicht abgeschlossen ist, liegt allein am Bereich. `healthAsOf` trägt
+ * er wie `saveRun` es tut: den Wert des Berichts, den er ersetzt.
+ */
+function scopedRun(
+  findings: readonly GardenerFinding[],
+  scope: GardenerRunScope,
+  healthAsOf?: StoredRun['healthAsOf'],
+): StoredRun {
+  return {
+    ...run(findings),
+    plan: ['checks', 'audit'],
+    completed: ['checks', 'audit'],
+    scope,
+    ...(healthAsOf === undefined ? {} : { healthAsOf }),
+  };
+}
+
 const ORPHAN = finding('orphan', 'verwaiste-seite');
 const STALE = finding('stale-page', 'angestaubte-seite');
 const BROKEN = finding('broken-link', 'kaputter-link');
+/** Ein zweiter verwaister Befund — was ein Lauf über die Art neu findet. */
+const ORPHAN_NEU = finding('orphan', 'neu-verwaiste-seite');
+/** Ein Befund in einem *anderen* Modul: das, was ein Teil-Lauf nie ansieht. */
+const FREMD = finding('index-drift', 'fremdes-modul', 'warn', 'anderes');
+/** Ein Befund ohne Modul (Dump, Projekt, Quelle) — der Filter nennt das „none". */
+const OHNE_MODUL = finding('unfiled-dump', 'ungefilterter-dump', 'warn', null);
 /** Die eine Art, die nur ein Modell hervorbringt (`LLM_ONLY_KINDS`). */
 const CONTRA = finding('contradiction', 'widerspruch', 'high');
 /** Ein Kandidat: deterministisch gefunden, aber vom Audit beurteilbar. */
@@ -422,6 +454,272 @@ describe('Pflegezustand: ausblenden, vertagen, vergessen', () => {
     const report = state.present(TODAY);
     expect(report?.complete).toBe(true);
     expect(report?.missingStages).toBeUndefined();
+  });
+
+  /* 021c: ein Lauf über einen Teil. Die Kante, an der lautlos Daten verschwinden
+     würden — ein Lauf über ein Modul, der jeden Befund des letzten vollständigen
+     Laufs woanders mitnimmt. Geprüft wird deshalb beides: dass der Teil ersetzt
+     wird, und dass alles andere unangetastet stehen bleibt. */
+  it('ersetzt bei einem Lauf über eine Art nur diese Art und lässt jede andere stehen', async () => {
+    const state = await GardenerState.load(root, TODAY);
+    await state.save(run([ORPHAN, STALE, BROKEN]));
+
+    await state.save(scopedRun([ORPHAN_NEU], { kinds: ['orphan'] }));
+
+    const ids = state.present(TODAY)?.findings.map((entry) => entry.id);
+    /* Was der Teil-Lauf nie angesehen hat, steht noch da. */
+    expect(ids).toContain(STALE.id);
+    expect(ids).toContain(BROKEN.id);
+    /* Im Bereich gilt der neue Lauf — keine Vereinigung mit dem alten Befund. */
+    expect(ids).toContain(ORPHAN_NEU.id);
+    expect(ids).not.toContain(ORPHAN.id);
+    expect(ids).toHaveLength(3);
+
+    /* Und so steht es in der Datei, nicht nur im Kopf dieser Instanz. */
+    const later = await GardenerState.load(root, TODAY);
+    expect(
+      later
+        .run()
+        ?.findings.map((entry) => entry.id)
+        .sort(),
+    ).toEqual([STALE.id, BROKEN.id, ORPHAN_NEU.id].sort());
+  });
+
+  it('ersetzt bei einem Lauf über ein Modul nur dessen Befunde, `module: null` nur die ohne Modul', async () => {
+    const state = await GardenerState.load(root, TODAY);
+    await state.save(run([ORPHAN, FREMD, OHNE_MODUL]));
+
+    await state.save(scopedRun([ORPHAN_NEU], { module: 'demo' }));
+    expect(
+      state
+        .present(TODAY)
+        ?.findings.map((entry) => entry.id)
+        .sort(),
+    ).toEqual([FREMD.id, OHNE_MODUL.id, ORPHAN_NEU.id].sort());
+
+    /* `null` ist hier ein Wert und kein „egal": nur die Befunde ohne Modul
+       fallen weg, die beiden mit Modul bleiben. */
+    await state.save(scopedRun([], { module: null }));
+    expect(
+      state
+        .present(TODAY)
+        ?.findings.map((entry) => entry.id)
+        .sort(),
+    ).toEqual([FREMD.id, ORPHAN_NEU.id].sort());
+  });
+
+  it('vergisst bei einem Lauf über einen Teil keine Entscheidung und schreibt den Rat nicht um', async () => {
+    const state = await GardenerState.load(root, TODAY);
+    await state.save({ ...run([ORPHAN, STALE]), advice: ['Zuerst die verwaisten Seiten.'] });
+    await state.dismiss(ORPHAN.id);
+    await state.snooze(STALE.id, day(3));
+
+    /* Ein Lauf über eine ganz andere Art: zu ORPHAN und STALE hat er nicht
+       hingesehen, also darf sein Schweigen zu ihnen nichts entscheiden. */
+    await state.save({
+      ...scopedRun([BROKEN], { kinds: ['broken-link'] }),
+      advice: ['Nur dieser Teil.'],
+    });
+
+    expect([...state.dismissed()]).toEqual([ORPHAN.id]);
+    expect(state.snoozedUntil(STALE.id)).toBe(day(3));
+    /* Der Rat ist eine Aussage über den ganzen Vault (021c, Entscheidung 2) —
+       ein Lauf über ein Stück davon erneuert ihn nicht. */
+    expect(state.present(TODAY)?.advice).toEqual(['Zuerst die verwaisten Seiten.']);
+    expect(await onDisk()).toMatchObject({
+      dismissed: [ORPHAN.id],
+      snoozed: { [STALE.id]: day(3) },
+    });
+  });
+
+  it('bleibt mit jeder erreichten Stufe ein unvollständiger Lauf — und nennt seinen Bereich', async () => {
+    const state = await GardenerState.load(root, TODAY);
+    await state.save(scopedRun([ORPHAN_NEU], { kinds: ['orphan'], module: 'demo' }));
+
+    const report = state.present(TODAY);
+    expect(report?.complete).toBe(false);
+    expect(report?.scope).toEqual({ kinds: ['orphan'], module: 'demo' });
+
+    /* Über die Datei hinweg, sonst wäre der Lauf beim nächsten Öffnen wieder ein
+       vollständiger — und der Gesundheitswert würde über den Teil gerechnet. */
+    const later = await GardenerState.load(root, TODAY);
+    expect(later.present(TODAY)?.complete).toBe(false);
+    expect(later.present(TODAY)?.scope).toEqual({ kinds: ['orphan'], module: 'demo' });
+  });
+
+  it('zeigt nach einem Lauf über einen Teil den eingefrorenen Wert des letzten vollständigen', async () => {
+    const state = await GardenerState.load(root, TODAY);
+    await state.save({ ...run([BROKEN]), ranAt: stamp(-1) });
+    const before = state.present(TODAY);
+    expect(before?.health).toBe(90);
+
+    /* Wie `saveRun` es tut: der Teil-Lauf trägt den Wert des Berichts, den er
+       ersetzt, samt dessen Datum. */
+    await state.save(
+      scopedRun(
+        [ORPHAN, STALE, BROKEN],
+        { module: 'demo' },
+        {
+          ranAt: before?.ranAt ?? '',
+          score: before?.health ?? 0,
+          contributions: before?.healthContributions ?? [],
+        },
+      ),
+    );
+
+    const after = state.present(TODAY);
+    /* Drei mittlere Befunde auf 10 Einheiten würden 70 rechnen — ein Teil des
+       Vaults bewegt den Wert des Vaults nicht. */
+    expect(after?.findings).toHaveLength(3);
+    expect(after?.health).toBe(90);
+    expect(after?.healthKnown).toBe(true);
+    expect(after?.healthAsOf).toBe(stamp(-1));
+    expect(after?.ranAt).toBe(stamp());
+  });
+
+  it('behält einen erledigten Befund außerhalb des Bereichs und vergisst den darin', async () => {
+    const state = await GardenerState.load(root, TODAY);
+    await state.save(run([ORPHAN, FREMD]));
+    await state.markFixed(ORPHAN.id, 'undo-demo');
+    await state.markFixed(FREMD.id, 'undo-fremd');
+
+    await state.save(scopedRun([ORPHAN_NEU], { module: 'demo' }));
+
+    /* Im Bereich hat der Lauf in die Dateien gesehen: was er nennt, steht wieder
+       offen da. Außerhalb hat niemand gesehen — der erledigte Befund bleibt aus
+       der Liste und sein Rückgängig-Token bleibt bekannt. Sonst stünde ein
+       längst behobener Befund aus einem anderen Modul plötzlich wieder offen. */
+    expect([...state.fixed()]).toEqual([FREMD.id]);
+    expect(state.present(TODAY)?.findings.map((entry) => entry.id)).toEqual([ORPHAN_NEU.id]);
+    expect(await onDisk()).toMatchObject({ fixed: [{ id: FREMD.id, undoToken: 'undo-fremd' }] });
+  });
+
+  /* 021c, die eine Kante, an der ein Teil-Lauf lautlos löscht: der Bereich nennt
+     eine Art, die in *diesem* Lauf keine Stufe hervorbringen konnte — ein
+     Widerspruch ohne konfiguriertes Modell. Der Lauf findet dazu nichts, und
+     dieses Nichts ist keine Aussage. Wer es als eine liest, löscht den Befund,
+     den Fix dazu und lässt „passt so" auf eine Kennung zeigen, die es nirgends
+     mehr gibt. */
+  it('löscht keine Art, nach der in diesem Lauf keine Stufe gesehen hat', async () => {
+    const ZWEITER = finding('contradiction', 'zweiter-widerspruch', 'high');
+    const state = await GardenerState.load(root, TODAY);
+    await state.save(run([CONTRA, ZWEITER, ORPHAN], true));
+    await state.dismiss(CONTRA.id);
+    await state.markFixed(ZWEITER.id, 'undo-widerspruch');
+
+    /* Ohne Route für die Deutung gibt es die Stufe nicht: der Lauf plant nur die
+       Prüfungen und hat nach keiner einzigen Art gesehen, die sein Bereich
+       nennt (`checkedKinds: []`). */
+    await state.save({
+      ...scopedRun([], { kinds: ['contradiction'] }),
+      plan: ['checks'],
+      completed: ['checks'],
+      checkedKinds: [],
+    });
+
+    expect(
+      state
+        .run()
+        ?.findings.map((entry) => entry.id)
+        .sort(),
+    ).toEqual([CONTRA.id, ZWEITER.id, ORPHAN.id].sort());
+    /* Die Entscheidung und der Rückweg zeigen weiter auf etwas, das es gibt. */
+    expect([...state.dismissed()]).toEqual([CONTRA.id]);
+    expect([...state.fixed()]).toEqual([ZWEITER.id]);
+    const report = state.present(TODAY);
+    expect(report?.hidden?.map((entry) => entry.finding.id)).toEqual([CONTRA.id]);
+    /* Und der Bericht sagt es auch, statt „geprüft, nichts gefunden" zu
+       suggerieren: nach nichts gesehen. */
+    expect(report?.checkedKinds).toEqual([]);
+
+    /* Über die Datei hinweg — dort täte der Verlust weh. */
+    const later = await GardenerState.load(root, TODAY);
+    expect(later.run()?.findings).toHaveLength(3);
+  });
+
+  it('ersetzt eine Art, nach der eine Stufe wirklich gesehen hat, auch wenn sie nichts fand', async () => {
+    const state = await GardenerState.load(root, TODAY);
+    await state.save(run([CONTRA, ORPHAN], true));
+
+    /* Diesmal lief die Deutung: sie hat nach Widersprüchen gesehen und keinen
+       mehr genannt. Das *ist* eine Aussage — der Befund fällt weg. Ohne diesen
+       Gegenfall würde die Regel oben auch von einem Bereich erfüllt, der nie
+       etwas ersetzt. */
+    await state.save({
+      ...scopedRun([], { kinds: ['contradiction'] }),
+      checkedKinds: ['contradiction'],
+    });
+
+    expect(state.run()?.findings.map((entry) => entry.id)).toEqual([ORPHAN.id]);
+    expect(state.present(TODAY)?.checkedKinds).toEqual(['contradiction']);
+  });
+
+  it('verwirft beim Lesen unbekannte Befundarten aus dem Bereich, behält den Rest', async () => {
+    await writeState({
+      version: 1,
+      run: {
+        ranAt: stamp(),
+        usedLlm: false,
+        findings: [ORPHAN, STALE],
+        advice: [],
+        size: 10,
+        plan: ['checks'],
+        completed: ['checks'],
+        scope: { kinds: ['orphan', 'aus-der-zukunft'], module: null },
+      },
+      dismissed: [],
+      fixed: [],
+    });
+
+    const state = await GardenerState.load(root, TODAY);
+    expect(state.run()?.scope).toEqual({ kinds: ['orphan'], module: null });
+    expect(state.present(TODAY)?.complete).toBe(false);
+  });
+
+  it('liest einen Bereich, von dem nichts Bekanntes bleibt, als keinen Bereich', async () => {
+    await writeState({
+      version: 1,
+      run: {
+        ranAt: stamp(),
+        usedLlm: false,
+        findings: [ORPHAN],
+        advice: [],
+        size: 10,
+        plan: ['checks'],
+        completed: ['checks'],
+        scope: { kinds: ['aus-der-zukunft'] },
+      },
+      dismissed: [],
+      fixed: [],
+    });
+
+    /* Kein Bereich heißt: ein Lauf über alles. Ein für immer unvollständiger
+       Lauf, der nicht sagen kann, was er abgedeckt hat, wäre schlimmer. */
+    const state = await GardenerState.load(root, TODAY);
+    expect(state.run()?.scope).toBeUndefined();
+    expect(state.present(TODAY)?.complete).toBe(true);
+    expect(state.present(TODAY)?.scope).toBeUndefined();
+  });
+
+  it('kennt jede Befundart in `GARDENER_FINDING_KINDS`', () => {
+    /* Gegen diese Liste wird ein gespeicherter Bereich geprüft: fehlt dort eine
+       Art, fällt ein Bereich über sie beim Lesen lautlos weg. Die Zuordnung
+       erzwingt der Compiler — eine neue Art in `GardenerFindingKind` macht sie
+       unvollständig und dieser Test rot. */
+    const alle: Record<GardenerFindingKind, true> = {
+      orphan: true,
+      'broken-link': true,
+      'index-drift': true,
+      'stale-page': true,
+      contradiction: true,
+      'missing-page': true,
+      'near-duplicate': true,
+      'unfiled-dump': true,
+      'unprocessed-source': true,
+      'project-without-next-step': true,
+      'loose-end': true,
+    };
+    expect([...GARDENER_FINDING_KINDS].sort()).toEqual(Object.keys(alle).sort());
   });
 
   it('verwirft eine unlesbare Datei zu `null` — „noch nicht geprüft", keine erfundene 100', async () => {
