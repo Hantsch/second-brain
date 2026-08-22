@@ -1,7 +1,7 @@
 # Roadmap
 
 **The** one source of status and planning: where we stand, what comes next, what is not planned
-at all yet. As of: 2026-08-21.
+at all yet. As of: 2026-08-22.
 
 Rules (so this document does not drift):
 
@@ -79,8 +79,8 @@ Gaps/notes:
 - **Story 001 shipped without a sprint.** It sits in `done/` with `· — ·` instead of a sprint id.
   Not worth backfilling; noted so the gap in the sprint history is not read as a lost sprint.
 - **M1 accepted by the user on 2026-08-19**, both sprints' test plans walked end to end:
-  [sprints/S01/testplan.md](sprints/S01/testplan.md),
-  [sprints/S02/testplan.md](sprints/S02/testplan.md).
+  [sprints/S01/testplan.md](sprints/done/S01/testplan.md),
+  [sprints/S02/testplan.md](sprints/done/S02/testplan.md).
 
 ### M2 — Projects answer where I left off — accepted
 
@@ -172,9 +172,9 @@ M4 was chosen next at the 2026-08-20 `/ai-scrum:roadmap plan`, now that M3 is ac
 
 Sprints:
 
-- [sprints/S05/sprint.md](sprints/S05/sprint.md) — a finding can be acted on (014, 015, 016,
+- [sprints/S05/sprint.md](sprints/done/S05/sprint.md) — a finding can be acted on (014, 015, 016,
   017), `done` — built, live acceptance pending
-  ([review](sprints/S05/review.md) · [testplan](sprints/S05/testplan.md)). Story 020 (M6) rode
+  ([review](sprints/done/S05/review.md) · [testplan](sprints/done/S05/testplan.md)). Story 020 (M6) rode
   along in the same sprint by direct user decision on 2026-08-21 — see M6 below and the
   sprint's own note.
 
@@ -182,7 +182,7 @@ Gaps/notes:
 
 - **Built, not yet accepted.** All four M4 stories are implemented, reviewed and smoke-tested
   through the running app, but the manual acceptance walk is the user's — see
-  [sprints/S05/testplan.md](sprints/S05/testplan.md). The milestone is marked accepted only
+  [sprints/S05/testplan.md](sprints/done/S05/testplan.md). The milestone is marked accepted only
   after that.
 - **The `sources:` frontmatter citation variant (016) is out of scope**, by user decision in
   S05's clarification round. An orphan can be resolved by a body-line link only; citing a source
@@ -199,7 +199,7 @@ Gaps/notes:
 
 ### M5 — Models without expertise — accepted
 
-Requirement: [019-model-recommendations-for-people-without-expertise.md](../requirements/done/019-model-recommendations-for-people-without-expertise.md)
+Requirement: [019-model-recommendations-for-people-without-expertise.md](requirements/done/019-model-recommendations-for-people-without-expertise.md)
 (epic, not buildable itself — split by `/refine` on 2026-08-21 into four child stories after a
 requirements interview covering the split, the install shape, the catalogue source and the
 cost-estimate scope).
@@ -225,7 +225,7 @@ Gaps/notes:
 - 019d (subscription providers instead of a metered key) is **rejected**, not postponed. Using a
   Claude or ChatGPT plan from this app is not officially permitted or documented, so the API-key
   path stays the only way to reach those models. Sources and reasoning:
-  [requirements/019d-subscription-providers.md](../requirements/done/019d-subscription-providers.md).
+  [requirements/019d-subscription-providers.md](requirements/done/019d-subscription-providers.md).
   Reopening needs an external trigger (an Anthropic approval, or OpenAI documenting third-party
   plan sessions) — the terms were read on 2026-08-21 and change often.
 - Windows VRAM detection (019a) is a known, permanent limitation, not a bug: WMI's 32-bit
@@ -242,7 +242,7 @@ Gaps/notes:
 
 ### M6 — Journal loose ends — built, acceptance pending
 
-Requirement: [020-journal-loose-ends.md](../requirements/done/020-journal-loose-ends.md). A
+Requirement: [020-journal-loose-ends.md](requirements/done/020-journal-loose-ends.md). A
 forward-looking sentence in the journal ("tomorrow is the notary appointment") whose day has
 passed with no later entry speaking to it becomes a visible, answerable loose end — surfaced in
 the journal conversation and as a reminder, closing itself once a later entry addresses it.
@@ -256,15 +256,15 @@ is no automatic expiry, the app may quote the user's own wording back at them, a
 (009) does not suppress its loose ends.
 
 Bundled into **S05** (M4) for scheduling by direct user decision on 2026-08-21, rather than
-cutting a fifth sprint for one story — see [sprints/S05/sprint.md](sprints/S05/sprint.md).
+cutting a fifth sprint for one story — see [sprints/S05/sprint.md](sprints/done/S05/sprint.md).
 Tracked as its own milestone here because it is not part of M4's "a finding can be acted on"
 scope.
 
 Sprints:
 
-- [sprints/S05/sprint.md](sprints/S05/sprint.md) — story 020 rode along in M4's sprint, `done`
+- [sprints/S05/sprint.md](sprints/done/S05/sprint.md) — story 020 rode along in M4's sprint, `done`
   — built, live acceptance pending
-  ([review](sprints/S05/review.md) · [testplan](sprints/S05/testplan.md))
+  ([review](sprints/done/S05/review.md) · [testplan](sprints/done/S05/testplan.md))
 
 Gaps/notes:
 
@@ -277,13 +277,104 @@ Gaps/notes:
   unbounded heuristic re-parsing on the dashboard and interview hot paths, and a new
   low-probability coupling between `journal:interviewPlan` and the gardener index.
 
+### M7 — A maintenance run I can see, stop and continue — accepted
+
+Requirement: [021-maintenance-i-can-see-stop-and-continue.md](requirements/done/021-maintenance-i-can-see-stop-and-continue.md)
+(container story, split by `/refine` into 021a/021b/021c and not built directly). A maintenance
+run stops being an opaque wait: progress is visible from any screen, stopping keeps what the
+finished stages found, continuing picks up where it left off, and a run can be scoped to one
+kind or one module instead of the whole vault.
+
+No concept behind M7 — a single user-written story from using the maintenance screen, split into
+three because the three capabilities have different write paths into the run state.
+
+**Built without a sprint**, directly on `dev` by user decision on 2026-08-22, rather than cutting
+S07 for one split story. The `done/INDEX.md` entries carry `· — ·` accordingly. Accepted by the
+user on 2026-08-22.
+
+Sprints: none — see above.
+
+Gaps/notes:
+
+- **Accepted, with one honest limitation from 021b**: a stopped run's health score stays frozen
+  at the last full run's value, and a first-ever partial run reports "unknown" rather than a
+  score computed from half the evidence. Deliberate — a score over a partial vault would be an
+  invented number.
+- **Scoped runs skip the model stages entirely (021c).** A scope is a heuristic-only run by
+  design; the LLM stages always look at the whole vault or not at all.
+- **`src/main/ipc/gardener.ts` and `src/main/gardener-state.ts` grew further** past the ~300-line
+  soft limit through this milestone's run-state work (already flagged under M4). Now the strongest
+  candidate in the repo for a split story.
+
+### M8 — A loose end is its own thing, not a wait — accepted
+
+Requirement: [022-a-loose-end-is-not-a-wait.md](requirements/done/022-a-loose-end-is-not-a-wait.md).
+The first real correction that came out of _using_ M6: loose ends had been folded into the
+"waiting on" tile, which answers a different question ("who owes me something") and lost its
+meaning by carrying them. Loose ends now have their own tile, a row on the journal day they were
+announced on, a name taken from what was actually announced, and an `'open'` urgency that stops
+a passed announcement from reading like a blown deadline.
+
+No concept behind M8 — a single user-written story, cut and built the same day.
+
+**Built without a sprint**, directly on `dev`, same decision as M7. Accepted by the user on
+2026-08-22 against the real vault (the demo vault cannot reproduce the wording being fixed).
+
+Sprints: none — see above.
+
+Gaps/notes:
+
+- **`journal:get` re-derives `openLooseEnds()` on every day fetch** — a full index scan per day
+  view. Spec-conformant (the story mandated one source of truth) but a performance follow-up if
+  journals grow large.
+- **A narrow stale-hash race when answering two loose ends on the same day in quick succession**
+  — `refreshDay` does not invalidate today's cached view. `InterviewDialog.tsx` has the identical
+  shape and never surfaced it because it asks one loose-end question per run; M8 is the first
+  place several rows can stack. Worth a follow-up story if it is ever hit.
+- **Two cosmetic i18n defects left in** (`de-dashboard.ts`, `de-journal.ts`): a German opening
+  quote closed with a straight quote. Fold in whenever those files are next touched.
+- **M6's own acceptance is still open** (see above) even though its correction M8 is accepted —
+  M8 was driven from the real vault, M6's full test plan was not walked.
+
+---
+
+### M9 — The gate is green and the small things are right — planned
+
+No concept and no single story behind M9 — it is the collected "pre-existing, needs an owner"
+backlog of M1–M8, given an owner. Five stories: the module schema drift that has kept `npm test`
+red since M1 (023), the seed script that lets a screenshot run read real Codex sessions (025),
+the filing path that writes German headings into an English vault (024), the German catalogue
+that opens quotes with `„` and closes them straight (026), and the maintenance run state that
+has grown to 788 + 409 lines through M4 and M7 (027).
+
+Chosen over cutting the condensed layer at the 2026-08-22 `/ai-scrum:roadmap plan`, by the user:
+four of the five are visible on screen anyway, and the repo's own quality gate has not been
+fully green for five sprints.
+
+Sprints:
+
+- [sprints/S07/sprint.md](sprints/S07/sprint.md) — the gate is green and the small things are
+  right (023, 025, 024, 026, 027), `planned`
+
+Gaps/notes:
+
+- **All five stories are `draft`.** Each carries three open questions, four of which are content
+  or architecture decisions no agent may resolve: which side of the module schema is
+  authoritative (023), what a `languages.documents` switch owes an existing vault (024), the
+  German quote convention for the whole catalogue (026), and whether the run state belongs in
+  `src/core/` (027).
+- **Story 022's Done section understated the quote defect** as "two i18n strings"; it is 98
+  occurrences across 13 files, with zero correct ones. 026 is written to the real number.
+- **027 is the drop candidate** if the sprint runs long — it is the only story with no
+  user-visible effect.
+
 ---
 
 ## Open / unprioritised
 
-| Topic                                                         | State                                                                                                                                                                                                                                              | Next step                                                                                                           |
-| ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| Condensed layer (module / project / area)                     | Concept written 2026-08-18: [concepts/condensed-layer.md](concepts/condensed-layer.md). Supersedes the earlier "project knowledge from agent sessions" entry — that is now one of four project inputs. 40 requirements, 11 open points, no stories | `/ai-scrum:roadmap plan` — prioritise against M2/M3/M4; depends on story 005 and the Project knowledge tab from 008 |
-| MCP interface for projects, knowledge and the condensed layer | Named as an outlook in [concepts/condensed-layer.md](concepts/condensed-layer.md) §14, deliberately without requirements                                                                                                                           | Own `/ai-scrum:concept` once the condensed artifacts exist                                                          |
-| German docs migrated to English                               | Decided in `.claude/ai-scrum.md`; `docs/*.md` are still German                                                                                                                                                                                     | Own story once it stops being cosmetic                                                                              |
-| Phase 2                                                       | Not defined                                                                                                                                                                                                                                        | Cut after phase 1 has been used                                                                                     |
+| Topic                                                         | State                                                                                                                                                                                                                                              | Next step                                                                                                                                                            |
+| ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Condensed layer (module / project / area)                     | Concept written 2026-08-18: [concepts/condensed-layer.md](concepts/condensed-layer.md). Supersedes the earlier "project knowledge from agent sessions" entry — that is now one of four project inputs. 40 requirements, 11 open points, no stories | `/ai-scrum:roadmap plan` — strongest M10 candidate, deferred once at the 2026-08-22 cut in favour of M9; depends on story 005 and the Project knowledge tab from 008 |
+| MCP interface for projects, knowledge and the condensed layer | Named as an outlook in [concepts/condensed-layer.md](concepts/condensed-layer.md) §14, deliberately without requirements                                                                                                                           | Own `/ai-scrum:concept` once the condensed artifacts exist                                                                                                           |
+| German docs migrated to English                               | Decided in `.claude/ai-scrum.md`; `docs/*.md` are still German                                                                                                                                                                                     | Own story once it stops being cosmetic                                                                                                                               |
+| Phase 2                                                       | Not defined                                                                                                                                                                                                                                        | Cut after phase 1 has been used                                                                                                                                      |

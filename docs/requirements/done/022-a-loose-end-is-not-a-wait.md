@@ -1,7 +1,7 @@
 ---
 id: 022
 title: A loose end is its own thing, not a wait
-status: in-progress # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-08-22
 ---
 
@@ -320,8 +320,8 @@ re-reviewed to PASS in a second pass:
 template-drift snapshot unrelated to this story, predates it per commit e8959d1). Code review:
 FAIL → 3 fixes → PASS (`story-review-hard`, two passes).
 
-**Open point — live smoke (P2) not yet run.** The manual test plan below explicitly requires
-the real vault (not `.demo-vault`), because it exercises the exact wording being fixed (the
-12 Aug "vormittag ruhig lost vereinzelt paar fragen" entry). That's outside what a headless
-build session can drive. Status stays `in-progress`; hand-over is the 6-step manual test plan
-above, run against the real vault.
+**Live smoke (P2) — accepted.** The manual test plan below requires the real vault (not
+`.demo-vault`), because it exercises the exact wording being fixed (the 12 Aug "vormittag
+ruhig lost vereinzelt paar fragen" entry), which a headless build session cannot drive. The
+user ran the acceptance walk against the real vault and accepted the story on 2026-08-22;
+status moved to `done`.
