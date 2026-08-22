@@ -48,6 +48,12 @@ export interface TileFrameProps {
   title: string;
   /** Number on the right of the header — data, hence mono. */
   count?: number | null;
+  /**
+   * How many of the rows in this tile are overdue. Rendered next to the count,
+   * in `--danger` and with the word — colour alone must not carry the
+   * statement. `null` or `0` means: nothing overdue, no marker.
+   */
+  overdue?: number | null;
   /** Calm additional info in the header, already translated. */
   meta?: string;
   /** Is the query still running? Then a placeholder instead of a statement. */
@@ -67,6 +73,7 @@ export function TileFrame({
   id,
   title,
   count,
+  overdue,
   meta,
   pending = false,
   error,
@@ -76,6 +83,7 @@ export function TileFrame({
   foot,
   children,
 }: TileFrameProps) {
+  const t = useT();
   const controls = useContext(TileControlsContext);
 
   return (
@@ -84,6 +92,14 @@ export function TileFrame({
         {controls === null ? null : <TileHandle id={id} title={title} controls={controls} />}
         <h2 className="sb-tile-title">{title}</h2>
         {typeof count === 'number' ? <span className="sb-tile-count">{count}</span> : null}
+        {typeof overdue === 'number' && overdue > 0 ? (
+          <>
+            {/* Two bare numbers next to each other read as one — the middot
+                separates them, the same way the day summary does. */}
+            {typeof count === 'number' ? <span className="sb-tile-dot">·</span> : null}
+            <span className="sb-tile-overdue">{t('tile.overdue', { count: overdue })}</span>
+          </>
+        ) : null}
         {meta === undefined ? null : <span className="sb-tile-meta">{meta}</span>}
         {controls === null ? null : (
           <TileMenu

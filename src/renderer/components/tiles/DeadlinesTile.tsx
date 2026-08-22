@@ -21,6 +21,7 @@ import {
   useSnoozeReminder,
   useUnsnoozeReminder,
 } from '../../lib/queries/dashboard';
+import { OverdueMark } from '../OverdueMark';
 import { SnoozeMenu } from '../SnoozeMenu';
 import { TileFrame } from '../TileFrame';
 
@@ -45,12 +46,14 @@ export function DeadlinesTile() {
 
   const all = (data ?? []).filter((reminder) => SOURCES.includes(reminder.source));
   const rows = all.slice(0, LIMIT);
+  const overdue = all.filter((reminder) => reminder.urgency === 'overdue').length;
 
   return (
     <TileFrame
       id="deadlines"
       title={t('module.deadlines.name')}
       count={all.length > 0 ? all.length : null}
+      overdue={overdue}
       pending={isPending}
       error={error ?? snooze.error}
       onRetry={() => void refetch()}
@@ -67,9 +70,10 @@ export function DeadlinesTile() {
       <ul className="sb-lines">
         {rows.map((reminder) => (
           <li key={reminder.id} className="sb-line">
+            {reminder.urgency === 'overdue' ? <OverdueMark /> : null}
             <button
               type="button"
-              className="sb-line-open"
+              className={`sb-line-open${reminder.urgency === 'overdue' ? ' sb-line-open--overdue' : ''}`}
               title={reminder.title}
               onClick={() =>
                 void navigate(

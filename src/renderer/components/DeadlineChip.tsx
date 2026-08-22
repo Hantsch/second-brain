@@ -2,7 +2,8 @@
 
    The color is decoration: the chip carries the date in mono and, where
    there's room, the sentence describing it ("2 days overdue"). Anyone who
-   can't see the color reads the same thing. */
+   can't see the color reads the same thing — and once the date has passed the
+   clock becomes a triangle, so the row is findable without comparing shades. */
 
 import { Icon } from '../atoms/Icon';
 import { useLanguage } from '../i18n';
@@ -33,7 +34,7 @@ export function DeadlineChip({ date, dueInDays, relative = false, now }: Deadlin
   const sentence = formatDue(days);
   return (
     <span className={`sb-deadline sb-deadline--${tone}`} title={sentence}>
-      <Icon name="clock" size={11} />
+      <Icon name={tone === 'overdue' ? 'triangle-alert' : 'clock'} size={11} />
       <span className="sb-deadline-date">{formatDate(date, language)}</span>
       {relative ? <span className="sb-deadline-rel">{sentence}</span> : null}
     </span>

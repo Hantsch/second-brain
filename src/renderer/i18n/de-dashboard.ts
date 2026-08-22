@@ -11,11 +11,10 @@
 export const deDashboard = {
   // ── Day summary ────────────────────────────────────────────────────────
   'dashboard.summary.label': 'Was heute drückt',
-  'dashboard.summary.overdue': '{count} überfällig',
   'dashboard.summary.today': '{count} heute fällig',
   'dashboard.summary.waitingOne': '1 Antwort ausstehend',
   'dashboard.summary.waitingMany': '{count} Antworten ausstehend',
-  'dashboard.summary.clear': 'Nichts ist überfällig, nichts ist heute fällig.',
+  'dashboard.summary.clear': 'Nichts ist heute fällig, niemand hält etwas auf.',
   'dashboard.summary.jump': 'Zu „{module}" springen',
 
   // ── Der „nicht abgelegt"-Streifen (Story 006) ─────────────────────────────
@@ -91,6 +90,8 @@ export const deDashboard = {
 
   // ── Tiles ──────────────────────────────────────────────────────────────
   'tile.more': '{count} weitere',
+  'row.overdue': 'Überfällig',
+  'tile.overdue': '{count} überfällig',
   'tile.capture.label': 'Gedanke',
   'tile.capture.placeholder': 'Roh und unsortiert.',
   'tile.capture.hint': 'speichert in die Inbox',

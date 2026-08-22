@@ -60,12 +60,14 @@ export function TodosTile({ scope }: TodosTileProps) {
     grouped.push({ group, rows });
   }
   const rest = todos.length - (LIMIT - budget);
+  const overdue = todos.filter((todo) => groupOf(todo) === 'overdue').length;
 
   return (
     <TileFrame
       id={scope === 'work' ? 'todos-work' : 'todos-private'}
       title={t(scope === 'work' ? 'module.todos-work.name' : 'module.todos-private.name')}
       count={todos.length > 0 ? todos.length : null}
+      overdue={overdue}
       pending={isPending}
       error={error ?? mutations.toggle.error}
       onRetry={() => void refetch()}

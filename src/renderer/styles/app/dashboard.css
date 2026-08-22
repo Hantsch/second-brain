@@ -205,6 +205,21 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* Overdue in the tile header: the number in --danger, with the word next to
+   it. Colour alone would be a statement only a sighted eye could read. */
+/* Separator between the total and the overdue marker: two bare numbers next
+   to each other read as one. */
+.sb-tile-dot {
+  color: var(--text-faint);
+  font-size: var(--text-2xs);
+}
+.sb-tile-overdue {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--danger);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
 .sb-tile-count,
 .sb-tile-meta {
   font-family: var(--font-mono);
@@ -374,6 +389,17 @@
   min-width: 6ch;
   max-width: 46%;
   border-radius: var(--radius-sm);
+}
+/* The row that presses: the mark before the title, the title in --danger.
+   The mark keeps its colour on hover — it states a fact, it is not a link. */
+.sb-line-open--overdue {
+  color: var(--danger);
+}
+.sb-overduemark {
+  display: inline-flex;
+  align-items: center;
+  color: var(--danger);
+  flex-shrink: 0;
 }
 .sb-line-open:hover {
   color: var(--accent);

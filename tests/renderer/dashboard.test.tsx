@@ -203,6 +203,20 @@ function handles(): HTMLElement[] {
   return screen.getAllByRole('button', { name: /verschieben$/ });
 }
 
+/** Die Zeile, deren Titelknopf diesen Text trägt. */
+function rowOf(title: string): HTMLElement {
+  const row = screen.getByRole('button', { name: title }).closest('.sb-line');
+  if (row === null) throw new Error('Zeile ohne Rahmen: ' + title);
+  return row as HTMLElement;
+}
+
+/** Der Kopf einer Kachel — Titel, Zahl, Alarm. */
+function headOf(title: string): HTMLElement {
+  const head = screen.getByRole('heading', { name: title }).closest('.sb-tile-head');
+  if (head === null) throw new Error('Kachel ohne Kopf: ' + title);
+  return head as HTMLElement;
+}
+
 function order(): string[] {
   return handles().map((handle) => handle.getAttribute('aria-label') ?? '');
 }
@@ -587,13 +601,46 @@ describe('Dashboard-Gitter', () => {
     wrap(<DashboardScreen />);
     await screen.findByRole('heading', { name: 'Steht an' });
 
-    /* Zwei überfällige (ein Todo, eine Antwort), ein heute fälliges Todo, eine
-       ausstehende Antwort — gezählt, nicht geschätzt. */
-    const jump = screen.getByRole('button', { name: '2 überfällig' });
-    expect(screen.getByRole('button', { name: '1 heute fällig' })).toBeTruthy();
+    /* Ein heute fälliges Todo, eine ausstehende Antwort — gezählt, nicht
+       geschätzt. Überfällig steht bewusst nicht in der Zeile: keine Kachel
+       zeigt alle fünf Quellen, also könnte der Sprung sein Versprechen nicht
+       halten. Das tragen jetzt die Kacheln selbst. */
+    const jump = screen.getByRole('button', { name: '1 heute fällig' });
     expect(screen.getByRole('button', { name: '1 Antwort ausstehend' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /überfällig$/ })).toBeNull();
     await userEvent.click(jump);
     expect(document.activeElement?.getAttribute('aria-label')).toBe('Steht an verschieben');
+  });
+
+  it('markiert die überfällige Zeile selbst, nicht nur die Kachel', async () => {
+    mount({ layout: layoutOf(['deadlines', 'waiting-on']) });
+    wrap(<DashboardScreen />);
+    await screen.findByRole('heading', { name: 'Steht an' });
+
+    /* Die Zahl im Kopf sagt "eine" — welche das ist, muss an der Zeile stehen.
+       Das Dreieck trägt die Aussage, das Rot betont sie nur: eine Zeile, die
+       sich allein durch ihre Farbe von den anderen unterscheidet, ist für ein
+       Auge, das die Farbe nicht sieht, gar nicht markiert. */
+    const overdueRow = rowOf('Rollen-Mapping dokumentieren');
+    expect(within(overdueRow).getByText('Überfällig')).toBeTruthy();
+    expect(overdueRow.querySelector('.sb-line-open--overdue')).not.toBeNull();
+
+    /* Und die Zeile ohne Frist bleibt ruhig. */
+    const calmRow = rowOf('Nyota Auth0 Migration');
+    expect(within(calmRow).queryByText('Überfällig')).toBeNull();
+    expect(calmRow.querySelector('.sb-line-open--overdue')).toBeNull();
+  });
+
+  it('nennt überfällige Einträge im Kopf der Kachel, die sie hält', async () => {
+    mount({ layout: layoutOf(['deadlines', 'waiting-on', 'todos-work']) });
+    wrap(<DashboardScreen />);
+    await screen.findByRole('heading', { name: 'Steht an' });
+
+    /* Je Kachel gezählt, nicht über alle Kacheln summiert: "Steht an" hält das
+       überfällige Todo, "Warte auf" die überfällige Antwort. */
+    expect(headOf('Steht an').textContent).toContain('1 überfällig');
+    expect(headOf('Warte auf').textContent).toContain('1 überfällig');
+    expect(headOf('Todos Arbeit').textContent).toContain('1 überfällig');
   });
 
   it('hat keinen A11y-Verstoß, auch nicht im Verschiebemodus', async () => {

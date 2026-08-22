@@ -5,11 +5,10 @@
 export const enDashboard = {
   // ── Day summary ──────────────────────────────────────────────────────────
   'dashboard.summary.label': 'What is pressing today',
-  'dashboard.summary.overdue': '{count} overdue',
   'dashboard.summary.today': '{count} due today',
   'dashboard.summary.waitingOne': '1 answer outstanding',
   'dashboard.summary.waitingMany': '{count} answers outstanding',
-  'dashboard.summary.clear': 'Nothing is overdue, nothing is due today.',
+  'dashboard.summary.clear': 'Nothing is due today, nobody is holding things up.',
   'dashboard.summary.jump': 'Jump to “{module}”',
 
   // ── The "unfiled" strip (story 006) ────────────────────────────────────────
@@ -82,6 +81,8 @@ export const enDashboard = {
 
   // ── Tiles ────────────────────────────────────────────────────────────────
   'tile.more': '{count} more',
+  'row.overdue': 'Overdue',
+  'tile.overdue': '{count} overdue',
   'tile.capture.label': 'Thought',
   'tile.capture.placeholder': 'Raw and unsorted.',
   'tile.capture.hint': 'saves to the inbox',

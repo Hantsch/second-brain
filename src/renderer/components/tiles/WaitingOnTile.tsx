@@ -24,6 +24,7 @@ import {
   useUnsnoozeReminder,
 } from '../../lib/queries/dashboard';
 import { pushToast } from '../../lib/toast';
+import { OverdueMark } from '../OverdueMark';
 import { SnoozeMenu } from '../SnoozeMenu';
 import { TileFrame } from '../TileFrame';
 
@@ -36,6 +37,11 @@ const DAY_IN_LEAF = /^(\d{4}-\d{2}-\d{2})\.md$/;
 function announcingDayOf(reminder: Reminder): string | null {
   const leaf = reminder.path.split('/').pop() ?? '';
   return DAY_IN_LEAF.exec(leaf)?.[1] ?? null;
+}
+
+/** A wait is late once its own deadline has passed. */
+function isLate(entry: { due?: string }, now: Date): boolean {
+  return entry.due !== undefined && dayDiff(now, new Date(`${entry.due}T00:00:00`)) < 0;
 }
 
 /**
@@ -70,10 +76,8 @@ export function WaitingOnTile() {
   const now = new Date();
 
   const entries = [...(data?.waitingOn ?? [])].sort((a, b) => {
-    const dueA = a.due ?? null;
-    const dueB = b.due ?? null;
-    const lateA = dueA !== null && dayDiff(now, new Date(`${dueA}T00:00:00`)) < 0;
-    const lateB = dueB !== null && dayDiff(now, new Date(`${dueB}T00:00:00`)) < 0;
+    const lateA = isLate(a, now);
+    const lateB = isLate(b, now);
     if (lateA !== lateB) return lateA ? -1 : 1;
     return a.since < b.since ? -1 : a.since > b.since ? 1 : 0;
   });
@@ -85,12 +89,21 @@ export function WaitingOnTile() {
      project field. */
   const looseEnds = (reminders.data ?? []).filter((reminder) => reminder.source === 'loose-end');
   const total = entries.length + looseEnds.length;
+  /* What actually nags in this tile: a deadline that has passed, a wait long
+     enough that the core raised a reminder, or a loose end. Counted across all
+     entries, not just the visible rows — same as `total`. */
+  const overdue =
+    looseEnds.length +
+    entries.filter(
+      (entry) => isLate(entry, now) || reminderFor(entry, reminders.data ?? []) !== null,
+    ).length;
 
   return (
     <TileFrame
       id="waiting-on"
       title={t('module.waiting-on.name')}
       count={total > 0 ? total : null}
+      overdue={overdue}
       pending={isPending}
       error={error}
       onRetry={() => void refetch()}
@@ -100,9 +113,10 @@ export function WaitingOnTile() {
       <ul className="sb-lines">
         {looseEnds.map((reminder) => (
           <li key={reminder.id} className="sb-line">
+            <OverdueMark />
             <button
               type="button"
-              className="sb-line-open"
+              className="sb-line-open sb-line-open--overdue"
               title={reminder.title}
               onClick={() => {
                 const day = announcingDayOf(reminder);
@@ -140,14 +154,14 @@ export function WaitingOnTile() {
           </li>
         ))}
         {rows.map((entry, index) => {
-          const late =
-            entry.due !== undefined && dayDiff(now, new Date(`${entry.due}T00:00:00`)) < 0;
+          const late = isLate(entry, now);
           const nagging = reminderFor(entry, reminders.data ?? []);
           return (
             <li key={`${entry.project}-${entry.who}-${index}`} className="sb-line">
+              {late || nagging !== null ? <OverdueMark /> : null}
               <button
                 type="button"
-                className="sb-line-open"
+                className={`sb-line-open${late || nagging !== null ? ' sb-line-open--overdue' : ''}`}
                 onClick={() => void navigate(`/projects?p=${encodeURIComponent(entry.project)}`)}
               >
                 {entry.who}
