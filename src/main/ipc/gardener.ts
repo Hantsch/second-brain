@@ -38,9 +38,11 @@ import {
   gardenerStateFor,
   gardenerToday,
   runWithProgress,
+  saveRun,
 } from './gardener-deps';
 import { docLanguage, settle, wikiIndex, wikiStore } from './wiki-bridge';
 import { gardenerLabels } from '../gardener-labels';
+import { beginGardenerRun, cancelGardenerRun, gardenerRunSnapshot } from '../gardener-run-state';
 import { GARDENER_STATE_FILE } from '../gardener-state';
 import type { GardenerState } from '../gardener-state';
 import type { Services } from '../services';
@@ -49,22 +51,6 @@ import type { Services } from '../services';
     Mirrors `MAX_SNOOZE_DAYS` in `ipc/reminders.ts` — the same bound, for the
     same reason, on a different kind of thing being put away. */
 const MAX_SNOOZE_DAYS = 365;
-
-/* One run per process. That's all that's needed: there's one open vault, and
-   two simultaneous runs over the same content would produce the same report
-   twice — at double the cost, if a model is involved. */
-let running: AbortController | null = null;
-
-/** Cancels a running maintenance run — on closing the vault and on quitting. */
-export function cancelGardenerRun(): void {
-  running?.abort();
-  running = null;
-}
-
-/** Is a maintenance run currently in progress? */
-export function gardenerRunning(): boolean {
-  return running !== null;
-}
 
 /** The report has changed: same wake-up as with the reminders. */
 function wake(services: Services): void {
@@ -187,40 +173,68 @@ export function gardenerHandlers(services: Services): HandlerMap {
   return defineHandlers({
     'gardener:report': async () => gardenerReport(services),
 
-    'gardener:run': async ({ useLlm }) => {
-      if (running !== null) throw fail('invalid', 'es läuft schon ein Pflegelauf');
-      /* The marker is set **before** the first `await`: otherwise two calls
-         from the same keypress would both go through and write the same
-         report twice. */
-      const controller = new AbortController();
-      running = controller;
+    /* A thin read of the one place that knows whether a run is going (021a,
+       D4) — no new business logic, `gardener-run-state.ts` already is the
+       single source of truth `event:gardener-progress` publishes from. */
+    'gardener:runStatus': () => gardenerRunSnapshot(),
+
+    'gardener:run': async ({ useLlm, resume }) => {
+      /* The slot is claimed **before** the first `await`, and from the one
+         place that knows about the autostart too (021a, D3): otherwise two
+         calls from the same keypress — or a click during the run on open —
+         would both go through and write the same report twice. */
+      const handle = beginGardenerRun({
+        trigger: 'user',
+        emit: (progress) => services.sendEvent('event:gardener-progress', progress),
+      });
+      if (handle === null) throw fail('invalid', 'es läuft schon ein Pflegelauf');
       try {
         const state = await gardenerStateFor(services);
-        const run = await runWithProgress(services, {
+        /* `resume` continues the run on file instead of starting from nothing
+           (021b, D3) — `runWithProgress` itself decides what "continues" means:
+           every stage already in its `completed` is skipped, so a check never
+           runs twice and a model stage that already answered is not asked
+           again. Without a stored run there is nothing to continue, so this
+           is silently the same as a plain run. */
+        const stored = resume === true ? state.run() : null;
+        const result = await runWithProgress(services, {
           ...(useLlm === undefined ? {} : { useLlm }),
-          signal: controller.signal,
-          onProgress: (progress) => services.sendEvent('event:gardener-progress', progress),
+          ...(stored === null ? {} : { resumeFrom: stored }),
+          signal: handle.signal,
+          trigger: handle.trigger,
+          onProgress: handle.publish,
         });
-        await state.save(run);
+        /* Stopping is not failing (021b, D2): what the finished stages found is
+           stored as a partial run and read back like any other report, so the
+           answer to a cancelled run is the report — not an error that throws
+           away the minutes the run already cost.
+
+           Except on the way out. A stop from closing the vault or from quitting
+           writes nothing at all, whatever the run got to: that vault must not be
+           left with half a report, and on quit the atomic write could not be
+           awaited anyway. Then this returns the report that was already on file
+           — unchanged, because nothing was written. */
+        if (handle.cancelledBy() !== 'shutdown') await saveRun(services, state, result);
         const report = await gardenerReport(services, state);
-        if (report === null) throw fail('io', 'der Bericht ließ sich nicht ablegen');
+        if (report === null) {
+          throw result.complete
+            ? fail('io', 'der Bericht ließ sich nicht ablegen')
+            : fail('cancelled', 'der Pflegelauf wurde abgebrochen, bevor etwas gefunden war');
+        }
         return report;
       } finally {
-        running = null;
-        /* Even a cancelled run ends visibly: otherwise the indicator keeps
-           spinning even though nothing is computing anymore. */
-        services.sendEvent('event:gardener-progress', {
-          phase: 'done',
-          check: null,
-          done: 0,
-          total: 0,
-          running: false,
-        });
+        /* Even a cancelled or failed run ends visibly, and frees the slot:
+           otherwise the indicator keeps spinning even though nothing is
+           computing anymore, and no further run would be allowed. */
+        handle.finish();
       }
     },
 
     'gardener:cancel': () => {
-      cancelGardenerRun();
+      /* A stop the user asked for — the only reason that leaves something
+         behind (021b, D2). The one on closing the vault and on quitting
+         (`main/index.ts`) says `'shutdown'` and keeps nothing. */
+      cancelGardenerRun('user');
     },
 
     'gardener:dismiss': async ({ id }) => {

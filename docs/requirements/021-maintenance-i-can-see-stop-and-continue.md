@@ -94,31 +94,52 @@ the vault must say so instead of quietly replacing the number for the whole.
 
 ## Open Questions
 
-<!-- From the requester; to be resolved in refine. -->
+_Resolved in refine on 2026-08-22._
 
-1. **Split or one story?** This carries three capabilities (visible state, resumable run,
-   part-run). 019 was cut into 019a–d for less. Suggest a split unless the plan stays under
-   the usual deliverable count.
-2. **What does "continue" mean for a model stage that was cut mid-request?** Repeat that one
-   stage, or resume only at stage granularity (checks done, model stage restarted)? The
-   cheapest honest answer is probably stage granularity — decide it explicitly, do not leave
-   it to the implementation.
-3. **Where does a paused run live?** `.secondbrain/gardener.json` already holds the run
-   ([gardener-state.ts](../../src/main/gardener-state.ts)); a partial run plus "what is still
-   missing" would go in the same file. It is deletable by contract — a lost pause must
-   degrade to "not checked yet", not to a wrong report.
-4. **How granular does model-stage progress get?** Real sub-progress needs the gateway to
-   report something; if it cannot, an honest "the model is reading, this can take a while"
-   with elapsed time may be the truthful maximum. Do not invent a percentage.
-5. **Is the health score for a part-run computed at all?** Suggest: not recomputed, the
-   previous score stands with a note — a score over one module is not this vault's health.
+1. **Split or one story?** → **Split.** Nine deliverables across core, IPC and renderer is
+   past the size the workflow carries in one story. Cut into three, see `## Plan`.
+2. **What does "continue" mean for a model stage cut mid-request?** → **Stage granularity.**
+   A stopped run keeps the findings of the stages that finished; continuing restarts only the
+   stage that was cut, from its beginning. The ten mechanical checks are milliseconds, so in
+   practice: checks kept, one model stage redone. No mid-request state is persisted. → 021b.
+3. **Where does a paused run live?** → `.secondbrain/gardener.json`, in `StoredRun`
+   ([gardener-state.ts:37](../../src/main/gardener-state.ts#L37)), extended by "which stages
+   finished". Deletable by contract: a lost pause degrades to "not checked yet". → 021b.
+4. **How granular does model-stage progress get?** → **Named stage plus elapsed time**, no
+   invented percentage. The overall bar becomes weighted — the ten checks are a small slice,
+   each model stage a large one — so it stops jumping to ~83% and standing still. → 021a.
+5. **Is the health score recomputed for a part-run?** → **No.** The last complete score
+   stands, labelled with its date; partial findings are shown next to it. A score over one
+   module is not this vault's health. → 021b (stopped run) and 021c (part-run).
 
 ## Plan
 
+**This file is a container. Do not build it.** It is split into three stories, each
+independently valuable and independently acceptable:
+
+| Story                      | Title                                             | Covers     |
+| -------------------------- | ------------------------------------------------- | ---------- |
+| [[021a-a-run-i-can-see]]   | A run I can see, from any screen                  | AC 1–5, 11 |
+| [[021b-stop-and-continue]] | Stopping keeps what was found, and I can continue | AC 6–8     |
+| [[021c-check-only-a-part]] | I can check only a part                           | AC 9       |
+
+AC 10 (works without a model, and says what a model stage would have added) is not a story of
+its own — it is an acceptance criterion in all three.
+
+Order matters: 021a first. It introduces the stage model (which stages a run has, which one is
+current, which are left) that 021b needs to persist "these stages finished" and 021c needs to
+say "this run only had these stages".
+
 ## Deliverables
+
+See the child stories.
 
 ## Model Hints
 
+See the child stories.
+
 ## Test Plan (manual acceptance)
+
+See the child stories.
 
 ## Done

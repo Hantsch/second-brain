@@ -23,6 +23,7 @@ import type {
 } from './contracts';
 import type { KeyStore } from './secrets';
 import type { SettingsService } from './settings';
+import { cancelGardenerRun } from './gardener-run-state';
 import { fail, noVault } from './ipc/errors';
 import { ensureStructure, isVault } from './vault-layout';
 
@@ -150,6 +151,12 @@ export class Services {
   }
 
   async closeVault(): Promise<VaultStatus> {
+    /* A maintenance run must not keep writing into a vault that is on its way
+       out — and `openVault` closes the old one before opening the next, so
+       without this a run would finish into the vault it is being replaced by.
+       `'shutdown'` is the reason that keeps nothing (021b): the run's own
+       caller sees it and persists no partial report. */
+    cancelGardenerRun('shutdown');
     const previous = this.open;
     this.open = null;
     this.indexState = { docCount: 0, indexedAt: null, indexing: false };

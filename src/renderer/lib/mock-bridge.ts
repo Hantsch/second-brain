@@ -502,6 +502,9 @@ const RESPONSES: MockResponses = {
   'reminders:unsnooze': () => undefined,
 
   'gardener:report': () => fx.gardenerReport,
+  /* No run is ever going in the mock — there is nothing that starts one on
+     its own, so mounting the maintenance screen here never has a run to seed. */
+  'gardener:runStatus': () => null,
   'gardener:run': () => fx.gardenerReport,
   'gardener:cancel': () => undefined,
   'gardener:dismiss': () => undefined,

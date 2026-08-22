@@ -62,6 +62,11 @@ export function HealthCard({ report, onShowHidden }: HealthCardProps) {
   const t = useT();
   const language = useLanguage();
   const known = report.healthKnown !== false;
+  /* A stopped run with no earlier complete check behind it (021b): there is no
+     frozen score and none may be computed, so the card names that state
+     instead of printing an "as of" line with no date in it. */
+  const partial = report.complete === false;
+  const frozenAt = report.healthAsOf;
   const contributions = report.healthContributions ?? [];
   const lost = contributions.reduce((sum, entry) => sum + entry.points, 0);
   const hidden = report.hidden ?? [];
@@ -76,7 +81,9 @@ export function HealthCard({ report, onShowHidden }: HealthCardProps) {
         <div className="sb-ghealth-why">
           <span className="gs-overline">{t('garden.health.why')}</span>
           {!known ? (
-            <p className="sb-ghealth-note">{t('garden.health.noStock')}</p>
+            <p className="sb-ghealth-note">
+              {t(partial ? 'garden.health.noCompleteBody' : 'garden.health.noStock')}
+            </p>
           ) : contributions.length === 0 && !hasHidden ? (
             <p className="sb-ghealth-note">{t('garden.health.perfect')}</p>
           ) : contributions.length === 0 ? null : (
@@ -112,8 +119,18 @@ export function HealthCard({ report, onShowHidden }: HealthCardProps) {
       </div>
 
       <p className="sb-ghealth-stamp">
-        <span>{t('garden.health.ranAt')}</span>
-        <span className="sb-mono">{stamp(report.ranAt, language)}</span>
+        {!partial ? (
+          <>
+            <span>{t('garden.health.ranAt')}</span>
+            <span className="sb-mono">{stamp(report.ranAt, language)}</span>
+          </>
+        ) : frozenAt === undefined ? (
+          <span>{t('garden.health.noComplete')}</span>
+        ) : (
+          <span className="sb-mono">
+            {t('garden.health.asOf', { when: stamp(frozenAt, language) })}
+          </span>
+        )}
         <span className="sb-ghealth-model">
           {t(report.usedLlm ? 'garden.health.withModel' : 'garden.health.withoutModel')}
         </span>

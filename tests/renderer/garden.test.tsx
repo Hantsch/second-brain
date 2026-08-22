@@ -494,6 +494,7 @@ function handlers(report: GardenerReport | null, extra: SbHandlers = {}): SbHand
     }),
     'gardener:report': () => report,
     'gardener:run': () => report ?? REPORT,
+    'gardener:runStatus': () => null,
     'gardener:cancel': () => undefined,
     'gardener:dismiss': () => undefined,
     'gardener:undismiss': () => undefined,
@@ -720,6 +721,11 @@ describe('Lauf', () => {
       done: 2,
       total: 10,
       running: true,
+      stage: 'checks',
+      percent: 20,
+      remaining: [],
+      startedAt: new Date().toISOString(),
+      trigger: 'user',
     });
 
     expect(await screen.findByText('Prüfung: Kaputte Wikilinks')).toBeTruthy();
@@ -749,9 +755,168 @@ describe('Lauf', () => {
       done: 10,
       total: 11,
       running: true,
+      stage: 'audit',
+      percent: 14,
+      remaining: [],
+      startedAt: new Date().toISOString(),
+      trigger: 'user',
     });
 
     expect(await screen.findByText('Das Modell deutet die Befunde')).toBeTruthy();
+  });
+
+  /* 021a D2: the bar renders `percent` as-is (never a recomputed flat count),
+     names what is still ahead, and ticks a `m:ss` elapsed clock from
+     `startedAt` — the reason the user can see the run is alive even while the
+     percentage itself stands still during a model stage. */
+  it('nennt die noch ausstehenden Stufen und zählt die Laufzeit hoch', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      installMock(
+        handlers(REPORT, {
+          'gardener:run': () => new Promise(() => undefined) as unknown as GardenerReport,
+        }),
+      );
+      wrap(<GardenScreen />);
+      await screen.findByText('72');
+      await userEvent.click(screen.getByRole('button', { name: 'Neu prüfen' }));
+
+      emit('event:gardener-progress', {
+        phase: 'checks',
+        check: 'broken-link',
+        done: 2,
+        total: 10,
+        running: true,
+        stage: 'checks',
+        percent: 8,
+        remaining: ['audit', 'loose-ends'],
+        startedAt: new Date().toISOString(),
+        trigger: 'user',
+      });
+
+      expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe('8');
+      expect(await screen.findByText('Noch aus: Widersprüche, lose Enden')).toBeTruthy();
+      expect(screen.getByText('0:00')).toBeTruthy();
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(2000);
+      });
+
+      expect(await screen.findByText('0:02')).toBeTruthy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+// ── Ohne Modell-Stufe und kein Zweitlauf (021a D6) ───────────────────────────
+
+describe('Lauf ohne Modell-Stufe', () => {
+  it('erklärt die kürzere Stufenliste, statt sie stillschweigend zu zeigen', async () => {
+    installMock(
+      handlers(REPORT, {
+        'gardener:run': () => new Promise(() => undefined) as unknown as GardenerReport,
+      }),
+    );
+    wrap(<GardenScreen />);
+    await screen.findByText('72');
+    await userEvent.click(screen.getByRole('button', { name: 'Neu prüfen' }));
+
+    /* `useLlm: false` für diesen Lauf: der Stufenplan (`@core/gardener/progress`)
+       enthält von Anfang an nur `checks` — `remaining` nennt nie `audit` oder
+       `loose-ends`, weil es sie im Plan gar nicht gibt. */
+    emit('event:gardener-progress', {
+      phase: 'checks',
+      check: 'broken-link',
+      done: 2,
+      total: 10,
+      running: true,
+      stage: 'checks',
+      percent: 20,
+      remaining: [],
+      startedAt: new Date().toISOString(),
+      trigger: 'user',
+    });
+
+    expect(
+      await screen.findByText(
+        'Keine Modell-Stufe — Widersprüche und lose Enden werden nicht geprüft.',
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText(/^Noch aus:/)).toBeNull();
+  });
+
+  it('nennt bei einer Modell-Stufe im Plan keine erfundene Erklärung', async () => {
+    installMock(
+      handlers(REPORT, {
+        'gardener:run': () => new Promise(() => undefined) as unknown as GardenerReport,
+      }),
+    );
+    wrap(<GardenScreen />);
+    await screen.findByText('72');
+    await userEvent.click(screen.getByRole('button', { name: 'Neu prüfen' }));
+
+    /* Derselbe `checks`-Schritt, aber mit einer Modell-Stufe noch aus — die
+       Zeile darf hier nicht erscheinen, sonst wäre sie eine Behauptung ohne
+       Deckung. */
+    emit('event:gardener-progress', {
+      phase: 'checks',
+      check: 'broken-link',
+      done: 2,
+      total: 10,
+      running: true,
+      stage: 'checks',
+      percent: 8,
+      remaining: ['audit'],
+      startedAt: new Date().toISOString(),
+      trigger: 'user',
+    });
+
+    await screen.findByText('Noch aus: Widersprüche');
+    expect(
+      screen.queryByText('Keine Modell-Stufe — Widersprüche und lose Enden werden nicht geprüft.'),
+    ).toBeNull();
+  });
+});
+
+describe('Kein Zweitlauf ohne Vorwarnung', () => {
+  /* Ein Lauf, der schon geht — egal wodurch ausgelöst — kommt über genau den
+     Weg herein, den D4 dafür gebaut hat: die Attrappe für `gardener:runStatus`
+     beantwortet die Frage schon beim Mount, bevor je ein Ereignis eintrifft. */
+  function runningSnapshot(): IpcEvents['event:gardener-progress'] {
+    return {
+      phase: 'checks',
+      check: 'broken-link',
+      done: 2,
+      total: 10,
+      running: true,
+      stage: 'checks',
+      percent: 20,
+      remaining: [],
+      startedAt: NOW,
+      trigger: 'auto',
+    };
+  }
+
+  it('sperrt „jetzt prüfen" mit sichtbarem Grund, statt die Fehlermeldung abzuwarten', async () => {
+    installMock(handlers(REPORT, { 'gardener:runStatus': () => runningSnapshot() }));
+    wrap(<GardenScreen />);
+    await screen.findByText('72');
+
+    const button = (await screen.findByRole('button', {
+      name: 'Neu prüfen',
+    })) as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+    expect(button.title).toBe('Ein Pflegelauf läuft schon.');
+
+    /* Ein deaktivierter Knopf löst in jsdom gar kein Klick-Ereignis aus — das
+       ist die eigentliche Zusage: nicht nur grau, sondern unerreichbar für
+       einen zweiten Aufruf. Zwei rasche Klicks bleiben daher ohne jede
+       Anfrage an `gardener:run`. */
+    await userEvent.click(button);
+    await userEvent.click(button);
+
+    expect(calls('gardener:run')).toEqual([]);
   });
 });
 
@@ -1261,6 +1426,87 @@ describe('Gesundheit nennt, was sie ausließ', () => {
     expect(select.value).toBe('all');
     expect(await screen.findByText(HIDDEN_DISMISSED.title)).toBeTruthy();
     expect(await screen.findByText(HIDDEN_SNOOZED.title)).toBeTruthy();
+  });
+});
+
+// ── Angehalten (021b, D4) ────────────────────────────────────────────────────
+
+/* Ein Lauf, der nicht jede geplante Stufe erreicht hat: `complete: false`,
+   die noch fehlenden Stufen benannt, und der eingefrorene Wert mit dem
+   Zeitpunkt des letzten vollständigen Laufs statt der eigenen `ranAt`. */
+const PARTIAL_REPORT: GardenerReport = {
+  ...REPORT,
+  complete: false,
+  missingStages: ['audit', 'loose-ends'],
+  healthAsOf: '2026-08-05T09:00:00+02:00',
+};
+
+/* Und derselbe Lauf ohne irgendetwas davor: die allererste Prüfung dieses
+   Vaults war die gestoppte. Kein eingefrorener Wert, kein Datum — und keiner,
+   der aus den halben Befunden gerechnet werden dürfte. */
+const PARTIAL_FIRST_REPORT: GardenerReport = {
+  ...REPORT,
+  complete: false,
+  missingStages: ['audit', 'loose-ends'],
+  health: 0,
+  healthKnown: false,
+  healthContributions: [],
+};
+
+describe('Prüfung sagt, dass sie eine Hälfte ist', () => {
+  it('nennt den angehaltenen Zustand und die fehlenden Stufen', async () => {
+    installMock(handlers(PARTIAL_REPORT));
+    wrap(<GardenScreen />);
+    await screen.findByText('72');
+
+    expect(screen.getByText('Vorzeitig gestoppt.')).toBeTruthy();
+    expect(screen.getByText('Fehlende Stufen: Widersprüche, lose Enden.')).toBeTruthy();
+  });
+
+  it('zeigt bei der Gesundheit den Stand statt der lebenden Uhrzeit', async () => {
+    installMock(handlers(PARTIAL_REPORT));
+    wrap(<GardenScreen />);
+    await screen.findByText('72');
+
+    expect(screen.getByText(/^Stand .*, letzte vollständige Prüfung$/)).toBeTruthy();
+    /* Die lebende Zeile weicht der eingefrorenen — sie steht nicht daneben. */
+    expect(screen.queryByText('Zuletzt geprüft')).toBeNull();
+  });
+
+  it('zeigt ohne frühere vollständige Prüfung keinen Wert und kein leeres Stand-Datum', async () => {
+    installMock(handlers(PARTIAL_FIRST_REPORT));
+    wrap(<GardenScreen />);
+
+    /* Statt „Stand , letzte vollständige Prüfung" — es gibt keine. */
+    expect(await screen.findByText('Noch keine vollständige Prüfung')).toBeTruthy();
+    expect(screen.queryByText(/^Stand /)).toBeNull();
+    /* Und keine Zahl aus den halben Befunden. */
+    expect(screen.queryByText('72')).toBeNull();
+    expect(screen.getByText(/^Die Prüfung wurde vorzeitig gestoppt/)).toBeTruthy();
+    /* Der angehaltene Zustand steht trotzdem da. */
+    expect(screen.getByText('Vorzeitig gestoppt.')).toBeTruthy();
+  });
+
+  it('bietet „Prüfung fortsetzen" neben „jetzt prüfen" und schickt resume: true', async () => {
+    installMock(handlers(PARTIAL_REPORT));
+    wrap(<GardenScreen />);
+    await screen.findByText('72');
+
+    expect(screen.getByRole('button', { name: 'Neu prüfen' })).toBeTruthy();
+    await userEvent.click(screen.getByRole('button', { name: 'Prüfung fortsetzen' }));
+
+    expect(calls('gardener:run')).toEqual([{ resume: true }]);
+  });
+
+  it('zeigt bei einem vollständigen Bericht keines der vier Dinge', async () => {
+    installMock(handlers(REPORT));
+    wrap(<GardenScreen />);
+    await screen.findByText('72');
+
+    expect(screen.queryByText('Vorzeitig gestoppt.')).toBeNull();
+    expect(screen.queryByText(/^Fehlende Stufen:/)).toBeNull();
+    expect(screen.queryByText(/^Stand .*, letzte vollständige Prüfung$/)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Prüfung fortsetzen' })).toBeNull();
   });
 });
 

@@ -189,7 +189,8 @@ export const api = {
   },
   gardener: {
     report: () => call('gardener:report'),
-    run: (useLlm?: boolean) => call('gardener:run', useLlm === undefined ? {} : { useLlm }),
+    runStatus: () => call('gardener:runStatus'),
+    run: (options?: IpcRequest<'gardener:run'>) => call('gardener:run', options ?? {}),
     cancel: () => call('gardener:cancel'),
     dismiss: (id: string) => call('gardener:dismiss', { id }),
     undismiss: (id: string) => call('gardener:undismiss', { id }),

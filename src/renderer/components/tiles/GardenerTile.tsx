@@ -12,11 +12,24 @@
    first).
 
    Both paths lead into the maintenance screen: with a run "go to maintenance",
-   without one "check now" — that's where the button that checks lives. */
+   without one "check now" — that's where the button that checks lives.
+
+   021b D5: a run that was stopped partway must not sell its partial finding
+   count as the vault's current state — that number can be smaller than
+   reality simply because a stage never ran. So with `complete: false` the
+   tile freezes on the score as of the last complete run (with its date) and
+   says the check was stopped, instead of the usual "N findings" line. The
+   score bar and worst-categories list stay: both come from
+   `healthContributions`, which mirrors the frozen score itself, not the count
+   of open findings in this run.
+
+   If that stopped run was this vault's **first** check, there is no frozen
+   score at all: `healthKnown` is then false and the tile falls back to "not
+   checked yet" — no number, and no "as of" line with nothing in it. */
 
 import { useNavigate } from 'react-router-dom';
-import { useT } from '../../i18n';
-import { plural } from '../../lib/format';
+import { useLanguage, useT } from '../../i18n';
+import { formatDate, plural } from '../../lib/format';
 import { useDashboardData } from '../../lib/queries/dashboard';
 import { useGardenerReport } from '../../lib/queries/gardener';
 import { HealthMeter } from '../HealthMeter';
@@ -27,6 +40,7 @@ const WORST = 2;
 
 export function GardenerTile() {
   const t = useT();
+  const language = useLanguage();
   const navigate = useNavigate();
   const { data, isPending, error, refetch } = useDashboardData();
   /* The breakdown lives only in the report, not in the dashboard bundle. It's
@@ -34,6 +48,8 @@ export function GardenerTile() {
   const report = useGardenerReport();
   const known = data?.healthKnown === true;
   const worst = (report.data?.healthContributions ?? []).slice(0, WORST);
+  const partial = report.data?.complete === false;
+  const asOf = partial ? formatDate(report.data?.healthAsOf ?? null, language) : '';
 
   return (
     <TileFrame
@@ -58,9 +74,20 @@ export function GardenerTile() {
       {data === undefined ? null : (
         <div className="sb-gtile">
           <HealthMeter score={data.health} size="sm" />
-          <span className="sb-tile-note">
-            {plural(data.findingCount, 'tile.gardener.findingsOne', 'tile.gardener.findingsMany')}
-          </span>
+          {partial ? (
+            /* Without a date there is no complete run to be "as of" — the
+               stopped note stands alone rather than with an empty date in
+               front of it (021b). */
+            <span className="sb-tile-note">
+              {asOf === ''
+                ? t('tile.gardener.stopped')
+                : `${t('tile.gardener.asOf', { date: asOf })} · ${t('tile.gardener.stopped')}`}
+            </span>
+          ) : (
+            <span className="sb-tile-note">
+              {plural(data.findingCount, 'tile.gardener.findingsOne', 'tile.gardener.findingsMany')}
+            </span>
+          )}
           {worst.length === 0 ? null : (
             <ul className="sb-lines">
               {worst.map((entry) => (

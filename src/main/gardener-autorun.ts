@@ -9,7 +9,10 @@
      a run over a half-built index would find findings that don't exist. So we
      wait and retry — the same as the reminder notification.
    - **One run per open.** Not stockpiled, not on a timer: anyone who wants to
-     check more often clicks "Check now" in the screen.
+     check more often clicks "Check now" in the screen. Whether one is already
+     going is not this class's own bookkeeping but `gardener-run-state.ts`'s —
+     the same slot the channel claims, so the two cannot overlap and one cancel
+     reaches either.
    - **The setting decides interpretation**, not this automaton: without
      `gardener.useLlm` the run stays deterministic and costs nothing.
 
@@ -17,8 +20,8 @@
    `reminder-notify.ts`, so the service container doesn't need a second hook.
    Errors stay quiet: a failed maintenance run must not cost the app anything. */
 
-import { runWithProgress } from './ipc/gardener-deps';
-import { gardenerStateFor } from './ipc/gardener-deps';
+import { gardenerStateFor, runWithProgress, saveRun } from './ipc/gardener-deps';
+import { beginGardenerRun, gardenerRunning } from './gardener-run-state';
 import { GARDENER_STATE_FILE } from './gardener-state';
 import type { Services } from './services';
 
@@ -34,8 +37,13 @@ export const FIRST_RUN_DELAY_MS = 2500;
 /** How many times we wait for the index before the run gives up. */
 const INDEX_RETRIES = 8;
 
-/** What an attempt did — the test reads from this that nothing was invented. */
-export type AutorunResult = 'ran' | 'off' | 'no-index' | 'busy';
+/**
+ * What an attempt did — the test reads from this that nothing was invented.
+ * `'cancelled'` is its own answer and not a failure: a run stopped on closing
+ * the vault must not look like a half-built index, or `runWhenReady` would
+ * retry exactly the run that was just called off.
+ */
+export type AutorunResult = 'ran' | 'off' | 'no-index' | 'busy' | 'cancelled';
 
 export interface AutorunOptions {
   /** Delay until the first attempt. Tests set it to 0. */
@@ -46,7 +54,6 @@ export class GardenerAutorun {
   private first: ReturnType<typeof setTimeout> | null = null;
   private unwatch: (() => void) | null = null;
   private lastVault: string | null = null;
-  private busy = false;
 
   constructor(
     private readonly services: Services,
@@ -92,28 +99,54 @@ export class GardenerAutorun {
 
   /** One attempt. Reports what it did. */
   async run(): Promise<AutorunResult> {
-    if (this.busy) return 'busy';
+    if (gardenerRunning()) return 'busy';
     const settings = this.services.settings.vault();
     if (settings === null || !settings.gardener.runOnOpen) return 'off';
     const status = this.services.status();
     if (!status.ready || status.indexing || this.services.index() === null) return 'no-index';
 
-    this.busy = true;
+    /* The slot, not a flag of our own — and it is claimed here rather than at
+       the top so a run nobody wants is never announced. Losing the race against
+       a click is still `'busy'`. */
+    const handle = beginGardenerRun({
+      trigger: 'auto',
+      emit: (progress) => this.services.sendEvent('event:gardener-progress', progress),
+    });
+    if (handle === null) return 'busy';
     try {
       const state = await gardenerStateFor(this.services);
-      const run = await runWithProgress(this.services);
-      await state.save(run);
-      /* Same wake-up as in the channel: the report now sits differently. */
-      this.services.sendEvent('event:vault-changed', {
-        paths: [GARDENER_STATE_FILE],
-        external: false,
+      /* Reported like every other run (021a, D3): without `onProgress` the run
+         on opening the vault was invisible — it happened, and the screen said
+         nothing while it did. `trigger` tells the screen who asked. */
+      const result = await runWithProgress(this.services, {
+        signal: handle.signal,
+        trigger: handle.trigger,
+        onProgress: handle.publish,
       });
-      return 'ran';
+      /* The same rule as in the channel (021b, D2): a stop the user asked for
+         keeps what the finished stages found, a stop from closing the vault or
+         quitting keeps nothing — and this run is exactly the one that is going
+         when the vault closes. */
+      const stored =
+        handle.cancelledBy() === 'shutdown' ? false : await saveRun(this.services, state, result);
+      /* Same wake-up as in the channel, and only when something really was
+         written: the report now sits differently. */
+      if (stored) {
+        this.services.sendEvent('event:vault-changed', {
+          paths: [GARDENER_STATE_FILE],
+          external: false,
+        });
+      }
+      /* `'ran'` means: a whole run is on file. A stopped one says `'cancelled'`
+         whether or not its half was kept — `runWhenReady` must not retry it,
+         and it must not be read as the check having happened. */
+      return result.complete && stored ? 'ran' : 'cancelled';
     } catch (error) {
+      if (handle.signal.aborted) return 'cancelled';
       console.warn('[gardener] Maintenance run on open failed:', error);
       return 'no-index';
     } finally {
-      this.busy = false;
+      handle.finish();
     }
   }
 }

@@ -31,6 +31,16 @@ export type GardenerFindingKind =
 
 export type FindingSeverity = 'info' | 'warn' | 'high';
 
+/**
+ * A stage of a maintenance run, for progress reporting. Mirrors
+ * `GardenerStageId` in `@core/gardener/progress` — kept as its own type here
+ * since `src/shared/` describes the wire, not the core's own type.
+ */
+export type GardenerStageId = 'checks' | 'audit' | 'loose-ends';
+
+/** Who asked for this run — the user via the screen, or the autorun (021 D3). */
+export type GardenerRunTrigger = 'user' | 'auto';
+
 export interface GardenerFinding {
   id: string;
   kind: GardenerFindingKind;
@@ -98,6 +108,22 @@ export interface GardenerReport {
   ranAt: string;
   /** Was an LLM used, or only the deterministic checks? */
   usedLlm: boolean;
+  /**
+   * Did the run reach every stage it planned to? `false` means the run was
+   * stopped partway (021b) — a legacy run without a recorded plan reads as
+   * complete, which is what it was. Optional so a report built without any
+   * notion of stages (fixtures, the synchronous `report.ts` builder) still
+   * satisfies the type; every reader of a partial run gets it from `present()`.
+   */
+  complete?: boolean;
+  /** Stages the plan called for but this run never reached. Only set when `complete` is `false`. */
+  missingStages?: GardenerStageId[];
+  /**
+   * When `complete` is `false`: the date of the run the frozen `health` below
+   * actually comes from — not this run's own `ranAt`, which would claim a
+   * number for stages that never ran.
+   */
+  healthAsOf?: string;
   /** The open findings — and only those. */
   findings: GardenerFinding[];
   /**

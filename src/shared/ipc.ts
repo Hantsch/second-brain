@@ -33,6 +33,8 @@ import type {
   GardenerFinding,
   GardenerFindingKind,
   GardenerReport,
+  GardenerRunTrigger,
+  GardenerStageId,
   GardenerSupersedeResult,
   IngestJob,
   IngestKind,
@@ -698,7 +700,22 @@ export interface IpcRoutes {
   /** Lift a snooze — the way back to `reminders:snooze`, otherwise there would be none. */
   'reminders:unsnooze': { req: { id: string }; res: void };
   'gardener:report': { req: void; res: GardenerReport | null };
-  'gardener:run': { req: { useLlm?: boolean }; res: GardenerReport };
+  /**
+   * The current run's last-known snapshot — the same payload `event:gardener-
+   * progress` carries — or `null` when no run is going (021a, D4). This is
+   * what lets a screen mounted mid-run show the bar immediately instead of
+   * waiting for the next progress event.
+   */
+  'gardener:runStatus': { req: void; res: IpcEvents['event:gardener-progress'] | null };
+  /**
+   * `resume: true` continues the last stored run instead of starting fresh
+   * (021b, D3): stages it already finished are not run a second time — a
+   * check does not run twice, and a model stage that already answered is not
+   * asked again. Without a stored run, or with one that already reached every
+   * planned stage, this is the same as a plain run (the latter a no-op that
+   * still ends the same way a run does).
+   */
+  'gardener:run': { req: { useLlm?: boolean; resume?: boolean }; res: GardenerReport };
   /** Cancels a running maintenance pass; without a running pass, nothing happens. */
   'gardener:cancel': { req: void; res: void };
   'gardener:dismiss': { req: { id: string }; res: void };
@@ -942,6 +959,7 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'reminders:snooze',
   'reminders:unsnooze',
   'gardener:report',
+  'gardener:runStatus',
   'gardener:run',
   'gardener:cancel',
   'gardener:dismiss',
@@ -993,16 +1011,33 @@ export interface IpcEvents {
   };
   /**
    * Progress of a maintenance run. `check` is the check currently running;
-   * `null` means either the model interpretation (`phase: 'audit'`) or the
-   * end. The run can be cancelled via `gardener:cancel` — so progress here
+   * `null` means either a model stage (`phase: 'audit'` or `'loose-ends'`) or
+   * the end. The run can be cancelled via `gardener:cancel` — so progress here
    * isn't decoration, it's the basis for deciding whether to cancel.
+   *
+   * `phase`, `check`, `done`, `total` are the original, flat-count fields —
+   * kept unchanged so nothing downstream breaks mid-story. `stage`, `percent`,
+   * `remaining`, `startedAt`, `trigger` are the weighted view (021a, D1): the
+   * ten mechanical checks together count as little as one model stage's
+   * fraction, so the bar doesn't jump to ~83% before the slow part even
+   * starts. See `@core/gardener/progress` for the weight math.
    */
   'event:gardener-progress': {
-    phase: 'checks' | 'audit' | 'done';
+    phase: 'checks' | 'audit' | 'loose-ends' | 'done';
     check: GardenerFindingKind | null;
     done: number;
     total: number;
     running: boolean;
+    /** The stage this event belongs to, per the weighted stage plan. */
+    stage: GardenerStageId | 'done';
+    /** 0..100, the cumulative weighted progress. */
+    percent: number;
+    /** Stages not yet started, in plan order. */
+    remaining: GardenerStageId[];
+    /** When this run started — ISO timestamp, same convention as `ranAt`. */
+    startedAt: string;
+    /** Who asked for this run. */
+    trigger: GardenerRunTrigger;
   };
   /**
    * Progress of an installer download started via `llm:downloadRuntime`

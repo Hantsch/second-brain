@@ -7,10 +7,34 @@ export const enGarden = {
   'garden.run.again': 'Check again',
   'garden.run.cancel': 'Cancel check',
   'garden.run.running': 'Check running',
+  /* 021a, D5: the rail indicator — visible from any screen, not just the
+     maintenance screen itself, hence its own text instead of `garden.run.running`. */
+  'garden.run.railIndicator': 'Maintenance run going',
   'garden.run.check': 'Check: {check}',
   'garden.run.audit': 'The model is interpreting the results',
+  'garden.run.looseEnds': 'The model is checking loose ends',
   'garden.run.step': '{done} of {total}',
   'garden.run.cancelled': 'Cancelled. The last report stays as it was.',
+  'garden.run.remaining': 'Still to come: {list}',
+  'garden.run.stage.checks': 'checks',
+  'garden.run.stage.audit': 'contradictions',
+  'garden.run.stage.loose-ends': 'loose ends',
+  'garden.run.elapsed': 'Elapsed {elapsed}',
+  /* 021a D6: shows only when this run's stage plan has no model stage at
+     all — not merely that one hasn't come up yet. Deliberately without a
+     cause: the renderer cannot tell "no model configured" apart from
+     "switched off for this run". */
+  'garden.run.noModelStage': 'No model stage — contradictions and loose ends are not checked.',
+  'garden.run.disabledWhileRunning': 'A maintenance run is already going.',
+  /* 021b, D4: the button next to "check now" — present only when the last
+     run stopped partway and stages are still missing. */
+  'garden.run.continue': 'Continue check',
+
+  // ── Stopped partway ──────────────────────────────────────────────────────
+  /* 021b, D4: the last run did not reach every stage it planned — the report
+     says so honestly, instead of staying quiet about it. */
+  'garden.stopped.title': 'Stopped partway.',
+  'garden.stopped.missing': 'Missing stages: {list}.',
 
   // ── Health ────────────────────────────────────────────────────────────────
   'garden.health.label': 'Health',
@@ -26,6 +50,15 @@ export const enGarden = {
   'garden.health.pointOne': '1 point',
   'garden.health.points': '{count} points',
   'garden.health.ranAt': 'Last checked',
+  /* 021b, D4: shown instead of the live timestamp when the score is frozen
+     from the last complete run — this run did not recompute it. */
+  'garden.health.asOf': 'As of {when}, last complete check',
+  /* And when the stop had nothing to freeze — the first check on this vault
+     was the one that got stopped. There is no complete check to point at, so
+     the score stays unknown rather than being derived from half a run. */
+  'garden.health.noComplete': 'No complete check yet',
+  'garden.health.noCompleteBody':
+    'The check was stopped before it finished, and there is no earlier complete one. A score over half a check would not be this vault’s health.',
   'garden.health.withModel': 'interpreted with a model',
   'garden.health.withoutModel': 'without a model, machine checks only',
   'garden.health.hiddenOne':

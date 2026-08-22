@@ -74,7 +74,7 @@ async function createHarness(userDataDir: string) {
   const { forgetGardenerState } = await import('../../src/main/gardener-state');
   const { forgetOverviewState } = await import('../../src/main/overview-state');
   const { forgetSessions } = await import('../../src/main/ipc/overview-deps');
-  const { cancelGardenerRun } = await import('../../src/main/ipc/gardener');
+  const { cancelGardenerRun } = await import('../../src/main/gardener-run-state');
   const { buildHandlers } = await import('../../src/main/ipc/register-all');
 
   /* Zustand aus einem früheren Test darf nicht überleben. */

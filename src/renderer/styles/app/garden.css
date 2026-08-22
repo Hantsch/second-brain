@@ -6,6 +6,17 @@
    gradient that would fake precision. Every clickable area is at least
    `--sb-hit` tall; that applies to the mono paths too. */
 
+/* ── Header ─────────────────────────────────────────────────────────────── */
+
+/* 021b, D4: "continue" sits next to "check now" when a stopped run left
+   stages behind — secondary variant, so the one teal accent still belongs
+   to "check now" alone. */
+.sb-gheader-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 /* ── Health ─────────────────────────────────────────────────────────────── */
 
 .sb-health {
@@ -236,6 +247,24 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.sb-grun-remaining {
+  font-size: var(--text-xs);
+  color: var(--text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* 021a D6: the honest note that a run without a model skips the model
+   stages entirely — a full sentence, so it wraps instead of clipping. */
+.sb-grun-note {
+  font-size: var(--text-xs);
+  color: var(--text-faint);
+}
+.sb-grun-elapsed {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
 }
 .sb-grun-track {
   display: block;

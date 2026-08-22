@@ -13,7 +13,7 @@ import { createMainWindow } from './window';
 import { syncQuickCaptureHotkey, unregisterHotkeys, watchQuickCaptureHotkey } from './hotkey';
 import { destroyQuickCapture } from './quick-capture';
 import { startGardenerAutorun } from './gardener-autorun';
-import { cancelGardenerRun } from './ipc/gardener';
+import { cancelGardenerRun } from './gardener-run-state';
 import { startReminderNotifier } from './reminder-notify';
 import { isVault } from './vault-layout';
 import type { Services } from './services';
@@ -122,5 +122,9 @@ app.on('will-quit', () => {
   reminderNotifier = null;
   gardenerAutorun?.stop();
   gardenerAutorun = null;
-  cancelGardenerRun();
+  /* On the way out nothing of a running pass is kept (021b, D2): the atomic
+     write could not be awaited here anyway, and a vault being left behind must
+     not carry half a report. A stop the user asked for goes through
+     `gardener:cancel` and says `'user'` instead. */
+  cancelGardenerRun('shutdown');
 });

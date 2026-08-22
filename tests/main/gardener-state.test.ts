@@ -58,6 +58,22 @@ function run(findings: readonly GardenerFinding[], usedLlm = false, size = 10): 
   return { ranAt: stamp(), usedLlm, findings: [...findings], advice: [], size };
 }
 
+/**
+ * Ein abgebrochener Lauf (021b): plant mehr Stufen, als er erreicht hat, und
+ * trägt den zum Zeitpunkt des Stopps eingefrorenen Gesundheitswert.
+ */
+function partialRun(
+  findings: readonly GardenerFinding[],
+  healthAsOf: StoredRun['healthAsOf'],
+): StoredRun {
+  return {
+    ...run(findings),
+    plan: ['checks', 'audit'],
+    completed: ['checks'],
+    healthAsOf,
+  };
+}
+
 const ORPHAN = finding('orphan', 'verwaiste-seite');
 const STALE = finding('stale-page', 'angestaubte-seite');
 const BROKEN = finding('broken-link', 'kaputter-link');
@@ -69,6 +85,7 @@ const DUPLICATE = finding('near-duplicate', 'beinahe-dublette');
 interface StoredShape {
   dismissed?: string[];
   snoozed?: Record<string, string>;
+  fixed?: { id: string; undoToken: string }[];
 }
 
 describe('Pflegezustand: ausblenden, vertagen, vergessen', () => {
@@ -297,5 +314,122 @@ describe('Pflegezustand: ausblenden, vertagen, vergessen', () => {
     expect(await state.snooze(STALE.id, day(1))).toBe(false);
     expect(await state.unsnooze(STALE.id)).toBe(false);
     expect((await onDisk()).snoozed).toEqual({});
+  });
+
+  it('behält beim Speichern eines abgebrochenen Laufs jede Entscheidung, auch zu Nicht-Wiedergefundenem', async () => {
+    /* 021b D1: ein Lauf, der nur die erste Stufe erreicht hat, hat zu allem
+       ausserhalb dieser Stufe geschwiegen — Schweigen darf keine Entscheidung
+       loeschen. STALE fehlt im zweiten (abgebrochenen) Lauf komplett und wird
+       trotzdem nicht aus `dismissed` entfernt. */
+    const state = await GardenerState.load(root, TODAY);
+    await state.save(run([ORPHAN, STALE]));
+    await state.dismiss(STALE.id);
+
+    await state.save(partialRun([ORPHAN], { ranAt: stamp(), score: 70, contributions: [] }));
+
+    expect([...state.dismissed()]).toEqual([STALE.id]);
+    expect(await onDisk()).toMatchObject({ dismissed: [STALE.id] });
+  });
+
+  it('rechnet die Gesundheit eines vollständigen Laufs weiterhin selbst', async () => {
+    /* Kein `plan` gesetzt (wie bisher): unverändertes Verhalten. */
+    const state = await GardenerState.load(root, TODAY);
+    await state.save(run([BROKEN]));
+
+    const report = state.present(TODAY);
+    expect(report?.complete).toBe(true);
+    expect(report?.missingStages).toBeUndefined();
+    expect(report?.healthAsOf).toBeUndefined();
+    expect(report?.health).toBe(90);
+  });
+
+  it('zeigt bei einem abgebrochenen Lauf den eingefrorenen Wert samt seinem Datum, nicht einen aus den Teilbefunden gerechneten', async () => {
+    const frozenAt = stamp(-1);
+    const state = await GardenerState.load(root, TODAY);
+    await state.save(
+      partialRun([ORPHAN, STALE, BROKEN], { ranAt: frozenAt, score: 42, contributions: [] }),
+    );
+
+    const report = state.present(TODAY);
+    /* Drei Befunde auf 10 Einheiten würden 70 rechnen (siehe erster Test oben) —
+       gezeigt wird stattdessen der eingefrorene Wert. */
+    expect(report?.complete).toBe(false);
+    expect(report?.health).toBe(42);
+    expect(report?.healthKnown).toBe(true);
+    expect(report?.healthAsOf).toBe(frozenAt);
+    expect(report?.missingStages).toEqual(['audit']);
+  });
+
+  it('lässt die Gesundheit eines abgebrochenen Laufs ohne früheren Bericht unbekannt', async () => {
+    /* Die allererste Prüfung dieses Vaults, mittendrin gestoppt: es gibt keinen
+       vollständigen Lauf, auf den ein Wert zeigen könnte. Aus den halben
+       Befunden einen zu rechnen wäre genau die Zahl, die dieser Lauf nicht
+       hergibt — „unbekannt" ist die einzige ehrliche Antwort. */
+    const state = await GardenerState.load(root, TODAY);
+    await state.save(partialRun([ORPHAN, STALE, BROKEN], undefined));
+
+    const report = state.present(TODAY);
+    expect(report?.complete).toBe(false);
+    /* Drei Befunde auf 10 Einheiten würden 70 rechnen — es wird nichts gerechnet. */
+    expect(report?.healthKnown).toBe(false);
+    expect(report?.health).toBe(0);
+    expect(report?.healthContributions).toEqual([]);
+    expect(report?.healthAsOf).toBeUndefined();
+    /* Die Befunde selbst bleiben: gestoppt heißt behalten, nur ohne Wert. */
+    expect(report?.findings.map((finding) => finding.id)).toEqual([ORPHAN.id, STALE.id, BROKEN.id]);
+  });
+
+  it('behält einen erledigten Befund, wenn der Lauf die Prüfungen nicht selbst gefahren ist', async () => {
+    /* 021b: die Befunde eines fortgesetzten Laufs sind die geerbten des Stopps.
+       Nichts hat noch einmal in die Dateien gesehen, also darf auch nichts
+       vergessen, dass ein Fix einen davon schon erledigt hat — sonst stünde er
+       wieder offen da, ohne dass ihn jemand nachgeprüft hätte. */
+    const state = await GardenerState.load(root, TODAY);
+    await state.save(partialRun([ORPHAN, STALE], undefined));
+    await state.markFixed(ORPHAN.id, 'undo-1');
+
+    await state.save(run([ORPHAN, STALE]), { checksReran: false });
+
+    expect([...state.fixed()]).toEqual([ORPHAN.id]);
+    expect(state.present(TODAY)?.findings.map((finding) => finding.id)).toEqual([STALE.id]);
+    expect(await onDisk()).toMatchObject({ fixed: [{ id: ORPHAN.id, undoToken: 'undo-1' }] });
+  });
+
+  it('vergisst ihn bei einem Lauf, der selbst geprüft hat', async () => {
+    const state = await GardenerState.load(root, TODAY);
+    await state.save(run([ORPHAN, STALE]));
+    await state.markFixed(ORPHAN.id, 'undo-1');
+
+    await state.save(run([ORPHAN, STALE]));
+
+    /* Der neue Lauf hat die Dateien gelesen: was er findet, steht wieder offen da. */
+    expect([...state.fixed()]).toEqual([]);
+    expect(state.present(TODAY)?.findings.map((finding) => finding.id)).toEqual([
+      ORPHAN.id,
+      STALE.id,
+    ]);
+  });
+
+  it('liest einen Lauf ohne `plan` als abgeschlossen — die alte Form kannte die Stufen noch nicht', async () => {
+    await writeState({
+      version: 1,
+      run: { ranAt: stamp(), usedLlm: false, findings: [ORPHAN], advice: [], size: 10 },
+      dismissed: [],
+      fixed: [],
+    });
+
+    const state = await GardenerState.load(root, TODAY);
+    const report = state.present(TODAY);
+    expect(report?.complete).toBe(true);
+    expect(report?.missingStages).toBeUndefined();
+  });
+
+  it('verwirft eine unlesbare Datei zu `null` — „noch nicht geprüft", keine erfundene 100', async () => {
+    await mkdir(dirname(stateFile()), { recursive: true });
+    await writeFile(stateFile(), '{ das ist kein JSON', 'utf8');
+
+    const state = await GardenerState.load(root, TODAY);
+    expect(state.run()).toBeNull();
+    expect(state.present(TODAY)).toBeNull();
   });
 });

@@ -185,4 +185,9 @@ export const deDashboard = {
   'tile.gardener.findingsOne': '1 Befund',
   'tile.gardener.findingsMany': '{count} Befunde',
   'tile.gardener.open': 'Zur Pflege',
+  /* 021b D5: eine gestoppte Prüfung darf ihre unvollständige Befundzahl nicht
+     als aktuellen Zustand des Vaults verkaufen — deshalb hier Stand-Datum und
+     Stopp-Hinweis statt der üblichen Befundzahl. */
+  'tile.gardener.asOf': 'Stand {date}',
+  'tile.gardener.stopped': 'Letzte Prüfung gestoppt',
 } as const;

@@ -14,7 +14,7 @@
      like the reply stream (`llm-stream.ts`) — and a subscription that lives
      only as long as the screen is open. */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { QueryClient, UseMutationResult, UseQueryResult } from '@tanstack/react-query';
 import type { IpcEvents, IpcRequest, IpcResponse } from '@shared/ipc';
@@ -55,12 +55,18 @@ function refresh(client: QueryClient): void {
 
 /**
  * A run. `useLlm` overrides the setting for this run; without it,
- * `gardener.useLlm` in the vault decides.
+ * `gardener.useLlm` in the vault decides. `resume: true` continues the last
+ * stored run (021b, D3/D4) instead of starting fresh — the screen's
+ * "continue" button next to "check now".
  */
-export function useGardenerRun(): UseMutationResult<GardenerReport, unknown, boolean | undefined> {
+export function useGardenerRun(): UseMutationResult<
+  GardenerReport,
+  unknown,
+  IpcRequest<'gardener:run'> | undefined
+> {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (useLlm?: boolean) => api.gardener.run(useLlm),
+    mutationFn: (options?: IpcRequest<'gardener:run'>) => api.gardener.run(options),
     /* The main process has already stored the report; its version is the
        authoritative one and thus goes into the cache without a second round-trip. */
     onSuccess: (report) => {
@@ -162,14 +168,37 @@ export function useGardenerMutations(): GardenerMutations {
 
 /**
  * The progress of the running maintenance run. `null` means: none is running
- * right now. The subscription lives as long as the screen does — progress
- * that nobody watches doesn't need to be collected.
+ * right now. Seeded from `gardener:runStatus` on mount (021a, D4) — a screen
+ * opened mid-run must show the bar right away, not wait for the next
+ * `event:gardener-progress` tick, which may be seconds out. The subscription
+ * then lives as long as the screen does and layers live updates on top;
+ * progress that nobody watches doesn't need to be collected.
  */
 export function useGardenerProgress(): GardenerProgress | null {
+  const ready = useVaultReady();
   const [progress, setProgress] = useState<GardenerProgress | null>(null);
+  /* Once a live event has arrived, it is the newer truth — the seed must
+     never overwrite it, even if the query resolves after that first event
+     (e.g. a run finishing right as the screen mounts). */
+  const liveEventSeen = useRef(false);
+
+  const { data: seed } = useQuery({
+    queryKey: qk.gardener.runStatus(),
+    queryFn: api.gardener.runStatus,
+    enabled: ready,
+    /* A one-shot read of "is a run going right now" — nothing here changes
+       under a refetch that the live event stream wouldn't already report. */
+    staleTime: Infinity,
+    gcTime: 0,
+  });
+
+  useEffect(() => {
+    if (seed && !liveEventSeen.current) setProgress(seed);
+  }, [seed]);
 
   useEffect(() => {
     return bridge().on('event:gardener-progress', (next) => {
+      liveEventSeen.current = true;
       setProgress(next.running ? next : null);
     });
   }, []);

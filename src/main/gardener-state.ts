@@ -26,7 +26,13 @@
 
 import { join } from 'node:path';
 import { LLM_ONLY_KINDS, healthScore, kindOf } from '@core/gardener';
-import type { GardenerFinding, GardenerHiddenFinding, GardenerReport } from '@shared/types';
+import type {
+  GardenerFinding,
+  GardenerHealthContribution,
+  GardenerHiddenFinding,
+  GardenerReport,
+  GardenerStageId,
+} from '@shared/types';
 import { readJson, writeJsonAtomic } from './fs-json';
 
 /** Vault-relative location. Also documented in docs/VAULT-FORMAT.md. */
@@ -56,6 +62,37 @@ export interface StoredRun {
   advice: string[];
   /** `vaultSize` at the time of the run — the reference size for health. */
   size: number;
+  /**
+   * The stages this run intended to reach (021b), in `@core/gardener/progress`
+   * ids. Missing means this run predates the field — it always ran to the
+   * end, so it reads as complete (`isRunComplete`).
+   */
+  plan?: GardenerStageId[];
+  /** The stages this run actually finished. Compared against `plan`. */
+  completed?: GardenerStageId[];
+  /**
+   * The health score as it stood the moment a partial run was stopped —
+   * copied from the report that was current then. `present()` uses this
+   * instead of computing from the partial findings, so no number is ever
+   * derived from half a check. Absent on a complete run; a later complete
+   * run overwrites it away.
+   */
+  healthAsOf?: {
+    ranAt: string;
+    score: number;
+    contributions: GardenerHealthContribution[];
+  };
+}
+
+/**
+ * Complete ⟺ `completed` covers every stage of `plan`. A run stored before
+ * this field existed has no `plan` at all — it always ran start to finish, so
+ * it reads as complete rather than as a run that is somehow always partial.
+ */
+export function isRunComplete(run: StoredRun): boolean {
+  if (run.plan === undefined) return true;
+  const completed = new Set(run.completed ?? []);
+  return run.plan.every((stage) => completed.has(stage));
 }
 
 /** A resolved finding with the token used to undo its fix. */
@@ -77,8 +114,9 @@ interface StoredGardener {
   snoozed: Record<string, string>;
   /**
    * Findings a fix has written. They stay in the run and are only hidden —
-   * that way `undoFix` can bring them back without checking again. A new run
-   * clears the list: then what's in the files is what counts.
+   * that way `undoFix` can bring them back without checking again. A run that
+   * re-derived them clears the list: then what's in the files is what counts.
+   * A run that only inherited them does not (`save`, `SaveRunOptions`).
    */
   fixed: FixedFinding[];
 }
@@ -115,6 +153,45 @@ function readDays(value: unknown): Record<string, string> {
   return out;
 }
 
+function isStageId(value: unknown): value is GardenerStageId {
+  return value === 'checks' || value === 'audit' || value === 'loose-ends';
+}
+
+/**
+ * Only the stage ids this build knows. Dropping unknown ones rather than
+ * rejecting the whole list — a future version's stage name must not make a
+ * plan or a completed list unreadable for this one.
+ */
+function readStageIds(value: unknown): GardenerStageId[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  return value.filter(isStageId);
+}
+
+function isHealthContribution(value: unknown): value is GardenerHealthContribution {
+  if (value === null || typeof value !== 'object') return false;
+  const record = value as Record<string, unknown>;
+  return (
+    typeof record['kind'] === 'string' &&
+    typeof record['count'] === 'number' &&
+    typeof record['points'] === 'number'
+  );
+}
+
+/** The frozen score of a partial run. Missing or malformed reads as absent —
+ * the health of that run is then unknown, never computed over its own
+ * (incomplete) findings (`present()`). */
+function readHealthAsOf(value: unknown): StoredRun['healthAsOf'] {
+  if (value === null || typeof value !== 'object') return undefined;
+  const record = value as Record<string, unknown>;
+  const ranAt = record['ranAt'];
+  const score = record['score'];
+  if (typeof ranAt !== 'string' || typeof score !== 'number') return undefined;
+  const contributions = Array.isArray(record['contributions'])
+    ? record['contributions'].filter(isHealthContribution)
+    : [];
+  return { ranAt, score, contributions };
+}
+
 function readFixed(value: unknown): FixedFinding[] {
   if (!Array.isArray(value)) return [];
   const result: FixedFinding[] = [];
@@ -143,6 +220,9 @@ function readRun(value: unknown): StoredRun | null {
     consideredIds: readStrings(record['consideredIds']),
     advice: readStrings(record['advice']),
     size: Math.max(0, Math.trunc(size)),
+    plan: readStageIds(record['plan']),
+    completed: readStageIds(record['completed']),
+    healthAsOf: readHealthAsOf(record['healthAsOf']),
   };
 }
 
@@ -181,6 +261,20 @@ function consideredBy(run: StoredRun): ReadonlySet<string> {
   const ids = new Set(run.findings.map((finding) => finding.id));
   for (const id of run.consideredIds ?? []) ids.add(id);
   return ids;
+}
+
+/** What `save()` has to know about the run it is storing (021b, D3). */
+export interface SaveRunOptions {
+  /**
+   * Did this call run the `checks` stage itself?
+   *
+   * `false` for a resumed run: its findings are the ones inherited from the
+   * earlier stop, not re-derived here (`runWithProgress`). Nothing looked at
+   * the files again, so nothing may forget that a fix already resolved one of
+   * them — `fixed` stays. Defaults to `true`, so a caller that doesn't say is
+   * treated as a run that checked, exactly as before this option existed.
+   */
+  checksReran?: boolean;
 }
 
 /**
@@ -262,10 +356,22 @@ export class GardenerState {
    * finding: gone from both lists, because an answer isn't a decision to
    * review, and gone here rather than at each caller, so no reader of a stored
    * run can miss it (`ipc/gardener-deps.ts`, `gardenerReport`).
+   *
+   * A partial run (021b) never computes its own score: `findings` here is
+   * whatever a stopped run happened to gather, and a number derived from that
+   * would look precise while being an artifact of when the stop landed.
+   * Instead the frozen `run.healthAsOf` — the score as it stood at the moment
+   * of the stop — is shown, with the date it actually came from so the screen
+   * doesn't pass it off as this run's own. And when there was nothing to
+   * freeze — the very first check on a vault, stopped mid-run — the health is
+   * **unknown** (`healthKnown: false`), because there is no complete check to
+   * point at yet. Falling back to a computed number there would be exactly the
+   * lie the frozen score exists to prevent.
    */
   present(today: string, resolved: ReadonlySet<string> = new Set()): GardenerReport | null {
     const run = this.data.run;
     if (run === null) return null;
+    const complete = isRunComplete(run);
     const dismissed = this.dismissed();
     const fixed = this.fixed();
     const findings: GardenerFinding[] = [];
@@ -278,10 +384,20 @@ export class GardenerState {
         hidden.push({ finding, state: 'snoozed', until });
       } else findings.push(finding);
     }
-    const health = healthScore(findings, run.size);
+    const frozen = run.healthAsOf;
+    const health = complete
+      ? healthScore(findings, run.size)
+      : { score: frozen?.score ?? null, contributions: frozen?.contributions ?? [] };
+    const completedStages = new Set(run.completed ?? []);
+    const missingStages = complete
+      ? undefined
+      : (run.plan ?? []).filter((stage) => !completedStages.has(stage));
     return {
       ranAt: run.ranAt,
       usedLlm: run.usedLlm,
+      complete,
+      missingStages,
+      healthAsOf: !complete ? run.healthAsOf?.ranAt : undefined,
       findings,
       hidden,
       health: health.score ?? 0,
@@ -302,17 +418,27 @@ export class GardenerState {
    * is gone".
    *
    * The list of resolved findings is cleared — what a fix actually resolved is
-   * now determined by the new run.
+   * now determined by the new run. Only for a run that **re-derived** it,
+   * though (`options.checksReran`, 021b): a resumed run carries the findings of
+   * the stop it continues, so clearing there would put a finding the user fixed
+   * in the meantime back on the open list, with nothing having re-checked it.
+   *
+   * A **partial** run (021b) prunes nothing: it stopped before reaching every
+   * planned stage, so its silence about a finding says nothing about whether
+   * that finding is still there — exactly the same reasoning `outlivesRun`
+   * already applies to a single missing kind, only here for the whole run.
    */
-  async save(run: StoredRun): Promise<void> {
+  async save(run: StoredRun, options: SaveRunOptions = {}): Promise<void> {
     const considered = consideredBy(run);
     this.data.run = run;
-    this.data.fixed = [];
-    this.data.dismissed = this.data.dismissed.filter((id) =>
-      outlivesRun(id, considered, run.usedLlm),
-    );
-    for (const id of Object.keys(this.data.snoozed)) {
-      if (!outlivesRun(id, considered, run.usedLlm)) delete this.data.snoozed[id];
+    if (options.checksReran !== false) this.data.fixed = [];
+    if (isRunComplete(run)) {
+      this.data.dismissed = this.data.dismissed.filter((id) =>
+        outlivesRun(id, considered, run.usedLlm),
+      );
+      for (const id of Object.keys(this.data.snoozed)) {
+        if (!outlivesRun(id, considered, run.usedLlm)) delete this.data.snoozed[id];
+      }
     }
     await this.write();
   }

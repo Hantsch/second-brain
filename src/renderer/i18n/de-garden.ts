@@ -18,10 +18,36 @@ export const deGarden = {
   'garden.run.again': 'Neu prüfen',
   'garden.run.cancel': 'Prüfung abbrechen',
   'garden.run.running': 'Prüfung läuft',
+  /* 021a, D5: die Rail-Anzeige — sichtbar auf jedem Screen, nicht nur auf der
+     Pflege-Seite selbst, daher ein eigener Text statt `garden.run.running`. */
+  'garden.run.railIndicator': 'Wartungslauf läuft',
   'garden.run.check': 'Prüfung: {check}',
   'garden.run.audit': 'Das Modell deutet die Befunde',
+  'garden.run.looseEnds': 'Das Modell prüft lose Enden',
   'garden.run.step': '{done} von {total}',
   'garden.run.cancelled': 'Abgebrochen. Der letzte Bericht bleibt, wie er war.',
+  'garden.run.remaining': 'Noch aus: {list}',
+  'garden.run.stage.checks': 'Prüfungen',
+  'garden.run.stage.audit': 'Widersprüche',
+  'garden.run.stage.loose-ends': 'lose Enden',
+  'garden.run.elapsed': 'Laufzeit {elapsed}',
+  /* 021a D6: steht nur, wenn der Stufenplan dieses Laufs gar keine
+     Modell-Stufe enthält — nicht, wenn sie nur noch nicht dran war. Absichtlich
+     ohne Ursache: der Renderer kann „kein Modell konfiguriert" nicht von
+     „für diesen Lauf abgeschaltet" unterscheiden. */
+  'garden.run.noModelStage':
+    'Keine Modell-Stufe — Widersprüche und lose Enden werden nicht geprüft.',
+  'garden.run.disabledWhileRunning': 'Ein Pflegelauf läuft schon.',
+  /* 021b, D4: der Knopf neben „jetzt prüfen" — nur da, wenn der letzte Lauf
+     vorzeitig stoppte und noch Stufen offen sind. */
+  'garden.run.continue': 'Prüfung fortsetzen',
+
+  // ── Vorzeitig gestoppt ────────────────────────────────────────────────────
+  /* 021b, D4: der letzte Lauf hat nicht jede geplante Stufe erreicht — der
+     Bericht ist ehrlich unvollständig, statt das stillschweigend zu
+     verschweigen. */
+  'garden.stopped.title': 'Vorzeitig gestoppt.',
+  'garden.stopped.missing': 'Fehlende Stufen: {list}.',
 
   // ── Gesundheit ────────────────────────────────────────────────────────────
   'garden.health.label': 'Gesundheit',
@@ -37,6 +63,15 @@ export const deGarden = {
   'garden.health.pointOne': '1 Punkt',
   'garden.health.points': '{count} Punkte',
   'garden.health.ranAt': 'Zuletzt geprüft',
+  /* 021b, D4: steht statt der lebenden Zeitangabe, wenn der Wert vom letzten
+     vollständigen Lauf einfriert — dieser Lauf hat ihn nicht neu berechnet. */
+  'garden.health.asOf': 'Stand {when}, letzte vollständige Prüfung',
+  /* Und wenn der Stopp nichts einzufrieren hatte — die erste Prüfung dieses
+     Vaults war die gestoppte. Es gibt keine vollständige Prüfung, auf die sich
+     ein Wert beziehen könnte, also bleibt er unbekannt. */
+  'garden.health.noComplete': 'Noch keine vollständige Prüfung',
+  'garden.health.noCompleteBody':
+    'Die Prüfung wurde vorzeitig gestoppt, und eine frühere vollständige gibt es nicht. Ein Wert über eine halbe Prüfung wäre nicht die Gesundheit dieses Vaults.',
   'garden.health.withModel': 'mit Modell gedeutet',
   'garden.health.withoutModel': 'ohne Modell, nur die maschinellen Prüfungen',
   'garden.health.hiddenOne':

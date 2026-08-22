@@ -172,4 +172,9 @@ export const enDashboard = {
   'tile.gardener.findingsOne': '1 result',
   'tile.gardener.findingsMany': '{count} results',
   'tile.gardener.open': 'Open Care',
+  /* 021b D5: a stopped check must not sell its partial finding count as the
+     vault's current state — hence the as-of date and the stopped note
+     instead of the usual finding count. */
+  'tile.gardener.asOf': 'As of {date}',
+  'tile.gardener.stopped': 'Last check was stopped',
 } as const;

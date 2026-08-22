@@ -82,6 +82,8 @@ export const qk = {
   },
   gardener: {
     report: () => ['gardener', 'report'] as const,
+    /** Seeds `useGardenerProgress` on mount — a run may already be going. */
+    runStatus: () => ['gardener', 'runStatus'] as const,
   },
   claude: {
     sessions: () => ['claude', 'sessions'] as const,

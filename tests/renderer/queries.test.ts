@@ -9,7 +9,9 @@
  */
 
 import { describe, expect, it, vi } from 'vitest';
-import { QueryClient } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { renderHook, waitFor } from '@testing-library/react';
+import type { ReactNode } from 'react';
 import { qk, VAULT_DEPENDENT_ROOTS } from '@renderer/lib/queries/keys';
 import type { IpcEventName, IpcEvents } from '@shared/ipc';
 
@@ -100,6 +102,11 @@ describe('Ereignisse', () => {
       done: 1,
       total: 9,
       running: true,
+      stage: 'checks',
+      percent: 11,
+      remaining: [],
+      startedAt: new Date().toISOString(),
+      trigger: 'user',
     });
     /* Zwischenstand: nichts nachladen, sonst rendert jede Prüfung neu. */
     expect(invalidate).not.toHaveBeenCalled();
@@ -110,6 +117,11 @@ describe('Ereignisse', () => {
       done: 9,
       total: 9,
       running: false,
+      stage: 'done',
+      percent: 100,
+      remaining: [],
+      startedAt: new Date().toISOString(),
+      trigger: 'user',
     });
 
     const keys = invalidate.mock.calls.map(([filter]) => JSON.stringify(filter?.queryKey));
@@ -166,5 +178,69 @@ describe('Ereignisse', () => {
     });
 
     expect(invalidate).not.toHaveBeenCalled();
+  });
+});
+
+/* 021a, D4: mounting the maintenance screen mid-run must show the running bar
+   right away, not only once the next `event:gardener-progress` tick arrives —
+   which, for a run already underway, may be seconds out. `useGardenerProgress`
+   seeds itself from `gardener:runStatus` on mount for exactly that reason. */
+describe('useGardenerProgress seeds from gardener:runStatus', () => {
+  function wrapWithClient(invoke: (channel: string, payload?: unknown) => unknown): {
+    wrapper: (props: { children: ReactNode }) => ReactNode;
+  } {
+    const sb = {
+      invoke: vi.fn((channel: string, payload?: unknown) => Promise.resolve(invoke(channel, payload))),
+      on: () => () => undefined,
+      off: vi.fn(),
+    };
+    window.sb = sb as unknown as typeof window.sb;
+    const client = new QueryClient();
+    return {
+      wrapper: ({ children }: { children: ReactNode }) =>
+        QueryClientProvider({ client, children }),
+    };
+  }
+
+  it('shows the running snapshot immediately when a run is already going', async () => {
+    const { wrapper } = wrapWithClient((channel) => {
+      if (channel === 'vault:status') return { ready: true, indexing: false };
+      if (channel === 'gardener:runStatus') {
+        return {
+          phase: 'checks',
+          check: 'orphan',
+          done: 2,
+          total: 9,
+          running: true,
+          stage: 'checks',
+          percent: 22,
+          remaining: [],
+          startedAt: new Date().toISOString(),
+          trigger: 'user',
+        };
+      }
+      return null;
+    });
+
+    const { useGardenerProgress } = await import('@renderer/lib/queries/gardener');
+    const { result } = renderHook(() => useGardenerProgress(), { wrapper });
+
+    await waitFor(() => expect(result.current?.running).toBe(true));
+    expect(result.current).toMatchObject({ running: true, trigger: 'user' });
+  });
+
+  it('stays null when no run is going', async () => {
+    const { wrapper } = wrapWithClient((channel) => {
+      if (channel === 'vault:status') return { ready: true, indexing: false };
+      if (channel === 'gardener:runStatus') return null;
+      return null;
+    });
+
+    const { useGardenerProgress } = await import('@renderer/lib/queries/gardener');
+    const { result } = renderHook(() => useGardenerProgress(), { wrapper });
+
+    /* Give the seed query a tick to settle, then confirm it never flips. */
+    await waitFor(() => expect(window.sb?.invoke).toHaveBeenCalledWith('gardener:runStatus', undefined));
+    expect(result.current).toBeNull();
   });
 });

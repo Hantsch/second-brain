@@ -82,6 +82,17 @@ export {
 } from './supersede';
 export { FULL_ROT_PENALTY_PER_UNIT, healthScore, vaultSize, type HealthResult } from './health';
 export {
+  CHECKS_STAGE_WEIGHT,
+  MODEL_STAGE_WEIGHT,
+  computeProgress,
+  computeStagePlan,
+  type GardenerStageId,
+  type ProgressInput,
+  type ProgressResult,
+  type StagePlanEntry,
+  type StagePlanOptions,
+} from './progress';
+export {
   GERMAN_GARDENER_LABELS,
   type FindingText,
   type GardenerLabels,

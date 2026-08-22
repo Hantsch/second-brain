@@ -938,6 +938,75 @@ describe('Kacheln', () => {
     expect(screen.getByText('3 Befunde')).toBeTruthy();
   });
 
+  it('verkauft einen gestoppten Lauf nicht als aktuelle Befundzahl (021b D5)', async () => {
+    mount({
+      data: { ...dashboardFixture, healthKnown: true, health: 84, findingCount: 3 },
+      extra: {
+        'gardener:report': () => ({
+          ranAt: '2026-08-22T09:00:00.000Z',
+          usedLlm: false,
+          complete: false,
+          missingStages: ['loose-ends'],
+          healthAsOf: '2026-08-20T09:00:00.000Z',
+          findings: [],
+          health: 84,
+          healthKnown: true,
+          advice: [],
+        }),
+      },
+    });
+    wrap(<GardenerTile />);
+    expect(await screen.findByText('84')).toBeTruthy();
+    expect(screen.getByText(/Letzte Prüfung gestoppt/)).toBeTruthy();
+    expect(screen.queryByText('3 Befunde')).toBeNull();
+  });
+
+  it('behauptet nach einer ersten, gestoppten Prüfung keinen Wert (021b)', async () => {
+    /* Der Lauf wurde gestoppt, bevor je einer vollständig war: es gibt keinen
+       eingefrorenen Wert, also sagt die Kachel „noch nicht geprüft" — statt
+       eine Zahl aus einer halben Prüfung zu zeigen. */
+    mount({
+      data: { ...dashboardFixture, healthKnown: false, health: 0, findingCount: 0 },
+      extra: {
+        'gardener:report': () => ({
+          ranAt: '2026-08-22T09:00:00.000Z',
+          usedLlm: false,
+          complete: false,
+          missingStages: ['audit', 'loose-ends'],
+          findings: [],
+          health: 0,
+          healthKnown: false,
+          advice: [],
+        }),
+      },
+    });
+    wrap(<GardenerTile />);
+    expect(await screen.findByText(/Noch nicht geprüft/)).toBeTruthy();
+    expect(screen.queryByText(/Stand/)).toBeNull();
+    expect(screen.queryByText('0')).toBeNull();
+  });
+
+  it('lässt bei fehlendem Stand das Datum weg, statt es leer hinzuschreiben', async () => {
+    mount({
+      data: { ...dashboardFixture, healthKnown: true, health: 84, findingCount: 3 },
+      extra: {
+        'gardener:report': () => ({
+          ranAt: '2026-08-22T09:00:00.000Z',
+          usedLlm: false,
+          complete: false,
+          missingStages: ['loose-ends'],
+          findings: [],
+          health: 84,
+          healthKnown: true,
+          advice: [],
+        }),
+      },
+    });
+    wrap(<GardenerTile />);
+    expect(await screen.findByText('Letzte Prüfung gestoppt')).toBeTruthy();
+    expect(screen.queryByText(/Stand/)).toBeNull();
+  });
+
   it('zeigt die Serie und den Stimmungsverlauf mit Textalternative', async () => {
     mount();
     wrap(<JournalStreakTile />);

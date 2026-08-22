@@ -31,6 +31,11 @@ import type { GardenerFinding } from '@shared/types';
 import { FsVaultStore, sha256 } from '@core/vault';
 import { createFetchFake, jsonResponse } from '../fakes/llm';
 import { toIpcError } from '../../src/main/ipc/errors';
+import {
+  beginGardenerRun,
+  cancelGardenerRun,
+  gardenerRunSnapshot,
+} from '../../src/main/gardener-run-state';
 import { IPC_ERROR_PREFIX, encodeIpcError } from '../../src/preload/ipc-error-wire';
 import { createTempVault } from '../helpers/vault';
 import type { TempVault } from '../helpers/vault';
@@ -64,7 +69,7 @@ async function createHarness(userDataDir: string) {
   const { forgetGardenerState } = await import('../../src/main/gardener-state');
   const { forgetOverviewState } = await import('../../src/main/overview-state');
   const { forgetSessions } = await import('../../src/main/ipc/overview-deps');
-  const { cancelGardenerRun, gardenerHandlers } = await import('../../src/main/ipc/gardener');
+  const { gardenerHandlers } = await import('../../src/main/ipc/gardener');
   const { dashboardHandlers } = await import('../../src/main/ipc/dashboard');
   const { moduleHandlers } = await import('../../src/main/ipc/modules');
   const { reminderHandlers } = await import('../../src/main/ipc/reminders');
@@ -339,8 +344,11 @@ describe('Pflege-Kanäle im Main', () => {
        hier allein an der zweiten Stufe (F1: das ODER, nicht nur der Audit). */
     expect(report.advice).toEqual([]);
     expect(report.usedLlm).toBe(true);
-    /* Und die Stufe meldet sich im Fortschritt, statt still zu laufen. */
-    expect(progress(harness).some((step) => step.phase === 'audit')).toBe(true);
+    /* Und die Stufe meldet sich im Fortschritt, statt still zu laufen — seit
+       021a D1 unter eigenem Namen: sie wiegt eigenständig, also heißt sie auch
+       eigenständig und teilt sich `'audit'` nicht mehr mit der Deutung. */
+    expect(progress(harness).some((step) => step.phase === 'loose-ends')).toBe(true);
+    expect(progress(harness).some((step) => step.phase === 'audit')).toBe(false);
   });
 
   it('lässt ein beantwortetes loses Ende auch aus dem abgelegten Bericht heraus — ohne neuen Lauf', async () => {
@@ -381,35 +389,365 @@ describe('Pflege-Kanäle im Main', () => {
     expect(steps.at(-1)).toMatchObject({ running: false });
   });
 
-  it('bricht einen Lauf ab und lässt den letzten Bericht unberührt', async () => {
+  /**
+   * Bricht den Lauf ab, sobald `phase` gemeldet wird — synchron aus der
+   * Ereignisschleife heraus, denn genau zwischen zwei Stufen gibt der Lauf ihr
+   * das Wort. `stop` sagt, welcher Abbruch es ist: der geklickte
+   * (`gardener:cancel`) oder der beim Schließen und Beenden (`main/index.ts`).
+   * Der Rückgabewert stellt den Versand wieder her.
+   */
+  function cancelOn(
+    phase: IpcEvents['event:gardener-progress']['phase'],
+    stop: () => void,
+  ): () => void {
+    const send = harness.services.sendEvent;
+    let fired = false;
+    harness.services.sendEvent = ((name, payload) => {
+      send(name, payload);
+      if (fired || name !== 'event:gardener-progress') return;
+      if ((payload as IpcEvents['event:gardener-progress']).phase !== phase) return;
+      fired = true;
+      stop();
+    }) as typeof harness.services.sendEvent;
+    return () => {
+      harness.services.sendEvent = send;
+    };
+  }
+
+  /**
+   * Routen für **beide** Modellstufen. Gefragt wird trotzdem keins: die Tests
+   * hier brechen ab, bevor die Stufe ihren Aufruf macht — und genau das prüft
+   * `fake.calls`.
+   */
+  async function routeModelStages() {
+    await harness.settings.setVaultSection('providers', [
+      {
+        id: 'local-1',
+        label: 'Lokal',
+        kind: 'openai-compatible',
+        baseUrl: 'http://localhost:11434/v1',
+        hasKey: false,
+        local: true,
+        enabled: true,
+        models: ['qwen2.5:14b'],
+        createdAt: '2026-08-10T12:00:00.000Z',
+      },
+    ]);
+    const ref = { providerId: 'local-1', model: 'qwen2.5:14b' };
+    await harness.settings.setVaultSection('routing', {
+      tasks: { 'gardener-audit': ref, 'journal-loose-ends': ref },
+      defaults: {},
+    });
+    const fake = createFetchFake(() => jsonResponse({ choices: [{ message: { content: '{}' } }] }));
+    vi.stubGlobal('fetch', fake.fetch);
+    return fake;
+  }
+
+  it('behält beim Abbruch, was die fertigen Stufen gefunden haben — als Teillauf', async () => {
+    /* Ein vollständiger Lauf zuerst: nur gegen ihn ist zu sehen, dass der
+       Teillauf dieselben Befunde trägt und die alte Zahl übernimmt. */
+    const first = await harness.call('gardener:run', {});
+    const fake = await routeModelStages();
+    harness.sent.length = 0;
+
+    /* Abbrechen, sobald die Deutung dran ist: die zehn Prüfungen sind fertig,
+       die beiden Modellstufen haben nicht angefangen. */
+    const restore = cancelOn('audit', () => void harness.call('gardener:cancel', undefined));
+    const partial = await harness.call('gardener:run', { useLlm: true });
+    restore();
+
+    /* Kein Modell wurde gefragt — der Abbruch kam davor. */
+    expect(fake.calls.length).toBe(0);
+    /* Der Lauf ist da, und er gibt sich als halber zu erkennen. (Die Uhr steht
+       im Test, `ranAt` unterscheidet die beiden Läufe also nicht — dass der
+       Teillauf den vollständigen abgelöst hat, zeigt die Datei unten.) */
+    expect(partial.complete).toBe(false);
+    expect(partial.missingStages).toEqual(['audit', 'loose-ends']);
+    expect(partial.usedLlm).toBe(false);
+    /* Und er trägt genau das, was die Prüfungen gefunden haben: derselbe
+       unveränderte Vault, dieselben Befunde wie im vollständigen Lauf. */
+    expect(partial.findings.map((finding) => finding.id)).toEqual(
+      first.findings.map((finding) => finding.id),
+    );
+    /* Die Zahl stammt aus dem letzten **vollständigen** Lauf und sagt das auch,
+       statt aus einer halben Prüfung gerechnet zu werden. */
+    expect(partial.health).toBe(first.health);
+    expect(partial.healthAsOf).toBe(first.ranAt);
+
+    /* Nicht nur im Speicher: so steht es in der Datei. */
+    const stored = JSON.parse((await vault.read('.secondbrain/gardener.json')) ?? '{}') as {
+      run: { plan?: string[]; completed?: string[]; healthAsOf?: { ranAt: string } };
+    };
+    expect(stored.run.plan).toEqual(['checks', 'audit', 'loose-ends']);
+    expect(stored.run.completed).toEqual(['checks']);
+    expect(stored.run.healthAsOf?.ranAt).toBe(first.ranAt);
+
+    /* Der abgebrochene Lauf endet sichtbar und gibt den Platz frei. */
+    expect(progress(harness).at(-1)).toMatchObject({ running: false });
+    expect(gardenerRunSnapshot()).toBeNull();
+    expect(await harness.call('gardener:runStatus', undefined)).toBeNull();
+  });
+
+  it('lässt „abbrechen" den Lauf nicht mehr scheitern — und den letzten Bericht unberührt', async () => {
     const first = await harness.call('gardener:run', {});
     harness.sent.length = 0;
 
     /* Beim ersten Fortschritt abbrechen — der Lauf gibt der Ereignisschleife
        zwischen zwei Prüfungen das Wort, sonst käme der Abbruch nie an. */
-    let cancelled = false;
-    const send = harness.services.sendEvent;
-    harness.services.sendEvent = ((name, payload) => {
-      send(name, payload);
-      if (name === 'event:gardener-progress' && !cancelled) {
-        cancelled = true;
-        void harness.call('gardener:cancel', undefined);
-      }
-    }) as typeof harness.services.sendEvent;
+    const restore = cancelOn('checks', () => void harness.call('gardener:cancel', undefined));
+    const answer = await harness.call('gardener:run', {});
+    restore();
 
-    await expect(harness.call('gardener:run', {})).rejects.toMatchObject({ code: 'cancelled' });
-    harness.services.sendEvent = send;
-
+    /* Ein Abbruch ist kein Fehler mehr: die Antwort ist der Bericht, der auf
+       der Platte steht. */
+    expect(answer.ranAt).toBe(first.ranAt);
+    expect(answer.complete).not.toBe(false);
+    expect(answer.findings.map((finding) => finding.id)).toEqual(
+      first.findings.map((finding) => finding.id),
+    );
+    /* Ein Lauf, der keine einzige Stufe geschafft hat, hat nichts abgeleitet —
+       er darf einen vollständigen Bericht nicht durch einen leeren ersetzen. */
     const kept = await harness.call('gardener:report', undefined);
     expect(kept?.ranAt).toBe(first.ranAt);
+    expect(kept?.complete).not.toBe(false);
     /* Auch der abgebrochene Lauf endet sichtbar. */
     expect(progress(harness).at(-1)).toMatchObject({ running: false });
+    /* Und er hinterlässt keinen Zustand, der weiter „es läuft" behauptet. */
+    expect(gardenerRunSnapshot()).toBeNull();
   });
 
-  it('lässt keinen zweiten Lauf gleichzeitig zu', async () => {
+  it('schreibt beim Abbruch durchs Beenden gar nichts', async () => {
+    const first = await harness.call('gardener:run', {});
+    await routeModelStages();
+    const before = await vault.read('.secondbrain/gardener.json');
+    harness.sent.length = 0;
+
+    /* Genau der Aufruf aus `main/index.ts`: der Vault wird geschlossen. Auch
+       nach fertigen Prüfungen bleibt davon nichts liegen. */
+    const restore = cancelOn('audit', () => cancelGardenerRun('shutdown'));
+    const answer = await harness.call('gardener:run', { useLlm: true });
+    restore();
+
+    expect(await vault.read('.secondbrain/gardener.json')).toBe(before);
+    expect(answer.ranAt).toBe(first.ranAt);
+    expect(answer.complete).not.toBe(false);
+    expect(answer.healthAsOf).toBeUndefined();
+    expect(progress(harness).at(-1)).toMatchObject({ running: false });
+    expect(gardenerRunSnapshot()).toBeNull();
+  });
+
+  it('bricht den Lauf beim Schließen des Vaults ab — mit dem Grund, der nichts aufhebt', async () => {
+    /* Derselbe Weg wie beim Wechseln des Vaults: `openVault` schließt den alten
+       zuerst. Bliebe der Lauf laufen, schriebe er in einen Vault, den der
+       Nutzer gerade zugemacht hat — oder in den, der ihn ablöst. */
+    const emitted: unknown[] = [];
+    const handle = beginGardenerRun({ trigger: 'user', emit: (step) => emitted.push(step) });
+    expect(handle).not.toBeNull();
+
+    await harness.services.closeVault();
+
+    expect(handle?.cancelledBy()).toBe('shutdown');
+    expect(handle?.signal.aborted).toBe(true);
+    expect(gardenerRunSnapshot()).toBeNull();
+  });
+
+  it('hört auf zu arbeiten, wenn der Vault mitten im Lauf geschlossen wird', async () => {
+    const first = await harness.call('gardener:run', {});
+    const fake = await routeModelStages();
+    /* Eine Änderung, die ein weiterlaufender Lauf mitschriebe: fiele doch etwas
+       in die Datei, stünde sie dort — bei stehender Uhr wären zwei gleiche
+       Läufe sonst Byte für Byte identisch. */
+    await addScimMention(vault, harness);
+    const before = await vault.read('.secondbrain/gardener.json');
+    harness.sent.length = 0;
+
+    /* Der Vault geht zu, während die Deutung dran wäre: die zehn Prüfungen sind
+       fertig — weitergerechnet wird trotzdem nichts mehr. */
+    const restore = cancelOn('audit', () => void harness.services.closeVault());
+    const running = harness.call('gardener:run', { useLlm: true });
+    /* Ohne Vault gibt es auch keinen Bericht mehr zurückzulesen — der Lauf
+       endet mit genau dieser Absage, nicht mit einem halben Bericht. */
+    await expect(running).rejects.toMatchObject({ code: 'no-vault' });
+    restore();
+
+    /* Der Beweis, dass der Abbruch angekommen ist: die Modellstufe hat nach dem
+       Schließen nicht mehr angefangen. Ein Lauf, der weiterliefe, würde für
+       einen zugemachten Vault noch ein Modell fragen — und danach in ihn
+       schreiben. */
+    expect(fake.calls.length).toBe(0);
+    expect(await vault.read('.secondbrain/gardener.json')).toBe(before);
+    expect(gardenerRunSnapshot()).toBeNull();
+
+    /* Und nach dem Wiederöffnen steht der letzte vollständige Bericht da. */
+    await harness.services.openVault(vault.root);
+    const kept = await harness.call('gardener:report', undefined);
+    expect(kept?.ranAt).toBe(first.ranAt);
+    expect(kept?.complete).not.toBe(false);
+  });
+
+  // ── Fortsetzen (021b, D3) ───────────────────────────────────────────────────
+
+  it('setzt einen abgebrochenen Lauf fort, ohne eine Prüfung zu wiederholen', async () => {
+    await seedAnnouncingDay();
+    const fake = await routeModelStages();
+
+    /* Abbrechen, sobald die Deutung dran ist: die zehn Prüfungen sind fertig,
+       die beiden Modellstufen haben nicht angefangen — derselbe Zustand wie im
+       Teillauf-Test oben. */
+    const restore = cancelOn('audit', () => void harness.call('gardener:cancel', undefined));
+    const partial = await harness.call('gardener:run', { useLlm: true });
+    restore();
+    expect(partial.complete).toBe(false);
+    expect(fake.calls.length).toBe(0);
+    const orphanBefore = findingOfKind(partial.findings, 'orphan');
+    expect(orphanBefore.paths[0]).toBe(SCIM);
+    expect(orphanBefore.fix).toBeNull();
+
+    /* Eine Änderung, die eine erneute Prüfung sichtbar verändern würde: die
+       verwaiste Seite bekommt eine Erwähnung, die ihr einen automatischen Fix
+       gäbe — sähe der fortgesetzte Lauf den `orphan`-Befund noch einmal, trüge
+       er diesen Fix. Steht er weiter mit `fix: null` da, hat die Prüfung nicht
+       noch einmal gelaufen. */
+    await addScimMention(vault, harness);
+    harness.sent.length = 0;
+
+    const resumed = await harness.call('gardener:run', { useLlm: true, resume: true });
+
+    /* Beide Modellstufen sind jetzt tatsächlich gelaufen — genau einmal je Stufe. */
+    expect(fake.calls.length).toBe(2);
+    expect(resumed.complete).not.toBe(false);
+    const orphanAfter = findingOfKind(resumed.findings, 'orphan');
+    expect(orphanAfter.paths[0]).toBe(SCIM);
+    expect(orphanAfter.fix).toBeNull();
+
+    /* Der Fortschritt beginnt bei der Deutung, nicht bei den Prüfungen: der
+       erste Schritt dieses Laufs liegt schon über 0%, weil die Prüfungen als
+       erledigt gelten, statt den Balken neu bei null zu zeigen. */
+    const steps = progress(harness);
+    expect(steps.length).toBeGreaterThan(0);
+    expect(steps.every((step) => step.phase !== 'checks')).toBe(true);
+    expect(steps[0]?.percent).toBeGreaterThan(0);
+  });
+
+  it('lässt eine Entscheidung über einen Fortsetzungslauf hinweg unberührt', async () => {
+    await seedAnnouncingDay();
+    await routeModelStages();
+    const restore = cancelOn('audit', () => void harness.call('gardener:cancel', undefined));
+    const partial = await harness.call('gardener:run', { useLlm: true });
+    restore();
+    const dismissTarget = findingOfKind(partial.findings, 'broken-link');
+    await harness.call('gardener:dismiss', { id: dismissTarget.id });
+
+    const resumed = await harness.call('gardener:run', { useLlm: true, resume: true });
+
+    /* Nach dem fortgesetzten, jetzt vollständigen Lauf gilt „passt so" weiter —
+       `save()` prunte normal, weil der Lauf vollständig ist, und die
+       Entscheidung hat weiter ein Ziel. */
+    expect(resumed.findings.some((finding) => finding.id === dismissTarget.id)).toBe(false);
+    const state = JSON.parse((await vault.read('.secondbrain/gardener.json')) ?? '{}') as {
+      dismissed: string[];
+    };
+    expect(state.dismissed).toContain(dismissTarget.id);
+  });
+
+  it('lässt einen erledigten Befund den Fortsetzungslauf überleben', async () => {
+    await routeModelStages();
+    const restore = cancelOn('audit', () => void harness.call('gardener:cancel', undefined));
+    const partial = await harness.call('gardener:run', { useLlm: true });
+    restore();
+    expect(partial.complete).toBe(false);
+
+    /* Zwischen Stopp und Fortsetzen wird einer der gefundenen Befunde per Fix
+       erledigt — die Datei ist geschrieben, der Befund nur noch ausgeblendet. */
+    const drift = partial.findings.find(
+      (finding) => finding.kind === 'index-drift' && finding.fix?.action === 'add-to-index',
+    ) as GardenerFinding;
+    expect(drift).toBeDefined();
+    const applied = await harness.call('gardener:applyFix', { finding: drift });
+    expect(applied.undoToken).toBeDefined();
+
+    const resumed = await harness.call('gardener:run', { useLlm: true, resume: true });
+
+    /* Der fortgesetzte Lauf erbt die Befunde des Stopps, er prüft sie nicht neu.
+       Also darf er auch nicht vergessen, dass dieser hier erledigt ist — sonst
+       stünde er wieder offen da, ohne dass irgendwer nachgesehen hätte. */
+    expect(resumed.complete).not.toBe(false);
+    expect(resumed.findings.some((finding) => finding.id === drift.id)).toBe(false);
+    const stored = JSON.parse((await vault.read('.secondbrain/gardener.json')) ?? '{}') as {
+      fixed: { id: string }[];
+    };
+    expect(stored.fixed.map((entry) => entry.id)).toContain(drift.id);
+
+    /* Und weil er noch als erledigt geführt wird, gilt auch der Rückweg weiter. */
+    const undone = await harness.call('gardener:undoFix', {
+      undoToken: applied.undoToken as string,
+    });
+    expect(undone.restored).toEqual([CATALOG]);
+    const back = await harness.call('gardener:report', undefined);
+    expect(back?.findings.some((finding) => finding.id === drift.id)).toBe(true);
+  });
+
+  it('fasst einen bereits vollständigen Lauf beim Fortsetzen nicht neu an', async () => {
+    const first = await harness.call('gardener:run', {});
+    const dismissTarget = findingOfKind(first.findings, 'orphan');
+    await harness.call('gardener:dismiss', { id: dismissTarget.id });
+    harness.sent.length = 0;
+
+    const resumed = await harness.call('gardener:run', { resume: true });
+
+    /* Nichts fehlte, also lief keine einzige Prüfung noch einmal — nur die
+       eine schließende Meldung, keine je-Prüfung-Fortschritte. */
+    expect(progress(harness).every((step) => step.phase !== 'checks')).toBe(true);
+    expect(resumed.findings.map((finding) => finding.id)).toEqual(
+      first.findings.filter((finding) => finding.id !== dismissTarget.id).map((f) => f.id),
+    );
+    /* Und die Entscheidung ist nicht weggefallen. */
+    expect(resumed.findings.some((finding) => finding.id === dismissTarget.id)).toBe(false);
+    const after = await harness.call('gardener:report', undefined);
+    expect(after?.hidden?.some((entry) => entry.finding.id === dismissTarget.id)).toBe(true);
+  });
+
+  it('lässt keinen zweiten Lauf gleichzeitig zu — und gibt danach wieder frei', async () => {
     const running = harness.call('gardener:run', {});
+    expect(gardenerRunSnapshot()).toMatchObject({ running: true, trigger: 'user' });
+
     await expect(harness.call('gardener:run', {})).rejects.toMatchObject({ code: 'invalid' });
+
     await running;
+    expect(gardenerRunSnapshot()).toBeNull();
+  });
+
+  // ── Laufstatus abfragen ─────────────────────────────────────────────────────
+
+  it('gibt null zurück, wenn kein Lauf geht', async () => {
+    expect(await harness.call('gardener:runStatus', undefined)).toBeNull();
+  });
+
+  it('gibt die laufende Momentaufnahme zurück, ohne auf ein Ereignis zu warten', async () => {
+    const running = harness.call('gardener:run', {});
+
+    const status = await harness.call('gardener:runStatus', undefined);
+    expect(status).toMatchObject({ running: true, trigger: 'user' });
+
+    await running;
+    expect(await harness.call('gardener:runStatus', undefined)).toBeNull();
+  });
+
+  it('gibt den Lauf auch frei, wenn er scheitert', async () => {
+    const index = harness.services.requireIndex.bind(harness.services);
+    harness.services.requireIndex = () => {
+      throw new Error('Index kaputt');
+    };
+
+    await expect(harness.call('gardener:run', {})).rejects.toThrow('Index kaputt');
+    harness.services.requireIndex = index;
+
+    /* Ein gescheiterter Lauf endet so sichtbar wie ein fertiger — und der
+       nächste darf sofort starten, statt an einem hängengebliebenen
+       „es läuft schon" zu scheitern. */
+    expect(progress(harness).at(-1)).toMatchObject({ running: false });
+    expect(gardenerRunSnapshot()).toBeNull();
+    await harness.call('gardener:run', {});
   });
 
   // ── Passt so ───────────────────────────────────────────────────────────────
@@ -1213,6 +1551,51 @@ describe('Pflege-Kanäle im Main', () => {
     const report = await harness.call('gardener:report', undefined);
     expect(report?.findings.length).toBeGreaterThan(0);
     expect(report?.ranAt.slice(0, 10)).toBe(TODAY);
+  });
+
+  it('meldet den Lauf beim Öffnen — mit „auto" als Auslöser', async () => {
+    const { GardenerAutorun } = await import('../../src/main/gardener-autorun');
+    const autorun = new GardenerAutorun(harness.services, { delayMs: 0 });
+    await harness.settings.patchVault({ gardener: { runOnOpen: true } });
+    harness.sent.length = 0;
+
+    expect(await autorun.run()).toBe('ran');
+
+    /* Vorher lief dieser Lauf ohne `onProgress` — er passierte, und der
+       Bildschirm sagte nichts dazu. */
+    const steps = progress(harness);
+    expect(steps.length).toBeGreaterThan(5);
+    expect(steps.every((step) => step.trigger === 'auto')).toBe(true);
+    expect(steps.at(-1)).toMatchObject({ running: false });
+    expect(gardenerRunSnapshot()).toBeNull();
+  });
+
+  it('bricht auch den Lauf beim Öffnen ab — es ist derselbe Abbruch', async () => {
+    const { GardenerAutorun } = await import('../../src/main/gardener-autorun');
+    const autorun = new GardenerAutorun(harness.services, { delayMs: 0 });
+    await harness.settings.patchVault({ gardener: { runOnOpen: true } });
+
+    let cancelled = false;
+    const send = harness.services.sendEvent;
+    harness.services.sendEvent = ((name, payload) => {
+      send(name, payload);
+      if (name === 'event:gardener-progress' && !cancelled) {
+        cancelled = true;
+        /* Genau der Aufruf vom Schließen des Vaults und vom Beenden — mit dem
+           Grund, der nichts zurücklässt (021b, D2). */
+        cancelGardenerRun('shutdown');
+      }
+    }) as typeof harness.services.sendEvent;
+
+    const result = await autorun.run();
+    harness.services.sendEvent = send;
+
+    /* Kein „no-index": ein abgebrochener Lauf darf nicht als halb gebauter
+       Index durchgehen, sonst versucht `runWhenReady` genau ihn erneut. */
+    expect(result).toBe('cancelled');
+    expect(await vault.exists('.secondbrain/gardener.json')).toBe(false);
+    expect(progress(harness).at(-1)).toMatchObject({ running: false, trigger: 'auto' });
+    expect(gardenerRunSnapshot()).toBeNull();
   });
 
   // ── Erinnerungen ───────────────────────────────────────────────────────────

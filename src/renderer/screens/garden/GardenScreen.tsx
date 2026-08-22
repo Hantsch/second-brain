@@ -22,6 +22,7 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import type { GardenerStageId } from '@shared/types';
 import { Button } from '../../atoms/Button';
 import { EmptyState } from '../../components/EmptyState';
 import { ErrorState } from '../../components/ErrorState';
@@ -48,6 +49,15 @@ import { useFindingActions } from './useFindingActions';
 import { ALL_FILTERS } from './filter';
 import type { FindingFilterState } from './filter';
 import { targetFor } from './targets';
+
+/* 021b, D4: names a missing stage in the "stopped partway" notice — the same
+   labels `RunBar`'s "still to come" line uses for a running plan's remaining
+   stages, so a stage is never called two different things on this screen. */
+const STAGE_LABEL_KEYS: Record<GardenerStageId, string> = {
+  checks: 'garden.run.stage.checks',
+  audit: 'garden.run.stage.audit',
+  'loose-ends': 'garden.run.stage.loose-ends',
+};
 
 export function GardenScreen() {
   const t = useT();
@@ -93,9 +103,37 @@ export function GardenScreen() {
     undo,
   } = useFindingActions(mutations, pages, run, openPath);
 
+  /* 021a D6: a run is going the moment `useGardenerProgress` reports one —
+     not only while *this* mutation instance is pending. That query is
+     correct on mount (021a, D4), so it also catches a run this screen didn't
+     start itself (autostart, or a click from before a remount). Guarding
+     `start` itself, not just the button's `disabled` attribute, is what
+     actually stops a second `gardener:run` from firing — a rapid second
+     click must not reach the IPC call just because the disabled state
+     hasn't re-rendered yet. */
+  const running = run.isPending || progress !== null;
+  const data = report.data ?? null;
+  /* 021b, D4: a run that never reached every planned stage names what it
+     missed — `missingStages` is only set together with `complete: false`
+     (see `GardenerReport`), so the length check alone decides whether
+     "continue" has anything to offer. A no-model run's plan is just
+     `checks`, which always completes, so this never shows there. */
+  const missingStages = data?.missingStages ?? [];
+  const canContinue = data?.complete === false && missingStages.length > 0;
+  const missingStagesLabel = missingStages.map((stage) => t(STAGE_LABEL_KEYS[stage])).join(', ');
+
   const start = (): void => {
+    if (running) return;
     reset();
     run.mutate(undefined);
+  };
+
+  /* Continues the stopped run instead of starting over — the stages it
+     already finished are not run a second time (021b, D3). */
+  const resume = (): void => {
+    if (running) return;
+    reset();
+    run.mutate({ resume: true });
   };
 
   const stop = (): void => {
@@ -107,11 +145,29 @@ export function GardenScreen() {
       overline={t('screen.garden.overline')}
       title={t('screen.garden.title')}
       action={
-        <Button icon="sprout" loading={run.isPending} disabled={run.isPending} onClick={start}>
-          {report.data === null || report.data === undefined
-            ? t('garden.run.action')
-            : t('garden.run.again')}
-        </Button>
+        <div className="sb-gheader-actions">
+          {canContinue ? (
+            <Button
+              variant="secondary"
+              icon="refresh-cw"
+              loading={run.isPending}
+              disabled={running}
+              title={running ? t('garden.run.disabledWhileRunning') : undefined}
+              onClick={resume}
+            >
+              {t('garden.run.continue')}
+            </Button>
+          ) : null}
+          <Button
+            icon="sprout"
+            loading={run.isPending}
+            disabled={running}
+            title={running ? t('garden.run.disabledWhileRunning') : undefined}
+            onClick={start}
+          >
+            {data === null ? t('garden.run.action') : t('garden.run.again')}
+          </Button>
+        </div>
       }
     />
   );
@@ -174,8 +230,6 @@ export function GardenScreen() {
     );
   }
 
-  const data = report.data ?? null;
-
   if (data === null) {
     return (
       <div className="sb-screen sb-screen--wide">
@@ -196,6 +250,16 @@ export function GardenScreen() {
     <div className="sb-screen sb-screen--wide">
       {header}
       {notes}
+      {data.complete === false ? (
+        <div className="sb-gllm" role="status">
+          <p className="sb-ghealth-note">
+            <span className="sb-gllm-title">{t('garden.stopped.title')}</span>
+          </p>
+          <p className="sb-ghealth-note">
+            {t('garden.stopped.missing', { list: missingStagesLabel })}
+          </p>
+        </div>
+      ) : null}
       <HealthCard
         report={data}
         onShowHidden={() => setFilter((prev) => ({ ...prev, state: 'all' }))}
