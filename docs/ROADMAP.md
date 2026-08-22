@@ -64,11 +64,12 @@ into Notes, and the old inbox is the "unfiled" filter on it.
 
 Gaps/notes:
 
-- **`tests/core/wiki/module.test.ts` is red and predates S01.** `MODULE_SCHEMA_TEMPLATE` in
-  `src/core/wiki/module.ts` drifted from `docs/MODULE-SCHEMA.md` when the doc was migrated to
-  English (commit `e8959d1`). Left untouched through both sprints because resyncing it changes
-  the module schema template written into the user's vault — a content decision, not a
-  navigation one. Still needs an owner: decide which side is authoritative.
+- **`tests/core/wiki/module.test.ts` was red from S01 through S06.** `MODULE_SCHEMA_TEMPLATE` in
+  `src/core/wiki/agents-md.ts` drifted from `docs/MODULE-SCHEMA.md` when the doc was migrated to
+  English (commit `e8959d1`). Resolved by story 023: the code is authoritative, `docs/MODULE-SCHEMA.md`
+  is rewritten to match it and carries a banner saying so — a single fixed (German) schema text
+  is simpler than a per-language doc plus a second drift guard, and nothing in the app parses
+  `AGENTS.md`.
 - **`capture-proposal.ts` hardcodes the German filing section name** regardless of the vault's
   document language (`docs.documents` setting). Surfaced by S02's story 005, which built a
   tolerant heading match for its own areas-specific write path but deliberately did not extend
@@ -155,8 +156,8 @@ Gaps/notes:
 - **010 leaves two pre-existing inline locale ternaries unmigrated** to the `locale()` helper it
   introduced (`DayList.tsx`, `DayEntry.tsx`) — out of that story's scope, worth folding in
   whenever those files are next touched.
-- **`tests/core/wiki/module.test.ts` is still red**, confirmed pre-existing and unrelated on
-  every story's build in this sprint (see the M1 gap above — still needs an owner).
+- **`tests/core/wiki/module.test.ts` was still red** on every story's build in this sprint,
+  confirmed pre-existing and unrelated (see the M1 gap above — resolved by story 023).
 
 ### M4 — A finding can be acted on — built, acceptance pending
 
@@ -188,11 +189,11 @@ Gaps/notes:
   S05's clarification round. An orphan can be resolved by a body-line link only; citing a source
   through a `sources:` frontmatter list needs its own story (different write path, different
   preview shape).
-- **A pre-existing red test blocks a fully green `npm test`**:
-  `tests/core/wiki/module.test.ts:150` asserts `MODULE_SCHEMA_TEMPLATE` is character-for-character
-  `docs/MODULE-SCHEMA.md`, and the two have drifted. It fails on `dev` as well and predates S05
-  — but it means the repo's own quality gate has not been fully green for some time. Which side
-  is the truth is a content decision, not a mechanical fix.
+- **A pre-existing red test blocked a fully green `npm test`**:
+  `tests/core/wiki/module.test.ts:150` asserts `MODULE_SCHEMA_TEMPLATE` in
+  `src/core/wiki/agents-md.ts` is character-for-character `docs/MODULE-SCHEMA.md`, and the two had
+  drifted. Predates S05 and was not this milestone's to fix — resolved by story 023: the code is
+  authoritative, the doc is rewritten to match it.
 - **Two files sit over the ~300-line soft limit**: `src/main/ipc/gardener.ts` and
   `src/main/gardener-state.ts`, both grown by this milestone's write paths. Reviewed as still
   single-responsibility; splitting them was judged not worth ballooning a story diff.
@@ -358,11 +359,12 @@ Sprints:
 
 Gaps/notes:
 
-- **All five stories are `draft`.** Each carries three open questions, four of which are content
-  or architecture decisions no agent may resolve: which side of the module schema is
-  authoritative (023), what a `languages.documents` switch owes an existing vault (024), the
-  German quote convention for the whole catalogue (026), and whether the run state belongs in
-  `src/core/` (027).
+- **All five stories are `draft`.** Each carries three open questions, most of which are content
+  or architecture decisions no agent may resolve: what a `languages.documents` switch owes an
+  existing vault (024), the German quote convention for the whole catalogue (026), and whether
+  the run state belongs in `src/core/` (027). 023's own question — which side of the module
+  schema is authoritative — is answered in its Decisions section: the code
+  (`src/core/wiki/agents-md.ts`) is authoritative, `docs/MODULE-SCHEMA.md` mirrors it.
 - **Story 022's Done section understated the quote defect** as "two i18n strings"; it is 98
   occurrences across 13 files, with zero correct ones. 026 is written to the real number.
 - **027 is the drop candidate** if the sprint runs long — it is the only story with no

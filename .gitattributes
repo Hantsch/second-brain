@@ -5,3 +5,8 @@
 # for a reason that has nothing to do with the code under test (story 005).
 tests/core/vault/** text eol=lf
 tests/fixtures/vault/** text eol=lf
+
+# The comparison in tests/core/wiki/module.test.ts is byte exact against a `\n`
+# TS template literal; core.autocrlf on Windows would otherwise turn the gate red
+# for a reason unrelated to the text (same rationale as story 005).
+docs/MODULE-SCHEMA.md text eol=lf

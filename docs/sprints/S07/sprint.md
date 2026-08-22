@@ -1,7 +1,7 @@
 ---
 sprint: S07
-status: planned # planned | in-progress | done
-branch: # set by /sprint
+status: in-progress # planned | in-progress | done
+branch: sprint/S07
 milestone: M9 — The gate is green and the small things are right
 ---
 
@@ -18,7 +18,7 @@ backlog of things every previous sprint had to say "pre-existing, unrelated" abo
 
 <!-- Order = the order the build phase works through. Dependent stories go last. -->
 
-- [ ] 023 — The module schema says one thing, not two
+- [x] 023 — The module schema says one thing, not two
 - [ ] 025 — A screenshot run never reads my real session data
 - [ ] 024 — Filing writes headings in my document language
 - [ ] 026 — German text closes its quotes, and three journal papercuts

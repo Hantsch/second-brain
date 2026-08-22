@@ -1,0 +1,8 @@
+- 2026-08-22 14:48 · 023 · D1 The doc is the text the app writes · started
+- 2026-08-22 14:52 · 023 · D1 The doc is the text the app writes · done
+- 2026-08-22 14:52 · 023 · D2 An existing module is not touched, English vault not broken · started
+- 2026-08-22 14:55 · 023 · D2 An existing module is not touched, English vault not broken · done
+- 2026-08-22 14:55 · 023 · D3 The decision is written down where the next reader looks · started
+- 2026-08-22 14:58 · 023 · D3 The decision is written down where the next reader looks · done
+- 2026-08-22 14:58 · 023 · D4 The gate is green · started
+- 2026-08-22 15:04 · 023 · D4 The gate is green · done

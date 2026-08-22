@@ -2,12 +2,12 @@
 
 Four documents, four questions. Anyone building something reads them in this order.
 
-| Document                             | Answers                                                     |
-| ------------------------------------ | ----------------------------------------------------------- |
-| [CONCEPT.md](CONCEPT.md)             | Why the app exists and what it does — product view, scope   |
-| [ARCHITECTURE.md](ARCHITECTURE.md)   | How it's built — layers, interfaces, screens, usability     |
-| [VAULT-FORMAT.md](VAULT-FORMAT.md)   | What's on disk — the binding file format                    |
-| [MODULE-SCHEMA.md](MODULE-SCHEMA.md) | How a knowledge module is maintained — Karpathy wiki schema |
+| Document                             | Answers                                                                                                                                               |
+| ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [CONCEPT.md](CONCEPT.md)             | Why the app exists and what it does — product view, scope                                                                                             |
+| [ARCHITECTURE.md](ARCHITECTURE.md)   | How it's built — layers, interfaces, screens, usability                                                                                               |
+| [VAULT-FORMAT.md](VAULT-FORMAT.md)   | What's on disk — the binding file format                                                                                                              |
+| [MODULE-SCHEMA.md](MODULE-SCHEMA.md) | How a knowledge module is maintained — Karpathy wiki schema; mirrors `MODULE_SCHEMA_TEMPLATE` in `src/core/wiki/agents-md.ts`, which is authoritative |
 
 The rules for working on the code live one level up in
 [../CLAUDE.md](../CLAUDE.md): guardrails, quality gates, design-system
