@@ -75,6 +75,24 @@ const own = {
   'settings.lang.de': 'Deutsch',
   'settings.lang.en': 'English',
 
+  'settings.lang.migration.title': 'Old-language headings',
+  'settings.lang.migration.warningOne': '1 file still carries headings in {language}.',
+  'settings.lang.migration.warning': '{count} files still carry headings in {language}.',
+  'settings.lang.migration.action': 'Migrate headings',
+  'settings.lang.migration.dialog.title': 'Migrate headings',
+  'settings.lang.migration.dialog.intro':
+    'Every affected file gets its section headings in the current document language. The rest of the content stays unchanged.',
+  'settings.lang.migration.dialog.countOne': '1 file will be migrated.',
+  'settings.lang.migration.dialog.count': '{count} files will be migrated.',
+  'settings.lang.migration.dialog.confirm': 'Migrate now',
+  'settings.lang.migration.result.noneMigrated': 'No file needed a change.',
+  'settings.lang.migration.result.migratedOne': '1 file migrated.',
+  'settings.lang.migration.result.migrated': '{count} files migrated.',
+  'settings.lang.migration.result.conflictsOne':
+    '1 file changed since the plan was made and was skipped.',
+  'settings.lang.migration.result.conflicts':
+    '{count} files changed since the plan was made and were skipped.',
+
   'settings.behavior.capture': 'Capturing',
   'settings.behavior.hotkey.label': 'Shortcut for quick capture',
   'settings.behavior.hotkey.hint':

@@ -1029,6 +1029,26 @@ describe('Projektdetail', () => {
     expect(screen.queryByText('Steht später im Dokument — darf nicht gewinnen.')).toBeNull();
   });
 
+  /* 024: the same widening `sectionKindOf`/`sectionHeadingIn` gave the core
+     read side must hold in the renderer's own parser — a project written
+     under `en` carries „## Status", not „## Stand", and this panel is the
+     only place that shows it. */
+  it('zeigt den Stand auch unter der Überschrift „## Status"', async () => {
+    const englishBody = BODY.replace('## Stand', '## Status');
+    mount({
+      extra: {
+        'projects:get': ({ slug }) => {
+          const found = PROJECTS.find((entry) => entry.slug === slug);
+          if (found === undefined) return null;
+          return { project: found, doc: { ...doc(found.path), body: englishBody } };
+        },
+      },
+    });
+    await detailReady();
+
+    expect(screen.getByText('Die neue Angebotsliste liegt auf dem Testsystem.')).toBeTruthy();
+  });
+
   /* Eine neu eingetragene Notiz steht ohne Neuladen im Panel — der Composer
      ist Teil des Panels, kein separater Weg dorthin. */
   it('zeigt eine neu eingetragene Notiz sofort im Panel und bestätigt es', async () => {

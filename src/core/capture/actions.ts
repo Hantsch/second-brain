@@ -5,10 +5,15 @@
  * Die eine Stelle, an der Pfade und Markdown entstehen — Heuristik und
  * Modellantwort liefern nur die Entscheidung, nie einen Dateinamen. Damit gilt
  * das Format aus docs/VAULT-FORMAT.md fuer beide Wege gleich: angehaengte Dumps
- * landen unter „Notizen", jeder mit seinem Datum als Unterueberschrift.
+ * landen im Notizen-Abschnitt, jeder mit seinem Datum als Unterueberschrift.
+ *
+ * Wie dieser Abschnitt **heisst**, entscheidet die Dokumentsprache
+ * (`docLanguage`, Vorgabe `'de'`) — und beim Schreiben die Zieldatei selbst
+ * (`resolveSection` in `sections.ts`). Der Vorschlag traegt nur die Vorschau.
  */
 
 import type {
+  DocLanguage,
   FilingAction,
   FilingProposal,
   FilingTarget,
@@ -18,28 +23,25 @@ import type {
 } from '@shared/types';
 import { journalPath, modulePath, projectPath, slugify } from '@core/vault/paths';
 import type { DateLike } from '@core/vault/paths';
+import { sectionNameFor } from '@core/vault/section-names';
 import type { FilingContext, ProjectCandidate } from './context';
 import { findArea, findModule, findProject } from './context';
 import { filingBlock } from './filing';
+import { sectionFor } from './sections';
 
+/* Die deutschen Namen, aus der gemeinsamen Tabelle (`core/vault/section-names`)
+   — zwei Fassungen dieser Namen waeren zwei Fassungen von
+   docs/VAULT-FORMAT.md. Sie sind die Vorgabe fuer Aufrufer ohne
+   Dokumentsprache, nicht mehr die einzige Antwort: wer eine Sprache mitgibt,
+   bekommt deren Ueberschriften (`sectionNameFor`). */
 /** Abschnitt, unter dem eingeordnete Dumps landen. */
-export const SECTION_NOTES = 'Notizen';
-export const SECTION_TODOS = 'Todos';
-export const SECTION_STATE = 'Stand';
+export const SECTION_NOTES = sectionNameFor('notes', 'de');
+export const SECTION_TODOS = sectionNameFor('todos', 'de');
+export const SECTION_STATE = sectionNameFor('state', 'de');
 /** Abschnitt des Tageseintrags fuer Erlebtes. */
-export const SECTION_DAY = 'Tag';
+export const SECTION_DAY = sectionNameFor('day', 'de');
 /** Abschnitt des Tageseintrags fuer herausgezogene Fakten und Todos. */
-export const SECTION_FACTS = 'Fakten';
-
-/** Welche Abschnitte ein Ziel zulaesst. Der erste ist die Vorgabe. */
-const SECTIONS: Record<FilingTarget, readonly string[]> = {
-  project: [SECTION_NOTES, SECTION_STATE, SECTION_TODOS],
-  area: [SECTION_NOTES, SECTION_TODOS],
-  module: [SECTION_NOTES],
-  journal: [SECTION_DAY, SECTION_FACTS],
-  'new-project': [SECTION_STATE],
-  inbox: [],
-};
+export const SECTION_FACTS = sectionNameFor('facts', 'de');
 
 /** Ziele, deren Inhalt ein datierter Block ist. */
 const DATED: readonly FilingTarget[] = ['project', 'area', 'module'];
@@ -73,16 +75,6 @@ export interface ProposalDraft {
 
 function stamp(at: DateLike): string {
   return (at instanceof Date ? at : new Date(at)).toISOString();
-}
-
-function sectionFor(target: FilingTarget, wanted: string | null): string | null {
-  const allowed = SECTIONS[target];
-  if (allowed.length === 0) return null;
-  const found =
-    wanted === null
-      ? undefined
-      : allowed.find((entry) => entry.toLowerCase() === wanted.trim().toLowerCase());
-  return found ?? allowed[0] ?? null;
 }
 
 /** Der Slug, unter dem ein neues Projekt angelegt wuerde. */
@@ -158,14 +150,19 @@ export function todoBlock(todos: readonly ProposedTodo[]): string {
 }
 
 /** Wohin Todos gehen, wenn sie kein eigenes Projekt nennen. */
-function todoHome(primary: FilingAction): { path: string; section: string } | null {
-  if (primary.target === 'journal') return { path: primary.path, section: SECTION_FACTS };
+function todoHome(
+  primary: FilingAction,
+  docLanguage: DocLanguage,
+): { path: string; section: string } | null {
+  if (primary.target === 'journal') {
+    return { path: primary.path, section: sectionNameFor('facts', docLanguage) };
+  }
   if (
     primary.target === 'project' ||
     primary.target === 'area' ||
     primary.target === 'new-project'
   ) {
-    return { path: primary.path, section: SECTION_TODOS };
+    return { path: primary.path, section: sectionNameFor('todos', docLanguage) };
   }
   return null;
 }
@@ -183,9 +180,10 @@ export function todoActions(
   primary: FilingAction,
   todos: readonly ProposedTodo[],
   projectPathOf: (slug: string) => string | null,
+  docLanguage: DocLanguage = 'de',
 ): FilingAction[] {
   if (todos.length === 0) return [];
-  const home = todoHome(primary);
+  const home = todoHome(primary, docLanguage);
   const grouped = new Map<
     string,
     { target: FilingTarget; section: string; todos: ProposedTodo[] }
@@ -195,7 +193,11 @@ export function todoActions(
     const own = todo.project === null ? null : projectPathOf(todo.project);
     const place =
       own !== null && own !== primary.path
-        ? { path: own, section: SECTION_TODOS, target: 'project' as FilingTarget }
+        ? {
+            path: own,
+            section: sectionNameFor('todos', docLanguage),
+            target: 'project' as FilingTarget,
+          }
         : home === null
           ? null
           : { ...home, target: primary.target };
@@ -232,12 +234,18 @@ function alternativesFor(
   context: FilingContext,
   primary: FilingAction,
   at: DateLike,
+  docLanguage: DocLanguage,
 ): FilingAction[] {
   const alternatives: FilingAction[] = [];
   const other = otherProject(draft, context);
   if (other !== null && primary.path !== other.path) {
     alternatives.push(
-      actionFor('project', other.path, SECTION_NOTES, contentFor('project', draft.text, at)),
+      actionFor(
+        'project',
+        other.path,
+        sectionNameFor('notes', docLanguage),
+        contentFor('project', draft.text, at),
+      ),
     );
   }
   if (primary.target !== 'journal') {
@@ -245,7 +253,7 @@ function alternativesFor(
       actionFor(
         'journal',
         journalPath(context.today),
-        SECTION_DAY,
+        sectionNameFor('day', docLanguage),
         contentFor('journal', draft.text, at),
       ),
     );
@@ -265,6 +273,7 @@ export function buildProposal(
   draft: ProposalDraft,
   context: FilingContext,
   now: DateLike = new Date(),
+  docLanguage: DocLanguage = 'de',
 ): FilingProposal {
   const path = pathFor(draft, context);
   const named: ProposalDraft =
@@ -279,7 +288,7 @@ export function buildProposal(
   const primary = actionFor(
     resolved.target,
     primaryPath,
-    sectionFor(resolved.target, resolved.section),
+    sectionFor(resolved.target, resolved.section, docLanguage),
     contentFor(resolved.target, resolved.text, now),
   );
 
@@ -293,8 +302,9 @@ export function buildProposal(
       primary,
       resolved.todos,
       (slug) => findProject(context, slug)?.path ?? null,
+      docLanguage,
     ),
-    alternatives: alternativesFor(resolved, context, primary, now),
+    alternatives: alternativesFor(resolved, context, primary, now, docLanguage),
     confidence: Math.min(1, Math.max(0, Number(resolved.confidence.toFixed(2)))),
     reason: resolved.reason,
     todos: resolved.todos,

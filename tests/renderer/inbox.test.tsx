@@ -427,6 +427,21 @@ describe('Inbox', () => {
     await waitFor(() => expect(applyCall(sb).proposal.primary.path).toBe('areas/gesundheit.md'));
   });
 
+  /* 024/D5: die Karte nennt den Abschnitt, unter dem der Text landet — vor
+     dem Bestätigen, nicht erst danach. Sie verschwindet, sobald das Ziel
+     „Bleibt in der Inbox" ist, weil dort nichts geschrieben wird. */
+  it('nennt den Abschnitt, unter dem der Text landet, und danach den neuen', async () => {
+    renderInbox();
+    await waitForProposal();
+
+    expect(screen.getByText('Landet unter')).toBeTruthy();
+    expect(screen.getByText('Notizen', { selector: '.sb-proposal-heading' })).toBeTruthy();
+
+    await switchToInboxTarget();
+
+    expect(screen.queryByText('Landet unter')).toBeNull();
+  });
+
   /* Ein Todo, das ein eigenes Projekt nennt, wird dorthin geschrieben — auch
      wenn der Nutzer ein anderes Hauptziel gewählt hat. Ein Schreibvorgang in eine
      ungewählte Datei muss sichtbar sein (Guardrail 2). */

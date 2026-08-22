@@ -22,18 +22,13 @@
      user has edited it — then nothing is written. No undo rewrites a line the
      app didn't create. */
 
-import {
-  SECTION_NOTES,
-  SECTION_STATE,
-  SECTION_TODOS,
-  filingBlock,
-  removeBlock,
-} from '@core/capture';
+import { filingBlock, removeBlock } from '@core/capture';
 import { deriveProjects, toIndexedDoc } from '@core/index';
 import { suggestProjectStatus } from '@core/overview';
 import { projectNotesHeading } from '@core/projects';
 import { isoDay, projectPath } from '@core/vault/paths';
-import type { Project, Scope, VaultDoc } from '@shared/types';
+import { sectionNameFor } from '@core/vault/section-names';
+import type { DocLanguage, Project, Scope, VaultDoc } from '@shared/types';
 import { SCOPES } from '@shared/types';
 import type { HandlerMap } from './registry';
 import { defineHandlers, fail } from './registry';
@@ -95,16 +90,21 @@ async function readProject(
   return { project, doc };
 }
 
-/** Body of a new project file: the three sections every project has. */
-function newBody(state: string): string {
+/**
+ * Body of a new project file: the three sections every project has, in the
+ * vault's document language — otherwise a project created in an English vault
+ * would carry German headings from birth, the exact mismatch story 024 closes
+ * for the filing path.
+ */
+function newBody(state: string, lang: DocLanguage): string {
   const stand = state.replace(/\r\n/g, '\n').trim();
   return [
-    `## ${SECTION_STATE}`,
+    `## ${sectionNameFor('state', lang)}`,
     '',
     ...(stand.length === 0 ? [] : [stand, '']),
-    `## ${SECTION_TODOS}`,
+    `## ${sectionNameFor('todos', lang)}`,
     '',
-    `## ${SECTION_NOTES}`,
+    `## ${sectionNameFor('notes', lang)}`,
     '',
   ].join('\n');
 }
@@ -190,7 +190,7 @@ export function projectHandlers(services: Services): HandlerMap {
           created: today,
           updated: today,
         },
-        newBody(typeof body === 'string' ? body : ''),
+        newBody(typeof body === 'string' ? body : '', docLanguage(services)),
       );
       await settle(services, [path], 'projects');
       return projectFor(services, slug);

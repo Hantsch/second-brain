@@ -166,6 +166,8 @@ const RESPONSES: MockResponses = {
     { path: 'inbox', dir: true, size: 0 },
     { path: 'projects', dir: true, size: 0 },
   ],
+  'vault:sectionPlan': ({ to }) => ({ to, count: 0, entries: [] }),
+  'vault:sectionMigrate': () => ({ results: [], migrated: 0, conflicts: 0 }),
 
   'index:stats': () => fx.indexStats,
   'index:rebuild': () => fx.indexStats,

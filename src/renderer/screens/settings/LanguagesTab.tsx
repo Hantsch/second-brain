@@ -17,6 +17,7 @@ import { useT } from '../../i18n';
 import { api } from '../../lib/api';
 import { qk } from '../../lib/queries/keys';
 import { Field } from './SettingsFields';
+import { SectionMigrationCard } from './SectionMigrationCard';
 
 const LANGUAGES: readonly UiLanguage[] = ['de', 'en'];
 
@@ -79,6 +80,8 @@ export function LanguagesTab() {
             }
           />
         </Field>
+
+        {settings.data.vault ? <SectionMigrationCard to={languages.documents} /> : null}
 
         <Field example={t('settings.lang.conversation.example')}>
           <Select

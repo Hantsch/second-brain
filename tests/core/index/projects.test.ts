@@ -135,6 +135,12 @@ describe('deriveProjects: Ableitungen', () => {
       'Das Rollenkonzept liegt bei Stefan und blockiert den Testmandanten.',
     );
   });
+
+  it('liefert denselben Wiedereinstiegspunkt unter der englischen Ueberschrift „## Status"', () => {
+    const englishDoc = projectDoc();
+    englishDoc.body = BODY.replace('## Stand', '## Status');
+    expect(derive([englishDoc, NOTE])[0]?.excerpt).toBe(derive()[0]?.excerpt);
+  });
 });
 
 describe('deriveProjects: externalTouches', () => {
@@ -196,10 +202,7 @@ describe('deriveProjects: status_set/next_step_set', () => {
   });
 
   it('ein unbekannter `by`-Wert verwirft die ganze Map, statt sie halb zu vertrauen', () => {
-    const [project] = derive([
-      projectDoc({ status_set: { at: '2026-08-01', by: 'robot' } }),
-      NOTE,
-    ]);
+    const [project] = derive([projectDoc({ status_set: { at: '2026-08-01', by: 'robot' } }), NOTE]);
     expect(project?.statusSet).toBeUndefined();
   });
 
@@ -232,6 +235,18 @@ describe('projectExcerpt', () => {
 
   it('gibt eine leere Zeichenkette zurueck, wenn nichts da ist', () => {
     expect(projectExcerpt('')).toBe('');
+  });
+
+  it('nimmt den ersten Absatz unter der englischen Ueberschrift „## Status" genauso', () => {
+    const bodyEn = BODY.replace('## Stand', '## Status');
+    expect(projectExcerpt(bodyEn)).toBe(projectExcerpt(BODY));
+  });
+
+  /* „State" war vor der gemeinsamen Tabelle eine akzeptierte Schreibweise. Eine
+     Datei, die sie schon traegt, darf ihren Wiedereinstiegspunkt nicht verlieren. */
+  it('erkennt auch die aeltere Schreibweise „## State"', () => {
+    const bodyState = BODY.replace('## Stand', '## State');
+    expect(projectExcerpt(bodyState)).toBe(projectExcerpt(BODY));
   });
 });
 

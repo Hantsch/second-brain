@@ -100,6 +100,12 @@ export function ProposalCard({
         <p className="sb-proposal-reason">
           {changed ? t('inbox.proposal.changed') : proposal.reason}
         </p>
+        {edit.action.section !== null && edit.action.section.length > 0 ? (
+          <p className="sb-proposal-section">
+            {t('inbox.proposal.section')}{' '}
+            <span className="sb-mono sb-proposal-heading">{edit.action.section}</span>
+          </p>
+        ) : null}
         <p className="sb-proposal-confidence">
           <span className="sb-mono sb-proposal-value">
             {t('inbox.proposal.confidence', { percent })}

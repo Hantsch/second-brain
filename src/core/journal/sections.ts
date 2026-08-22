@@ -14,8 +14,7 @@
  */
 
 import type { DocLanguage } from '@shared/types';
-import { SECTION_DAY, SECTION_FACTS } from '@core/capture';
-import { fold } from '@core/index/text';
+import { sectionKindOf, sectionNameFor, type SectionKind } from '@core/vault/section-names';
 import { findSections } from '@core/vault/sections';
 import { assistantBlockSpans } from './dialog';
 
@@ -23,26 +22,24 @@ import { assistantBlockSpans } from './dialog';
 const HEADING = /^ {0,3}#{1,6}\s/;
 
 /** Which of the three sections is meant. */
-export type JournalSectionKind = 'day' | 'dialogue' | 'facts';
+export type JournalSectionKind = Extract<SectionKind, 'day' | 'dialogue' | 'facts'>;
 
 /** The headings of a journal entry in one language. */
 export type JournalSections = Record<JournalSectionKind, string>;
 
-/* The German names come from `core/capture/actions` — two versions of them
-   would mean two versions of docs/VAULT-FORMAT.md. */
-const HEADINGS: Record<DocLanguage, JournalSections> = {
-  de: { day: SECTION_DAY, dialogue: 'Gespräch', facts: SECTION_FACTS },
-  en: { day: 'Day', dialogue: 'Conversation', facts: 'Facts' },
-};
+/* Sourced from the shared table (`core/vault/section-names`) — two versions of
+   these names would mean two versions of docs/VAULT-FORMAT.md. */
+function sectionsFor(docLanguage: DocLanguage): JournalSections {
+  return {
+    day: sectionNameFor('day', docLanguage),
+    dialogue: sectionNameFor('dialogue', docLanguage),
+    facts: sectionNameFor('facts', docLanguage),
+  };
+}
 
-/**
- * Headings that count as the same section — compared folded, so that
- * "Gespräch" and "Gespraech" match the same thing.
- */
-const ALIASES: Record<JournalSectionKind, readonly string[]> = {
-  day: ['tag', 'day'],
-  dialogue: ['gespraech', 'conversation'],
-  facts: ['fakten', 'facts'],
+const HEADINGS: Record<DocLanguage, JournalSections> = {
+  de: sectionsFor('de'),
+  en: sectionsFor('en'),
 };
 
 /** The headings in this document language. */
@@ -52,7 +49,7 @@ export function journalSections(docLanguage: DocLanguage = 'de'): JournalSection
 
 /** Is this heading the named section? */
 export function isSectionOf(heading: string, kind: JournalSectionKind): boolean {
-  return ALIASES[kind].includes(fold(heading.trim()));
+  return sectionKindOf(heading) === kind;
 }
 
 /**

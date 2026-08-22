@@ -26,6 +26,7 @@ import { ollamaRuntimeHandlers } from './ollama-runtime';
 import { projectHandlers } from './projects';
 import { reminderHandlers } from './reminders';
 import { searchHandlers } from './search';
+import { sectionMigrationHandlers } from './section-migration';
 import { settingsHandlers } from './settings';
 import { shellHandlers } from './shell';
 import { todoHandlers } from './todos';
@@ -38,6 +39,7 @@ export function buildHandlers(services: Services): HandlerMap {
   const installerPathTracker = createInstallerPathTracker();
   return {
     ...vaultHandlers(services),
+    ...sectionMigrationHandlers(services),
     ...indexHandlers(services),
     ...searchHandlers(services),
     ...captureHandlers(services),

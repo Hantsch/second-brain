@@ -36,6 +36,7 @@ import type { IndexedDoc } from '@core/index/types';
 import { excerpt, extractSections } from '@core/vault/doc';
 import { isoDay } from '@core/vault/paths';
 import type { DateLike } from '@core/vault/paths';
+import { sectionKindOf } from '@core/vault/section-names';
 import { limits } from './types';
 import type { OverviewIndex, OverviewLimits } from './types';
 
@@ -48,9 +49,6 @@ const CONTEXT_CHARS = 400;
 /** Hoechstlaenge der Antwortfelder. */
 const MAX_NEXT_STEP = 200;
 const MAX_REASON = 300;
-
-/** Abschnitt, in dem der Wiedereinstiegspunkt steht. */
-const STATE_SECTIONS = new Set(['stand', 'state']);
 
 export interface ProjectStatusSuggestion {
   status: ProjectStatus;
@@ -109,7 +107,7 @@ function ageOf(project: Project, today: string): number {
 /** Der Abschnitt „Stand" — der Wiedereinstiegspunkt in Prosa. */
 function stateSection(body: string): string {
   for (const [heading, text] of extractSections(body)) {
-    if (STATE_SECTIONS.has(heading.trim().toLowerCase())) return text.trim();
+    if (sectionKindOf(heading) === 'state') return text.trim();
   }
   return body.trim();
 }

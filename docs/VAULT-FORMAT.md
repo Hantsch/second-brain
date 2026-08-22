@@ -163,11 +163,14 @@ todo scoping — but the project list is a documented exception: there, favourit
 and last-worked-on produce one single list across scopes, with scope separation
 left entirely to the existing scope filter rather than to visual blocks.
 `repos` connects the project to Claude Code sessions: if a session lives in this
-directory, it counts as a work trace for the project. The notes section accepts
-either heading, "Notes" or "Notizen" — the same tolerance areas have (below): a
-document-language switch never orphans notes already filed under the other
-spelling, and a file carrying both appends new notes under whichever heading
-comes first in the file.
+directory, it counts as a work trace for the project. Filing writes the state and
+notes headings in the vault's configured document language (`languages.documents`)
+— `## Status`/`## Notes` for English, `## Stand`/`## Notizen` for German — but
+re-resolves against whatever heading the target file already has: a
+document-language switch never orphans a section already filed under the other
+spelling, and a file carrying both appends new content under whichever heading
+comes first in the file. The notes section accepts either heading, "Notes" or
+"Notizen" — the same tolerance areas have (below).
 
 ## Area (`areas/<slug>.md`)
 
@@ -197,11 +200,14 @@ Minuten haben mehr gebracht als jede neue Übung.
 
 An area is an ongoing responsibility with no end — health, a relationship, a
 recurring chore — as opposed to a project, which can finish. `scope`: `work` ·
-`private`. The notes section accepts either heading, "Notizen" or "Notes":
-reading is tolerant of both spellings so a document-language switch never
-orphans notes already filed under the other one, and if a file somehow carries
-both, the one that's already there is the one new notes append to. A note
-dropped with no chosen target lands in the default area, `areas/notes.md`,
+`private`. Filing writes the notes heading in the vault's configured document
+language (`languages.documents`) — "Notes" for English, "Notizen" for German —
+unless the target file already has one, in which case that heading is reused.
+The notes section accepts either heading, "Notizen" or "Notes": reading is
+tolerant of both spellings so a document-language switch never orphans notes
+already filed under the other one, and if a file somehow carries both, the one
+that's already there is the one new notes append to. A note dropped with no
+chosen target lands in the default area, `areas/notes.md`,
 created on first use.
 
 ## Todos

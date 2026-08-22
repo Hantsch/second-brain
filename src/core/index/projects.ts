@@ -19,14 +19,12 @@ import { PROJECT_STATUSES } from '@shared/types';
 import { excerpt, extractSections } from '@core/vault/doc';
 import { dirName, isoDay } from '@core/vault/paths';
 import type { DateLike } from '@core/vault/paths';
+import { sectionKindOf } from '@core/vault/section-names';
 import { ageInDays, daysBetween, laterOf } from './dates';
 import { asDate, asStringList, asText } from './text';
 import { scopeFromPath } from './todos';
 import { DEFAULT_STALE_AFTER_DAYS } from './types';
 import type { ExternalTouches, IndexedDoc } from './types';
-
-/** Abschnitt, dessen erster Absatz der Wiedereinstiegspunkt ist. */
-const STATE_SECTION = 'stand';
 
 export interface ProjectDerivationOptions {
   /** Das „jetzt", auf das sich `ageDays` und `stale` beziehen. */
@@ -94,7 +92,7 @@ function waitingOnOf(value: unknown): WaitingOn[] {
 /** Erster Absatz unter '## Stand', sonst erster Absatz des Rumpfs. */
 export function projectExcerpt(body: string, maxChars = 240): string {
   for (const [heading, text] of extractSections(body)) {
-    if (heading.trim().toLowerCase() === STATE_SECTION) {
+    if (sectionKindOf(heading) === 'state') {
       const found = excerpt(text, maxChars);
       if (found.length > 0) return found;
     }

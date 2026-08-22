@@ -12,24 +12,16 @@
  */
 
 import type { DocLanguage } from '@shared/types';
-import { SECTION_NOTES } from '@core/capture';
-import { headingFor } from '@core/vault/sections';
-
-/** Headings that count as a project's notes section, compared case-insensitively. */
-const NOTES_ALIASES = ['notizen', 'notes'];
-
-/* The German name comes from `core/capture/actions` — the filing path and the
-   hand-written note path must agree on the same word, or a fresh file would grow
-   two "notes" sections depending on which path wrote first. */
-const NOTES_HEADING: Record<DocLanguage, string> = {
-  de: SECTION_NOTES,
-  en: 'Notes',
-};
+import { sectionHeadingIn } from '@core/vault/section-names';
 
 /**
  * The heading a new note is appended under: whichever of "Notizen" / "Notes" is
  * already in the file, or the document language's word when the file has neither.
+ *
+ * Sourced from the shared table (`core/vault/section-names`) — the filing path and
+ * the hand-written note path must agree on the same word, or a fresh file would
+ * grow two "notes" sections depending on which path wrote first.
  */
 export function projectNotesHeading(body: string, docLanguage: DocLanguage = 'de'): string {
-  return headingFor(body, NOTES_ALIASES, NOTES_HEADING[docLanguage] ?? NOTES_HEADING.de);
+  return sectionHeadingIn(body, 'notes', docLanguage);
 }

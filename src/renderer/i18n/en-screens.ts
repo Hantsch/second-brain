@@ -71,6 +71,7 @@ export const enScreens = {
   'inbox.proposal.confidence': 'Confidence {percent} %',
   'inbox.proposal.changed': 'Target chosen by you.',
   'inbox.proposal.heuristic': 'Sorted without a model — rules instead of understanding.',
+  'inbox.proposal.section': 'Lands under',
   'inbox.proposal.exact': 'This is what gets written',
   'inbox.proposal.nothing': 'Nothing gets written — the dump stays put',
   'inbox.proposal.todos': 'Todos found',

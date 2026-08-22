@@ -15,11 +15,15 @@
  * und `filed_at` und wird damit zum Beleg, wohin sein Inhalt gewandert ist. Es gibt
  * dafuer weder eine Papierkorb-Kopie noch eine Loeschung — `movedTo` ist immer `null`.
  *
- * Format: docs/VAULT-FORMAT.md. Neue Projektdateien tragen die Abschnitte Stand,
- * Todos und Notizen; angehaengte Dumps stehen unter „Notizen" mit ihrem Datum.
+ * Format: docs/VAULT-FORMAT.md. Neue Projektdateien tragen die drei Abschnitte
+ * Stand, Todos und Notizen — in der Dokumentsprache, also `Status`/`Todos`/`Notes`
+ * fuer einen englischen Vault. Angehaengte Dumps stehen im Notizen-Abschnitt mit
+ * ihrem Datum; welche Ueberschrift das ist, entscheidet die Zieldatei selbst
+ * (`resolveSection`), nicht die Vorschau im Vorschlag.
  */
 
 import type {
+  DocLanguage,
   FilingAction,
   FilingProposal,
   FilingResult,
@@ -28,9 +32,11 @@ import type {
 } from '@shared/types';
 import { isoDay } from '@core/vault/paths';
 import type { DateLike } from '@core/vault/paths';
+import { sectionNameFor } from '@core/vault/section-names';
+import type { SectionKind } from '@core/vault/section-names';
 import { createUndoToken } from '@core/vault/trash';
-import { SECTION_NOTES, SECTION_STATE, SECTION_TODOS } from './actions';
 import { FilingError } from './filing';
+import { resolveSection } from './sections';
 import { revertStep, writeJournal } from './undo';
 import type { FilingJournal, Step, UndoStore } from './undo';
 
@@ -47,6 +53,11 @@ export interface ApplyOptions {
    * einer fremden Aenderung einen Konflikt statt eines Ueberschreibens.
    */
   expectedHashes?: Readonly<Record<string, string>>;
+  /**
+   * Sprache, in der **fehlende** Abschnitte und neue Projektdateien beschriftet
+   * werden. Hat eine Zieldatei den Abschnitt schon, gewinnt ihre Ueberschrift.
+   */
+  docLanguage?: DocLanguage;
 }
 
 /** Slug eines Projekts aus seinem Pfad — der Pfad ist die Wahrheit, nicht der Titel. */
@@ -84,16 +95,20 @@ function projectFrontmatter(
   };
 }
 
-/** Rumpf einer neuen Projektdatei: die drei Abschnitte, die jedes Projekt hat. */
-function projectBody(state: string): string {
+/**
+ * Rumpf einer neuen Projektdatei: die drei Abschnitte, die jedes Projekt hat, in
+ * der Dokumentsprache. Hier gibt es nichts neu zu bestimmen — die Datei entsteht
+ * gerade, sie kann noch keine Ueberschrift mitbringen, die gewinnen koennte.
+ */
+function projectBody(state: string, docLanguage: DocLanguage): string {
   return [
-    `## ${SECTION_STATE}`,
+    `## ${sectionNameFor('state', docLanguage)}`,
     '',
     state.trim(),
     '',
-    `## ${SECTION_TODOS}`,
+    `## ${sectionNameFor('todos', docLanguage)}`,
     '',
-    `## ${SECTION_NOTES}`,
+    `## ${sectionNameFor('notes', docLanguage)}`,
     '',
   ].join('\n');
 }
@@ -149,12 +164,22 @@ class Run {
     if (!this.written.includes(path)) this.written.push(path);
   }
 
-  /** Einen Block unter einem Abschnitt anhaengen. */
-  async append(action: FilingAction, section: string): Promise<void> {
+  /**
+   * Einen Block anhaengen. Die Ueberschrift wird **hier** bestimmt, aus dem Rumpf,
+   * der gerade gelesen wurde: der Abschnitt im Vorschlag ist eine Vorschau aus dem
+   * Index, und ein „Notes" gegen ein bestehendes „## Notizen" waere ein zweiter
+   * Abschnitt fuer dieselbe Sache. `kind` ist die Vorgabe, wenn die Aktion selbst
+   * keinen Abschnitt nennt.
+   *
+   * Fuer den Rueckweg aendert das nichts: das Protokoll haelt den Block, nicht die
+   * Ueberschrift — `removeBlock` findet ihn im ganzen Rumpf wieder.
+   */
+  async append(action: FilingAction, kind: SectionKind): Promise<void> {
     const block = action.content.replace(/\r\n/g, '\n').trim();
     if (block.length === 0) return;
     const doc = await this.store.read(action.path);
     if (doc === null) throw new FilingError('not-found', `Zieldatei fehlt: ${action.path}`);
+    const section = resolveSection(doc.body, action, kind, this.options.docLanguage);
     await this.store.append(action.path, section, block, {
       expectedHash: this.hashFor(action.path, doc.hash),
     });
@@ -201,12 +226,6 @@ class Run {
   }
 }
 
-/** Der Abschnitt, unter dem eine Aktion landet. */
-function sectionOf(action: FilingAction, fallback: string): string {
-  const section = action.section?.trim();
-  return section === undefined || section.length === 0 ? fallback : section;
-}
-
 /**
  * Der Status, den der Dump vor der Ablage trug — der Wert, auf den ein Rueckgaengig
  * ihn zurueckstellt.
@@ -224,18 +243,23 @@ function previousStatus(value: unknown): string {
  * Den Hauptvorschlag ausfuehren. `inbox` schreibt keine Zieldatei: der Dump bleibt
  * liegen und wird nur als bewusst behalten markiert.
  */
-async function applyPrimary(run: Run, proposal: FilingProposal, today: string): Promise<void> {
+async function applyPrimary(
+  run: Run,
+  proposal: FilingProposal,
+  today: string,
+  docLanguage: DocLanguage,
+): Promise<void> {
   const action = proposal.primary;
   if (action.target === 'inbox') return;
   if (action.target === 'new-project') {
     await run.create(
       action.path,
       projectFrontmatter(proposal, projectSlugOf(action.path), today),
-      projectBody(action.content),
+      projectBody(action.content, docLanguage),
     );
     return;
   }
-  await run.append(action, sectionOf(action, SECTION_NOTES));
+  await run.append(action, 'notes');
 }
 
 /**
@@ -255,7 +279,7 @@ export async function applyProposal(
 
   const run = new Run(store, options);
   try {
-    await applyPrimary(run, proposal, today);
+    await applyPrimary(run, proposal, today, options.docLanguage ?? 'de');
 
     /* Ein echtes Ziel (nicht `inbox`), das trotzdem nichts geschrieben hat: der
        Vorschlagstext war leer oder nur Leerraum — `Run.append` haengt einen
@@ -276,7 +300,7 @@ export async function applyProposal(
     if (!keepsDump) {
       for (const extra of proposal.extras) {
         if (extra.target === 'inbox') continue;
-        await run.append(extra, sectionOf(extra, SECTION_TODOS));
+        await run.append(extra, 'todos');
       }
       // Bei `new-project` steht `waiting_on` schon im frisch geschriebenen Frontmatter.
       if (proposal.primary.target !== 'new-project') {

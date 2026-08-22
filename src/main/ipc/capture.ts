@@ -89,16 +89,17 @@ class ProposalCache {
 
     const index = captureIndex(services);
     const now = new Date();
+    const docLanguage = services.settings.vault()?.languages.documents ?? 'de';
     const work = classifyDump(
       {
         store,
         index,
         gateway: createGateway(services),
-        docLanguage: services.settings.vault()?.languages.documents ?? 'de',
+        docLanguage,
         now,
       },
       path,
-    ).then((proposal) => withAllTargets(proposal, index, doc.body, now));
+    ).then((proposal) => withAllTargets(proposal, index, doc.body, now, docLanguage));
 
     this.pending.set(path, work);
     try {
@@ -193,8 +194,13 @@ export function captureHandlers(services: Services): HandlerMap {
     'capture:classify': ({ path }) => cache.resolve(services, path),
 
     'capture:apply': async ({ proposal }) => {
-      const prepared = normalize(proposal, projectsOf(services));
-      const result = await applyProposal(captureStore(services), prepared);
+      const docLanguage = services.settings.vault()?.languages.documents ?? 'de';
+      const prepared = normalize(proposal, projectsOf(services), docLanguage);
+      /* The same document language the proposal was normalized with has to reach
+         the write itself: `applyProposal` labels *missing* sections and new project
+         files, and without it every filing would fall back to German headings no
+         matter what `languages.documents` says. */
+      const result = await applyProposal(captureStore(services), prepared, { docLanguage });
       cache.forget(proposal.dumpPath);
       await settle(services, [...result.written, proposal.dumpPath]);
       return result;

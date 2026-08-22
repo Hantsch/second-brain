@@ -19,6 +19,7 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import axe from 'axe-core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { SectionMigrationEntry } from '@shared/ipc';
 import type {
   LocalRuntimeStatus,
   ModelRef,
@@ -73,6 +74,10 @@ interface State {
   snapshot: SettingsSnapshot;
   detected: { running: boolean; models: string[] };
   runtimeStatus: LocalRuntimeStatus;
+  /* 024 D8: what `vault:sectionPlan` currently finds for the tab's
+     document-language plan — empty by default so the existing language
+     tests see no card. */
+  sectionPlanEntries: SectionMigrationEntry[];
 }
 
 let state: State;
@@ -134,6 +139,24 @@ const invoke = vi.fn(async (channel: string, payload?: unknown): Promise<unknown
       const added = { ...ollama([]), label: input.label, baseUrl: input.baseUrl };
       state.providers = [...state.providers, added];
       return added;
+    }
+    case 'vault:sectionPlan': {
+      const { to } = payload as { to: 'de' | 'en' };
+      return { to, count: state.sectionPlanEntries.length, entries: state.sectionPlanEntries };
+    }
+    case 'vault:sectionMigrate': {
+      const { entries } = payload as { to: 'de' | 'en'; entries: SectionMigrationEntry[] };
+      const results = entries.map((entry) => ({
+        path: entry.path,
+        outcome: 'migrated' as const,
+        renames: entry.renames.length,
+        folds: entry.folds.length,
+      }));
+      /* The plan is empty once the migration ran against it — the same
+         "recheck the reality" the real gateway (`vault:sectionPlan` re-read
+         through the store) would find. */
+      state.sectionPlanEntries = [];
+      return { results, migrated: entries.length, conflicts: 0 };
     }
     case 'settings:get':
       return state.snapshot;
@@ -205,6 +228,7 @@ beforeEach(() => {
     snapshot: JSON.parse(JSON.stringify(settingsSnapshot)) as SettingsSnapshot,
     detected: { running: false, models: [] },
     runtimeStatus: 'absent',
+    sectionPlanEntries: [],
   };
   window.sb = { invoke, on: () => () => undefined, off: () => undefined } as unknown as SbBridge;
 });
@@ -684,6 +708,56 @@ describe('Einstellungen: Sprachen', () => {
     const { container } = await openTab('languages');
     await screen.findByLabelText('Oberfläche');
     await expectNoViolations(container);
+  });
+
+  /* 024 D8: the card queries the plan itself and stays up as long as the
+     plan finds old-language headings — not only right after a switch. */
+  describe('mit alten Überschriften', () => {
+    beforeEach(() => {
+      state.sectionPlanEntries = [
+        {
+          path: 'projects/foo.md',
+          hash: 'hash-1',
+          renames: [{ kind: 'notes', from: 'Notes', to: 'Notizen' }],
+          folds: [],
+        },
+      ];
+    });
+
+    it('zeigt die Warnung schon beim Öffnen des Tabs, ohne dass die Sprache erst umgeschaltet wird', async () => {
+      await openTab('languages');
+      expect(await screen.findByText('1 Datei trägt noch Überschriften in English.')).toBeTruthy();
+      expect(invoke).toHaveBeenCalledWith('vault:sectionPlan', { to: 'de' });
+    });
+
+    it('stellt nach Bestätigung um und meldet das Ergebnis', async () => {
+      await openTab('languages');
+      await screen.findByText('1 Datei trägt noch Überschriften in English.');
+      const plannedEntries = state.sectionPlanEntries; // the mock empties this once migrated
+
+      await userEvent.click(screen.getByRole('button', { name: 'Überschriften umstellen' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Jetzt umstellen' }));
+
+      await waitFor(() =>
+        expect(invoke).toHaveBeenCalledWith('vault:sectionMigrate', {
+          to: 'de',
+          entries: plannedEntries,
+        }),
+      );
+      expect(await screen.findByText('1 Datei umgestellt.')).toBeTruthy();
+
+      /* Once done, the plan is empty again — closing the dialog (Escape,
+         to dodge the ambiguous "Schließen" name shared by the window's own
+         close button) leaves nothing behind to reopen. */
+      await userEvent.keyboard('{Escape}');
+      await waitFor(() => expect(screen.queryByText(/trägt noch Überschriften/)).toBeNull());
+    });
+
+    it('hat keinen A11y-Verstoß', async () => {
+      const { container } = await openTab('languages');
+      await screen.findByText('1 Datei trägt noch Überschriften in English.');
+      await expectNoViolations(container);
+    });
   });
 });
 

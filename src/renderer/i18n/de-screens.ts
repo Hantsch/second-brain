@@ -78,6 +78,7 @@ export const deScreens = {
   'inbox.proposal.confidence': 'Zuversicht {percent} %',
   'inbox.proposal.changed': 'Ziel von dir gewählt.',
   'inbox.proposal.heuristic': 'Ohne Modell eingeordnet — Regeln statt Verstehen.',
+  'inbox.proposal.section': 'Landet unter',
   'inbox.proposal.exact': 'Das wird geschrieben',
   /* „Bleibt in der Inbox" schreibt nichts. Die Beschriftung muss das sagen,
      sonst behauptet das Feld einen Schreibvorgang, den es nicht gibt. */

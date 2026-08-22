@@ -46,7 +46,10 @@ export interface ClassifyDeps {
   store: ClassifyStore;
   index: CaptureIndex;
   gateway: LlmGateway;
-  /** Sprache, in der Titel und Notizen geschrieben werden. */
+  /**
+   * Sprache, in der Titel und Notizen geschrieben werden — und in der die
+   * Abschnitte des Vorschlags heissen. Vorgabe `'de'`.
+   */
   docLanguage?: DocLanguage;
   /** Das „jetzt". Tests geben eine feste Zeit. */
   now?: DateLike;
@@ -198,9 +201,10 @@ export async function classifyDump(deps: ClassifyDeps, dumpPath: string): Promis
     scope: asScope(doc.frontmatter['scope']),
   });
   const at = deps.now ?? context.today;
+  const docLanguage = deps.docLanguage ?? 'de';
 
   if (text.length === 0 || !deps.gateway.isAvailable('classify-dump')) {
-    return buildProposal(base, context, at);
+    return buildProposal(base, context, at, docLanguage);
   }
 
   try {
@@ -216,7 +220,7 @@ export async function classifyDump(deps: ClassifyDeps, dumpPath: string): Promis
           areas: narrow.areas.map((area) => area.slug),
           knownTags: context.tags,
         },
-        deps.docLanguage ?? 'de',
+        docLanguage,
       ),
       schema: CLASSIFY_DUMP_SCHEMA,
       temperature: 0,
@@ -224,11 +228,11 @@ export async function classifyDump(deps: ClassifyDeps, dumpPath: string): Promis
     });
     const parsed = parseJsonLoose<Record<string, unknown>>(result.text);
     const verdict = readVerdict(parsed);
-    return buildProposal(merge(base, verdict, context), context, at);
+    return buildProposal(merge(base, verdict, context), context, at, docLanguage);
   } catch (error) {
     // Kein Modell, kein Netz, kaputtes JSON: die Heuristik traegt. Nur ein Abbruch
     // des Aufrufers ist ein echter Abbruch.
     if (isAbortError(error)) throw error;
-    return buildProposal(base, context, at);
+    return buildProposal(base, context, at, docLanguage);
   }
 }

@@ -13,7 +13,7 @@
  *   15.08."), nicht eine Floskel. Der Nutzer soll widersprechen koennen.
  */
 
-import type { FilingProposal, FilingTarget, Scope } from '@shared/types';
+import type { DocLanguage, FilingProposal, FilingTarget, Scope } from '@shared/types';
 import type { DateLike } from '@core/vault/paths';
 import { buildProposal } from './actions';
 import type { ProposalDraft } from './actions';
@@ -44,6 +44,12 @@ export interface HeuristicInput {
   tags?: readonly string[];
   /** Vom Nutzer beim Erfassen gesetzter Scope. */
   scope?: Scope | null;
+  /**
+   * Dokumentsprache — sie benennt die Abschnitte des Vorschlags. Die Entscheidung
+   * selbst (`heuristicDraft`) haengt nicht daran: welches Projekt gemeint ist,
+   * steht im Text, nicht in der Sprache der Ueberschriften.
+   */
+  docLanguage?: DocLanguage;
 }
 
 /** Scope aus den Signalwoertern: Mehrheit gewinnt, Gleichstand entscheidet nicht. */
@@ -194,5 +200,10 @@ export function heuristicDraft(input: HeuristicInput): ProposalDraft {
 
 /** Der vollstaendige Vorschlag ohne Modell. */
 export function heuristicProposal(input: HeuristicInput): FilingProposal {
-  return buildProposal(heuristicDraft(input), input.context, input.now ?? input.context.today);
+  return buildProposal(
+    heuristicDraft(input),
+    input.context,
+    input.now ?? input.context.today,
+    input.docLanguage ?? 'de',
+  );
 }

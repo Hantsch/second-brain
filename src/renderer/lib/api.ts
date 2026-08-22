@@ -43,6 +43,9 @@ export const api = {
     write: (request: IpcRequest<'vault:write'>) => call('vault:write', request),
     remove: (path: string) => call('vault:delete', { path }),
     tree: (dir?: string) => call('vault:tree', dir === undefined ? {} : { dir }),
+    sectionPlan: (to: DocLanguage) => call('vault:sectionPlan', { to }),
+    sectionMigrate: (request: IpcRequest<'vault:sectionMigrate'>) =>
+      call('vault:sectionMigrate', request),
   },
   index: {
     stats: () => call('index:stats'),

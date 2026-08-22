@@ -216,6 +216,12 @@
   line-height: var(--leading-normal);
   color: var(--text-muted);
 }
+.sb-proposal-section {
+  max-width: 72ch;
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--text-muted);
+}
 .sb-proposal-confidence {
   display: flex;
   align-items: center;

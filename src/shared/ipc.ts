@@ -107,6 +107,54 @@ export interface WriteRequest {
   expectedHash?: string;
 }
 
+/**
+ * One heading that only needs a new name — mirrors `SectionRename` from
+ * `@core/vault/section-migration`. Kept as its own shape here (not imported
+ * from the core) for the same reason `JournalStreamBlock` mirrors
+ * `JournalBlock`: nothing outside that module needs to import from it just to
+ * describe the wire shape.
+ */
+export interface SectionRename {
+  kind: string;
+  /** The heading as it stands in the file. */
+  from: string;
+  /** The heading it becomes — the target language's word for this kind. */
+  to: string;
+}
+
+/** One heading whose content moves under the heading the file already has — mirrors `SectionFold`. */
+export interface SectionFold {
+  kind: string;
+  /** The old-language heading that goes. */
+  from: string;
+  /** The target-language heading that receives its content. */
+  into: string;
+}
+
+/** What one file needs, and the hash it was planned at — mirrors `SectionMigrationEntry`. */
+export interface SectionMigrationEntry {
+  path: string;
+  hash: string;
+  renames: SectionRename[];
+  folds: SectionFold[];
+}
+
+/**
+ * What became of one file in `vault:sectionMigrate` — mirrors
+ * `SectionMigrationOutcome`. `conflict`: the file changed since the plan,
+ * nothing was written. `missing`: the file is gone. `unchanged`: nothing was
+ * left to do. `skipped`: the path isn't one this migration may touch.
+ */
+export type SectionMigrationOutcome = 'migrated' | 'conflict' | 'missing' | 'unchanged' | 'skipped';
+
+/** Mirrors `SectionMigrationResult`. */
+export interface SectionMigrationResult {
+  path: string;
+  outcome: SectionMigrationOutcome;
+  renames: number;
+  folds: number;
+}
+
 /** One round of the coaching dialogue, as it appears in the journal entry. */
 export interface JournalTurn {
   role: 'user' | 'assistant';
@@ -249,6 +297,29 @@ export interface IpcRoutes {
   'vault:write': { req: WriteRequest; res: WriteResult };
   'vault:delete': { req: { path: string }; res: { undoToken: string } };
   'vault:tree': { req: { dir?: string }; res: { path: string; dir: boolean; size: number }[] };
+  /**
+   * Which files still carry section headings in the other document language,
+   * and what a migration to `to` would do to them (story 024, D7) — the read
+   * side of the section-heading migration in `@core/vault/section-migration`.
+   * `count` is `entries.length`, carried alongside so the settings screen can
+   * show "N files carry old-language headings" without counting itself.
+   * Files with nothing to do are not in `entries` — an already-migrated vault
+   * yields `count: 0`.
+   */
+  'vault:sectionPlan': {
+    req: { to: DocLanguage };
+    res: { to: DocLanguage; count: number; entries: SectionMigrationEntry[] };
+  };
+  /**
+   * Runs a plan (or a subset of it) from `vault:sectionPlan`. Each entry's
+   * `hash` guards its write exactly as the plan was taken: a file that moved
+   * on in between comes back as `conflict` in `results`, not as an overwrite.
+   * One file's conflict does not stop the others in the same call.
+   */
+  'vault:sectionMigrate': {
+    req: { to: DocLanguage; entries: SectionMigrationEntry[] };
+    res: { results: SectionMigrationResult[]; migrated: number; conflicts: number };
+  };
 
   // ── Index & search ───────────────────────────────────────────────────────
   'index:stats': { req: void; res: IndexStats };
@@ -882,6 +953,8 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'vault:write',
   'vault:delete',
   'vault:tree',
+  'vault:sectionPlan',
+  'vault:sectionMigrate',
   'index:stats',
   'index:rebuild',
   'search:query',

@@ -56,6 +56,7 @@ export {
   todoLine,
   type ProposalDraft,
 } from './actions';
+export { resolveSection, sectionFor } from './sections';
 export {
   MAX_CONFIDENCE,
   heuristicDraft,

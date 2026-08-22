@@ -37,7 +37,7 @@ import { ProjectNoteComposer } from './ProjectNoteComposer';
 import { SuggestionCard } from './SuggestionCard';
 import { WaitingComposer } from './WaitingComposer';
 import type { WaitingEntryInput } from './WaitingComposer';
-import { SECTION_STATE, datedEntries, notesSectionOf, sectionOf } from './sections';
+import { datedEntries, notesSectionOf, stateSectionOf } from './sections';
 import { useComposerKeys, useTodoKeys } from './use-project-keys';
 
 function openFile(path: string): void {
@@ -215,7 +215,7 @@ export function ProjectOverviewTab({ project, doc, now }: ProjectOverviewTabProp
         return result;
       });
 
-  const state = sectionOf(doc.body, SECTION_STATE);
+  const state = stateSectionOf(doc.body);
   const notes = notesSectionOf(doc.body);
   const noteCount = datedEntries(notes);
   const openWaiting = project.waitingOn.filter((entry) => entry.resolved !== true).length;

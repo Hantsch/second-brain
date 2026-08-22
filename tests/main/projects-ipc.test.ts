@@ -17,7 +17,7 @@ import { createFetchFake, jsonResponse } from '../fakes/llm';
 import { CLAUDE_PROJECTS_DIR } from '../fixtures';
 import { createTempVault } from '../helpers/vault';
 import type { TempVault } from '../helpers/vault';
-import { TODAY, freezeTime } from '../helpers/time';
+import { TODAY, day, freezeTime } from '../helpers/time';
 
 /* Electron gibt es im Test nicht: Fenster keine, Verschlüsselung keine. */
 vi.mock('electron', () => ({
@@ -350,6 +350,28 @@ describe('Projekt- und Todo-Kanäle im Main', () => {
     /* Sofort in der Liste — der Index ist nachgezogen. */
     const list = await harness.call('projects:list', { scope: 'private' });
     expect(list.map((project) => project.slug)).toContain('kueche-renovieren');
+  });
+
+  /* 024: a project created while the vault's document language is English
+     must carry English headings from the start — otherwise creating a
+     project would disagree with filing onto it a moment later. */
+  it('legt ein Projekt mit englischen Überschriften an, wenn die Dokumentsprache Englisch ist', async () => {
+    await harness.settings.setLanguages({ documents: 'en' });
+
+    const created = await harness.call('projects:create', {
+      title: 'Renovate kitchen',
+      scope: 'private',
+      status: 'idea',
+      body: 'Two carpenters sent quotes.',
+    });
+
+    const raw = (await vault.read(created.path)) ?? '';
+    expect(raw).toContain('## Status');
+    expect(raw).toContain('Two carpenters sent quotes.');
+    expect(raw).toContain('## Todos');
+    expect(raw).toContain('## Notes');
+    expect(raw).not.toContain('## Stand');
+    expect(raw).not.toContain('## Notizen');
   });
 
   /* Der Ordner entscheidet, nicht der Titel: „Hochbeet bauen" landet im Ordner
@@ -843,6 +865,49 @@ describe('Projekt- und Todo-Kanäle im Main', () => {
     expect(created.project).toBeNull();
     expect(created.scope).toBe('private');
     expect(await vault.read(created.path)).toContain('- [ ] Zahnarzttermin verschieben');
+  });
+
+  /* 024: `ensureDay` creates a *new* day file with the right-language "Facts"
+     heading (here: no entry exists yet for tomorrow); a caller that then
+     resolved the target section from a hardcoded German constant would
+     append under a second, freshly created "## Fakten" instead of the
+     "## Facts" `ensureDay` just wrote. */
+  it('legt ein neues Tagesdatei-Todo unter der englischen Facts-Überschrift an, nicht unter einer zweiten deutschen', async () => {
+    await harness.settings.setLanguages({ documents: 'en' });
+    freezeTime(`${day(1)}T09:00:00+02:00`);
+
+    const created = await harness.call('todos:create', {
+      text: 'Reschedule dentist appointment',
+      scope: 'private',
+      project: null,
+      due: null,
+    });
+
+    expect(created.path).toBe(`journal/2026/08/${day(1)}.md`);
+    const raw = (await vault.read(created.path)) ?? '';
+    expect(raw).toContain('## Facts');
+    expect(raw).not.toContain('## Fakten');
+    expect(raw.indexOf('Reschedule dentist appointment')).toBeGreaterThan(raw.indexOf('## Facts'));
+  });
+
+  /* 024: today's day file in the fixture already carries the German
+     "## Fakten" heading — the setting must not win over a heading that is
+     already there, or filing a todo would split it into two sections. */
+  it('hängt ein Tagesdatei-Todo unter das bestehende „## Fakten" an, auch wenn die Dokumentsprache Englisch ist', async () => {
+    await harness.settings.setLanguages({ documents: 'en' });
+
+    const created = await harness.call('todos:create', {
+      text: 'Reschedule dentist appointment',
+      scope: 'private',
+      project: null,
+      due: null,
+    });
+
+    expect(created.path).toBe(`journal/2026/08/${TODAY}.md`);
+    const raw = (await vault.read(created.path)) ?? '';
+    expect(raw).toContain('## Fakten');
+    expect(raw).not.toContain('## Facts');
+    expect(raw.indexOf('Reschedule dentist appointment')).toBeGreaterThan(raw.indexOf('## Fakten'));
   });
 
   // ── Todos in Areas ─────────────────────────────────────────────────────────

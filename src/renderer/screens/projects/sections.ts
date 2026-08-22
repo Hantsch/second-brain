@@ -14,6 +14,9 @@ export const SECTION_NOTES = 'Notizen';
 /** The other spelling of the notes heading — see `notesSectionOf` below. */
 const SECTION_NOTES_EN = 'Notes';
 
+/** The other spellings of the state heading — see `stateSectionOf` below. */
+const SECTION_STATE_ALIASES = [SECTION_STATE, 'Status', 'State'];
+
 const HEADING = /^(#{2,6})\s+(.+?)\s*$/;
 const FENCE = /^ {0,3}(?:`{3,}|~{3,})/;
 
@@ -83,6 +86,25 @@ export function notesSectionOf(body: string): string {
   if (de === null && en === null) return '';
   const heading = en === null || (de !== null && de <= en) ? SECTION_NOTES : SECTION_NOTES_EN;
   return sectionOf(body, heading);
+}
+
+/**
+ * The state section under whichever spelling of the heading — "Stand",
+ * "Status" or "State" (`core/vault/section-names.ts`'s `state` aliases) —
+ * appears FIRST in the file. Same reasoning as `notesSectionOf` above: a
+ * project written under `en` carries `## Status`, and a project migrated
+ * from `de` may carry `## State`; matching only "Stand" would show this
+ * panel empty even though the file has content.
+ */
+export function stateSectionOf(body: string): string {
+  let winner: { heading: string; line: number } | null = null;
+  for (const heading of SECTION_STATE_ALIASES) {
+    const line = firstHeadingLine(body, heading);
+    if (line !== null && (winner === null || line < winner.line)) {
+      winner = { heading, line };
+    }
+  }
+  return winner === null ? '' : sectionOf(body, winner.heading);
 }
 
 /** How many dated entries (`### …`) a section holds. */

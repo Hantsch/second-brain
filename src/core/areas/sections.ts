@@ -20,8 +20,7 @@
  */
 
 import type { DocLanguage } from '@shared/types';
-import { SECTION_NOTES, SECTION_TODOS } from '@core/capture';
-import { fold } from '@core/index/text';
+import { sectionKindOf, sectionNameFor, type SectionKind } from '@core/vault/section-names';
 import { findSections } from '@core/vault/sections';
 import type { SectionRange } from '@core/vault/sections';
 
@@ -32,26 +31,24 @@ export const AREA_SECTION_LEVEL = 2;
 export const AREA_ENTRY_LEVEL = AREA_SECTION_LEVEL + 1;
 
 /** Which of the two sections is meant. */
-export type AreaSectionKind = 'notes' | 'todos';
+export type AreaSectionKind = Extract<SectionKind, 'notes' | 'todos'>;
 
 /** The headings of an area file in one language. */
 export type AreaSections = Record<AreaSectionKind, string>;
 
-/* The German names come from `core/capture/actions` — two versions of them
-   would mean two versions of docs/VAULT-FORMAT.md. "Todos" is the same word in
-   both languages; that is the vault format, not an oversight. */
-const HEADINGS: Record<DocLanguage, AreaSections> = {
-  de: { notes: SECTION_NOTES, todos: SECTION_TODOS },
-  en: { notes: 'Notes', todos: SECTION_TODOS },
-};
+/* Sourced from the shared table (`core/vault/section-names`) — two versions of
+   these names would mean two versions of docs/VAULT-FORMAT.md. "Todos" is the
+   same word in both languages; that is the vault format, not an oversight. */
+function sectionsFor(docLanguage: DocLanguage): AreaSections {
+  return {
+    notes: sectionNameFor('notes', docLanguage),
+    todos: sectionNameFor('todos', docLanguage),
+  };
+}
 
-/**
- * Headings that count as the same section — compared folded, so that "Notizen"
- * and "Notes" address the one section a file has.
- */
-const ALIASES: Record<AreaSectionKind, readonly string[]> = {
-  notes: ['notizen', 'notes'],
-  todos: ['todos'],
+const HEADINGS: Record<DocLanguage, AreaSections> = {
+  de: sectionsFor('de'),
+  en: sectionsFor('en'),
 };
 
 /** The headings in this document language. */
@@ -61,7 +58,7 @@ export function areaSections(docLanguage: DocLanguage = 'de'): AreaSections {
 
 /** Is this heading the named section? */
 export function isAreaSectionOf(heading: string, kind: AreaSectionKind): boolean {
-  return ALIASES[kind].includes(fold(heading.trim()));
+  return sectionKindOf(heading) === kind;
 }
 
 /**

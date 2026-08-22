@@ -12,9 +12,9 @@
    change made elsewhere would be worse than a refusal. */
 
 import { areaSectionIn } from '@core/areas/sections';
-import { SECTION_FACTS, SECTION_TODOS, todoLine } from '@core/capture';
+import { SECTION_TODOS, todoLine } from '@core/capture';
 import { parseTodos, scopeFor } from '@core/index';
-import { ensureDay } from '@core/journal';
+import { ensureDay, sectionIn } from '@core/journal';
 import { isoDay, projectPath } from '@core/vault/paths';
 import type { DocLanguage, Scope, Todo, VaultDoc } from '@shared/types';
 import { SCOPES } from '@shared/types';
@@ -183,7 +183,15 @@ async function targetFor(
     if (doc === null) throw fail('not-found', `diese Datei gibt es nicht: ${known.path}`);
     return { path: known.path, section: areaSectionIn(doc.body, 'todos', docLanguage(services)) };
   }
-  return { path: await ensureJournal(services, now), section: SECTION_FACTS };
+  const journal = await ensureJournal(services, now);
+  return {
+    path: journal.path,
+    /* The facts heading, whichever spelling the file already carries — same
+       rule `journal/close.ts` uses. Without this, a day file `ensureDay` just
+       created under `en` (`## Facts`) would get a *second*, hardcoded German
+       section from a caller that never looked at what was actually written. */
+    section: sectionIn(journal.body, 'facts', docLanguage(services)),
+  };
 }
 
 /**
@@ -194,9 +202,12 @@ async function targetFor(
  * language change. `ensureDay` is idempotent — if the file exists, it's left
  * untouched.
  */
-async function ensureJournal(services: Services, now: Date): Promise<string> {
-  const { path } = await ensureDay(journalStore(services), now, docLanguage(services));
-  return path;
+async function ensureJournal(
+  services: Services,
+  now: Date,
+): Promise<{ path: string; body: string }> {
+  const { path, doc } = await ensureDay(journalStore(services), now, docLanguage(services));
+  return { path, body: doc.body };
 }
 
 /**

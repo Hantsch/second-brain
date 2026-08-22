@@ -70,10 +70,6 @@ Gaps/notes:
   is rewritten to match it and carries a banner saying so — a single fixed (German) schema text
   is simpler than a per-language doc plus a second drift guard, and nothing in the app parses
   `AGENTS.md`.
-- **`capture-proposal.ts` hardcodes the German filing section name** regardless of the vault's
-  document language (`docs.documents` setting). Surfaced by S02's story 005, which built a
-  tolerant heading match for its own areas-specific write path but deliberately did not extend
-  the general filing path. Worth its own story once English-language vaults are common.
 - **`scripts/seed/internal.mjs` pins `claudeProjectsDir` for the demo vault but not Codex**, so
   screenshot runs read the real `~/.codex/sessions`. Pre-existing from story 001, surfaced by 008
   because the Sessions tab now reads both CLIs.
@@ -107,11 +103,6 @@ Gaps/notes:
   Fixed in a standalone commit on the S03 branch (`af519ef`): anchored to `/vault/`, module
   added. Confirmed missing from both `main` and `dev` before the fix — needs the S03 branch
   merged to actually land the core module in history.
-- **Filing still hardcodes the German `Notizen` heading** (`src/core/capture/filing.ts`);
-  only the new note-composer write path from story 003 is heading-alias aware. A project using
-  `## Notes` can end up with a second, German-headed section if a dump is filed onto it. Same
-  family as the S01/S02 gap about `capture-proposal.ts` hardcoding the German section name —
-  worth one story once English-language vaults are common.
 - **The "last worked on" marker (013) is computed over the filtered list**, not globally — under
   a narrowed scope filter it marks the most recent project within that scope. Intentional and
   tested, not a defect.

@@ -75,6 +75,24 @@ const own = {
   'settings.lang.de': 'Deutsch',
   'settings.lang.en': 'English',
 
+  'settings.lang.migration.title': 'Alte Sprachüberschriften',
+  'settings.lang.migration.warningOne': '1 Datei trägt noch Überschriften in {language}.',
+  'settings.lang.migration.warning': '{count} Dateien tragen noch Überschriften in {language}.',
+  'settings.lang.migration.action': 'Überschriften umstellen',
+  'settings.lang.migration.dialog.title': 'Überschriften umstellen',
+  'settings.lang.migration.dialog.intro':
+    'Jede betroffene Datei bekommt ihre Abschnittsüberschriften in der aktuellen Dokumentsprache. Der übrige Inhalt bleibt unverändert.',
+  'settings.lang.migration.dialog.countOne': '1 Datei wird umgestellt.',
+  'settings.lang.migration.dialog.count': '{count} Dateien werden umgestellt.',
+  'settings.lang.migration.dialog.confirm': 'Jetzt umstellen',
+  'settings.lang.migration.result.noneMigrated': 'Keine Datei musste geändert werden.',
+  'settings.lang.migration.result.migratedOne': '1 Datei umgestellt.',
+  'settings.lang.migration.result.migrated': '{count} Dateien umgestellt.',
+  'settings.lang.migration.result.conflictsOne':
+    '1 Datei hat sich seit der Planung geändert und wurde übersprungen.',
+  'settings.lang.migration.result.conflicts':
+    '{count} Dateien haben sich seit der Planung geändert und wurden übersprungen.',
+
   'settings.behavior.capture': 'Erfassen',
   'settings.behavior.hotkey.label': 'Tastenkombination für das Schnell-Erfassen',
   'settings.behavior.hotkey.hint':

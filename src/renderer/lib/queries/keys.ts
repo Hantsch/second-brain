@@ -7,6 +7,10 @@ export const qk = {
     recent: () => ['vault', 'recent'] as const,
     doc: (path: string) => ['vault', 'doc', path] as const,
     tree: (dir: string) => ['vault', 'tree', dir] as const,
+    /** The section-heading migration plan (024, D7/D8) for one target
+        document language — queried live, not only right after a switch, so
+        the offer in `SectionMigrationCard` survives a reload. */
+    sectionPlan: (to: string) => ['vault', 'sectionPlan', to] as const,
   },
   index: {
     stats: () => ['index', 'stats'] as const,

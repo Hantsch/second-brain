@@ -7,6 +7,7 @@
  * Ueberschriften in Code-Zaeunen (``` oder ~~~) zaehlen nicht als Abschnitte.
  */
 
+import { fold } from '@core/index/text';
 import { splitFrontmatterBlock } from './frontmatter';
 
 export interface SectionRange {
@@ -73,8 +74,18 @@ function rangesFrom(lines: string[], headings: Heading[]): SectionRange[] {
   });
 }
 
+/**
+ * Vergleichsform einer Ueberschrift: getrimmt, Leerraum zusammengezogen und
+ * gefaltet (`core/index/text`'s `fold` — Umlaute ausgeschrieben, Diakritika weg).
+ *
+ * Warum gefaltet: die Alias-Tabelle in `section-names.ts` haelt ihre Schreibweisen
+ * schon in dieser Form ('gespraech'), und `sectionKindOf` vergleicht ebenfalls
+ * gefaltet. Wuerde hier nur kleingeschrieben, traefe ein echtes '## Gespräch' in
+ * einer Datei niemals auf sein Alias — die Ablage legte einen zweiten Abschnitt
+ * fuer dieselbe Sache an. Eine Faltungsregel, auf beiden Seiten dieselbe.
+ */
 function normalizeHeading(text: string): string {
-  return text.trim().replace(/\s+/g, ' ').toLowerCase();
+  return fold(text.trim().replace(/\s+/g, ' '));
 }
 
 /** Alle Abschnitte eines Rumpfs, optional auf eine Ueberschriftenebene gefiltert. */

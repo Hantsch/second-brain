@@ -16,3 +16,29 @@
 - 2026-08-22 15:34 · 025 · D4 the guard is locked by a test · done
 - 2026-08-22 15:34 · 025 · D5 comments truthful and the run proven · started
 - 2026-08-22 15:41 · 025 · D5 comments truthful and the run proven · done
+- 2026-08-22 15:29 · 024 · D1 shared name table · started
+- 2026-08-22 15:32 · 024 · D1 shared name table · done
+- 2026-08-22 15:32 · 024 · D2 filing writes in document language · started
+- 2026-08-22 15:44 · 024 · D2 filing writes in document language · done
+- 2026-08-22 15:44 · 024 · D3 read side accepts English state heading · started
+- 2026-08-22 15:53 · 024 · D3 read side English state heading · done
+- 2026-08-22 15:53 · 024 · D4 proposal names its heading · done
+- 2026-08-22 15:53 · 024 · D6 migration engine · done
+- 2026-08-22 15:53 · 024 · D5 preview shows heading · started
+- 2026-08-22 15:53 · 024 · D7 migration channels · started
+- 2026-08-22 16:01 · 024 · D5 preview shows heading · done
+- 2026-08-22 16:01 · 024 · D7 migration channels · done
+- 2026-08-22 16:01 · 024 · D8 warning and migration offer · started
+- 2026-08-22 16:11 · 024 · D8 warning and migration offer · done
+- 2026-08-22 16:11 · 024 · D9 docs · started
+- 2026-08-22 16:13 · 024 · D9 docs · done
+- 2026-08-22 16:25 · 024 · review-fix cycle 1 (docLanguage not wired at capture:apply; state alias; umlaut folding; prettier) · started
+- 2026-08-22 16:29 · 024 · review-fix cycle 1 · done
+- 2026-08-22 17:33 · 024 · verify gate green (typecheck/lint/test/build), prettier confirmed pre-existing CRLF-only · done
+- 2026-08-22 17:33 · 024 · review-fix cycle 2 (confirmation pass) · started
+- 2026-08-22 17:53 · 024 · review-fix cycle 2 (missed sites: renderer state panel Stand-only match, todo:add hardcoded Fakten, projects:create hardcoded de headings; plus story-md prettier indent) · done
+- 2026-08-22 17:53 · 024 · review-fix cycle 3 (confirmation pass) · started
+- 2026-08-22 18:05 · 024 · review-fix cycle 3 (confirmation pass, verdict PASS) · done
+- 2026-08-22 18:05 · 024 · live smoke (seed + shot) · started
+- 2026-08-22 18:07 · 024 · live smoke (seed + shot + targeted _electron drive of proposal heading + migration card) · done
+- 2026-08-22 18:09 · 024 · Done section filled, ACs ticked, status done, moved to done/ + INDEX.md · done
