@@ -346,9 +346,9 @@ fully green for five sprints.
 
 Sprints:
 
-- [sprints/S07/sprint.md](sprints/S07/sprint.md) — the gate is green and the small things are
+- [sprints/done/S07/sprint.md](sprints/done/S07/sprint.md) — the gate is green and the small things are
   right (023, 025, 024, 026, 027), `done` — all five stories built, none blocked
-  ([review](sprints/S07/review.md), [test plan](sprints/S07/testplan.md))
+  ([review](sprints/done/S07/review.md), [test plan](sprints/done/S07/testplan.md))
 
 **The goal is met:** `npm test` reports 190 files / 2707 tests / 0 failed, verified after the last
 commit. The decisions taken: the code is authoritative for the module schema (023); a
