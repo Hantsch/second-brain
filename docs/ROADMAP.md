@@ -125,7 +125,7 @@ concept behind them.
 
 Independent of everything else — [systems/navigation.md](systems/navigation.md) explicitly
 leaves the journal untouched at the rail level; 011 supersedes only the line about the journal's
-*inner* structure staying untouched.
+_inner_ structure staying untouched.
 
 The `## Day`/`## Conversation` split is gone for new writing: one field, a stance next to it
 (listen/tips/analyse, chosen per write and not persisted), the app's answers interleaved inline
@@ -158,7 +158,7 @@ Gaps/notes:
 - **`tests/core/wiki/module.test.ts` is still red**, confirmed pre-existing and unrelated on
   every story's build in this sprint (see the M1 gap above — still needs an owner).
 
-### M4 — A finding can be acted on — planned
+### M4 — A finding can be acted on — built, acceptance pending
 
 Stories 014 (the run reports findings, not results), 017 (a finding says how it ends), 016
 (orphan page — I pick the target), 015 (resolve a near-duplicate). Cut straight from the
@@ -173,8 +173,29 @@ M4 was chosen next at the 2026-08-20 `/ai-scrum:roadmap plan`, now that M3 is ac
 Sprints:
 
 - [sprints/S05/sprint.md](sprints/S05/sprint.md) — a finding can be acted on (014, 015, 016,
-  017), `planned`. Story 020 (M6) rides along in the same sprint by direct user decision on
-  2026-08-21 — see M6 below and the sprint's own note.
+  017), `done` — built, live acceptance pending
+  ([review](sprints/S05/review.md) · [testplan](sprints/S05/testplan.md)). Story 020 (M6) rode
+  along in the same sprint by direct user decision on 2026-08-21 — see M6 below and the
+  sprint's own note.
+
+Gaps/notes:
+
+- **Built, not yet accepted.** All four M4 stories are implemented, reviewed and smoke-tested
+  through the running app, but the manual acceptance walk is the user's — see
+  [sprints/S05/testplan.md](sprints/S05/testplan.md). The milestone is marked accepted only
+  after that.
+- **The `sources:` frontmatter citation variant (016) is out of scope**, by user decision in
+  S05's clarification round. An orphan can be resolved by a body-line link only; citing a source
+  through a `sources:` frontmatter list needs its own story (different write path, different
+  preview shape).
+- **A pre-existing red test blocks a fully green `npm test`**:
+  `tests/core/wiki/module.test.ts:150` asserts `MODULE_SCHEMA_TEMPLATE` is character-for-character
+  `docs/MODULE-SCHEMA.md`, and the two have drifted. It fails on `dev` as well and predates S05
+  — but it means the repo's own quality gate has not been fully green for some time. Which side
+  is the truth is a content decision, not a mechanical fix.
+- **Two files sit over the ~300-line soft limit**: `src/main/ipc/gardener.ts` and
+  `src/main/gardener-state.ts`, both grown by this milestone's write paths. Reviewed as still
+  single-responsibility; splitting them was judged not worth ballooning a story diff.
 
 ### M5 — Models without expertise — accepted
 
@@ -219,22 +240,42 @@ Gaps/notes:
 - **M5 accepted by the user on 2026-08-21**, S06's test plan walked end to end, including the
   steps needing a configured OpenRouter key or a real Ollama install.
 
-### M6 — Journal loose ends — planned
+### M6 — Journal loose ends — built, acceptance pending
 
-Requirement: [020-journal-loose-ends.md](../requirements/020-journal-loose-ends.md). A
+Requirement: [020-journal-loose-ends.md](../requirements/done/020-journal-loose-ends.md). A
 forward-looking sentence in the journal ("tomorrow is the notary appointment") whose day has
 passed with no later entry speaking to it becomes a visible, answerable loose end — surfaced in
 the journal conversation and as a reminder, closing itself once a later entry addresses it.
 
 No concept behind M6 — a single user-written story, not cut from a milestone-sized concept.
-Six open questions remain in the story (surface location, where the answer is written, where
-state persists, expiry horizon, how specific the app's own question may get, interaction with a
-closed day) — left for `/refine`'s clarification round, not decided here.
+The six open questions were answered by the user in S05's clarification round on 2026-08-21 and
+are recorded in the story under `## Decisions (Sprint)`: loose ends live as a finding kind in
+the Maintenance surface (reusing 017's exits framework), the answer is written into today's
+entry with a back-reference, state lives in its own place independent of any single day, there
+is no automatic expiry, the app may quote the user's own wording back at them, and closing a day
+(009) does not suppress its loose ends.
 
 Bundled into **S05** (M4) for scheduling by direct user decision on 2026-08-21, rather than
 cutting a fifth sprint for one story — see [sprints/S05/sprint.md](sprints/S05/sprint.md).
 Tracked as its own milestone here because it is not part of M4's "a finding can be acted on"
 scope.
+
+Sprints:
+
+- [sprints/S05/sprint.md](sprints/S05/sprint.md) — story 020 rode along in M4's sprint, `done`
+  — built, live acceptance pending
+  ([review](sprints/S05/review.md) · [testplan](sprints/S05/testplan.md))
+
+Gaps/notes:
+
+- **Built, not yet accepted.** Story 020 is implemented, reviewed and smoke-tested, but the
+  manual acceptance walk is the user's.
+- **Only the heuristic path was exercised live.** The model-found (`origin: 'model'`) loose end
+  needs a real local model routed; tests cover it with the fake provider and with "no model
+  configured", but no live model ran during the sprint.
+- **Two accepted low-severity limitations** are documented in the story's Done section:
+  unbounded heuristic re-parsing on the dashboard and interview hot paths, and a new
+  low-probability coupling between `journal:interviewPlan` and the gardener index.
 
 ---
 
