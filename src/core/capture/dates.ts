@@ -86,6 +86,12 @@ export interface DateHit {
   iso: string;
   /** Wortwoertlich, was im Text stand — Futter fuer die Begruendung. */
   label: string;
+  /**
+   * Wo `label` im Text beginnt (0-basiert). Wer wissen muss, *worum* es an dieser
+   * Stelle geht — nicht nur an welchem Tag —, braucht den Satzteil um das Label
+   * herum, und dafuer die Position.
+   */
+  at: number;
 }
 
 const WEEKDAYS: readonly [string, number][] = [
@@ -135,10 +141,6 @@ const PHRASES: readonly [RegExp, (today: string) => string][] = [
   [wordRegex('Monatsende|Ende\\s+des\\s+Monats'), (today) => endOfMonth(today)],
 ];
 
-interface RawHit extends DateHit {
-  at: number;
-}
-
 /**
  * Jahr zu einem Datum ohne Jahresangabe. Ein Dump plant nach vorn: liegt der Tag
  * mehr als ein halbes Jahr zurueck, ist das naechste Jahr gemeint.
@@ -152,8 +154,8 @@ function resolveYear(day: number, month: number, raw: string | undefined, today:
   return diffDays(candidate, today) > 183 ? year + 1 : year;
 }
 
-function numericHits(text: string, today: string): RawHit[] {
-  const hits: RawHit[] = [];
+function numericHits(text: string, today: string): DateHit[] {
+  const hits: DateHit[] = [];
   for (const match of matchAll(NUMERIC_DATE, text)) {
     const day = Number(match.groups[0]);
     const month = Number(match.groups[1]);
@@ -163,8 +165,8 @@ function numericHits(text: string, today: string): RawHit[] {
   return hits;
 }
 
-function namedHits(text: string, today: string): RawHit[] {
-  const hits: RawHit[] = [];
+function namedHits(text: string, today: string): DateHit[] {
+  const hits: DateHit[] = [];
   for (const match of matchAll(MONTH_DATE, text)) {
     const day = Number(match.groups[0]);
     const month = MONTH_KEYS.indexOf(fold(match.groups[1] ?? '')) + 1;
@@ -184,7 +186,7 @@ function namedHits(text: string, today: string): RawHit[] {
  * `today` ist die Grundlage jeder relativen Angabe.
  */
 export function findDates(text: string, today: string): DateHit[] {
-  const raw: RawHit[] = [...numericHits(text, today), ...namedHits(text, today)];
+  const raw: DateHit[] = [...numericHits(text, today), ...namedHits(text, today)];
 
   for (const match of matchAll(ISO_DATE, text)) {
     const iso = plainDay(Number(match.groups[0]), Number(match.groups[1]), Number(match.groups[2]));
@@ -213,7 +215,7 @@ export function findDates(text: string, today: string): DateHit[] {
   for (const hit of raw) {
     if (seen.has(hit.iso)) continue;
     seen.add(hit.iso);
-    hits.push({ iso: hit.iso, label: hit.label });
+    hits.push(hit);
   }
   return hits;
 }

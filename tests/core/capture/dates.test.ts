@@ -65,6 +65,13 @@ describe('findDates', () => {
     expect(findDates('bis 15.08. abgeben', TODAY)[0]?.label).toBe('15.08.');
     expect(findDates('nächste Woche', TODAY)[0]?.label).toBe('nächste Woche');
   });
+
+  it('trägt mit, wo das Label steht — sonst ist der Satzteil dazu nicht auffindbar', () => {
+    expect(findDates('bis 15.08. abgeben', TODAY)[0]?.at).toBe(4);
+    expect(findDates('morgen früh anrufen', TODAY)[0]?.at).toBe(0);
+    /* Am Satzende: wer den zugehörigen Satzteil sucht, muss nach vorne lesen. */
+    expect(findDates('Der Notartermin ist am 2026-08-15.', TODAY)[0]?.at).toBe(23);
+  });
 });
 
 describe('primaryDate', () => {

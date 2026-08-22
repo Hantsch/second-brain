@@ -144,6 +144,15 @@ export interface JournalDayView {
   turns: JournalTurn[];
   /** The "Facts" section, verbatim as it is in the file. */
   facts: string;
+  /**
+   * Loose ends announced on this day that are still open (020, D5) — the
+   * same `openLooseEnds()` the interview's follow-up and the maintenance
+   * report already read, filtered to `day.date`. Reusing
+   * `JournalInterviewLooseEnd` rather than a second shape keeps the id
+   * (`loose-end:<id>`) identical to the one the dashboard and maintenance
+   * screen already track this loose end under.
+   */
+  looseEnds: JournalInterviewLooseEnd[];
 }
 
 /**

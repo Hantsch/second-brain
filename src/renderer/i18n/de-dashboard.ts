@@ -87,6 +87,9 @@ export const deDashboard = {
   'module.claude-sessions.purpose': 'Arbeitsspuren der Agenten-CLI, den Projekten zugeordnet.',
   'module.gardener.name': 'Pflege',
   'module.gardener.purpose': 'Gesundheit und Befunde der letzten Prüfung.',
+  'module.loose-ends.name': 'Lose Enden',
+  'module.loose-ends.purpose':
+    'Ankündigungen aus dem Tagebuch, deren Tag vorbei ist und die niemand aufgegriffen hat.',
 
   // ── Tiles ──────────────────────────────────────────────────────────────
   'tile.more': '{count} weitere',
@@ -137,10 +140,10 @@ export const deDashboard = {
   'tile.waiting.since': 'seit {date}',
   'tile.waiting.due': 'bis {date}',
   'tile.waiting.overdue': 'überfällig',
-  /* Warum ein loses Ende hier mahnt: am genannten Tag stand eine Ankündigung
-     im Tagebuch, seitdem hat niemand gesagt, wie es ausging. */
-  'tile.waiting.looseEnd': 'Angekündigt am {date}, seitdem nichts dazu',
 
+  /* 022 D2: die Ankündigung selbst ist keine Frist — eigenes Label statt der
+     Fristsprache von "überfällig". */
+  'reminder.urgency.open': 'Angekündigt, offen',
   'tile.deadlines.empty': 'Keine Frist in den nächsten {days} Tagen.',
   'tile.deadlines.project': 'Projektfrist',
   'tile.deadlines.todo': 'Todo',
@@ -190,4 +193,13 @@ export const deDashboard = {
      Stopp-Hinweis statt der üblichen Befundzahl. */
   'tile.gardener.asOf': 'Stand {date}',
   'tile.gardener.stopped': 'Letzte Prüfung gestoppt',
+
+  /* 022 D4: eine eigene Kachel für lose Enden — vormals fälschlich Teil von
+     "Warte auf". Die Zeile nennt sich selbst als Ankündigung ohne Ausgang,
+     nicht als Frist oder Wartefall. */
+  'tile.looseEnds.empty': 'Kein loses Ende. Jede Ankündigung im Tagebuch hat einen Ausgang.',
+  'tile.looseEnds.announced': 'Angekündigt am {date}',
+  'tile.looseEnds.for': 'für {date}',
+  'tile.looseEnds.snooze': '„{title}" ruhig stellen',
+  'tile.looseEnds.open': 'Tageseintrag vom {date} öffnen',
 } as const;

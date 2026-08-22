@@ -73,4 +73,9 @@ export const MODULE_META: Record<DashboardModuleId, ModuleMeta> = {
     purposeKey: 'module.gardener.purpose',
     icon: 'sprout',
   },
+  'loose-ends': {
+    nameKey: 'module.loose-ends.name',
+    purposeKey: 'module.loose-ends.purpose',
+    icon: 'link',
+  },
 };

@@ -84,8 +84,16 @@ function toStreamBlock(block: JournalBlock): JournalStreamBlock {
  * that's actually there, including an embedded answer block — `dayText`
  * strips those for reading (search, prompts, close-out), and reusing it here
  * would mean saving a heading-less day silently deletes the app's own words.
+ *
+ * Returns everything of `JournalDayView` this function can answer from the
+ * file alone. `looseEnds` needs `openLooseEnds()` (services, gardener
+ * state) — the caller (`journal.ts`'s `journal:get`) attaches it, so this
+ * stays a pure "file to view" mapping with no service dependency of its own.
  */
-export function toView(found: { day: JournalDay; doc: VaultDoc }): JournalDayView {
+export function toView(found: {
+  day: JournalDay;
+  doc: VaultDoc;
+}): Omit<JournalDayView, 'looseEnds'> {
   const body = found.doc.body;
   const day = sectionOf(body, 'day');
   const facts = sectionOf(body, 'facts');

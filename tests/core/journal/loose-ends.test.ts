@@ -33,6 +33,16 @@ function day(date: string, ...lines: string[]): LooseEndDay {
 }
 
 const NOTARY = day('2026-08-18', 'Der Sprint zieht sich.', '', 'Morgen bin ich beim Notar.');
+const SIGNING = day('2026-08-18', 'The notary signing is on 2026-08-19.');
+/* Der 12.-August-Absatz (022): weicher Zeilenumbruch, kein einziger Punkt — also
+   ein Satz, dessen Ankündigung ganz am Ende steht. */
+const MONDSEE = day(
+  '2026-08-12',
+  'Vormittag ruhig, lost, vereinzelt paar Fragen',
+  'fahr dann morgen so um zwei nach Mondsee',
+);
+const MONDSEE_QUOTE =
+  'Vormittag ruhig, lost, vereinzelt paar Fragen fahr dann morgen so um zwei nach Mondsee';
 
 describe('findLooseEnds', () => {
   it('findet die Ankündigung mit Satz, Tag, Pfad, Zeile und aufgelöstem Datum', () => {
@@ -53,14 +63,29 @@ describe('findLooseEnds', () => {
   });
 
   it('nimmt auch ein ausgeschriebenes Datum in englischer Prosa', () => {
-    const ends = findLooseEnds(
-      [day('2026-08-18', 'The notary signing is on 2026-08-19.')],
-      [],
-      TODAY,
-    );
+    const ends = findLooseEnds([SIGNING], [], TODAY);
 
     expect(ends).toHaveLength(1);
+    /* Das Datum steht am Satzende — der Name kommt dann aus dem, was davor steht. */
     expect(ends[0]).toMatchObject({ refDate: '2026-08-19', subject: 'notary signing' });
+  });
+
+  it('benennt die Ankündigung, nicht den Anfang des Absatzes', () => {
+    const ends = findLooseEnds([MONDSEE], [], TODAY);
+
+    expect(ends).toHaveLength(1);
+    /* Der Name kommt aus dem Satzteil um „morgen" herum. „zwei" ist eine Uhrzeit
+       und benennt nichts, genau wie eine Zahl in Ziffern. */
+    expect(ends[0]?.subject).toBe('Mondsee');
+    expect(ends[0]?.refDate).toBe('2026-08-13');
+    /* Der Satz bleibt ganz — nur der Name wird anders daraus gezogen. */
+    expect(ends[0]?.quote).toBe(MONDSEE_QUOTE);
+  });
+
+  it('schweigt, wenn ein datiertes Todo genau diese Ankündigung trägt', () => {
+    const trip: LooseEndTodo = { text: 'Nach Mondsee fahren', due: '2026-08-13' };
+
+    expect(findLooseEnds([MONDSEE], [trip], TODAY)).toEqual([]);
   });
 
   it('schweigt, solange der angekündigte Tag heute oder später ist', () => {
@@ -102,6 +127,21 @@ describe('findLooseEnds', () => {
     expect(findLooseEnds([NOTARY, unlinked], [], TODAY)).toHaveLength(1);
   });
 
+  it('erkennt die Antwort eines späteren Tags auch, wenn dieser das eng verankerte Thema nicht wörtlich nennt (022, D2)', () => {
+    /* MONDSEEs Thema wird auf das eine Wort neben der Ankündigung verengt
+       (`subject` ist "Mondsee", siehe oben) — für die Todo-Prüfung (`.every`)
+       ist das die Verbesserung. Die "verlinkt und greift das Thema auf"-Prüfung
+       läuft aber über `.some` gegen ein *breiteres* Wortfeld: schon eines der
+       Wörter aus dem Kopf des Satzes reicht, damit ein späterer Tag als Antwort
+       zählt — auch wenn er "Mondsee" selbst gar nicht wiederholt. */
+    const answered = day(
+      '2026-08-14',
+      'Vereinzelt noch was geklärt, aber erledigt, siehe [[2026-08-12]].',
+    );
+
+    expect(findLooseEnds([MONDSEE, answered], [], TODAY)).toEqual([]);
+  });
+
   it('schweigt, wenn ein Todo mit Frist dasselbe Thema trägt', () => {
     const dated: LooseEndTodo = { text: 'Notartermin nachfassen', due: '2026-08-25' };
     const undated: LooseEndTodo = { text: 'Notartermin nachfassen', due: null };
@@ -129,5 +169,23 @@ describe('findLooseEnds', () => {
     expect(first.map((end) => end.id)).toEqual(again.map((end) => end.id));
     expect(later.map((end) => end.id)).toEqual(first.map((end) => end.id));
     expect(first[0]?.id).toMatch(/^[0-9a-f]{16}$/);
+  });
+
+  it('behält Zitat und id Zeichen für Zeichen — auch wenn der Name sich ändert', () => {
+    /* Fest verdrahtete Werte, absichtlich nicht nachgerechnet: an
+       `looseEndId(day, quote)` hängen die Wartungsmeldung `loose-end:<id>` und
+       die gespeicherten „beantwortet" / „passt so" / „später" des Nutzers. Wandert
+       hier ein Zeichen, kommen erledigte lose Enden zurück. */
+    const notary = findLooseEnds([NOTARY], [], TODAY)[0];
+    expect([notary?.quote, notary?.id]).toEqual(['Morgen bin ich beim Notar.', '2c1aec1a55776340']);
+
+    const signing = findLooseEnds([SIGNING], [], TODAY)[0];
+    expect([signing?.quote, signing?.id]).toEqual([
+      'The notary signing is on 2026-08-19.',
+      '8a0428bfb2eeb048',
+    ]);
+
+    const mondsee = findLooseEnds([MONDSEE], [], TODAY)[0];
+    expect([mondsee?.quote, mondsee?.id]).toEqual([MONDSEE_QUOTE, 'c7861f4a5889610c']);
   });
 });

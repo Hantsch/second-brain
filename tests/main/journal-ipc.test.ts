@@ -24,6 +24,7 @@ import { createFetchFake, jsonResponse, sseChunks, sseResponse } from '../fakes/
 import type { FetchResponder } from '../fakes/llm';
 import { createTempVault } from '../helpers/vault';
 import type { TempVault } from '../helpers/vault';
+import { day, freezeTime } from '../helpers/time';
 
 /* Electron gibt es im Test nicht: Fenster keine, Verschlüsselung keine. */
 vi.mock('electron', () => ({
@@ -997,6 +998,67 @@ describe('Tagebuch-Kanäle im Main', () => {
       /* "Neustart": eine frische Instanz liest dieselbe Datei erneut. */
       const reloaded = await looseEndState();
       expect([...reloaded.answeredIds()]).toEqual(['loose-end:abc123']);
+    });
+  });
+
+  describe('journal:get trägt die losen Enden des Tages (020, D5)', () => {
+    /* `openLooseEnds()` braucht eine feste Gegenwart, sonst hinge „ist das
+       Datum schon fällig" vom Tag ab, an dem die Suite läuft. */
+    const ANNOUNCING_DAY = day(-5);
+    const ANNOUNCING_PATH = `journal/2026/08/${ANNOUNCING_DAY}.md`;
+    const QUOTE = 'Morgen bin ich beim Notar.';
+
+    beforeEach(() => {
+      freezeTime();
+    });
+
+    async function seedAnnouncingDay(): Promise<void> {
+      await vault.write(
+        ANNOUNCING_PATH,
+        [
+          '---',
+          'type: journal',
+          `title: 'Tag ${ANNOUNCING_DAY}'`,
+          `date: ${ANNOUNCING_DAY}`,
+          'lang: de',
+          '---',
+          '',
+          '## Tag',
+          '',
+          QUOTE,
+          '',
+        ].join('\n'),
+      );
+      await harness.services.requireIndex().refresh?.();
+    }
+
+    it('nennt ein unbeantwortetes Versprechen als offenes loses Ende genau am ankündigenden Tag', async () => {
+      await seedAnnouncingDay();
+
+      const view = await harness.call('journal:get', { date: ANNOUNCING_DAY });
+
+      expect(view?.looseEnds).toEqual([
+        { id: expect.stringMatching(/^loose-end:/), day: ANNOUNCING_DAY, quote: QUOTE },
+      ]);
+      /* Ein anderer Tag desselben Vaults trägt kein fremdes loses Ende. */
+      const otherDay = await harness.call('journal:get', { date: DATE });
+      expect(otherDay?.looseEnds).toEqual([]);
+    });
+
+    it('lässt ein beantwortetes loses Ende aus der Ansicht des ankündigenden Tages verschwinden', async () => {
+      await seedAnnouncingDay();
+      const before = await harness.call('journal:get', { date: ANNOUNCING_DAY });
+      const looseEnd = before?.looseEnds[0];
+      expect(looseEnd, 'ein gefundenes loses Ende').toBeDefined();
+
+      await harness.call('journal:answerLooseEnd', {
+        id: looseEnd?.id as string,
+        day: ANNOUNCING_DAY,
+        text: 'War in zehn Minuten erledigt.',
+      });
+
+      const after = await harness.call('journal:get', { date: ANNOUNCING_DAY });
+      expect(after?.looseEnds).toEqual([]);
     });
   });
 

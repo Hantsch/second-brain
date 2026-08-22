@@ -237,12 +237,18 @@ describe('reminders — lose Enden (020, D7)', () => {
     expect(list).toHaveLength(1);
     expect(list[0]).toMatchObject({
       source: 'loose-end',
-      urgency: 'overdue',
+      urgency: 'open',
       date: day(-5),
       scope: 'private',
     });
     // Der Titel nennt den Gegenstand — die Begründung, warum es mahnt.
     expect(list[0]!.title.length).toBeGreaterThan(0);
+  });
+
+  it('mahnt nicht mit `overdue` — eine Ankündigung ist keine verpasste Frist (022 D2)', () => {
+    const index = indexFrom([notary()]);
+    const list = reminders(index, LIMITS, TODAY).filter((entry) => entry.source === 'loose-end');
+    expect(list[0]!.urgency).not.toBe('overdue');
   });
 
   it('mahnt nicht, wenn der Gegenstand schon ein Todo mit Frist ist — `findLooseEnds` zieht das selbst ab', () => {

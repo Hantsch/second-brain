@@ -66,9 +66,22 @@ export function electronNotifier(): Notifier {
   };
 }
 
-/** Due means: overdue or today. Everything else is nudged by the UI instead. */
+/**
+ * Due means: overdue or today. Everything else is nudged by the UI instead —
+ * in particular `open` (a loose end): it's an honest label for an
+ * unanswered announcement, not a deadline, and must not trigger the same
+ * desktop notification as a blown deadline.
+ */
 function isDue(reminder: Reminder): boolean {
-  return reminder.urgency === 'overdue' || reminder.urgency === 'today';
+  switch (reminder.urgency) {
+    case 'overdue':
+    case 'today':
+      return true;
+    case 'soon':
+    case 'upcoming':
+    case 'open':
+      return false;
+  }
 }
 
 export interface NotifierOptions {

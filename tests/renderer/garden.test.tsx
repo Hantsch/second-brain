@@ -336,6 +336,7 @@ function todayView(): JournalDayView {
     stream: [],
     turns: [],
     facts: '',
+    looseEnds: [],
   };
 }
 

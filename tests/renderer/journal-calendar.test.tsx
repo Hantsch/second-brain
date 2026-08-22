@@ -722,6 +722,7 @@ describe('MonthCalendar wired into JournalScreen (010, D2)', () => {
       stream: [{ kind: 'entry', text: 'A short day.', at: null }],
       turns: [],
       facts: '',
+      looseEnds: [],
       ...patch,
     };
   }

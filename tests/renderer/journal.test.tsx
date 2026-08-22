@@ -197,6 +197,7 @@ function view(patch: Partial<JournalDayView> = {}): JournalDayView {
       { role: 'assistant', text: 'Zwei der drei Punkte warten auf andere.', at: '18:41' },
     ],
     facts: '- [ ] Interceptor zusammenlegen @due:2026-08-17',
+    looseEnds: [],
     ...patch,
   };
 }
@@ -1251,6 +1252,95 @@ describe('Tagebuch: Interview-Einstieg (012, D6)', () => {
     const field = screen.getByLabelText('Was beschäftigt dich?') as HTMLTextAreaElement;
     expect(field.disabled).toBe(false);
     await waitFor(() => expect(document.activeElement).toBe(field));
+  });
+});
+
+describe('Tagebuch: loses Ende am Tag (022, D6)', () => {
+  /* A loose end only ever stands on a day before today (`isBefore` in
+     `loose-ends.ts`) — `TODAY` is the one day it could never carry, so the
+     fixture has to use a past day, `EARLIER`, to exercise the real path. */
+  const LOOSE_END = {
+    id: 'loose-end:1',
+    day: EARLIER,
+    quote: 'Morgen sehe ich mir das Angebot noch mal an.',
+  };
+  /* Deliberately different from today's `hash-1` (via the default `view()`),
+     so a test that asserted the wrong hash would fail loudly instead of
+     passing by coincidence. */
+  const EARLIER_HASH = 'hash-past';
+
+  function withLooseEnd(extra: Handlers = {}): Handlers {
+    return {
+      'journal:get': ({ date }) =>
+        date === EARLIER
+          ? view({ looseEnds: [LOOSE_END], doc: doc({ hash: EARLIER_HASH }) })
+          : view(),
+      ...extra,
+    };
+  }
+
+  async function openOnEarlierDay(extra: Handlers = {}): Promise<{ sb: Mock }> {
+    const { sb } = open(withLooseEnd(extra));
+    await userEvent.click(
+      await screen.findByRole('button', { name: `Eintrag vom ${EARLIER} öffnen` }),
+    );
+    return { sb };
+  }
+
+  it('zeigt das lose Ende der Ankündigung direkt am Tag, ohne den Umweg über die Wartung', async () => {
+    await openOnEarlierDay();
+
+    expect(await screen.findByText(`„${LOOSE_END.quote}"`)).toBeTruthy();
+  });
+
+  it('beantwortet das lose Ende über journal:answerLooseEnd, mit dem Hash von heute statt vom betrachteten Tag', async () => {
+    const { sb } = await openOnEarlierDay();
+
+    await screen.findByText(`„${LOOSE_END.quote}"`);
+    await userEvent.type(screen.getByLabelText('Antwort'), 'Erledigt, alles gut.');
+    await userEvent.click(screen.getByRole('button', { name: 'Eintragen' }));
+
+    /* `journal:answerLooseEnd` always appends into *today*'s file, no matter
+       which day's loose-end row triggered it — the concurrency guard has to
+       carry today's hash (`hash-1`), never the viewed day's (`hash-past`),
+       or every answer would fail with `conflict`. */
+    await waitFor(() =>
+      expect(sb.payloadOf('journal:answerLooseEnd')).toEqual({
+        id: LOOSE_END.id,
+        day: LOOSE_END.day,
+        text: 'Erledigt, alles gut.',
+        expectedHash: 'hash-1',
+      }),
+    );
+  });
+
+  it('lässt die Zeile nach dem Beantworten verschwinden, weil der Tag mit dem offenen Filter neu geladen wird', async () => {
+    const state = { view: view({ looseEnds: [LOOSE_END], doc: doc({ hash: EARLIER_HASH }) }) };
+    const { sb } = await openOnEarlierDay({
+      'journal:get': ({ date }) => (date === EARLIER ? state.view : view()),
+      'journal:answerLooseEnd': () => {
+        /* `openLooseEnds()` (020, D5) is the single source of truth: once the
+           answer is written, a re-fetch of the day no longer lists it — the
+           row disappearing is a direct consequence of that filter, not a
+           second check this component invents on its own. */
+        state.view = view({ looseEnds: [] });
+        return { path: DAY_PATH, hash: 'hash-6' };
+      },
+    });
+
+    await screen.findByText(`„${LOOSE_END.quote}"`);
+    await userEvent.type(screen.getByLabelText('Antwort'), 'Erledigt.');
+    await userEvent.click(screen.getByRole('button', { name: 'Eintragen' }));
+
+    await waitFor(() => expect(sb.payloadOf('journal:answerLooseEnd')).toBeTruthy());
+    await waitFor(() => expect(screen.queryByText(`„${LOOSE_END.quote}"`)).toBeNull());
+  });
+
+  it('zeigt keine Zeile, solange kein loses Ende am Tag offen ist', async () => {
+    open();
+
+    await screen.findByRole('heading', { name: 'Montag, 10. August 2026' });
+    expect(screen.queryByLabelText('Antwort')).toBeNull();
   });
 });
 

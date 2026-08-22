@@ -29,10 +29,21 @@ const LIMIT = 5;
 
 const SOURCES: readonly Reminder['source'][] = ['project-deadline', 'todo-due'];
 
-/** Die Farbe folgt der Dringlichkeit; die Aussage steht im Text daneben. */
+/** Die Farbe folgt der Dringlichkeit; die Aussage steht im Text daneben.
+    Diese Kachel zeigt nur `project-deadline` und `todo-due` (siehe `SOURCES`)
+    — ein loses Ende (`open`) landet nie hier, `later` deckt es trotzdem
+    sicher ab, statt die Zuordnung non-exhaustiv zu lassen. */
 function tone(reminder: Reminder): 'overdue' | 'soon' | 'later' {
-  if (reminder.urgency === 'overdue') return 'overdue';
-  return reminder.urgency === 'today' ? 'soon' : 'later';
+  switch (reminder.urgency) {
+    case 'overdue':
+      return 'overdue';
+    case 'today':
+      return 'soon';
+    case 'soon':
+    case 'upcoming':
+    case 'open':
+      return 'later';
+  }
 }
 
 export function DeadlinesTile() {

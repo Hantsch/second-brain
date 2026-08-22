@@ -251,6 +251,8 @@ const RESPONSES: MockResponses = {
       },
     ],
     facts: '- [ ] Stefan wegen Rollenkonzept nachfassen @due:2026-08-12',
+    /* No loose end in the mock fixtures yet (020, D6 wires the real ones). */
+    looseEnds: [],
   }),
   'journal:append': () => ({ ...writeResult, path: fx.journalDay.path }),
   'journal:setDay': () => ({ ...writeResult, path: fx.journalDay.path }),

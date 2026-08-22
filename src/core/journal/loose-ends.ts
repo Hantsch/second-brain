@@ -68,8 +68,9 @@ const MAX_SUBJECT_WORDS = 6;
 
 /**
  * Words that never name what was announced: function words in both languages,
- * plus every word that is itself a date. Everything else in a sentence is fair
- * game as a subject term.
+ * every word that is itself a date, and every spelled-out number — "um zwei" is
+ * a clock reading, not a topic, and a number written in digits is dropped
+ * already. Everything else in a sentence is fair game as a subject term.
  */
 const NOISE = new Set(
   `
@@ -88,6 +89,8 @@ const NOISE = new Set(
   januar februar maerz april juni juli august september oktober november dezember
   today tomorrow yesterday week weeks month next monday tuesday wednesday thursday
   friday saturday sunday january february march june july october december
+  eins zwei drei vier fuenf sechs sieben acht neun zehn zwoelf zwanzig hundert tausend
+  three four five seven eight nine eleven twelve twenty thirty hundred thousand
   `.split(/\s+/u),
 );
 
@@ -199,25 +202,63 @@ export function sentencesOf(text: string): Fragment[] {
   return found;
 }
 
-/** The words of a sentence that name its subject, in their own spelling. */
-function subjectWords(sentence: string): string[] {
-  const words: string[] = [];
-  for (const raw of sentence.split(/[^\p{L}\p{N}]+/u)) {
-    const key = fold(raw);
+/** A candidate subject word with the offset it stands at. */
+interface Word {
+  text: string;
+  at: number;
+}
+
+/** Everything in a sentence that could name a subject, in reading order. */
+function contentWords(sentence: string): Word[] {
+  const words: Word[] = [];
+  for (const match of sentence.matchAll(/[\p{L}\p{N}]+/gu)) {
+    const key = fold(match[0]);
+    if (match.index === undefined) continue;
     if (key.length < MIN_TERM || /\d/.test(key) || NOISE.has(key)) continue;
-    words.push(raw);
-    if (words.length === MAX_SUBJECT_WORDS) break;
+    words.push({ text: match[0], at: match.index });
   }
   return words;
+}
+
+/**
+ * The words of a sentence that name its subject, in their own spelling.
+ *
+ * `at` is where the date reference stands. It is the anchor, because a paragraph
+ * without full stops is one single sentence here (`sentencesOf`) and the
+ * announcement is then rarely its first clause — taking the head of the sentence
+ * named a trip to the Mondsee "vormittag ruhig lost vereinzelt paar fragen".
+ *
+ * Read **forward** from the reference: both languages put what was announced
+ * behind a fronted date ("Morgen bin ich beim Notar", "fahr dann morgen so um
+ * zwei nach Mondsee"). Only when nothing follows it ("The notary signing is on
+ * 2026-08-19") does the subject lie in front, and then it is the words nearest
+ * to it. Deliberately not a window on both sides at once: what stands just
+ * before an announcement is usually the tail of the previous clause, and
+ * dragging that in is the very bug this rule fixes.
+ *
+ * `at = 0` reads the whole sentence from its start — for a caller that has no
+ * date reference at hand this is exactly the old behaviour.
+ */
+function subjectWords(sentence: string, at = 0): string[] {
+  const words = contentWords(sentence);
+  const start = words.findIndex((word) => word.at >= at);
+  const ahead = start === -1 ? [] : words.slice(start);
+  const picked =
+    ahead.length > 0 ? ahead.slice(0, MAX_SUBJECT_WORDS) : words.slice(-MAX_SUBJECT_WORDS);
+  return picked.map((word) => word.text);
 }
 
 /**
  * The terms a subject is recognized by elsewhere: folded, deduplicated, and
  * compared as substrings — German glues words together ("Notartermin" is "Notar"
  * plus "Termin"), and a whole-word comparison would miss exactly that.
+ *
+ * `at` is the offset of the date reference in `text`, when the caller knows it:
+ * the terms have to be the same words the subject shows, or a loose end would be
+ * subtracted by a different name than the one it is displayed under.
  */
-export function subjectTerms(text: string): string[] {
-  return [...new Set(subjectWords(text).map(fold))];
+export function subjectTerms(text: string, at = 0): string[] {
+  return [...new Set(subjectWords(text, at).map(fold))];
 }
 
 /** Wikilink targets in a text, reduced to their last path segment. */
@@ -254,21 +295,36 @@ function entryTextOf(source: LooseEndDay): EntryText {
  *   person coming back to it in their own words;
  * - a **todo with a deadline** carries the subject: then the loose end has a home
  *   already, and the todo list is where it gets chased, not here.
+ *
+ * The two checks read the subject at different widths on purpose. The todo
+ * check is `.every` — every term has to show up in the *same* todo sentence —
+ * so narrowing the terms to the words right around the date (`at`-anchored)
+ * only makes that easier to satisfy correctly, which is the point of the
+ * at-anchoring. The link check is `.some` — any *one* term found anywhere in
+ * the later day's prose is enough — and there a narrower term set makes the
+ * match *harder*, not easier: fewer terms means fewer chances for one of them
+ * to appear in the later day's own wording. That branch therefore keeps
+ * reading the subject from the head of the sentence (no `at`), the same
+ * broader window it always used, so a later day answering in different words
+ * still gets recognized.
  */
 function isAnswered(
   day: string,
-  terms: readonly string[],
+  quote: string,
+  at: number | undefined,
   entries: readonly EntryText[],
   dated: readonly string[],
 ): boolean {
-  if (terms.length > 0 && dated.some((text) => terms.every((term) => text.includes(term)))) {
+  const narrow = subjectTerms(quote, at);
+  if (narrow.length > 0 && dated.some((text) => narrow.every((term) => text.includes(term)))) {
     return true;
   }
+  const broad = subjectTerms(quote);
   return entries.some(
     (entry) =>
       entry.date > day &&
       entry.links.has(day) &&
-      (terms.length === 0 || terms.some((term) => entry.folded.includes(term))),
+      (broad.length === 0 || broad.some((term) => entry.folded.includes(term))),
   );
 }
 
@@ -283,14 +339,18 @@ function isAnswered(
  *
  * A factory rather than a plain function: the day texts and the dated todos are
  * folded once per stock, not once per candidate.
+ *
+ * `at` is the offset of the date reference inside `quote`, for a caller that has
+ * it (`findLooseEnds`); without it the subject is read from the head of the
+ * quote, as before.
  */
 export function settledCheck(
   days: readonly LooseEndDay[],
   todos: readonly LooseEndTodo[],
-): (day: string, quote: string) => boolean {
+): (day: string, quote: string, at?: number) => boolean {
   const entries = days.map(entryTextOf);
   const dated = todos.filter((todo) => todo.due !== null).map((todo) => fold(todo.text));
-  return (day, quote) => isAnswered(day, subjectTerms(quote), entries, dated);
+  return (day, quote, at) => isAnswered(day, quote, at, entries, dated);
 }
 
 /**
@@ -322,8 +382,8 @@ export function findLooseEnds(
         );
         if (hit === undefined) continue;
 
-        if (settled(date, sentence.text)) continue;
-        const words = subjectWords(sentence.text);
+        if (settled(date, sentence.text, hit.at)) continue;
+        const words = subjectWords(sentence.text, hit.at);
 
         const id = looseEndId(date, sentence.text);
         if (found.has(id)) continue;

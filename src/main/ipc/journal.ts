@@ -202,7 +202,12 @@ export function journalHandlers(services: Services): HandlerMap {
 
     'journal:get': async ({ date }) => {
       const found = await readDay(journalStore(services), date);
-      return found === null ? null : toView(found);
+      if (found === null) return null;
+      /* Same source as the interview's follow-up and the maintenance report
+         (`openLooseEnds`, above) — filtered to this day's announcements, so
+         the day view never invents a second "is it open" check. */
+      const looseEnds = (await openLooseEnds(services)).filter((looseEnd) => looseEnd.day === date);
+      return { ...toView(found), looseEnds };
     },
 
     'journal:append': async ({ date, text }) => {

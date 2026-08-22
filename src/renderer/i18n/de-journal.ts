@@ -189,4 +189,9 @@ export const deJournal = {
      Nachfrage, keine Behauptung — sie zitiert nur den eigenen Satz von
      damals zurück, ohne zu unterstellen, was daraus geworden ist. */
   'journal.interview.looseEnd.question': 'Wie ist es ausgegangen: „{quote}"?',
+  // ── Lose Ende am Tag selbst (022, D6) ────────────────────────────────────
+  'journal.looseEnd.quote': '„{quote}"',
+  'journal.looseEnd.answerLabel': 'Antwort',
+  'journal.looseEnd.answerPlaceholder': 'Was ist daraus geworden?',
+  'journal.looseEnd.answerSubmit': 'Eintragen',
 } as const;

@@ -284,7 +284,7 @@ describe('Anordnung als Rechnung', () => {
   it('deckt mit der Startanordnung jedes Modul genau einmal ab', () => {
     const ids = DEFAULT_DASHBOARD_TILES.map((tile) => tile.id);
     expect(new Set(ids).size).toBe(ids.length);
-    expect(ids).toHaveLength(13);
+    expect(ids).toHaveLength(14);
   });
 
   it('zählt die Zielposition zeilenweise: über dem Zeiger kommt vorher', () => {
@@ -1134,13 +1134,13 @@ describe('Kacheln', () => {
   });
 });
 
-// ── „Warte auf" mit einem losen Ende (020, D7) ──────────────────────────────
+// ── „Warte auf" zeigt keine losen Enden mehr (022, D3) ──────────────────────
 
-describe('Warte auf — loses Ende', () => {
+describe('Warte auf — loses Ende gehört nicht mehr hierher', () => {
   const looseEndReminder: Reminder = {
     id: 'loose-end:abc123',
     source: 'loose-end',
-    urgency: 'overdue',
+    urgency: 'open',
     title: 'Notartermin',
     date: day(-4),
     daysOut: -4,
@@ -1150,15 +1150,8 @@ describe('Warte auf — loses Ende', () => {
     who: null,
   };
 
-  it('zeigt ein loses Ende einmal, mit einer Begründung, warum es mahnt', async () => {
+  it('zeigt ein loses Ende nicht, auch wenn die Erinnerungs-Liste eins enthält', async () => {
     mount({ extra: { 'reminders:list': () => [...reminders, looseEndReminder] } });
-    wrap(<WaitingOnTile />);
-    expect((await screen.findAllByText('Notartermin')).length).toBe(1);
-    expect(screen.getByText(/Angekündigt am/)).toBeTruthy();
-  });
-
-  it('zeigt nichts, wenn die Erinnerungs-Liste kein loses Ende enthält', async () => {
-    mount({ extra: { 'reminders:list': () => reminders } });
     wrap(<WaitingOnTile />);
     await screen.findByText('Stefan');
     expect(screen.queryByText('Notartermin')).toBeNull();

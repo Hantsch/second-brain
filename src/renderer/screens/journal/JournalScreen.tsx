@@ -48,6 +48,7 @@ import { monthOf } from '../../lib/month-calendar';
 import { useJournalDays, useProjects } from '../../lib/queries/data';
 import {
   useCoachRoute,
+  useInterviewMutations,
   useJournalDay,
   useJournalMutations,
   useJournalSettings,
@@ -59,6 +60,7 @@ import { EntryStream } from './EntryStream';
 import { FactsSection } from './FactsSection';
 import type { AppliedClose } from './FactsSection';
 import { InterviewDialog } from './InterviewDialog';
+import { LooseEndRow } from './LooseEndRow';
 import { useJournalKeys } from './use-journal-keys';
 
 /** A talk turn in progress: marker and one's own message. */
@@ -119,10 +121,23 @@ export function JournalScreen() {
 
   const days = useJournalDays();
   const view = useJournalDay(date);
+  /* `journal:answerLooseEnd` always writes into *today*'s file (see
+     `loose-end-answer.ts`), even though a loose-end row is rendered on the day
+     the announcement was made — always a day before today. The concurrency
+     guard therefore has to carry *today*'s hash, not the viewed day's — the
+     same reasoning `InterviewDialog.tsx` already documents for its own
+     `expectedHash`. When `date` already is today this is the same cache entry
+     as `view` above, so no second fetch. */
+  const todayView = useJournalDay(today);
   const projects = useProjects();
   const settings = useJournalSettings();
   const route = useCoachRoute();
   const mutations = useJournalMutations(date);
+  /* Loose-end answers go through the interview's own channel (020, D5),
+     never through the day's regular mutations — the same
+     `journal:answerLooseEnd` `InterviewDialog.tsx` already calls, reused
+     here rather than a second write path for the same fact (022, D6). */
+  const interview = useInterviewMutations(date);
   const narrow = useNarrow();
 
   /* The stance: defaults from settings, switchable per conversation. */
@@ -534,21 +549,53 @@ export function JournalScreen() {
                 onFold: foldDay,
               }}
               dialogue={
-                <EntryStream
-                  stream={view.data?.stream ?? []}
-                  live={
-                    pending === null
-                      ? null
-                      : {
-                          message: pending.message,
-                          text: stream.text,
-                          done: stream.done,
-                          error: stream.error,
-                          citations: stream.citations,
-                        }
-                  }
-                  onOpenDay={(day) => select(day)}
-                />
+                <>
+                  {/* One row per open loose end announced on this day (022,
+                      D6) — above the stream, since it belongs to the day the
+                      announcement was made, not to the conversation that
+                      followed. `looseEnds` is already filtered to "open" by
+                      `openLooseEnds()` (020, D5), so a row simply vanishes
+                      once the day refetches after an answer; no second
+                      "is this open" check lives here. */}
+                  {(view.data?.looseEnds ?? []).map((looseEnd) => (
+                    <LooseEndRow
+                      key={looseEnd.id}
+                      looseEnd={looseEnd}
+                      busy={
+                        interview.answerLooseEnd.isPending &&
+                        interview.answerLooseEnd.variables?.id === looseEnd.id
+                      }
+                      error={
+                        interview.answerLooseEnd.variables?.id === looseEnd.id
+                          ? interview.answerLooseEnd.error
+                          : undefined
+                      }
+                      onAnswer={(text) =>
+                        interview.answerLooseEnd.mutate({
+                          id: looseEnd.id,
+                          day: looseEnd.day,
+                          text,
+                          expectedHash: todayView.data?.doc.hash,
+                        })
+                      }
+                    />
+                  ))}
+                  <EntryStream
+                    stream={view.data?.stream ?? []}
+                    live={
+                      pending === null
+                        ? null
+                        : {
+                            message: pending.message,
+                            text: stream.text,
+                            done: stream.done,
+                            error: stream.error,
+                            citations: stream.citations,
+                          }
+                    }
+                    onOpenDay={(day) => select(day)}
+                  />
+                </>
               }
               proposal={
                 proposal === undefined ? undefined : (

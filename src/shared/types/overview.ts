@@ -17,7 +17,8 @@ export type DashboardModuleId =
   | 'journal-streak'
   | 'gardener'
   | 'claude-sessions'
-  | 'active-projects';
+  | 'active-projects'
+  | 'loose-ends';
 
 /**
  * The same set at runtime. Both main and renderer need it: main uses it to
@@ -38,6 +39,7 @@ export const DASHBOARD_MODULES: readonly DashboardModuleId[] = [
   'journal-streak',
   'claude-sessions',
   'gardener',
+  'loose-ends',
 ];
 
 export type ModuleSize = 'sm' | 'md' | 'lg' | 'xl';
@@ -68,7 +70,7 @@ export interface DashboardLayout {
  * renderer needs it too: "reset layout" must produce the same order as a
  * fresh vault.
  *
- * Eight modules start hidden, and for a reason: **space is the scarce
+ * Nine modules start hidden, and for a reason: **space is the scarce
  * resource.** The default grid must stay within 1152×720 across two screens
  * (checked in `scripts/shot.mjs`), otherwise the screen only answers its one
  * question after scrolling. Two empty input fields ("quick capture", "ask")
@@ -88,7 +90,7 @@ export interface DashboardLayout {
  * anyway (reminders cover both spheres), and the full list is one checkbox in
  * the picker or one click in the projects screen away.
  *
- * Hidden doesn't mean gone: all thirteen appear in the picker ("modules"),
+ * Hidden doesn't mean gone: all fourteen appear in the picker ("modules"),
  * with a checkbox and immediate effect. Each module appears exactly once.
  */
 export const DEFAULT_DASHBOARD_TILES: readonly DashboardTile[] = [
@@ -105,13 +107,19 @@ export const DEFAULT_DASHBOARD_TILES: readonly DashboardTile[] = [
   { id: 'claude-sessions', size: 'md', hidden: true },
   { id: 'quick-capture', size: 'md', hidden: true },
   { id: 'ask', size: 'md', hidden: true },
+  { id: 'loose-ends', size: 'sm', hidden: true },
 ];
 
 /** What triggers a reminder. */
 export type ReminderSource =
   'todo-due' | 'project-deadline' | 'waiting-overdue' | 'stale-project' | 'loose-end';
 
-export type ReminderUrgency = 'overdue' | 'today' | 'soon' | 'upcoming';
+/**
+ * `open` is distinct from `overdue`: a loose end is an announcement whose day
+ * passed without a follow-up, not a deadline someone missed. Treating it as
+ * `overdue` would claim a broken promise that was never made.
+ */
+export type ReminderUrgency = 'overdue' | 'today' | 'soon' | 'upcoming' | 'open';
 
 export interface Reminder {
   id: string;

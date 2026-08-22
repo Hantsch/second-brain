@@ -78,6 +78,9 @@ export const enDashboard = {
   'module.claude-sessions.purpose': 'Work traces of the agent CLI, linked to your projects.',
   'module.gardener.name': 'Care',
   'module.gardener.purpose': 'Health and results from the last check.',
+  'module.loose-ends.name': 'Loose ends',
+  'module.loose-ends.purpose':
+    'Announcements from the journal whose day has passed with no follow-up.',
 
   // ── Tiles ────────────────────────────────────────────────────────────────
   'tile.more': '{count} more',
@@ -127,10 +130,10 @@ export const enDashboard = {
   'tile.waiting.since': 'since {date}',
   'tile.waiting.due': 'by {date}',
   'tile.waiting.overdue': 'overdue',
-  /* Why a loose end nags here: the journal announced something for the named
-     day, and nothing since has said how it went. */
-  'tile.waiting.looseEnd': 'Announced on {date}, nothing since',
 
+  /* 022 D2: the announcement itself is not a deadline — its own label instead
+     of the deadline language of "overdue". */
+  'reminder.urgency.open': 'Announced, open',
   'tile.deadlines.empty': 'No deadline within the next {days} days.',
   'tile.deadlines.project': 'Project deadline',
   'tile.deadlines.todo': 'Todo',
@@ -177,4 +180,13 @@ export const enDashboard = {
      instead of the usual finding count. */
   'tile.gardener.asOf': 'As of {date}',
   'tile.gardener.stopped': 'Last check was stopped',
+
+  /* 022 D4: a tile of its own for loose ends — previously wrongly folded into
+     "Waiting for". The row names itself as an announcement without an
+     outcome, not as a deadline or a wait. */
+  'tile.looseEnds.empty': 'No loose end. Every announcement in the journal has an outcome.',
+  'tile.looseEnds.announced': 'Announced on {date}',
+  'tile.looseEnds.for': 'for {date}',
+  'tile.looseEnds.snooze': 'Snooze “{title}”',
+  'tile.looseEnds.open': 'Open the journal entry of {date}',
 } as const;

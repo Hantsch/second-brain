@@ -55,7 +55,18 @@ export function urgencyFor(daysOut: number, horizonDays: number): ReminderUrgenc
 }
 
 function rank(urgency: ReminderUrgency): number {
-  return urgency === 'overdue' ? 0 : urgency === 'today' ? 1 : urgency === 'soon' ? 2 : 3;
+  switch (urgency) {
+    case 'overdue':
+      return 0;
+    case 'today':
+      return 1;
+    case 'soon':
+      return 2;
+    case 'upcoming':
+      return 3;
+    case 'open':
+      return 4;
+  }
 }
 
 /**
@@ -242,7 +253,7 @@ function fromLooseEnds(
   return findLooseEnds(days, todos, today).map((looseEnd) => ({
     id: idFor('loose-end', looseEnd.id),
     source: 'loose-end',
-    urgency: 'overdue',
+    urgency: 'open',
     title: looseEnd.subject.length > 0 ? looseEnd.subject : looseEnd.quote,
     date: looseEnd.refDate,
     daysOut: daysBetween(today, looseEnd.refDate) ?? 0,

@@ -40,6 +40,7 @@
  */
 
 import type { LooseEnd, ModelRef } from '@shared/types';
+import { findDates } from '@core/capture';
 import { collapse, fold } from '@core/index/text';
 import { parseJsonLoose } from '@core/llm';
 import type { LlmGateway } from '@core/llm';
@@ -192,12 +193,25 @@ function readLooseEnds(value: unknown): RawLooseEnd[] {
  * file, a sentence the heuristic already found, and one that is already settled:
  * answered by a later day or carried by a dated todo.
  */
+/**
+ * Where the proposed `refDate` stands inside the quote — the same anchor
+ * `findLooseEnds` uses for its own subject terms. The model does not report an
+ * offset, so it is recovered the same way the quote itself is grounded: run
+ * the same date parser over the same text and take the position of whichever
+ * hit matches the date the model proposed. `undefined` when none does — the
+ * settled check then falls back to reading the subject from the sentence's
+ * head, exactly as it did before `at`-anchoring existed.
+ */
+function anchorOf(raw: RawLooseEnd): number | undefined {
+  return findDates(raw.quote, raw.day).find((hit) => hit.iso === raw.refDate)?.at;
+}
+
 function toLooseEnd(
   raw: RawLooseEnd,
   sources: ReadonlyMap<string, DaySource>,
   today: string,
   known: ReadonlySet<string>,
-  settled: (day: string, quote: string) => boolean,
+  settled: (day: string, quote: string, at?: number) => boolean,
 ): LooseEnd | null {
   const source = sources.get(raw.day);
   if (source === undefined) return null;
@@ -208,8 +222,10 @@ function toLooseEnd(
   if (known.has(id)) return null;
   /* The same check the heuristic runs, over the same days and todos — a model
      that overlooks the answering entry must not be able to re-open a loose end
-     the files have already closed. */
-  if (settled(raw.day, raw.quote)) return null;
+     the files have already closed. Anchored at the same offset `findLooseEnds`
+     would use, so both paths read the identical subject terms for the same
+     sentence and cannot disagree about whether it is already settled. */
+  if (settled(raw.day, raw.quote, anchorOf(raw))) return null;
   return {
     id,
     day: raw.day,

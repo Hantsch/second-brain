@@ -262,6 +262,25 @@
   justify-content: flex-end;
 }
 
+/* ── Loose end (022, D6) ────────────────────────────────────────────────── */
+
+/* One compact row per open loose end, above the entry stream — several can
+   stack without the weight of `LooseEndCard.tsx`'s full finding card
+   (`sb-looseend-quote`/`sb-looseend-answer` are shared with it, see
+   `garden.css`). */
+.sb-looseend-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+.sb-looseend-row-quote {
+  padding: 0 0 0 var(--space-3);
+}
+
 /* ── Mood and energy ─────────────────────────────────────────────────────── */
 
 /* Label, levels, and feedback on one line: the day header must not cost

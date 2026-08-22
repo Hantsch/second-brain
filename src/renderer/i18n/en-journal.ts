@@ -179,4 +179,9 @@ export const enJournal = {
      inquiry, not a claim — it only quotes the earlier sentence back, never
      asserting what became of it. */
   'journal.interview.looseEnd.question': 'How did it go: "{quote}"?',
+  // ── Loose end on the day itself (022, D6) ────────────────────────────────
+  'journal.looseEnd.quote': '“{quote}”',
+  'journal.looseEnd.answerLabel': 'Answer',
+  'journal.looseEnd.answerPlaceholder': 'What came of it?',
+  'journal.looseEnd.answerSubmit': 'Record',
 } as const;

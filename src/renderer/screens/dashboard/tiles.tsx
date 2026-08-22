@@ -19,6 +19,7 @@ import { DeadlinesTile } from '../../components/tiles/DeadlinesTile';
 import { GardenerTile } from '../../components/tiles/GardenerTile';
 import { InboxTile } from '../../components/tiles/InboxTile';
 import { JournalStreakTile } from '../../components/tiles/JournalStreakTile';
+import { LooseEndsTile } from '../../components/tiles/LooseEndsTile';
 import { QuickCaptureTile } from '../../components/tiles/QuickCaptureTile';
 import { RecentWorkTile } from '../../components/tiles/RecentWorkTile';
 import { StaleProjectsTile } from '../../components/tiles/StaleProjectsTile';
@@ -44,6 +45,7 @@ const TILES: Record<DashboardModuleId, ComponentType> = {
   'journal-streak': memo(JournalStreakTile),
   'claude-sessions': memo(ClaudeSessionsTile),
   gardener: memo(GardenerTile),
+  'loose-ends': memo(LooseEndsTile),
 };
 
 export function renderTile(id: DashboardModuleId): React.JSX.Element {
