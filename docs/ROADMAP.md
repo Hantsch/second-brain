@@ -323,14 +323,15 @@ Gaps/notes:
   — `refreshDay` does not invalidate today's cached view. `InterviewDialog.tsx` has the identical
   shape and never surfaced it because it asks one loose-end question per run; M8 is the first
   place several rows can stack. Worth a follow-up story if it is ever hit.
-- **Two cosmetic i18n defects left in** (`de-dashboard.ts`, `de-journal.ts`): a German opening
-  quote closed with a straight quote. Fold in whenever those files are next touched.
+- ~~**Two cosmetic i18n defects left in** (`de-dashboard.ts`, `de-journal.ts`): a German opening
+  quote closed with a straight quote.~~ Fixed by story 026 in S07 — and the count was wrong: it
+  was 100 occurrences across all 13 `de*.ts` catalogues, not two.
 - **M6's own acceptance is still open** (see above) even though its correction M8 is accepted —
   M8 was driven from the real vault, M6's full test plan was not walked.
 
 ---
 
-### M9 — The gate is green and the small things are right — planned
+### M9 — The gate is green and the small things are right — built, acceptance pending
 
 No concept and no single story behind M9 — it is the collected "pre-existing, needs an owner"
 backlog of M1–M8, given an owner. Five stories: the module schema drift that has kept `npm test`
@@ -346,20 +347,38 @@ fully green for five sprints.
 Sprints:
 
 - [sprints/S07/sprint.md](sprints/S07/sprint.md) — the gate is green and the small things are
-  right (023, 025, 024, 026, 027), `planned`
+  right (023, 025, 024, 026, 027), `done` — all five stories built, none blocked
+  ([review](sprints/S07/review.md), [test plan](sprints/S07/testplan.md))
+
+**The goal is met:** `npm test` reports 190 files / 2707 tests / 0 failed, verified after the last
+commit. The decisions taken: the code is authoritative for the module schema (023); a
+`languages.documents` switch warns and offers a migration rather than being silently accepted
+(024); German low-high quotes `„…“` for the whole catalogue (026); pure run-state logic moves to
+`src/core/gardener/` (027).
 
 Gaps/notes:
 
-- **All five stories are `draft`.** Each carries three open questions, most of which are content
-  or architecture decisions no agent may resolve: what a `languages.documents` switch owes an
-  existing vault (024), the German quote convention for the whole catalogue (026), and whether
-  the run state belongs in `src/core/` (027). 023's own question — which side of the module
-  schema is authoritative — is answered in its Decisions section: the code
-  (`src/core/wiki/agents-md.ts`) is authoritative, `docs/MODULE-SCHEMA.md` mirrors it.
-- **Story 022's Done section understated the quote defect** as "two i18n strings"; it is 98
-  occurrences across 13 files, with zero correct ones. 026 is written to the real number.
-- **027 is the drop candidate** if the sprint runs long — it is the only story with no
-  user-visible effect.
+- **`npm run format:check` is the next never-green gate** — 460 files fail, and it is not this
+  sprint's doing: a file last touched before the sprint fails prettier purely because the working
+  copy carries CRLF (`core.autocrlf` on Windows against a repo prettier expects in LF). Story 023
+  fixed this for one file via `.gitattributes`; the repo needs the same decision made once,
+  everywhere. **Wants its own story** — it is exactly the kind of carve-out M9 existed to retire.
+- **The maintenance progress bar vanishes** after navigating away from the garden screen and
+  back. Found while smoke-testing 027, isolated to `src/renderer/lib/queries/gardener.ts` (which
+  027 never touched) and confirmed pre-existing against a HEAD worktree. Small, visible,
+  ready to pick up.
+- **`src/main/ipc/gardener-deps.ts` is still 635 lines**, over the soft limit. It is run
+  orchestration rather than run state, so it fell outside 027's scope.
+- **024 turned out wider than written.** Its review found four more places that hardcoded or
+  only matched the German heading (`ProjectOverviewTab.tsx`, `main/ipc/todos.ts`,
+  `main/ipc/projects.ts`, plus a `stand`-only read side). All fixed with tests; worth remembering
+  that "which write paths are in scope" was under-answered at refine time.
+- **Live acceptance is still the user's.** 024, 026 and 027 were each driven through the running
+  app during their builds, but no story has had a full manual walk-through. Two honest caveats
+  from 026: the demo vault has no unresolvable loose end (that branch is accepted on unit tests),
+  and the English due-date string is an `aria-label`, not visible text.
+- **`applyFiling` in `core/capture/filing.ts` has no live caller** (pre-existing dead export); its
+  new `docLanguage` option is correct but exercised by no live path.
 
 ---
 
@@ -370,4 +389,6 @@ Gaps/notes:
 | Condensed layer (module / project / area)                     | Concept written 2026-08-18: [concepts/condensed-layer.md](concepts/condensed-layer.md). Supersedes the earlier "project knowledge from agent sessions" entry — that is now one of four project inputs. 40 requirements, 11 open points, no stories | `/ai-scrum:roadmap plan` — strongest M10 candidate, deferred once at the 2026-08-22 cut in favour of M9; depends on story 005 and the Project knowledge tab from 008 |
 | MCP interface for projects, knowledge and the condensed layer | Named as an outlook in [concepts/condensed-layer.md](concepts/condensed-layer.md) §14, deliberately without requirements                                                                                                                           | Own `/ai-scrum:concept` once the condensed artifacts exist                                                                                                           |
 | German docs migrated to English                               | Decided in `.claude/ai-scrum.md`; `docs/*.md` are still German                                                                                                                                                                                     | Own story once it stops being cosmetic                                                                                                                               |
+| `format:check` never green on Windows                         | Found in S07: 460 files fail prettier purely on CRLF line endings, including files no sprint has touched — `core.autocrlf` against a repo prettier expects in LF. Story 023 solved it for one file via `.gitattributes`                          | Own story — a repo-wide `.gitattributes`/prettier decision made once. Second never-green gate after the one M9 just retired                                          |
+| Maintenance progress bar vanishes after navigation            | Found while smoke-testing 027 in S07, isolated to `src/renderer/lib/queries/gardener.ts`, confirmed pre-existing against a HEAD worktree — the backend answers `gardener:runStatus` correctly while the bar is gone                                | Small own story — visible, isolated, ready to pick up                                                                                                               |
 | Phase 2                                                       | Not defined                                                                                                                                                                                                                                        | Cut after phase 1 has been used                                                                                                                                      |

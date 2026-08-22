@@ -1,6 +1,6 @@
 ---
 sprint: S07
-status: in-progress # planned | in-progress | done
+status: done # planned | in-progress | done
 branch: sprint/S07
 milestone: M9 — The gate is green and the small things are right
 ---
