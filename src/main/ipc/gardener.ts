@@ -20,31 +20,16 @@
      (`core/gardener/fixes.ts`). Afterward the finding is hidden rather than
      deleted — `gardener:undoFix` reverses both. */
 
-import {
-  applyFix,
-  discardPage,
-  discardPlan,
-  orphanTargets,
-  supersede,
-  undoFix,
-} from '@core/gardener';
+import { applyFix, discardPage, discardPlan, supersede, undoFix } from '@core/gardener';
 import { shiftDay } from '@core/overview';
-import type { GardenerFinding, OrphanTargets } from '@shared/types';
 import type { HandlerMap } from './registry';
 import { defineHandlers, fail } from './registry';
-import {
-  gardenerIndex,
-  gardenerReport,
-  gardenerStateFor,
-  gardenerToday,
-  runWithProgress,
-  saveRun,
-} from './gardener-deps';
+import { assertActionable, findingOf, linkOrphan, orphanPick } from './gardener-actions';
+import { gardenerReport, gardenerStateFor, gardenerToday } from './gardener-deps';
+import { runGardener } from './gardener-run';
 import { docLanguage, settle, wikiIndex, wikiStore } from './wiki-bridge';
-import { gardenerLabels } from '../gardener-labels';
-import { beginGardenerRun, cancelGardenerRun, gardenerRunSnapshot } from '../gardener-run-state';
-import { GARDENER_STATE_FILE, narrowedScope } from '../gardener-state';
-import type { GardenerState } from '../gardener-state';
+import { cancelGardenerRun, gardenerRunSnapshot } from '../gardener-run-state';
+import { GARDENER_STATE_FILE } from '../gardener-state';
 import type { Services } from '../services';
 
 /** Snoozing for longer than a year means: forgetting. That's not snoozing.
@@ -60,115 +45,6 @@ function wake(services: Services): void {
   });
 }
 
-function findingOf(value: unknown): GardenerFinding {
-  if (value === null || typeof value !== 'object') throw fail('invalid', 'kein Befund');
-  const finding = value as GardenerFinding;
-  if (typeof finding.id !== 'string' || !Array.isArray(finding.paths)) {
-    throw fail('invalid', 'kein Befund');
-  }
-  return finding;
-}
-
-/** Der Hash, den der letzte Lauf fuer `path` festgehalten hat; `null`, wenn keiner
-    der Befunde einen kennt. */
-function recordedHash(findings: readonly GardenerFinding[], path: string): string | null {
-  for (const finding of findings) {
-    const hash = finding.hashes?.[path];
-    /* Der Bericht ist eine Datei im Vault: was drinsteht, ist nicht typgeprueft. */
-    if (typeof hash === 'string' && hash.length > 0) return hash;
-  }
-  return null;
-}
-
-/**
- * Darf auf `path` gehandelt werden — nennt ihn ein Befund des aktuellen Berichts,
- * und ist die Datei seither unberuehrt?
- *
- * Zwei Zusagen in einer Pruefung, weil beide dieselbe Quelle brauchen:
- *
- * 1. **Nur ein genannter Pfad.** Die Kanaele fuer Verwerfen und Ueberholen nehmen
- *    einen nackten Pfad aus dem Renderer, nicht einen ganzen `GardenerFinding`
- *    wie `applyFix` — es gilt also dieselbe Begruendung wie bei `add-to-index` in
- *    `core/gardener/fixes.ts`: ein Pfad von aussen darf nicht selbst entscheiden,
- *    welche Datei die App fuer betroffen haelt.
- * 2. **Nur ein aktueller Befund.** Der Hash-Vergleich im Kern (`discard-page.ts`,
- *    `supersede.ts`) faengt eine Aenderung *zwischen Vorschau und Klick*; er kann
- *    keine fangen, die *zwischen Lauf und Klick* passiert ist, denn die Vorschau
- *    liest die schon bearbeitete Datei als Wahrheit. Deshalb vergleicht diese
- *    Pruefung gegen den Hash, den der Lauf festgehalten hat (AC 10, zweiter Satz):
- *    wer seit dem Lauf editiert hat, bekommt `conflict` und prueft neu — statt
- *    stillschweigend eine Fassung zu verwerfen, die nie geprueft wurde.
- *
- * Beides steht **vor** jedem Kernaufruf, auch vor der rein lesenden Vorschau:
- * so sagt schon der Dialog, dass der Lauf veraltet ist, statt eine Vorschau zu
- * zeigen, die der Klick nicht halten kann.
- *
- * Kein Hash im Befund heisst „unbekannt", nicht „geaendert" — ein Bericht aus
- * einer aelteren Version verhaelt sich wie bisher. Und eine Datei, die es nicht
- * mehr gibt, ist kein Konflikt: dafuer meldet der Kern `not-found`.
- */
-async function assertActionable(services: Services, ...paths: readonly string[]): Promise<void> {
-  const findings = (await gardenerReport(services))?.findings ?? [];
-  for (const path of paths) {
-    const named = findings.filter((finding) => finding.paths.includes(path));
-    if (named.length === 0) throw fail('not-found', `„${path}" steht in keinem aktuellen Befund.`);
-    const recorded = recordedHash(named, path);
-    if (recorded === null) continue;
-    const live = await wikiStore(services).hash(path);
-    if (live !== null && live !== recorded) {
-      throw fail('conflict', `„${path}" wurde seit dem Pflegelauf geändert. Bitte erneut prüfen.`);
-    }
-  }
-}
-
-interface OrphanPick {
-  state: GardenerState;
-  finding: GardenerFinding;
-  /** Der Pfad der verwaisten Seite, aus dem Index — nicht aus dem Renderer. */
-  orphanPath: string;
-  candidates: OrphanTargets;
-}
-
-/**
- * Ein Verwaisten-Befund, der eine Auswahl braucht, samt **frisch gerechneter**
- * Kandidatenliste — die eine Quelle fuer beide Kanaele, Vorschau (`orphanTargets`)
- * und Bestaetigung (`linkOrphan`).
- *
- * Zwei Gruende, das nicht zweimal zu schreiben:
- *
- * 1. **Vorschau und Klick duerfen sich nicht widersprechen.** Wuerden beide
- *    Kanaele die Menge je selbst zusammenstellen, koennte der Waehler ein Ziel
- *    anbieten, das die Bestaetigung dann ablehnt.
- * 2. **Der Renderer schickt einen nackten Pfad zurueck.** Derselbe Grund wie bei
- *    `add-to-index` in `core/gardener/fixes.ts`: ein Pfad von aussen darf nicht
- *    selbst entscheiden, in welche Datei geschrieben wird. Also rechnet das Main
- *    die erlaubte Menge neu und prueft die Zugehoerigkeit — statt der Angabe zu
- *    glauben.
- */
-async function orphanPick(services: Services, findingId: string): Promise<OrphanPick> {
-  const state = await gardenerStateFor(services);
-  const findings = (await gardenerReport(services, state))?.findings ?? [];
-  const finding = findings.find((entry) => entry.id === findingId);
-  if (finding === undefined) throw fail('not-found', 'diesen Befund gibt es nicht');
-  if (finding.kind !== 'orphan' || finding.fix !== null) {
-    throw fail('invalid', 'dieser Befund braucht keine Auswahl');
-  }
-  /* Only the finding's own module — never the whole vault: the candidates
-     are a pick among that module's pages, same scope as the automatic
-     `singleMention` fix in `checks/orphan.ts`. */
-  const modulePages = gardenerIndex(services)
-    .pages()
-    .filter((page) => page.module === finding.module);
-  const orphanPage = modulePages.find((page) => page.path === finding.paths[0]);
-  if (orphanPage === undefined) throw fail('not-found', 'die verwaiste Seite gibt es nicht mehr');
-  return {
-    state,
-    finding,
-    orphanPath: orphanPage.path,
-    candidates: orphanTargets(modulePages, orphanPage, docLanguage(services)),
-  };
-}
-
 export function gardenerHandlers(services: Services): HandlerMap {
   return defineHandlers({
     'gardener:report': async () => gardenerReport(services),
@@ -178,72 +54,10 @@ export function gardenerHandlers(services: Services): HandlerMap {
        single source of truth `event:gardener-progress` publishes from. */
     'gardener:runStatus': () => gardenerRunSnapshot(),
 
-    'gardener:run': async ({ useLlm, resume, scope }) => {
-      /* The slot is claimed **before** the first `await`, and from the one
-         place that knows about the autostart too (021a, D3): otherwise two
-         calls from the same keypress — or a click during the run on open —
-         would both go through and write the same report twice. */
-      const handle = beginGardenerRun({
-        trigger: 'user',
-        emit: (progress) => services.sendEvent('event:gardener-progress', progress),
-      });
-      if (handle === null) throw fail('invalid', 'es läuft schon ein Pflegelauf');
-      try {
-        const state = await gardenerStateFor(services);
-        /* `resume` continues the run on file instead of starting from nothing
-           (021b, D3) — `runWithProgress` itself decides what "continues" means:
-           every stage already in its `completed` is skipped, so a check never
-           runs twice and a model stage that already answered is not asked
-           again. Without a stored run there is nothing to continue, so this
-           is silently the same as a plain run. */
-        const stored = resume === true ? state.run() : null;
-        /* Continuing a part-run keeps it a part-run (021c). The stop it
-           continues looked at one slice of the vault; its findings are this
-           run's base, and every stage still to come sees only that slice. Were
-           the scope dropped here, the resumed run would reach every planned
-           stage, read as a **complete** check of the whole vault, and then
-           recompute the health score and prune the user's decisions over
-           findings most of which nothing ever re-derived. A part-run must not
-           become "the whole vault, checked" by way of a continue.
-
-           Normalized before the fallback, not after: `{ kinds: [] }` from a
-           caller is not a scope (`narrowedScope`), and taking it as one would
-           launder exactly the run this guards. */
-        const inherited = stored === null ? undefined : narrowedScope(stored.scope);
-        const runScope = narrowedScope(scope) ?? inherited;
-        const result = await runWithProgress(services, {
-          ...(useLlm === undefined ? {} : { useLlm }),
-          ...(stored === null ? {} : { resumeFrom: stored }),
-          ...(runScope === undefined ? {} : { scope: runScope }),
-          signal: handle.signal,
-          trigger: handle.trigger,
-          onProgress: handle.publish,
-        });
-        /* Stopping is not failing (021b, D2): what the finished stages found is
-           stored as a partial run and read back like any other report, so the
-           answer to a cancelled run is the report — not an error that throws
-           away the minutes the run already cost.
-
-           Except on the way out. A stop from closing the vault or from quitting
-           writes nothing at all, whatever the run got to: that vault must not be
-           left with half a report, and on quit the atomic write could not be
-           awaited anyway. Then this returns the report that was already on file
-           — unchanged, because nothing was written. */
-        if (handle.cancelledBy() !== 'shutdown') await saveRun(services, state, result);
-        const report = await gardenerReport(services, state);
-        if (report === null) {
-          throw result.complete
-            ? fail('io', 'der Bericht ließ sich nicht ablegen')
-            : fail('cancelled', 'der Pflegelauf wurde abgebrochen, bevor etwas gefunden war');
-        }
-        return report;
-      } finally {
-        /* Even a cancelled or failed run ends visibly, and frees the slot:
-           otherwise the indicator keeps spinning even though nothing is
-           computing anymore, and no further run would be allowed. */
-        handle.finish();
-      }
-    },
+    /* The run flow itself (slot claim, resume/scope inheritance, cancel
+       reason, save, report) lives in `gardener-run.ts` (027, D5) — this
+       channel file only wires the request through. */
+    'gardener:run': async (request) => runGardener(services, request),
 
     'gardener:cancel': () => {
       /* A stop the user asked for — the only reason that leaves something
@@ -370,30 +184,7 @@ export function gardenerHandlers(services: Services): HandlerMap {
 
     'gardener:linkOrphan': async ({ findingId, target }) => {
       const pick = await orphanPick(services, findingId);
-      /* Der eine Test, der alles abdeckt: `orphanTargets` schliesst die verwaiste
-         Seite selbst, fremde Module, schon verlinkende Seiten und alles, was gar
-         keine Wiki-Seite ist, bereits aus. Wer nicht in dieser Liste steht, ist
-         kein Ziel — ein zweiter, eigener Pfad-Test waere eine zweite Wahrheit. */
-      if (!pick.candidates.targets.some((candidate) => candidate.path === target)) {
-        throw fail('invalid', `„${target}" ist kein wählbares Ziel für diesen Befund.`);
-      }
-      /* Genau die Form, die der automatische Ein-Kandidaten-Fix hat: `paths[0]`
-         die verwaiste Seite, `paths[1]` das Ziel, und als Vorschau die Zeile aus
-         demselben Aufruf, der die Kandidaten geliefert hat. Damit ist „die
-         Vorschau ist die Zeile" nicht zugesagt, sondern gebaut — und `fixes.ts`
-         kann gewaehltes und gefundenes Ziel nicht unterscheiden. */
-      const result = await applyFix(
-        { store: wikiStore(services), docLanguage: docLanguage(services) },
-        {
-          ...pick.finding,
-          paths: [pick.orphanPath, target],
-          fix: {
-            action: 'add-links',
-            label: gardenerLabels(services.settings.uiLanguage()).fix('add-links'),
-            preview: pick.candidates.line,
-          },
-        },
-      );
+      const result = await linkOrphan(services, pick, target);
       if (result.written.length > 0) {
         await settle(services, result.written, 'gardener');
         if (result.undoToken !== null)

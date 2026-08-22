@@ -61,3 +61,28 @@
 - 2026-08-22 19:00 · 026 · live smoke (seed + shot) · started
 - 2026-08-22 19:05 · 026 · live smoke (seed + shot + targeted _electron drive of Lose-Enden tile + Settings-Sprachen quote rendering) · done
 - 2026-08-22 19:12 · 026 · Done section filled, ACs ticked, status done, moved to done/ + INDEX.md · done
+- 2026-08-22 19:01 · 027 · D1 scope predicates and stored shapes to core · started
+- 2026-08-22 19:07 · 027 · D1 scope predicates and stored shapes to core · done
+- 2026-08-22 19:07 · 027 · D2 JSON reading to core · started
+- 2026-08-22 19:13 · 027 · D2 JSON reading to core · done
+- 2026-08-22 19:13 · 027 · D3 save-time merge and pruning to core (hard tier) · started
+- 2026-08-22 19:18 · 027 · D3 save-time merge and pruning to core (hard tier) · done
+- 2026-08-22 19:18 · 027 · D4 present() to core · started
+- 2026-08-22 19:21 · 027 · D4 present() to core · done
+- 2026-08-22 19:21 · 027 · D5 run flow out of the channel file · started
+- 2026-08-22 19:25 · 027 · D5 run flow out of the channel file · done
+- 2026-08-22 19:25 · 027 · D6 fix and orphan helpers out of the channel file · started
+- 2026-08-22 19:29 · 027 · D6 fix and orphan helpers out of the channel file · done
+- 2026-08-22 19:29 · 027 · D7 ownership written down · started
+- 2026-08-22 19:33 · 027 · D7 ownership written down · done
+- 2026-08-22 19:33 · 027 · verify gate (typecheck/lint/test/build) · started
+- 2026-08-22 19:33 · 027 · verify gate (typecheck/lint/test/build) green via D7's own verify run; format:check pre-existing CRLF issue confirmed, touched files prettier-clean · done
+- 2026-08-22 19:34 · 027 · code review (clean agent, hard tier) · started
+- 2026-08-22 19:34 · 027 · code review (clean agent, hard tier) · done (PASS with 1 blocking gate defect: ARCHITECTURE.md table padding broke format:check for real, not CRLF; fixed via prettier --write, re-verified clean)
+- 2026-08-22 19:42 · 027 · verify gate re-run post fix (lint/typecheck/test) green, format:check clean on touched files including ARCHITECTURE.md · done
+- 2026-08-22 19:42 · 027 · live smoke (seed + shot, drive maintenance screen) · started
+- 2026-08-22 20:20 · 027 · live smoke investigation: nav-away-and-back progress display bug found, isolated via direct gardener:runStatus query — backend (story 027's files) reports running:true correctly at the exact instant the bar is hidden; bug lives in untouched src/renderer/lib/queries/gardener.ts / RunBar.tsx, pre-existing and out of scope, not a story-027 regression · done
+- 2026-08-22 20:20 · 027 · live smoke retry: stop/continue/scope while staying on garden screen (avoiding the unrelated renderer bug) · started
+- 2026-08-22 20:47 · 027 · live smoke (all 5 flow steps confirmed: start/nav backend-correct, stop, continue, scope, close-vault-mid-run all PASS) · done
+- 2026-08-22 20:47 · 027 · Done section filled, ACs ticked, status done, moved to done/ + INDEX.md · started
+- 2026-08-22 20:52 · 027 · Done section filled, ACs ticked, status done, moved to done/ + INDEX.md · done

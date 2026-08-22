@@ -11,6 +11,17 @@
  *   `supersede`  benennt „die neuere Seite loest die aeltere ab" — nur Frontmatter
  *   `labels`   die einsetzbaren Beschriftungen, Vorgabe Deutsch
  *
+ * Der gespeicherte Lauf selbst (027, aus `main/gardener-state.ts` herausgezogen,
+ * weil er ohne Electron auskommt und damit hierher gehoert):
+ *   `run-record`  die gespeicherten Formen: `StoredRun`, `StoredGardener`, `empty()`
+ *   `run-scope`   die Geltungsbereichs-Praedikate: `narrowedScope`, `inScope`,
+ *                 `scopeAdmits`, `isRunComplete`
+ *   `run-read`    liest und validiert die rohe JSON-Form aus `gardener.json`
+ *   `run-merge`   die Zusammenfuehrung beim Speichern: was ein Teil-Lauf ueberlebt
+ *                 (`applySavedRun` ueber `mergeScoped`/`keptFixed`/`outlivesRun`)
+ *   `run-present` baut den Bericht fuer den Bildschirm, samt eingefrorenem
+ *                 Gesundheitswert (`presentRun`)
+ *
  * Der Kern liest den Bestand nur ueber den Index und schreibt nur ueber den Store.
  * Ohne Modell fehlt das Urteil, nicht die Pflege.
  */
@@ -163,3 +174,8 @@ export {
   type UndoStore,
 } from './undo';
 export { WordIndex } from './word-index';
+export { empty, type FixedFinding, type StoredGardener, type StoredRun } from './run-record';
+export { inScope, isRunComplete, narrowedScope, scopeAdmits } from './run-scope';
+export { readStoredGardener } from './run-read';
+export { applySavedRun, type SaveRunOptions } from './run-merge';
+export { presentRun } from './run-present';

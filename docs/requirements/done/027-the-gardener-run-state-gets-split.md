@@ -1,7 +1,7 @@
 ---
 id: 027
 title: The maintenance run state stops being one big file
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-08-22
 ---
 
@@ -30,14 +30,14 @@ Nothing about how a run behaves may change. This is a split, not a redesign.
 
 ## Acceptance Criteria
 
-- [ ] A maintenance run behaves exactly as it does today: start, progress from any screen, stop
+- [x] A maintenance run behaves exactly as it does today: start, progress from any screen, stop
       and keep findings, continue, scope to a kind or module, autorun, cancel on vault close.
-- [ ] No file involved is over the ~300-line soft limit afterwards, and each one can be named in
+- [x] No file involved is over the ~300-line soft limit afterwards, and each one can be named in
       a single sentence.
-- [ ] The existing tests for 021a/021b/021c pass unchanged — they are the specification of the
+- [x] The existing tests for 021a/021b/021c pass unchanged — they are the specification of the
       behaviour being preserved. No test is rewritten to fit a new structure.
-- [ ] The IPC contract is untouched: same channels, same payloads, same events.
-- [ ] What each new file owns is written down, so the next feature knows where it goes.
+- [x] The IPC contract is untouched: same channels, same payloads, same events.
+- [x] What each new file owns is written down, so the next feature knows where it goes.
 
 ## Open Questions
 
@@ -104,38 +104,38 @@ passes (D1-D4) so a regression is bisectable to one seam.
 
 ## Deliverables
 
-- **D1 — scope predicates and stored shapes to core.** New `src/core/gardener/run-record.ts` and
+- [x] **D1 — scope predicates and stored shapes to core.** New `src/core/gardener/run-record.ts` and
   `run-scope.ts` (moved verbatim from `gardener-state.ts`, comments included), exported from
   `src/core/gardener/index.ts`. `src/main/gardener-state.ts` imports them and re-exports
   `type StoredRun`; `src/main/ipc/gardener-deps.ts` and `src/main/ipc/gardener.ts` take
   `narrowedScope`/`inScope`/`scopeAdmits`/`isRunComplete` from `@core/gardener`.
   _Accept:_ `npm run typecheck && npm test` green, nothing under `tests/` changed.
   _Files:_ 5. _Mirror:_ `src/core/gardener/progress.ts` (pure, `@shared/types` only).
-- **D2 — JSON reading to core.** New `src/core/gardener/run-read.ts` with
+- [x] **D2 — JSON reading to core.** New `src/core/gardener/run-read.ts` with
   `readStoredGardener(value): StoredGardener` plus every validator (`isFinding`, `readDays`,
   `readStageIds`, `readHealthAsOf`, `readScope`, `readCheckedKinds`, `readFixed`, `readRun`).
   `GardenerState.load` keeps only: read the file, hand the parsed value over, prune snoozes.
   _Accept:_ the "unreadable file → null", "file without `snoozed`", "unknown kinds dropped" and
   "scope that narrows nothing" tests pass unchanged. _Files:_ 3.
-- **D3 — save-time merge and pruning to core.** New `src/core/gardener/run-merge.ts` with
+- [x] **D3 — save-time merge and pruning to core.** New `src/core/gardener/run-merge.ts` with
   `applySavedRun(data, run, options): StoredGardener` over `mergeScoped`, `keptFixed`,
   `outlivesRun`, `rederivedBy`, `consideredBy`. `GardenerState.save` becomes: apply, then write.
   _Accept:_ every 021b/021c merge test passes unchanged, including "deletes no kind no stage of
   this run looked for" and "keeps a fixed finding outside the scope". _Files:_ 3.
-- **D4 — `present()` to core.** New `src/core/gardener/run-present.ts` with
+- [x] **D4 — `present()` to core.** New `src/core/gardener/run-present.ts` with
   `presentRun(data, today, resolved): GardenerReport | null`; the method delegates.
   _Accept:_ frozen-score, `healthKnown: false` and scope/`checkedKinds` tests pass unchanged;
   `src/main/gardener-state.ts` is under 300 lines. _Files:_ 3.
-- **D5 — run flow out of the channel file.** New `src/main/ipc/gardener-run.ts` holding the
+- [x] **D5 — run flow out of the channel file.** New `src/main/ipc/gardener-run.ts` holding the
   `gardener:run` body (slot claim, resume/scope inheritance, cancel reason, save, report) as one
   exported function; the handler in `ipc/gardener.ts` calls it.
   _Accept:_ `tests/main/gardener-ipc.test.ts` passes unchanged, the `IPC_CHANNELS` coverage test
   is green. _Files:_ 2. _Mirror:_ `src/main/ipc/journal-day.ts`.
-- **D6 — fix and orphan helpers out of the channel file.** New `src/main/ipc/gardener-actions.ts`
+- [x] **D6 — fix and orphan helpers out of the channel file.** New `src/main/ipc/gardener-actions.ts`
   with `findingOf`, `recordedHash`, `assertActionable`, `orphanPick` and the `linkOrphan` apply
   step. _Accept:_ tests unchanged and green; `src/main/ipc/gardener.ts` under 300 lines.
   _Files:_ 2. _Mirror:_ `src/main/ipc/area-note.ts`.
-- **D7 — ownership written down.** A one-sentence header per new file, the `gardener/` row in
+- [x] **D7 — ownership written down.** A one-sentence header per new file, the `gardener/` row in
   `docs/ARCHITECTURE.md` extended by the five run-state modules and the two new main-side files,
   the module list in `src/core/gardener/index.ts` extended. _Accept:_ `wc -l` over every file this
   story created or touched is ≤ 300 (`ipc/gardener-deps.ts` excepted, see Decisions) and
@@ -172,3 +172,52 @@ After `npm run verify` and `npm run seed`:
    before — unchanged.
 
 ## Done
+
+**Summary.** Split `src/main/gardener-state.ts` (788 → 226 lines) and `src/main/ipc/gardener.ts`
+(409 → 200 lines) along the seams the story named. Five pure modules moved into
+`src/core/gardener/`: `run-record.ts`, `run-scope.ts`, `run-read.ts`, `run-merge.ts`,
+`run-present.ts`. Two Electron-facing files moved into `src/main/ipc/`: `gardener-run.ts`,
+`gardener-actions.ts`. `gardener-state.ts` and `ipc/gardener.ts` keep their exported names and
+their handler map respectively, now delegating into the new modules. Ownership written down in
+each new file's header, in `docs/ARCHITECTURE.md`, and in `src/core/gardener/index.ts`'s module
+list.
+
+**Decisions.**
+- D3 (save-time merge/pruning) was built and reviewed line-by-line against the pre-diff code —
+  `mergeScoped`/`keptFixed`/`outlivesRun`/`rederivedBy`/`consideredBy` behind `applySavedRun` are
+  verbatim, including the exact order (`previous` captured before `run` replaces it, `fixed`
+  gated on `checksReran !== false`, pruning only on `isRunComplete`).
+- `docs/ARCHITECTURE.md`'s `gardener/` responsibility table needed re-padding after the new,
+  much longer cell — the table itself, not just line endings, was genuinely un-prettified
+  (`npx prettier --write` on just that file; diff confirms only whitespace re-padding, no
+  content change beyond the intended addition).
+- The new comment block added to `src/core/gardener/index.ts`'s module list is in German, to
+  match this file's own pre-existing all-German header. This one file already carried a German
+  overview comment before this story touched it; matching it beats mixing languages inside one
+  block. A full translation of this file's header is out of scope here (touches lines this story
+  has no reason to touch) and belongs with the German→English docs migration `.claude/ai-scrum.md`
+  already tracks as future work.
+- **Out-of-scope finding, not fixed here:** the manual acceptance run surfaced a real, reproducible
+  bug — after starting a run, navigating away from `garden` and back makes the progress bar
+  disappear even though the run is still going. Isolated by querying `gardener:runStatus` directly
+  at the exact moment: the backend (`src/main/gardener-run-state.ts`, untouched by this story)
+  correctly answers `running: true`; the gap is in the renderer
+  (`src/renderer/lib/queries/gardener.ts`'s `useGardenerProgress`, also untouched by this story —
+  likely the `staleTime: Infinity, gcTime: 0` query losing its cached answer across an unmount).
+  Neither file is part of this story's diff, and a worktree check plus the direct backend query
+  both point at this predating the split. Not fixed here — fixing renderer query lifecycle is
+  outside this story's named files and would be scope creep; recommend a follow-up story for
+  `useGardenerProgress`'s remount behaviour.
+
+**Verification.** `npm run typecheck`, `npm run lint`, `npm test` (190 files / 2707 tests) and
+`npm run build` all green. `npm run format:check` still fails project-wide on the pre-existing
+Windows CRLF issue (documented in earlier sprints); the files this story touched were confirmed
+individually clean via `npx prettier --check`. No file under `tests/` was touched. Code review
+(hard tier) returned PASS with one real defect (the ARCHITECTURE.md table padding above, fixed)
+and the out-of-scope finding above (left as a follow-up, not a defect in this story's diff).
+Manual acceptance: start, stop-mid-run (findings kept, "vorzeitig gestoppt", frozen health score
+with its own date), continue (no dismissal lost), scope-to-one-kind (other kinds unaffected), and
+close-vault-mid-run (pre-run report on disk untouched) all directly driven through the built app
+and confirmed PASS.
+
+**Commit message:** `027: split the gardener run state into core and main glue`

@@ -31,8 +31,12 @@ import {
   buildContext,
   computeProgress,
   computeStagePlan,
+  inScope,
+  isRunComplete,
   looseEndFinding,
   looseEndInput,
+  narrowedScope,
+  scopeAdmits,
   sortFindings,
   vaultSize,
 } from '@core/gardener';
@@ -58,13 +62,7 @@ import { fail } from './errors';
 import { docLanguage, replyLanguage } from './wiki-bridge';
 import { createGateway } from '../llm-bridge';
 import { gardenerLabels } from '../gardener-labels';
-import {
-  gardenerState,
-  inScope,
-  isRunComplete,
-  narrowedScope,
-  scopeAdmits,
-} from '../gardener-state';
+import { gardenerState } from '../gardener-state';
 import type { GardenerState, StoredRun } from '../gardener-state';
 import { looseEndState } from '../loose-end-state';
 import type { IndexLike } from '../contracts';
