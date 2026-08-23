@@ -265,9 +265,11 @@ export const enScreens = {
   'settings.vault': 'Vault',
   'settings.vaultOpen': 'Open another vault',
 
-  'onboarding.language.label': 'Interface language',
+  'onboarding.language.label': 'Language',
   'onboarding.language.de': 'Deutsch',
   'onboarding.language.en': 'English',
+  'onboarding.language.hint': 'Applies to interface, documents, and conversation.',
+  'onboarding.language.advanced': 'Advanced',
   'onboarding.overline': 'First step',
   'onboarding.title': 'Welcome',
   'onboarding.what.title': 'What is a vault?',

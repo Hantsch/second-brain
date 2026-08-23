@@ -55,7 +55,17 @@ const invoke = vi.fn(async (channel: string, payload?: unknown): Promise<unknown
       return state.snapshot;
     case 'settings:setApp': {
       const { patch } = payload as { patch: Partial<SettingsSnapshot['app']> };
-      state.snapshot = { ...state.snapshot, app: { ...state.snapshot.app, ...patch } };
+      state.snapshot = {
+        ...state.snapshot,
+        app: {
+          ...state.snapshot.app,
+          ...patch,
+          newVaultLanguages: {
+            ...state.snapshot.app.newVaultLanguages,
+            ...patch.newVaultLanguages,
+          },
+        },
+      };
       return state.snapshot;
     }
     default:
@@ -101,14 +111,16 @@ describe('Onboarding: Sprachwahl', () => {
     renderApp();
     await screen.findByRole('heading', { level: 1, name: 'Willkommen' });
 
-    const group = screen.getByRole('group', { name: 'Oberflächensprache' });
+    const group = screen.getByRole('group', { name: 'Sprache' });
     expect(within(group).getByRole('button', { name: 'Deutsch' })).toBeTruthy();
     const english = within(group).getByRole('button', { name: 'English' });
 
     await userEvent.click(english);
 
     await waitFor(() =>
-      expect(invoke).toHaveBeenCalledWith('settings:setApp', { patch: { uiLanguage: 'en' } }),
+      expect(invoke).toHaveBeenCalledWith('settings:setApp', {
+        patch: { uiLanguage: 'en', newVaultLanguages: { documents: 'en', conversation: 'en' } },
+      }),
     );
   });
 
@@ -116,13 +128,42 @@ describe('Onboarding: Sprachwahl', () => {
     renderApp();
     await screen.findByRole('heading', { level: 1, name: 'Willkommen' });
 
-    const group = screen.getByRole('group', { name: 'Oberflächensprache' });
+    const group = screen.getByRole('group', { name: 'Sprache' });
     await userEvent.click(within(group).getByRole('button', { name: 'English' }));
 
     /* Same screen, same mount — just the language switched under it. */
     expect(await screen.findByRole('heading', { level: 1, name: 'Welcome' })).toBeTruthy();
-    expect(screen.getByRole('group', { name: 'Interface language' })).toBeTruthy();
+    expect(screen.getByRole('group', { name: 'Language' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Open a vault' })).toBeTruthy();
+  });
+
+  it('lässt unter "Erweitert" Dokument- und Gesprächssprache sowie Übersetzung einzeln setzen', async () => {
+    renderApp();
+    await screen.findByRole('heading', { level: 1, name: 'Willkommen' });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Erweitert' }));
+
+    const documents = screen.getByLabelText('Dokumentsprache');
+    await userEvent.selectOptions(documents, 'English');
+    await waitFor(() =>
+      expect(invoke).toHaveBeenCalledWith('settings:setApp', {
+        patch: { newVaultLanguages: { documents: 'en' } },
+      }),
+    );
+
+    const translate = screen.getByRole('switch', { name: /Fremdsprachige Quellen/ });
+    expect(translate).toHaveProperty('checked', true);
+    await userEvent.click(translate);
+    await waitFor(() =>
+      expect(invoke).toHaveBeenCalledWith('settings:setApp', {
+        patch: { newVaultLanguages: { translateSources: false } },
+      }),
+    );
+
+    /* The simple choice above stays untouched — it still writes all three at once. */
+    expect(invoke).not.toHaveBeenCalledWith('settings:setApp', {
+      patch: { uiLanguage: 'en', newVaultLanguages: { documents: 'en', conversation: 'en' } },
+    });
   });
 });
 
@@ -137,7 +178,7 @@ describe('Onboarding: kein Modell', () => {
   it('sagt es auch auf Englisch, nach dem Sprachwechsel', async () => {
     renderApp();
     await screen.findByRole('heading', { level: 1, name: 'Willkommen' });
-    const group = screen.getByRole('group', { name: 'Oberflächensprache' });
+    const group = screen.getByRole('group', { name: 'Sprache' });
     await userEvent.click(within(group).getByRole('button', { name: 'English' }));
 
     expect(await screen.findByText(/No model is configured/)).toBeTruthy();

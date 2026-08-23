@@ -1330,6 +1330,25 @@ async function shootColdStates(options, shooter, log, skipped) {
     await settle(session.page);
     log(`  Onboarding (kein Vault) → ${await shooter.shot('onboarding', session.page)}`);
 
+    /* The "advanced" disclosure: document/conversation language and
+       translate-sources, settable before any vault exists. */
+    const advancedToggle = session.page.getByRole('button', { name: 'Erweitert' });
+    const advancedReady = await advancedToggle.waitFor({ state: 'visible', timeout: 4000 }).then(
+      () => true,
+      () => false,
+    );
+    if (advancedReady) {
+      await advancedToggle.click();
+      await settle(session.page);
+      log(
+        `  Onboarding, Sprache erweitert → ${await shooter.shot('onboarding-language-advanced', session.page)}`,
+      );
+      await advancedToggle.click();
+      await settle(session.page);
+    } else {
+      skipped.push('Onboarding: "Erweitert" stand nicht im Screen');
+    }
+
     /* 031/D4: the language choice above the header and the "no model
        configured" statement below the vault actions (031/D3) both render
        unconditionally on this screen, so `onboarding.png` already shows
@@ -1337,7 +1356,7 @@ async function shootColdStates(options, shooter, log, skipped) {
        that, click "English" for real (the same group/role the tests in
        `tests/renderer/onboarding.test.tsx` use) and take a second shot
        once the screen's own texts have actually turned English. */
-    const langGroup = session.page.getByRole('group', { name: 'Oberflächensprache' });
+    const langGroup = session.page.getByRole('group', { name: 'Sprache' });
     const englishButton = langGroup.getByRole('button', { name: 'English' });
     const langReady = await englishButton.waitFor({ state: 'visible', timeout: 4000 }).then(
       () => true,
@@ -1362,7 +1381,7 @@ async function shootColdStates(options, shooter, log, skipped) {
          German text, and a silent language leak here would turn that check
          into a false negative that has nothing to do with the error state. */
       await session.page
-        .getByRole('group', { name: 'Interface language' })
+        .getByRole('group', { name: 'Language' })
         .getByRole('button', { name: 'Deutsch' })
         .click();
       await session.page

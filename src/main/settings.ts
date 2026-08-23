@@ -129,7 +129,15 @@ export class SettingsService {
   async openVault(root: string): Promise<VaultSettings> {
     const file = join(root, VAULT_SETTINGS_FILE);
     const stored = await readJson<Partial<VaultSettings>>(file);
-    const merged = deepMerge(defaultVaultSettings(), stored);
+    /* A vault opened for the first time has no `stored` languages of its own
+       yet — its seed is what the onboarding screen collected before the vault
+       existed, not the hardcoded 'de' in `defaultVaultSettings()`. `stored`
+       overrides this seed field by field once the vault has its own file. */
+    const seed: VaultSettings = {
+      ...defaultVaultSettings(),
+      languages: { ui: this.appSettings.uiLanguage, ...this.appSettings.newVaultLanguages },
+    };
+    const merged = deepMerge(seed, stored);
     merged.version = VAULT_SETTINGS_VERSION;
     this.vaultRoot = root;
     this.vaultSettings = merged;

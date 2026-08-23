@@ -2423,6 +2423,7 @@ describe('Ruhig stellen', () => {
           theme: 'dark' as const,
           customization: { background: 'none' as const, appIcon: 'knowledge-garden' as const },
           uiLanguage: 'de' as const,
+          newVaultLanguages: { documents: 'de', conversation: 'de', translateSources: true },
           window: { width: 1440, height: 900 },
           startMinimized: false,
           onboarded: true,

@@ -10,12 +10,23 @@
    the same action again.
 
    Above all of that sits the one choice this screen can make before a vault
-   even exists: the UI language. It writes through `settings:setApp` (the
-   machine-bound app settings, not `settings:setLanguages` — that channel
-   needs an open vault). The response is written straight into the settings
-   query cache, the same way `LanguagesTab` does it; `App`'s own settings
-   effect then calls `setLanguage()` from the cache, so this screen's own
-   text switches immediately, without a reload.
+   even exists: the language. Picking one sets `uiLanguage` *and* the seed
+   for the vault-level document and conversation language
+   (`AppSettings.newVaultLanguages`) — all three, since there's no vault yet
+   to tell them apart. It writes through `settings:setApp` (the machine-bound
+   app settings, not `settings:setLanguages` — that channel needs an open
+   vault). The response is written straight into the settings query cache,
+   the same way `LanguagesTab` does it; `App`'s own settings effect then
+   calls `setLanguage()` from the cache, so this screen's own text switches
+   immediately, without a reload.
+
+   "Advanced" expands the same three settings `LanguagesTab` shows once a
+   vault is open — document language, conversation language, and translating
+   foreign-language sources — so someone who wants German documents but
+   English chat doesn't have to wait until a vault exists to say so. Once a
+   vault is created or opened for the first time, `SettingsService.openVault`
+   reads this seed into the vault's own `languages`; after that the vault's
+   file is the truth and this screen is gone anyway.
 
    Below the vault actions sits a calm, factual statement: no model is
    configured yet. That's not a guess — provider and routing configuration
@@ -26,17 +37,20 @@
 
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { UiLanguage } from '@shared/types';
+import type { AppSettings, SettingsSnapshot, UiLanguage } from '@shared/types';
 import { Button } from '../../atoms/Button';
 import { Card } from '../../atoms/Card';
 import { Icon } from '../../atoms/Icon';
 import { Input } from '../../atoms/Input';
+import { Select } from '../../atoms/Select';
+import { Switch } from '../../atoms/Switch';
 import { ErrorState } from '../../components/ErrorState';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { useLanguage, useT } from '../../i18n';
 import { api } from '../../lib/api';
 import { decodeIpcError } from '../../lib/ipc-error';
 import { qk } from '../../lib/queries/keys';
+import { Field } from '../settings/SettingsFields';
 
 /** Action group an attempt originated from. */
 type Origin = 'open' | 'create' | 'recent';
@@ -48,14 +62,30 @@ export function OnboardingScreen() {
   const t = useT();
   const language = useLanguage();
   const client = useQueryClient();
+  const settings = useQuery({ queryKey: qk.settings.snapshot(), queryFn: api.settings.get });
+  /* The response is the new settings state — straight into the cache, no
+     refetch. `App`'s settings effect reads from the same cache entry and
+     calls `setLanguage()`, which is what makes this screen's own texts
+     switch without a restart. */
+  const writeSettings = (snapshot: SettingsSnapshot): void => {
+    client.setQueryData(qk.settings.snapshot(), snapshot);
+  };
   const setUiLanguage = useMutation({
-    mutationFn: (uiLanguage: UiLanguage) => api.settings.setApp({ uiLanguage }),
-    /* The response is the new settings state — straight into the cache, no
-       refetch. `App`'s settings effect reads from the same cache entry and
-       calls `setLanguage()`, which is what makes this screen's own texts
-       switch without a restart. */
-    onSuccess: (snapshot) => client.setQueryData(qk.settings.snapshot(), snapshot),
+    /* The simple choice: one language for all three, since there's no vault
+       yet to tell "interface", "documents" and "conversation" apart. */
+    mutationFn: (code: UiLanguage) =>
+      api.settings.setApp({
+        uiLanguage: code,
+        newVaultLanguages: { documents: code, conversation: code },
+      }),
+    onSuccess: writeSettings,
   });
+  const setNewVaultLanguages = useMutation({
+    mutationFn: (patch: Partial<AppSettings['newVaultLanguages']>) =>
+      api.settings.setApp({ newVaultLanguages: patch }),
+    onSuccess: writeSettings,
+  });
+  const [advanced, setAdvanced] = useState(false);
   const [name, setName] = useState('');
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<unknown>(null);
@@ -103,6 +133,16 @@ export function OnboardingScreen() {
       />
     );
 
+  const languageOptions = UI_LANGUAGES.map((code) => ({
+    value: code,
+    label: t(`settings.lang.${code}`),
+  }));
+  const newVaultLanguages = settings.data?.app.newVaultLanguages ?? {
+    documents: 'de' as const,
+    conversation: 'de' as const,
+    translateSources: true,
+  };
+
   return (
     <div className="sb-onboarding">
       <div className="sb-onboarding-card">
@@ -130,6 +170,53 @@ export function OnboardingScreen() {
             ))}
           </span>
         </div>
+        <div className="sb-onboarding-lang-foot">
+          <span className="gs-hint">{t('onboarding.language.hint')}</span>
+          <button
+            type="button"
+            className="sb-onboarding-lang-advtoggle"
+            aria-expanded={advanced}
+            onClick={() => setAdvanced((value) => !value)}
+          >
+            <Icon name={advanced ? 'chevron-down' : 'chevron-right'} size={13} />
+            {t('onboarding.language.advanced')}
+          </button>
+        </div>
+
+        {advanced ? (
+          <div className="sb-onboarding-lang-adv">
+            <Field example={t('settings.lang.documents.example')}>
+              <Select
+                label={t('settings.lang.documents.label')}
+                hint={t('settings.lang.documents.hint')}
+                options={languageOptions}
+                value={newVaultLanguages.documents}
+                onChange={(event) =>
+                  setNewVaultLanguages.mutate({ documents: event.target.value as UiLanguage })
+                }
+              />
+            </Field>
+            <Field example={t('settings.lang.conversation.example')}>
+              <Select
+                label={t('settings.lang.conversation.label')}
+                hint={t('settings.lang.conversation.hint')}
+                options={languageOptions}
+                value={newVaultLanguages.conversation}
+                onChange={(event) =>
+                  setNewVaultLanguages.mutate({ conversation: event.target.value as UiLanguage })
+                }
+              />
+            </Field>
+            <Switch
+              label={t('settings.lang.translate.label')}
+              description={t('settings.lang.translate.hint')}
+              checked={newVaultLanguages.translateSources}
+              onChange={(event) =>
+                setNewVaultLanguages.mutate({ translateSources: event.target.checked })
+              }
+            />
+          </div>
+        ) : null}
 
         <ScreenHeader overline={t('onboarding.overline')} title={t('onboarding.title')} />
         <Card>

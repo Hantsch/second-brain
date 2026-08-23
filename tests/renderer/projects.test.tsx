@@ -379,6 +379,7 @@ function snapshot(overview: Partial<OverviewSettings> = {}): SettingsSnapshot {
       theme: 'dark',
       customization: { background: 'none', appIcon: 'knowledge-garden' },
       uiLanguage: 'de',
+      newVaultLanguages: { documents: 'de', conversation: 'de', translateSources: true },
       window: { width: 1440, height: 900 },
       startMinimized: false,
       onboarded: true,

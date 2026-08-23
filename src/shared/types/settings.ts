@@ -147,6 +147,12 @@ export interface AppSettings {
   customization: CustomizationSettings;
   /** UI language before a vault is opened. */
   uiLanguage: UiLanguage;
+  /** Seed for `languages.documents` / `.conversation` / `.translateSources` the
+      first time a vault is opened or created (`SettingsService.openVault`) —
+      chosen on the onboarding screen's "advanced" disclosure, before any vault
+      exists to carry `LanguageSettings` itself. Ignored once a vault has its
+      own settings file. */
+  newVaultLanguages: Pick<LanguageSettings, 'documents' | 'conversation' | 'translateSources'>;
   window: WindowBounds;
   /** Start minimized to the tray. */
   startMinimized: boolean;

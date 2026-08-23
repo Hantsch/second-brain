@@ -115,6 +115,7 @@ const APP_SETTINGS: AppSettings = {
   theme: 'dark',
   customization: { background: 'none', appIcon: 'knowledge-garden' },
   uiLanguage: 'en',
+  newVaultLanguages: { documents: 'de', conversation: 'de', translateSources: true },
   window: { width: 1440, height: 900 },
   startMinimized: false,
   onboarded: true,

@@ -248,6 +248,34 @@ describe('Einstellungs-Kanäle im Main', () => {
     expect(snapshot.app.uiLanguage).toBe('en');
   });
 
+  it('seedet die Sprachen eines frisch geöffneten Vaults aus den App-Einstellungen', async () => {
+    /* Was auf dem Onboarding-Screen gewählt wurde, bevor dieser zweite Vault
+       überhaupt existierte — kein eigenes `.secondbrain/settings.json` heißt
+       "zum ersten Mal geöffnet", und dann gilt dieser Seed statt des
+       hartcodierten 'de' aus `defaultVaultSettings()`. */
+    await harness.call('settings:setApp', {
+      patch: {
+        uiLanguage: 'en',
+        newVaultLanguages: { documents: 'de', conversation: 'en', translateSources: false },
+      },
+    });
+
+    const other = await createTempVault();
+    try {
+      await harness.services.openVault(other.root);
+      const snapshot = await harness.call('settings:get', undefined);
+      expect(snapshot.vault?.languages).toEqual({
+        ui: 'en',
+        documents: 'de',
+        conversation: 'en',
+        translateSources: false,
+      });
+    } finally {
+      await harness.services.closeVault();
+      await other.cleanup();
+    }
+  });
+
   it('weist eine Sprache ab, die es nicht gibt', async () => {
     await expect(
       harness.call('settings:setLanguages', {

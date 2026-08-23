@@ -27,6 +27,7 @@ export function defaultAppSettings(): AppSettings {
     theme: 'dark',
     customization: { background: 'none', appIcon: 'knowledge-garden' },
     uiLanguage: 'de',
+    newVaultLanguages: { documents: 'de', conversation: 'de', translateSources: true },
     window: { width: WINDOW_DEFAULT.width, height: WINDOW_DEFAULT.height },
     startMinimized: false,
     onboarded: false,

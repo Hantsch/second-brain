@@ -280,9 +280,11 @@ export const deScreens = {
   'settings.vault': 'Vault',
   'settings.vaultOpen': 'Anderen Vault öffnen',
 
-  'onboarding.language.label': 'Oberflächensprache',
+  'onboarding.language.label': 'Sprache',
   'onboarding.language.de': 'Deutsch',
   'onboarding.language.en': 'English',
+  'onboarding.language.hint': 'Gilt für Oberfläche, Dokumente und Gespräche.',
+  'onboarding.language.advanced': 'Erweitert',
   'onboarding.overline': 'Erster Schritt',
   'onboarding.title': 'Willkommen',
   'onboarding.what.title': 'Was ist ein Vault?',

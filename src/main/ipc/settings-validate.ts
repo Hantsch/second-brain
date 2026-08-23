@@ -242,6 +242,31 @@ export function sanitizeAppPatch(patch: unknown): DeepPartial<AppSettings> {
   if (source.uiLanguage !== undefined) {
     out.uiLanguage = oneOf(source.uiLanguage, 'uiLanguage', UI_LANGUAGES);
   }
+  const newVaultLanguages = bag(source.newVaultLanguages, 'newVaultLanguages');
+  if (newVaultLanguages) {
+    const value: Partial<AppSettings['newVaultLanguages']> = {};
+    if (newVaultLanguages.documents !== undefined) {
+      value.documents = oneOf<DocLanguage>(
+        newVaultLanguages.documents,
+        'newVaultLanguages.documents',
+        UI_LANGUAGES,
+      );
+    }
+    if (newVaultLanguages.conversation !== undefined) {
+      value.conversation = oneOf(
+        newVaultLanguages.conversation,
+        'newVaultLanguages.conversation',
+        UI_LANGUAGES,
+      );
+    }
+    if (newVaultLanguages.translateSources !== undefined) {
+      value.translateSources = boolean(
+        newVaultLanguages.translateSources,
+        'newVaultLanguages.translateSources',
+      );
+    }
+    if (Object.keys(value).length > 0) out.newVaultLanguages = value;
+  }
   if (source.startMinimized !== undefined) {
     out.startMinimized = boolean(source.startMinimized, 'startMinimized');
   }
