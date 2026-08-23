@@ -1,0 +1,18 @@
+- 2026-08-23 10:05 · 028 · D1 Types, machine-local setting, shared validator · started
+- 2026-08-23 10:15 · 028 · D1 Types, machine-local setting, shared validator · done
+- 2026-08-23 10:16 · 028 · D2 Core merge of detected and entered facts · started
+- 2026-08-23 10:29 · 028 · D2 Core merge of detected and entered facts · done
+- 2026-08-23 10:35 · 028 · D3 Persist and apply in main · started
+- 2026-08-23 10:45 · 028 · D3 Persist and apply in main · done
+- 2026-08-23 10:47 · 028 · D4 Editable VRAM row in the machine card · started
+- 2026-08-23 11:44 · 028 · D4 Editable VRAM row in the machine card · done
+- 2026-08-23 11:55 · 028 · story done, moved to done/ · done
+- 2026-08-23 12:00 · 029 · D1 The setting, its default and a shared validator · started
+- 2026-08-23 12:03 · 029 · D1 The setting, its default and a shared validator · done
+- 2026-08-23 12:03 · 029 · D2 The budget inside the capacity math · started
+- 2026-08-23 12:06 · 029 · D2 The budget inside the capacity math · done
+- 2026-08-23 12:06 · 029 · D3 Persist and thread the budget through every verdict · started
+- 2026-08-23 12:14 · 029 · D3 Persist and thread the budget through every verdict · done
+- 2026-08-23 12:14 · 029 · D4 Budget control and honest planning figures on the machine card · started
+- 2026-08-23 12:26 · 029 · D4 Budget control and honest planning figures on the machine card · done
+- 2026-08-23 12:39 · 029 · story done, moved to done/ · done

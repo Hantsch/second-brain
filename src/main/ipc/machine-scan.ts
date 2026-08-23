@@ -11,10 +11,15 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { execFile } from 'node:child_process';
 import { promises as fs } from 'node:fs';
-import { judgeCapacity } from '@core/llm';
+import { applyVramOverride, judgeCapacity } from '@core/llm';
+import {
+  DEFAULT_RESOURCE_BUDGET_PERCENT,
+  isValidResourceBudgetPercent,
+} from '@shared/llm/resource-budget';
+import { isValidVramOverrideMb } from '@shared/llm/vram-override';
 import type { CapacityVerdict, MachineFacts, MachineScanResult } from '@shared/types';
 import type { HandlerMap } from './registry';
-import { defineHandlers } from './registry';
+import { defineHandlers, fail } from './registry';
 import type { Services } from '../services';
 
 /** The GPU slice of `MachineFacts` — a slice of the real shape, never a parallel one. */
@@ -336,33 +341,104 @@ export interface MachineScanDeps {
   execFileFn?: ExecFileFn;
 }
 
-/** Both detections combined into one `MachineFacts`. Shared by the
- *  `'llm:scanMachine'` handler and `scanCapacityVerdict` below, so the two
- *  never run the detection logic differently. */
-async function detectMachineFacts(deps: MachineScanDeps): Promise<MachineFacts> {
+/** Both detections combined into one `MachineFacts`, with the manually
+ *  entered VRAM figure (028) folded in on top — `applyVramOverride` is the
+ *  one seam both `'llm:scanMachine'` and `scanCapacityVerdict` below go
+ *  through, so a verdict never sees detection's raw, override-less facts. */
+async function detectMachineFacts(
+  deps: MachineScanDeps,
+  vramOverrideMb: number | null,
+): Promise<MachineFacts> {
   const platform = deps.platform ?? os.platform();
   const execFileFn = deps.execFileFn ?? execFileAsync;
   const [base, gpu] = await Promise.all([
     detectCheapFacts(platform),
     detectGpuFacts(platform, execFileFn),
   ]);
-  return { ...base, ...gpu };
+  return applyVramOverride({ ...base, ...gpu }, vramOverrideMb);
+}
+
+/** The machine-local override, read fresh on every call — it can change
+ *  between a scan and the next (028). Never touches the vault: this setting
+ *  lives in `AppSettings`, which is machine-bound by design. */
+function vramOverrideOf(services: Services): number | null {
+  return services.settings.snapshot().app.machine.vramOverrideMb;
+}
+
+/** The resource budget (029), read fresh on every call for the same reason as
+ *  the VRAM override above — it can change between two scans. Every
+ *  `judgeCapacity` call in this file goes through here, so no verdict can end
+ *  up planning against a different percentage than the others. A stored value
+ *  that isn't a valid percentage (a hand-edited settings file, or a file
+ *  written before this setting existed) falls back to the default rather than
+ *  poisoning the sizing math with `NaN` or an out-of-range factor. */
+function budgetOf(services: Services): number {
+  const stored = services.settings.snapshot().app.machine.resourceBudgetPercent;
+  return isValidResourceBudgetPercent(stored) ? stored : DEFAULT_RESOURCE_BUDGET_PERCENT;
 }
 
 /** The same detections as `'llm:scanMachine'`, judged, without the raw facts
  *  — what `recommendModels` (main/llm-bridge.ts) needs a verdict for, without
  *  duplicating the GPU/RAM detection code. Never throws, same guarantee as
- *  the detections it combines. */
-export async function scanCapacityVerdict(deps: MachineScanDeps = {}): Promise<CapacityVerdict> {
-  return judgeCapacity(await detectMachineFacts(deps));
+ *  the detections it combines. Takes `services` (028, D3) so the manual VRAM
+ *  override reaches the recommendation path exactly like `'llm:scanMachine'`
+ *  — otherwise a model ruled out before the override was entered would keep
+ *  reading that way here, with no error and no empty state to notice. The
+ *  resource budget (029, D3) rides along for exactly the same reason: this is
+ *  the verdict `recommendModels` sizes local models against, so a budget
+ *  missing *here* would leave recommendations planning at the old default
+ *  while the machine card shows the new one — again with nothing on screen
+ *  that could reveal it. */
+export async function scanCapacityVerdict(
+  services: Services,
+  deps: MachineScanDeps = {},
+): Promise<CapacityVerdict> {
+  const facts = await detectMachineFacts(deps, vramOverrideOf(services));
+  return judgeCapacity(facts, budgetOf(services));
 }
 
 export function machineScanHandlers(services: Services, deps: MachineScanDeps = {}): HandlerMap {
   return defineHandlers({
     'llm:scanMachine': async (): Promise<MachineScanResult> => {
-      void services; // not needed for a machine scan — no vault access here
-      const facts = await detectMachineFacts(deps);
-      return { facts, verdict: judgeCapacity(facts), scannedAt: new Date().toISOString() };
+      const facts = await detectMachineFacts(deps, vramOverrideOf(services));
+      return {
+        facts,
+        verdict: judgeCapacity(facts, budgetOf(services)),
+        scannedAt: new Date().toISOString(),
+      };
+    },
+    /* Set (or clear, `vramMb: null`) the override, then return a fresh scan
+       in one round trip — there is deliberately no separate getter channel.
+       Validated before anything is written: a rejected figure never reaches
+       `patchApp`, and `patchApp` only ever touches `AppSettings` (userData),
+       never the vault's own settings file. */
+    'llm:setVramOverride': async ({ vramMb }): Promise<MachineScanResult> => {
+      if (vramMb !== null && !isValidVramOverrideMb(vramMb)) {
+        throw fail('invalid', 'VRAM-Wert liegt außerhalb des gültigen Bereichs');
+      }
+      await services.settings.patchApp({ machine: { vramOverrideMb: vramMb } });
+      const facts = await detectMachineFacts(deps, vramMb);
+      return {
+        facts,
+        verdict: judgeCapacity(facts, budgetOf(services)),
+        scannedAt: new Date().toISOString(),
+      };
+    },
+    /* Same round trip as the override above, for the share of RAM/VRAM sizing
+       may plan against (029). Validated first, so a rejected percentage never
+       reaches `patchApp`; `patchApp` deep-merges, so writing this percentage
+       leaves `vramOverrideMb` untouched, and it only ever writes `AppSettings`
+       in userData, never the vault's own settings file. The fresh verdict is
+       judged with the value just written — reading it back through
+       `budgetOf` would depend on the settings store having applied the patch
+       already. */
+    'llm:setResourceBudget': async ({ percent }): Promise<MachineScanResult> => {
+      if (!isValidResourceBudgetPercent(percent)) {
+        throw fail('invalid', 'Budget-Wert liegt außerhalb des gültigen Bereichs');
+      }
+      await services.settings.patchApp({ machine: { resourceBudgetPercent: percent } });
+      const facts = await detectMachineFacts(deps, vramOverrideOf(services));
+      return { facts, verdict: judgeCapacity(facts, percent), scannedAt: new Date().toISOString() };
     },
   });
 }

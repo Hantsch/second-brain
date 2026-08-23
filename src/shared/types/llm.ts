@@ -170,7 +170,12 @@ export interface MachineFacts {
   platform: string | null;
   arch: string | null;
   freeDiskMb: number | null;
-  /** Dedicated VRAM, in MB. Filled in by platform-specific detection (D2). */
+  /**
+   * Dedicated VRAM, in MB — the effective value: `manualVramMb` wins over
+   * `detectedVramMb` when both are present (028). Everything downstream
+   * (`judgeCapacity`, the fact rows) reads this field and needs no separate
+   * merge logic.
+   */
   vramMb: number | null;
   /** Name of the detected GPU, if any. Filled in by platform-specific detection (D2). */
   gpuName: string | null;
@@ -178,6 +183,35 @@ export interface MachineFacts {
   gpuDetection: MachineDetection;
   /** Why GPU detection didn't produce a value, if `gpuDetection` isn't `'detected'`. */
   gpuDetectionReason?: string;
+  /**
+   * What platform-specific detection actually measured, before any manual
+   * override is applied (028) — `null` when detection didn't produce a
+   * number (matches `gpuDetection` not being `'detected'`). Optional (like
+   * `gpuDetectionReason`) so existing fact literals built before the merge
+   * step (D2) landed keep compiling; the merge step always sets it.
+   */
+  detectedVramMb?: number | null;
+  /**
+   * The VRAM figure the user typed in by hand (028's machine-local
+   * `machine.vramOverrideMb` setting), independent of what detection found —
+   * `null` when nothing was entered. Optional for the same reason as
+   * `detectedVramMb`.
+   */
+  manualVramMb?: number | null;
+  /**
+   * Where the effective `vramMb` came from: `'manual'` when an entered value
+   * is in effect (it always wins over detection), `'detected'` when only
+   * detection produced a number, `'none'` when neither did. Optional for the
+   * same reason as `detectedVramMb`.
+   */
+  vramSource?: 'detected' | 'manual' | 'none';
+  /**
+   * True when both a detected and a manually entered VRAM figure exist and
+   * they disagree — surfaced so the user can resolve it (028, Q2) instead of
+   * the app silently picking a winner. Optional for the same reason as
+   * `detectedVramMb`.
+   */
+  vramConflict?: boolean;
 }
 
 /**
@@ -206,6 +240,22 @@ export interface CapacityVerdict {
   heuristic: true;
   /** Which input facts were missing or unusable for this judgement. */
   unknowns: string[];
+  /**
+   * The resource budget percentage the verdict was planned against (029),
+   * when `judgeCapacity` was called with one — `undefined` for a verdict
+   * produced before this parameter existed or without an explicit budget
+   * (100%, i.e. no reduction). Optional so existing verdict literals built
+   * before this deliverable keep compiling.
+   */
+  budgetPercent?: number;
+  /** VRAM, in MB, the verdict was planned against after applying
+      `budgetPercent` to `MachineFacts.vramMb` — `undefined` under the same
+      conditions as `budgetPercent`. */
+  plannedVramMb?: number;
+  /** RAM, in MB, the verdict was planned against after applying
+      `budgetPercent` to `MachineFacts.totalRamMb` — `undefined` under the
+      same conditions as `budgetPercent`. */
+  plannedRamMb?: number;
 }
 
 /** Result of a machine scan: the facts, main's capacity verdict on them, and when they were taken. */

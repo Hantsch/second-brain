@@ -105,7 +105,7 @@ async function buildRecommendations(services: Services): Promise<RecommendationS
   const providers = providersOf(services);
   const [catalogue, verdict] = await Promise.all([
     loadCatalogueWithLiveData({}),
-    scanCapacityVerdict(),
+    scanCapacityVerdict(services),
   ]);
   // A disabled local runtime isn't actually reachable, so its models don't
   // count as "installed" here — otherwise an entry only present on a

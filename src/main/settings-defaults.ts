@@ -4,6 +4,7 @@
 
 import { DEFAULT_DASHBOARD_TILES } from '@shared/types';
 import type { AppSettings, DashboardLayout, VaultSettings } from '@shared/types';
+import { DEFAULT_RESOURCE_BUDGET_PERCENT } from '@shared/llm/resource-budget';
 
 export const APP_SETTINGS_VERSION = 2;
 export const VAULT_SETTINGS_VERSION = 1;
@@ -29,6 +30,7 @@ export function defaultAppSettings(): AppSettings {
     window: { width: WINDOW_DEFAULT.width, height: WINDOW_DEFAULT.height },
     startMinimized: false,
     onboarded: false,
+    machine: { vramOverrideMb: null, resourceBudgetPercent: DEFAULT_RESOURCE_BUDGET_PERCENT },
   };
 }
 

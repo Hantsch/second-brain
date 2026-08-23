@@ -152,6 +152,22 @@ export interface AppSettings {
   startMinimized: boolean;
   /** Onboarding already completed. */
   onboarded: boolean;
+  /** What's tied to this machine specifically, not to the app installation
+      in general (028) — kept as its own object so more machine-local facts
+      have somewhere to go without growing the flat `AppSettings` shape. */
+  machine: {
+    /** Manually entered VRAM figure in MB, or `null` when nothing was
+        entered — detection on Windows can't read a card's real VRAM above
+        4 GB (32-bit `AdapterRAM`, see 019a's Done section), so the user can
+        fill it in by hand. Never written into the vault: this travels with
+        the machine, not with the vault. */
+    vramOverrideMb: number | null;
+    /** Percentage of this machine's RAM/VRAM the app may plan model
+        recommendations against (029) — the user's way of reserving headroom
+        for everything else running on the machine. Not written into the
+        vault: this travels with the machine, like `vramOverrideMb`. */
+    resourceBudgetPercent: number;
+  };
 }
 
 export interface SettingsSnapshot {

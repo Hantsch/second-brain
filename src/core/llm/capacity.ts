@@ -4,7 +4,29 @@
    no process, no Electron. Every threshold below is a named constant with a
    comment on where the number comes from, because none of them are measured:
    this is a rule-of-thumb sizing aid, not a benchmark. `heuristic: true` is
-   therefore permanent, not a toggle. */
+   therefore permanent, not a toggle.
+
+   Sizing math runs end to end in this fixed order, for both VRAM and RAM:
+
+     1. raw figure           — `MachineFacts.vramMb` / `totalRamMb`, as scanned.
+     2. − fixed reserve      — `VRAM_HEADROOM_MB` / `RAM_OS_RESERVE_MB`, headroom
+                                for the driver/KV-cache or the OS, subtracted
+                                unconditionally, before the budget ever applies.
+     3. × budget percent     — `judgeCapacity`'s `budgetPercent` argument (029):
+                                the share of what's *left after step 2* the user
+                                allows planning to use. This is the one and only
+                                place that percentage is applied. 100% budget
+                                does NOT mean "the whole machine" — it means "all
+                                of what's left once the fixed reserve is already
+                                off the top"; the reserve in step 2 is never
+                                given back, no matter how high the percentage.
+     4. ÷ GB-per-param       — `GB_PER_PARAM_B_AT_Q4` converts the remaining
+                                budgeted MB into a parameter count.
+     5. × comfort / CPU-only
+        penalty              — `COMFORTABLE_HEADROOM_FACTOR` (VRAM path) or
+                                `RAM_ONLY_PENALTY_FACTOR` × optionally
+                                `LOW_CORE_PENALTY_FACTOR` (RAM path) shrink the
+                                "possible" figure down to "comfortable". */
 
 import type {
   CapacityVerdict,
@@ -71,8 +93,14 @@ function hasNamedGpu(detection: MachineDetection, gpuName: string | null): boole
  * Facts → verdict. Never throws, never guesses a specific number for a
  * missing fact — an unusable input degrades to `null`/`'unknown'` and is
  * named in `unknowns` so the caller can say so honestly.
+ *
+ * `budgetPercent` (029) is the share of RAM/VRAM — after the fixed reserves,
+ * see the header comment — that sizing may plan against. It defaults to 100
+ * so every call site and fixture that predates this parameter keeps behaving
+ * exactly as before: 100% is "no reduction beyond the existing reserves",
+ * not "the whole machine".
  */
-export function judgeCapacity(facts: MachineFacts): CapacityVerdict {
+export function judgeCapacity(facts: MachineFacts, budgetPercent = 100): CapacityVerdict {
   const unknowns: string[] = [];
 
   if (facts.totalRamMb === null) unknowns.push('ram');
@@ -85,8 +113,8 @@ export function judgeCapacity(facts: MachineFacts): CapacityVerdict {
     hasNamedGpu(facts.gpuDetection, facts.gpuName) && facts.vramMb === null;
   if (namedGpuWithUnknownVram) unknowns.push('vram');
 
-  const vramCeiling = vramBasedCeiling(facts.vramMb);
-  const ramCeiling = ramBasedCeiling(facts.totalRamMb, facts.cpuCores);
+  const vramCeiling = vramBasedCeiling(facts.vramMb, budgetPercent);
+  const ramCeiling = ramBasedCeiling(facts.totalRamMb, facts.cpuCores, budgetPercent);
 
   if (vramCeiling === null && ramCeiling === null) {
     return {
@@ -96,6 +124,7 @@ export function judgeCapacity(facts: MachineFacts): CapacityVerdict {
       tiersThatFit: [],
       heuristic: true,
       unknowns,
+      budgetPercent,
     };
   }
 
@@ -126,6 +155,9 @@ export function judgeCapacity(facts: MachineFacts): CapacityVerdict {
     tiersThatFit: tiersThatFit(comfortable),
     heuristic: true,
     unknowns,
+    budgetPercent,
+    plannedVramMb: vramCeiling?.plannedMb,
+    plannedRamMb: ramCeiling?.plannedMb,
   };
 }
 
@@ -134,24 +166,37 @@ interface Ceiling {
   possible: number;
   /** Whether low core count, not memory, drove the comfortable ceiling down. */
   cpuBound: boolean;
+  /** MB actually planned against: (raw − fixed reserve) × budgetPercent. */
+  plannedMb: number;
 }
 
-function vramBasedCeiling(vramMb: number | null): Ceiling | null {
+/** Applies the budget percentage (029) to what's left after a fixed reserve. */
+function applyBudget(usableMb: number, budgetPercent: number): number {
+  return usableMb * (budgetPercent / 100);
+}
+
+function vramBasedCeiling(vramMb: number | null, budgetPercent: number): Ceiling | null {
   if (vramMb === null) return null;
   const usableMb = Math.max(0, vramMb - VRAM_HEADROOM_MB);
-  const possible = usableMb / 1024 / GB_PER_PARAM_B_AT_Q4;
+  const plannedMb = applyBudget(usableMb, budgetPercent);
+  const possible = plannedMb / 1024 / GB_PER_PARAM_B_AT_Q4;
   const comfortable = possible * COMFORTABLE_HEADROOM_FACTOR;
-  return { comfortable, possible, cpuBound: false };
+  return { comfortable, possible, cpuBound: false, plannedMb };
 }
 
-function ramBasedCeiling(totalRamMb: number | null, cpuCores: number | null): Ceiling | null {
+function ramBasedCeiling(
+  totalRamMb: number | null,
+  cpuCores: number | null,
+  budgetPercent: number,
+): Ceiling | null {
   if (totalRamMb === null) return null;
   const usableMb = Math.max(0, totalRamMb - RAM_OS_RESERVE_MB);
-  const possible = usableMb / 1024 / GB_PER_PARAM_B_AT_Q4;
+  const plannedMb = applyBudget(usableMb, budgetPercent);
+  const possible = plannedMb / 1024 / GB_PER_PARAM_B_AT_Q4;
   const lowCores = cpuCores !== null && cpuCores < MIN_COMFORTABLE_CORES;
   const penalty = lowCores
     ? RAM_ONLY_PENALTY_FACTOR * LOW_CORE_PENALTY_FACTOR
     : RAM_ONLY_PENALTY_FACTOR;
   const comfortable = possible * penalty;
-  return { comfortable, possible, cpuBound: lowCores };
+  return { comfortable, possible, cpuBound: lowCores, plannedMb };
 }

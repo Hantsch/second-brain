@@ -136,6 +136,31 @@ export function useMachineScan(): UseMutationResult<MachineScanResult, unknown, 
   return useMutation({ mutationKey: qk.llm.machineScan(), mutationFn: api.llm.scanMachine });
 }
 
+/**
+ * Sets or clears the manually entered VRAM override (028): the renderer
+ * validates the raw input via `parseVramOverrideMb` before this ever runs
+ * (`MachineCard.tsx`), so a rejected value never reaches the channel. Returns
+ * a fresh `MachineScanResult` — same shape `useMachineScan` resolves to — so
+ * the card can swap in whichever of the two mutations last completed rather
+ * than needing a separate "current settings" query (there is none, by
+ * design: see the story's "no idle-state getter channel" decision).
+ */
+export function useSetVramOverride(): UseMutationResult<MachineScanResult, unknown, number | null> {
+  return useMutation({ mutationFn: api.llm.setVramOverride });
+}
+
+/**
+ * Sets the resource budget percentage (029, D4): the renderer validates the
+ * raw input via `parseResourceBudgetPercent` before this ever runs
+ * (`MachineCard.tsx`'s `BudgetRow`), so a rejected value never reaches the
+ * channel — same shape as `useSetVramOverride` above, including the fresh
+ * `MachineScanResult` it resolves to (there is no separate getter, by the
+ * same design decision).
+ */
+export function useSetResourceBudget(): UseMutationResult<MachineScanResult, unknown, number> {
+  return useMutation({ mutationFn: api.llm.setResourceBudget });
+}
+
 export interface RoutingMutations {
   setRoute: UseMutationResult<Routing, unknown, { task: TaskKind; ref: ModelRef | null }>;
   setDefault: UseMutationResult<Routing, unknown, { tier: ModelTier; ref: ModelRef | null }>;

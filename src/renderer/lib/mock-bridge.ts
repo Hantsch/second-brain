@@ -4,11 +4,131 @@
    the type below enforces that at compile time. */
 
 import type { IpcChannel, IpcRequest, IpcResponse } from '@shared/ipc';
-import type { RawSource, RecommendationSet, WriteResult } from '@shared/types';
+import {
+  DEFAULT_RESOURCE_BUDGET_PERCENT,
+  isValidResourceBudgetPercent,
+} from '@shared/llm/resource-budget';
+import { isValidVramOverrideMb } from '@shared/llm/vram-override';
+import type { MachineScanResult, RawSource, RecommendationSet, WriteResult } from '@shared/types';
 import type { SbBridge } from './bridge';
 import { encodeIpcError } from './ipc-error';
 import * as fx from './mock-fixtures';
 import * as st from './mock-settings';
+
+/* 028: the manually entered VRAM figure and (test-only) a "detected" figure,
+   simulating the merge `applyVramOverride` does on the main side — kept as
+   module state so a save survives a re-scan within the same session, the way
+   the real `userData/settings.json`-backed override does. Browser mode has
+   no real GPU detection, so `detectedVramMb` only ever moves when a renderer
+   test calls `setMockDetectedVramMb` to exercise the conflict note.
+   `resetVramOverrideMock` exists so `tests/renderer/settings.test.tsx` can
+   clear this between tests — it is module-level state and would otherwise
+   leak from one test into the next. */
+let vramOverrideMb: number | null = null;
+let detectedVramMb: number | null = null;
+
+/* 029: the resource budget, module state for the same reason as the override
+   above — a save has to survive a re-scan inside one browser session. Read by
+   `mockVramVerdict` below to plan the VRAM ceiling the same way main's
+   `judgeCapacity` would, and by `MachineCard.tsx`'s `BudgetRow` (D4) as the
+   current value to display and edit. */
+let resourceBudgetPercent: number = DEFAULT_RESOURCE_BUDGET_PERCENT;
+
+/** Clears every 028/029 machine-card lever back to its default: the VRAM
+    override, the simulated detected figure, and (D4) the resource budget —
+    all module-level state, so a value a test sets must not leak into the
+    next one via this same shared mock. */
+export function resetVramOverrideMock(): void {
+  vramOverrideMb = null;
+  detectedVramMb = null;
+  resourceBudgetPercent = DEFAULT_RESOURCE_BUDGET_PERCENT;
+}
+
+/** Test-only lever: lets a renderer test simulate a machine where detection
+    found a VRAM figure — including one that conflicts with an entered value —
+    without a real GPU. Not reachable from the UI. */
+export function setMockDetectedVramMb(mb: number | null): void {
+  detectedVramMb = mb;
+}
+
+/* 029, D4: mirrors just the VRAM half of `judgeCapacity`'s math (see the
+   header comment and constants in `src/core/llm/capacity.ts`) so the budget
+   control's planned-figure row and "nothing fits" state are demonstrable in
+   browser mode/tests — without this file importing `core/llm`, which would
+   break the renderer/core boundary the top-of-file comment already explains.
+   RAM stays out of scope here: the mock never has a real `totalRamMb`, so
+   there is nothing honest to plan against on that side regardless of budget. */
+const MOCK_VRAM_HEADROOM_MB = 1024;
+const MOCK_GB_PER_PARAM_B_AT_Q4 = 0.55;
+const MOCK_COMFORTABLE_HEADROOM_FACTOR = 0.8;
+const MOCK_TIER_LANDMARKS_B: readonly number[] = [3, 7, 8, 13, 34, 70];
+
+interface MockVramVerdict {
+  plannedMb: number;
+  comfortableParamsB: number;
+  possibleParamsB: number;
+  tiersThatFit: string[];
+}
+
+function mockVramVerdict(vramMb: number, budgetPercent: number): MockVramVerdict {
+  const usableMb = Math.max(0, vramMb - MOCK_VRAM_HEADROOM_MB);
+  const plannedMb = usableMb * (budgetPercent / 100);
+  const possibleParamsB = plannedMb / 1024 / MOCK_GB_PER_PARAM_B_AT_Q4;
+  const comfortableParamsB = possibleParamsB * MOCK_COMFORTABLE_HEADROOM_FACTOR;
+  const tiersThatFit = MOCK_TIER_LANDMARKS_B.filter((b) => b <= comfortableParamsB).map(
+    (b) => `${b}B`,
+  );
+  return { plannedMb, comfortableParamsB, possibleParamsB, tiersThatFit };
+}
+
+function mockMachineScan(): MachineScanResult {
+  const vramMb = vramOverrideMb ?? detectedVramMb;
+  const vramSource: 'detected' | 'manual' | 'none' =
+    vramOverrideMb !== null ? 'manual' : detectedVramMb !== null ? 'detected' : 'none';
+  /* No real facts in the mock bridge, so `judgeCapacity` (main-side, D3)
+     would come back unable to judge anything beyond what a VRAM figure
+     allows — RAM and CPU stay unknown regardless of the VRAM override;
+     entering VRAM does not manufacture a RAM or CPU figure. */
+  const vramVerdict = vramMb !== null ? mockVramVerdict(vramMb, resourceBudgetPercent) : null;
+  return {
+    facts: {
+      totalRamMb: null,
+      cpuCores: null,
+      platform: null,
+      arch: null,
+      freeDiskMb: null,
+      vramMb,
+      gpuName: null,
+      gpuDetection: detectedVramMb !== null ? 'detected' : 'not-attempted',
+      detectedVramMb,
+      manualVramMb: vramOverrideMb,
+      vramSource,
+      vramConflict:
+        vramOverrideMb !== null && detectedVramMb !== null && vramOverrideMb !== detectedVramMb,
+    },
+    verdict: vramVerdict
+      ? {
+          limitingFactor: 'vram',
+          maxComfortableParamsB: vramVerdict.comfortableParamsB,
+          maxPossibleParamsB: vramVerdict.possibleParamsB,
+          tiersThatFit: vramVerdict.tiersThatFit,
+          heuristic: true,
+          unknowns: ['ram', 'cpu'],
+          budgetPercent: resourceBudgetPercent,
+          plannedVramMb: vramVerdict.plannedMb,
+        }
+      : {
+          limitingFactor: 'unknown',
+          maxComfortableParamsB: null,
+          maxPossibleParamsB: null,
+          tiersThatFit: [],
+          heuristic: true,
+          unknowns: ['ram', 'cpu'],
+          budgetPercent: resourceBudgetPercent,
+        },
+    scannedAt: fx.NOW,
+  };
+}
 
 const writeResult: WriteResult = { path: fx.doc.path, hash: 'demo-hash', created: false };
 
@@ -439,30 +559,29 @@ const RESPONSES: MockResponses = {
   'llm:setDefault': () => st.routing,
   'llm:suggestRouting': () => st.routing,
   'llm:testTask': () => ({ ok: false, latencyMs: 0, sample: '', error: 'llm-unavailable' }),
-  'llm:scanMachine': () => ({
-    facts: {
-      totalRamMb: null,
-      cpuCores: null,
-      platform: null,
-      arch: null,
-      freeDiskMb: null,
-      vramMb: null,
-      gpuName: null,
-      gpuDetection: 'not-attempted',
-    },
-    /* No real facts in the mock bridge, so `judgeCapacity` (main-side, D3)
-       would come back unable to judge anything — mirrored here by hand since
-       this fake has no access to `core/llm`. */
-    verdict: {
-      limitingFactor: 'unknown',
-      maxComfortableParamsB: null,
-      maxPossibleParamsB: null,
-      tiersThatFit: [],
-      heuristic: true,
-      unknowns: ['ram', 'cpu'],
-    },
-    scannedAt: fx.NOW,
-  }),
+  'llm:scanMachine': () => mockMachineScan(),
+  /* Persists into the module-level slot above rather than a real settings
+     store — good enough for browser mode and for the renderer test's
+     save/clear/rescan-survival scenarios (`resetVramOverrideMock` guards
+     against it leaking between tests). Mirrors D3's `isValidVramOverrideMb`
+     guard: the renderer already validates before calling, but an invalid
+     payload is rejected here too rather than silently accepted. */
+  'llm:setVramOverride': ({ vramMb }) => {
+    if (vramMb !== null && !isValidVramOverrideMb(vramMb)) {
+      throw encodeIpcError({ code: 'invalid', message: 'vramMb außerhalb des gültigen Bereichs' });
+    }
+    vramOverrideMb = vramMb;
+    return mockMachineScan();
+  },
+  /* Same shape for the budget: validated here too, then persisted into the
+     module slot, and the fresh scan reports the percentage it was just set to. */
+  'llm:setResourceBudget': ({ percent }) => {
+    if (!isValidResourceBudgetPercent(percent)) {
+      throw encodeIpcError({ code: 'invalid', message: 'percent außerhalb des gültigen Bereichs' });
+    }
+    resourceBudgetPercent = percent;
+    return mockMachineScan();
+  },
   'llm:recommendModels': () => recommendationSet,
 
   'dashboard:data': () => ({

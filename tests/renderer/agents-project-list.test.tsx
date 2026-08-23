@@ -118,6 +118,7 @@ const APP_SETTINGS: AppSettings = {
   window: { width: 1440, height: 900 },
   startMinimized: false,
   onboarded: true,
+  machine: { vramOverrideMb: null, resourceBudgetPercent: 80 },
 };
 
 /** The whole screen on a mocked bridge — the only way to see what is written. */

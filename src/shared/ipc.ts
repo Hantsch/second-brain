@@ -766,6 +766,34 @@ export interface IpcRoutes {
   /** Cheap machine facts (RAM, CPU, disk, GPU) for judging local-model capacity. */
   'llm:scanMachine': { req: void; res: MachineScanResult };
   /**
+   * Sets or clears the manually entered VRAM override (028): detection can't
+   * read VRAM above 4 GB on Windows (32-bit `AdapterRAM`, see 019a), so the
+   * user can type the figure in by hand. Persisted machine-locally (never in
+   * the vault) and folded into every subsequent `MachineFacts` the same way
+   * a detected value would be — the verdict and the model recommendation use
+   * it exactly like a measurement. `vramMb: null` clears it. Returns a fresh
+   * scan result — the same shape as `llm:scanMachine` — so caller and store
+   * stay in sync in one round trip; there is deliberately no separate getter,
+   * the scan result carries the value. A figure outside the accepted range
+   * (see `shared/llm/vram-override.ts`) is refused with `invalid` and nothing
+   * is written.
+   */
+  'llm:setVramOverride': { req: { vramMb: number | null }; res: MachineScanResult };
+  /**
+   * Sets the share of this machine's RAM/VRAM that model sizing may plan
+   * against (029) — the user's way of keeping headroom for everything else
+   * running on the machine. Persisted machine-locally (never in the vault),
+   * like the VRAM override, and applied inside `judgeCapacity` after the
+   * fixed reserves, so every verdict — the machine card's and the one behind
+   * the model recommendation — plans with the same percentage. Returns a
+   * fresh scan result, the same shape as `llm:scanMachine`, so the change is
+   * visible in one round trip; there is deliberately no separate getter, the
+   * scan result's verdict carries `budgetPercent`. A figure outside 10–100 or
+   * anything that isn't a whole percent (see `shared/llm/resource-budget.ts`)
+   * is refused with `invalid` and nothing is written.
+   */
+  'llm:setResourceBudget': { req: { percent: number }; res: MachineScanResult };
+  /**
    * One recommended target per task, with reason/tradeoff keys and cost per
    * run — a proposal, nothing is written until `llm:setRoute`/`llm:setDefault`
    * confirms it.
@@ -1047,6 +1075,8 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'llm:suggestRouting',
   'llm:testTask',
   'llm:scanMachine',
+  'llm:setVramOverride',
+  'llm:setResourceBudget',
   'llm:recommendModels',
   'dashboard:data',
   'dashboard:layout',

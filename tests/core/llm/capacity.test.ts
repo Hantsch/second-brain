@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { judgeCapacity } from '@core/llm';
+import { applyVramOverride, judgeCapacity } from '@core/llm';
 import type { MachineFacts } from '@shared/types';
 
 /* Fixtures for the four machines named in the 019a plan, plus the win32 case
@@ -94,5 +94,99 @@ describe('judgeCapacity', () => {
     // memory size unknown" instead of "no GPU".
     expect(namedGpuUnknownVram.unknowns).toEqual(['vram']);
     expect(noGpuAtAll.unknowns).toEqual([]);
+  });
+});
+
+/* 028, D2: `judgeCapacity` itself is untouched by the story — the merge
+   (`applyVramOverride`) happens before a fact object ever reaches it, so
+   these prove the two compose correctly rather than testing new judgement
+   logic. RAM stays unknown throughout, isolating what entering VRAM alone
+   changes. */
+describe('judgeCapacity over a manually overridden VRAM figure', () => {
+  const namedGpuNoRam = facts({
+    cpuCores: 8,
+    gpuName: 'NVIDIA GeForce RTX 4080',
+    gpuDetection: 'detected',
+  });
+
+  it('flips the limiting factor to vram, raises the ceiling off "unknown", and drops vram from unknowns', () => {
+    const before = judgeCapacity(namedGpuNoRam);
+    expect(before.limitingFactor).toBe('unknown');
+    expect(before.maxComfortableParamsB).toBeNull();
+    expect(before.unknowns.sort()).toEqual(['ram', 'vram']);
+
+    const merged = applyVramOverride(namedGpuNoRam, 16384);
+    const after = judgeCapacity(merged);
+
+    expect(after.limitingFactor).toBe('vram');
+    expect(after.maxComfortableParamsB).not.toBeNull();
+    expect(after.unknowns).toEqual(['ram']);
+  });
+
+  it('clearing the override restores the pre-override verdict exactly', () => {
+    const cleared = applyVramOverride(namedGpuNoRam, null);
+
+    expect(judgeCapacity(cleared)).toEqual(judgeCapacity(namedGpuNoRam));
+  });
+});
+
+/* 029, D2: the resource budget percentage is applied AFTER the existing
+   fixed reserves (VRAM headroom, RAM OS reserve), as a second multiplier on
+   what's left — never on the raw figure. One fixture machine, swept across
+   the accepted range, proves the ceiling only ever shrinks as the budget
+   falls, and that omitting the argument reproduces pre-029 behaviour
+   exactly. */
+describe('judgeCapacity with a resource budget percentage', () => {
+  const fixtureMachine: MachineFacts = facts({
+    totalRamMb: 32768,
+    cpuCores: 8,
+    vramMb: 16384,
+    gpuName: 'NVIDIA GeForce RTX 4080',
+    gpuDetection: 'detected',
+  });
+
+  it('reports plannedVramMb/plannedRamMb/budgetPercent as (raw - reserve) x percent, at 100/80/50/10', () => {
+    // Fixed reserves from capacity.ts: VRAM_HEADROOM_MB = 1024, RAM_OS_RESERVE_MB = 4096.
+    const usableVramMb = 16384 - 1024;
+    const usableRamMb = 32768 - 4096;
+
+    for (const percent of [100, 80, 50, 10]) {
+      const verdict = judgeCapacity(fixtureMachine, percent);
+
+      expect(verdict.budgetPercent).toBe(percent);
+      expect(verdict.plannedVramMb).toBeCloseTo(usableVramMb * (percent / 100), 6);
+      expect(verdict.plannedRamMb).toBeCloseTo(usableRamMb * (percent / 100), 6);
+    }
+  });
+
+  it('tiersThatFit is non-empty at 100 percent and empty at 10 percent', () => {
+    const at100 = judgeCapacity(fixtureMachine, 100);
+    const at10 = judgeCapacity(fixtureMachine, 10);
+
+    expect(at100.tiersThatFit.length).toBeGreaterThan(0);
+    expect(at10.tiersThatFit).toEqual([]);
+  });
+
+  it('the comfortable ceiling is monotonically non-increasing as the percentage falls', () => {
+    const percents = [100, 80, 50, 10];
+    const ceilings = percents.map(
+      (percent) => judgeCapacity(fixtureMachine, percent).maxComfortableParamsB,
+    );
+
+    for (const ceiling of ceilings) expect(ceiling).not.toBeNull();
+    for (let i = 1; i < ceilings.length; i++) {
+      expect(ceilings[i]!).toBeLessThanOrEqual(ceilings[i - 1]!);
+    }
+  });
+
+  it('judgeCapacity(facts) with no second argument behaves exactly as it did before this parameter existed', () => {
+    const withoutArgument = judgeCapacity(fixtureMachine);
+    const withExplicit100 = judgeCapacity(fixtureMachine, 100);
+
+    expect(withoutArgument).toEqual(withExplicit100);
+    expect(withoutArgument.limitingFactor).toBe('vram');
+    expect(withoutArgument.maxComfortableParamsB).toBeCloseTo(21.818, 2);
+    expect(withoutArgument.maxPossibleParamsB).toBeCloseTo(27.273, 2);
+    expect(withoutArgument.tiersThatFit).toEqual(['3B', '7B', '8B', '13B']);
   });
 });

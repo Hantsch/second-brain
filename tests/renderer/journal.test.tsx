@@ -303,6 +303,7 @@ const settings: SettingsSnapshot = {
     window: { width: 1440, height: 900 },
     startMinimized: false,
     onboarded: true,
+    machine: { vramOverrideMb: null, resourceBudgetPercent: 80 },
   },
   vault: {
     version: 1,
