@@ -424,13 +424,75 @@ handed-on build covers and whether it ships unsigned (031).
 
 ---
 
+### M11 — A local engine for a machine that is not mine — planned
+
+No concept behind M11. Three user-written stories, cut on 2026-08-23 from one observation while
+looking at the provider setup: the app manages exactly one local runtime, and the first test user
+will not have strong hardware. M10 gives the sizing heuristic better facts; M11 gives it something
+small to recommend and a way to actually run it.
+
+**A model the machine can carry.** The bundled catalogue knows a 7B and an 8B, and
+`classifyModelTier` puts everything up to 8B into one `cheap` bucket — so on a laptop without a
+discrete GPU the recommendation can only suggest something that crawls or say nothing fits. Story
+032 adds the 1B–4B class, makes the tier distinction the recommendation needs, and has the app say
+outright which tasks are beyond this machine instead of routing them to a model that will produce
+mush. It is the one story of the three that needs no new runtime and is useful on its own.
+
+**An engine that installs itself.** Ollama is llama.cpp underneath, so this is not a better
+engine — it is the three knobs Ollama decides for you and that decide everything on a weak GPU:
+how many layers go to the GPU, how large the context is, which quantisation you take. Reaching
+them today means a GitHub release, a Hugging Face file, an invented command line and the
+"own OpenAI-compatible URL" preset. Story 033 makes llama.cpp a second managed runtime next to
+Ollama — named in the list, fetched from inside the app, model file included, progress and cancel
+reusing 019c's shapes. Story 034 starts it from the settings screen with the layer count, context
+size and thread count derived from the machine facts (028) and the resource budget (029), each
+value shown with one sentence on what it traded away.
+
+Sprints:
+
+- [sprints/S09/sprint.md](sprints/S09/sprint.md) — a small model, an engine that installs itself,
+  and a start I can see (032, 033, 034), `planned`
+
+Decisions taken at the cut (2026-08-23, user):
+
+- **AirLLM is rejected, not postponed.** Read at the source
+  ([lyogavin/airllm](https://github.com/lyogavin/airllm)): it keeps one layer on the GPU at a time
+  and is explicitly disk-loading bound, needs Python and PyTorch inside the Electron bundle, and
+  exposes no OpenAI-compatible server. It buys model size with speed, and this milestone needs the
+  opposite — many short prompts on a slow machine. Reopening would need a different design, not a
+  newer version.
+- **Ollama stays.** llama.cpp is a second option for the machines where it is the better one, and
+  Ollama remains fully managed as it is today. Which of the two a given machine should get is an
+  open question in 033, not a foregone conclusion.
+- **Nothing about the engine enters the vault.** Binaries and GGUF files live in a place the app
+  owns; a vault on a USB stick stays a folder of Markdown files.
+- **Cut after S08, not folded into it.** Stories 028 and 029 rewrite exactly the heuristic
+  (`src/core/llm/capacity.ts`) and the recommendation path this milestone builds on. Two sprints
+  editing one heuristic in parallel is the failure mode the sprint order exists to avoid.
+
+Open at the cut, to be decided in S09's clarification round: which concrete small models go into
+the catalogue and whether `ModelTier` gains a fourth value (032 — a type change in
+`@shared/types`, not a local edit), which llama.cpp build the app fetches and where model files
+come from (033 — a curated pin is small, a Hugging Face search is its own sprint), whether 019c's
+~700 lines of install/pull/status code get extracted behind an interface both runtimes implement
+(033-Q6, the architectural call of the sprint), and whether the engine starts automatically and
+what happens when nothing fits even entirely on the CPU (034 — the two cases the test user meets
+first).
+
+Risk carried knowingly: 033 and 034 have 019c's acceptance problem in a sharper form. Their real
+test needs a machine where the engine is genuinely absent and the graphics card genuinely weak,
+and the build machine is neither. Expect at least one to end as "built, acceptance pending" until
+it runs on the test user's laptop — which is what story 031 in S08 exists to make possible.
+
+---
+
 ## Open / unprioritised
 
-| Topic                                                         | State                                                                                                                                                                                                                                              | Next step                                                                                                                                                                                           |
-| ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Condensed layer (module / project / area)                     | Concept written 2026-08-18: [concepts/condensed-layer.md](concepts/condensed-layer.md). Supersedes the earlier "project knowledge from agent sessions" entry — that is now one of four project inputs. 40 requirements, 11 open points, no stories | `/ai-scrum:roadmap plan` — standing next-milestone candidate, deferred twice (2026-08-22 in favour of M9, 2026-08-23 in favour of M10); depends on story 005 and the Project knowledge tab from 008 |
-| MCP interface for projects, knowledge and the condensed layer | Named as an outlook in [concepts/condensed-layer.md](concepts/condensed-layer.md) §14, deliberately without requirements                                                                                                                           | Own `/ai-scrum:concept` once the condensed artifacts exist                                                                                                                                          |
-| German docs migrated to English                               | Decided in `.claude/ai-scrum.md`; `docs/*.md` are still German                                                                                                                                                                                     | Own story once it stops being cosmetic                                                                                                                                                              |
-| `format:check` never green on Windows                         | Found in S07: 460 files fail prettier purely on CRLF line endings, including files no sprint has touched — `core.autocrlf` against a repo prettier expects in LF. Story 023 solved it for one file via `.gitattributes`                            | Own story — a repo-wide `.gitattributes`/prettier decision made once. Second never-green gate after the one M9 just retired                                                                         |
-| Maintenance progress bar vanishes after navigation            | Found while smoke-testing 027 in S07, isolated to `src/renderer/lib/queries/gardener.ts`, confirmed pre-existing against a HEAD worktree — the backend answers `gardener:runStatus` correctly while the bar is gone                                | Small own story — visible, isolated, ready to pick up                                                                                                                                               |
-| Phase 2                                                       | Not defined                                                                                                                                                                                                                                        | Cut after phase 1 has been used                                                                                                                                                                     |
+| Topic                                                         | State                                                                                                                                                                                                                                              | Next step                                                                                                                                                                                                                  |
+| ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Condensed layer (module / project / area)                     | Concept written 2026-08-18: [concepts/condensed-layer.md](concepts/condensed-layer.md). Supersedes the earlier "project knowledge from agent sessions" entry — that is now one of four project inputs. 40 requirements, 11 open points, no stories | `/ai-scrum:roadmap plan` — standing next-milestone candidate, deferred three times (2026-08-22 in favour of M9, twice on 2026-08-23 in favour of M10 and M11); depends on story 005 and the Project knowledge tab from 008 |
+| MCP interface for projects, knowledge and the condensed layer | Named as an outlook in [concepts/condensed-layer.md](concepts/condensed-layer.md) §14, deliberately without requirements                                                                                                                           | Own `/ai-scrum:concept` once the condensed artifacts exist                                                                                                                                                                 |
+| German docs migrated to English                               | Decided in `.claude/ai-scrum.md`; `docs/*.md` are still German                                                                                                                                                                                     | Own story once it stops being cosmetic                                                                                                                                                                                     |
+| `format:check` never green on Windows                         | Found in S07: 460 files fail prettier purely on CRLF line endings, including files no sprint has touched — `core.autocrlf` against a repo prettier expects in LF. Story 023 solved it for one file via `.gitattributes`                            | Own story — a repo-wide `.gitattributes`/prettier decision made once. Second never-green gate after the one M9 just retired                                                                                                |
+| Maintenance progress bar vanishes after navigation            | Found while smoke-testing 027 in S07, isolated to `src/renderer/lib/queries/gardener.ts`, confirmed pre-existing against a HEAD worktree — the backend answers `gardener:runStatus` correctly while the bar is gone                                | Small own story — visible, isolated, ready to pick up                                                                                                                                                                      |
+| Phase 2                                                       | Not defined                                                                                                                                                                                                                                        | Cut after phase 1 has been used                                                                                                                                                                                            |
