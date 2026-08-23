@@ -94,17 +94,22 @@
 .sb-body--custom-background,
 .sb-content--custom-background {
   background-color: var(--surface-page);
+  /* The veil is a vignette, not a flat tint: it thins out in the middle so the
+     artwork reads, and reaches the full page colour before the element's edge.
+     That is what dissolves the picture's own borders — with `cover` the image
+     fills the whole surface, so a flat tint would leave a hard cut at every side. */
   background-image:
-    linear-gradient(
-      color-mix(in srgb, var(--surface-page) 92%, transparent),
-      color-mix(in srgb, var(--surface-page) 92%, transparent)
+    radial-gradient(
+      ellipse 82% 86% at 50% 48%,
+      color-mix(in srgb, var(--surface-page) 91%, transparent) 0%,
+      color-mix(in srgb, var(--surface-page) 93%, transparent) 40%,
+      color-mix(in srgb, var(--surface-page) 97%, transparent) 72%,
+      var(--surface-page) 100%
     ),
     var(--sb-custom-background);
   background-position: center;
   background-repeat: no-repeat;
-  background-size:
-    cover,
-    min(78vw, 1100px) auto;
+  background-size: cover, cover;
 }
 
 .sb-rail {

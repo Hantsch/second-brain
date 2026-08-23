@@ -1,7 +1,7 @@
 # Roadmap
 
 **The** one source of status and planning: where we stand, what comes next, what is not planned
-at all yet. As of: 2026-08-22.
+at all yet. As of: 2026-08-23.
 
 Rules (so this document does not drift):
 
@@ -382,13 +382,55 @@ Gaps/notes:
 
 ---
 
+### M10 — A model that fits this machine, and an app I can hand on — planned
+
+No concept behind M10. Four user-written stories, cut on 2026-08-23, along two lines that only
+matter outside the author's own session.
+
+**The machine gets a say.** M5 shipped the sizing heuristic with a documented hole: on Windows,
+WMI's 32-bit `AdapterRAM` misreports any card ≥4 GB, so `vramMb` stays `null` and the verdict
+falls back to the RAM ceiling. Story 028 makes the human the second data source 019a said would
+be needed — a fact the scan misses can be typed in, is marked as entered rather than measured,
+and is read by the verdict and the recommendation alike. Story 029 adds the number that was
+missing underneath all of it: the share of the machine a recommendation may plan with, so a
+model is chosen against what the user is willing to give it rather than against the whole box.
+
+**The app leaves the repository.** Story 030 finishes a rename that only ever happened in
+`package.json`: the window, the HTML title, the dashboard, the journal speaker, the prompts and
+the README still say "Second Brain". Story 031 turns `npm run package` into something that can
+be handed over — one command, one ZIP for a USB stick, a readme for the recipient, and an
+automated check that nothing of the author's is inside it.
+
+Sprints:
+
+- [sprints/S08/sprint.md](sprints/S08/sprint.md) — it fits my machine, and I can pass it on
+  (028, 029, 030, 031), `planned`
+
+Decisions taken at the cut (2026-08-23, user):
+
+- **The vault directory stays `.secondbrain/`.** Renaming it is a vault-format change with a
+  migration path; M10 is not that. A vault written by the old build opens unchanged.
+- **The journal speaker becomes `Guston` for new turns**, and every existing `Second Brain` day
+  stays readable. Nothing in the vault is rewritten.
+- **A handed-on copy keeps settings and keys in `userData`/`safeStorage`** on the recipient's
+  machine. A portable "data next to the .exe" mode is explicitly out — `safeStorage` is bound to
+  the Windows user, so encrypted keys would not survive the trip.
+
+Open at the cut, to be decided in S08's clarification round: whether the resource budget applies
+before or after the existing OS reserve and what its default is (029 — together they decide
+whether an accepted milestone starts recommending differently on day one), whether the design
+system's `Gaston` and the app's `Guston` are one name or two (030), and which platforms the
+handed-on build covers and whether it ships unsigned (031).
+
+---
+
 ## Open / unprioritised
 
-| Topic                                                         | State                                                                                                                                                                                                                                              | Next step                                                                                                                                                            |
-| ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Condensed layer (module / project / area)                     | Concept written 2026-08-18: [concepts/condensed-layer.md](concepts/condensed-layer.md). Supersedes the earlier "project knowledge from agent sessions" entry — that is now one of four project inputs. 40 requirements, 11 open points, no stories | `/ai-scrum:roadmap plan` — strongest M10 candidate, deferred once at the 2026-08-22 cut in favour of M9; depends on story 005 and the Project knowledge tab from 008 |
-| MCP interface for projects, knowledge and the condensed layer | Named as an outlook in [concepts/condensed-layer.md](concepts/condensed-layer.md) §14, deliberately without requirements                                                                                                                           | Own `/ai-scrum:concept` once the condensed artifacts exist                                                                                                           |
-| German docs migrated to English                               | Decided in `.claude/ai-scrum.md`; `docs/*.md` are still German                                                                                                                                                                                     | Own story once it stops being cosmetic                                                                                                                               |
-| `format:check` never green on Windows                         | Found in S07: 460 files fail prettier purely on CRLF line endings, including files no sprint has touched — `core.autocrlf` against a repo prettier expects in LF. Story 023 solved it for one file via `.gitattributes`                          | Own story — a repo-wide `.gitattributes`/prettier decision made once. Second never-green gate after the one M9 just retired                                          |
-| Maintenance progress bar vanishes after navigation            | Found while smoke-testing 027 in S07, isolated to `src/renderer/lib/queries/gardener.ts`, confirmed pre-existing against a HEAD worktree — the backend answers `gardener:runStatus` correctly while the bar is gone                                | Small own story — visible, isolated, ready to pick up                                                                                                               |
-| Phase 2                                                       | Not defined                                                                                                                                                                                                                                        | Cut after phase 1 has been used                                                                                                                                      |
+| Topic                                                         | State                                                                                                                                                                                                                                              | Next step                                                                                                                                                                                           |
+| ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Condensed layer (module / project / area)                     | Concept written 2026-08-18: [concepts/condensed-layer.md](concepts/condensed-layer.md). Supersedes the earlier "project knowledge from agent sessions" entry — that is now one of four project inputs. 40 requirements, 11 open points, no stories | `/ai-scrum:roadmap plan` — standing next-milestone candidate, deferred twice (2026-08-22 in favour of M9, 2026-08-23 in favour of M10); depends on story 005 and the Project knowledge tab from 008 |
+| MCP interface for projects, knowledge and the condensed layer | Named as an outlook in [concepts/condensed-layer.md](concepts/condensed-layer.md) §14, deliberately without requirements                                                                                                                           | Own `/ai-scrum:concept` once the condensed artifacts exist                                                                                                                                          |
+| German docs migrated to English                               | Decided in `.claude/ai-scrum.md`; `docs/*.md` are still German                                                                                                                                                                                     | Own story once it stops being cosmetic                                                                                                                                                              |
+| `format:check` never green on Windows                         | Found in S07: 460 files fail prettier purely on CRLF line endings, including files no sprint has touched — `core.autocrlf` against a repo prettier expects in LF. Story 023 solved it for one file via `.gitattributes`                            | Own story — a repo-wide `.gitattributes`/prettier decision made once. Second never-green gate after the one M9 just retired                                                                         |
+| Maintenance progress bar vanishes after navigation            | Found while smoke-testing 027 in S07, isolated to `src/renderer/lib/queries/gardener.ts`, confirmed pre-existing against a HEAD worktree — the backend answers `gardener:runStatus` correctly while the bar is gone                                | Small own story — visible, isolated, ready to pick up                                                                                                                                               |
+| Phase 2                                                       | Not defined                                                                                                                                                                                                                                        | Cut after phase 1 has been used                                                                                                                                                                     |
