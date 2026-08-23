@@ -265,6 +265,9 @@ export const enScreens = {
   'settings.vault': 'Vault',
   'settings.vaultOpen': 'Open another vault',
 
+  'onboarding.language.label': 'Interface language',
+  'onboarding.language.de': 'Deutsch',
+  'onboarding.language.en': 'English',
   'onboarding.overline': 'First step',
   'onboarding.title': 'Welcome',
   'onboarding.what.title': 'What is a vault?',
@@ -282,6 +285,8 @@ export const enScreens = {
     'The name shows up in the title bar later. You pick the folder in the next step — it should be empty, the app creates the structure.',
   'onboarding.recent': 'Opened recently',
   'onboarding.missing': 'not found',
+  'onboarding.noModel.body':
+    'No model is configured. Gaston works fully without one — set one up later, once a vault is open, in settings.',
 
   'quickCapture.title': 'Quick capture',
   'quickCapture.placeholder': 'What has been on your mind?',

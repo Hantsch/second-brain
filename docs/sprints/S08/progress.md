@@ -31,3 +31,13 @@
 - 2026-08-23 13:09 · 030 · D7 Verified, and the vault is provably untouched · started
 - 2026-08-23 13:23 · 030 · D7 Verified, and the vault is provably untouched · done
 - 2026-08-23 13:23 · 030 · story done, moved to done/ · done
+- 2026-08-23 13:24 · 031 · D1 The content check, as a tested pure function · started
+- 2026-08-23 13:32 · 031 · D1 The content check, as a tested pure function · done
+- 2026-08-23 13:32 · 031 · D2 npm run handoff: one command, one ZIP · started
+- 2026-08-23 13:46 · 031 · D2 npm run handoff: one command, one ZIP · done
+- 2026-08-23 13:46 · 031 · D3 First start: language choice + no-model statement · started
+- 2026-08-23 13:54 · 031 · D3 First start: language choice + no-model statement · done
+- 2026-08-23 13:54 · 031 · D4 First start visible in the screenshot run · started
+- 2026-08-23 13:59 · 031 · D4 First start visible in the screenshot run · done
+- 2026-08-23 13:59 · 031 · D5 Documentation for sender and recipient · started
+- 2026-08-23 14:00 · 031 · D5 Documentation for sender and recipient · done

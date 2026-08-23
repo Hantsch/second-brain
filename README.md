@@ -45,6 +45,7 @@ The binding file format is documented in [docs/VAULT-FORMAT.md](docs/VAULT-FORMA
 | `npm run dev`          | Start Electron with hot reload                                 |
 | `npm run build`        | Type-check and `electron-vite build` into `out/`               |
 | `npm run package`      | Portable Windows EXE into `dist/gaston-<version>-portable.exe` |
+| `npm run handoff`      | Verify, package, and zip a handoff build for someone else      |
 | `npm test`             | Vitest (core, main, renderer)                                  |
 | `npm run typecheck`    | `tsc` for the Node side and the renderer                       |
 | `npm run lint`         | ESLint over the whole repo                                     |
@@ -59,6 +60,22 @@ The binding file format is documented in [docs/VAULT-FORMAT.md](docs/VAULT-FORMA
 need `npm run build` first, and they never touch the real installation: the vault
 comes in via `SB_VAULT`, and settings live in their own `--user-data-dir`.
 `SB_DEMO=1` marks the run as demo mode.
+
+## Handing it on
+
+`npm run handoff` runs the quality gate, packages the app, and writes a single
+`dist/gaston-<version>-windows.zip`. Unpacked, it contains exactly two files: the
+portable `gaston-<version>-portable.exe` and a `README.txt` for the recipient —
+nothing of the sender's, checked twice against a list of forbidden patterns
+(`.env`, `.secondbrain`, a real vault, `node_modules`, and the like). Re-running the
+command replaces the previous ZIP instead of piling up.
+
+What it deliberately doesn't cover: the `.exe` is unsigned, so Windows SmartScreen
+will warn on first start (`README.txt` says how to proceed); there's no
+auto-update — a new version is a new ZIP; only Windows x64 is built; settings and
+keys stay on the recipient's machine rather than travelling with the app; and the
+ZIP ships no starter vault — the recipient creates or opens their own on first
+start.
 
 ## Status
 

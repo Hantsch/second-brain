@@ -280,6 +280,9 @@ export const deScreens = {
   'settings.vault': 'Vault',
   'settings.vaultOpen': 'Anderen Vault öffnen',
 
+  'onboarding.language.label': 'Oberflächensprache',
+  'onboarding.language.de': 'Deutsch',
+  'onboarding.language.en': 'English',
   'onboarding.overline': 'Erster Schritt',
   'onboarding.title': 'Willkommen',
   'onboarding.what.title': 'Was ist ein Vault?',
@@ -297,6 +300,8 @@ export const deScreens = {
     'Der Name steht später in der Titelzeile. Den Ordner wählst du im nächsten Schritt — er sollte leer sein, die Struktur legt die App an.',
   'onboarding.recent': 'Zuletzt geöffnet',
   'onboarding.missing': 'nicht gefunden',
+  'onboarding.noModel.body':
+    'Es ist noch kein Modell eingerichtet. Gaston funktioniert auch ohne eines vollständig — ein Modell lässt sich später einrichten, sobald ein Vault offen ist, in den Einstellungen.',
 
   'quickCapture.title': 'Schnell erfassen',
   'quickCapture.placeholder': 'Was ist dir durch den Kopf gegangen?',

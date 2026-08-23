@@ -1330,6 +1330,50 @@ async function shootColdStates(options, shooter, log, skipped) {
     await settle(session.page);
     log(`  Onboarding (kein Vault) → ${await shooter.shot('onboarding', session.page)}`);
 
+    /* 031/D4: the language choice above the header and the "no model
+       configured" statement below the vault actions (031/D3) both render
+       unconditionally on this screen, so `onboarding.png` already shows
+       both. What it does NOT prove is that the switch itself works — for
+       that, click "English" for real (the same group/role the tests in
+       `tests/renderer/onboarding.test.tsx` use) and take a second shot
+       once the screen's own texts have actually turned English. */
+    const langGroup = session.page.getByRole('group', { name: 'Oberflächensprache' });
+    const englishButton = langGroup.getByRole('button', { name: 'English' });
+    const langReady = await englishButton.waitFor({ state: 'visible', timeout: 4000 }).then(
+      () => true,
+      () => false,
+    );
+    if (langReady) {
+      await englishButton.click();
+      const switched = await session.page
+        .getByRole('heading', { level: 1, name: 'Welcome' })
+        .waitFor({ state: 'visible', timeout: 4000 })
+        .then(
+          () => true,
+          () => false,
+        );
+      await settle(session.page);
+      log(`  Onboarding, English → ${await shooter.shotAs('onboarding-en.png', session.page)}`);
+      if (!switched) {
+        skipped.push('Onboarding: der Klick auf „English" schaltete die eigenen Texte nicht um');
+      }
+      /* Back to German through the same real button, not a reload: the rest
+         of this function (the broken-vault error card below) looks for
+         German text, and a silent language leak here would turn that check
+         into a false negative that has nothing to do with the error state. */
+      await session.page
+        .getByRole('group', { name: 'Interface language' })
+        .getByRole('button', { name: 'Deutsch' })
+        .click();
+      await session.page
+        .getByRole('heading', { level: 1, name: 'Willkommen' })
+        .waitFor({ state: 'visible', timeout: 4000 })
+        .catch(() => undefined);
+      await settle(session.page);
+    } else {
+      skipped.push('Onboarding: die Sprachwahl („English") stand nicht im Screen');
+    }
+
     const entry = session.page.locator('.sb-recent-item').first();
     try {
       await entry.waitFor({ state: 'visible', timeout: 4000 });

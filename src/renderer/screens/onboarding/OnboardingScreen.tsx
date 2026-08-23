@@ -7,17 +7,33 @@
    wants to open a vault shouldn't have to wonder whether they need a name.
 
    The error appears directly below the action that triggered it, and offers
-   the same action again. */
+   the same action again.
+
+   Above all of that sits the one choice this screen can make before a vault
+   even exists: the UI language. It writes through `settings:setApp` (the
+   machine-bound app settings, not `settings:setLanguages` — that channel
+   needs an open vault). The response is written straight into the settings
+   query cache, the same way `LanguagesTab` does it; `App`'s own settings
+   effect then calls `setLanguage()` from the cache, so this screen's own
+   text switches immediately, without a reload.
+
+   Below the vault actions sits a calm, factual statement: no model is
+   configured yet. That's not a guess — provider and routing configuration
+   travels with the vault (`VaultSettings`), so before one is open there is
+   architecturally nothing to configure. Neither the language buttons nor
+   this statement carry the screen's one teal accent; that stays on "open a
+   vault". */
 
 import { useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { UiLanguage } from '@shared/types';
 import { Button } from '../../atoms/Button';
 import { Card } from '../../atoms/Card';
 import { Icon } from '../../atoms/Icon';
 import { Input } from '../../atoms/Input';
 import { ErrorState } from '../../components/ErrorState';
 import { ScreenHeader } from '../../components/ScreenHeader';
-import { useT } from '../../i18n';
+import { useLanguage, useT } from '../../i18n';
 import { api } from '../../lib/api';
 import { decodeIpcError } from '../../lib/ipc-error';
 import { qk } from '../../lib/queries/keys';
@@ -25,9 +41,21 @@ import { qk } from '../../lib/queries/keys';
 /** Action group an attempt originated from. */
 type Origin = 'open' | 'create' | 'recent';
 
+/** Order of the two-way language choice above the header. */
+const UI_LANGUAGES: readonly UiLanguage[] = ['de', 'en'];
+
 export function OnboardingScreen() {
   const t = useT();
+  const language = useLanguage();
   const client = useQueryClient();
+  const setUiLanguage = useMutation({
+    mutationFn: (uiLanguage: UiLanguage) => api.settings.setApp({ uiLanguage }),
+    /* The response is the new settings state — straight into the cache, no
+       refetch. `App`'s settings effect reads from the same cache entry and
+       calls `setLanguage()`, which is what makes this screen's own texts
+       switch without a restart. */
+    onSuccess: (snapshot) => client.setQueryData(qk.settings.snapshot(), snapshot),
+  });
   const [name, setName] = useState('');
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<unknown>(null);
@@ -78,6 +106,31 @@ export function OnboardingScreen() {
   return (
     <div className="sb-onboarding">
       <div className="sb-onboarding-card">
+        <div className="sb-onboarding-lang">
+          <span className="gs-overline sb-onboarding-lang-label">
+            {t('onboarding.language.label')}
+          </span>
+          <span
+            className="sb-onboarding-lang-seg"
+            role="group"
+            aria-label={t('onboarding.language.label')}
+          >
+            {UI_LANGUAGES.map((code) => (
+              <button
+                key={code}
+                type="button"
+                className={`sb-onboarding-langbtn ${
+                  language === code ? 'sb-onboarding-langbtn--active' : ''
+                }`.trim()}
+                aria-pressed={language === code}
+                onClick={() => setUiLanguage.mutate(code)}
+              >
+                {t(`onboarding.language.${code}`)}
+              </button>
+            ))}
+          </span>
+        </div>
+
         <ScreenHeader overline={t('onboarding.overline')} title={t('onboarding.title')} />
         <Card>
           <h2 className="sb-empty-title sb-onboarding-what">{t('onboarding.what.title')}</h2>
@@ -155,6 +208,14 @@ export function OnboardingScreen() {
         ) : null}
 
         {failureAt('recent')}
+
+        {/* Provider and routing configuration travels with the vault
+            (`VaultSettings`), so before one is open there is no model to
+            check for — this is a fact of the current state, not a guess. */}
+        <p className="sb-llm-note sb-onboarding-nomodel">
+          <Icon name="info" size={14} />
+          <span>{t('onboarding.noModel.body')}</span>
+        </p>
       </div>
     </div>
   );
