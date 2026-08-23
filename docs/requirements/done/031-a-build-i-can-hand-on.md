@@ -1,7 +1,7 @@
 ---
 id: 031
 title: A build I can hand on
-status: in-progress # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-08-23
 ---
 
@@ -289,13 +289,15 @@ sweeps `out/**` for forbidden content, packages with `electron-builder --win por
 `.exe` plus a rendered `README.txt`, checks the staged files and then the written ZIP a second
 time, and writes `dist/gaston-<version>-windows.zip` — replacing any previous run's artifacts.
 The content checks (`scripts/lib/handoff-check.mjs`) are pure, tested functions with an allowlist
-+ denylist; `build.files`/`build.extraResources` in `package.json` are pinned by a test so
-widening them fails loudly. `OnboardingScreen` gained a language picker (`Deutsch`/`English`,
-switches `t()` immediately via the existing `settings:setApp` → settings-query round trip) and a
-calm "no model configured" statement below the vault actions. `scripts/shot.mjs` and
-`README.md` were extended to cover and document all of the above.
+
+- denylist; `build.files`/`build.extraResources` in `package.json` are pinned by a test so
+  widening them fails loudly. `OnboardingScreen` gained a language picker (`Deutsch`/`English`,
+  switches `t()` immediately via the existing `settings:setApp` → settings-query round trip) and a
+  calm "no model configured" statement below the vault actions. `scripts/shot.mjs` and
+  `README.md` were extended to cover and document all of the above.
 
 **Verification.**
+
 - `npm run build`, `npm test` (2830 tests, 198 files), `npm run lint`, `npm run typecheck` —
   all green on the final working tree.
 - Real end-to-end `npm run handoff` run: produced `dist/gaston-0.1.0-windows.zip` containing
@@ -313,6 +315,7 @@ calm "no model configured" statement below the vault actions. `scripts/shot.mjs`
   new violation, not fixed as out of scope).
 
 **Decisions (made during the build, beyond what refine already fixed):**
+
 - D1's first draft used German comments/finding strings, mirroring the pre-existing (but
   CLAUDE.md-noncompliant) style of `scripts/seed/settings-guard.mjs`. Caught during review and
   corrected to English before D2 consumed it — CLAUDE.md's current "comments/documentation/

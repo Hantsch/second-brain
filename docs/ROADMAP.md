@@ -442,7 +442,7 @@ because it now also blocks the one command this milestone's second half is built
 
 ### M11 — A local engine for a machine that is not mine — planned
 
-No concept behind M11. Three user-written stories, cut on 2026-08-23 from one observation while
+No concept behind M11. Four user-written stories, cut on 2026-08-23 from one observation while
 looking at the provider setup: the app manages exactly one local runtime, and the first test user
 will not have strong hardware. M10 gives the sizing heuristic better facts; M11 gives it something
 small to recommend and a way to actually run it.
@@ -453,6 +453,13 @@ discrete GPU the recommendation can only suggest something that crawls or say no
 032 adds the 1B–4B class, makes the tier distinction the recommendation needs, and has the app say
 outright which tasks are beyond this machine instead of routing them to a model that will produce
 mush. It is the one story of the three that needs no new runtime and is useful on its own.
+
+**A card that remembers what it found.** Added to the milestone on 2026-08-23 after using what
+M10 built: the machine card forgets its scan on every app start, asks for VRAM in megabytes, and
+explains the machine in parameter counts to the person these stories exist for. Story 035 persists
+the scan machine-locally, moves the field to GB, replaces the parameter sentence with plain
+language, and makes the resource budget a slider. It runs first in S09 because it splits the file
+032 and 034 edit next.
 
 **An engine that installs itself.** Ollama is llama.cpp underneath, so this is not a better
 engine — it is the three knobs Ollama decides for you and that decide everything on a weak GPU:
@@ -467,7 +474,7 @@ value shown with one sentence on what it traded away.
 Sprints:
 
 - [sprints/S09/sprint.md](sprints/S09/sprint.md) — a small model, an engine that installs itself,
-  and a start I can see (032, 033, 034), `planned`
+  and a start I can see (035, 032, 033, 034), `planned`
 
 Decisions taken at the cut (2026-08-23, user):
 

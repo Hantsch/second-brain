@@ -22,6 +22,7 @@ local model without leaving the app, and the card says which numbers it chose an
 
 <!-- Order = the order the build phase works through. Dependent stories go last. -->
 
+- [ ] 035 — The machine card remembers, and speaks plainly
 - [ ] 032 — A model that fits a weak machine
 - [ ] 033 — llama.cpp is a runtime the app can install
 - [ ] 034 — The engine starts with settings that fit this machine
@@ -36,7 +37,15 @@ running the two lines in parallel would mean two sprints editing one heuristic.
 
 **Why this order.**
 
-- **032 first, and useful alone.** It is the only story of the three that needs no new runtime and
+- **035 first, because everything else edits the same two places.** It is the smallest story of
+  the four and the only one that is pure repair: it makes the machine card persist its scan, take
+  GB instead of MB, and drop the parameter vocabulary. It splits the 493-line
+  `MachineCard.tsx` into `src/renderer/screens/settings/machine/` and touches
+  `src/core/llm/capacity.ts` — the file 032 changes next and 034 reads. Doing it first means the
+  three engine stories land on the split card instead of merging against it, and the first test
+  user sees a card that does not forget on the very same day the small-model recommendation
+  arrives.
+- **032 second, and useful alone.** It is the only story of the three that needs no new runtime and
   no new process: it changes what the app suggests. If the sprint stops after it, the first test
   user still gets a recommendation that fits their laptop — through Ollama, which is already
   managed. Everything after it is about control, not about being usable at all.
@@ -48,7 +57,8 @@ running the two lines in parallel would mean two sprints editing one heuristic.
   enterable and the budget 029 introduces. It is also the story most likely to need a second
   pass, so it sits where a carry-over hurts least.
 
-**Depends on S08.** 034 computes from `MachineFacts` including hand-entered values (028) and from
+**Depends on S08.** 035 is a direct follow-up to 019a/028/029 and assumes all three are accepted
+— it rewrites the file they live in. 034 computes from `MachineFacts` including hand-entered values (028) and from
 the resource budget (029). If S08 is not accepted when this sprint starts, 034 either waits or
 degrades to the detected facts only — that is a decision for the clarification round, not a
 silent fallback.
@@ -78,7 +88,9 @@ silent fallback.
 - **Nothing about the engine goes into the vault.** Binaries and model files live in a place the
   app owns; a vault on a USB stick stays a folder of Markdown.
 
-**Acceptance.** `ui-acceptance-required` and `live-smoke-required` are both true. 032 is
+**Acceptance.** `ui-acceptance-required` and `live-smoke-required` are both true. 035 is fully
+acceptable on the author's machine — restart, slider, GB field, keyboard — and is refined (`ready`)
+with its plan in the story file. 032 is
 acceptable in the running app against a fixture-weak verdict. 033 and 034 have the same problem
 019c had: their real acceptance needs a machine where the engine is genuinely absent, and the
 author's machine is not that. Expect at least one of them to end as "built, acceptance pending"
