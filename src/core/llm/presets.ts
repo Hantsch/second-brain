@@ -20,6 +20,18 @@ export const PROVIDER_PRESETS: readonly ProviderPreset[] = [
     hint: 'llm.preset.ollama.hint',
   },
   {
+    id: 'llamacpp',
+    label: 'llama.cpp',
+    kind: 'openai-compatible',
+    baseUrl: 'http://127.0.0.1:8080/v1',
+    needsKey: false,
+    local: true,
+    canListModels: true,
+    // "Runs on this machine. Control over GPU offload and context — the
+    //  choice for weak hardware where Ollama decides them for you."
+    hint: 'llm.preset.llamacpp.hint',
+  },
+  {
     id: 'lmstudio',
     label: 'LM Studio',
     kind: 'openai-compatible',

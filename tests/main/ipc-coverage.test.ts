@@ -104,6 +104,14 @@ describe('kein Kanal ist ein Platzhalter', () => {
   });
 });
 
+describe('033: llm:searchModelFiles', () => {
+  it('ist im Vertrag, hat einen Handler und ist im Preload-Allowlist', () => {
+    expect(IPC_CHANNELS).toContain('llm:searchModelFiles');
+    expect(channels).toContain('llm:searchModelFiles');
+    expect(typeof handlers.get('llm:searchModelFiles')).toBe('function');
+  });
+});
+
 describe('Preload-Freigabe', () => {
   function bridge(): {
     invoke: (channel: string, payload?: unknown) => Promise<unknown>;

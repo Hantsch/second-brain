@@ -21,9 +21,6 @@ import { OpenAiCompatibleProvider, PROVIDER_PRESETS } from '@core/llm';
 import type { FetchLike } from '@core/llm';
 import type { IpcResponse } from '@shared/ipc';
 import type { LocalRuntimeStatus, ProviderConfig } from '@shared/types';
-import type { HandlerMap } from './registry';
-import { defineHandlers } from './registry';
-import type { Services } from '../services';
 
 export type LocalRuntime = IpcResponse<'llm:detectLocal'>[number];
 
@@ -225,16 +222,9 @@ export async function detectOllamaRuntimeStatus(
   return 'absent';
 }
 
-/** `llm:localRuntimeStatus` — no vault access needed: this is "what's on
-    this machine", the same kind of fact `machine-scan.ts` reports. */
-export function runtimeStatusHandlers(
-  services: Services,
-  options: RuntimeStatusOptions = {},
-): HandlerMap {
-  return defineHandlers({
-    'llm:localRuntimeStatus': async () => {
-      void services;
-      return detectOllamaRuntimeStatus(options);
-    },
-  });
-}
+/* `llm:localRuntimeStatus` used to be handled here, when the only runtime it
+   could mean was Ollama. Since 033 (D5) it takes a `RuntimeId`, so the channel
+   dispatches through `runtime/registry.ts` and Ollama's answer is
+   `createOllamaRuntimePart`'s `status` — which calls exactly the function
+   above. This file stays what it always was: the detection itself, no
+   channel. */

@@ -10,6 +10,11 @@ second roadmap.
   → sessions/transcript) reading both Claude Code and Codex CLI session trails, read-only, with
   project linking and honest empty/off/misconfigured states; passed clean-agent review after one
   fix cycle.
+- 033 — llama.cpp is a runtime the app can install · S09 · A shared `RuntimeInstaller` interface
+  puts llama.cpp beside Ollama: GPU-scan-preselected engine build (with arch/x64/arm64 asset
+  table), staged download with cancel-leaves-nothing, and anonymous Hugging Face search for GGUF
+  files, sharing the existing pull-progress shape. Passed `story-review-hard` after one fix cycle;
+  AC 8 (a real end-to-end task run) needs real hardware/network and is built, acceptance pending.
 - 002 — Knowledge absorbs sources · S01 · Modules screen became Knowledge (`#/knowledge`), Sources
   left the rail and moved in as its input tab with an `into=` module prefill; old `#/modules` and
   `#/sources` deep links redirect with the query string intact.

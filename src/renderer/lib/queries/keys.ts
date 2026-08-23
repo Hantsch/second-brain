@@ -72,10 +72,12 @@ export const qk = {
     routing: () => ['llm', 'routing'] as const,
     machineScan: () => ['llm', 'machineScan'] as const,
     recommendations: () => ['llm', 'recommendations'] as const,
-    /* Whether Ollama is installed/running (019c) — distinct from `detect()`,
-       which probes every local preset's endpoint at once. */
-    runtimeStatus: () => ['llm', 'runtimeStatus'] as const,
-    runtimeInstallPlan: () => ['llm', 'runtimeInstallPlan'] as const,
+    /* Whether a local runtime is installed/running (019c; 033 adds `runtime`
+       so Ollama's and llama.cpp's cards each keep their own cache entry
+       instead of overwriting one another) — distinct from `detect()`, which
+       probes every local preset's endpoint at once. */
+    runtimeStatus: (runtime: string) => ['llm', 'runtimeStatus', runtime] as const,
+    runtimeInstallPlan: (runtime: string) => ['llm', 'runtimeInstallPlan', runtime] as const,
   },
   dashboard: {
     data: () => ['dashboard', 'data'] as const,

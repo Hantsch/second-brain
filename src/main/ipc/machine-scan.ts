@@ -44,9 +44,19 @@ function toMb(bytes: number): number | null {
 /** Free space on the volume that would hold local models. Never throws.
     Exported for `ollama-install.ts` (019c, D2): the runtime install plan needs
     the same free-disk fact this scan already gathers, and duplicating the
-    `statfs` probe would be the kind of copy the project's own rules forbid. */
-export async function detectFreeDiskMb(): Promise<number | null> {
-  const candidates = [ollamaModelsDir(), os.homedir(), os.tmpdir()];
+    `statfs` probe would be the kind of copy the project's own rules forbid.
+
+    `preferredDir` (033, Q2b) is tried before the defaults, so a caller that
+    knows which volume it is about to write to — llama.cpp's engine and model
+    files go under `<userData>`, not into `~/.ollama` — measures that one
+    instead of a nearby guess. Without it, behaviour is unchanged. */
+export async function detectFreeDiskMb(preferredDir?: string): Promise<number | null> {
+  const candidates = [
+    ...(preferredDir === undefined ? [] : [preferredDir]),
+    ollamaModelsDir(),
+    os.homedir(),
+    os.tmpdir(),
+  ];
   for (const dir of candidates) {
     try {
       const stats = await fs.statfs(dir);

@@ -535,11 +535,12 @@ const RESPONSES: MockResponses = {
       configured: false,
     },
   ],
-  'llm:localRuntimeStatus': () => 'absent',
+  'llm:localRuntimeStatus': ({ runtime }) => ({ runtime, status: 'absent' }),
   /* Honest like `llm:scanMachine` above: the browser-mode mock has no real
      platform or disk facts, so it reports the install as blocked rather than
      pretending a download would work. */
-  'llm:runtimeInstallPlan': () => ({
+  'llm:runtimeInstallPlan': ({ runtime }) => ({
+    runtime,
     canInstall: false,
     blockedReason: 'unsupported-platform',
     downloadMb: 0,
@@ -557,7 +558,12 @@ const RESPONSES: MockResponses = {
      or started in browser mode, so both report the "nothing to do" case
      rather than pretending a runtime exists. */
   'llm:openRuntimeInstaller': () => ({ opened: false, reason: 'no-installer-downloaded' }),
-  'llm:startLocalRuntime': () => ({ started: false, status: 'absent', reason: 'spawn-failed' }),
+  'llm:startLocalRuntime': ({ runtime }) => ({
+    runtime,
+    started: false,
+    status: 'absent',
+    reason: 'spawn-failed',
+  }),
   /* And for the same reason there is no runtime to pull a model into: a fake
      progress stream would be the one thing this mock must not invent. */
   'llm:pullModel': () => {
@@ -567,6 +573,13 @@ const RESPONSES: MockResponses = {
     });
   },
   'llm:cancelPull': () => undefined,
+  /* Browser mode never reaches the real Hugging Face API — an offline
+     network is exactly the honest state D3's outcome type already names, so
+     the mock reports that instead of inventing search hits. */
+  'llm:searchModelFiles': (request) =>
+    request.step === 'search'
+      ? { step: 'search', ok: false, reason: 'network-error' }
+      : { step: 'files', ok: false, reason: 'network-error' },
   'llm:tasks': () => st.tasks,
   'llm:routing': () => st.routing,
   'llm:setRoute': () => st.routing,

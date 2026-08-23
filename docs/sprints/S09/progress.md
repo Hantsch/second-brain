@@ -24,3 +24,32 @@
 - 2026-08-23 19:43 · 032 · D4 Shortfall in the UI, both languages · started
 - 2026-08-23 19:48 · 032 · D4 Shortfall in the UI, both languages · done
 - 2026-08-23 20:04 · 032 · story review + fix cycle + closing · done
+- 2026-08-23 20:06 · 033 · D1 Runtime descriptors + generalised plan · started
+- 2026-08-23 20:11 · 033 · D1 Runtime descriptors + generalised plan · done
+- 2026-08-23 20:11 · 033 · D2 Engine build selection from GPU scan · started
+- 2026-08-23 20:11 · 033 · D3 Hugging Face search + file parsing · started
+- 2026-08-23 20:17 · 033 · D2 Engine build selection from GPU scan · done
+- 2026-08-23 20:17 · 033 · D3 Hugging Face search + file parsing · done
+- 2026-08-23 20:17 · 033 · D4 IPC contract carries the runtime · started
+- 2026-08-23 20:26 · 033 · D4 IPC contract carries the runtime · done
+- 2026-08-23 20:26 · 033 · D5 RuntimeInstaller interface + Ollama adapter · started
+- 2026-08-23 20:39 · 033 · D5 RuntimeInstaller interface + Ollama adapter · done
+- 2026-08-23 20:39 · 033 · D6 llama.cpp engine fetch · started
+- 2026-08-23 20:59 · 033 · D6 llama.cpp engine fetch · done
+- 2026-08-23 20:59 · 033 · D7 llama.cpp status + model file download · started
+- 2026-08-23 21:13 · 033 · D7 llama.cpp status + model file download · done
+- 2026-08-23 21:13 · 033 · D8 HF search handler · started
+- 2026-08-23 21:16 · 033 · D8 HF search handler · done
+- 2026-08-23 21:16 · 033 · D9 llama.cpp provider preset + minimal start · started
+- 2026-08-23 21:40 · 033 · D9 llama.cpp provider preset + minimal start · done
+- 2026-08-23 21:40 · 033 · D10 Runtime cards, one per runtime · started
+- 2026-08-23 22:04 · 033 · D10 Runtime cards, one per runtime · done
+- 2026-08-23 22:04 · 033 · D11 Model search and download panel · started
+- 2026-08-23 22:19 · 033 · D11 Model search and download panel · done
+- 2026-08-23 22:19 · 033 · story verification · started
+- 2026-08-23 22:36 · 033 · story verification (typecheck/lint/test/build/seed/shot) · done
+- 2026-08-23 22:36 · 033 · story review (story-review-hard) · started
+- 2026-08-23 22:52 · 033 · story review (story-review-hard) · done (FAIL, fix cycle 1 started)
+- 2026-08-23 23:08 · 033 · story review fix cycle (2 parallel agents) · done
+- 2026-08-23 23:08 · 033 · re-verification (typecheck/lint/test/build/seed/shot) · done
+- 2026-08-23 23:08 · 033 · closing (Done section filled, status left in-progress: AC8 needs live network+GPU) · done

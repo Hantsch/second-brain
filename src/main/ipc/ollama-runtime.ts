@@ -20,6 +20,12 @@
  *   duplicated — until it reports `'running'` or a short timeout elapses. A
  *   missing binary (`ENOENT`, e.g. a race with an uninstall) is reported as
  *   `started: false, reason: 'spawn-failed'`, never thrown.
+ *
+ * 033, D5: both bodies moved into `createOllamaRuntimePart` — Ollama's part of
+ * the `RuntimeInstaller` interface — which also took over
+ * `llm:localRuntimeStatus` from `llm-detect.ts`, since that channel reports the
+ * very status this file already polls. The channels dispatch on `RuntimeId`
+ * through `runtime/registry.ts`; nothing about the Ollama path changed.
  */
 
 import { spawn } from 'node:child_process';
@@ -29,7 +35,8 @@ import type { InstallerPathTracker } from './ollama-install';
 import { detectOllamaRuntimeStatus } from './llm-detect';
 import type { RuntimeStatusOptions } from './llm-detect';
 import type { HandlerMap } from './registry';
-import { defineHandlers } from './registry';
+import { createRuntimeRegistry, lifecycleChannelHandlers } from './runtime/registry';
+import type { RuntimeInstallerPart } from './runtime/types';
 import type { Services } from '../services';
 
 /** The slice of `child_process.spawn` this file needs — injectable so no
@@ -117,33 +124,45 @@ export interface OllamaRuntimeDeps {
   spawnErrorGraceMs?: number;
 }
 
-/** `llm:openRuntimeInstaller` / `llm:startLocalRuntime` — the two D3
-    channels. `installerPathTracker` must be the same instance
-    `ollamaInstallHandlers` was built with (`register-all.ts` creates it once
-    and hands it to both), otherwise this always sees "nothing downloaded
-    yet". */
-export function ollamaRuntimeHandlers(
+/**
+ * Ollama's half of `RuntimeInstaller` (033, D5) for the runtime-lifecycle
+ * channels — the two D3 handler bodies unchanged, plus `status`, which used to
+ * be its own handler in `llm-detect.ts`. It is the same call that file always
+ * made (`detectOllamaRuntimeStatus`), and the same one `start` polls: one
+ * probe, one meaning, so the status a card shows and the status a start waits
+ * for can never disagree.
+ *
+ * `installerPathTracker` must be the same instance the install part was built
+ * with (`register-all.ts` creates it once and hands it to both), otherwise this
+ * always sees "nothing downloaded yet".
+ */
+export type OllamaRuntimePart = RuntimeInstallerPart<'status' | 'openInstaller' | 'start'>;
+
+export function createOllamaRuntimePart(
   services: Services,
   installerPathTracker: InstallerPathTracker,
   deps: OllamaRuntimeDeps = {},
-): HandlerMap {
+): OllamaRuntimePart {
+  void services;
   const spawnFn = deps.spawnFn ?? nodeSpawn;
   const probeFn = deps.probeFn ?? (() => detectOllamaRuntimeStatus(deps.statusOptions));
   const timeoutMs = deps.timeoutMs ?? START_TIMEOUT_MS;
   const pollIntervalMs = deps.pollIntervalMs ?? START_POLL_INTERVAL_MS;
   const spawnErrorGraceMs = deps.spawnErrorGraceMs ?? SPAWN_ERROR_GRACE_MS;
 
-  return defineHandlers({
-    'llm:openRuntimeInstaller': async () => {
-      void services;
+  return {
+    id: 'ollama',
+
+    status: probeFn,
+
+    openInstaller: async () => {
       const path = installerPathTracker.get();
       if (path === null) return { opened: false, reason: 'no-installer-downloaded' };
       const error = await shell.openPath(path);
       return error === '' ? { opened: true } : { opened: false, reason: error };
     },
 
-    'llm:startLocalRuntime': async () => {
-      void services;
+    start: async () => {
       const child = spawnFn('ollama', ['serve'], {
         detached: true,
         stdio: 'ignore',
@@ -160,5 +179,20 @@ export function ollamaRuntimeHandlers(
         ? { started: true, status }
         : { started: false, status, reason: 'timeout' as const };
     },
-  });
+  };
+}
+
+/** `llm:localRuntimeStatus` / `llm:openRuntimeInstaller` / `llm:startLocalRuntime`
+    over a registry that knows Ollama and nothing else — this module's own seam,
+    and the one its test drives. Production builds one registry across all
+    runtimes in `register-all.ts` and hands it to the very same
+    `lifecycleChannelHandlers`. */
+export function ollamaRuntimeHandlers(
+  services: Services,
+  installerPathTracker: InstallerPathTracker,
+  deps: OllamaRuntimeDeps = {},
+): HandlerMap {
+  return lifecycleChannelHandlers(
+    createRuntimeRegistry([createOllamaRuntimePart(services, installerPathTracker, deps)]),
+  );
 }

@@ -26,6 +26,7 @@ import type {
   DashboardLayout,
   DocLanguage,
   DumpItem,
+  EngineBuildId,
   FilingProposal,
   FilingResult,
   GardenerDiscardPlan,
@@ -37,6 +38,9 @@ import type {
   GardenerRunTrigger,
   GardenerStageId,
   GardenerSupersedeResult,
+  HfModelSearchRequest,
+  HfModelSearchResponse,
+  HfPullFile,
   IngestJob,
   IngestKind,
   JournalDay,
@@ -56,6 +60,7 @@ import type {
   RecommendationSet,
   Reminder,
   Routing,
+  RuntimeId,
   RuntimePlan,
   Scope,
   SearchHit,
@@ -677,70 +682,119 @@ export interface IpcRoutes {
     }[];
   };
   /**
-   * Status of the Ollama runtime specifically (019c): whether it's running,
-   * installed but stopped, or absent. Feeds the guided "get a local runtime"
-   * flow — distinct from `llm:detectLocal`'s multi-preset running check.
+   * Status of a local runtime (019c; 033 generalises it from Ollama-only to
+   * any `RuntimeId`): whether it's running, installed but stopped, or absent.
+   * Feeds the guided "get a local runtime" flow — distinct from
+   * `llm:detectLocal`'s multi-preset running check. The response echoes
+   * `runtime` back so a caller juggling both runtime cards never has to track
+   * which request a given answer belongs to.
    */
-  'llm:localRuntimeStatus': { req: void; res: LocalRuntimeStatus };
-  /**
-   * The precondition judgement for an in-app runtime install (019c, D2): size,
-   * where the installer would land, where models would end up. A plain read
-   * with no side effect — the same shape as `llm:scanMachine` — so the
-   * confirmation dialog can show real numbers before anything downloads.
-   */
-  'llm:runtimeInstallPlan': { req: void; res: RuntimePlan };
-  /**
-   * Starts the installer download after the user has confirmed the plan from
-   * `llm:runtimeInstallPlan`. Takes no request payload: what to fetch and
-   * where to put it both come from the plan, not from anything the renderer
-   * supplies. Progress and completion arrive over `event:install-progress`,
-   * keyed by the returned `downloadId` — the same run/report split
-   * `journal:coach`/`event:llm-stream` uses for a streamed operation. Throws
-   * (closed `IpcError` code `invalid`) instead of starting a download if the
-   * plan turns out blocked at this moment (a race with `llm:scanMachine`,
-   * e.g. disk filled up between reading the plan and confirming it) — by the
-   * time this channel is called, the renderer has already shown the plan and
-   * only offers the button when `canInstall` was true.
-   */
-  'llm:downloadRuntime': { req: void; res: { downloadId: string } };
-  /** Cancels a running installer download; an unknown id changes nothing. */
-  'llm:cancelRuntimeDownload': { req: { downloadId: string }; res: void };
-  /**
-   * Opens the installer file the most recently *completed* `llm:downloadRuntime`
-   * run produced, in its OS default handler (019c, D3) — so the user doesn't
-   * have to go find the file themselves. No request payload: the handler
-   * tracks the last completed download's path itself, the same way
-   * `llm:downloadRuntime` already tracks its running downloads — it never
-   * trusts a filesystem path the renderer might supply. `shell.openPath` never
-   * throws; a non-empty return is the OS's own human-readable failure reason,
-   * carried through as `reason` (this is OS/installer-path info, not vault
-   * content, so it's fine to surface as-is). `reason: 'no-installer-downloaded'`
-   * if no download has completed yet this run.
-   */
-  'llm:openRuntimeInstaller': { req: void; res: { opened: boolean; reason?: string } };
-  /**
-   * Starts `ollama serve` detached, so it keeps running after this call
-   * returns, then polls the same detection `llm:localRuntimeStatus` uses
-   * until it reports `'running'` or a few seconds pass (019c, D3) — the
-   * "start it for me" step once the runtime is installed but not running.
-   * `reason` is closed: `'timeout'` if the server never answered in time,
-   * `'spawn-failed'` if the `ollama` binary itself couldn't be started (e.g.
-   * a race with an uninstall) — never a thrown error either way.
-   */
-  'llm:startLocalRuntime': {
-    req: void;
-    res: { started: boolean; status: LocalRuntimeStatus; reason?: 'timeout' | 'spawn-failed' };
+  'llm:localRuntimeStatus': {
+    req: { runtime: RuntimeId };
+    res: { runtime: RuntimeId; status: LocalRuntimeStatus };
   };
   /**
-   * Pulls a model into the local Ollama runtime (019c, D4) — the last step of
-   * the guided flow, once a runtime is running but empty. Returns immediately
-   * with a `pullId`; the pull itself runs on in the background and reports over
+   * The precondition judgement for an in-app runtime install (019c, D2; 033
+   * adds `runtime`): size, where the installer would land, where models
+   * would end up. A plain read with no side effect — the same shape as
+   * `llm:scanMachine` — so the confirmation dialog can show real numbers
+   * before anything downloads. `runtime` is echoed in the response for the
+   * same reason as `llm:localRuntimeStatus`.
+   */
+  'llm:runtimeInstallPlan': {
+    req: { runtime: RuntimeId; buildId?: EngineBuildId };
+    res: RuntimePlan & { runtime: RuntimeId };
+  };
+  /**
+   * Starts the installer download after the user has confirmed the plan from
+   * `llm:runtimeInstallPlan` (033 adds `runtime`, so the download fetches the
+   * right runtime's engine). What to fetch and where to put it both come from
+   * the plan for that runtime, not from anything else the renderer supplies.
+   * Progress and completion arrive over `event:install-progress`, keyed by the
+   * returned `downloadId` — the same run/report split `journal:coach`/
+   * `event:llm-stream` uses for a streamed operation. Throws (closed
+   * `IpcError` code `invalid`) instead of starting a download if the plan
+   * turns out blocked at this moment (a race with `llm:scanMachine`, e.g. disk
+   * filled up between reading the plan and confirming it) — by the time this
+   * channel is called, the renderer has already shown the plan and only
+   * offers the button when `canInstall` was true.
+   */
+  'llm:downloadRuntime': {
+    req: { runtime: RuntimeId; buildId?: EngineBuildId };
+    res: { downloadId: string };
+  };
+  /**
+   * Cancels a running installer download; an unknown id changes nothing.
+   * `runtime` (033) routes the cancel to the right runtime's installer.
+   */
+  'llm:cancelRuntimeDownload': { req: { runtime: RuntimeId; downloadId: string }; res: void };
+  /**
+   * Opens the installer file the most recently *completed* `llm:downloadRuntime`
+   * run for this runtime produced, in its OS default handler (019c, D3; 033
+   * adds `runtime`) — so the user doesn't have to go find the file themselves.
+   * The handler tracks the last completed download's path per runtime itself,
+   * the same way `llm:downloadRuntime` already tracks its running downloads —
+   * it never trusts a filesystem path the renderer might supply.
+   * `shell.openPath` never throws; a non-empty return is the OS's own
+   * human-readable failure reason, carried through as `reason` (this is
+   * OS/installer-path info, not vault content, so it's fine to surface as-is).
+   * `reason: 'no-installer-downloaded'` if no download has completed yet this
+   * run.
+   */
+  'llm:openRuntimeInstaller': {
+    req: { runtime: RuntimeId };
+    res: { opened: boolean; reason?: string };
+  };
+  /**
+   * Starts the given runtime's server detached, so it keeps running after
+   * this call returns, then polls the same detection `llm:localRuntimeStatus`
+   * uses until it reports `'running'` or a few seconds pass (019c, D3; 033
+   * adds `runtime`) — the "start it for me" step once the runtime is
+   * installed but not running. `reason` is closed: `'timeout'` if the server
+   * never answered in time, `'spawn-failed'` if the binary itself couldn't be
+   * started (e.g. a race with an uninstall) — never a thrown error either way.
+   */
+  'llm:startLocalRuntime': {
+    req: { runtime: RuntimeId };
+    res: {
+      runtime: RuntimeId;
+      started: boolean;
+      status: LocalRuntimeStatus;
+      reason?: 'timeout' | 'spawn-failed';
+    };
+  };
+  /**
+   * Pulls a model into the given local runtime (019c, D4; 033 adds `runtime`,
+   * since llama.cpp fills its model directory from a Hugging Face file rather
+   * than Ollama's native pull) — the last step of the guided flow, once a
+   * runtime is running but empty. Returns immediately with a `pullId`; the
+   * pull itself runs on in the background and reports over
    * `event:pull-progress`, the same run/report split `llm:downloadRuntime`
    * uses. Throws (closed code `invalid`) on an empty model id, nothing else:
-   * an unreachable runtime or a model Ollama doesn't know surfaces as a
-   * closing event with an `error`, not as a rejected call.
+   * an unreachable runtime or a model it doesn't know surfaces as a closing
+   * event with an `error`, not as a rejected call. `hfFile` (033, D7) is set
+   * only for `runtime: 'llamacpp'`, whose model directory is filled from a
+   * Hugging Face file rather than a native pull tag; `modelId` still names
+   * the file (its base name) for progress reporting, so `event:pull-progress`
+   * needs no shape change either. Refused up front — before the download
+   * starts — when the free-disk check (`detail.blockedReason`,
+   * `detail.freeDiskMb`) does not clear.
    */
-  'llm:pullModel': { req: { modelId: string }; res: { pullId: string } };
+  'llm:pullModel': {
+    req: { runtime: RuntimeId; modelId: string; hfFile?: HfPullFile };
+    res: { pullId: string };
+  };
+  /**
+   * Searches Hugging Face for GGUF model repositories, or lists one
+   * repository's `.gguf` files (033, D3/D4/D8) — D3's two-step flow
+   * (`searchHfModels` then `listHfModelFiles`) folded into one channel rather
+   * than two, since both steps share the same honest-failure shape
+   * (`HfLookupReason`) and the file-listing step is never useful on its own.
+   * Anonymous access only — no token, see the story's "Hugging Face access"
+   * decision. Never throws for a gated repo or an offline network: those are
+   * honest states named in the response (`ok: false, reason`), not bugs.
+   */
+  'llm:searchModelFiles': { req: HfModelSearchRequest; res: HfModelSearchResponse };
   /**
    * Cancels a running pull; an unknown id changes nothing. The partial model is
    * removed from Ollama before the run's closing event goes out, so a repeat
@@ -1079,6 +1133,7 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'llm:startLocalRuntime',
   'llm:pullModel',
   'llm:cancelPull',
+  'llm:searchModelFiles',
   'llm:tasks',
   'llm:routing',
   'llm:setRoute',

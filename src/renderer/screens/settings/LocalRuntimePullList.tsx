@@ -25,7 +25,7 @@ import { Button } from '../../atoms/Button';
 import { useLanguage, useT } from '../../i18n';
 import { formatBytes } from '../../lib/format';
 import { decodeIpcError } from '../../lib/ipc-error';
-import { clearPull, useAllPulls, type PullState } from '../../lib/pullStore';
+import { clearPull, findPullEntry, useAllPulls, type PullState } from '../../lib/pullStore';
 import { usePullMutations, useRecommendations } from '../../lib/queries/llm';
 
 interface PullCandidate {
@@ -53,18 +53,41 @@ function pct(state: PullState | undefined): number {
   return Math.min(100, Math.round((state.completed / state.total) * 100));
 }
 
-interface RowProps {
-  candidate: PullCandidate;
+/**
+ * One download row: name, size, progress, cancel/retry/start — shared by
+ * Ollama's pull list here and llama.cpp's model panel (033, D11), which is
+ * why this is exported and keyed by a bare `modelId`/`sizeLabel` pair
+ * instead of a `PullCandidate` (a shape specific to Ollama's recommendation-
+ * derived list; llama.cpp has no `ModelRef` for a Hugging Face file).
+ */
+export interface PullRowProps {
+  /** What this row downloads — Ollama's model tag, or a llama.cpp GGUF
+      file's base name. The row itself never needs to know which. */
+  modelId: string;
+  /** Pre-formatted size, e.g. "18 GB" (Ollama, whole numbers from
+      `needsDownloadGb`) or "4.1 GB" (llama.cpp, from `formatBytes`) — each
+      caller formats its own source figure. */
+  sizeLabel: string;
+  /** Extra detail next to the size — llama.cpp's quantisation, or `undefined`
+      when a caller (Ollama's list) has nothing else to add. */
+  meta?: string;
   entry: readonly [string, PullState] | undefined;
   pulling: boolean;
   onPull: () => void;
   onCancel: (pullId: string) => void;
 }
 
-function PullRow({ candidate, entry, pulling, onPull, onCancel }: RowProps) {
+export function PullRow({
+  modelId,
+  sizeLabel,
+  meta,
+  entry,
+  pulling,
+  onPull,
+  onCancel,
+}: PullRowProps) {
   const t = useT();
   const language = useLanguage();
-  const modelId = candidate.ref.model;
   const state = entry?.[1];
   const running = state !== undefined && !state.done;
 
@@ -73,7 +96,8 @@ function PullRow({ candidate, entry, pulling, onPull, onCancel }: RowProps) {
       <div className="sb-runtime-pull-head">
         <span className="sb-mono">{modelId}</span>
         <span className="sb-routing-hint">
-          {t('settings.runtime.pull.size', { gb: candidate.gb })}
+          {sizeLabel}
+          {meta ? ` · ${meta}` : ''}
         </span>
       </div>
 
@@ -157,11 +181,13 @@ export function LocalRuntimePullList() {
   const t = useT();
   const recommendations = useRecommendations(true);
   const pulls = useAllPulls();
-  const { start, cancel } = usePullMutations();
+  // Ollama-only for now (033 makes the hook itself per-runtime; the model
+  // search/download panel for llama.cpp is D11's job, not this file's).
+  const { start, cancel } = usePullMutations('ollama');
 
   const candidates = derivePullCandidates(recommendations.data);
   const entryFor = (modelId: string): readonly [string, PullState] | undefined =>
-    Object.entries(pulls).find(([, state]) => state.modelId === modelId);
+    findPullEntry(pulls, modelId);
 
   const pull = (modelId: string): void => {
     /* A stale finished/failed entry for this exact model must not survive
@@ -191,7 +217,8 @@ export function LocalRuntimePullList() {
           {candidates.map((candidate) => (
             <PullRow
               key={candidate.ref.model}
-              candidate={candidate}
+              modelId={candidate.ref.model}
+              sizeLabel={t('settings.runtime.pull.size', { gb: candidate.gb })}
               entry={entryFor(candidate.ref.model)}
               pulling={start.isPending}
               onPull={() => pull(candidate.ref.model)}

@@ -12,6 +12,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { UseMutationResult, UseQueryResult } from '@tanstack/react-query';
 import type { IpcRequest, IpcResponse } from '@shared/ipc';
 import type {
+  EngineBuildId,
   LocalRuntimeStatus,
   MachineScanResult,
   ModelRef,
@@ -20,6 +21,7 @@ import type {
   ProviderPreset,
   RecommendationSet,
   Routing,
+  RuntimeId,
   RuntimePlan,
   TaskDefinition,
   TaskKind,
@@ -135,7 +137,11 @@ export function useProviderMutations(): ProviderMutations {
  * `setQueryData` on this same key.
  */
 export function useMachineScanResult(): UseQueryResult<MachineScanResult | null> {
-  return useQuery({ queryKey: qk.llm.machineScan(), queryFn: api.llm.getMachineScan, retry: false });
+  return useQuery({
+    queryKey: qk.llm.machineScan(),
+    queryFn: api.llm.getMachineScan,
+    retry: false,
+  });
 }
 
 /**
@@ -214,10 +220,10 @@ export function useRoutingMutations(): RoutingMutations {
  * a re-visit (or the explicit "recheck" button, which just calls `refetch`)
  * must not serve a stale answer.
  */
-export function useRuntimeStatus(): UseQueryResult<LocalRuntimeStatus> {
+export function useRuntimeStatus(runtime: RuntimeId): UseQueryResult<LocalRuntimeStatus> {
   return useQuery({
-    queryKey: qk.llm.runtimeStatus(),
-    queryFn: api.llm.localRuntimeStatus,
+    queryKey: qk.llm.runtimeStatus(runtime),
+    queryFn: async () => (await api.llm.localRuntimeStatus(runtime)).status,
     retry: false,
     staleTime: 0,
     gcTime: 0,
@@ -231,10 +237,10 @@ export function useRuntimeStatus(): UseQueryResult<LocalRuntimeStatus> {
  * so the dialog always shows this moment's disk/platform facts rather than
  * whatever happened to be cached from an earlier visit.
  */
-export function useRuntimeInstallPlan(): UseQueryResult<RuntimePlan> {
+export function useRuntimeInstallPlan(runtime: RuntimeId): UseQueryResult<RuntimePlan> {
   return useQuery({
-    queryKey: qk.llm.runtimeInstallPlan(),
-    queryFn: api.llm.runtimeInstallPlan,
+    queryKey: qk.llm.runtimeInstallPlan(runtime),
+    queryFn: () => api.llm.runtimeInstallPlan(runtime),
     enabled: false,
     retry: false,
   });
@@ -257,7 +263,10 @@ export function useRecommendations(enabled: boolean): UseQueryResult<Recommendat
 }
 
 export interface RuntimeMutations {
-  download: UseMutationResult<{ downloadId: string }, unknown, void>;
+  /** `buildId` (033, D10) is only meaningful for `'llamacpp'` — Ollama's
+      channel ignores it, so passing `undefined` here keeps its behaviour
+      exactly as before. */
+  download: UseMutationResult<{ downloadId: string }, unknown, EngineBuildId | undefined>;
   cancelDownload: UseMutationResult<void, unknown, string>;
   openInstaller: UseMutationResult<{ opened: boolean; reason?: string }, unknown, void>;
   start: UseMutationResult<
@@ -265,32 +274,45 @@ export interface RuntimeMutations {
     unknown,
     void
   >;
+  /** Re-runs the install-precondition judgement for one specific build (033,
+      D10) — what the install dialog's build select calls when the user picks
+      a different option than the GPU-scan's preselected one, so the shown
+      size/target reflect the chosen build rather than the original one. */
+  replan: UseMutationResult<RuntimePlan, unknown, EngineBuildId>;
 }
 
 /**
- * The runtime lifecycle actions (019c D6): get the installer, cancel that
- * download, open the finished installer, start the server once installed.
+ * The runtime lifecycle actions (019c D6; 033, D10 makes them per-runtime):
+ * get the installer, cancel that download, open the finished installer,
+ * start the server once installed, and re-plan for a chosen engine build.
  * Only `start` invalidates `runtimeStatus` — it's the one action whose whole
  * point is "the status just changed"; the others report through
  * `event:install-progress` instead (read directly by the dialog, not through
  * the query cache — the same split `usePullMutations` uses for pulls).
  */
-export function useRuntimeMutations(): RuntimeMutations {
+export function useRuntimeMutations(runtime: RuntimeId): RuntimeMutations {
   const client = useQueryClient();
   return {
-    download: useMutation({ mutationFn: api.llm.downloadRuntime }),
-    cancelDownload: useMutation({ mutationFn: api.llm.cancelRuntimeDownload }),
-    openInstaller: useMutation({ mutationFn: api.llm.openRuntimeInstaller }),
+    download: useMutation({
+      mutationFn: (buildId?: EngineBuildId) => api.llm.downloadRuntime(runtime, buildId),
+    }),
+    cancelDownload: useMutation({
+      mutationFn: (downloadId: string) => api.llm.cancelRuntimeDownload(runtime, downloadId),
+    }),
+    openInstaller: useMutation({ mutationFn: () => api.llm.openRuntimeInstaller(runtime) }),
     start: useMutation({
-      mutationFn: api.llm.startLocalRuntime,
+      mutationFn: () => api.llm.startLocalRuntime(runtime),
       /* Only a successful start rewrites the cached status. On failure the
          card must stay on "installed, stopped" so its failure sentence
          actually renders — that sentence lives in that branch only, and
          overwriting the status unconditionally would flip the card away
          from it before the user ever saw why starting didn't work. */
       onSuccess: (result) => {
-        if (result.started) client.setQueryData(qk.llm.runtimeStatus(), result.status);
+        if (result.started) client.setQueryData(qk.llm.runtimeStatus(runtime), result.status);
       },
+    }),
+    replan: useMutation({
+      mutationFn: (buildId: EngineBuildId) => api.llm.runtimeInstallPlan(runtime, buildId),
     }),
   };
 }
@@ -308,9 +330,9 @@ export interface PullMutations {
  * the streaming-chat side). Nothing here needs invalidating either: no
  * query exposes "is a model installed" that a finished pull would affect.
  */
-export function usePullMutations(): PullMutations {
+export function usePullMutations(runtime: RuntimeId): PullMutations {
   return {
-    start: useMutation({ mutationFn: api.llm.pullModel }),
+    start: useMutation({ mutationFn: (modelId: string) => api.llm.pullModel(runtime, modelId) }),
     cancel: useMutation({ mutationFn: api.llm.cancelPull }),
   };
 }

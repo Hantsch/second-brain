@@ -21,6 +21,11 @@
  *   error, abort) into the same closed `IpcError['code']` vocabulary used
  *   everywhere else on this boundary; the renderer turns the code into a
  *   sentence via `t()`.
+ *
+ * 033, D5: the three handler bodies moved into `createOllamaInstallPart` —
+ * Ollama's part of the `RuntimeInstaller` interface in `runtime/types.ts`. The
+ * channels now dispatch on `RuntimeId` through `runtime/registry.ts`; nothing
+ * about what happens once Ollama is the answer has changed.
  */
 
 import { randomUUID } from 'node:crypto';
@@ -32,8 +37,10 @@ import { app } from 'electron';
 import { planRuntimeInstall } from '@core/llm';
 import type { RuntimePlan } from '@shared/types';
 import type { HandlerMap } from './registry';
-import { defineHandlers, fail, toIpcError } from './registry';
+import { fail, toIpcError } from './registry';
 import { detectFreeDiskMb } from './machine-scan';
+import { createRuntimeRegistry, installChannelHandlers } from './runtime/registry';
+import type { RuntimeInstallerPart } from './runtime/types';
 import type { Services } from '../services';
 
 /**
@@ -73,7 +80,11 @@ export interface DownloadFs {
   remove(path: string): Promise<void>;
 }
 
-function nodeWriteSink(path: string): WriteSink {
+/* Exported since 033, D6: `runtime/llamacpp-install.ts` streams its engine
+   archives through the very same sink, `wholeMb` and `contentLengthMb` — the
+   generic half of this file's download machinery, reused rather than copied
+   (a third runtime would be the point to move these three into `runtime/`). */
+export function nodeWriteSink(path: string): WriteSink {
   const stream = fs.createWriteStream(path);
   return {
     write: (chunk) =>
@@ -173,13 +184,13 @@ export async function buildRuntimePlan(deps: OllamaInstallDeps = {}): Promise<Ru
 
 /** Megabytes, rounded down — so "1.9 MB downloaded" doesn't briefly read as
     "2 MB" before the byte that completes it actually arrives. */
-function wholeMb(bytes: number): number {
+export function wholeMb(bytes: number): number {
   return Math.floor(bytes / (1024 * 1024));
 }
 
 /** The `Content-Length` header, in whole MB — or `null` if it's missing or
     unparseable, which happens whenever a host doesn't send it. */
-function contentLengthMb(response: Response): number | null {
+export function contentLengthMb(response: Response): number | null {
   const header = response.headers.get('content-length');
   const bytes = header === null ? NaN : Number(header);
   return Number.isFinite(bytes) && bytes > 0
@@ -248,27 +259,29 @@ async function runDownload(
   }
 }
 
-/** `llm:downloadRuntime` / `llm:cancelRuntimeDownload` — the running downloads,
-    keyed by the id `llm:downloadRuntime` handed back. Module-level on
-    purpose: exactly like `llmStreams`'s `running` map, it must survive
-    between the two IPC calls that use it. */
-export function ollamaInstallHandlers(
+/**
+ * Ollama's half of `RuntimeInstaller` (033, D5) for the three install channels
+ * — the same three handler bodies 019c had, moved behind the interface
+ * unchanged. The `running` map still lives in this closure for the same reason
+ * as before: it is the only link between `download` and `cancel`.
+ */
+export type OllamaInstallPart = RuntimeInstallerPart<'plan' | 'download' | 'cancel'>;
+
+export function createOllamaInstallPart(
   services: Services,
   deps: OllamaInstallDeps = {},
-): HandlerMap {
+): OllamaInstallPart {
   const running = new Map<string, AbortController>();
   const fetchImpl = deps.fetchImpl ?? fetch;
   const downloadFs = deps.fs ?? nodeFs;
   const installerPathTracker = deps.installerPathTracker ?? createInstallerPathTracker();
 
-  return defineHandlers({
-    'llm:runtimeInstallPlan': async () => {
-      void services;
-      return buildRuntimePlan(deps);
-    },
+  return {
+    id: 'ollama',
 
-    'llm:downloadRuntime': async () => {
-      void services;
+    plan: () => buildRuntimePlan(deps),
+
+    download: async () => {
       const plan = await buildRuntimePlan(deps);
       if (!plan.canInstall) {
         throw fail('invalid', 'auf dieser Maschine ist keine App-interne Installation möglich');
@@ -306,8 +319,20 @@ export function ollamaInstallHandlers(
       return { downloadId };
     },
 
-    'llm:cancelRuntimeDownload': async ({ downloadId }) => {
+    cancel: async (downloadId) => {
       running.get(downloadId)?.abort();
     },
-  });
+  };
+}
+
+/** `llm:runtimeInstallPlan` / `llm:downloadRuntime` / `llm:cancelRuntimeDownload`
+    over a registry that knows Ollama and nothing else — this module's own seam,
+    and the one its test drives. Production builds one registry across all
+    runtimes in `register-all.ts` and hands it to the very same
+    `installChannelHandlers`. */
+export function ollamaInstallHandlers(
+  services: Services,
+  deps: OllamaInstallDeps = {},
+): HandlerMap {
+  return installChannelHandlers(createRuntimeRegistry([createOllamaInstallPart(services, deps)]));
 }

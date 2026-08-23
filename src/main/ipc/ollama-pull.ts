@@ -22,13 +22,20 @@
  * - **A half-read line is not an error.** `parsePullLines` carries an
  *   unterminated fragment over to the next chunk and drops it at the end of the
  *   stream; a truncated final line can't fail a finished pull.
+ *
+ * 033, D5: both bodies moved into `createOllamaPullPart` — Ollama's part of the
+ * `RuntimeInstaller` interface. `llm:pullModel` now dispatches on `RuntimeId`
+ * through `runtime/registry.ts` (`llm:cancelPull` carries no runtime and asks
+ * every registered one); nothing about the Ollama path changed.
  */
 
 import { randomUUID } from 'node:crypto';
 import { createPullProgress, parsePullLines, PROVIDER_PRESETS } from '@core/llm';
 import type { FetchLike, PullProgress } from '@core/llm';
 import type { HandlerMap } from './registry';
-import { defineHandlers, fail, toIpcError } from './registry';
+import { fail, toIpcError } from './registry';
+import { createRuntimeRegistry, pullChannelHandlers } from './runtime/registry';
+import type { RuntimeInstallerPart } from './runtime/types';
 import type { Services } from '../services';
 
 /**
@@ -159,16 +166,26 @@ async function runPull(
   }
 }
 
-/** `llm:pullModel` / `llm:cancelPull` — the running pulls, keyed by the id
-    `llm:pullModel` handed back. The map lives across both calls for the same
-    reason `llmStreams`'s `running` does: it's the only link between them. */
-export function ollamaPullHandlers(services: Services, deps: OllamaPullDeps = {}): HandlerMap {
+/**
+ * Ollama's half of `RuntimeInstaller` (033, D5) for the pull channels — the two
+ * D4 handler bodies unchanged. The `running` map still lives in this closure
+ * for the same reason `llmStreams`'s does: it's the only link between the call
+ * that starts a pull and the one that cancels it.
+ */
+export type OllamaPullPart = RuntimeInstallerPart<'pull' | 'cancelPull'>;
+
+export function createOllamaPullPart(
+  services: Services,
+  deps: OllamaPullDeps = {},
+): OllamaPullPart {
   const running = new Map<string, AbortController>();
   const fetchImpl = deps.fetchImpl ?? fetch;
   const baseUrl = deps.baseUrl ?? ollamaNativeBase();
 
-  return defineHandlers({
-    'llm:pullModel': async ({ modelId }) => {
+  return {
+    id: 'ollama',
+
+    pull: async (modelId) => {
       const model = modelId.trim();
       if (model === '') throw fail('invalid', 'kein Modell angegeben');
 
@@ -203,8 +220,16 @@ export function ollamaPullHandlers(services: Services, deps: OllamaPullDeps = {}
       return { pullId };
     },
 
-    'llm:cancelPull': async ({ pullId }) => {
+    cancelPull: async (pullId) => {
       running.get(pullId)?.abort();
     },
-  });
+  };
+}
+
+/** `llm:pullModel` / `llm:cancelPull` over a registry that knows Ollama and
+    nothing else — this module's own seam, and the one its test drives.
+    Production builds one registry across all runtimes in `register-all.ts` and
+    hands it to the very same `pullChannelHandlers`. */
+export function ollamaPullHandlers(services: Services, deps: OllamaPullDeps = {}): HandlerMap {
+  return pullChannelHandlers(createRuntimeRegistry([createOllamaPullPart(services, deps)]));
 }

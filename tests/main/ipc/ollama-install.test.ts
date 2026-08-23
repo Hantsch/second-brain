@@ -166,7 +166,7 @@ describe('llm:runtimeInstallPlan', () => {
   it('reports the same plan the download itself would act on, without fetching anything', async () => {
     const { services } = fakeServices();
     const handlers = ollamaInstallHandlers(services, WIN32_DEPS);
-    const plan = await handlers['llm:runtimeInstallPlan']?.(undefined);
+    const plan = await handlers['llm:runtimeInstallPlan']?.({ runtime: 'ollama' });
 
     expect(plan).toMatchObject({ canInstall: true, downloadMb: 300 });
     expect(plan?.installerPath).toContain('OllamaSetup.exe');
@@ -184,9 +184,9 @@ describe('llm:downloadRuntime — happy path', () => {
       fs: fakeFs.fs,
     });
 
-    const result = await handlers['llm:downloadRuntime']?.(undefined);
+    const result = await handlers['llm:downloadRuntime']?.({ runtime: 'ollama' });
     expect(result?.downloadId).toBeTruthy();
-    const plan = await handlers['llm:runtimeInstallPlan']?.(undefined);
+    const plan = await handlers['llm:runtimeInstallPlan']?.({ runtime: 'ollama' });
     if (!plan) throw new Error('no plan');
     await tick(); // let `runDownload` reach its first pending `reader.read()`
 
@@ -220,7 +220,7 @@ describe('llm:downloadRuntime — happy path', () => {
       fs: fakeDownloadFs().fs,
     });
 
-    await handlers['llm:downloadRuntime']?.(undefined);
+    await handlers['llm:downloadRuntime']?.({ runtime: 'ollama' });
     await tick(); // let `runDownload` reach its first pending `reader.read()`
     fetch.pushChunk(1_100_000);
     await tick();
@@ -242,10 +242,10 @@ describe('llm:downloadRuntime — cancel', () => {
       fs: fakeFs.fs,
     });
 
-    const { downloadId } = (await handlers['llm:downloadRuntime']?.(undefined)) ?? {
+    const { downloadId } = (await handlers['llm:downloadRuntime']?.({ runtime: 'ollama' })) ?? {
       downloadId: '',
     };
-    const plan = await handlers['llm:runtimeInstallPlan']?.(undefined);
+    const plan = await handlers['llm:runtimeInstallPlan']?.({ runtime: 'ollama' });
     if (!plan) throw new Error('no plan');
     await tick(); // let `runDownload` reach its first pending `reader.read()`
 
@@ -253,7 +253,7 @@ describe('llm:downloadRuntime — cancel', () => {
     await tick();
     expect(fakeFs.bytesWritten(plan.installerPath)).toBe(2 * 1024 * 1024);
 
-    await handlers['llm:cancelRuntimeDownload']?.({ downloadId });
+    await handlers['llm:cancelRuntimeDownload']?.({ runtime: 'ollama', downloadId });
     await tick();
 
     expect(fakeFs.existingFiles()).not.toContain(plan.installerPath);
@@ -273,7 +273,7 @@ describe('llm:downloadRuntime — cancel', () => {
     const { services } = fakeServices();
     const handlers = ollamaInstallHandlers(services, WIN32_DEPS);
     await expect(
-      handlers['llm:cancelRuntimeDownload']?.({ downloadId: 'not-a-real-id' }),
+      handlers['llm:cancelRuntimeDownload']?.({ runtime: 'ollama', downloadId: 'not-a-real-id' }),
     ).resolves.toBeUndefined();
   });
 });
@@ -289,7 +289,7 @@ describe('llm:downloadRuntime — failure', () => {
       fs: fakeFs.fs,
     });
 
-    await handlers['llm:downloadRuntime']?.(undefined);
+    await handlers['llm:downloadRuntime']?.({ runtime: 'ollama' });
     await tick();
 
     const final = events.at(-1);
@@ -308,8 +308,8 @@ describe('llm:downloadRuntime — failure', () => {
       fs: fakeFs.fs,
     });
 
-    await handlers['llm:downloadRuntime']?.(undefined);
-    const plan = await handlers['llm:runtimeInstallPlan']?.(undefined);
+    await handlers['llm:downloadRuntime']?.({ runtime: 'ollama' });
+    const plan = await handlers['llm:runtimeInstallPlan']?.({ runtime: 'ollama' });
     if (!plan) throw new Error('no plan');
     await tick(); // let `runDownload` reach its first pending `reader.read()`
     fetch.pushChunk(1_000);
@@ -335,7 +335,7 @@ describe('llm:downloadRuntime — blocked plan', () => {
       freeDiskMbFn: async () => 100_000,
     });
 
-    await expect(handlers['llm:downloadRuntime']?.(undefined)).rejects.toMatchObject({
+    await expect(handlers['llm:downloadRuntime']?.({ runtime: 'ollama' })).rejects.toMatchObject({
       code: 'invalid',
     });
   });
@@ -349,7 +349,7 @@ describe('llm:downloadRuntime — blocked plan', () => {
       writableFn: async () => true,
     });
 
-    await expect(handlers['llm:downloadRuntime']?.(undefined)).rejects.toMatchObject({
+    await expect(handlers['llm:downloadRuntime']?.({ runtime: 'ollama' })).rejects.toMatchObject({
       code: 'invalid',
     });
   });
@@ -361,10 +361,10 @@ describe('llm:downloadRuntime — blocked plan', () => {
       writableFn: async () => false, // e.g. a read-only mount or missing permission
     });
 
-    const plan = await handlers['llm:runtimeInstallPlan']?.(undefined);
+    const plan = await handlers['llm:runtimeInstallPlan']?.({ runtime: 'ollama' });
     expect(plan).toMatchObject({ canInstall: false, blockedReason: 'no-write-permission' });
 
-    await expect(handlers['llm:downloadRuntime']?.(undefined)).rejects.toMatchObject({
+    await expect(handlers['llm:downloadRuntime']?.({ runtime: 'ollama' })).rejects.toMatchObject({
       code: 'invalid',
     });
   });

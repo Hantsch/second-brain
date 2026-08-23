@@ -23,6 +23,9 @@ const own = {
     'Erfassen, Suchen, Projekte und Todos funktionieren ohne jedes Modell.',
   'settings.models.start.none.action': 'Zum Dashboard',
 
+  'llm.preset.llamacpp.hint':
+    'Läuft auf diesem Rechner. Gibt die Kontrolle über GPU-Auslagerung und Kontextgröße, die Ollama dir abnimmt — die Wahl für schwache Hardware.',
+
   'settings.detect.title': 'Läuft hier schon ein Modell?',
   'settings.detect.checking': 'Suche auf diesem Rechner',
   'settings.detect.found':

@@ -14,7 +14,7 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { ProviderConfig } from '@shared/types';
+import type { ProviderConfig, RuntimeId } from '@shared/types';
 import { Button } from '../../atoms/Button';
 import { ErrorState } from '../../components/ErrorState';
 import { Panel } from '../../components/Panel';
@@ -39,6 +39,11 @@ import { ProviderDialog } from './ProviderDialog';
 import { RecommendationSection } from './RecommendationSection';
 import { RoutingSection } from './RoutingSection';
 import { StartCard } from './StartCard';
+
+/** The runtimes this tab shows a card for (033, D10) — Ollama and llama.cpp,
+    the only two `RuntimeId` has today; a third would extend this list, not
+    invent a second rendering path. */
+const LOCAL_RUNTIMES: readonly RuntimeId[] = ['ollama', 'llamacpp'];
 
 interface Note {
   text: string;
@@ -154,7 +159,12 @@ export function ModelsTab() {
 
       <MachineCard />
 
-      <LocalRuntimeCard />
+      {/* One card per registered runtime (033, D10) — Ollama first (it stays
+          the recommended default, Decisions Q5), then llama.cpp as the
+          explicit-choice option for GPU-offload/context control. */}
+      {LOCAL_RUNTIMES.map((runtime) => (
+        <LocalRuntimeCard key={runtime} runtime={runtime} />
+      ))}
 
       <Panel
         title={t('settings.providers.title')}

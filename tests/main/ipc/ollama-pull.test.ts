@@ -146,7 +146,7 @@ async function startPull(
   handlers: ReturnType<typeof ollamaPullHandlers>,
   modelId = 'qwen3:8b',
 ): Promise<string> {
-  const started = await handlers['llm:pullModel']?.({ modelId });
+  const started = await handlers['llm:pullModel']?.({ runtime: 'ollama', modelId });
   expect(started?.pullId).toBeTruthy();
   await tick(); // let `runPull` reach its first pending `reader.read()`
   return started?.pullId ?? '';
@@ -365,7 +365,7 @@ describe('llm:pullModel — refusals', () => {
   it('reports a closed code for a non-2xx response and does not delete anything', async () => {
     const fake = fakeOllama({ pullStatus: 503 });
     const handlers = handlersFor(fake);
-    await handlers['llm:pullModel']?.({ modelId: 'qwen3:8b' });
+    await handlers['llm:pullModel']?.({ runtime: 'ollama', modelId: 'qwen3:8b' });
     await tick();
 
     const final = fake.events().at(-1);
@@ -393,7 +393,9 @@ describe('llm:pullModel — refusals', () => {
 
   it('refuses an empty model id instead of starting a request', async () => {
     const fake = fakeOllama();
-    await expect(handlersFor(fake)['llm:pullModel']?.({ modelId: '   ' })).rejects.toMatchObject({
+    await expect(
+      handlersFor(fake)['llm:pullModel']?.({ runtime: 'ollama', modelId: '   ' }),
+    ).rejects.toMatchObject({
       code: 'invalid',
     });
     expect(fake.timeline).toEqual([]);

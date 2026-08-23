@@ -40,6 +40,31 @@ export {
   type RuntimeBlockedReason,
 } from './runtime-plan';
 export {
+  ENGINE_ASSETS,
+  LLAMACPP_RELEASE_TAG,
+  archiveFormatOf,
+  availableEngineBuilds,
+  getEngineAsset,
+  runtimeSupportsPlatform,
+  totalEngineDownloadMb,
+  type ArchiveFormat,
+  type EngineArch,
+  type EngineAssetDescriptor,
+  type ExtraArchive,
+} from './runtime/descriptors';
+export {
+  planRuntimeDownload,
+  DISK_SAFETY_MARGIN_MB,
+  type RuntimeDownloadInput,
+  type RuntimeDownloadKind,
+  type RuntimeDownloadPlan,
+} from './runtime/plan';
+export {
+  selectEngineBuild,
+  type EngineBuildInput,
+  type EngineBuildChoice,
+} from './runtime/engine-build';
+export {
   createPullProgress,
   parsePullLines,
   type PullLine,
@@ -85,6 +110,8 @@ export {
   type OpenRouterPrice,
 } from './catalogue/openrouter';
 export { sanitize } from './redact';
+export { searchHfModels, listHfModelFiles } from './hf/search';
+export { parseQuantisation } from './hf/quant';
 export {
   assessReachability,
   reachableOnly,

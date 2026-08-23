@@ -88,6 +88,21 @@ export function getAllPulls(): Readonly<Record<string, PullState>> {
 }
 
 /**
+ * Finds a pull's entry by the name it reports progress under
+ * (`PullState.modelId` — Ollama's model tag or, for llama.cpp (033, D11), a
+ * Hugging Face file's base name). Shared by `LocalRuntimePullList.tsx` and
+ * `LlamaCppModelPanel.tsx` so a row that never held the `pullId` locally can
+ * still recover it after a remount, without either screen repeating the
+ * same `Object.entries().find()` lookup.
+ */
+export function findPullEntry(
+  pulls: Readonly<Record<string, PullState>>,
+  modelId: string,
+): readonly [string, PullState] | undefined {
+  return Object.entries(pulls).find(([, state]) => state.modelId === modelId);
+}
+
+/**
  * Every currently-known pull, keyed by `pullId`. This is how a component that
  * never held the `pullId` locally (e.g. because it remounted after the user
  * navigated away and back) finds out "is anything pulling right now" — it

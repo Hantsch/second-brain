@@ -18,6 +18,9 @@ const own = {
     'Capturing, searching, projects and todos work without any model.',
   'settings.models.start.none.action': 'Go to the dashboard',
 
+  'llm.preset.llamacpp.hint':
+    'Runs on this machine. Gives you control over GPU offload and context size that Ollama decides for you — the choice for weak hardware.',
+
   'settings.detect.title': 'Is a model already running here?',
   'settings.detect.checking': 'Looking on this machine',
   'settings.detect.found':

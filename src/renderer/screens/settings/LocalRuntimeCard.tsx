@@ -1,9 +1,10 @@
-/* Local runtime card (019c D6): what the models tab shows about Ollama
-   without the user doing anything — installed? running? — plus the guided
-   path to get one, start it, and pull a model. Mirrors `MachineCard`'s shape
-   (a `Panel` with its own busy/error state) and opens `LocalRuntimeInstallDialog`
-   (mirroring `ProviderDialog`) rather than downloading on the first click —
-   nothing here acts before the user confirms it (guardrail 2).
+/* Local runtime card (019c D6; 033, D10 makes it per-runtime): what the
+   models tab shows about a local runtime without the user doing anything —
+   installed? running? — plus the guided path to get one, start it, and pull
+   a model. Mirrors `MachineCard`'s shape (a `Panel` with its own busy/error
+   state) and opens `LocalRuntimeInstallDialog` (mirroring `ProviderDialog`)
+   rather than downloading on the first click — nothing here acts before the
+   user confirms it (guardrail 2).
 
    Always rendered in the models tab, not gated behind `empty`: a user who
    already has a cloud provider configured may still want a local runtime for
@@ -12,7 +13,7 @@
    no onboarding-only condition). */
 
 import { useState } from 'react';
-import type { RuntimeBlockedReason } from '@shared/types';
+import type { RuntimeBlockedReason, RuntimeId } from '@shared/types';
 import { Button } from '../../atoms/Button';
 import { Panel } from '../../components/Panel';
 import { useT } from '../../i18n';
@@ -23,16 +24,21 @@ import {
   useRuntimeMutations,
   useRuntimeStatus,
 } from '../../lib/queries/llm';
+import { LlamaCppModelPanel } from './LlamaCppModelPanel';
 import { LocalRuntimeInstallDialog } from './LocalRuntimeInstallDialog';
 import { LocalRuntimePullList } from './LocalRuntimePullList';
 
 /** Mirrors `StartCard`'s constant of the same address — duplicated rather
     than shared, since a one-line URL isn't worth a constants module and
     `StartCard` already imports `LOCAL_RUNTIME_CARD_ID` from this file (the
-    other direction would create a cycle). */
+    other direction would create a cycle). Ollama-only: llama.cpp has no
+    equivalent manual-install page (Decisions, Q4 — all platforms are
+    handled in-app), so its card never shows this link. */
 const OLLAMA_URL = 'https://ollama.com';
 
-/** DOM id `StartCard`'s "go to the local runtime card" link scrolls to. */
+/** DOM id `StartCard`'s "go to the local runtime card" link scrolls to —
+    always the Ollama card, since that is the one the onboarding guide talks
+    about (Ollama stays the recommended default, Decisions Q5). */
 export const LOCAL_RUNTIME_CARD_ID = 'local-runtime-card';
 
 interface StartResult {
@@ -40,11 +46,24 @@ interface StartResult {
   text: string;
 }
 
-export function LocalRuntimeCard() {
+/** Picks the runtime-specific i18n key when one exists (`.llamacpp` suffix),
+    falling back to the shared/Ollama-shaped key otherwise — this is what
+    keeps the Ollama card's copy byte-for-byte what it was before D10.
+    Exported so `LocalRuntimeInstallDialog` (same runtime-vs-shared-copy
+    problem) doesn't duplicate it. */
+export function runtimeKey(base: string, runtime: RuntimeId): string {
+  return runtime === 'llamacpp' ? `${base}.llamacpp` : base;
+}
+
+export interface LocalRuntimeCardProps {
+  runtime: RuntimeId;
+}
+
+export function LocalRuntimeCard({ runtime }: LocalRuntimeCardProps) {
   const t = useT();
-  const status = useRuntimeStatus();
-  const plan = useRuntimeInstallPlan();
-  const { start } = useRuntimeMutations();
+  const status = useRuntimeStatus(runtime);
+  const plan = useRuntimeInstallPlan(runtime);
+  const { start } = useRuntimeMutations(runtime);
   const [installOpen, setInstallOpen] = useState(false);
   const [startResult, setStartResult] = useState<StartResult | null>(null);
 
@@ -67,10 +86,15 @@ export function LocalRuntimeCard() {
       onSuccess: (result) => {
         setStartResult(
           result.started
-            ? { ok: true, text: t('settings.runtime.start.ok') }
+            ? { ok: true, text: t(runtimeKey('settings.runtime.start.ok', runtime)) }
             : {
                 ok: false,
-                text: t(`settings.runtime.start.failed.${result.reason ?? 'timeout'}`),
+                text: t(
+                  runtimeKey(
+                    `settings.runtime.start.failed.${result.reason ?? 'timeout'}`,
+                    runtime,
+                  ),
+                ),
               },
         );
       },
@@ -90,9 +114,9 @@ export function LocalRuntimeCard() {
     plan.data && !plan.data.canInstall ? plan.data.blockedReason : null;
 
   return (
-    <div id={LOCAL_RUNTIME_CARD_ID}>
+    <div id={runtime === 'ollama' ? LOCAL_RUNTIME_CARD_ID : undefined}>
       <Panel
-        title={t('settings.runtime.title')}
+        title={t(runtimeKey('settings.runtime.title', runtime))}
         action={
           <Button
             variant="ghost"
@@ -107,12 +131,19 @@ export function LocalRuntimeCard() {
         note={t('settings.runtime.note')}
       >
         <div className="sb-setting-block">
+          {/* AC 1: llama.cpp's card names what it is for, not just a URL to
+              configure by hand — the same sentence D9's preset already uses
+              for its own hint. */}
+          {runtime === 'llamacpp' ? (
+            <p className="sb-routing-hint">{t('llm.preset.llamacpp.hint')}</p>
+          ) : null}
+
           {statusErrorText ? <p className="sb-note-detail sb-note-bad">{statusErrorText}</p> : null}
 
           {status.data === 'running' ? (
             <p className="sb-runtime-status">
               <span className="sb-dot sb-dot--ok" aria-hidden="true" />
-              {t('settings.runtime.status.running')}
+              {t(runtimeKey('settings.runtime.status.running', runtime))}
             </p>
           ) : null}
 
@@ -120,7 +151,7 @@ export function LocalRuntimeCard() {
             <>
               <p className="sb-runtime-status">
                 <span className="sb-dot" aria-hidden="true" />
-                {t('settings.runtime.status.installedStopped')}
+                {t(runtimeKey('settings.runtime.status.installedStopped', runtime))}
               </p>
               <div className="sb-setting-actions">
                 <Button icon="zap" loading={start.isPending} onClick={startIt}>
@@ -148,31 +179,53 @@ export function LocalRuntimeCard() {
               </div>
               {blockedReason ? (
                 <p className="sb-note-detail sb-note-bad">
-                  {t(`settings.runtime.blocked.${blockedReason}`)}
+                  {t(runtimeKey(`settings.runtime.blocked.${blockedReason}`, runtime))}
                 </p>
               ) : planErrorText ? (
                 <p className="sb-note-detail sb-note-bad">{planErrorText}</p>
               ) : null}
-              <p className="sb-routing-hint">{t('settings.runtime.manualPath')}</p>
-              <div className="sb-setting-actions">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  icon="external-link"
-                  onClick={openOllamaExternally}
-                >
-                  {t('settings.detect.guideLink')}
-                </Button>
-              </div>
+              {/* Ollama's only: llama.cpp has no manual-install page to send
+                  the user to (see `OLLAMA_URL`'s own comment above). */}
+              {runtime === 'ollama' ? (
+                <>
+                  <p className="sb-routing-hint">{t('settings.runtime.manualPath')}</p>
+                  <div className="sb-setting-actions">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      icon="external-link"
+                      onClick={openOllamaExternally}
+                    >
+                      {t('settings.detect.guideLink')}
+                    </Button>
+                  </div>
+                </>
+              ) : null}
             </>
           ) : null}
 
-          {status.data === 'running' ? <LocalRuntimePullList /> : null}
+          {/* The pull list is Ollama's model catalogue browser (recommendations
+              → `ollama pull`); llama.cpp's model source is Hugging Face
+              search (033, D11's `LlamaCppModelPanel`) instead. */}
+          {status.data === 'running' && runtime === 'ollama' ? <LocalRuntimePullList /> : null}
+          {/* Shown once the engine is installed, not only once it's running —
+              a model file downloads straight from Hugging Face onto disk and
+              needs no running server, so gating it on `installed-stopped`
+              too (rather than `running` alone, as Ollama's list does) avoids
+              forcing a start just to fetch a file first. */}
+          {runtime === 'llamacpp' &&
+          (status.data === 'installed-stopped' || status.data === 'running') ? (
+            <LlamaCppModelPanel />
+          ) : null}
         </div>
       </Panel>
 
       {installOpen && plan.data && plan.data.canInstall ? (
-        <LocalRuntimeInstallDialog plan={plan.data} onClose={() => setInstallOpen(false)} />
+        <LocalRuntimeInstallDialog
+          runtime={runtime}
+          plan={plan.data}
+          onClose={() => setInstallOpen(false)}
+        />
       ) : null}
     </div>
   );

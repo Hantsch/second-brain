@@ -15,17 +15,19 @@
 import { StrictMode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { HashRouter } from 'react-router-dom';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import axe from 'axe-core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SectionMigrationEntry } from '@shared/ipc';
 import type {
+  EngineBuildId,
   LocalRuntimeStatus,
   ModelRef,
   ProviderConfig,
   RecommendationSet,
   Routing,
+  RuntimeId,
   SettingsSnapshot,
   TaskKind,
 } from '@shared/types';
@@ -80,6 +82,10 @@ interface State {
   snapshot: SettingsSnapshot;
   detected: { running: boolean; models: string[] };
   runtimeStatus: LocalRuntimeStatus;
+  /* 033, D10: llama.cpp's own card reads its status independently of
+     Ollama's — a separate field is what proves the two cards' queries don't
+     collide, rather than both happening to read the same fixture. */
+  llamaCppRuntimeStatus: LocalRuntimeStatus;
   /* 024 D8: what `vault:sectionPlan` currently finds for the tab's
      document-language plan — empty by default so the existing language
      tests see no card. */
@@ -91,6 +97,20 @@ interface State {
 }
 
 let state: State;
+
+/* `event:install-progress` listeners registered via `bridge().on(...)` — a
+   real map instead of the earlier no-op stub, so the llama.cpp install
+   dialog's "done" event can actually be fired (033 review finding 3), the
+   same pattern `sources.test.tsx`/`ask.test.tsx` use for their own events. */
+let listeners: Map<string, Set<(payload: never) => void>>;
+
+function emitEvent(event: string, payload: unknown): void {
+  act(() => {
+    for (const callback of listeners.get(event) ?? []) {
+      (callback as (value: unknown) => void)(payload);
+    }
+  });
+}
 
 /** Brücke mit Zustand: Schreibvorgänge wirken, alles Übrige kommt aus den Fixtures. */
 const invoke = vi.fn(async (channel: string, payload?: unknown): Promise<unknown> => {
@@ -134,8 +154,68 @@ const invoke = vi.fn(async (channel: string, payload?: unknown): Promise<unknown
     case 'llm:recommendModels':
       if (state.recommendation) return state.recommendation;
       return (mockBridge.invoke as (c: string, p?: unknown) => Promise<unknown>)(channel, payload);
-    case 'llm:localRuntimeStatus':
-      return state.runtimeStatus;
+    case 'llm:localRuntimeStatus': {
+      const { runtime } = payload as { runtime: RuntimeId };
+      return {
+        runtime,
+        status: runtime === 'llamacpp' ? state.llamaCppRuntimeStatus : state.runtimeStatus,
+      };
+    }
+    /* llama.cpp's own plan, real enough to open its install dialog and
+       exercise the build select (033, D10) — Ollama's plan keeps falling
+       through to the honest "blocked" mock bridge default below. */
+    case 'llm:runtimeInstallPlan': {
+      const { runtime, buildId } = payload as { runtime: RuntimeId; buildId?: EngineBuildId };
+      if (runtime !== 'llamacpp') {
+        return (mockBridge.invoke as (c: string, p?: unknown) => Promise<unknown>)(
+          channel,
+          payload,
+        );
+      }
+      const build = buildId ?? 'cuda';
+      const downloadMbByBuild: Record<EngineBuildId, number> = {
+        cuda: 4200,
+        vulkan: 1200,
+        cpu: 800,
+        macos: 900,
+      };
+      /* The `cpu` build is the one this fixture treats as "no longer fits" —
+         exercising the case where changing the build select replans into a
+         blocked plan (033 review finding 2) without needing a second disk
+         fixture just for this. */
+      const blocked = build === 'cpu';
+      return {
+        runtime,
+        canInstall: !blocked,
+        blockedReason: blocked ? 'insufficient-disk' : null,
+        downloadMb: downloadMbByBuild[build],
+        installerPath: 'C:/Users/demo/AppData/Roaming/Gaston/runtimes/llamacpp',
+        modelDirHint: 'C:/Users/demo/AppData/Roaming/Gaston/models/gguf',
+        build: {
+          id: build,
+          reason: {
+            kind: 'gpu',
+            gpuName: 'NVIDIA GeForce RTX 4070',
+            confident: true,
+            requestedBuild: 'cuda',
+            actualBuild: 'cuda',
+          },
+          options: ['cuda', 'vulkan', 'cpu'],
+        },
+      };
+    }
+    /* Only llama.cpp: Ollama's download keeps falling through to the honest
+       "browser mode can't install" mock bridge default below. */
+    case 'llm:downloadRuntime': {
+      const { runtime } = payload as { runtime: RuntimeId; buildId?: EngineBuildId };
+      if (runtime !== 'llamacpp') {
+        return (mockBridge.invoke as (c: string, p?: unknown) => Promise<unknown>)(
+          channel,
+          payload,
+        );
+      }
+      return { downloadId: 'llamacpp-download-1' };
+    }
     case 'llm:detectLocal':
       return [
         {
@@ -242,10 +322,21 @@ beforeEach(() => {
     snapshot: JSON.parse(JSON.stringify(settingsSnapshot)) as SettingsSnapshot,
     detected: { running: false, models: [] },
     runtimeStatus: 'absent',
+    llamaCppRuntimeStatus: 'absent',
     sectionPlanEntries: [],
     recommendation: null,
   };
-  window.sb = { invoke, on: () => () => undefined, off: () => undefined } as unknown as SbBridge;
+  listeners = new Map();
+  window.sb = {
+    invoke,
+    on: (event: string, callback: (payload: never) => void) => {
+      const set = listeners.get(event) ?? new Set();
+      set.add(callback);
+      listeners.set(event, set);
+      return () => void set.delete(callback);
+    },
+    off: () => undefined,
+  } as unknown as SbBridge;
 });
 
 afterEach(() => {
@@ -683,10 +774,13 @@ describe('Einstellungen: Lokale Laufzeit', () => {
     state.runtimeStatus = 'absent';
     await openTab('models');
 
+    /* Beide Karten sind ohne Zustand „fehlt" — llama.cpp defaults ebenso zu
+       „absent" (033, D10), deshalb die Zwei statt eine Fundstelle. */
     expect(
-      await screen.findByText('Auf diesem Rechner ist keine lokale Laufzeit installiert.'),
-    ).toBeTruthy();
-    await userEvent.click(screen.getByRole('button', { name: 'Jetzt holen' }));
+      await screen.findAllByText('Auf diesem Rechner ist keine lokale Laufzeit installiert.'),
+    ).toHaveLength(2);
+    /* Ollamas Karte steht zuerst (`LOCAL_RUNTIMES`), also ihr „Jetzt holen". */
+    await userEvent.click(screen.getAllByRole('button', { name: 'Jetzt holen' })[0] as HTMLElement);
 
     expect(
       await screen.findByText(/App-interne Installation deckt nur Windows und macOS ab/),
@@ -728,9 +822,11 @@ describe('Einstellungen: Lokale Laufzeit', () => {
 
   /* F3: `pull.progress` must read in human units, not raw byte integers —
      the acceptance criterion is "shows the total size and what is left",
-     and a ten-digit byte count communicates neither. The bridge's `on()` is
-     a no-op in this test file, so `event:pull-progress` chunks are pushed
-     into `pullStore` directly instead of routed through it. */
+     and a ten-digit byte count communicates neither. Pulls read their
+     progress from `pullStore` directly rather than from `event:pull-progress`
+     (that split lives in `usePullMutations`/`llm-stream.ts`), so the chunk is
+     pushed straight into the store here instead of emitted through the
+     bridge. */
   it('zeigt den Pull-Fortschritt in lesbaren Einheiten statt Rohbytes', async () => {
     state.runtimeStatus = 'running';
     const completedBytes = 3 * 1024 * 1024 * 1024;
@@ -759,6 +855,119 @@ describe('Einstellungen: Lokale Laufzeit', () => {
     await screen.findByText('Ollama läuft auf diesem Rechner.');
     await screen.findByText('qwen2.5:32b');
     await expectNoViolations(container);
+  });
+
+  /* 033, D10: llama.cpp gets its own card, next to Ollama's — each reading
+     its own status (proving the two runtimes' queries don't collide) and
+     llama.cpp's naming what it is for, not just a bare URL (AC 1). */
+  it('zeigt neben Ollama eine eigene Karte für llama.cpp mit eigenem Status und Zweck-Hinweis', async () => {
+    state.runtimeStatus = 'installed-stopped';
+    state.llamaCppRuntimeStatus = 'running';
+    await openTab('models');
+
+    expect(await screen.findByText('Lokale Laufzeit (Ollama)')).toBeTruthy();
+    expect(screen.getByText('Lokale Laufzeit (llama.cpp)')).toBeTruthy();
+    expect(screen.getByText('Ollama ist installiert, läuft aber gerade nicht.')).toBeTruthy();
+    expect(screen.getByText('llama.cpp läuft auf diesem Rechner.')).toBeTruthy();
+    expect(screen.getByText(/Kontrolle über GPU-Auslagerung und Kontextgröße/)).toBeTruthy();
+  });
+
+  /* The install dialog shows the GPU scan's preselected build with its
+     reason, and lets it be changed — changing it must re-plan against Hugging
+     Face's own numbers rather than only relabel the same size (guardrail 2).
+     Review finding 1 (033): the select must show the just-picked build right
+     away, not only once `replan` resolves — otherwise it can show a build
+     that isn't what "confirm" would actually download. Review finding 2: a
+     build that replans into a blocked plan must render its reason and
+     disable confirm, not let the user press it into a generic error. */
+  it('zeigt beim Holen von llama.cpp den vorgeschlagenen Build und plant beim Wechsel neu', async () => {
+    await openTab('models');
+
+    const getButtons = await screen.findAllByRole('button', { name: 'Jetzt holen' });
+    expect(getButtons.length).toBe(2); // Ollama and llama.cpp each offer their own
+    await userEvent.click(getButtons[1] as HTMLElement); // llama.cpp is the second card
+
+    expect(await screen.findByText('Lokale Laufzeit holen')).toBeTruthy();
+    // The structured reason (033, D2) is composed into German here, not
+    // rendered as core's English fact (CLAUDE.md guardrail 7).
+    expect(screen.getByText(/NVIDIA GeForce RTX 4070.*erkannt/)).toBeTruthy();
+    const select = screen.getByLabelText('Build') as HTMLSelectElement;
+    expect(select.value).toBe('cuda');
+    expect(screen.getByText(/4,1 GB/)).toBeTruthy();
+    const confirmButton = screen.getByRole('button', {
+      name: 'Engine herunterladen',
+    }) as HTMLButtonElement;
+    expect(confirmButton.disabled).toBe(false);
+
+    await userEvent.selectOptions(select, 'vulkan');
+
+    /* The select already shows "vulkan" here — before `waitFor` gives the
+       `replan` mutation any chance to resolve — because it's bound to the
+       `buildId` state set synchronously in `changeBuild`, not to
+       `currentPlan.build.id`, which only updates on the mutation's
+       `onSuccess`. */
+    expect(select.value).toBe('vulkan');
+
+    await waitFor(() =>
+      expect(invoke).toHaveBeenCalledWith('llm:runtimeInstallPlan', {
+        runtime: 'llamacpp',
+        buildId: 'vulkan',
+      }),
+    );
+    expect(await screen.findByText(/1,2 GB/)).toBeTruthy();
+
+    // Picking a build the replanned plan can't fit (this fixture's "cpu" is
+    // the one that no longer fits) must render the blocked reason and
+    // disable confirm — the user must still be able to pick a different
+    // build (the select itself stays enabled) rather than press into a
+    // generic error.
+    await userEvent.selectOptions(select, 'cpu');
+    expect(select.value).toBe('cpu');
+    expect(
+      await screen.findByText(
+        'Nicht genug freier Speicherplatz für die Engine — Platz schaffen und erneut versuchen.',
+      ),
+    ).toBeTruthy();
+    expect(confirmButton.disabled).toBe(true);
+    expect(select.disabled).toBe(false);
+  });
+
+  /* Review finding 3 (033): a llama.cpp engine download that finishes without
+     error really is the install completing (the binary is in place), so the
+     card's status query must refresh on its own — not only once the user
+     presses "Erneut prüfen". */
+  it('aktualisiert den llama.cpp-Status, sobald der Engine-Download ohne Fehler fertig ist', async () => {
+    await openTab('models');
+
+    const getButtons = await screen.findAllByRole('button', { name: 'Jetzt holen' });
+    await userEvent.click(getButtons[1] as HTMLElement);
+    await screen.findByText('Lokale Laufzeit holen');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Engine herunterladen' }));
+    await waitFor(() =>
+      expect(invoke).toHaveBeenCalledWith('llm:downloadRuntime', {
+        runtime: 'llamacpp',
+        buildId: 'cuda',
+      }),
+    );
+
+    const statusCallsBeforeDone = invoke.mock.calls.filter(
+      ([channel]) => channel === 'llm:localRuntimeStatus',
+    ).length;
+
+    emitEvent('event:install-progress', {
+      downloadId: 'llamacpp-download-1',
+      downloadedMb: 4200,
+      totalMb: 4200,
+      done: true,
+    });
+
+    await waitFor(() => {
+      const statusCallsAfterDone = invoke.mock.calls.filter(
+        ([channel]) => channel === 'llm:localRuntimeStatus',
+      ).length;
+      expect(statusCallsAfterDone).toBeGreaterThan(statusCallsBeforeDone);
+    });
   });
 });
 

@@ -1,12 +1,17 @@
-/* Pure preconditions for getting a local runtime installed in-app (019c, D1):
-   platform + free disk + installer size → whether an in-app install is even
-   possible, and if so, what it would cost and where things would go. No
-   filesystem, no process, no Electron — main supplies every fact as a plain
-   parameter, and this function never throws. */
+/* Ollama-shaped preconditions for getting a local runtime installed in-app
+   (019c, D1). Thin wrapper (033, D1) around the generalised
+   `planRuntimeDownload` in `runtime/plan.ts`: this module now only knows the
+   Ollama-specific vocabulary (`installerPath`, `modelDirHint`,
+   `installerSizeMb`) and translates it to and from the shared decision
+   logic, so `tests/core/llm/runtime-plan.test.ts` keeps passing unedited —
+   same inputs, same outputs, same behaviour, just no longer its own copy of
+   the platform/disk/writability judgement. */
 
 import * as path from 'node:path';
 import * as os from 'node:os';
 import type { RuntimeBlockedReason, RuntimePlan } from '@shared/types';
+import { runtimeSupportsPlatform } from './runtime/descriptors';
+import { planRuntimeDownload } from './runtime/plan';
 
 /* `RuntimeBlockedReason` and `RuntimePlan` live in `@shared/types`, not here,
    so the renderer's separate TypeScript project (`tsconfig.web.json`) can
@@ -35,20 +40,6 @@ export interface RuntimePlanInput {
   writable: boolean;
 }
 
-/** Ollama ships an official downloadable GUI installer only for Windows and
-    macOS. Linux's official install path is a shell script (`curl | sh`),
-    which this app's guardrails forbid running as a constructed shell command
-    — no shell strings, ever. Linux therefore always gets the manual path;
-    this is a deliberate, documented scope decision, not an oversight. */
-const INSTALLABLE_PLATFORMS: readonly string[] = ['win32', 'darwin'];
-
-/** Extra headroom required above the installer size itself, so the plan
-    doesn't greenlight a download that would land with (near) zero bytes
-    free — the temp copy and the installer's own extraction both need room
-    too. A guess, not a measurement; named so it can be revisited without
-    hunting for a magic literal. */
-const DISK_SAFETY_MARGIN_MB = 500;
-
 /** Name the installer is saved under, per platform — recognizable in a temp
     folder and in support requests. Only reached for the two installable
     platforms; the fallback below is never shown to a user (`canInstall` is
@@ -75,14 +66,12 @@ function ollamaModelsDirHint(): string {
 }
 
 /**
- * Facts → plan. Never throws: every input is either used as given or, for
- * `freeDiskMb === null` ("couldn't be determined", never a guessed zero —
- * see `MachineFacts`), treated as "unknown, so don't block on it" — the
- * actual download step will fail honestly if space really is short, rather
- * than this heuristic refusing an attempt that might have worked.
+ * Facts → plan. Never throws — see `planRuntimeDownload` in `runtime/plan.ts`
+ * for the shared reasoning behind every branch (platform support, disk
+ * safety margin, `freeDiskMb === null` never blocking). This wrapper only
+ * adds the Ollama-specific paths/hints the pre-033 callers still expect.
  */
 export function planRuntimeInstall(input: RuntimePlanInput): RuntimePlan {
-  const downloadMb = input.installerSizeMb;
   /* `path.win32`/`path.posix` explicitly, not the bare `path` module: the
      latter is bound to the host running this code, but `input.platform` is
      data, not necessarily the host — fixtures for every platform must be
@@ -91,37 +80,22 @@ export function planRuntimeInstall(input: RuntimePlanInput): RuntimePlan {
   const installerPath = joinPath(input.tempDir, installerFilename(input.platform));
   const modelDirHint = ollamaModelsDirHint();
 
-  if (!INSTALLABLE_PLATFORMS.includes(input.platform)) {
-    return {
-      canInstall: false,
-      blockedReason: 'unsupported-platform',
-      downloadMb,
-      installerPath,
-      modelDirHint,
-    };
-  }
+  const download = planRuntimeDownload({
+    runtime: 'ollama',
+    kind: 'engine',
+    platform: input.platform,
+    freeDiskMb: input.freeDiskMb,
+    downloadMb: input.installerSizeMb,
+    targetPath: installerPath,
+    writable: input.writable,
+    assetAvailable: runtimeSupportsPlatform('ollama', input.platform),
+  });
 
-  const requiredMb = input.installerSizeMb + DISK_SAFETY_MARGIN_MB;
-  const insufficientDisk = input.freeDiskMb !== null && input.freeDiskMb < requiredMb;
-  if (insufficientDisk) {
-    return {
-      canInstall: false,
-      blockedReason: 'insufficient-disk',
-      downloadMb,
-      installerPath,
-      modelDirHint,
-    };
-  }
-
-  if (!input.writable) {
-    return {
-      canInstall: false,
-      blockedReason: 'no-write-permission',
-      downloadMb,
-      installerPath,
-      modelDirHint,
-    };
-  }
-
-  return { canInstall: true, blockedReason: null, downloadMb, installerPath, modelDirHint };
+  return {
+    canInstall: download.canDownload,
+    blockedReason: download.blockedReason,
+    downloadMb: download.downloadMb,
+    installerPath,
+    modelDirHint,
+  };
 }

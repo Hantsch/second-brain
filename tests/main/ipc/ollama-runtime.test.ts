@@ -95,7 +95,7 @@ describe('llm:openRuntimeInstaller', () => {
     tracker.set('C:\\Temp\\OllamaSetup.exe');
     const handlers = ollamaRuntimeHandlers(fakeServices(), tracker);
 
-    const result = await handlers['llm:openRuntimeInstaller']?.(undefined);
+    const result = await handlers['llm:openRuntimeInstaller']?.({ runtime: 'ollama' });
 
     expect(openPathMock).toHaveBeenCalledWith('C:\\Temp\\OllamaSetup.exe');
     expect(result).toEqual({ opened: true });
@@ -107,7 +107,7 @@ describe('llm:openRuntimeInstaller', () => {
     tracker.set('C:\\Temp\\OllamaSetup.exe');
     const handlers = ollamaRuntimeHandlers(fakeServices(), tracker);
 
-    const result = await handlers['llm:openRuntimeInstaller']?.(undefined);
+    const result = await handlers['llm:openRuntimeInstaller']?.({ runtime: 'ollama' });
 
     expect(result).toEqual({
       opened: false,
@@ -119,7 +119,7 @@ describe('llm:openRuntimeInstaller', () => {
     const tracker = createInstallerPathTracker();
     const handlers = ollamaRuntimeHandlers(fakeServices(), tracker);
 
-    const result = await handlers['llm:openRuntimeInstaller']?.(undefined);
+    const result = await handlers['llm:openRuntimeInstaller']?.({ runtime: 'ollama' });
 
     expect(openPathMock).not.toHaveBeenCalled();
     expect(result).toEqual({ opened: false, reason: 'no-installer-downloaded' });
@@ -137,11 +137,11 @@ describe('llm:startLocalRuntime — success', () => {
       probeFn,
     });
 
-    const result = await handlers['llm:startLocalRuntime']?.(undefined);
+    const result = await handlers['llm:startLocalRuntime']?.({ runtime: 'ollama' });
 
     expect(spawn.calls).toEqual([{ file: 'ollama', args: ['serve'] }]);
     expect(spawn.unrefed).toEqual([true]);
-    expect(result).toEqual({ started: true, status: 'running' });
+    expect(result).toEqual({ runtime: 'ollama', started: true, status: 'running' });
   });
 });
 
@@ -156,9 +156,14 @@ describe('llm:startLocalRuntime — timeout', () => {
       probeFn,
     });
 
-    const result = await handlers['llm:startLocalRuntime']?.(undefined);
+    const result = await handlers['llm:startLocalRuntime']?.({ runtime: 'ollama' });
 
-    expect(result).toEqual({ started: false, status: 'installed-stopped', reason: 'timeout' });
+    expect(result).toEqual({
+      runtime: 'ollama',
+      started: false,
+      status: 'installed-stopped',
+      reason: 'timeout',
+    });
   });
 });
 
@@ -173,9 +178,14 @@ describe('llm:startLocalRuntime — spawn failure', () => {
       probeFn,
     });
 
-    const result = await handlers['llm:startLocalRuntime']?.(undefined);
+    const result = await handlers['llm:startLocalRuntime']?.({ runtime: 'ollama' });
 
-    expect(result).toEqual({ started: false, status: 'absent', reason: 'spawn-failed' });
+    expect(result).toEqual({
+      runtime: 'ollama',
+      started: false,
+      status: 'absent',
+      reason: 'spawn-failed',
+    });
     expect(spawn.unrefed).toEqual([]); // never unref'd a process that failed to start
     expect(probeFn).not.toHaveBeenCalled();
   });

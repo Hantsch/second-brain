@@ -172,15 +172,32 @@ export const api = {
     setVramOverride: (vramMb: number | null) => call('llm:setVramOverride', { vramMb }),
     setResourceBudget: (percent: number) => call('llm:setResourceBudget', { percent }),
     recommendModels: () => call('llm:recommendModels'),
-    localRuntimeStatus: () => call('llm:localRuntimeStatus'),
-    runtimeInstallPlan: () => call('llm:runtimeInstallPlan'),
-    downloadRuntime: () => call('llm:downloadRuntime'),
-    cancelRuntimeDownload: (downloadId: string) =>
-      call('llm:cancelRuntimeDownload', { downloadId }),
-    openRuntimeInstaller: () => call('llm:openRuntimeInstaller'),
-    startLocalRuntime: () => call('llm:startLocalRuntime'),
-    pullModel: (modelId: string) => call('llm:pullModel', { modelId }),
+    localRuntimeStatus: (runtime: IpcRequest<'llm:localRuntimeStatus'>['runtime']) =>
+      call('llm:localRuntimeStatus', { runtime }),
+    runtimeInstallPlan: (
+      runtime: IpcRequest<'llm:runtimeInstallPlan'>['runtime'],
+      buildId?: IpcRequest<'llm:runtimeInstallPlan'>['buildId'],
+    ) => call('llm:runtimeInstallPlan', { runtime, buildId }),
+    downloadRuntime: (
+      runtime: IpcRequest<'llm:downloadRuntime'>['runtime'],
+      buildId?: IpcRequest<'llm:downloadRuntime'>['buildId'],
+    ) => call('llm:downloadRuntime', { runtime, buildId }),
+    cancelRuntimeDownload: (
+      runtime: IpcRequest<'llm:cancelRuntimeDownload'>['runtime'],
+      downloadId: string,
+    ) => call('llm:cancelRuntimeDownload', { runtime, downloadId }),
+    openRuntimeInstaller: (runtime: IpcRequest<'llm:openRuntimeInstaller'>['runtime']) =>
+      call('llm:openRuntimeInstaller', { runtime }),
+    startLocalRuntime: (runtime: IpcRequest<'llm:startLocalRuntime'>['runtime']) =>
+      call('llm:startLocalRuntime', { runtime }),
+    pullModel: (
+      runtime: IpcRequest<'llm:pullModel'>['runtime'],
+      modelId: string,
+      hfFile?: IpcRequest<'llm:pullModel'>['hfFile'],
+    ) => call('llm:pullModel', { runtime, modelId, hfFile }),
     cancelPull: (pullId: string) => call('llm:cancelPull', { pullId }),
+    searchModelFiles: (request: IpcRequest<'llm:searchModelFiles'>) =>
+      call('llm:searchModelFiles', request),
   },
   dashboard: {
     data: () => call('dashboard:data'),
