@@ -27,7 +27,12 @@ function definition(
   kind: TaskKind,
   suggested: ModelTier,
   typicalTokens: { in: number; out: number },
-  flags: { sensitive?: boolean; streams?: boolean; structured?: boolean } = {},
+  flags: {
+    sensitive?: boolean;
+    streams?: boolean;
+    structured?: boolean;
+    minLocalParamsB?: number;
+  } = {},
 ): TaskDefinition {
   return {
     kind,
@@ -38,6 +43,7 @@ function definition(
     sensitive: flags.sensitive === true,
     streams: flags.streams === true,
     structured: flags.structured === true,
+    minLocalParamsB: flags.minLocalParamsB,
   };
 }
 
@@ -56,7 +62,7 @@ function definition(
 export const TASK_DEFINITIONS: readonly TaskDefinition[] = [
   // One sentence of output — a large model would be wasteful here. Input is a
   // short dump text, output a handful of tags/title words.
-  definition('title-tags', 'cheap', { in: 500, out: 60 }, { structured: true }),
+  definition('title-tags', 'cheap', { in: 500, out: 60 }, { structured: true, minLocalParamsB: 1 }),
   // Personal content, a simple decision: small and local. Input is a dump,
   // output a compact filing verdict.
   definition(
@@ -77,7 +83,12 @@ export const TASK_DEFINITIONS: readonly TaskDefinition[] = [
   // input carries several retrieved snippets, the output a full answer.
   definition('query-answer', 'balanced', { in: 3000, out: 500 }, { streams: true }),
   // Just sorting: a short list of search-hit IDs in, an ordered list out.
-  definition('query-rerank', 'cheap', { in: 800, out: 40 }, { structured: true }),
+  definition(
+    'query-rerank',
+    'cheap',
+    { in: 800, out: 40 },
+    { structured: true, minLocalParamsB: 1 },
+  ),
   // Longer, but straightforward — a whole source transcript/document in, a
   // condensed wiki source page out.
   definition('summarize-source', 'balanced', { in: 6000, out: 800 }),

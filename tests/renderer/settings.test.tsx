@@ -24,6 +24,7 @@ import type {
   LocalRuntimeStatus,
   ModelRef,
   ProviderConfig,
+  RecommendationSet,
   Routing,
   SettingsSnapshot,
   TaskKind,
@@ -83,6 +84,10 @@ interface State {
      document-language plan — empty by default so the existing language
      tests see no card. */
   sectionPlanEntries: SectionMigrationEntry[];
+  /* 032 D4: overrides the mock bridge's default recommendation fixture when
+     set — lets a single test exercise a `beyond-this-machine` row without
+     touching the shared fixture every other recommendation test relies on. */
+  recommendation: RecommendationSet | null;
 }
 
 let state: State;
@@ -126,6 +131,9 @@ const invoke = vi.fn(async (channel: string, payload?: unknown): Promise<unknown
       for (const kind of TASK_KINDS) suggested.tasks[kind] = ref;
       return suggested;
     }
+    case 'llm:recommendModels':
+      if (state.recommendation) return state.recommendation;
+      return (mockBridge.invoke as (c: string, p?: unknown) => Promise<unknown>)(channel, payload);
     case 'llm:localRuntimeStatus':
       return state.runtimeStatus;
     case 'llm:detectLocal':
@@ -235,6 +243,7 @@ beforeEach(() => {
     detected: { running: false, models: [] },
     runtimeStatus: 'absent',
     sectionPlanEntries: [],
+    recommendation: null,
   };
   window.sb = { invoke, on: () => () => undefined, off: () => undefined } as unknown as SbBridge;
 });
@@ -508,6 +517,75 @@ describe('Einstellungen: Modellempfehlung', () => {
     expect(invoke).not.toHaveBeenCalledWith(
       'llm:setRoute',
       expect.objectContaining({ task: 'wiki-ingest' }),
+    );
+  });
+
+  /* 032 D4: a task whose minimum local size is beyond what this machine can
+     carry gets no pick at all (`reasonKey: 'beyond-this-machine'`) — the row
+     must say why in plain numbers and name the two honest options, and must
+     never offer a button that could only write nonsense. `isAcceptable`
+     already returns `false` for `pick: null`; this asserts that holds for a
+     real shortfall row too, and that "accept all" still writes every other
+     acceptable row while leaving this one untouched. */
+  it('zeigt bei einer Aufgabe jenseits der Maschine die Zahlen und Optionen, aber keinen Übernehmen-Knopf', async () => {
+    state.recommendation = {
+      catalogueGeneratedAt: '2026-08-10T00:00:00.000Z',
+      catalogueStale: false,
+      tasks: [
+        {
+          task: 'classify-dump',
+          pick: null,
+          reasonKey: 'beyond-this-machine',
+          tradeoffKey: null,
+          costPerRun: null,
+          policySource: null,
+          policyReadAt: null,
+          needsDownloadGb: null,
+          alternatives: [],
+          shortfall: { requiredParamsB: 32, machineParamsB: 8, cloudOptionAvailable: false },
+        },
+        {
+          task: 'title-tags',
+          pick: { providerId: 'ollama-1', model: 'llama3.1:8b' },
+          reasonKey: 'best-fit-for-task',
+          tradeoffKey: null,
+          costPerRun: null,
+          policySource: null,
+          policyReadAt: null,
+          needsDownloadGb: null,
+          alternatives: [],
+          shortfall: null,
+        },
+      ],
+    };
+    await openTab('models');
+    await screen.findByRole('table');
+    await userEvent.click(screen.getByRole('button', { name: 'Empfehlungen holen' }));
+    await screen.findAllByRole('listitem');
+
+    expect(screen.getByText('Braucht mindestens 32 Mrd. Parameter.')).toBeTruthy();
+    expect(screen.getByText('Diese Maschine trägt etwa 8 Mrd.')).toBeTruthy();
+    expect(
+      screen.getByText(
+        'Auch dafür ist keine Cloud-Alternative eingerichtet — die Aufgabe bleibt ohne Modell.',
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole('button', { name: 'Empfehlung für Dump einordnen übernehmen' }),
+    ).toBeNull();
+
+    invoke.mockClear();
+    await userEvent.click(screen.getByRole('button', { name: 'Alle übernehmen' }));
+
+    await waitFor(() =>
+      expect(invoke).toHaveBeenCalledWith('llm:setRoute', {
+        task: 'title-tags',
+        ref: { providerId: 'ollama-1', model: 'llama3.1:8b' },
+      }),
+    );
+    expect(invoke).not.toHaveBeenCalledWith(
+      'llm:setRoute',
+      expect.objectContaining({ task: 'classify-dump' }),
     );
   });
 

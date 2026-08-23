@@ -11,7 +11,7 @@ import { Badge } from '../../atoms/Badge';
 import { Button } from '../../atoms/Button';
 import { describeRef } from '../../components/RoutingTable';
 import { useT, type Vars } from '../../i18n';
-import { formatCostUsd, formatDate } from '../../lib/format';
+import { formatCostUsd, formatDate, formatNumber } from '../../lib/format';
 
 export interface RecommendationRowProps {
   row: TaskRecommendation;
@@ -34,6 +34,21 @@ function targetText(
     return t('settings.recommend.needsDownload', { model: name, gb: row.needsDownloadGb });
   }
   return name;
+}
+
+/**
+ * The machine's parameter ceiling for the shortfall line. It arrives from the
+ * capacity heuristic as a raw division (7.2727272727272725), which `t()` would
+ * interpolate verbatim and with a JS decimal point — wrong separator in German
+ * and ten digits of false precision. Floored rather than rounded: flooring can
+ * only understate what the machine carries, so the printed pair stays true to
+ * the shortfall it describes (rounding 2.7 up against a 3 B floor would read
+ * as "needs 3, carries 3"). The required figure needs no such treatment — it
+ * is an exact constant from the tier table — but goes through `formatNumber`
+ * too, so both numbers in the block follow the UI language.
+ */
+function formatCarriedParamsB(value: number, language: UiLanguage): string {
+  return formatNumber(Math.floor(value), language);
 }
 
 /**
@@ -105,6 +120,28 @@ export function RecommendationRow({
             date: formatDate(row.policyReadAt, language),
           })}
         </p>
+      ) : null}
+
+      {row.shortfall ? (
+        <div className="sb-note-detail">
+          <p>
+            {t('settings.recommend.shortfall.required', {
+              required: formatNumber(row.shortfall.requiredParamsB, language),
+            })}
+          </p>
+          <p>
+            {row.shortfall.machineParamsB !== null
+              ? t('settings.recommend.shortfall.carried', {
+                  carried: formatCarriedParamsB(row.shortfall.machineParamsB, language),
+                })
+              : t('settings.recommend.shortfall.carriedUnknown')}
+          </p>
+          <p>
+            {row.shortfall.cloudOptionAvailable
+              ? t('settings.recommend.shortfall.optionCloud')
+              : t('settings.recommend.shortfall.optionNone')}
+          </p>
+        </div>
       ) : null}
 
       <div className="sb-setting-actions">

@@ -20,6 +20,23 @@ describe('loadCatalogue', () => {
     }
   });
 
+  it('every local (non-cloud) entry has a paramsB and a sizeOnDiskGb', () => {
+    const catalogue = loadCatalogue();
+
+    // "Local" is the disk footprint, the same signal `isLocalCapable` uses in
+    // recommend.ts/reachability.ts — filtering on `paramsB` instead would make
+    // the `paramsB` assertion below a tautology and let exactly the entry that
+    // matters (a local one with no parameter count, invisible to the size
+    // floor) slip through unnoticed.
+    const localEntries = catalogue.entries.filter((e) => e.sizeOnDiskGb !== null);
+    expect(localEntries.length).toBeGreaterThan(0);
+    for (const entry of localEntries) {
+      expect(entry.paramsB, `${entry.id} has no paramsB`).not.toBeNull();
+      expect(typeof entry.paramsB).toBe('number');
+      expect(typeof entry.sizeOnDiskGb).toBe('number');
+    }
+  });
+
   it('includes at least one local, one no-training cloud, and one trains/unknown cloud entry', () => {
     const catalogue = loadCatalogue();
 

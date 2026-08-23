@@ -15,3 +15,12 @@
 - 2026-08-23 18:46 · 035 · D8 screenshots and both languages · started
 - 2026-08-23 18:50 · 035 · D8 screenshots and both languages · done
 - 2026-08-23 19:21 · 035 · story review + fix cycle + closing · done
+- 2026-08-23 19:22 · 032 · D1 Two small local models in the curated catalogue · started
+- 2026-08-23 19:23 · 032 · D1 Two small local models in the curated catalogue · done
+- 2026-08-23 19:23 · 032 · D2 Size signal inside cheap + per-task minimum · started
+- 2026-08-23 19:27 · 032 · D2 Size signal inside cheap + per-task minimum · done
+- 2026-08-23 19:27 · 032 · D3 Right-sized picks and beyond-this-machine verdict · started
+- 2026-08-23 19:43 · 032 · D3 Right-sized picks and beyond-this-machine verdict · done
+- 2026-08-23 19:43 · 032 · D4 Shortfall in the UI, both languages · started
+- 2026-08-23 19:48 · 032 · D4 Shortfall in the UI, both languages · done
+- 2026-08-23 20:04 · 032 · story review + fix cycle + closing · done

@@ -225,8 +225,18 @@ const own = {
     'No model you can currently reach fits this task.',
   'settings.recommend.reason.sensitive-rule-no-qualifying-target':
     'This task reads personal content, and no reachable model meets the rule for it — the task stays without a model.',
+  'settings.recommend.reason.beyond-this-machine':
+    'This task needs more than this machine can carry.',
   'settings.recommend.tradeoff.cheaper-alternative-available':
     'A cheaper or local alternative exists: {alternatives}.',
+
+  'settings.recommend.shortfall.required': 'Needs at least {required} B parameters.',
+  'settings.recommend.shortfall.carried': 'This machine carries about {carried} B.',
+  'settings.recommend.shortfall.carriedUnknown':
+    'What this machine carries could not be determined.',
+  'settings.recommend.shortfall.optionCloud': 'A cloud model could cover this one task instead.',
+  'settings.recommend.shortfall.optionNone':
+    'No cloud alternative is set up for this either — the task stays without a model.',
 };
 
 export const enSettingsModels: Record<SettingsModelsKey, string> = {

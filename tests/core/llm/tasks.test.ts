@@ -85,6 +85,18 @@ describe('Aufgabenkatalog', () => {
     expect(task.structured).toBe(true);
   });
 
+  it('setzt minLocalParamsB nur für title-tags und query-rerank auf 1', () => {
+    expect(
+      TASK_DEFINITIONS.filter((task) => task.minLocalParamsB === 1)
+        .map((task) => task.kind)
+        .sort(),
+    ).toEqual(['query-rerank', 'title-tags']);
+    for (const task of TASK_DEFINITIONS) {
+      if (task.kind === 'title-tags' || task.kind === 'query-rerank') continue;
+      expect(task.minLocalParamsB).toBeUndefined();
+    }
+  });
+
   it('wirft bei einer unbekannten Aufgabe', () => {
     // @ts-expect-error absichtlich falscher Wert: der Katalog muss laut scheitern
     expect(() => taskDefinition('gibt-es-nicht')).toThrow(/Unbekannte LLM-Aufgabe/);

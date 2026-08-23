@@ -101,6 +101,14 @@ export interface TaskDefinition {
   streams: boolean;
   /** Expects structured JSON back. */
   structured: boolean;
+  /**
+   * Overrides the tier-derived minimum local model size (032,
+   * `MIN_LOCAL_PARAMS_B_BY_TIER` in `src/core/llm/tiers.ts`) for this specific
+   * task — for format-shaped tasks whose output is small enough that a ~1B
+   * model suffices, even though the tier's general floor is higher.
+   * `undefined` means "use the tier's floor".
+   */
+  minLocalParamsB?: number;
 }
 
 /** A concrete target: provider + model. */
@@ -335,13 +343,40 @@ export interface RuntimePlan {
  * - `'sensitive-rule-no-qualifying-target'` — the task reads personal content
  *   and every reachable candidate was refused by the sensitive-task rule
  *   (see `sensitive.ts`).
+ * - `'beyond-this-machine'` (032) — the task's minimum local model size is
+ *   above what this machine's capacity verdict says it can carry at all, and
+ *   no cloud candidate survived either. Deliberately no pick: naming a model
+ *   too small for the task would route it to something that produces mush.
+ *   Always accompanied by a `shortfall`.
  */
 export type RecommendationReasonKey =
   | 'best-fit-for-task'
   | 'cheapest-reachable'
   | 'only-local-option'
   | 'no-reachable-model'
-  | 'sensitive-rule-no-qualifying-target';
+  | 'sensitive-rule-no-qualifying-target'
+  | 'beyond-this-machine';
+
+/**
+ * The numbers behind a `'beyond-this-machine'` row (032): what the task needs,
+ * what this machine carries, and whether there is an honest alternative to
+ * point at. Data, not a sentence — the renderer builds the copy from `t()`.
+ */
+export interface RecommendationShortfall {
+  /** Billions of parameters a local model must clear for this task
+   *  (`MIN_LOCAL_PARAMS_B_BY_TIER`, or the task's own `minLocalParamsB`). */
+  requiredParamsB: number;
+  /** The machine's optimistic ceiling (`CapacityVerdict.maxPossibleParamsB`)
+   *  — `null` only if that ceiling was unknown, which is never the case for a
+   *  row that got here, since an unknown ceiling is never read as a block. */
+  machineParamsB: number | null;
+  /** Whether the catalogue holds a cloud model this task could use instead —
+   *  for a sensitive task, only one the sensitive-task rule allows. Says
+   *  nothing about whether a provider for it is already configured: the row
+   *  names the honest options ("a cloud model for this one task, or nothing"),
+   *  it does not promise one click. */
+  cloudOptionAvailable: boolean;
+}
 
 /**
  * What the user gives up by taking the pick over an alternative. Deliberately
@@ -371,8 +406,21 @@ export interface TaskRecommendation {
    *  installed or is a cloud model. */
   needsDownloadGb: number | null;
   /** Remaining surviving candidates, capped so the UI has a short swap list
-   *  rather than the whole catalogue. */
+   *  rather than the whole catalogue. As long as at least one candidate clears
+   *  the task's minimum local size, one below it never appears here either
+   *  (032, Q3a) — it must not be one click away in the swap list. When nothing
+   *  reachable clears the minimum and the machine itself is not the limiting
+   *  factor, the pre-032 list stands instead (below-floor entries included):
+   *  `pick` is then one of them too, and hiding its peers would misrepresent
+   *  the choice rather than improve it. */
   alternatives: ModelRef[];
+  /**
+   * Set exactly when `reasonKey` is `'beyond-this-machine'` (032), `null` for
+   * every other reason. Optional, like `CapacityVerdict.budgetPercent`, so
+   * recommendation literals written before this field existed keep compiling;
+   * `recommendModels` itself always sets it explicitly.
+   */
+  shortfall?: RecommendationShortfall | null;
 }
 
 export interface RecommendationSet {

@@ -49,6 +49,8 @@ export {
 } from './pull-parser';
 export {
   TIER_ORDER,
+  MIN_LOCAL_PARAMS_B_BY_TIER,
+  cheapSizeBand,
   classifyModelTier,
   collectCandidates,
   parameterBillions,
@@ -107,6 +109,7 @@ export {
   recommendModels,
   type RecommendationReasonKey,
   type RecommendationSet,
+  type RecommendationShortfall,
   type RecommendationTradeoffKey,
   type TaskRecommendation,
 } from './recommend';

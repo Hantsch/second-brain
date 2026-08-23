@@ -542,8 +542,15 @@ describe('the budget reaches every verdict, including the recommendation path', 
   }
 
   /* On this fixture machine (32 GB RAM, no GPU) the RAM ceiling allows ~50B at
-     100% and ~20B at 40%: the 34B entry drops out, the 13B one survives. */
-  const BIG = localEntry('ollama/big-model:34b', 34, 20);
+     100% and ~20B at 40%: the 40B entry drops out, the 13B one survives.
+
+     The two entries sit in different tiers on purpose (`classifyModelTier`
+     reads the size off the id: 40B is `strong`, 13B is `balanced`), so the
+     budget is what decides between them. Since 032 the ranking right-sizes
+     among candidates of the *same* tier — the smaller, comfortable one wins —
+     so a same-tier pair would never name the bigger model at any budget, and
+     this test would be asserting the ranking rather than the budget. */
+  const BIG = localEntry('ollama/big-model:40b', 40, 24);
   const SMALL = localEntry('ollama/small-model:13b', 13, 8);
 
   const CLOUD: CatalogueEntry = {

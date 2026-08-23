@@ -238,9 +238,22 @@ const own = {
     'Kein Modell, das du derzeit erreichen kannst, passt zu dieser Aufgabe.',
   'settings.recommend.reason.sensitive-rule-no-qualifying-target':
     'Diese Aufgabe liest persönliche Inhalte, und kein erreichbares Modell erfüllt die Regel dafür — die Aufgabe bleibt ohne Modell.',
+  'settings.recommend.reason.beyond-this-machine':
+    'Diese Aufgabe braucht mehr, als diese Maschine tragen kann.',
   /* One sentence per `RecommendationTradeoffKey`. */
   'settings.recommend.tradeoff.cheaper-alternative-available':
     'Eine günstigere oder lokale Alternative wäre auch möglich: {alternatives}.',
+
+  /* The shortfall block for a `beyond-this-machine` row (032, D4): required
+     size, what the machine carries, and the two honest options. */
+  'settings.recommend.shortfall.required': 'Braucht mindestens {required} Mrd. Parameter.',
+  'settings.recommend.shortfall.carried': 'Diese Maschine trägt etwa {carried} Mrd.',
+  'settings.recommend.shortfall.carriedUnknown':
+    'Was diese Maschine trägt, ließ sich nicht ermitteln.',
+  'settings.recommend.shortfall.optionCloud':
+    'Ein Cloud-Modell könnte diese eine Aufgabe stattdessen übernehmen.',
+  'settings.recommend.shortfall.optionNone':
+    'Auch dafür ist keine Cloud-Alternative eingerichtet — die Aufgabe bleibt ohne Modell.',
 } as const;
 
 export const deSettingsModels = { ...own, ...deSettingsRuntime } as const;

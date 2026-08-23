@@ -17,6 +17,11 @@ const CHEAP_MAX_B = 8;
 /** Up to here as medium; above it as large. */
 const BALANCED_MAX_B = 34;
 
+/** Up to this size, a `cheap` model counts as `tiny` (032). */
+const TINY_MAX_B = 2;
+/** Up to this size, a `cheap` model counts as `small`, otherwise `mid` (032). */
+const SMALL_MAX_B = 4;
+
 const CHEAP_TOKENS = ['mini', 'nano', 'micro', 'tiny', 'small', 'haiku', 'flash', 'lite'];
 const STRONG_TOKENS = ['opus', 'fable', 'large', 'ultra', 'max', 'heavy'];
 const BALANCED_TOKENS = ['sonnet', 'medium', 'mixtral', 'turbo', '4o'];
@@ -55,6 +60,31 @@ export function classifyModelTier(name: string): ModelTier {
   if (BALANCED_TOKENS.some((token) => tokens.has(token))) return 'balanced';
   return 'balanced';
 }
+
+/**
+ * Finer-grained size band inside the `cheap` tier (032): a 1.2B model and an
+ * 8B model are both `cheap`, but only one of them can carry a task's actual
+ * work — this band is the signal `minLocalParamsB` checks against. Only
+ * meaningful for models already classified `cheap` (paramsB <= CHEAP_MAX_B),
+ * but the function itself doesn't enforce that.
+ */
+export function cheapSizeBand(paramsB: number): 'tiny' | 'small' | 'mid' {
+  if (paramsB <= TINY_MAX_B) return 'tiny';
+  if (paramsB <= SMALL_MAX_B) return 'small';
+  return 'mid';
+}
+
+/**
+ * Floor, in billions of parameters, a local model must clear to run a task of
+ * this tier at all — independent of `CHEAP_MAX_B`/`BALANCED_MAX_B`, which only
+ * say what still counts as fast/cheap, not what's capable enough. A task can
+ * override this with `TaskDefinition.minLocalParamsB` (032).
+ */
+export const MIN_LOCAL_PARAMS_B_BY_TIER: Record<ModelTier, number> = {
+  cheap: 3, // First `TIER_LANDMARKS_B` landmark in src/core/llm/capacity.ts.
+  balanced: 7, // Second `TIER_LANDMARKS_B` landmark in src/core/llm/capacity.ts.
+  strong: 13, // First `TIER_LANDMARKS_B` landmark above CHEAP_MAX_B.
+};
 
 /**
  * Splits the name into words. This avoids matches in the middle of words —

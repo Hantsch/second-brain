@@ -1,6 +1,6 @@
 {
   "_comment": "Hand-curated once per release from provider pricing pages and provider privacy/ToS pages. generatedAt is bumped by hand when the list is refreshed; nothing here is fetched automatically (D1 — live merge is a later deliverable).",
-  "generatedAt": "2026-08-01",
+  "generatedAt": "2026-08-23",
   "entries": [
     {
       "id": "ollama/qwen2.5-coder:7b",
@@ -25,6 +25,30 @@
       "dataPolicy": "no-training",
       "policySource": "local model — never leaves the machine",
       "policyReadAt": "2026-08-01"
+    },
+    {
+      "id": "ollama/llama3.2:3b",
+      "providerKind": "openai-compatible",
+      "paramsB": 3.2,
+      "sizeOnDiskGb": 2.0,
+      "quantisation": "Q4_K_M",
+      "priceInPerMTok": null,
+      "priceOutPerMTok": null,
+      "dataPolicy": "no-training",
+      "policySource": "local model — never leaves the machine",
+      "policyReadAt": "2026-08-23"
+    },
+    {
+      "id": "ollama/llama3.2:1b",
+      "providerKind": "openai-compatible",
+      "paramsB": 1.2,
+      "sizeOnDiskGb": 1.3,
+      "quantisation": "Q4_K_M",
+      "priceInPerMTok": null,
+      "priceOutPerMTok": null,
+      "dataPolicy": "no-training",
+      "policySource": "local model — never leaves the machine",
+      "policyReadAt": "2026-08-23"
     },
     {
       "id": "anthropic/claude-haiku-4-5",
