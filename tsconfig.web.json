@@ -22,5 +22,10 @@
       "@renderer/*": ["./src/renderer/*"]
     }
   },
-  "include": ["src/renderer/**/*", "src/shared/**/*", "tests/renderer/**/*"]
+  "include": [
+    "src/renderer/**/*",
+    "src/shared/**/*",
+    "tests/renderer/**/*",
+    "src/core/llm/capacity-bands.ts"
+  ]
 }

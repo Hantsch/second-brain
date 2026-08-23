@@ -128,37 +128,61 @@ export function useProviderMutations(): ProviderMutations {
 }
 
 /**
+ * The remembered result of the last scan (035, D2) — what the machine card
+ * shows on mount, without the user clicking scan first. `undefined` while
+ * loading, `null` for "never scanned" (the honest empty state); a mutation
+ * result below always takes precedence once one has run, via
+ * `setQueryData` on this same key.
+ */
+export function useMachineScanResult(): UseQueryResult<MachineScanResult | null> {
+  return useQuery({ queryKey: qk.llm.machineScan(), queryFn: api.llm.getMachineScan, retry: false });
+}
+
+/**
  * Scans this machine for RAM/VRAM/CPU/disk facts. Triggered by hand from the
- * models tab — no caching, no staleness: every press is a fresh look at the
- * machine, so this is a mutation rather than a query.
+ * models tab — every press is a fresh look at the machine, so this is a
+ * mutation rather than a query. Its result replaces whatever
+ * `useMachineScanResult` had cached, so a rescan is reflected immediately
+ * without a refetch.
  */
 export function useMachineScan(): UseMutationResult<MachineScanResult, unknown, void> {
-  return useMutation({ mutationKey: qk.llm.machineScan(), mutationFn: api.llm.scanMachine });
+  const client = useQueryClient();
+  return useMutation({
+    mutationKey: qk.llm.machineScan(),
+    mutationFn: api.llm.scanMachine,
+    onSuccess: (result) => client.setQueryData(qk.llm.machineScan(), result),
+  });
 }
 
 /**
  * Sets or clears the manually entered VRAM override (028): the renderer
  * validates the raw input via `parseVramOverrideMb` before this ever runs
  * (`MachineCard.tsx`), so a rejected value never reaches the channel. Returns
- * a fresh `MachineScanResult` — same shape `useMachineScan` resolves to — so
- * the card can swap in whichever of the two mutations last completed rather
- * than needing a separate "current settings" query (there is none, by
- * design: see the story's "no idle-state getter channel" decision).
+ * a fresh `MachineScanResult` — same shape `useMachineScan` resolves to —
+ * written into the same query cache `useMachineScanResult` reads, so the
+ * card shows the edit immediately and a later remount still sees it.
  */
 export function useSetVramOverride(): UseMutationResult<MachineScanResult, unknown, number | null> {
-  return useMutation({ mutationFn: api.llm.setVramOverride });
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: api.llm.setVramOverride,
+    onSuccess: (result) => client.setQueryData(qk.llm.machineScan(), result),
+  });
 }
 
 /**
  * Sets the resource budget percentage (029, D4): the renderer validates the
  * raw input via `parseResourceBudgetPercent` before this ever runs
  * (`MachineCard.tsx`'s `BudgetRow`), so a rejected value never reaches the
- * channel — same shape as `useSetVramOverride` above, including the fresh
- * `MachineScanResult` it resolves to (there is no separate getter, by the
- * same design decision).
+ * channel — same shape as `useSetVramOverride` above, including writing the
+ * fresh `MachineScanResult` into the same query cache.
  */
 export function useSetResourceBudget(): UseMutationResult<MachineScanResult, unknown, number> {
-  return useMutation({ mutationFn: api.llm.setResourceBudget });
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: api.llm.setResourceBudget,
+    onSuccess: (result) => client.setQueryData(qk.llm.machineScan(), result),
+  });
 }
 
 export interface RoutingMutations {

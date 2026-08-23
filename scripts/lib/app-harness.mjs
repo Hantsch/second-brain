@@ -78,6 +78,34 @@ export function prepareUserData(dir, { vault, recent, width = 1440, height = 900
     )}\n`,
     'utf8',
   );
+  /* A pre-existing machine scan (035, D1): without this the machine card in
+     Settings → Models only ever shows the never-scanned empty state in a
+     screenshot, and the reworked populated layout — the three groups, the GB
+     field, the slider, the plain-language headline — stays unverified. The
+     numbers are plausible fixture values, not a real probe result; that's
+     fine, the card never distinguishes "real" from "cached" facts. */
+  writeFileSync(
+    join(dir, 'machine-scan.json'),
+    `${JSON.stringify(
+      {
+        version: 1,
+        scannedAt: new Date().toISOString(),
+        facts: {
+          totalRamMb: 32768,
+          cpuCores: 12,
+          platform: 'win32',
+          arch: 'x64',
+          freeDiskMb: 512000,
+          vramMb: 12288,
+          gpuName: 'NVIDIA GeForce RTX 4070',
+          gpuDetection: 'detected',
+        },
+      },
+      null,
+      2,
+    )}\n`,
+    'utf8',
+  );
   return dir;
 }
 

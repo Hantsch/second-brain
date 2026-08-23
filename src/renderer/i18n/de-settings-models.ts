@@ -155,55 +155,59 @@ const own = {
   'settings.fallback.summarize-source': 'Quelle bleibt unter raw/ liegen',
   'settings.fallback.wiki-ingest': 'Seiten bleiben, wie sie sind',
   'settings.fallback.journal-chat': 'Tageseintrag lässt sich weiter schreiben',
+  'settings.fallback.journal-loose-ends': 'Lose Enden bleiben unentdeckt',
   'settings.fallback.project-status': 'Stand und nächster Schritt bleiben Handarbeit',
   'settings.fallback.gardener-audit': 'Die deterministischen Prüfungen laufen weiter',
 
   'settings.machine.title': 'Diese Maschine',
   'settings.machine.scan': 'Diesen Rechner scannen',
   'settings.machine.rescan': 'Erneut scannen',
+  'settings.machine.scannedAt': 'Zuletzt gescannt: {when}',
+  'settings.machine.group.facts': 'Was diese Maschine ist',
+  'settings.machine.group.capacity': 'Was sie tragen kann',
+  'settings.machine.group.editable': 'Was du ändern darfst',
   'settings.machine.idle':
     'Noch kein Scan gelaufen. Er liest RAM, Grafikspeicher, CPU-Kerne und freien Speicherplatz — nichts wird gesendet oder gespeichert.',
   'settings.machine.disclaimer':
     'Faustregel, keine Messung: der tatsächliche Durchsatz hängt vom Modell, der Quantisierung und der Software ab.',
   'settings.machine.unknown': 'unbekannt',
   'settings.machine.unknowns': 'Nicht zu ermitteln: {list}.',
-  'settings.machine.tiers': 'Größen, die bequem passen sollten: {tiers}.',
-  'settings.machine.verdict.ram':
-    'Der Arbeitsspeicher setzt die Grenze: bequem etwa {comfortable} Mrd. Parameter, höchstens {possible} Mrd.',
-  'settings.machine.verdict.vram':
-    'Der Grafikspeicher (VRAM) setzt die Grenze: bequem etwa {comfortable} Mrd. Parameter, höchstens {possible} Mrd.',
-  'settings.machine.verdict.cpu':
-    'Die Anzahl der CPU-Kerne setzt die Grenze: bequem etwa {comfortable} Mrd. Parameter, darüber werden Antworten spürbar langsam.',
   'settings.machine.verdict.unknown':
     'Lässt sich nicht einschätzen — dafür fehlen zu viele Angaben.',
+  'settings.machine.resource.ram': 'Der Arbeitsspeicher (RAM)',
+  'settings.machine.resource.vram': 'Der Grafikspeicher (VRAM)',
+  'settings.machine.resource.cpu': 'Die Anzahl der CPU-Kerne',
+  'settings.machine.verdict.band.none':
+    '{resource} setzt die Grenze: dafür passt derzeit kein lokales Modell bequem auf diese Maschine.',
+  'settings.machine.verdict.band.small':
+    '{resource} setzt die Grenze: diese Maschine trägt bequem kleine lokale Modelle, etwa für schnelle Chat-Aufgaben.',
+  'settings.machine.verdict.band.medium':
+    '{resource} setzt die Grenze: diese Maschine trägt bequem mittelgroße lokale Modelle mit mehr Kontext und besseren Antworten.',
+  'settings.machine.verdict.band.large':
+    '{resource} setzt die Grenze: diese Maschine trägt bequem auch große lokale Modelle.',
   'settings.machine.fact.ram': 'Arbeitsspeicher (RAM)',
   'settings.machine.fact.vram': 'Grafikspeicher (VRAM)',
   'settings.machine.fact.gpu': 'Grafikkarte',
   'settings.machine.fact.cpu': 'CPU-Kerne',
   'settings.machine.fact.disk': 'Freier Speicherplatz',
-  'settings.machine.vram.unitMb': 'MB',
+  'settings.machine.vram.unitGb': 'GB',
   'settings.machine.vram.enter': 'Eintragen',
   'settings.machine.vram.manual': 'Von dir eingetragen',
   'settings.machine.vram.clear': 'Löschen',
   'settings.machine.vram.error.empty': 'Eine Zahl eingeben.',
-  'settings.machine.vram.error.not-a-number': 'Eine ganze Zahl in MB eingeben.',
-  'settings.machine.vram.error.not-positive': 'Mindestens {min} MB eingeben.',
-  'settings.machine.vram.error.too-large': 'Höchstens {max} MB eingeben.',
+  'settings.machine.vram.error.not-a-number': 'Eine Zahl in GB eingeben.',
+  'settings.machine.vram.error.not-positive': 'Mindestens {min} GB eingeben.',
+  'settings.machine.vram.error.too-large': 'Höchstens {max} GB eingeben.',
   'settings.machine.vram.conflict':
     'Die Erkennung meldet inzwischen {detected}, was von den {manual} abweicht, die du eingetragen hast.',
   'settings.machine.vram.conflict.keepMine': 'Meins behalten',
   'settings.machine.vram.conflict.useDetected': 'Erkannten Wert verwenden',
   'settings.machine.budget.title': 'Ressourcen-Budget',
   'settings.machine.budget.value': '{percent} %',
-  'settings.machine.budget.unitPercent': '%',
   'settings.machine.budget.help':
     'Bemisst Modellempfehlungen an diesem Anteil von RAM und VRAM, nach der festen Reserve. Ein bereits laufendes Modell wird dadurch nicht gedrosselt.',
-  'settings.machine.budget.change': 'Ändern',
-  'settings.machine.budget.error.empty': 'Eine Zahl eingeben.',
-  'settings.machine.budget.error.not-a-number': 'Eine ganze Prozentzahl eingeben.',
-  'settings.machine.budget.error.out-of-range': 'Eine Zahl von {min} bis {max} eingeben.',
+  'settings.machine.budget.aria': 'Anteil von RAM und VRAM für lokale Modelle',
   'settings.machine.budget.planned': 'geplant mit {planned} bei {percent} % nach Reserve',
-  'settings.machine.budget.noneFit': 'Bei diesem Anteil passt kein lokales Modell.',
 
   'settings.recommend.title': 'Modellempfehlung',
   'settings.recommend.action': 'Empfehlungen holen',

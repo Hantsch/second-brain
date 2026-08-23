@@ -168,6 +168,7 @@ export const api = {
     suggestRouting: () => call('llm:suggestRouting'),
     testTask: (task: IpcRequest<'llm:testTask'>['task']) => call('llm:testTask', { task }),
     scanMachine: () => call('llm:scanMachine'),
+    getMachineScan: () => call('llm:getMachineScan'),
     setVramOverride: (vramMb: number | null) => call('llm:setVramOverride', { vramMb }),
     setResourceBudget: (percent: number) => call('llm:setResourceBudget', { percent }),
     recommendModels: () => call('llm:recommendModels'),

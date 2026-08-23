@@ -15,7 +15,7 @@
 import { StrictMode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { HashRouter } from 'react-router-dom';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import axe from 'axe-core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -33,6 +33,7 @@ import type { SbBridge } from '@renderer/lib/bridge';
 import {
   mockBridge,
   resetVramOverrideMock,
+  seedMockScanned,
   setMockDetectedVramMb,
 } from '@renderer/lib/mock-bridge';
 import { settingsSnapshot, tasks as TASKS } from '@renderer/lib/mock-settings';
@@ -863,6 +864,23 @@ describe('Einstellungen: Maschine (VRAM)', () => {
     return rendered;
   }
 
+  /* 035, D2 / review F5: every other test in this describe block clicks
+     "Diesen Rechner scannen" first. This one starts from the state the real
+     app is usually in — a machine already scanned in an earlier session —
+     and checks that `llm:getMachineScan` alone (no click) is enough for the
+     card to show facts, verdict and scan date on mount. */
+  it('zeigt einen zuvor gespeicherten Scan sofort an, ohne dass "Scannen" geklickt wird', async () => {
+    seedMockScanned();
+
+    await openTab('models');
+
+    expect(await screen.findByText(/Zuletzt gescannt:/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Erneut scannen' })).toBeTruthy();
+    expect(screen.getByText('Arbeitsspeicher (RAM)')).toBeTruthy();
+    expect(screen.getByText('Grafikspeicher (VRAM)')).toBeTruthy();
+    expect(invoke.mock.calls.some(([channel]) => channel === 'llm:scanMachine')).toBe(false);
+  });
+
   it('bietet eine Eingabe an, solange der VRAM-Wert unbekannt ist', async () => {
     await scan();
     /* RAM, GPU, CPU und Speicherplatz sind in der Attrappe ebenfalls
@@ -882,7 +900,7 @@ describe('Einstellungen: Maschine (VRAM)', () => {
 
     await userEvent.type(input, 'abc');
     await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
-    expect(await screen.findByText('Eine ganze Zahl in MB eingeben.')).toBeTruthy();
+    expect(await screen.findByText('Eine Zahl in GB eingeben.')).toBeTruthy();
 
     expect(invoke.mock.calls.some(([channel]) => channel === 'llm:setVramOverride')).toBe(false);
     /* Nichts hat sich am Wert geändert — die Eingabe ist verworfen, nicht übernommen. */
@@ -892,7 +910,8 @@ describe('Einstellungen: Maschine (VRAM)', () => {
   it('übernimmt einen gültigen Wert mit der Marke „von dir eingetragen“', async () => {
     await scan();
     await userEvent.click(screen.getByRole('button', { name: 'Eintragen' }));
-    await userEvent.type(screen.getByLabelText('Grafikspeicher (VRAM)'), '16384');
+    /* The field reads and writes GB (035, D3) — `16` GB is the stored 16384 MB. */
+    await userEvent.type(screen.getByLabelText('Grafikspeicher (VRAM)'), '16');
     await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
 
     await waitFor(() =>
@@ -905,7 +924,7 @@ describe('Einstellungen: Maschine (VRAM)', () => {
   it('setzt den Wert über „Löschen“ auf unbekannt zurück', async () => {
     await scan();
     await userEvent.click(screen.getByRole('button', { name: 'Eintragen' }));
-    await userEvent.type(screen.getByLabelText('Grafikspeicher (VRAM)'), '16384');
+    await userEvent.type(screen.getByLabelText('Grafikspeicher (VRAM)'), '16');
     await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
     await screen.findByText('Von dir eingetragen');
 
@@ -927,11 +946,12 @@ describe('Einstellungen: Maschine (VRAM)', () => {
       expect(screen.queryByText('Von dir eingetragen')).toBeNull();
 
       await userEvent.click(screen.getByRole('button', { name: 'Eintragen' }));
-      /* The field prefills with the detected value (8192) — replace it
-         rather than appending, or the draft would read "819216384". */
+      /* The field prefills with the detected value in GB ("8") — replace it
+         rather than appending, or the draft would read "816" instead of the
+         intended "16". */
       const input = screen.getByLabelText('Grafikspeicher (VRAM)');
       await userEvent.clear(input);
-      await userEvent.type(input, '16384');
+      await userEvent.type(input, '16');
       await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
       await screen.findByText('Von dir eingetragen');
 
@@ -975,18 +995,20 @@ describe('Einstellungen: Maschine (Ressourcen-Budget)', () => {
     return rendered;
   }
 
-  it('zeigt den aktuellen Anteil mit Hinweistext und ändert ihn über eine eigene Eingabe', async () => {
+  it('zeigt den aktuellen Anteil mit Hinweistext und ändert ihn über den Schieberegler', async () => {
     await scan();
     expect(screen.getByText('80 %')).toBeTruthy();
     expect(
       screen.getByText(/Bemisst Modellempfehlungen an diesem Anteil von RAM und VRAM/),
     ).toBeTruthy();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Ändern' }));
-    const input = screen.getByLabelText('Ressourcen-Budget');
-    await userEvent.clear(input);
-    await userEvent.type(input, '50');
-    await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    /* 035, D5: a slider replaced the text field + "Ändern" button — drag is
+       a `change` (live) followed by a `pointerUp` (the single commit). */
+    const slider = screen.getByRole('slider', {
+      name: 'Anteil von RAM und VRAM für lokale Modelle',
+    });
+    fireEvent.change(slider, { target: { value: '50' } });
+    fireEvent.pointerUp(slider);
 
     await waitFor(() =>
       expect(invoke).toHaveBeenCalledWith('llm:setResourceBudget', { percent: 50 }),
@@ -994,34 +1016,17 @@ describe('Einstellungen: Maschine (Ressourcen-Budget)', () => {
     expect(await screen.findByText('50 %')).toBeTruthy();
   });
 
-  it('lehnt eine leere, nicht-numerische und außerhalb des Bereichs liegende Eingabe ab, ohne den Kanal zu rufen', async () => {
-    await scan();
-    await userEvent.click(screen.getByRole('button', { name: 'Ändern' }));
-    const input = screen.getByLabelText('Ressourcen-Budget');
-
-    await userEvent.clear(input);
-    await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
-    expect(await screen.findByText('Eine Zahl eingeben.')).toBeTruthy();
-
-    await userEvent.type(input, 'abc');
-    await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
-    expect(await screen.findByText('Eine ganze Prozentzahl eingeben.')).toBeTruthy();
-
-    await userEvent.clear(input);
-    await userEvent.type(input, '5');
-    await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
-    expect(await screen.findByText('Eine Zahl von 10 bis 100 eingeben.')).toBeTruthy();
-
-    expect(invoke.mock.calls.some(([channel]) => channel === 'llm:setResourceBudget')).toBe(false);
-    /* Nothing changed on a rejected input — the field is still there with its
-       last entry, not silently reset. */
-    expect(screen.getByLabelText('Ressourcen-Budget')).toBeTruthy();
-  });
+  /* The old text-field validation test ("lehnt eine leere/nicht-numerische/
+     außerhalb liegende Eingabe ab") no longer has an equivalent: a native
+     `input[type=range]` with `min`/`max`/`step` cannot produce an empty,
+     non-numeric or out-of-range value in the first place (035, D5) — there
+     is no error copy left to test here. The slider's own keyboard/commit
+     behavior is covered in `tests/renderer/atoms/Slider.test.tsx`. */
 
   it('zeigt bei bekanntem VRAM die geplante Zahl neben dem realen Wert', async () => {
     await scan();
     await userEvent.click(screen.getByRole('button', { name: 'Eintragen' }));
-    await userEvent.type(screen.getByLabelText('Grafikspeicher (VRAM)'), '16384');
+    await userEvent.type(screen.getByLabelText('Grafikspeicher (VRAM)'), '16');
     await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
     await screen.findByText('16 GB');
 
@@ -1031,21 +1036,28 @@ describe('Einstellungen: Maschine (Ressourcen-Budget)', () => {
     expect(row.textContent).toContain('geplant mit 12 GB bei 80 % nach Reserve');
   });
 
-  it('nennt bei einem zu kleinen Budget ehrlich, dass kein lokales Modell passt', async () => {
+  /* 035, D6: there is no more separate "nothing fits" line — the plain-
+     language headline sentence itself says so, banded via
+     `describeCapacityBand` into `verdict.band.none`, naming the limiting
+     resource instead of a parameter count. */
+  it('sagt in der Kopfzeile ehrlich, dass bei diesem Budget nichts Lokales passt', async () => {
     await scan();
     await userEvent.click(screen.getByRole('button', { name: 'Eintragen' }));
-    await userEvent.type(screen.getByLabelText('Grafikspeicher (VRAM)'), '2048');
+    await userEvent.type(screen.getByLabelText('Grafikspeicher (VRAM)'), '2');
     await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
 
-    expect(await screen.findByText('Bei diesem Anteil passt kein lokales Modell.')).toBeTruthy();
-    /* The two lines are mutually exclusive — a machine with nothing that
-       fits never also claims comfortable sizes. */
+    expect(
+      await screen.findByText(
+        'Der Grafikspeicher (VRAM) setzt die Grenze: dafür passt derzeit kein lokales Modell bequem auf diese Maschine.',
+      ),
+    ).toBeTruthy();
+    /* No parameter counts or size tiers survive on the card (035, D6). */
     expect(screen.queryByText(/Größen, die bequem passen sollten/)).toBeNull();
+    expect(screen.queryByText(/Mrd\. Parameter/)).toBeNull();
   });
 
   it('hat keinen A11y-Verstoß', async () => {
     const { container } = await scan();
-    await userEvent.click(screen.getByRole('button', { name: 'Ändern' }));
     await expectNoViolations(container);
   });
 });

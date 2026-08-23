@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { applyVramOverride, judgeCapacity } from '@core/llm';
+import { describeCapacityBand } from '@core/llm/capacity-bands';
 import type { MachineFacts } from '@shared/types';
 
 /* Fixtures for the four machines named in the 019a plan, plus the win32 case
@@ -188,5 +189,59 @@ describe('judgeCapacity with a resource budget percentage', () => {
     expect(withoutArgument.maxComfortableParamsB).toBeCloseTo(21.818, 2);
     expect(withoutArgument.maxPossibleParamsB).toBeCloseTo(27.273, 2);
     expect(withoutArgument.tiersThatFit).toEqual(['3B', '7B', '8B', '13B']);
+  });
+});
+
+/* 035, D6: the plain-language band the card's headline sentence uses instead
+   of a parameter count. Pure function over `maxComfortableParamsB` — these
+   fixtures reuse the ones above rather than re-deriving verdicts by hand, so
+   a threshold change here is visibly tied to a real machine profile. */
+describe('describeCapacityBand', () => {
+  it('nothing local fits: "none"', () => {
+    const verdict = judgeCapacity(facts({ totalRamMb: 4096, cpuCores: 2 }));
+
+    expect(verdict.maxComfortableParamsB).not.toBeNull();
+    expect(verdict.maxComfortableParamsB!).toBeLessThan(3);
+    expect(describeCapacityBand(verdict)).toBe('none');
+  });
+
+  it('9.5 GB RAM, no usable GPU (comfortable ~5B): "small"', () => {
+    const verdict = judgeCapacity(facts({ totalRamMb: 9728, cpuCores: 8 }));
+
+    expect(verdict.maxComfortableParamsB).toBeCloseTo(5, 2);
+    expect(describeCapacityBand(verdict)).toBe('small');
+  });
+
+  it('16 GB RAM, no usable GPU (comfortable ~10.9B): "medium"', () => {
+    const verdict = judgeCapacity(facts({ totalRamMb: 16384, cpuCores: 8 }));
+
+    expect(describeCapacityBand(verdict)).toBe('medium');
+  });
+
+  it('32 GB RAM, 16 GB VRAM at full budget (comfortable ~21.8B): "medium"', () => {
+    const verdict = judgeCapacity(
+      facts({
+        totalRamMb: 32768,
+        cpuCores: 8,
+        vramMb: 16384,
+        gpuName: 'NVIDIA GeForce RTX 4080',
+        gpuDetection: 'detected',
+      }),
+    );
+
+    expect(describeCapacityBand(verdict)).toBe('medium');
+  });
+
+  it('96 GB RAM, no GPU (comfortable ~83.6B): "large"', () => {
+    const verdict = judgeCapacity(facts({ totalRamMb: 98304, cpuCores: 8 }));
+
+    expect(describeCapacityBand(verdict)).toBe('large');
+  });
+
+  it('every fact unknown: "none", never a band on a guessed number', () => {
+    const verdict = judgeCapacity(facts({}));
+
+    expect(verdict.limitingFactor).toBe('unknown');
+    expect(describeCapacityBand(verdict)).toBe('none');
   });
 });

@@ -20,6 +20,8 @@ import { isValidVramOverrideMb } from '@shared/llm/vram-override';
 import type { CapacityVerdict, MachineFacts, MachineScanResult } from '@shared/types';
 import type { HandlerMap } from './registry';
 import { defineHandlers, fail } from './registry';
+import type { MachineScanCache } from '../machine-scan-cache';
+import { createMachineScanCache } from '../machine-scan-cache';
 import type { Services } from '../services';
 
 /** The GPU slice of `MachineFacts` — a slice of the real shape, never a parallel one. */
@@ -335,10 +337,26 @@ function parseSizeMb(text: string | null): number | null {
 
 // ── Handler ─────────────────────────────────────────────────────────────────
 
-/** Test seam: production passes nothing, tests inject a platform and a fake exec. */
+/** Test seam: production passes nothing, tests inject a platform, a fake exec
+ *  and — since 035 — a scan cache of their own. */
 export interface MachineScanDeps {
   platform?: string;
   execFileFn?: ExecFileFn;
+  cache?: MachineScanCache;
+}
+
+/** Both detections combined, exactly as measured: no override, no budget.
+ *  Split out for 035's cache, which stores precisely this value — storing the
+ *  merged facts instead would freeze a manual figure into the stored
+ *  "detected" VRAM, and clearing the override later could not undo it. */
+async function probeMachineFacts(deps: MachineScanDeps): Promise<MachineFacts> {
+  const platform = deps.platform ?? os.platform();
+  const execFileFn = deps.execFileFn ?? execFileAsync;
+  const [base, gpu] = await Promise.all([
+    detectCheapFacts(platform),
+    detectGpuFacts(platform, execFileFn),
+  ]);
+  return { ...base, ...gpu };
 }
 
 /** Both detections combined into one `MachineFacts`, with the manually
@@ -349,13 +367,7 @@ async function detectMachineFacts(
   deps: MachineScanDeps,
   vramOverrideMb: number | null,
 ): Promise<MachineFacts> {
-  const platform = deps.platform ?? os.platform();
-  const execFileFn = deps.execFileFn ?? execFileAsync;
-  const [base, gpu] = await Promise.all([
-    detectCheapFacts(platform),
-    detectGpuFacts(platform, execFileFn),
-  ]);
-  return applyVramOverride({ ...base, ...gpu }, vramOverrideMb);
+  return applyVramOverride(await probeMachineFacts(deps), vramOverrideMb);
 }
 
 /** The machine-local override, read fresh on every call — it can change
@@ -397,48 +409,97 @@ export async function scanCapacityVerdict(
   return judgeCapacity(facts, budgetOf(services));
 }
 
+/** The scan cache for this container, or `null` when there is nowhere to keep
+ *  one. `deps.cache` is the test seam; production goes through
+ *  `services.userDataDir`. A container without that directory has no cache,
+ *  and "no cache" behaves exactly like "never scanned" — the behaviour every
+ *  call site had before 035. */
+function machineScanCache(services: Services, deps: MachineScanDeps): MachineScanCache | null {
+  if (deps.cache) return deps.cache;
+  return services.userDataDir ? createMachineScanCache(services.userDataDir) : null;
+}
+
+/** One result out of raw facts. The override and the budget are applied here,
+ *  at read time, so what comes back always matches the settings as they are
+ *  now — the stored facts carry neither, and no stored verdict can go stale. */
+function deriveScanResult(
+  raw: MachineFacts,
+  scannedAt: string,
+  vramOverrideMb: number | null,
+  budgetPercent: number,
+): MachineScanResult {
+  const facts = applyVramOverride(raw, vramOverrideMb);
+  return { facts, verdict: judgeCapacity(facts, budgetPercent), scannedAt };
+}
+
+/** What a setter judges against. Changing a setting scans nothing, so the
+ *  remembered scan is used as it stands, `scannedAt` included — stamping
+ *  "now" there would claim a scan that never ran. Only a machine that has
+ *  never been scanned still probes, so the setters keep working exactly as
+ *  they did before 035 when no cache exists. */
+async function factsForSetting(
+  cache: MachineScanCache | null,
+  deps: MachineScanDeps,
+): Promise<{ raw: MachineFacts; scannedAt: string }> {
+  const cached = await cache?.read();
+  if (cached) return { raw: cached.facts, scannedAt: cached.scannedAt };
+  return { raw: await probeMachineFacts(deps), scannedAt: new Date().toISOString() };
+}
+
 export function machineScanHandlers(services: Services, deps: MachineScanDeps = {}): HandlerMap {
+  const cache = machineScanCache(services, deps);
   return defineHandlers({
-    'llm:scanMachine': async (): Promise<MachineScanResult> => {
-      const facts = await detectMachineFacts(deps, vramOverrideOf(services));
-      return {
-        facts,
-        verdict: judgeCapacity(facts, budgetOf(services)),
-        scannedAt: new Date().toISOString(),
-      };
+    /* The remembered scan, re-judged against the settings as they stand now
+       (035, D2) — what the card shows on mount, without probing anything.
+       `null` (no cache, or a corrupt/version-mismatched one, which `.read()`
+       already treats as "never scanned") is the honest empty state; nothing
+       here invents a result to fill it. */
+    'llm:getMachineScan': async (): Promise<MachineScanResult | null> => {
+      const cached = await cache?.read();
+      if (!cached) return null;
+      return deriveScanResult(
+        cached.facts,
+        cached.scannedAt,
+        vramOverrideOf(services),
+        budgetOf(services),
+      );
     },
-    /* Set (or clear, `vramMb: null`) the override, then return a fresh scan
-       in one round trip — there is deliberately no separate getter channel.
-       Validated before anything is written: a rejected figure never reaches
-       `patchApp`, and `patchApp` only ever touches `AppSettings` (userData),
-       never the vault's own settings file. */
+    'llm:scanMachine': async (): Promise<MachineScanResult> => {
+      const raw = await probeMachineFacts(deps);
+      const scannedAt = new Date().toISOString();
+      /* Remembered pre-override, before anything is folded in (035, D1). A
+         failed write costs a rescan after the next start, never this scan. */
+      await cache?.write({ scannedAt, facts: raw });
+      return deriveScanResult(raw, scannedAt, vramOverrideOf(services), budgetOf(services));
+    },
+    /* Set (or clear, `vramMb: null`) the override, then return the machine
+       re-judged in the same round trip. Validated before anything is written:
+       a rejected figure never reaches `patchApp`, and `patchApp` only ever
+       touches `AppSettings` (userData), never the vault's own settings file.
+       Since 035 this re-judges the remembered scan instead of probing the GPU
+       again — nothing about the hardware changed by typing a number. */
     'llm:setVramOverride': async ({ vramMb }): Promise<MachineScanResult> => {
       if (vramMb !== null && !isValidVramOverrideMb(vramMb)) {
         throw fail('invalid', 'VRAM-Wert liegt außerhalb des gültigen Bereichs');
       }
       await services.settings.patchApp({ machine: { vramOverrideMb: vramMb } });
-      const facts = await detectMachineFacts(deps, vramMb);
-      return {
-        facts,
-        verdict: judgeCapacity(facts, budgetOf(services)),
-        scannedAt: new Date().toISOString(),
-      };
+      const { raw, scannedAt } = await factsForSetting(cache, deps);
+      return deriveScanResult(raw, scannedAt, vramMb, budgetOf(services));
     },
     /* Same round trip as the override above, for the share of RAM/VRAM sizing
        may plan against (029). Validated first, so a rejected percentage never
        reaches `patchApp`; `patchApp` deep-merges, so writing this percentage
        leaves `vramOverrideMb` untouched, and it only ever writes `AppSettings`
-       in userData, never the vault's own settings file. The fresh verdict is
-       judged with the value just written — reading it back through
-       `budgetOf` would depend on the settings store having applied the patch
-       already. */
+       in userData, never the vault's own settings file. The verdict is judged
+       with the value just written — reading it back through `budgetOf` would
+       depend on the settings store having applied the patch already. */
     'llm:setResourceBudget': async ({ percent }): Promise<MachineScanResult> => {
       if (!isValidResourceBudgetPercent(percent)) {
         throw fail('invalid', 'Budget-Wert liegt außerhalb des gültigen Bereichs');
       }
       await services.settings.patchApp({ machine: { resourceBudgetPercent: percent } });
-      const facts = await detectMachineFacts(deps, vramOverrideOf(services));
-      return { facts, verdict: judgeCapacity(facts, percent), scannedAt: new Date().toISOString() };
+      const { raw, scannedAt } = await factsForSetting(cache, deps);
+      return deriveScanResult(raw, scannedAt, vramOverrideOf(services), percent);
     },
   });
 }

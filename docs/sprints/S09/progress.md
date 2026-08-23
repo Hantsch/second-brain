@@ -1,0 +1,17 @@
+- 2026-08-23 17:56 · 035 · D1 Machine-scan cache in userData · started
+- 2026-08-23 18:05 · 035 · D1 Machine-scan cache in userData · done
+- 2026-08-23 18:05 · 035 · D2 llm:getMachineScan channel + card reads on mount · started
+- 2026-08-23 18:12 · 035 · D2 llm:getMachineScan channel + card reads on mount · done
+- 2026-08-23 18:12 · 035 · D3 Manual VRAM in GB · started
+- 2026-08-23 18:12 · 035 · D4 Gaston slider atom · started
+- 2026-08-23 18:17 · 035 · D3 Manual VRAM in GB · done
+- 2026-08-23 18:17 · 035 · D4 Gaston slider atom · done
+- 2026-08-23 18:17 · 035 · D6 headline sentence without parameters · started
+- 2026-08-23 18:27 · 035 · D6 headline sentence without parameters · done
+- 2026-08-23 18:27 · 035 · D5 budget becomes a slider · started
+- 2026-08-23 18:32 · 035 · D5 budget becomes a slider · done
+- 2026-08-23 18:32 · 035 · D7 card split into groups · started
+- 2026-08-23 18:46 · 035 · D7 card split into groups · done
+- 2026-08-23 18:46 · 035 · D8 screenshots and both languages · started
+- 2026-08-23 18:50 · 035 · D8 screenshots and both languages · done
+- 2026-08-23 19:21 · 035 · story review + fix cycle + closing · done

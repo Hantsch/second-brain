@@ -24,8 +24,11 @@
  *     would leave no trace on any screen.
  */
 
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import type * as NodeOs from 'node:os';
+import { tmpdir as realTmpdir } from 'node:os';
+import { join } from 'node:path';
 import type { CatalogueEntry } from '@core/llm';
 import { recommendModels } from '@core/llm';
 import { DEFAULT_RESOURCE_BUDGET_PERCENT } from '@shared/llm/resource-budget';
@@ -36,6 +39,7 @@ import {
   machineScanHandlers,
   scanCapacityVerdict,
 } from '../../../src/main/ipc/machine-scan';
+import { createMachineScanCache } from '../../../src/main/machine-scan-cache';
 import type { Services } from '../../../src/main/services';
 
 /* The handler registry imports `ipcMain`; a machine scan never touches it. */
@@ -606,5 +610,171 @@ describe('the budget reaches every verdict, including the recommendation path', 
 
     expect(narrow).toEqual(wide);
     expect(wide.tasks.some((task) => task.pick?.model === CLOUD.id)).toBe(true);
+  });
+});
+
+/* 035, D1: the scan is remembered in userData, and the two setters re-judge
+   that remembered scan instead of probing the GPU again.
+
+   Two things are load-bearing here and neither shows up on screen when it is
+   wrong. First, what goes into the cache is detection's *pre-override* output:
+   store the merged facts instead and a manual figure would be frozen into the
+   stored "detected" VRAM, so clearing the override later could never get back
+   to what the card actually measured. Second, `scannedAt` means "when the scan
+   ran" — moving a slider scans nothing, so the date must not jump to now. */
+describe('the remembered scan (035, D1)', () => {
+  let cacheDir = '';
+
+  beforeEach(async () => {
+    cacheDir = await mkdtemp(join(realTmpdir(), 'gaston-scan-handlers-'));
+  });
+
+  afterEach(async () => {
+    await rm(cacheDir, { recursive: true, force: true });
+  });
+
+  /** Deps with a real cache over a temp directory — the same object the app
+   *  builds from `services.userDataDir`, only somewhere disposable. */
+  function depsWithCache(execFileFn: ExecFileFn, platform = 'linux') {
+    return { platform, execFileFn, cache: createMachineScanCache(cacheDir) };
+  }
+
+  async function storedFile(): Promise<Record<string, unknown>> {
+    return JSON.parse(await readFile(join(cacheDir, 'machine-scan.json'), 'utf8')) as Record<
+      string,
+      unknown
+    >;
+  }
+
+  async function callScan(services: Services, execFileFn: ExecFileFn, platform = 'linux') {
+    const deps = depsWithCache(execFileFn, platform);
+    const handler = machineScanHandlers(services, deps)['llm:scanMachine'];
+    if (!handler) throw new Error('llm:scanMachine has no handler');
+    return await handler(undefined);
+  }
+
+  it('writes the cache file on a scan', async () => {
+    await callScan(fakeServices(), stdoutExec(LSPCI_HYBRID));
+
+    const stored = await storedFile();
+    expect(stored['version']).toBe(1);
+    expect(typeof stored['scannedAt']).toBe('string');
+    expect(stored['facts']).toMatchObject({
+      platform: 'linux',
+      gpuName: 'NVIDIA Corporation GA104M [GeForce RTX 3070 Mobile]',
+      totalRamMb: FIXTURE_RAM_MB,
+    });
+  });
+
+  it('stores what detection measured, not what the override made of it', async () => {
+    const result = await callScan(fakeServices(16_384), stdoutExec(LSPCI_NO_GPU));
+
+    // The result the card sees carries the override…
+    expect(result.facts.vramMb).toBe(16_384);
+    expect(result.facts.vramSource).toBe('manual');
+    // …the file behind it does not, so clearing the override can undo it.
+    const facts = (await storedFile())['facts'] as Record<string, unknown>;
+    expect(facts['vramMb']).toBeNull();
+    expect(facts).not.toHaveProperty('manualVramMb');
+    expect(facts).not.toHaveProperty('vramSource');
+  });
+
+  it('re-judges the remembered scan on a budget change without probing again', async () => {
+    const services = fakeServices(null, 100);
+    const wide = await callScan(services, stdoutExec(LSPCI_NO_GPU));
+
+    /* A second exec seam, untouched by the scan above: if the setter probed,
+       this is where it would show. */
+    const exec = stdoutExec(LSPCI_NO_GPU);
+    const setBudget = machineScanHandlers(services, depsWithCache(exec))['llm:setResourceBudget'];
+    if (!setBudget) throw new Error('llm:setResourceBudget has no handler');
+    const narrow = await setBudget({ percent: 40 });
+
+    expect(exec).not.toHaveBeenCalled();
+    expect(narrow.verdict.budgetPercent).toBe(40);
+    expect(narrow.verdict.plannedRamMb).toBeLessThan(wide.verdict.plannedRamMb!);
+    // Nothing was scanned, so the date stays the one of the actual scan.
+    expect(narrow.scannedAt).toBe(wide.scannedAt);
+  });
+
+  it('re-judges it on a VRAM change without probing, and clearing gets the detection back', async () => {
+    const services = fakeServices(null);
+    const scan = await callScan(services, stdoutExec(DARWIN_INTEL), 'darwin');
+    expect(scan.facts.vramMb).toBe(4096);
+
+    const exec = stdoutExec(DARWIN_INTEL);
+    const setVram = machineScanHandlers(services, depsWithCache(exec, 'darwin'))[
+      'llm:setVramOverride'
+    ];
+    if (!setVram) throw new Error('llm:setVramOverride has no handler');
+
+    const entered = await setVram({ vramMb: 16_384 });
+    expect(exec).not.toHaveBeenCalled();
+    expect(entered.facts.vramMb).toBe(16_384);
+    expect(entered.facts.detectedVramMb).toBe(4096);
+    expect(entered.facts.vramConflict).toBe(true);
+    expect(entered.scannedAt).toBe(scan.scannedAt);
+
+    const cleared = await setVram({ vramMb: null });
+    expect(cleared.facts.vramMb).toBe(4096);
+    expect(cleared.facts.vramSource).toBe('detected');
+    expect(cleared.facts.vramConflict).toBe(false);
+    expect(cleared.scannedAt).toBe(scan.scannedAt);
+  });
+
+  it.each([
+    ['a corrupt file', 'not json at all {'],
+    ['a file from another version', JSON.stringify({ version: 99, scannedAt: '2026-01-01' })],
+  ])('treats %s as "never scanned" and falls back to a probe', async (_case, contents) => {
+    await writeFile(join(cacheDir, 'machine-scan.json'), contents, 'utf8');
+
+    const exec = stdoutExec(LSPCI_HYBRID);
+    const setBudget = machineScanHandlers(fakeServices(null, 100), depsWithCache(exec))[
+      'llm:setResourceBudget'
+    ];
+    if (!setBudget) throw new Error('llm:setResourceBudget has no handler');
+    const result = await setBudget({ percent: 40 });
+
+    expect(exec).toHaveBeenCalledTimes(1);
+    expect(result.facts.gpuName).toBe('NVIDIA Corporation GA104M [GeForce RTX 3070 Mobile]');
+    expect(result.verdict.budgetPercent).toBe(40);
+    expect(Number.isNaN(Date.parse(result.scannedAt))).toBe(false);
+  });
+
+  /* 035, D2: what the card asks for on mount, before any user interaction —
+     the honest "never scanned" `null`, or the remembered scan re-judged
+     against the settings as they stand now (never a re-probe). */
+  describe('llm:getMachineScan', () => {
+    function handlerFor(services: Services, execFileFn: ExecFileFn, platform = 'linux') {
+      const handler = machineScanHandlers(services, depsWithCache(execFileFn, platform))[
+        'llm:getMachineScan'
+      ];
+      if (!handler) throw new Error('llm:getMachineScan has no handler');
+      return handler;
+    }
+
+    it('returns null when no cache file exists yet', async () => {
+      const exec = stdoutExec(LSPCI_HYBRID);
+
+      const result = await handlerFor(fakeServices(), exec)(undefined);
+
+      expect(result).toBeNull();
+      // The point of the handler: it reads the cache, it never probes.
+      expect(exec).not.toHaveBeenCalled();
+    });
+
+    it('returns the derived facts, verdict and scannedAt from a cached scan', async () => {
+      const services = fakeServices(null, 40);
+      const scanned = await callScan(services, stdoutExec(LSPCI_HYBRID));
+
+      const exec = stdoutExec(LSPCI_HYBRID);
+      const result = await handlerFor(services, exec)(undefined);
+
+      expect(exec).not.toHaveBeenCalled();
+      expect(result).not.toBeNull();
+      expect(result?.scannedAt).toBe(scanned.scannedAt);
+      expect(result?.facts.gpuName).toBe('NVIDIA Corporation GA104M [GeForce RTX 3070 Mobile]');
+      expect(result?.verdict.budgetPercent).toBe(40);
+    });
   });
 });

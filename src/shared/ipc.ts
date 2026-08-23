@@ -766,6 +766,17 @@ export interface IpcRoutes {
   /** Cheap machine facts (RAM, CPU, disk, GPU) for judging local-model capacity. */
   'llm:scanMachine': { req: void; res: MachineScanResult };
   /**
+   * The remembered result of the last `llm:scanMachine` (035, D2): what the
+   * machine card shows on mount, without probing anything and without the
+   * user clicking scan first. Facts and verdict are derived fresh from the
+   * cached pre-override facts against the settings as they stand right now
+   * — the same derivation `llm:scanMachine` and the two setters below use —
+   * so nothing returned here can disagree with the current VRAM override or
+   * resource budget. `null` means this machine has never been scanned: the
+   * honest empty state, never an invented result.
+   */
+  'llm:getMachineScan': { req: void; res: MachineScanResult | null };
+  /**
    * Sets or clears the manually entered VRAM override (028): detection can't
    * read VRAM above 4 GB on Windows (32-bit `AdapterRAM`, see 019a), so the
    * user can type the figure in by hand. Persisted machine-locally (never in
@@ -773,10 +784,10 @@ export interface IpcRoutes {
    * a detected value would be — the verdict and the model recommendation use
    * it exactly like a measurement. `vramMb: null` clears it. Returns a fresh
    * scan result — the same shape as `llm:scanMachine` — so caller and store
-   * stay in sync in one round trip; there is deliberately no separate getter,
-   * the scan result carries the value. A figure outside the accepted range
-   * (see `shared/llm/vram-override.ts`) is refused with `invalid` and nothing
-   * is written.
+   * stay in sync in one round trip, without a second call to
+   * `llm:getMachineScan` just to see the value just written. A figure
+   * outside the accepted range (see `shared/llm/vram-override.ts`) is
+   * refused with `invalid` and nothing is written.
    */
   'llm:setVramOverride': { req: { vramMb: number | null }; res: MachineScanResult };
   /**
@@ -787,8 +798,8 @@ export interface IpcRoutes {
    * fixed reserves, so every verdict — the machine card's and the one behind
    * the model recommendation — plans with the same percentage. Returns a
    * fresh scan result, the same shape as `llm:scanMachine`, so the change is
-   * visible in one round trip; there is deliberately no separate getter, the
-   * scan result's verdict carries `budgetPercent`. A figure outside 10–100 or
+   * visible in one round trip, the same way `llm:setVramOverride` avoids a
+   * follow-up `llm:getMachineScan` call. A figure outside 10–100 or
    * anything that isn't a whole percent (see `shared/llm/resource-budget.ts`)
    * is refused with `invalid` and nothing is written.
    */
@@ -1075,6 +1086,7 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'llm:suggestRouting',
   'llm:testTask',
   'llm:scanMachine',
+  'llm:getMachineScan',
   'llm:setVramOverride',
   'llm:setResourceBudget',
   'llm:recommendModels',

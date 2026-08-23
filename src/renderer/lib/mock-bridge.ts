@@ -42,13 +42,27 @@ export function resetVramOverrideMock(): void {
   vramOverrideMb = null;
   detectedVramMb = null;
   resourceBudgetPercent = DEFAULT_RESOURCE_BUDGET_PERCENT;
+  hasScanned = false;
 }
+
+/* 035, D2: whether `llm:scanMachine` has ever run in this session — mirrors
+   the real cache file's presence, so `llm:getMachineScan` can answer the
+   same "never scanned" honestly instead of always finding a result. */
+let hasScanned = false;
 
 /** Test-only lever: lets a renderer test simulate a machine where detection
     found a VRAM figure — including one that conflicts with an entered value —
     without a real GPU. Not reachable from the UI. */
 export function setMockDetectedVramMb(mb: number | null): void {
   detectedVramMb = mb;
+}
+
+/** Test-only lever: seeds "the machine card mounts with an already-remembered
+    scan" (035, D2) without going through the UI's "Diesen Rechner scannen"
+    button — the state `llm:getMachineScan` needs to answer honestly the
+    moment the tab renders, before any click. */
+export function seedMockScanned(): void {
+  hasScanned = true;
 }
 
 /* 029, D4: mirrors just the VRAM half of `judgeCapacity`'s math (see the
@@ -559,7 +573,14 @@ const RESPONSES: MockResponses = {
   'llm:setDefault': () => st.routing,
   'llm:suggestRouting': () => st.routing,
   'llm:testTask': () => ({ ok: false, latencyMs: 0, sample: '', error: 'llm-unavailable' }),
-  'llm:scanMachine': () => mockMachineScan(),
+  'llm:scanMachine': () => {
+    hasScanned = true;
+    return mockMachineScan();
+  },
+  /* `null` until a scan has run this session — the same "never scanned"
+     honesty `llm:scanMachine` above already carries for the real detection
+     facts, now for the cache read too. */
+  'llm:getMachineScan': () => (hasScanned ? mockMachineScan() : null),
   /* Persists into the module-level slot above rather than a real settings
      store — good enough for browser mode and for the renderer test's
      save/clear/rescan-survival scenarios (`resetVramOverrideMock` guards

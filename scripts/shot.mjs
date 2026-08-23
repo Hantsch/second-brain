@@ -1147,6 +1147,30 @@ async function shootDeepStates(session, shooter, log, skipped) {
        und Routing — ohne die Aufnahme am Ende wäre dieses ganze Panel in
        keinem Bild. */
     if (state.id === 'settings-models') {
+      /* Die Karte "Diese Maschine" (035) trägt in ihrer Mitte genau das,
+         was diese Story hinzugefügt hat: den Klartext-Satz zur Kapazität
+         (D6) und die beiden veränderbaren Zeilen, VRAM-Feld (D3) und
+         Budget-Regler (D5) — im Panel oben (`settings-models`) und am
+         Tabellenende (`settings-models-bottom`) liegt beides dazwischen und
+         ist in keinem Bild. Das VRAM-Feld erscheint erst nach "Eintragen";
+         ohne den Klick zeigte diese Aufnahme nur den Knopf, nicht das Feld. */
+      const vramEditButton = session.page.getByRole('button', { name: 'Eintragen' });
+      if (await vramEditButton.count()) {
+        await vramEditButton.click();
+      }
+      const editableFieldset = session.page.locator('.sb-fieldset').first();
+      if (await editableFieldset.count()) {
+        await editableFieldset.evaluate((element) => element.scrollIntoView({ block: 'center' }));
+        await settle(session.page);
+        log(
+          `  ${'maschine, mitte'.padEnd(18)} → ${await shooter.shot('settings-models-machine-mid', session.page)}`,
+        );
+      } else {
+        skipped.push(
+          'settings-models: die Mitte der Maschinenkarte (Kapazität, VRAM, Budget) blieb ungeprüft',
+        );
+      }
+
       if (await scrollToEnd(session.page)) {
         await settle(session.page);
         log(

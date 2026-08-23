@@ -34,7 +34,7 @@ import {
   type LocalRuntime,
 } from '../../lib/queries/llm';
 import { LocalRuntimeCard } from './LocalRuntimeCard';
-import { MachineCard } from './MachineCard';
+import { MachineCard } from './machine/MachineCard';
 import { ProviderDialog } from './ProviderDialog';
 import { RecommendationSection } from './RecommendationSection';
 import { RoutingSection } from './RoutingSection';
