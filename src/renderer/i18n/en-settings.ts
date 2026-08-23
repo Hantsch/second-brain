@@ -149,6 +149,7 @@ const own = {
     'On top of the checks: contradictions between pages, near duplicates, terms without a page. Without a route the check stays deterministic and costs nothing.',
 
   'settings.about.title': 'About this app',
+  'settings.about.app': 'App',
   'settings.about.version': 'Version',
   'settings.about.electron': 'Electron',
   'settings.about.platform': 'Platform',

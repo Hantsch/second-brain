@@ -840,7 +840,7 @@ describe('Kacheln', () => {
       </>,
     );
     await userEvent.type(
-      screen.getByLabelText('Frage an das Second Brain'),
+      screen.getByLabelText('Frage an Gaston'),
       'Was weiß ich über X?',
     );
     await userEvent.click(screen.getByRole('button', { name: 'Fragen' }));

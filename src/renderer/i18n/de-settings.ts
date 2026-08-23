@@ -149,6 +149,7 @@ const own = {
     'Zusätzlich zu den Prüfungen: Widersprüche zwischen Seiten, Beinahe-Dubletten, Begriffe ohne Seite. Ohne Route bleibt die Prüfung deterministisch und kostet nichts.',
 
   'settings.about.title': 'Über diese App',
+  'settings.about.app': 'App',
   'settings.about.version': 'Version',
   'settings.about.electron': 'Electron',
   'settings.about.platform': 'Plattform',

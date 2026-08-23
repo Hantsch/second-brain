@@ -4,6 +4,7 @@
    of not starting at all. */
 
 import { app, BrowserWindow } from 'electron';
+import { APP_ID } from './app-identity';
 import { attachCore } from './core-bridge';
 import { createKeyStore } from './secrets';
 import { createServices } from './services';
@@ -28,7 +29,7 @@ let gardenerAutorun: GardenerAutorun | null = null;
 const hasSingleInstanceLock = app.requestSingleInstanceLock();
 if (!hasSingleInstanceLock) app.quit();
 
-app.setAppUserModelId('app.hantsch.guston');
+app.setAppUserModelId(APP_ID);
 
 async function bootstrap(): Promise<Services> {
   const userDataDir = app.getPath('userData');

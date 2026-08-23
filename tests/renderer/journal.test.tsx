@@ -821,7 +821,7 @@ describe('Tagebuch: das Gespräch', () => {
     expect(await screen.findByText('Niemand da, der antwortet?')).toBeTruthy();
     /* Keine gespielte Empathie: es gibt keine Antwortrunde — und auch keinen
        Ausfall-Hinweis, weil nie ein Modell gefragt wurde. */
-    expect(screen.queryByRole('article', { name: 'Second Brain' })).toBeNull();
+    expect(screen.queryByRole('article', { name: 'Gaston' })).toBeNull();
     expect(
       screen.queryByText('Aufgeschrieben. Für eine Antwort ist kein Modell zugeordnet.'),
     ).toBeNull();

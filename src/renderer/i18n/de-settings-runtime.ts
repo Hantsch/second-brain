@@ -33,7 +33,7 @@ export const deSettingsRuntime = {
   'settings.runtime.dialog.installerPath': 'Der Installer wird gespeichert unter: {path}',
   'settings.runtime.dialog.modelDir': 'Ollama legt Modelle ab unter: {path}',
   'settings.runtime.dialog.noUninstall':
-    'Diese App kann Ollama später nicht deinstallieren — es bleibt auf diesem Rechner, auch wenn Second brain entfernt wird.',
+    'Diese App kann Ollama später nicht deinstallieren — es bleibt auf diesem Rechner, auch wenn Gaston entfernt wird.',
   'settings.runtime.dialog.confirm': 'Installer herunterladen',
   'settings.runtime.dialog.downloading': 'Installer wird heruntergeladen …',
   'settings.runtime.dialog.progress': '{downloaded} von {total}',

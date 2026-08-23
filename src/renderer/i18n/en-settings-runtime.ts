@@ -32,7 +32,7 @@ export const enSettingsRuntime: Record<SettingsRuntimeKey, string> = {
   'settings.runtime.dialog.installerPath': 'The installer will be saved to: {path}',
   'settings.runtime.dialog.modelDir': 'Ollama will store models at: {path}',
   'settings.runtime.dialog.noUninstall':
-    'This app cannot uninstall Ollama later — it stays on this machine even if Second brain is removed.',
+    'This app cannot uninstall Ollama later — it stays on this machine even if Gaston is removed.',
   'settings.runtime.dialog.confirm': 'Download the installer',
   'settings.runtime.dialog.downloading': 'Downloading the installer…',
   'settings.runtime.dialog.progress': '{downloaded} of {total}',

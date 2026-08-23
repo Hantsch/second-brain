@@ -88,7 +88,7 @@ export const deJournal = {
   'journal.dialogue.title': 'Verlauf',
   'journal.dialogue.empty': 'Was du hier schreibst, steht wörtlich im Tageseintrag — und nur dort.',
   'journal.turn.user': 'Ich',
-  'journal.turn.assistant': 'Second Brain',
+  'journal.turn.assistant': 'Gaston',
   'journal.thinking': 'Denkt nach',
   'journal.field.label': 'Was beschäftigt dich?',
   'journal.field.placeholder': 'Schreib es hin, wie es dir kommt.',

@@ -73,7 +73,7 @@ import type {
   SourceDetail,
 } from './types';
 
-/** Answer to a question asked of the Second Brain. */
+/** Answer to a question asked of Gaston. */
 export interface AskAnswer {
   threadId: string;
   messageId: string;
@@ -582,7 +582,7 @@ export interface IpcRoutes {
   };
 
   // ── Asking questions ─────────────────────────────────────────────────────
-  /** Question to the Second Brain; answer streams over `event:llm-stream`. */
+  /** Question to Gaston; answer streams over `event:llm-stream`. */
   'chat:ask': {
     req: {
       question: string;

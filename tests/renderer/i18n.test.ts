@@ -168,7 +168,7 @@ describe('i18n', () => {
   it('hält die Anführungszeichen-Konvention ein: „…“ auf Deutsch, kein U+201E auf Englisch', () => {
     for (const [key, value] of Object.entries(de)) {
       expect(value, `de: ${key} enthält ein falsches Schlusszeichen (" oder U+201D)`).not.toMatch(
-        /["”]/
+        /["”]/,
       );
       const openers = value.match(/„/g)?.length ?? 0;
       const closers = value.match(/“/g)?.length ?? 0;
@@ -176,16 +176,25 @@ describe('i18n', () => {
     }
 
     for (const [key, value] of Object.entries(en)) {
-      expect(value, `en: ${key} enthält ein deutsches Anführungszeichen (U+201E)`).not.toMatch(
-        /„/
-      );
+      expect(value, `en: ${key} enthält ein deutsches Anführungszeichen (U+201E)`).not.toMatch(/„/);
     }
 
     for (const [path, source] of Object.entries(SOURCES)) {
       const file = path.split('/').pop() ?? path;
       if (!file.startsWith('en')) continue;
-      expect(source, `${file} enthält ein deutsches Anführungszeichen (U+201E)`).not.toMatch(
-        /„/
+      expect(source, `${file} enthält ein deutsches Anführungszeichen (U+201E)`).not.toMatch(/„/);
+    }
+  });
+
+  /* Der Produktname ist auf „Gaston" vereinheitlicht (Story 030). Taucht der
+     alte Name in irgendeiner Katalogdatei wieder auf — als Fließtext, nicht
+     nur als Key —, ist das ein Rückfall, den nur ein Test bemerkt. */
+  it('nennt nirgends mehr den alten Produktnamen', () => {
+    for (const [path, source] of Object.entries(SOURCES)) {
+      const file = path.split('/').pop() ?? path;
+      if (!file.startsWith('de') && !file.startsWith('en')) continue;
+      expect(source, `${file} enthält noch den alten Produktnamen`).not.toMatch(
+        /second[\s-]*brain|zweites hirn/i,
       );
     }
   });

@@ -86,7 +86,7 @@ function commonRules(
 ): string[] {
   const { about, claims, novel, contradictions } = input.sections;
   return [
-    'Du verdichtest eine Quelle zu einer Wiki-Seite in einem persoenlichen Second Brain.',
+    'Du verdichtest eine Quelle zu einer Wiki-Seite in einem persoenlichen Wissensarchiv.',
     languageRule(docLanguage, input.translate !== false),
     `Gliedere die Antwort in genau diese Abschnitte als Markdown-Ueberschriften zweiter Ebene: "## ${about}", "## ${claims}", "## ${novel}", "## ${contradictions}".`,
     `Unter "${about}" stehen zwei bis vier Saetze: worum es geht und fuer wen.`,

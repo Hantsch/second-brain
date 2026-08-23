@@ -214,9 +214,7 @@ describe('foldLegacyDay', () => {
     const after = foldLegacyDay(before);
 
     expect(rawSection(after, 'day')).toBe(
-      ['## Tag', '', 'Erster Satz.', '', '> **Second Brain** — 08:11', '> Ich höre.', ''].join(
-        '\n',
-      ),
+      ['## Tag', '', 'Erster Satz.', '', '> **Gaston** — 08:11', '> Ich höre.', ''].join('\n'),
     );
     expect(parseStream(after).map((block) => `${block.kind}:${block.text}`)).toEqual([
       'entry:Erster Satz.',
@@ -280,7 +278,7 @@ describe('foldLegacyDay', () => {
 
     const after = foldLegacyDay(before);
 
-    expect(after).toContain('> **Second Brain** — 00:00');
+    expect(after).toContain('> **Gaston** — 00:00');
     expect(parseStream(after)[0]).toMatchObject({
       kind: 'answer',
       text: 'Ohne Uhrzeit notiert.',
@@ -288,7 +286,7 @@ describe('foldLegacyDay', () => {
     });
   });
 
-  it('normalisiert die Sprecher-Bezeichnung der App auf „Second Brain"', () => {
+  it('normalisiert die Sprecher-Bezeichnung der App auf „Gaston"', () => {
     /* „Coach" gilt `parseDialog` als App-Sprecher. Gefaltet muss der Block als
        Antwort zurücklesbar sein — dafür zählt nur der kanonische Name. */
     const before = legacyBody([''], ['> **Coach** — 17:30', '> Alte Bezeichnung.']);
@@ -296,6 +294,7 @@ describe('foldLegacyDay', () => {
     const after = foldLegacyDay(before);
 
     expect(after).not.toContain('**Coach**');
+    expect(after).toContain('> **Gaston** — 17:30');
     expect(parseStream(after)[0]).toMatchObject({
       kind: 'answer',
       text: 'Alte Bezeichnung.',

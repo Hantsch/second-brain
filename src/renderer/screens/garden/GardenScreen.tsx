@@ -1,4 +1,4 @@
-/* Maintenance — this is where it becomes visible whether the Second Brain is
+/* Maintenance — this is where it becomes visible whether Gaston's vault is
    healthy.
 
    Top to bottom in the order you need it: the score with its reasoning, the

@@ -5,6 +5,7 @@ import { BrowserWindow, screen, shell } from 'electron';
 import { join, resolve } from 'node:path';
 import type { AppIcon } from '@shared/types';
 import type { WindowBounds } from '@shared/types';
+import { APP_ID, APP_NAME } from './app-identity';
 import { clampBounds } from './bounds';
 import { WINDOW_MIN } from './settings-defaults';
 import { isDev, loadPage, preloadPath } from './renderer-entry';
@@ -47,7 +48,7 @@ export function createMainWindow(services: Services): BrowserWindow {
     frame: false,
     backgroundColor: BACKGROUND,
     icon: appIconPath(services.settings.app().customization.appIcon),
-    title: 'Second Brain',
+    title: APP_NAME,
     autoHideMenuBar: true,
     webPreferences: {
       preload: preloadPath(),
@@ -69,12 +70,12 @@ export function createMainWindow(services: Services): BrowserWindow {
     const icon = appIconPath(settings.customization.appIcon);
     window.setIcon(icon);
     if (process.platform === 'win32') {
-      window.setAppDetails({ appId: 'app.hantsch.guston', appIconPath: icon, appIconIndex: 0 });
+      window.setAppDetails({ appId: APP_ID, appIconPath: icon, appIconIndex: 0 });
     }
   });
   if (process.platform === 'win32') {
     const icon = appIconPath(services.settings.app().customization.appIcon);
-    window.setAppDetails({ appId: 'app.hantsch.guston', appIconPath: icon, appIconIndex: 0 });
+    window.setAppDetails({ appId: APP_ID, appIconPath: icon, appIconIndex: 0 });
   }
   window.once('closed', stopIconSync);
   attachNavigationGuards(window);

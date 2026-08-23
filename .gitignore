@@ -10,7 +10,7 @@ release/
 .vault/
 coverage/
 
-# Nie ins Repo: echte Second-Brain-Inhalte und Schlüssel (nur die Vault am Repo-Root,
+# Nie ins Repo: echte Gaston-Inhalte und Schlüssel (nur die Vault am Repo-Root,
 # nicht src/core/vault/ — ein unverankertes "vault/" hätte auch das Kernmodul
 # ausgeschlossen; das war nie beabsichtigt und ist seit Sprint S01 unbemerkt passiert).
 /vault/

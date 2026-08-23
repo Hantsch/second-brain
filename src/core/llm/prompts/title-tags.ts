@@ -31,7 +31,7 @@ export function titleTagsPrompt(input: TitleTagsInput, docLanguage: DocLanguage)
   const known = input.knownTags ?? [];
   return turns(
     [
-      'Du benennst Notizen für ein persönliches Second Brain.',
+      'Du benennst Notizen für ein persönliches Wissensarchiv.',
       documentLanguageRule(docLanguage),
       `Der Titel ist eine Aussage, kein Etikett: sachlich, ohne Vorsilben wie "Notiz über", höchstens 60 Zeichen.`,
       `Höchstens ${maxTags} Tags, kleingeschrieben, ohne Rautezeichen.`,

@@ -54,7 +54,7 @@ export const enDashboard = {
   'module.quick-capture.name': 'Quick capture',
   'module.quick-capture.purpose': 'One field for the thought you have right now.',
   'module.ask.name': 'Question',
-  'module.ask.purpose': 'A question to the second brain, answered from the vault.',
+  'module.ask.purpose': 'A question to Gaston, answered from the vault.',
   'module.recent-work.name': 'Worked on last',
   'module.recent-work.purpose':
     'File changes, Claude sessions, journal entries and sources in one trail.',
@@ -89,7 +89,7 @@ export const enDashboard = {
   'tile.capture.label': 'Thought',
   'tile.capture.placeholder': 'Raw and unsorted.',
   'tile.capture.hint': 'saves to the inbox',
-  'tile.ask.label': 'Question to the second brain',
+  'tile.ask.label': 'Question to Gaston',
   'tile.ask.placeholder': 'What do I know about …?',
   'tile.ask.submit': 'Ask',
   'tile.ask.hint': 'The question travels to the questions screen.',

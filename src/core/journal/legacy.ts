@@ -48,12 +48,13 @@
  *    trade-off of this deliverable, and it is why the fold is a single explicit
  *    action the human confirms first (D9) instead of something the app does on
  *    its own.
- * 3. **A non-canonical app speaker label.** `parseDialog` also accepts "Coach"
- *    or "Brain" as the app; the folded block always says "Second Brain", because
- *    otherwise `parseStream` would not read it back as an answer.
+ * 3. **A non-canonical app speaker label.** `parseDialog` also accepts "Coach",
+ *    "Brain" or the pre-rename "Second Brain" as the app; the folded block
+ *    always says "Gaston", the current canonical label, because otherwise
+ *    `parseStream` would not read it back as an answer.
  *
  * Known limit, not handled: if one of my own turns quotes an app speaker line
- * inside itself (`> > **Second Brain** — 10:00`), that line becomes a real
+ * inside itself (`> > **Gaston** — 10:00`), that line becomes a real
  * answer block once my turn is prose. Recognising that would mean guessing at
  * nested quoting; a hand-written case that rare is better left visible in the
  * file than silently rewritten.

@@ -211,8 +211,10 @@ describe('Tagebuch-Kanäle im Main', () => {
     expect(file).toContain('\nDer Sprint fühlt sich unmöglich an.\n');
     expect(file).toContain(`> ${REPLY}`);
     expect(file.split('> **Ich**')).toHaveLength(2);
-    /* Genau eine neue Antwort neben der einen aus dem Bestand. */
-    expect(file.split('> **Second Brain**')).toHaveLength(3);
+    /* Der Alt-Abschnitt „Gespräch" behält seine eine Antwort unter dem alten
+       Namen — die neue Antwort trägt den neuen. */
+    expect(file.split('> **Second Brain**')).toHaveLength(2);
+    expect(file.split('> **Gaston**')).toHaveLength(2);
     /* Der Alt-Abschnitt „Gespräch" bleibt unangetastet, mit seinen zwei Runden. */
     const view = await harness.call('journal:get', { date: DATE });
     expect(view?.turns).toHaveLength(2);

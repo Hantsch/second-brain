@@ -8,7 +8,7 @@
      auch nicht die Frage.
    - Roundtrip: `parseStream` liest das Paar als `answer` + `entry` zurück.
    - „Meine Worte und seine Worte verschwimmen nie": im rohen Dateitext steht
-     die Frage als Blockzitat mit Sprecher „Second Brain", die Antwort als
+     die Frage als Blockzitat mit Sprecher „Gaston", die Antwort als
      Prosa ohne Anführungszeichen.
    - Der Schluss zu D1: was `recordAnswer` schreibt, zählt `planInterview`
      danach als abgedeckt. Genau hier würde ein abweichendes Format auffallen. */
@@ -84,7 +84,7 @@ describe('recordAnswer', () => {
        `newDayBody` anlegt, und das Paar steht im ersten davon. */
     const content = await fixture.text(PATH);
     expect(content.match(/^## .*$/gm)).toEqual(['## Tag', '## Fakten']);
-    expect(content.indexOf('> **Second Brain**')).toBeLessThan(content.indexOf('## Fakten'));
+    expect(content.indexOf('> **Gaston**')).toBeLessThan(content.indexOf('## Fakten'));
     expect(content.indexOf('Am Auth0-Umzug.')).toBeLessThan(content.indexOf('## Fakten'));
   });
 
@@ -97,13 +97,13 @@ describe('recordAnswer', () => {
     /* Genau das Blockzitat von `formatAnswer` — kein zweites Format (011). */
     const content = await fixture.text(PATH);
     expect(content).toContain(formatAnswer(step.question, AT, 'de'));
-    expect(content).toContain(`> **Second Brain** — ${AT}\n> ${step.question}\n\nAm Auth0-Umzug.`);
+    expect(content).toContain(`> **Gaston** — ${AT}\n> ${step.question}\n\nAm Auth0-Umzug.`);
 
     /* Und die Gegenprobe auf dem rohen Text: die Frage steht in einer
        Zitatzeile, die Antwort in einer Zeile ohne '>' — genau das Bild aus
        docs/VAULT-FORMAT.md, „Daily entry". */
     const lines = content.split('\n');
-    const speaker = lines.findIndex((line) => line.startsWith('> **Second Brain**'));
+    const speaker = lines.findIndex((line) => line.startsWith('> **Gaston**'));
     expect(speaker).toBeGreaterThan(-1);
     expect(lines[speaker + 1]).toBe(`> ${step.question}`);
     expect(lines[speaker + 2]).toBe('');

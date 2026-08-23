@@ -1,6 +1,6 @@
 # Architecture
 
-Three layers, one direction: **Renderer → Preload → Main → Core → Files.**
+Gaston is three layers, one direction: **Renderer → Preload → Main → Core → Files.**
 The renderer only knows [src/shared/ipc.ts](../src/shared/ipc.ts). The core only
 knows files and interfaces. Only main knows both worlds.
 

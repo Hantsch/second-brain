@@ -277,7 +277,7 @@ describe('Fragen: Leerzustand', () => {
 
   it('erklärt den Screen, wenn im Vault noch nichts liegt', async () => {
     open({ 'modules:list': () => [], 'projects:list': () => [] });
-    expect(await screen.findByText('Frag dein zweites Hirn')).toBeTruthy();
+    expect(await screen.findByText('Frag Gaston')).toBeTruthy();
   });
 });
 

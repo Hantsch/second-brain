@@ -67,6 +67,21 @@ const MIXED_BODY = [
   '',
 ].join('\n');
 
+/* 030: a day spanning the rename — one answer still carries the old label
+   from before the app was renamed to Gaston, one was written after. Both
+   must count; the old label is never rewritten. */
+const RENAMED_BODY = [
+  '## Tag',
+  '',
+  'Kurzer Eintrag.',
+  '',
+  '> **Second Brain** — 08:00',
+  '> Alte Antwort vor der Umbenennung.',
+  '',
+  formatAnswer('Neue Antwort danach.', '09:00', 'de'),
+  '',
+].join('\n');
+
 function journalDoc(overrides: Record<string, unknown> = {}) {
   return makeDoc({
     path: 'journal/2026/08/2026-08-10.md',
@@ -125,6 +140,18 @@ describe('deriveJournalDays', () => {
   it('zählt Antworten aus Strom und Gespräch zusammen, statt sich gegenseitig zu verdrängen', () => {
     /* Handeditierter Tag: eine Antwort im Strom, eine weitere im alten Abschnitt. */
     expect(countTurns(MIXED_BODY)).toBe(2);
+  });
+
+  it('zählt eine alte „Second Brain"-Antwort und eine neue „Gaston"-Antwort im selben Tag', () => {
+    /* Die Umbenennung selbst darf keine Antwort verschlucken: beide Labels
+       zählen, egal auf welcher Seite der Umbenennung die Antwort steht. */
+    expect(countTurns(RENAMED_BODY)).toBe(2);
+    const day = toJournalDay(
+      makeDoc({ path: 'journal/2026/08/2026-08-10.md', docType: 'journal', body: RENAMED_BODY }),
+    );
+    /* Und beide Antworten bleiben aus dem Auszug draußen, nicht nur die neue. */
+    expect(day.excerpt).not.toContain('Alte Antwort');
+    expect(day.excerpt).not.toContain('Neue Antwort');
   });
 
   it('zählt eine bis zu 3 Leerzeichen eingerückte Antwort genauso wie `parseStream` sie liest', () => {

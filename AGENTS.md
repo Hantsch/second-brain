@@ -1,4 +1,4 @@
-# Agent rules — Second Brain
+# Agent rules — Gaston
 
 Electron + React knowledge vault. Markdown files are the source of truth; the index is
 derived and disposable. Full context: CLAUDE.md — read it only if this file is not enough.

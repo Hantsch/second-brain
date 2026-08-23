@@ -144,7 +144,7 @@ describe('rawDayText', () => {
 
     expect(result).toContain('Prosa davor.');
     expect(result).toContain('Prosa danach.');
-    expect(result).toContain('> **Second Brain** — 09:00');
+    expect(result).toContain('> **Gaston** — 09:00');
     expect(result).toContain('> Eine Antwort der App.');
     expect(result).not.toContain('Hm.');
     expect(result).not.toContain('Etwas tun');
@@ -153,7 +153,7 @@ describe('rawDayText', () => {
   it('nimmt einen Rumpf ohne Überschriften vollständig, Antworten eingeschlossen', () => {
     const body = ['Prosa ohne Überschrift.', '', formatAnswer('Antwort.', '10:00'), ''].join('\n');
     expect(rawDayText(body)).toBe(
-      ['Prosa ohne Überschrift.', '', '> **Second Brain** — 10:00', '> Antwort.'].join('\n'),
+      ['Prosa ohne Überschrift.', '', '> **Gaston** — 10:00', '> Antwort.'].join('\n'),
     );
   });
 

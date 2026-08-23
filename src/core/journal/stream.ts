@@ -2,7 +2,7 @@
  * The stream format of a day (011): my prose and the app's answers live together
  * under one heading — "## Day"/"## Tag" — in write order. Prose is plain
  * Markdown, as typed; an app answer is the same blockquote block
- * `dialog.ts#formatTurn` already writes for "Second Brain", restricted to that
+ * `dialog.ts#formatTurn` already writes for "Gaston", restricted to that
  * one speaker — a stream block is never authored by "me" as a quote.
  *
  * Reading is as lenient as `dialog.ts#parseDialog`, for the same reason: the

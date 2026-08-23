@@ -1,8 +1,8 @@
 {
-  "name": "guston",
+  "name": "gaston",
   "version": "0.1.0",
   "private": true,
-  "description": "Dateibasiertes Second Brain: reindumpen, einordnen, wiederfinden — lokal, portabel, LLM-gestützt",
+  "description": "Electron app that files, organizes and makes your notes findable again — a local, portable, LLM-assisted personal knowledge base",
   "author": "Hantsch",
   "license": "MIT",
   "type": "module",
@@ -11,9 +11,9 @@
     "node": ">=20.19"
   },
   "build": {
-    "appId": "app.hantsch.guston",
-    "productName": "Guston",
-    "artifactName": "guston-${version}-portable.${ext}",
+    "appId": "app.hantsch.gaston",
+    "productName": "Gaston",
+    "artifactName": "gaston-${version}-portable.${ext}",
     "directories": {
       "output": "dist",
       "buildResources": "assets"

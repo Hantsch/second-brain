@@ -16,3 +16,18 @@
 - 2026-08-23 12:14 · 029 · D4 Budget control and honest planning figures on the machine card · started
 - 2026-08-23 12:26 · 029 · D4 Budget control and honest planning figures on the machine card · done
 - 2026-08-23 12:39 · 029 · story done, moved to done/ · done
+- 2026-08-23 12:41 · 030 · D1 One app identity, from package.json to the taskbar · started
+- 2026-08-23 12:44 · 030 · D1 One app identity, from package.json to the taskbar · done
+- 2026-08-23 12:45 · 030 · D2 Both catalogues stop saying "Second Brain" · started
+- 2026-08-23 12:48 · 030 · D2 Both catalogues stop saying "Second Brain" · done
+- 2026-08-23 12:48 · 030 · D3 The About tab names the app, and a test keeps it that way · started
+- 2026-08-23 12:51 · 030 · D3 The About tab names the app, and a test keeps it that way · done
+- 2026-08-23 12:51 · 030 · D4 The journal speaker is Gaston, and old days still work · started
+- 2026-08-23 13:02 · 030 · D4 The journal speaker is Gaston, and old days still work · done
+- 2026-08-23 13:02 · 030 · D5 Nothing we send out names another product · started
+- 2026-08-23 13:05 · 030 · D5 Nothing we send out names another product · done
+- 2026-08-23 13:05 · 030 · D6 The documentation says Gaston · started
+- 2026-08-23 13:08 · 030 · D6 The documentation says Gaston · done
+- 2026-08-23 13:09 · 030 · D7 Verified, and the vault is provably untouched · started
+- 2026-08-23 13:23 · 030 · D7 Verified, and the vault is provably untouched · done
+- 2026-08-23 13:23 · 030 · story done, moved to done/ · done

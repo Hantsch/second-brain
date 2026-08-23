@@ -1,4 +1,4 @@
-/* Fragen an das Second Brain — der Screen, an dem sich entscheidet, ob das Archiv
+/* Fragen an Gaston — der Screen, an dem sich entscheidet, ob das Archiv
    etwas wert ist.
 
    Der Ablauf einer Frage, und warum er so aussieht:

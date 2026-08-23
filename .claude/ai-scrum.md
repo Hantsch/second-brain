@@ -10,7 +10,7 @@
 -->
 
 ai-scrum-version: 2.1.1
-project: Second Brain (Guston)
+project: Gaston
 
 ## Verify
 

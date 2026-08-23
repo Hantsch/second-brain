@@ -125,7 +125,7 @@ export const enScreens = {
 
   'screen.ask.overline': 'Look it up',
   'screen.ask.title': 'Ask',
-  'screen.ask.empty.title': 'Ask your second brain',
+  'screen.ask.empty.title': 'Ask Gaston',
   'screen.ask.empty.body':
     'Answers come from your own notes only, with a quote and a file path. If there is no evidence, the app says so.',
   'screen.ask.empty.action': 'Add a source',
@@ -277,7 +277,7 @@ export const enScreens = {
   'onboarding.create': 'Choose a folder and create',
   'onboarding.createCancel': 'Cancel',
   'onboarding.nameLabel': 'Name of the new vault',
-  'onboarding.namePlaceholder': 'Second brain',
+  'onboarding.namePlaceholder': 'My vault',
   'onboarding.nameHint':
     'The name shows up in the title bar later. You pick the folder in the next step — it should be empty, the app creates the structure.',
   'onboarding.recent': 'Opened recently',

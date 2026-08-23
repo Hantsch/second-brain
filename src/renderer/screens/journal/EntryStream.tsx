@@ -95,7 +95,7 @@ export function EntryStream({ stream, live, onOpenDay }: EntryStreamProps) {
               }
               /* An `entry` block is my own prose, not a "turn" with a
                  speaker — it never carries a speaker header, mirroring the
-                 file where it's plain Markdown with no `> **Second Brain**`
+                 file where it's plain Markdown with no `> **Gaston**`
                  marker. */
               plain={block.kind === 'entry'}
             />

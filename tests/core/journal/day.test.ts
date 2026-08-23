@@ -188,7 +188,7 @@ describe('appendAnswer', () => {
 
     expect(result.at).toBe('14:32');
     const content = (await store.readText(FRESH_PATH)) ?? '';
-    expect(content).toContain('## Tag\n\n> **Second Brain** — 14:32\n> Ich höre.');
+    expect(content).toContain('## Tag\n\n> **Gaston** — 14:32\n> Ich höre.');
   });
 
   it('landet zusammen mit appendEntry in Schreibreihenfolge im „Tag"-Abschnitt', async () => {
@@ -200,7 +200,7 @@ describe('appendAnswer', () => {
 
     const content = (await store.readText(FRESH_PATH)) ?? '';
     const entryOne = content.indexOf('Erster Gedanke.');
-    const answer = content.indexOf('> **Second Brain**');
+    const answer = content.indexOf('> **Gaston**');
     const entryTwo = content.indexOf('Noch ein Gedanke.');
     expect(entryOne).toBeGreaterThan(-1);
     expect(entryOne).toBeLessThan(answer);

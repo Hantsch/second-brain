@@ -417,7 +417,7 @@ function streamBlock(entry) {
       .split('\n')
       .map((line) => (line.trim().length === 0 ? '>' : `> ${line.trimEnd()}`))
       .join('\n');
-    lines.push(`> **Second Brain** — ${turn.time}`, quoted, '');
+    lines.push(`> **Gaston** — ${turn.time}`, quoted, '');
   }
   return lines.join('\n');
 }

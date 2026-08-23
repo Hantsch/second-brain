@@ -126,7 +126,7 @@ export function classifyDumpPrompt(input: ClassifyDumpInput, docLanguage: DocLan
 
   return turns(
     [
-      'Du ordnest einen rohen Gedanken in ein persönliches Second Brain ein.',
+      'Du ordnest einen rohen Gedanken in ein persönliches Wissensarchiv ein.',
       documentLanguageRule(docLanguage),
       `Heute ist ${input.today}. Rechne relative Fristen („morgen", „bis Freitag") in YYYY-MM-DD um.`,
       'Wähle ein bestehendes Projekt, wenn der Text erkennbar dazugehört. Lege ein neues Projekt nur vor, wenn es um ein klar abgegrenztes Vorhaben mit Ziel geht.',

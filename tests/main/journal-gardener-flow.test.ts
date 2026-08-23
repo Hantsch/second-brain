@@ -239,7 +239,7 @@ describe('Welle E von einer Naht zur nächsten', () => {
     /* Ein Strom unter „Tag" (011): meine Sätze als Prosa, jede Antwort als
        Blockquote-Block darunter — Sprecherzeile mit Uhrzeit wie in VAULT-FORMAT.md.
        Meine Worte werden nie zitiert, deshalb steht dort keine „Ich"-Zeile. */
-    expect(stream.match(/^> \*\*Second Brain\*\* — \d\d:\d\d$/gm)).toHaveLength(2);
+    expect(stream.match(/^> \*\*Gaston\*\* — \d\d:\d\d$/gm)).toHaveLength(2);
     expect(stream).not.toContain('> **Ich**');
     for (const line of ['Der Sprint fühlt sich unmöglich an.', 'Und morgen kommt die Abnahme.']) {
       expect(stream).toContain(`\n${line}\n`);
@@ -390,7 +390,7 @@ describe('Welle E von einer Naht zur nächsten', () => {
     /* Die eigenen Worte stehen da — geschrieben, bevor gefragt wird, als Prosa. */
     expect(written).toContain('\nDer Sprint fühlt sich unmöglich an.\n');
     /* Und kein Antwortblock: gespielte Empathie wäre schlimmer als Stille. */
-    expect(written).not.toContain('> **Second Brain**');
+    expect(written).not.toContain('> **Gaston**');
     const view = await harness.call('journal:get', { date: DATE });
     expect(view?.turns).toEqual([]);
 

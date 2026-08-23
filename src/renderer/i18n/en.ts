@@ -17,7 +17,7 @@ import { enSettings } from './en-settings';
 import { enWiki } from './en-wiki';
 
 export const en: Record<TranslationKey, string> = {
-  'app.name': 'Second brain',
+  'app.name': 'Gaston',
 
   'common.cancel': 'Cancel',
   'common.close': 'Close',

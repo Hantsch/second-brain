@@ -8,7 +8,7 @@ document is the contract: what isn't written here doesn't get written.
 
 ```
 <vault>/
-  README.md                   explains the folder to anything that isn't the Second Brain
+  README.md                   explains the folder to anything that isn't Gaston
   inbox/                      dumps, not yet filed
     2026-08-10-1432-short-slug.md
   journal/
@@ -265,6 +265,12 @@ Nothing marks my own words specially — they're just prose — but an answer is
 never merged into one of my paragraphs; the two stay visually and structurally
 distinct. `Facts` holds what day close extracted — proposals the user
 confirmed.
+
+The app was renamed to Gaston after this format was established: a fresh entry
+now writes `> **Gaston** — HH:MM`, but the `> **Second Brain** — HH:MM` label
+above — and any day already written with it — is still read and recognized
+the same way, for backward compatibility. Nothing rewrites old entries to
+relabel them.
 
 `closed: YYYY-MM-DD` marks the day as finished — the calendar day, not a
 timestamp. Missing or `closed: null` means the day is still open.

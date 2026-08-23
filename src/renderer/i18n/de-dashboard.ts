@@ -62,7 +62,7 @@ export const deDashboard = {
   'module.quick-capture.name': 'Schnell erfassen',
   'module.quick-capture.purpose': 'Ein Feld für den Gedanken, der gerade kommt.',
   'module.ask.name': 'Frage',
-  'module.ask.purpose': 'Eine Frage an das Second Brain, beantwortet aus dem Vault.',
+  'module.ask.purpose': 'Eine Frage an Gaston, beantwortet aus dem Vault.',
   'module.recent-work.name': 'Zuletzt gearbeitet',
   'module.recent-work.purpose':
     'Dateiänderungen, Claude-Sessions, Tageseinträge und Quellen in einer Spur.',
@@ -98,7 +98,7 @@ export const deDashboard = {
   'tile.capture.label': 'Gedanke',
   'tile.capture.placeholder': 'Roh und unsortiert.',
   'tile.capture.hint': 'speichert in die Inbox',
-  'tile.ask.label': 'Frage an das Second Brain',
+  'tile.ask.label': 'Frage an Gaston',
   'tile.ask.placeholder': 'Was weiß ich über …?',
   'tile.ask.submit': 'Fragen',
   'tile.ask.hint': 'Die Frage wandert mit in den Fragen-Screen.',

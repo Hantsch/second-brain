@@ -1,4 +1,4 @@
-/* Answer a question to the Second Brain — exclusively from the excerpts
+/* Answer a question against the vault — exclusively from the excerpts
    passed in.
 
    This is the prompt that guardrail 3 ("no hallucinations") hangs on: every
@@ -61,7 +61,7 @@ export function queryAnswerPrompt(
 ): ChatTurn[] {
   const base = turns(
     [
-      'Du beantwortest Fragen zu einem persönlichen Second Brain.',
+      'Du beantwortest Fragen zu einem persönlichen Wissensarchiv.',
       replyLanguageRule(replyLanguage),
       documentLanguageRule(docLanguage),
       'Benutze ausschließlich die mitgegebenen Ausschnitte. Kein Weltwissen, keine Vermutungen, keine Ergänzungen.',

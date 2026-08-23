@@ -6,7 +6,7 @@
  * > **Ich** — 18:40
  * > Der Sprint fühlt sich unmöglich an.
  *
- * > **Second Brain** — 18:40
+ * > **Gaston** — 18:40
  * > ...
  * ```
  *
@@ -34,15 +34,16 @@ const QUOTE_LINE = /^ {0,3}>\s?(.*)$/;
 
 /** What the speakers are called in the document language. */
 const SPEAKERS: Record<DocLanguage, Record<DialogRole, string>> = {
-  de: { user: 'Ich', assistant: 'Second Brain' },
-  en: { user: 'Me', assistant: 'Second Brain' },
+  de: { user: 'Ich', assistant: 'Gaston' },
+  en: { user: 'Me', assistant: 'Gaston' },
 };
 
 /* Folded labels that are recognized as a role. Anything else is a foreign
-   block and stays untouched. */
+   block and stays untouched. 'second brain'/'secondbrain'/'brain' stay
+   recognized for days written before the app was renamed to Gaston. */
 const LABELS: Record<DialogRole, readonly string[]> = {
   user: ['ich', 'me', 'i'],
-  assistant: ['second brain', 'secondbrain', 'brain', 'coach'],
+  assistant: ['gaston', 'second brain', 'secondbrain', 'brain', 'coach'],
 };
 
 function roleOf(label: string): DialogRole | null {

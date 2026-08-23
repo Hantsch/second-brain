@@ -37,7 +37,7 @@ const QUOTE_LINE = /^ {0,3}>\s?(.*)$/;
  * way (`@core/index/journal.ts` → `@core/journal`) would close a cycle. Keep
  * both lists in sync if the assistant's speaker name ever changes.
  */
-const ASSISTANT_LABELS = new Set(['second brain', 'secondbrain', 'brain', 'coach']);
+const ASSISTANT_LABELS = new Set(['gaston', 'second brain', 'secondbrain', 'brain', 'coach']);
 
 function isAssistantLabel(label: string): boolean {
   return ASSISTANT_LABELS.has(fold(label).replace(/\s+/g, ' ').trim());

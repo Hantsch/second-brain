@@ -28,6 +28,10 @@ export function AboutTab() {
           <div className="sb-setting-block">
             <dl className="sb-kv">
               <div>
+                <dt>{t('settings.about.app')}</dt>
+                <dd className="sb-mono">{t('app.name')}</dd>
+              </div>
+              <div>
                 <dt>{t('settings.about.version')}</dt>
                 <dd className="sb-mono">{info.data.version}</dd>
               </div>

@@ -52,7 +52,7 @@ export function rerankPrompt(
   );
   return turns(
     [
-      'Du sortierst Ausschnitte aus einem persoenlichen Second Brain nach ihrem Bezug zu einer Frage.',
+      'Du sortierst Ausschnitte aus einem persoenlichen Wissensarchiv nach ihrem Bezug zu einer Frage.',
       `Die Ausschnitte sind auf ${docLanguage === 'en' ? 'Englisch' : 'Deutsch'} oder gemischt — die Sprache entscheidet nicht ueber die Relevanz.`,
       'Gib nur Nummern zurueck, beste zuerst. Was nichts zur Frage sagt, lasse weg.',
       'Antworte nicht auf die Frage. Bewerte nur.',

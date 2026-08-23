@@ -157,7 +157,7 @@ export interface ChatMessage {
 }
 
 export type ChatKind =
-  /** Frage an das Second Brain, Antwort nur aus Belegen. */
+  /** Frage an Gaston, Antwort nur aus Belegen. */
   | 'ask'
   /** Tagebuch-/Coaching-Gespräch. */
   | 'journal'

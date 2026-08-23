@@ -1,5 +1,8 @@
 # Concept
 
+Gaston offloads the real brain: dump thoughts in, get them filed, organized, and
+findable again.
+
 ## Why
 
 Too many projects, too much jumping between them. After switching, where you were
@@ -7,7 +10,7 @@ and what state things are in is gone. On top of that: ideas, sources, things rea
 worries — everything a head can't hold. This stuff needs to get out of the head,
 but not get lost: **dump it in, and the app handles structure.**
 
-Second driver: a Second Brain that's only ever filled rots. Notes go stale, pages
+Second driver: a second brain that's only ever filled rots. Notes go stale, pages
 become orphaned, sources sit undigested, and eventually you stop trusting your own
 archive. That's why **maintenance** is a screen here, not an afterthought.
 
@@ -51,7 +54,7 @@ archive. That's why **maintenance** is a screen here, not an afterthought.
 - **Contradictions are kept and named**, not flattened.
 - **Questions** run against the whole vault or against one module. Answers with
   citations. If the question was good, the answer can be filed as a wiki page at
-  the push of a button — that way asking feeds the Second Brain instead of
+  the push of a button — that way asking feeds Gaston instead of
   vanishing in the chat.
 
 ### Overview — what happened, what's coming up

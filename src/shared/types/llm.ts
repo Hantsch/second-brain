@@ -70,7 +70,7 @@ export type TaskKind =
   | 'summarize-source'
   /** Write and link entity/concept pages. */
   | 'wiki-ingest'
-  /** Answer a question against the Second Brain, with citations. */
+  /** Answer a question against Gaston's vault, with citations. */
   | 'query-answer'
   /** Sort/filter search hits for a question. */
   | 'query-rerank'

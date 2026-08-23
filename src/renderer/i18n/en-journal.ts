@@ -78,7 +78,7 @@ export const enJournal = {
   'journal.dialogue.empty':
     'What you write here goes into the day entry, word for word — and nowhere else.',
   'journal.turn.user': 'Me',
-  'journal.turn.assistant': 'Second brain',
+  'journal.turn.assistant': 'Gaston',
   'journal.thinking': 'Thinking',
   'journal.field.label': 'What is on your mind?',
   'journal.field.placeholder': 'Write it down as it comes.',

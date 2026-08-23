@@ -17,7 +17,7 @@ import { deSettings } from './de-settings';
 import { deWiki } from './de-wiki';
 
 export const de = {
-  'app.name': 'Second brain',
+  'app.name': 'Gaston',
 
   'common.cancel': 'Abbrechen',
   'common.close': 'Schließen',

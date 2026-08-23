@@ -1,4 +1,4 @@
-# Second Brain
+# Gaston
 
 An Electron app that offloads the real brain. The user dumps thoughts into it — ideas,
 work states, worries, sources — and the app files them, organizes them, and makes them
@@ -95,6 +95,9 @@ screenshots, launcher), `tests/` (Vitest, fixtures).
 
 ## Design system: Gaston
 
+"Gaston" names both the app and this vendored design system — deliberately, not a
+naming collision to untangle later.
+
 Mandatory for all frontend work. Vendored under
 [src/renderer/styles/gaston/](src/renderer/styles/gaston/) (tokens + `components.css`)
 and [src/renderer/atoms/](src/renderer/atoms/) (the `gs-*` wrappers).
@@ -167,17 +170,18 @@ Neighbor repos this project deliberately draws from:
 - `../claude-control` — reading Claude Code sessions from `~/.claude/projects`
 
 <!-- tech-rules:managed:start 1.0.0 -->
+
 ## House rules
 
 These rules live in this repository as project skills, so they apply to everyone who works here —
 no plugin needed. Installed and updated with `/tech-rules:setup` (plugin `tech-rules@hantsch`).
 
-| Read before | Skill |
-| --- | --- |
-| any code change | `/karpathy` |
-| touching `src/renderer/` | `/frontend-guidelines`, `/design-tokens` |
-| main / preload / renderer, IPC, `webPreferences` | `/electron-arch`, `/typed-ipc` |
-| screenshotting or verifying the UI | `/ui-verify` |
+| Read before                                      | Skill                                    |
+| ------------------------------------------------ | ---------------------------------------- |
+| any code change                                  | `/karpathy`                              |
+| touching `src/renderer/`                         | `/frontend-guidelines`, `/design-tokens` |
+| main / preload / renderer, IPC, `webPreferences` | `/electron-arch`, `/typed-ipc`           |
+| screenshotting or verifying the UI               | `/ui-verify`                             |
 
 Do not edit a skill to make it fit this project. A deviation is recorded **here**, with its
 reason, and wins over the skill; a deviation without a reason is a violation that has been

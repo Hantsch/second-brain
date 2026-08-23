@@ -168,7 +168,7 @@ describe('coach: Tipps und Analyse', () => {
     expect(result.model).not.toBeNull();
 
     const content = await fixture.text(DAY_PATH);
-    expect(content).toContain(`> **Second Brain** — 14:32\n> ${REPLY}`);
+    expect(content).toContain(`> **Gaston** — 14:32\n> ${REPLY}`);
     /* Meine Prosa zuerst, die Antwort darunter — und nichts vermischt. */
     const blocks = streamOf(content);
     expect(blocks.map((block) => block.kind)).toEqual(['entry', 'answer']);

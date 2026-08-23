@@ -32,9 +32,7 @@ export function createProviderFactory(options: FactoryOptions = {}): ProviderFac
           baseUrl: config.baseUrl,
           ...shared,
           // OpenRouter likes a title in the header, so calls stay attributable.
-          ...(isOpenRouterBaseUrl(config.baseUrl)
-            ? { headers: { 'x-title': 'Second Brain' } }
-            : {}),
+          ...(isOpenRouterBaseUrl(config.baseUrl) ? { headers: { 'x-title': 'Gaston' } } : {}),
         });
     }
   };

@@ -137,7 +137,7 @@ export const deScreens = {
 
   'screen.ask.overline': 'Nachschlagen',
   'screen.ask.title': 'Fragen',
-  'screen.ask.empty.title': 'Frag dein zweites Hirn',
+  'screen.ask.empty.title': 'Frag Gaston',
   'screen.ask.empty.body':
     'Antworten kommen ausschließlich aus deinen eigenen Notizen, mit Zitat und Dateipfad. Gibt es keinen Beleg, sagt die App das.',
   'screen.ask.empty.action': 'Quelle aufnehmen',
@@ -292,7 +292,7 @@ export const deScreens = {
   'onboarding.create': 'Ordner wählen und anlegen',
   'onboarding.createCancel': 'Abbrechen',
   'onboarding.nameLabel': 'Name des neuen Vaults',
-  'onboarding.namePlaceholder': 'Zweites Hirn',
+  'onboarding.namePlaceholder': 'Mein Wissen',
   'onboarding.nameHint':
     'Der Name steht später in der Titelzeile. Den Ordner wählst du im nächsten Schritt — er sollte leer sein, die Struktur legt die App an.',
   'onboarding.recent': 'Zuletzt geöffnet',
