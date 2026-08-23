@@ -382,7 +382,7 @@ Gaps/notes:
 
 ---
 
-### M10 — A model that fits this machine, and an app I can hand on — planned
+### M10 — A model that fits this machine, and an app I can hand on — built, acceptance pending
 
 No concept behind M10. Four user-written stories, cut on 2026-08-23, along two lines that only
 matter outside the author's own session.
@@ -391,36 +391,52 @@ matter outside the author's own session.
 WMI's 32-bit `AdapterRAM` misreports any card ≥4 GB, so `vramMb` stays `null` and the verdict
 falls back to the RAM ceiling. Story 028 makes the human the second data source 019a said would
 be needed — a fact the scan misses can be typed in, is marked as entered rather than measured,
-and is read by the verdict and the recommendation alike. Story 029 adds the number that was
-missing underneath all of it: the share of the machine a recommendation may plan with, so a
-model is chosen against what the user is willing to give it rather than against the whole box.
+and is read by the verdict and the recommendation alike, with conflicts between a later scan and
+the entered value surfaced rather than silently resolved. Story 029 adds the number that was
+missing underneath all of it: the share of the machine a recommendation may plan with (default
+80%, applied after the existing OS/headroom reserves), so a model is chosen against what the
+user is willing to give it rather than against the whole box.
 
 **The app leaves the repository.** Story 030 finishes a rename that only ever happened in
 `package.json`: the window, the HTML title, the dashboard, the journal speaker, the prompts and
-the README still say "Second Brain". Story 031 turns `npm run package` into something that can
-be handed over — one command, one ZIP for a USB stick, a readme for the recipient, and an
-automated check that nothing of the author's is inside it.
+the README no longer say "Second Brain" — the app is **Gaston**, the same name as the vendored
+design system, deliberately. Story 031 turns `npm run package` into something that can be handed
+over — `npm run handoff` produces one ZIP for a USB stick, a readme for the recipient, an
+automated check that nothing of the author's is inside it, and a first-start screen (language,
+vault, honest "no model configured") for someone who isn't the app's author.
 
 Sprints:
 
 - [sprints/S08/sprint.md](sprints/S08/sprint.md) — it fits my machine, and I can pass it on
-  (028, 029, 030, 031), `planned`
+  (028, 029, 030, 031), `done` (031 built, live acceptance pending)
 
 Decisions taken at the cut (2026-08-23, user):
 
 - **The vault directory stays `.secondbrain/`.** Renaming it is a vault-format change with a
   migration path; M10 is not that. A vault written by the old build opens unchanged.
-- **The journal speaker becomes `Guston` for new turns**, and every existing `Second Brain` day
+- **The journal speaker becomes `Gaston` for new turns**, and every existing `Second Brain` day
   stays readable. Nothing in the vault is rewritten.
 - **A handed-on copy keeps settings and keys in `userData`/`safeStorage`** on the recipient's
   machine. A portable "data next to the .exe" mode is explicitly out — `safeStorage` is bound to
   the Windows user, so encrypted keys would not survive the trip.
 
-Open at the cut, to be decided in S08's clarification round: whether the resource budget applies
-before or after the existing OS reserve and what its default is (029 — together they decide
-whether an accepted milestone starts recommending differently on day one), whether the design
-system's `Gaston` and the app's `Guston` are one name or two (030), and which platforms the
-handed-on build covers and whether it ships unsigned (031).
+Decisions taken during S08's clarification round (2026-08-23, user):
+
+- **029 — resource budget:** applies after the existing OS/headroom reserves (100% still isn't
+  "all of it"); one global percentage, not separate RAM/VRAM budgets; default **80%**, a
+  deliberate day-one behaviour change rather than a pure opt-in.
+- **030 — one name:** `Gaston` and the design system's `Gaston` are the *same* name, deliberately
+  — not two names that needed disambiguating. `package.json`, the `appId`
+  (`app.hantsch.guston` → `app.hantsch.gaston`) and both `src/main` call sites were renamed with
+  it; the repository/checkout folder stays `second-brain`.
+- **031 — scope:** Windows only; English-only recipient readme; the app creates/opens a vault on
+  first start rather than shipping one in the ZIP; a first-start screen is in scope; shipped
+  unsigned, SmartScreen's warning documented rather than resolved.
+
+Gap carried out of S08: `npm run handoff`'s first step is the repo-wide `npm run verify`, which
+inherits the `format:check`-never-green-on-Windows carve-out tracked under M9's Gaps/notes above
+(CRLF checkout vs. prettier's LF default) — unrelated to M10, not fixed by it, noted again here
+because it now also blocks the one command this milestone's second half is built around.
 
 ---
 

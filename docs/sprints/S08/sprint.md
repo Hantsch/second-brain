@@ -1,7 +1,7 @@
 ---
 sprint: S08
-status: planned # planned | in-progress | done
-branch: # set by /sprint
+status: done # planned | in-progress | done
+branch: sprint/S08
 milestone: M10 — A model that fits this machine, and an app I can hand on
 ---
 
@@ -22,10 +22,10 @@ give it", and `dist/` holds a file I can hand over.
 
 <!-- Order = the order the build phase works through. Dependent stories go last. -->
 
-- [ ] 028 — I fill in what the scan could not detect
-- [ ] 029 — I say how much of this machine a model may use
-- [ ] 030 — The app is called Guston, everywhere
-- [ ] 031 — A build I can hand on
+- [x] 028 — I fill in what the scan could not detect
+- [x] 029 — I say how much of this machine a model may use
+- [x] 030 — The app is called Gaston, everywhere
+- [ ] 031 — A build I can hand on (built, acceptance pending — needs a clean Windows machine)
 
 ## Notes
 
