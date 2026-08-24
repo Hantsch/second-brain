@@ -768,7 +768,12 @@ describe('MonthCalendar wired into JournalScreen (010, D2)', () => {
       window: { width: 1440, height: 900 },
       startMinimized: false,
       onboarded: true,
-      machine: { vramOverrideMb: null, resourceBudgetPercent: 80 },
+      machine: {
+        vramOverrideMb: null,
+        resourceBudgetPercent: 80,
+        llamaAutoStart: 'manual',
+        llamaOverrides: { gpuLayers: null, contextTokens: null },
+      },
     },
     vault: {
       version: 1,

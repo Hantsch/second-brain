@@ -564,6 +564,22 @@ const RESPONSES: MockResponses = {
     status: 'absent',
     reason: 'spawn-failed',
   }),
+  /* Same honesty (034, D2): browser mode never has a real llama.cpp binary or
+     model file on disk, so the card sees "absent" and "nothing to plan for"
+     rather than an invented plan. */
+  'llm:llamaEngineStatus': () => ({ status: 'absent', ownedByApp: false, port: null }),
+  'llm:llamaStartPlan': () => null,
+  /* Nothing was ever started here, so there is nothing to stop — the same
+     no-op the real channel reports for that case (034, D3), not a refusal. */
+  'llm:stopLlamaEngine': () => ({ stopped: false }),
+  /* Same honesty as `llm:llamaStartPlan` above: browser mode never has an
+     installed `.gguf` file, so there is no plan to hand back here either —
+     the write itself is harmless (nothing else in this mock reads the
+     overrides back), but inventing a plan would contradict that `null`. */
+  'llm:setLlamaOverrides': () => null,
+  /* 034, D6: the mock never actually starts anything, so there is nothing
+     for this to affect beyond acknowledging the write. */
+  'llm:setLlamaAutoStart': () => undefined,
   /* And for the same reason there is no runtime to pull a model into: a fake
      progress stream would be the one thing this mock must not invent. */
   'llm:pullModel': () => {

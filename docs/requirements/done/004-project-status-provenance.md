@@ -277,8 +277,8 @@ it was written. Nothing here touches an LLM.
 ### Known limitations (not fixed, judged acceptable)
 
 - **F3 (test coverage, low):** the original D2 test suite proved an unrelated patch
-  doesn't *invent* a stamp on a file that never had one, but not that it leaves an
-  *existing* stamp byte-identical (the actual `setPreserving`-wholesale-replace risk
+  doesn't _invent_ a stamp on a file that never had one, but not that it leaves an
+  _existing_ stamp byte-identical (the actual `setPreserving`-wholesale-replace risk
   named in Model Hints). Fixed during review follow-up: added
   `tests/main/projects-ipc.test.ts`, "lässt einen vorhandenen Stempel unangetastet, wenn
   ein Patch ihn nicht betrifft".

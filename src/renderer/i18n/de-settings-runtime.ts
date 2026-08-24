@@ -48,6 +48,66 @@ export const deSettingsRuntime = {
   'settings.runtime.blocked.no-write-permission.llamacpp':
     'Diese App hat kein Schreibrecht für den Download-Ort.',
 
+  /* 034, D3: die erweiterten Fehlgründe von `llm:startLocalRuntime`, nur für
+     llama.cpp — Ollamas Implementierung meldet diese vier nie. */
+  'settings.runtime.start.failed.port-in-use.llamacpp':
+    'Jeder Port von 11435 bis 11444 ist bereits belegt. Was ihn belegt, schließen, dann erneut versuchen.',
+  'settings.runtime.start.failed.model-missing.llamacpp':
+    'Es ist noch keine Modelldatei installiert. Erst eine holen, dann die Engine starten.',
+  'settings.runtime.start.failed.binary-missing.llamacpp':
+    'Die Engine selbst ist noch nicht installiert. Erst holen, dann starten.',
+  'settings.runtime.start.failed.out-of-memory.llamacpp':
+    'Beim Start ist der Speicher ausgegangen. Ressourcenbudget oder Kontext verkleinern, dann erneut versuchen.',
+
+  /* 034, D4: `LlamaEngineDetails` — der abgeleitete Startplan, seine
+     Warnungen und der Stopp-/Fremd-Engine-Text. Die `reason`-Codes kommen aus
+     `llama-args.ts` (Vokabular siehe dessen Kopfkommentar); die Werte hier
+     setzen daraus den jeweiligen Satz zusammen. */
+  'settings.runtime.plan.gpuLayers.vram-fit':
+    '{n} von {total} Layern laufen auf der GPU — der Rest läuft auf der CPU.',
+  'settings.runtime.plan.gpuLayers.no-vram':
+    'Kein Layer läuft auf der GPU — für diesen Rechner war kein VRAM eingeplant.',
+  'settings.runtime.plan.gpuLayers.unknown-size':
+    'Kein Layer läuft auf der GPU — die Dateigröße des Modells ließ sich nicht zur Bemessung nutzen.',
+  'settings.runtime.plan.gpuLayers.manual':
+    '{n} von {total} Layern auf der GPU — von Hand gesetzt.',
+  'settings.runtime.plan.estimatedNote':
+    'Die Layer-Anzahl ist aus der Modellgröße geschätzt, nicht aus der Datei gelesen.',
+  'settings.runtime.plan.context.fits':
+    'Kontext: {tokens} Tokens — die größte Stufe, die noch in den geplanten Speicher passt.',
+  'settings.runtime.plan.context.floor':
+    'Kontext: {tokens} Tokens — die kleinste Stufe, mit der die Engine noch startet; nichts Größeres hat gepasst.',
+  'settings.runtime.plan.context.manual': 'Kontext: {tokens} Tokens — von Hand gesetzt.',
+  'settings.runtime.plan.threads.budget':
+    '{n} von {cores} CPU-Threads — entspricht dem Ressourcenbudget.',
+  'settings.runtime.plan.threads.default':
+    '{n} Threads — die Kernzahl ließ sich nicht bestimmen, daher ein Standardwert.',
+  'settings.runtime.plan.warning.cpu-only':
+    'Dieses Modell läuft vollständig auf der CPU — kein Layer wird auf eine GPU ausgelagert.',
+  'settings.runtime.plan.warning.slow-floor-context':
+    'Läuft auf der CPU mit einem Kontext von 2048 Tokens — Antworten brauchen auf diesem Rechner mehrere Minuten.',
+  'settings.runtime.plan.warning.facts-unknown':
+    'Einige Maschinenfakten sind unbekannt, daher kann dieser Plan von der tatsächlichen Maschine abweichen.',
+  /* 034, D6: der Autostart-Schalter — `machine.llamaAutoStart`, Standard
+     'manual'. */
+  'settings.runtime.autoStart.label': 'Automatisch starten, wenn eine Aufgabe es braucht',
+  'settings.runtime.autoStart.note':
+    'Standardmäßig aus — die Engine startet nur, wenn du „Jetzt starten“ drückst.',
+  'settings.runtime.advanced.summary': 'Erweitert',
+  /* 034, D5: die beiden von Hand gesetzten Startplan-Werte hinter der
+     „Erweitert“-Ausklappung — machine-lokal wie der VRAM-Override und das
+     Ressourcenbudget, nie im Vault. */
+  'settings.runtime.advanced.gpuLayers.label': 'GPU-Layer',
+  'settings.runtime.advanced.contextTokens.label': 'Kontext-Tokens',
+  'settings.runtime.advanced.clear': 'Zurücksetzen',
+  'settings.runtime.advanced.error.empty': 'Eine Zahl eingeben.',
+  'settings.runtime.advanced.error.not-a-number': 'Eine ganze Zahl eingeben.',
+  'settings.runtime.advanced.error.negative': 'Mindestens 0 eingeben.',
+  'settings.runtime.stop': 'Jetzt stoppen',
+  'settings.runtime.stop.note': 'Stoppen bricht eine laufende Anfrage ab.',
+  'settings.runtime.foreignEngine':
+    'Diese App hat diese Engine nicht gestartet, daher kann sie von hier aus nicht gestoppt werden.',
+
   'settings.runtime.dialog.title': 'Lokale Laufzeit holen',
   'settings.runtime.dialog.intro': 'Bevor irgendetwas heruntergeladen wird:',
   'settings.runtime.dialog.size': 'Downloadgröße: {mb}',

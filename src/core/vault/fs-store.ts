@@ -25,13 +25,7 @@ import {
 import { sha256 } from './hash';
 import { assertSafeVaultPath, extName, isInside } from './paths';
 import { appendToSection } from './sections';
-import {
-  createUndoToken,
-  parseManifest,
-  trashManifestPath,
-  trashPath,
-  trashRoot,
-} from './trash';
+import { createUndoToken, parseManifest, trashManifestPath, trashPath, trashRoot } from './trash';
 import type { TrashManifest } from './trash';
 import { VaultConflictError, VaultNotFoundError } from './types';
 import type {

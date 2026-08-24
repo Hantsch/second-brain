@@ -3,7 +3,7 @@
    - Vault settings live in `<vault>/.secondbrain/settings.json` (travel with the vault) */
 
 import type { CoachMode } from './domain';
-import type { ProviderConfig, Routing } from './llm';
+import type { LlamaOverrides, ProviderConfig, Routing } from './llm';
 import type { DashboardLayout } from './overview';
 
 export type UiLanguage = 'de' | 'en';
@@ -173,6 +173,16 @@ export interface AppSettings {
         for everything else running on the machine. Not written into the
         vault: this travels with the machine, like `vramOverrideMb`. */
     resourceBudgetPercent: number;
+    /** Whether the llama.cpp engine starts only on a button press, or on the
+        first task that needs it while it is installed-but-stopped (034,
+        Decisions Q2). Default `'manual'` — the app never starts a process
+        the user didn't ask for. Machine-local, like the two fields above. */
+    llamaAutoStart: 'manual' | 'on-demand';
+    /** Hand-entered overrides for the llama.cpp start plan (034, Decisions
+        Q1), behind the card's "advanced" disclosure — `null` fields derive
+        as usual. Machine-local: a GPU-layer count tuned for this box has no
+        business travelling with the vault to another one. */
+    llamaOverrides: LlamaOverrides;
   };
 }
 

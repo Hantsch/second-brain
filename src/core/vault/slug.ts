@@ -65,7 +65,12 @@ export function uniqueSlug(
   taken: Iterable<string> | ((candidate: string) => boolean),
 ): string {
   const isTaken =
-    typeof taken === 'function' ? taken : ((set) => (candidate: string) => set.has(candidate))(new Set(taken));
+    typeof taken === 'function'
+      ? taken
+      : (
+          (set) => (candidate: string) =>
+            set.has(candidate)
+        )(new Set(taken));
   const slug = slugify(base);
   if (!isTaken(slug)) return slug;
   for (let suffix = 2; suffix <= 9999; suffix += 1) {

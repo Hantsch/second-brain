@@ -1,13 +1,13 @@
 ---
 name: design-tokens
-description: "Method for a semantic design-token layer in a React/Tailwind app and the mobile accessibility floor that goes with it. Use when: picking colours for a component; writing a class list that would contain a hex value or a raw palette class (slate-500, gray-200); adding or changing dark mode; setting up or extending the token vocabulary in tailwind.config or the CSS variable block; adding a theme; choosing spacing, radius, elevation or transitions; building anything touch-operated; reviewing UI code for hardcoded colours, missing focus states, too-small touch targets or colour-only status. DO NOT USE FOR: choosing a brand palette from scratch; backend code; non-Tailwind styling systems."
+description: 'Method for a semantic design-token layer in a React/Tailwind app and the mobile accessibility floor that goes with it. Use when: picking colours for a component; writing a class list that would contain a hex value or a raw palette class (slate-500, gray-200); adding or changing dark mode; setting up or extending the token vocabulary in tailwind.config or the CSS variable block; adding a theme; choosing spacing, radius, elevation or transitions; building anything touch-operated; reviewing UI code for hardcoded colours, missing focus states, too-small touch targets or colour-only status. DO NOT USE FOR: choosing a brand palette from scratch; backend code; non-Tailwind styling systems.'
 ---
 
 <!-- tech-rules:managed 1.0.0 -->
 
 # Design Tokens and the Accessibility Floor
 
-A method, not a fixed palette. It defines *which roles exist* and *how they are wired*, so that a
+A method, not a fixed palette. It defines _which roles exist_ and _how they are wired_, so that a
 project can pick its own colours and still get one-line theming, working opacity modifiers and a
 consistent vocabulary. Where a repository already has a token layer, adopt its names and extend it;
 do not introduce a second one alongside.
@@ -48,7 +48,7 @@ Two files carry the whole system.
     --color-accent-soft-border: 199 210 254;
     --color-accent-text: 79 70 229;
     --color-accent-text-strong: 55 48 163;
-    --color-accent-on: 255 255 255;   /* text/icon colour on top of bg-accent */
+    --color-accent-on: 255 255 255; /* text/icon colour on top of bg-accent */
 
     /* Status - each is a triad: solid, soft fill, border */
     --color-danger: 220 38 38;
@@ -109,20 +109,20 @@ zero component edits.
 Use the role, not the colour. The point of the layer is that a component never knows what colour it
 is.
 
-| Role | Classes |
-| --- | --- |
-| Page background | `bg-bg` |
-| Card / panel | `bg-surface` |
-| Hover / pressed tiers | `bg-surface-muted`, `bg-surface-strong` |
-| Inverted surface | `bg-surface-inverse` + `text-text-inverse` |
-| Primary text | `text-text` |
-| Secondary text | `text-text-muted`, `text-text-subtle`, `text-text-faint` |
-| Border / ring | `border-border`, `border-border-strong` |
-| Accent fill (CTA) | `bg-accent` + `text-accent-on` |
-| Accent text / tint | `text-accent-text`, `bg-accent-soft` + `border-accent-soft-border` |
-| Danger | `bg-danger`, `bg-danger-soft`, `text-danger`, `ring-danger-border` |
-| Success | `bg-success-soft`, `text-success`, `ring-success-border` |
-| Warning | `bg-warning-soft`, `text-warning`, `ring-warning-border` |
+| Role                  | Classes                                                            |
+| --------------------- | ------------------------------------------------------------------ |
+| Page background       | `bg-bg`                                                            |
+| Card / panel          | `bg-surface`                                                       |
+| Hover / pressed tiers | `bg-surface-muted`, `bg-surface-strong`                            |
+| Inverted surface      | `bg-surface-inverse` + `text-text-inverse`                         |
+| Primary text          | `text-text`                                                        |
+| Secondary text        | `text-text-muted`, `text-text-subtle`, `text-text-faint`           |
+| Border / ring         | `border-border`, `border-border-strong`                            |
+| Accent fill (CTA)     | `bg-accent` + `text-accent-on`                                     |
+| Accent text / tint    | `text-accent-text`, `bg-accent-soft` + `border-accent-soft-border` |
+| Danger                | `bg-danger`, `bg-danger-soft`, `text-danger`, `ring-danger-border` |
+| Success               | `bg-success-soft`, `text-success`, `ring-success-border`           |
+| Warning               | `bg-warning-soft`, `text-warning`, `ring-warning-border`           |
 
 **A raw palette class in application code is a bug, not a style choice.** `bg-slate-100`,
 `text-gray-500`, `border-zinc-200`, `#1f2937`, `rgb(31 41 55)` - each one is a value that will not

@@ -13,11 +13,11 @@ existing deep link, hotkey or palette entry lands on a dead route.
 but none of them has had manual live acceptance by the user yet (see "Built, live acceptance
 pending" below).
 
-| Story | Status | Commit |
-| ----- | ------ | ------ |
-| 002 — Knowledge absorbs sources | done | `5d8a90c` knowledge absorbs sources |
-| 007 — Capture and ask become actions, not places | done | `e9e3daa` capture and ask become overlays, not rail screens |
-| 008 — Agent sessions move inside projects | done | `a697514` agent sessions move inside projects |
+| Story                                            | Status | Commit                                                      |
+| ------------------------------------------------ | ------ | ----------------------------------------------------------- |
+| 002 — Knowledge absorbs sources                  | done   | `5d8a90c` knowledge absorbs sources                         |
+| 007 — Capture and ask become actions, not places | done   | `e9e3daa` capture and ask become overlays, not rail screens |
+| 008 — Agent sessions move inside projects        | done   | `a697514` agent sessions move inside projects               |
 
 Plus `20b6a60` — sprint setup, clarification round and the refine of 007/008.
 
@@ -65,7 +65,7 @@ navigation stories should reuse `KnowledgeRedirect`'s shape rather than reinvent
 - 007: a second question fired from the palette was silently dropped while the ask overlay was
   open, and `Escape` in the palette tore down the overlay underneath it. A follow-up verifier
   then found a deeper one — firing the mutation from `AskOverlay`'s mount effect wedged the ask
-  panel in *every dev build* (StrictMode double-invoke plus TanStack Query's mutation observer
+  panel in _every dev build_ (StrictMode double-invoke plus TanStack Query's mutation observer
   never re-attaching). All fixed, with the regression test now running under StrictMode.
 - 008: `agents:projects` returns `[]` when session reading is switched off, and the
   hide-the-tab logic read that as "not linked" — the Sessions tab silently vanished from every
@@ -80,7 +80,7 @@ with fakes look green.
 **Scope held, with one deliberate exception.** The sprint said "renderer only, or close to it"
 and that a new IPC channel would be a signal the story grew. 007 needed a real `project` filter
 in `chat:ask` — prefilling a project scope that does not actually filter would have been a
-false claim to the user. That was accepted as an *additive* change to an existing channel. 008
+false claim to the user. That was accepted as an _additive_ change to an existing channel. 008
 stayed strictly inside that line: its two new preferences ride `settings:setVault`.
 
 **Decisions worth carrying forward** (full lists live in each story's `## Decisions (Sprint)`):
@@ -89,7 +89,7 @@ stayed strictly inside that line: its two new preferences ride `settings:setVaul
   search params and would close the overlay.
 - Ask mode's `Enter` submits, unlike a `?q=` URL which only prefills: the keystroke is the
   user's action.
-- "Show empty sessions tab" is one *global* toggle, not per project — a per-project map in
+- "Show empty sessions tab" is one _global_ toggle, not per project — a per-project map in
   vault settings cannot be pruned by `deepMerge`.
 - `WorkTrace.tsx` was deleted rather than kept beside the new tab. That is the merge the sprint
   asked for; no session data stayed behind on the Overview tab.
@@ -120,10 +120,10 @@ workaround:
 
 - **The redirects are unreachable.** `#/modules`, `#/sources` and `#/agents?a=&p=&s=` cannot be
   entered by hand: the window is frameless, there is no address field, and every in-app link
-  was repointed to the new routes as part of the same stories. Only the redirect *targets* are
+  was repointed to the new routes as part of the same stories. Only the redirect _targets_ are
   checkable by hand. The redirects themselves rest on their mutation-tested unit tests — which
   is the load-bearing evidence for the sprint's single biggest risk. `#/capture` and `#/ask?q=`
-  are the exception and *are* covered, because the dashboard tile, the inbox and recent-work
+  are the exception and _are_ covered, because the dashboard tile, the inbox and recent-work
   still navigate to them.
 - **"Reload the app on `#/…`" is not performable at all.** All three story test plans ask for
   it; a restart always lands on `/dashboard`.
@@ -131,7 +131,7 @@ workaround:
   pins only `claudeProjectsDir` (gap 4 below). Only the control and the honest empty/off state
   can be checked against the demo vault.
 - **`Ctrl+Shift+Space` may be taken by another app.** The UI fallback is the palette's
-  "Erfassen-Fenster" entry, which exercises the window but not the *global* part of the
+  "Erfassen-Fenster" entry, which exercises the window but not the _global_ part of the
   criterion.
 - **Every LLM path is only testable in its "no model configured" shape**, since the demo vault
   ships `providers: []`. That is the guardrail-1 state and worth checking, but it is not the

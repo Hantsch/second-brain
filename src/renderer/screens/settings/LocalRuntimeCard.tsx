@@ -25,6 +25,7 @@ import {
   useRuntimeStatus,
 } from '../../lib/queries/llm';
 import { LlamaCppModelPanel } from './LlamaCppModelPanel';
+import { LlamaEngineDetails } from './LlamaEngineDetails';
 import { LocalRuntimeInstallDialog } from './LocalRuntimeInstallDialog';
 import { LocalRuntimePullList } from './LocalRuntimePullList';
 
@@ -216,6 +217,13 @@ export function LocalRuntimeCard({ runtime }: LocalRuntimeCardProps) {
           {runtime === 'llamacpp' &&
           (status.data === 'installed-stopped' || status.data === 'running') ? (
             <LlamaCppModelPanel />
+          ) : null}
+          {/* The derived start plan, its warnings, and the stop button (034,
+              D4) — same gating as the model panel above: nothing to plan or
+              stop before the engine is at least installed. */}
+          {runtime === 'llamacpp' &&
+          (status.data === 'installed-stopped' || status.data === 'running') ? (
+            <LlamaEngineDetails />
           ) : null}
         </div>
       </Panel>

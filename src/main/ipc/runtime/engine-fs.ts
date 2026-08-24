@@ -27,6 +27,11 @@ export interface EngineFs extends UnzipFs {
   /** Whether this existing directory accepts writes — the measurement
       `planRuntimeDownload` turns into `no-write-permission`. */
   writable(dir: string): Promise<boolean>;
+  /** Size of an existing file in bytes, or `null` when it can't be measured
+      (missing, or a directory) — never a throw. Optional: only the start-plan
+      lookup (034, D2) needs it, and every other `EngineFs` caller — plus every
+      existing test fake — is unaffected by its absence. */
+  size?(target: string): Promise<number | null>;
 }
 
 export const nodeEngineFs: EngineFs = {
@@ -50,6 +55,14 @@ export const nodeEngineFs: EngineFs = {
       return true;
     } catch {
       return false;
+    }
+  },
+  size: async (target) => {
+    try {
+      const stats = await fsPromises.stat(target);
+      return stats.isFile() ? stats.size : null;
+    } catch {
+      return null;
     }
   },
   list: async (dir) => {

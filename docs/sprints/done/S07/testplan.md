@@ -255,7 +255,7 @@ identical to before.
 
 - **Story 025, AC 4** (seed run reports a future setting that points outside the
   demo vault): purely a developer-facing console safety net inside `npm run
-  seed`; no screen in the app can ever surface it, so it has no UI step.
+seed`; no screen in the app can ever surface it, so it has no UI step.
 - Two smaller, already-noted exceptions above are not full gaps but are worth
   flagging: the due-date aria-label quote fix (026) is not visible text, only an
   accessibility label; and the loose-end dead-link fix (026) has no example in

@@ -272,6 +272,7 @@ The rail's journal item shows an open-days count pill that hides at zero. Seed d
 marks two demo days closed and leaves the rest open for the screenshots.
 
 **Decisions (implementation-time).**
+
 - The filter's own label/terminology is "open"/"nur offene Tage" (`isDayOpen`,
   `openOnly`, `openDays`) rather than the AC's literal "not finished"/"nicht
   abgeschlossen" wording — semantically the same set of days, applied consistently
@@ -293,6 +294,7 @@ marks two demo days closed and leaves the rest open for the screenshots.
   left untouched.
 
 **Verification.**
+
 - `npm run build` — pass.
 - `npm test` — 2151/2152 pass; the one failure (`tests/core/wiki/module.test.ts`, a
   German/English text drift between `MODULE_SCHEMA_TEMPLATE` and

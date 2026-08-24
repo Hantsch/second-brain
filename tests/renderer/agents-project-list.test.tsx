@@ -119,7 +119,12 @@ const APP_SETTINGS: AppSettings = {
   window: { width: 1440, height: 900 },
   startMinimized: false,
   onboarded: true,
-  machine: { vramOverrideMb: null, resourceBudgetPercent: 80 },
+  machine: {
+    vramOverrideMb: null,
+    resourceBudgetPercent: 80,
+    llamaAutoStart: 'manual',
+    llamaOverrides: { gpuLayers: null, contextTokens: null },
+  },
 };
 
 /** The whole screen on a mocked bridge — the only way to see what is written. */

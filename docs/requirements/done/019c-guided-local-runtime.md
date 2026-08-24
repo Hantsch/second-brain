@@ -81,7 +81,7 @@ arguments; the only variable is a URL from a hardcoded per-platform map.
    per-platform install path) answers "installed". Channel `llm:localRuntimeStatus`.
 2. **Preconditions** — a pure function in `src/core/llm/runtime-plan.ts`: platform + free disk
    (from the 019a facts) + installer size → `{ canInstall, blockedReason, downloadMb,
-   installerPath, modelDirHint }`. Testable without a machine; the renderer renders it.
+installerPath, modelDirHint }`. Testable without a machine; the renderer renders it.
 3. **Installer download** — new `src/main/ipc/ollama-install.ts`: hardcoded platform → official
    installer URL map, download into Electron `app.getPath('temp')` with an `AbortController`,
    progress emitted on a `llm:installProgress` event, partial file deleted on cancel or error,
@@ -91,7 +91,7 @@ arguments; the only variable is a URL from a hardcoded per-platform map.
    detached, then re-probe with a timeout, and report success or the reason.
 5. **Pull** — new `src/main/ipc/ollama-pull.ts`: `POST http://localhost:11434/api/pull`,
    NDJSON stream parsed line by line into `llm:pullProgress` events (`{ modelId, status,
-   completed, total }`), `AbortController` for cancel, and on cancel a `DELETE /api/delete` for
+completed, total }`), `AbortController` for cancel, and on cancel a `DELETE /api/delete` for
    the partial model so nothing half-pulled survives. Channels `llm:pullModel`,
    `llm:cancelPull`.
 6. **Events** — the two progress events go into `IPC_EVENTS` in
@@ -116,7 +116,7 @@ arguments; the only variable is a URL from a hardcoded per-platform map.
 **D1 — Runtime status and preconditions** [x]
 `src/main/ipc/llm-detect.ts`, `src/shared/types/llm.ts`, `src/shared/ipc.ts`,
 `src/main/ipc/register-all.ts`, new `src/core/llm/runtime-plan.ts` + test.
-*Accepted when:* the channel returns the right one of three states on this machine, the pure
+_Accepted when:_ the channel returns the right one of three states on this machine, the pure
 precondition function is covered by fixtures for each blocked reason, and
 `tests/main/ipc-coverage.test.ts` passes.
 
@@ -124,26 +124,26 @@ precondition function is covered by fixtures for each blocked reason, and
 New `src/main/ipc/ollama-install.ts`, `src/shared/ipc.ts` (channels + `llm:installProgress`
 event). Mirror: [src/main/ipc/llm-stream.ts](../../src/main/ipc/llm-stream.ts) for the
 event-emitting shape.
-*Accepted when:* a download reports progress, cancelling mid-download removes the partial file,
+_Accepted when:_ a download reports progress, cancelling mid-download removes the partial file,
 and a failed request surfaces one sentence rather than a stack trace.
 
 **D3 — Open the installer, start the runtime** [x]
 `src/main/ipc/ollama-install.ts`. `shell.openPath` on the downloaded file;
 `execFile('ollama', ['serve'])` detached plus a re-probe with timeout.
-*Accepted when:* both channels return a typed result with a reason on failure, and neither
+_Accepted when:_ both channels return a typed result with a reason on failure, and neither
 builds a shell string.
 
-**D4 — Model pull with a progress stream** *(risky, see Model Hints)* [x]
+**D4 — Model pull with a progress stream** _(risky, see Model Hints)_ [x]
 New `src/main/ipc/ollama-pull.ts`, `src/shared/ipc.ts` (`llm:pullModel`, `llm:cancelPull`,
 `llm:pullProgress`), plus a unit test for the NDJSON line parser.
-*Accepted when:* a pull emits monotonic progress events, cancel aborts the request **and**
+_Accepted when:_ a pull emits monotonic progress events, cancel aborts the request **and**
 deletes the partial model, a truncated trailing line does not throw, and a second pull of the
 same model after a cancel starts clean.
 
 **D5 — Pull progress that survives navigation** [x]
 New `src/renderer/lib/pullStore.ts` (or the project's existing store pattern),
 `src/renderer/lib/api.ts`, one app-level subscription.
-*Accepted when:* starting a pull, navigating to another screen and returning shows the bar at
+_Accepted when:_ starting a pull, navigating to another screen and returning shows the bar at
 the advanced position, and the subscription is registered exactly once (no duplicate handlers
 after remount).
 
@@ -151,7 +151,7 @@ after remount).
 New `src/renderer/screens/settings/LocalRuntimeCard.tsx`, `ModelsTab.tsx`, `StartCard.tsx`,
 `src/renderer/i18n/de.ts`, `src/renderer/i18n/en.ts`. Mirror: `ProviderDialog.tsx` for the
 dialog, `RoutingSection.tsx` for the panel.
-*Accepted when:* the three states render, the dialog names download size, installer path, model
+_Accepted when:_ the three states render, the dialog names download size, installer path, model
 directory and the no-uninstall fact before anything is downloaded, the blocked case shows one
 sentence plus the manual path, both languages are complete, and `npm run lint` finds no raw
 palette class.

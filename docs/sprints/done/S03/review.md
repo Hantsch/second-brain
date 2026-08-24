@@ -7,11 +7,11 @@ waiting-on entries can be added in place, the detail view says where status and 
 step came from and whether they're stale, and the project list surfaces the project I
 last worked on and the ones I keep coming back to — one list, no duplicates.
 
-| Story | Status | Commit |
-| --- | --- | --- |
-| 003 — Project notes and waiting-on, editable in place | done | `46c6d07` — add project note and waiting-on composers, editable in place |
-| 004 — Where the project status and next step come from | done | `5251324` — project status/next-step provenance |
-| 013 — Favourite projects (star) and an order that matches how I work | done | `51a8c35` — favourite projects — star, reordered list, tiles and pickers |
+| Story                                                                | Status | Commit                                                                   |
+| -------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------ |
+| 003 — Project notes and waiting-on, editable in place                | done   | `46c6d07` — add project note and waiting-on composers, editable in place |
+| 004 — Where the project status and next step come from               | done   | `5251324` — project status/next-step provenance                          |
+| 013 — Favourite projects (star) and an order that matches how I work | done   | `51a8c35` — favourite projects — star, reordered list, tiles and pickers |
 
 All three stories are done; nothing is blocked. One additional commit landed on the
 branch ahead of the stories: `af519ef` — a repo-wide `.gitignore` fix (see Findings).
@@ -44,7 +44,7 @@ put favourites first.
 
 **Critical, cross-sprint: `.gitignore` was excluding the vault core module from git.**
 Found while refining story 003. The rule `vault/` (intended to keep the user's real
-vault data out of the repo) had no anchor, so it matched *any* directory literally named
+vault data out of the repo) had no anchor, so it matched _any_ directory literally named
 `vault` anywhere in the tree — including `src/core/vault/`, the module that owns paths,
 layout, frontmatter, atomic writes, and the file watcher. That module has never been
 tracked in git, on `main`, on `dev`, or on any prior sprint branch (verified: `git show
@@ -84,7 +84,7 @@ clone of `main`/`dev` before this fix was missing the app's core module entirely
   tiles, todo scoping). Written into `VAULT-FORMAT.md` and the relevant code comments so
   it doesn't read as a regression later.
 - **The "last worked on" marker is computed over the filtered list** (013), so under a
-  narrowed scope filter it marks the most recent project *within that scope*. Intentional
+  narrowed scope filter it marks the most recent project _within that scope_. Intentional
   and tested, but wasn't written down as an explicit Decision during refine — recorded
   here for visibility.
 - **List-star writes have no error surface** (013), unlike the detail star (which carries
@@ -101,7 +101,7 @@ already recorded with its reasoning in the story's own `## Done` section:
 - Undo writes for the new composer paths don't send `expectedHash` (003, F4) — an undo
   during a very short external-edit window overwrites rather than conflicts. Matches the
   existing `resolveWaiting` undo this story mirrors.
-- The *filing* path (as opposed to the new note composer) still hardcodes the German
+- The _filing_ path (as opposed to the new note composer) still hardcodes the German
   section heading (003, F6) — pre-existing, out of this story's file list, and the
   condition that makes the F2 bug class reachable from the other direction. Worth its own
   story if English-language vaults become common (echoes a gap already on the roadmap

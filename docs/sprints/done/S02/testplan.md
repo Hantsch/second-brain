@@ -61,15 +61,15 @@ start command again.
 
 Facts the steps below rely on:
 
-| Thing                                          | Where                                                                                                                       |
-| ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| Areas "Gesundheit" (private) and "Kunden und Team" (work) | `areas/gesundheit.md`, `areas/kunden-und-team.md` — each has exactly one dated note and at least one open todo |
-| Area "Finanzen" (private)                       | `areas/finanzen.md` — one open todo, **zero notes** (built on purpose to show the per-area empty state) |
-| No area named "Notizen" yet                      | the default, untargeted-note area (`areas/notes.md`) is created the first time someone saves a note without a target |
-| Five dumps in `inbox/`                           | three `status: raw`, one `status: proposed`, one `status: kept` ("Zu viele Baustellen gleichzeitig" — deliberately left lying, not a finding) |
-| The Notes filter link / the Today strip both count 4 | only `raw`/`proposed` dumps count as "unfiled" — the one already `kept` does not, but still sits in the workspace list |
-| UI language                                      | German (`languages.ui: de`)                                                                                                |
-| LLM providers                                    | **none configured** — every filing proposal is the heuristic one, not a model's                                            |
+| Thing                                                     | Where                                                                                                                                         |
+| --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Areas "Gesundheit" (private) and "Kunden und Team" (work) | `areas/gesundheit.md`, `areas/kunden-und-team.md` — each has exactly one dated note and at least one open todo                                |
+| Area "Finanzen" (private)                                 | `areas/finanzen.md` — one open todo, **zero notes** (built on purpose to show the per-area empty state)                                       |
+| No area named "Notizen" yet                               | the default, untargeted-note area (`areas/notes.md`) is created the first time someone saves a note without a target                          |
+| Five dumps in `inbox/`                                    | three `status: raw`, one `status: proposed`, one `status: kept` ("Zu viele Baustellen gleichzeitig" — deliberately left lying, not a finding) |
+| The Notes filter link / the Today strip both count 4      | only `raw`/`proposed` dumps count as "unfiled" — the one already `kept` does not, but still sits in the workspace list                        |
+| UI language                                               | German (`languages.ui: de`)                                                                                                                   |
+| LLM providers                                             | **none configured** — every filing proposal is the heuristic one, not a model's                                                               |
 
 ---
 
@@ -284,7 +284,7 @@ seconds.
   the file, nothing was silently overwritten.
 - Step 6: after a reload the app reads the current hash, and the same move now
   succeeds.
-- *Note:* the app's own file watcher picks up an external edit within about a
+- _Note:_ the app's own file watcher picks up an external edit within about a
   second (the same mechanism as UC-7), so this conflict only appears if the
   edit and the click happen inside that window. It may take more than one
   attempt — that raciness is itself evidence the "files are the truth"

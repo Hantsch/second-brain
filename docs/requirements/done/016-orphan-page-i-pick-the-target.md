@@ -315,11 +315,13 @@ alongside the existing single-candidate one, and the full pick → preview → c
 path plus the discard dialog were driven through the real running app (see Verification).
 
 **Commit message:**
+
 ```
 016: orphan page — I pick the target
 ```
 
 **Verification:**
+
 - `npm run build` — green.
 - `npm run lint` / `npm run typecheck` — green.
 - `npm test` — 2435 passed, 1 failed. The 1 failure is the pre-existing
@@ -360,6 +362,7 @@ path plus the discard dialog were driven through the real running app (see Verif
 
 **Decisions made during the build (none required user input beyond what the story's
 `Decisions (Sprint)` section already settled):**
+
 - `OrphanTarget`/`OrphanTargets` were placed in `src/shared/types/gardener.ts`, not
   `overview.ts` as the story's own D1 file list literally named — `overview.ts`'s header
   comment explicitly says gardener finding/discard/supersede shapes live in `gardener.ts`

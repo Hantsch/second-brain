@@ -99,7 +99,7 @@ Decided during refine (reason each):
   never happened, and a direct contradiction with the `written: []` the same call
   returned. Considered two ways to close this: (a) silently fall back to `kept`, or
   (b) reject with an error. Chose (b): a user who edits the proposal text down to
-  nothing and hits Ctrl+Enter asked to *file*, not to *leave it* — treating that as a
+  nothing and hits Ctrl+Enter asked to _file_, not to _leave it_ — treating that as a
   quiet "kept" would still misrepresent their action, just with a different lie. A
   thrown `FilingError('invalid', ...)` fits the existing error surface exactly
   (`'invalid'` is already a valid `IpcError.code`, wired through `toIpcError` and the

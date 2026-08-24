@@ -97,7 +97,7 @@ end must not come back from the dead because its wording was re-derived.
 3. **How is the subject found?** → **Only the naming fix, not the loosening.** The subject is
    taken from the words around the date reference instead of from the head of the sentence.
    The settled check keeps its strict "every term" rule: a narrower, more accurate subject
-   makes that rule *easier* to satisfy, which is exactly what the Mondsee case needs.
+   makes that rule _easier_ to satisfy, which is exactly what the Mondsee case needs.
    Loosening it on top would silence real loose ends — deliberately not done.
 4. **Does a loose end keep a red mark at all?** → **New `ReminderUrgency` value `'open'`.**
    Decided once in the shared type, so the desktop notification in `reminder-notify.ts` also
@@ -114,7 +114,7 @@ end must not come back from the dead because its wording was re-derived.
 
 **Order is strict: D1 → D2 → (D3, D4) → D5 → D6.**
 
-*Core — the name and the subtraction (D1)*
+_Core — the name and the subtraction (D1)_
 
 - `src/core/capture/dates.ts`: `DateHit` gains `at` (the label's offset in the text). The
   value already exists internally on `RawHit`; it is only dropped on the way out.
@@ -126,13 +126,13 @@ end must not come back from the dead because its wording was re-derived.
   already the rule for digit-carrying words.
 - `sentencesOf`, `quote` and `looseEndId` are **not** touched (Q2).
 
-*Shared — honest urgency (D2)*
+_Shared — honest urgency (D2)_
 
 - `ReminderUrgency` gains `'open'`; `fromLooseEnds` uses it instead of the hardcoded
   `'overdue'` ([reminders.ts:245](../../src/core/overview/reminders.ts#L245)). Consumers
   (`reminder-notify.ts`, `DeadlinesTile`, `DaySummary`) handle the new value explicitly.
 
-*Dashboard (D3, D4)*
+_Dashboard (D3, D4)_
 
 - `WaitingOnTile` loses its loose-end rows and computes count + overdue over `waitingOn`
   entries alone.
@@ -140,7 +140,7 @@ end must not come back from the dead because its wording was re-derived.
   with `hidden: true`. Rows are read-only handles: subject, day announced, announced-for
   date, snooze, and a link into the journal day — answering happens in the journal (D6).
 
-*Journal (D5, D6)*
+_Journal (D5, D6)_
 
 - `JournalDayView` gains the day's open loose ends, served by reusing the existing
   `openLooseEnds()` in [ipc/journal.ts:136](../../src/main/ipc/journal.ts#L136) filtered to
@@ -154,7 +154,7 @@ No LLM anywhere in this story — every new path is the heuristic one.
 
 ## Deliverables
 
-**D1 — The subject names what was announced.** *(core only)*
+**D1 — The subject names what was announced.** _(core only)_
 
 - `src/core/capture/dates.ts` — expose `at` on `DateHit`.
 - `src/core/journal/loose-ends.ts` — `subjectWords(sentence, at)`, number words into
@@ -168,7 +168,7 @@ the end — yields a subject from the announcement clause, not from the opening 
 dated todo carrying that announcement, the same fixture produces no loose end at all.
 `subjectTerms` keeps its exported signature.
 
-**D2 — A loose end is open, not overdue.** *(shared + core + thin renderer touch)*
+**D2 — A loose end is open, not overdue.** _(shared + core + thin renderer touch)_
 
 - `src/shared/types/overview.ts` — `'open'` in `ReminderUrgency`.
 - `src/core/overview/reminders.ts` — `fromLooseEnds` uses `'open'`.
@@ -181,7 +181,7 @@ dated todo carrying that announcement, the same fixture produces no loose end at
 Acceptance: no `switch`/map over `ReminderUrgency` is left non-exhaustive (typecheck
 proves it), and nothing renders a loose end in the overdue colour.
 
-**D3 — "Waiting on" is waits only.** *(renderer only)*
+**D3 — "Waiting on" is waits only.** _(renderer only)_
 
 - `src/renderer/components/tiles/WaitingOnTile.tsx` — remove the `source === 'loose-end'`
   filter (line 90) and the loose-end rows (lines 114-155); `total` and `overdue` over
@@ -191,7 +191,7 @@ proves it), and nothing renders a loose end in the overdue colour.
 Acceptance: the tile no longer calls `useReminders()` for loose ends; count and overdue
 badge equal the number of `waitingOn` entries resp. the late ones among them.
 
-**D4 — A loose ends module of its own.** *(renderer only)*
+**D4 — A loose ends module of its own.** _(renderer only)_
 
 - New `src/renderer/components/tiles/LooseEndsTile.tsx` — mirror
   `src/renderer/components/tiles/AskTile.tsx` for the frame and
@@ -208,7 +208,7 @@ lists the open loose ends — each naming itself as an announcement without an o
 the announced-for date and a link to that journal day. Gaston tokens only, sentence case,
 no emoji.
 
-**D5 — The day view knows its loose ends.** *(main + shared)*
+**D5 — The day view knows its loose ends.** _(main + shared)_
 
 - `src/shared/ipc.ts` — `JournalDayView` gains `looseEnds` (reuse the existing
   `JournalInterviewLooseEnd` shape rather than inventing a second one).
@@ -220,7 +220,7 @@ no emoji.
 Acceptance: no second implementation of "open" — the answered / gardener-dismissed /
 snoozed filtering is the existing one, so the ids match the dashboard and maintenance ids.
 
-**D6 — The day shows its loose end.** *(renderer only)*
+**D6 — The day shows its loose end.** _(renderer only)_
 
 - New `src/renderer/screens/journal/LooseEndRow.tsx` (small, one row per loose end).
 - `src/renderer/screens/journal/JournalScreen.tsx` — render it above `EntryStream`.
@@ -237,7 +237,7 @@ LLM path anywhere in this story) · AC 9 → D5 + D6 (shared id, one filtering i
 
 ## Model Hints
 
-- **D1 → `deliverable-hard`.** Risk: `subjectWords` feeds both the displayed name *and*
+- **D1 → `deliverable-hard`.** Risk: `subjectWords` feeds both the displayed name _and_
   `subjectTerms`, which drives the settled subtraction — a wrong window silently either
   resurrects loose ends the user already closed or swallows open ones, and any accidental
   change to `sentencesOf`/`quote` moves every `looseEndId` and detaches the user's stored
@@ -284,6 +284,7 @@ hidden by default. D5 exposed the day's open loose ends on `JournalDayView` by r
 
 A first review pass (`story-review-hard`) found 3 confirmed blocking bugs, all fixed and
 re-reviewed to PASS in a second pass:
+
 1. Answering a loose end from the journal used the viewed (past) day's hash instead of
    today's — every answer attempt raised a spurious conflict, since the write always targets
    today's file. Fixed by fetching today's day the same way `InterviewDialog.tsx` already does.
@@ -296,6 +297,7 @@ re-reviewed to PASS in a second pass:
    sets; regression test added.
 
 **Not fixed, deliberately (non-blocking per second review pass):**
+
 - `LooseEndsTile.tsx`'s journal link sends an empty `d=` query param when a loose end's day
   can't be resolved (defensive-only in practice — a loose end's path is always a journal day
   file, so this never fires on real data).
@@ -311,6 +313,7 @@ re-reviewed to PASS in a second pass:
   (`de-dashboard.ts`, `de-journal.ts`).
 
 **Commit message:**
+
 ```
 022: loose ends get their own place, waiting-on stays about others
 ```

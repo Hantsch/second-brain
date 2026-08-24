@@ -19,13 +19,13 @@ gets an owner.
 **Result: all five stories done, none blocked.** The goal is met: `npm test` reports
 **190 files / 2707 tests / 0 failed**, verified by the orchestrator after the last commit.
 
-| Story                                                | Status | Commit                                                              |
-| ---------------------------------------------------- | ------ | ------------------------------------------------------------------- |
-| 023 — The module schema says one thing, not two      | done   | `023: module schema doc and code say the same thing`                |
-| 025 — A screenshot run never reads my real data      | done   | `025: demo vault seeds and guards Codex sessions too`               |
-| 024 — Filing writes headings in my document language | done   | `024: filing writes headings in my document language`               |
-| 026 — German text closes its quotes, + 3 papercuts   | done   | `026: German catalogue closes its quotes, loose-end dead link, …`   |
-| 027 — The maintenance run state stops being one file | done   | `027: split the gardener run state into core and main glue`         |
+| Story                                                | Status | Commit                                                            |
+| ---------------------------------------------------- | ------ | ----------------------------------------------------------------- |
+| 023 — The module schema says one thing, not two      | done   | `023: module schema doc and code say the same thing`              |
+| 025 — A screenshot run never reads my real data      | done   | `025: demo vault seeds and guards Codex sessions too`             |
+| 024 — Filing writes headings in my document language | done   | `024: filing writes headings in my document language`             |
+| 026 — German text closes its quotes, + 3 papercuts   | done   | `026: German catalogue closes its quotes, loose-end dead link, …` |
+| 027 — The maintenance run state stops being one file | done   | `027: split the gardener run state into core and main glue`       |
 
 Gate state after the final commit: `npm test` green, `npm run typecheck` green, `npm run lint`
 green, `npm run build` green. `npm run format:check` is red on 460 files — see
@@ -150,7 +150,7 @@ acceptance. Status per story:
   through the built app and passed. **Built, live acceptance pending** (and see the known
   progress-bar issue above, which the tester will likely encounter).
 - **023** — engine plus docs, exempt from P1/P2 per the sprint plan. Accepted on tests.
-- **025** — the screenshot harness itself; its acceptance *is* a green seed-and-shot run, which
+- **025** — the screenshot harness itself; its acceptance _is_ a green seed-and-shot run, which
   it had, plus a manual negative-path check confirming the guard fires.
 
 No story is presented as fully accepted. `ui-acceptance-required` was satisfied for every
@@ -160,7 +160,7 @@ user-facing path — no console workaround was accepted as a test step anywhere.
 
 - **Story 025's guard has no UI surface at all.** Its AC — the seed refuses to run if a setting
   points outside the demo vault — is a console-only safety net inside `npm run seed`. There is
-  nothing to click. This is honest rather than a defect (the story *is* the harness), but it means
+  nothing to click. This is honest rather than a defect (the story _is_ the harness), but it means
   that criterion cannot be manually accepted through the app.
 - **026's English due-date fix is an `aria-label`, not visible text** — verifiable in a screen
   reader or in source, not by looking at the screen.

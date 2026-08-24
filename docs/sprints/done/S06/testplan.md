@@ -40,6 +40,7 @@ adapter). No step performs the action itself via a console or IPC call.
    `settings-models-bottom.png`). Look at both — they should show the machine card, the
    local runtime card and the recommendation panel. Treat any red output or a missing
    screenshot as a blocker before doing the manual steps below.
+
 5. Start the real app for the manual walkthrough:
 
    ```powershell
@@ -133,6 +134,7 @@ app — this app does not offer uninstall, by design).
    ```
 
    Expected: no result (no leftover file).
+
 6. Click **Get it** once more, confirm, and this time let the download finish. Expected:
    the dialog reaches a "Download finished" state with an **Open the installer** button.
 7. Click **Open the installer**. Expected: the dialog tells you it opened the installer and
@@ -188,6 +190,7 @@ scan first if you haven't.
    ```
 
    Expected: the cancelled model does not appear in the list.
+
 5. Click **Pull** again on the same row and let it finish this time. Expected: the row
    shows "Installed." once done.
 6. Scroll further down to the **Providers** panel and, once you've added/probed an Ollama
@@ -270,7 +273,7 @@ it as not verified rather than faking a result.
    **Routing** panel above updates to show that task now routed to the accepted model.
 2. Click **Discard** at the bottom of the recommendation panel. Expected: the recommendation
    list clears; the one task you accepted in step 1 stays routed (discard only clears the
-   *unaccepted* proposal, not what you already committed).
+   _unaccepted_ proposal, not what you already committed).
 3. Verify, outside the app, that only the one accepted task was written:
 
    ```powershell
@@ -279,6 +282,7 @@ it as not verified rather than faking a result.
 
    Expected: exactly the one task you accepted appears under `routing.tasks`; nothing else
    changed.
+
 4. Optionally, re-fetch recommendations and click **Accept all**. Expected: every row whose
    pick names a configured provider gets accepted one at a time (you can watch each row
    flip to "Accepted" in turn); rows with no configured provider yet show "Set up a
@@ -309,19 +313,19 @@ app — this is the story's own instruction for reaching this state, not a worka
 
 ## Summary checklist
 
-| Section | Story | Needs a real Ollama/network state? |
-| --- | --- | --- |
-| 1. Machine scan | 019a | No — works on any machine |
-| 2a. Install runtime | 019c | Yes — a machine without Ollama installed |
-| 2b. Start runtime | 019c | Yes — Ollama installed, service stopped |
-| 2c. Pull a model | 019c | Yes — Ollama installed and running |
-| 2d. Blocked install | 019c | Optional — needs a constrained machine (full disk, no write permission, or Linux) |
-| 3a. No providers | 019b | No |
-| 3b. Local recommendations | 019b | Yes — Ollama running |
-| 3c. Cloud recommendations | 019b | Yes — a real OpenRouter API key |
-| 3d. Accept/discard | 019b | No (works once any provider is configured) |
-| 3e. Offline fallback | 019b | Yes — ability to disable the network adapter |
-| 3f. Language | 019a/019b/019c | No |
+| Section                   | Story          | Needs a real Ollama/network state?                                                |
+| ------------------------- | -------------- | --------------------------------------------------------------------------------- |
+| 1. Machine scan           | 019a           | No — works on any machine                                                         |
+| 2a. Install runtime       | 019c           | Yes — a machine without Ollama installed                                          |
+| 2b. Start runtime         | 019c           | Yes — Ollama installed, service stopped                                           |
+| 2c. Pull a model          | 019c           | Yes — Ollama installed and running                                                |
+| 2d. Blocked install       | 019c           | Optional — needs a constrained machine (full disk, no write permission, or Linux) |
+| 3a. No providers          | 019b           | No                                                                                |
+| 3b. Local recommendations | 019b           | Yes — Ollama running                                                              |
+| 3c. Cloud recommendations | 019b           | Yes — a real OpenRouter API key                                                   |
+| 3d. Accept/discard        | 019b           | No (works once any provider is configured)                                        |
+| 3e. Offline fallback      | 019b           | Yes — ability to disable the network adapter                                      |
+| 3f. Language              | 019a/019b/019c | No                                                                                |
 
 Sections marked "No" can be run on any machine right after `npm run seed && npm run dev`.
 Sections marked "Yes" need the stated prerequisite arranged first — if you don't have it,

@@ -302,6 +302,7 @@ model, and both RAM/VRAM rows now show "X GB · planning with Y GB at N% after r
 "no local model fits at this share" line appears when `tiersThatFit` is empty at a known verdict.
 
 **Decisions (Implementation).**
+
 - D1 required nine mechanical one-line additions (`resourceBudgetPercent: 80`) to full `AppSettings`
   fixture literals in `src/renderer/lib/mock-settings.ts` and renderer test files, to keep
   `npm run typecheck` green after the field became required on `AppSettings.machine` — no other
@@ -315,6 +316,7 @@ model, and both RAM/VRAM rows now show "X GB · planning with Y GB at N% after r
   verdict inside `isLocalCapable`), confirmed by a regression test rather than new guard code.
 
 **Verification.**
+
 - `npm run typecheck`, `npm run lint`, `npm run build` — all green.
 - `npm test` — 194 files, 2797 tests, all green (includes new/updated tests in
   `tests/shared/resource-budget.test.ts`, `tests/core/llm/capacity.test.ts`,

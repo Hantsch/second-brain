@@ -1705,9 +1705,7 @@ describe('Pflege-Kanäle im Main', () => {
     });
 
     expect(report.findings.length).toBeGreaterThan(0);
-    expect(report.findings.every((finding) => finding.module === 'identity-management')).toBe(
-      true,
-    );
+    expect(report.findings.every((finding) => finding.module === 'identity-management')).toBe(true);
     expect(report.scope).toEqual({ module: 'identity-management' });
   });
 

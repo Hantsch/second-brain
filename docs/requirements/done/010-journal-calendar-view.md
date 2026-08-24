@@ -291,7 +291,7 @@ regression-tested. Collapse state persists in `sessionStorage`, default expanded
 **Decisions (mine, made while building, per the sprint's "no questions" rule):**
 
 - 009's `closed` field landed exactly as the plan assumed (`JournalDay.closed: string |
-  null`, `isDayOpen(day, today)` in `lib/journal-open.ts`) — D4 consumed it verbatim, no
+null`, `isDayOpen(day, today)` in `lib/journal-open.ts`) — D4 consumed it verbatim, no
   adaptation needed.
 - The collapse toggle became icon-only (`chevron-up`/`chevron-down`, `aria-label` carries
   the translated text) rather than a text button with a wrap fallback: the 200–240px side
@@ -318,7 +318,7 @@ regression-tested. Collapse state persists in `sessionStorage`, default expanded
   CSS (a fixed cell height instead of `aspect-ratio`, plus a `grid-template-rows`/
   `overflow` fix in `journal.css` for a related sizing trap it exposed) — confirmed via
   `npm run shot` before and after.
-- Story-review-hard found one further **confirmed, blocking** defect in the *wide*
+- Story-review-hard found one further **confirmed, blocking** defect in the _wide_
   layout after that: the toolbar's four `.gs-btn` buttons (`white-space: nowrap`)
   exceeded the 200–240px column's width, spilling the collapse label past the side
   column's border (visible in `.screenshots/04-journal.png`). Fixed by making the
@@ -368,6 +368,7 @@ demo-vault seed spanning two months.
 **Changed files:**
 
 New:
+
 - `src/renderer/components/MonthCalendar.tsx`
 - `src/renderer/lib/month-calendar.ts`
 - `src/renderer/styles/app/journal-calendar.css`
@@ -376,6 +377,7 @@ New:
 - `tests/renderer/journal-calendar.test.tsx`
 
 Modified:
+
 - `src/renderer/screens/journal/JournalScreen.tsx`
 - `src/renderer/screens/journal/use-journal-keys.ts`
 - `src/renderer/lib/format.ts` (exported `locale()`)

@@ -45,6 +45,8 @@ import type {
   IngestKind,
   JournalDay,
   KnowledgeModule,
+  LlamaOverrides,
+  LlamaStartPlan,
   LocalRuntimeStatus,
   MachineScanResult,
   ModelRef,
@@ -746,13 +748,20 @@ export interface IpcRoutes {
     res: { opened: boolean; reason?: string };
   };
   /**
-   * Starts the given runtime's server detached, so it keeps running after
-   * this call returns, then polls the same detection `llm:localRuntimeStatus`
-   * uses until it reports `'running'` or a few seconds pass (019c, D3; 033
-   * adds `runtime`) — the "start it for me" step once the runtime is
-   * installed but not running. `reason` is closed: `'timeout'` if the server
-   * never answered in time, `'spawn-failed'` if the binary itself couldn't be
-   * started (e.g. a race with an uninstall) — never a thrown error either way.
+   * Starts the given runtime's server, then polls the same detection
+   * `llm:localRuntimeStatus` uses until it reports `'running'` or a few
+   * seconds pass (019c, D3; 033 adds `runtime`) — the "start it for me" step
+   * once the runtime is installed but not running. Ollama's server is spawned
+   * detached and outlives this app; llama.cpp's (034, D3) is tracked and
+   * stopped again on quit, which is what `llm:stopLlamaEngine` acts on.
+   *
+   * `reason` is closed and never a raw error string from the process (034,
+   * AC 5): `'timeout'` if the server never answered in time, `'spawn-failed'`
+   * if the binary itself couldn't be started (e.g. a race with an uninstall),
+   * plus the four causes 034 can name for llama.cpp and act on —
+   * `'binary-missing'`, `'model-missing'`, `'port-in-use'`,
+   * `'out-of-memory'`. Ollama's implementation only ever reports the first
+   * two, so widening this stays backward compatible for it.
    */
   'llm:startLocalRuntime': {
     req: { runtime: RuntimeId };
@@ -760,9 +769,79 @@ export interface IpcRoutes {
       runtime: RuntimeId;
       started: boolean;
       status: LocalRuntimeStatus;
-      reason?: 'timeout' | 'spawn-failed';
+      reason?:
+        | 'timeout'
+        | 'spawn-failed'
+        | 'port-in-use'
+        | 'model-missing'
+        | 'binary-missing'
+        | 'out-of-memory';
     };
   };
+  /**
+   * llama.cpp-specific status detail (034, D2) that the generic
+   * `llm:localRuntimeStatus` doesn't carry: `ownedByApp` (Decisions, Q6 — a
+   * foreign runtime is shown as running but never stopped) and which port in
+   * the 11435–11444 range (Decisions, Q3) it is actually reachable on. A
+   * dedicated channel rather than widening `llm:localRuntimeStatus`, since
+   * both of these are meaningless for Ollama, which has no port range to
+   * probe and no lifecycle this app doesn't already fully own via `PATH`.
+   */
+  'llm:llamaEngineStatus': {
+    req: void;
+    res: { status: LocalRuntimeStatus; ownedByApp: boolean; port: number | null };
+  };
+  /**
+   * The start plan (034, D1's `planLlamaStart`) for the currently installed
+   * model file and the current machine facts/resource budget/overrides —
+   * what the card shows before a start (AC 3) so the values and their one-
+   * sentence reasons are visible ahead of pressing the button, not only
+   * after. `null` when no `.gguf` file is installed yet: there is nothing to
+   * plan for, which is an honest empty state, not a refusal.
+   */
+  'llm:llamaStartPlan': {
+    req: void;
+    res: LlamaStartPlan | null;
+  };
+  /**
+   * Stops the llama.cpp engine *this app started* (034, D3) — llama.cpp-only,
+   * because it is the only runtime whose process this app tracks; Ollama's
+   * `ollama serve` is deliberately detached and this app never stops it.
+   *
+   * Never refused (Decisions, Q5): `stopped: true` when a tracked process was
+   * signalled, `stopped: false` when there was nothing app-owned to stop —
+   * that second case is a no-op, not an error. A foreign engine (something
+   * answering on a port in the range that this app did not spawn) is never
+   * touched by this channel (Decisions, Q6).
+   */
+  'llm:stopLlamaEngine': {
+    req: void;
+    res: { stopped: boolean };
+  };
+  /**
+   * Sets (or clears, `null`) one or both of the advanced start-plan overrides
+   * (034, Decisions Q1) — `machine.llamaOverrides`, machine-local like the
+   * VRAM override and the resource budget above. A field left out of the
+   * request is untouched, so setting one never clobbers the other (D5).
+   * Returns the freshly derived start plan (D1) directly — `null` when no
+   * `.gguf` file is installed — so the card's readout updates in the same
+   * round trip a stop/start already does, without a follow-up
+   * `llm:llamaStartPlan` call. A value that isn't a non-negative integer is
+   * refused with `invalid`; there is no ceiling on this side of the
+   * boundary — `planLlamaStart`'s own clamp is the one that applies it (see
+   * `shared/llm/llama-overrides.ts`).
+   */
+  'llm:setLlamaOverrides': { req: Partial<LlamaOverrides>; res: LlamaStartPlan | null };
+  /**
+   * Sets the auto-start mode (034, D6; Decisions Q2) —
+   * `machine.llamaAutoStart`, machine-local like the overrides above.
+   * `'manual'` (the default) never starts the engine on its own; `'on-
+   * demand'` lets the LLM request path start it the first time a task needs
+   * it and finds it `installed-stopped` (`ensureLlamaRunning`,
+   * `llamacpp-autostart.ts`). A value that is neither is refused with
+   * `invalid`.
+   */
+  'llm:setLlamaAutoStart': { req: 'manual' | 'on-demand'; res: void };
   /**
    * Pulls a model into the given local runtime (019c, D4; 033 adds `runtime`,
    * since llama.cpp fills its model directory from a Hugging Face file rather
@@ -1131,6 +1210,11 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'llm:cancelRuntimeDownload',
   'llm:openRuntimeInstaller',
   'llm:startLocalRuntime',
+  'llm:llamaEngineStatus',
+  'llm:llamaStartPlan',
+  'llm:stopLlamaEngine',
+  'llm:setLlamaOverrides',
+  'llm:setLlamaAutoStart',
   'llm:pullModel',
   'llm:cancelPull',
   'llm:searchModelFiles',

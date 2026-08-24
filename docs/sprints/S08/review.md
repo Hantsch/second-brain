@@ -6,12 +6,12 @@
 stops guessing about hardware it cannot see and stops planning with the whole machine, and the
 app becomes something that can leave this repository under one name and one handoff command.
 
-| Story | Status | Commit |
-| --- | --- | --- |
-| 028 — I fill in what the scan could not detect | done | `a294a33` (combined with 029, see Findings) |
-| 029 — I say how much of this machine a model may use | done | `a294a33` |
-| 030 — The app is called Gaston, everywhere | done | `dd87567` |
-| 031 — A build I can hand on | built, live acceptance pending | `abcf6f6` |
+| Story                                                | Status                         | Commit                                      |
+| ---------------------------------------------------- | ------------------------------ | ------------------------------------------- |
+| 028 — I fill in what the scan could not detect       | done                           | `a294a33` (combined with 029, see Findings) |
+| 029 — I say how much of this machine a model may use | done                           | `a294a33`                                   |
+| 030 — The app is called Gaston, everywhere           | done                           | `dd87567`                                   |
+| 031 — A build I can hand on                          | built, live acceptance pending | `abcf6f6`                                   |
 
 All four stories are implemented, tested, and clean-agent reviewed with a PASS verdict. Three are
 fully accepted at the build level; 031's one remaining acceptance step (unpacking the ZIP on a
@@ -76,7 +76,7 @@ and an honest "no model configured" statement for a recipient who isn't the app'
   behaviour change to an already-accepted milestone (M5).
 - **031 uncovered a pre-existing, unrelated repo issue**: `core.autocrlf=true` on Windows checkouts
   plus prettier's default `endOfLine` makes `npm run format:check` (and therefore `npm run
-  verify`, which `npm run handoff` calls as its first step) red across roughly 500 files that
+verify`, which `npm run handoff` calls as its first step) red across roughly 500 files that
   predate this sprint. None of story 031's own files are affected, and this is the same gap
   already tracked under M9 in the roadmap — but it now also means `npm run handoff` currently
   stops at its first step on this machine rather than reaching packaging. Recommend a small,

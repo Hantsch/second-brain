@@ -319,6 +319,7 @@ showing the current month, expanded by default.
     ```
 
     Switch back to the app without restarting.
+
 14. Settings → Sprachen: switch "Oberflächensprache" to English, then look at the
     calendar again; switch back to Deutsch.
 

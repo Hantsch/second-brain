@@ -10,7 +10,7 @@ code. Covers exactly the four stories built this sprint, nothing else:
 
 Every step for a user-facing action goes through the real UI — no console command, no direct
 internal call. Console commands only appear to start the app, to run the packaging pipeline
-itself (031, which *is* the feature under test), or, after a UI action, to independently confirm
+itself (031, which _is_ the feature under test), or, after a UI action, to independently confirm
 an outcome the UI has no screen for (e.g. "did anything land in the vault's git status" — this
 never replaces the UI step, it only double-checks its result, the same way the stories'
 own authors verified them).
@@ -31,7 +31,7 @@ automatically instead, that's fine too — for use cases 1–3 any open vault wo
 **Settings → Vault** or the app's vault switcher to open `.demo-vault/` explicitly.
 
 The app's default UI language is German. All labels below are given in English with the German
-label in *italics* at first use per screen, so the plan works whichever language the app is
+label in _italics_ at first use per screen, so the plan works whichever language the app is
 currently in. Settings → Languages (or the onboarding language picker, story 031) switches the
 UI language at any time, live, with no restart.
 
@@ -43,29 +43,29 @@ UI language at any time, live, with no restart.
 
 **Steps**
 
-1. Open **Settings → Models** (*Einstellungen → Modelle*). Click **Scan this machine**
-   (*Diesen Rechner scannen*).
-   - Expected: a "This machine" (*Diese Maschine*) card appears with a verdict sentence, a list
+1. Open **Settings → Models** (_Einstellungen → Modelle_). Click **Scan this machine**
+   (_Diesen Rechner scannen_).
+   - Expected: a "This machine" (_Diese Maschine_) card appears with a verdict sentence, a list
      of rows (Resource budget, RAM, Graphics memory (VRAM), GPU, CPU cores, Free disk space),
      and a heuristic disclaimer note.
    - On a Windows machine whose graphics card has 4 GB or more of memory, the **Graphics memory
-     (VRAM)** row (*Grafikspeicher (VRAM)*) reads **unknown** (*unbekannt*) even though the GPU
+     (VRAM)** row (_Grafikspeicher (VRAM)_) reads **unknown** (_unbekannt_) even though the GPU
      row correctly names the card — this is the exact detection gap this story fixes (Windows
      only reports VRAM in a 32-bit field that saturates at 4 GB). If your card is smaller than
      4 GB the row may already show a real number; the rest of the walk below still works, you
      just won't see the "unknown → filled in" transition.
    - Note the verdict sentence and the tier list ("Sizes that should fit comfortably: …") before
      continuing — you'll compare against it in step 3.
-2. Next to the VRAM row, click **Enter it** (*Eintragen*). Try each of the following in the
-   field, pressing **Save** (*Speichern*) each time: empty, `0`, `-5`, `abc`, `999999999`.
+2. Next to the VRAM row, click **Enter it** (_Eintragen_). Try each of the following in the
+   field, pressing **Save** (_Speichern_) each time: empty, `0`, `-5`, `abc`, `999999999`.
    - Expected: each attempt shows an inline error under the field and the row's value does not
      change. No round trip to the machine card happens (the verdict above stays exactly as it
      was).
 3. Enter `16384` and click **Save**.
    - Expected: the row now shows **16 GB** with a small **Entered by you** badge
-     (*Von dir eingetragen*) next to it. The verdict sentence and the tier list above change to
+     (_Von dir eingetragen_) next to it. The verdict sentence and the tier list above change to
      reflect the new ceiling. The heuristic disclaimer note is still there, unchanged.
-4. Click **Scan again** (*Erneut scannen*).
+4. Click **Scan again** (_Erneut scannen_).
    - Expected: the VRAM row still reads 16 GB with the "Entered by you" badge — a re-scan does
      not discard it.
 5. Scroll to the **model recommendation** section further down the Models tab and refresh/re-open
@@ -83,7 +83,7 @@ UI language at any time, live, with no restart.
    **Settings → Models**, click **Scan this machine**.
    - Expected: 16 GB is still shown, still marked "Entered by you" — the value survives an app
      restart.
-7. Click **Clear** (*Löschen*) next to the VRAM row.
+7. Click **Clear** (_Löschen_) next to the VRAM row.
    - Expected: the row goes back to **unknown**, the "Entered by you" badge disappears, and the
      verdict sentence / tier list return to what step 1 showed.
 8. Switch the UI language (Settings → Languages) and look at the VRAM row, its errors, and the
@@ -111,13 +111,13 @@ session (so a machine scan result is on screen — if not, click **Scan this mac
 
 **Steps**
 
-1. On the "This machine" card, find the **Resource budget** row (*Ressourcen-Budget*), above RAM
+1. On the "This machine" card, find the **Resource budget** row (_Ressourcen-Budget_), above RAM
    and VRAM. It should read **80 %** by default. Below it there is explanatory help text stating
    that it sizes the recommendation and does not limit a model that is already running.
 2. Look at the RAM and Graphics memory (VRAM) rows: each should show the real figure, then a
-   suffix like "· planning with X GB at 80% after reserve" (*„· geplant mit X GB bei 80 % nach
-   Reserve"*).
-3. Click **Change** (*Ändern*) next to Resource budget. Try each of the following, pressing
+   suffix like "· planning with X GB at 80% after reserve" (_„· geplant mit X GB bei 80 % nach
+   Reserve"_).
+3. Click **Change** (_Ändern_) next to Resource budget. Try each of the following, pressing
    **Save** each time: empty, `abc`, `0`, `-5`, `9`, `101`.
    - Expected: each attempt shows an inline error, the stored percentage does not change, and
      nothing else on the card moves.
@@ -131,8 +131,8 @@ session (so a machine scan result is on screen — if not, click **Scan this mac
      fitting) than it did at 100%. A cloud-provider recommendation, if one is configured, is
      unchanged.
 7. Click **Change**, set the value to `10`, save.
-   - Expected: the card states outright that no local model fits at this share (*"Bei diesem
-     Anteil passt kein lokales Modell."*) — instead of quietly recommending nothing or something
+   - Expected: the card states outright that no local model fits at this share (_"Bei diesem
+     Anteil passt kein lokales Modell."_) — instead of quietly recommending nothing or something
      unrunnable.
 8. Set the value back to `70`, leave the Settings screen (e.g. go to Dashboard), then return to
    Settings → Models.
@@ -160,7 +160,7 @@ No gaps — every acceptance criterion for this story is reachable through the U
 ## Use case 3: the app is called Gaston, everywhere (story 030)
 
 **Preparation.** `npm run seed` (already run above) creates the demo vault with the sample
-content this use case checks: one seeded journal day still written in the *old* label format
+content this use case checks: one seeded journal day still written in the _old_ label format
 (`> **Second Brain**`) among otherwise normal days, and one seeded YouTube source with its real
 external title. App running, demo vault open (`.demo-vault/`).
 
@@ -168,13 +168,13 @@ external title. App running, demo vault open (`.demo-vault/`).
 
 1. **Title bar.** Look at the app window's own title bar. Expected: it reads **Gaston** — not
    "Second Brain", not "Guston".
-2. **About tab.** Go to **Settings → About** (*Einstellungen → Info*). Expected: the first row in
+2. **About tab.** Go to **Settings → About** (_Einstellungen → Info_). Expected: the first row in
    the list is labelled **App** with the value **Gaston**, next to Version, Electron and
    Platform.
 3. **Dashboard.** Go to **Dashboard** and find the "ask" tile/module. Expected: its label reads
-   **Question to Gaston** (*Frage an Gaston*) — not "Frage an das Second Brain". Switch the UI
+   **Question to Gaston** (_Frage an Gaston_) — not "Frage an das Second Brain". Switch the UI
    language (Settings → Languages) and confirm the tile's label is correctly translated in both.
-4. **New journal turn.** Go to **Journal** (*Journal*), open **Today**. Type a line into the
+4. **New journal turn.** Go to **Journal** (_Journal_), open **Today**. Type a line into the
    composer at the bottom of the day and send it to get a coaching reply.
    - Expected: the reply appears in the conversation under the speaker label **Gaston** — not
      "Second Brain".
@@ -183,8 +183,8 @@ external title. App running, demo vault open (`.demo-vault/`).
      is stored as `> **Gaston** — HH:MM`.
 5. **Old journal day still works.** In the Journal screen, browse a few days back (the demo data
    spans about three weeks) to find the day marked with a "stress" tag and a low mood/energy — it
-   carries a section titled **Legacy conversation** (*Altes Gespräch*) with a **Move into the
-   entry** button (*In den Eintrag übernehmen*).
+   carries a section titled **Legacy conversation** (_Altes Gespräch_) with a **Move into the
+   entry** button (_In den Eintrag übernehmen_).
    - Expected: it renders as a normal turn-by-turn conversation (still labelled Gaston in the
      UI, since the display always shows the current role label regardless of what the file's
      literal text says), the turn count looks complete, and the day otherwise reads normally.
@@ -197,7 +197,7 @@ external title. App running, demo vault open (`.demo-vault/`).
 6. **Vault untouched.** Confirm the vault folder still contains a `.secondbrain/` directory
    (visible in the file system, e.g. via `.demo-vault/.secondbrain`) — the directory name itself
    was deliberately not renamed by this story.
-7. **Demo source keeps its real title.** Go to **Knowledge → Sources** (*Wissen → Quellen*).
+7. **Demo source keeps its real title.** Go to **Knowledge → Sources** (_Wissen → Quellen_).
    Expected: the seeded YouTube source still shows its real external title, unchanged by the
    rename (`Your AI Second Brain Is Slowly Rotting`) — the rename does not falsify sample data.
 8. **Taskbar / jump list (optional, needs a packaged build).** The window title and About tab
@@ -228,16 +228,16 @@ against the same dev app already started above). Steps 4 and 6 need a terminal a
 **Steps (already run for real this session — repeat only if you want to double-check)**
 
 1. If no vault is open (or after closing one), the onboarding screen appears with a **language
-   choice** (*Oberflächensprache*, "Deutsch" / "English") above the header, the vault actions
+   choice** (_Oberflächensprache_, "Deutsch" / "English") above the header, the vault actions
    (Open a vault / Create a new vault), and — below them — a calm statement that no model is
    configured yet and that Gaston works fully without one.
 2. Click **English**, then **Deutsch**, on the language choice. Expected: the screen's own texts
    (title, hints, buttons) switch immediately, with no restart.
-3. Click **Create a new vault** (*Neuen Vault anlegen*), give it a name, pick an empty folder.
+3. Click **Create a new vault** (_Neuen Vault anlegen_), give it a name, pick an empty folder.
    Expected: the vault is created and opened, and going to e.g. the Journal or Ask screen shows
    the honest "no model configured" state (`LlmMissing`) instead of an error or a blank area.
 
-**Steps (console, because this *is* the feature under test — packaging, not a UI action)**
+**Steps (console, because this _is_ the feature under test — packaging, not a UI action)**
 
 4. From the repo root:
    ```powershell

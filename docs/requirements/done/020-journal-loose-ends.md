@@ -427,7 +427,7 @@ excluded from every surface that reads the gardener report.
 
 - The forward-marker table lives inside `loose-ends.ts` itself and only recognizes German
   relative phrases plus language-neutral dated forms (a bare `am <weekday>` is deliberately
-  *not* a marker, since `findDates` always projects weekdays forward and an invented loose end
+  _not_ a marker, since `findDates` always projects weekdays forward and an invented loose end
   is the costlier error than a missed one); English relative phrasing beyond a real date is left
   to the model pass, per the story's own decision.
 - `LooseEndCard.tsx` recovers the day and quote for display by parsing the fixed `: "<quote>"`

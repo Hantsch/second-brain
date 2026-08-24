@@ -68,20 +68,20 @@ command again.
 Facts the steps below rely on. Press `2` (or click "Projekte" in the rail) to reach the
 project list; scope filter "Alle", sort "Zuletzt berührt" is the default view.
 
-| Project (work)                    | Touched      | Starred | Stale | Notes                                                              |
-| ---------------------------------- | ------------ | ------- | ----- | ------------------------------------------------------------------- |
-| Kundenportal Relaunch               | today        | no      | no    | has a `next_step`; deadline in 3 days; the re-entry point           |
-| Orbit SSO-Migration                 | 2 days ago   | **yes** | no    | status "Wartet"; two open `waiting_on` entries, one already overdue |
-| Datenmigration Legacy-CRM           | 40 days ago  | **yes** | **yes** | untouched long enough to count as stalled on its own                |
-| Angebot Praxisnetz Süd              | 3 days ago   | no      | no    | **no `next_step`** — the empty state to fetch a suggestion for      |
-| Rechnungsautomatisierung            | 1 day ago    | no      | no    | plain, unstarred, nothing special                                   |
+| Project (work)            | Touched     | Starred | Stale   | Notes                                                               |
+| ------------------------- | ----------- | ------- | ------- | ------------------------------------------------------------------- |
+| Kundenportal Relaunch     | today       | no      | no      | has a `next_step`; deadline in 3 days; the re-entry point           |
+| Orbit SSO-Migration       | 2 days ago  | **yes** | no      | status "Wartet"; two open `waiting_on` entries, one already overdue |
+| Datenmigration Legacy-CRM | 40 days ago | **yes** | **yes** | untouched long enough to count as stalled on its own                |
+| Angebot Praxisnetz Süd    | 3 days ago  | no      | no      | **no `next_step`** — the empty state to fetch a suggestion for      |
+| Rechnungsautomatisierung  | 1 day ago   | no      | no      | plain, unstarred, nothing special                                   |
 
-| Project (private)                  | Touched      | Starred | Stale |
-| ---------------------------------- | ------------ | ------- | ----- |
-| Hochbeet für den Balkon             | 2 days ago   | no      | no    |
-| Finanzen aufräumen                  | 5 days ago   | no      | no    |
-| Podcast-Idee: Werkstattfunk         | 14 days ago  | no      | **yes** |
-| Italienisch lernen                  | 33 days ago  | no      | **yes** |
+| Project (private)           | Touched     | Starred | Stale   |
+| --------------------------- | ----------- | ------- | ------- |
+| Hochbeet für den Balkon     | 2 days ago  | no      | no      |
+| Finanzen aufräumen          | 5 days ago  | no      | no      |
+| Podcast-Idee: Werkstattfunk | 14 days ago | no      | **yes** |
+| Italienisch lernen          | 33 days ago | no      | **yes** |
 
 Given this, the default "Alle" / "Zuletzt berührt" view's **current** section reads, top
 to bottom: **Kundenportal Relaunch** (marked "Zuletzt bearbeitet"), **Orbit
@@ -176,7 +176,7 @@ list.
   Relaunch" wurde zwischenzeitlich geändert. Nichts wurde überschrieben." — the typed
   text `Konflikttest` is **still in the field**, and the file keeps the editor's own line
   from step 1 with no note appended.
-- *Note:* like every conflict test in this app, this is timing-sensitive — the file
+- _Note:_ like every conflict test in this app, this is timing-sensitive — the file
   watcher usually catches up within about a second, so you may need a repeat attempt.
 - After confirming the conflict, press `Ctrl+R` to reload and leave the project in a
   clean state for the next use case.
@@ -205,7 +205,7 @@ list.
 - Step 3: the composer stays open (ready for another entry) and the field clears; the
   entry "Miriam" appears in the "Warte auf" list with today's date as "seit".
 - Step 4: the file's `waiting_on` array gained one entry, `who: Miriam`, `since:
-  <today>`, with no `what`/`due` keys at all (left out, not written as empty strings).
+<today>`, with no `what`/`due` keys at all (left out, not written as empty strings).
 - Step 5: the tile lists "Miriam" among the projects' waiting-on entries, the same as any
   filed one.
 - Step 7: the entry is gone from the list and from the file's `waiting_on` array; nothing
@@ -618,7 +618,7 @@ and open it.
 ### UC-22 — Everything this sprint wrote survives a full rebuild
 
 This is the one place this plan needs a step outside the UI: the index is a derived
-cache, and proving it is *derivable* means removing it and watching the app rebuild it —
+cache, and proving it is _derivable_ means removing it and watching the app rebuild it —
 there is no in-app button for that by design (deleting `.secondbrain/index/` is an
 environment setup action, not a user-facing feature; the verification itself happens
 entirely back in the UI afterward).
@@ -631,7 +631,7 @@ Rechnungsautomatisierung, this time leave it starred) without undoing any of the
 
 1. Close the app.
 2. Delete the folder `.demo-vault\.secondbrain\index\` (File Explorer, or `Remove-Item
-   -Recurse -Force .demo-vault\.secondbrain\index`).
+-Recurse -Force .demo-vault\.secondbrain\index`).
 3. Start the app again with the same command as in Global preparation.
 4. Open Kundenportal Relaunch: check the note, the waiting-on entry, and the status
    provenance line.

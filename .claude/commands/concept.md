@@ -77,45 +77,57 @@ rules from `CLAUDE.md`, content of concepts already decided.
    ---
 
    ## 1. Vision
+
    <Why does the system exist, how does it feel — from the interview answers.>
 
    ## 2. Scope
+
    <Three lists, in this order — the distinction is the point:>
 
    ### In scope (v1)
+
    <What the first version does.>
 
    ### Deliberately not in v1
+
    <What is wanted but comes later — each with a rationale for the deferral,
    as a short "> Rationale: …" note under the list.>
 
    ### Non-goals (permanent)
+
    <What this will never do, and why. A permanent no is a decision worth keeping;
    without this section it gets re-proposed every few months.>
 
    ## 3. Design decisions taken (from the requirements interview)
+
    <Table | Topic | Decision | Rationale | — one row per resolved question. ONLY
    what the user answered; the rationale is the user's reason, not yours.>
 
    ## 4. Tech decisions
+
    <Only where this concept fixes technology. Table | Area | Choice | Rationale |
    with one row per area (runtime, language, UI, styling, build, packaging, state,
    tests, lint). Omit the section entirely when the concept adds nothing to the
    stack already in CLAUDE.md — an empty table is worse than none.>
 
    ## 5. Core terms & model
+
    <Terms, an ASCII flow diagram is welcome.>
 
    ## 6…n. <Topic sections>
+
    <The mechanics in detail, grouped by topic like the reference concepts.>
 
    ## n+1. Integration with existing systems (architecture notes)
+
    <Where it docks on: data, backend, client, tooling, persistence.>
 
    ## n+2. Requirements
+
    <Numbered, checkable requirements (e.g. XYZ-1, XYZ-2, …), grouped by topic.>
 
    ## n+3. Open points
+
    <Numbered list of everything still unresolved — every question not asked or
    deliberately deferred lands here.>
    ```

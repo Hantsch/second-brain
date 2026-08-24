@@ -83,7 +83,10 @@ export function assertSafeVaultPath(input: string): string {
       throw new VaultPathError(input, `Unerlaubtes Zeichen im Namen "${segment}".`);
     }
     if (segment.endsWith('.') || segment.endsWith(' ')) {
-      throw new VaultPathError(input, `Name darf nicht auf Punkt oder Leerzeichen enden: "${segment}".`);
+      throw new VaultPathError(
+        input,
+        `Name darf nicht auf Punkt oder Leerzeichen enden: "${segment}".`,
+      );
     }
     if (WINDOWS_RESERVED.test(segment)) {
       throw new VaultPathError(input, `"${segment}" ist auf Windows ein reservierter Name.`);

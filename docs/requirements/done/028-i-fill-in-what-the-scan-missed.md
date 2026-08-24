@@ -82,7 +82,7 @@ richer. A number I typed in that nothing downstream reads would be worse than no
 - **The verdict itself gets no new field:** honesty about provenance is carried by the facts and
   rendered as a marker on the row, which keeps 019b's verdict consumers untouched.
 - **Validation lives in `src/shared/`** (like `ipc.ts`, which is already runtime code there), so
-  renderer and main run the *same* rule — `tsconfig.web.json` excludes `src/core`, so a core-only
+  renderer and main run the _same_ rule — `tsconfig.web.json` excludes `src/core`, so a core-only
   validator would have to be duplicated.
 - **Accepted range 256–262144 MB** (256 GB, above any shipping card) with integers only; empty,
   non-numeric, fractional, zero, negative and out-of-range each return a named error key instead
@@ -251,19 +251,19 @@ VRAM row.
 
 ## Coverage (AC → deliverable)
 
-| AC | Deliverable |
-| --- | --- |
-| Fill an unknown fact in through the UI, no file editing | D4 (field) + D3 (channel) |
-| Survives re-scan and restart | D3 (persisted in `userData`, applied in `detectMachineFacts`) |
-| Visibly marked as entered, disclaimer unchanged | D1 (`vramSource`) + D4 (marker) |
-| Verdict uses it exactly like a detected value | D2 (merge + verdict test) |
-| Recommendation (019b) uses the same value | D3 (`scanCapacityVerdict` / `buildRecommendations`) |
-| Clearable, verdict falls back | D3 (`null` write) + D4 (clear action) + D2 (fallback test) |
-| Bad input rejected before the verdict | D1 (validator) + D4 (inline error) + D3 (IPC guard) |
-| Lives on this machine, not in the vault | D1 (`AppSettings`) + D3 (no-vault-write test) |
-| No hardcoded string, both languages | D4 |
-| Unit-tested merge, verdict, rejected inputs, no real hardware | D1, D2, D3 |
-| Conflict detection vs. entry is surfaced (Decision Q2) | D2 (`vramConflict`) + D4 (conflict note) |
+| AC                                                            | Deliverable                                                   |
+| ------------------------------------------------------------- | ------------------------------------------------------------- |
+| Fill an unknown fact in through the UI, no file editing       | D4 (field) + D3 (channel)                                     |
+| Survives re-scan and restart                                  | D3 (persisted in `userData`, applied in `detectMachineFacts`) |
+| Visibly marked as entered, disclaimer unchanged               | D1 (`vramSource`) + D4 (marker)                               |
+| Verdict uses it exactly like a detected value                 | D2 (merge + verdict test)                                     |
+| Recommendation (019b) uses the same value                     | D3 (`scanCapacityVerdict` / `buildRecommendations`)           |
+| Clearable, verdict falls back                                 | D3 (`null` write) + D4 (clear action) + D2 (fallback test)    |
+| Bad input rejected before the verdict                         | D1 (validator) + D4 (inline error) + D3 (IPC guard)           |
+| Lives on this machine, not in the vault                       | D1 (`AppSettings`) + D3 (no-vault-write test)                 |
+| No hardcoded string, both languages                           | D4                                                            |
+| Unit-tested merge, verdict, rejected inputs, no real hardware | D1, D2, D3                                                    |
+| Conflict detection vs. entry is surfaced (Decision Q2)        | D2 (`vramConflict`) + D4 (conflict note)                      |
 
 ## Done
 
@@ -281,8 +281,8 @@ and reviewed.
 
 - **AC 5's literal wording vs. the frozen `judgeCapacity` math.** `judgeCapacity`
   (`src/core/llm/capacity.ts`, explicitly left untouched by the Plan) always takes whichever of
-  the VRAM/RAM ceilings is *tighter*, and treats VRAM as unconstrained while unknown. This makes
-  it mathematically provable that entering a real VRAM figure can only hold or *narrow* the
+  the VRAM/RAM ceilings is _tighter_, and treats VRAM as unconstrained while unknown. This makes
+  it mathematically provable that entering a real VRAM figure can only hold or _narrow_ the
   reported ceiling relative to the pre-override (RAM-only) estimate — never raise it, which is
   what AC 5's illustrative example ("a model previously ruled out as too big becomes
   recommendable") describes. Both D2 and D3 hit this independently, verified it by direct
@@ -304,7 +304,7 @@ and reviewed.
 
 **Incident during D4.** The agent implementing D4 ran an unscoped `npm run format` mid-task,
 reformatting ~500 unrelated files, then an unscoped `git restore` while cleaning up, which
-silently reverted several *other* in-progress, uncommitted files back to their last-committed
+silently reverted several _other_ in-progress, uncommitted files back to their last-committed
 state — including this story file (status/ticks/Plan/Deliverables all reverted to the pre-refine
 draft) and, separately and outside this story's scope, in-progress uncommitted refine work on
 `docs/sprints/S08/sprint.md` and stories 029/030/031. This story file was reconstructed by hand

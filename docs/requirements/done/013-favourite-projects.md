@@ -355,11 +355,13 @@ partition (`filter.ts`, which additionally interleaves with "last touched" and t
 Two demo projects were starred in the seed (one of them stale) for the live smoke test.
 
 **Commit message.**
+
 ```
 013: favourite projects — star, reordered list, tiles and pickers
 ```
 
 **Verification.**
+
 - `npm run build` — green.
 - `npm test` (`npx vitest run --pool=threads`) — 2023/2025 passed. The 2 failures are
   pre-existing and unrelated to this story: `tests/core/wiki/module.test.ts` (MODULE-SCHEMA
@@ -400,6 +402,7 @@ Two demo projects were starred in the seed (one of them stale) for the live smok
 
 **Decisions and known limitations** (beyond the ones already recorded under
 `## Decisions (Sprint)`):
+
 - A failed list-star write (`ProjectsScreen.tsx`) is silent — no `onError`/error surface, same
   as the pre-existing `next_step` patch on this screen. The detail-star write is not silent (it
   has `expectedHash` and shares `ProjectDetail`'s existing generic `ErrorState` for `patch`
@@ -417,8 +420,8 @@ Two demo projects were starred in the seed (one of them stale) for the live smok
   live bug — left as an inline comment risk rather than a defensive rewrite for a case the rest
   of the codebase already assumes can't happen.
 - The "last worked on" marker is computed over the already scope/status/query-filtered list
-  (`filter.ts`), so under a narrowed scope it marks the most recently touched project *within
-  that scope*, not the global last-touched project. This is intentional (the alternative would
+  (`filter.ts`), so under a narrowed scope it marks the most recently touched project _within
+  that scope_, not the global last-touched project. This is intentional (the alternative would
   either show no marker under a scope filter or mark a row that isn't visually on top) and is
   pinned by a test, but wasn't written down as an explicit Decision during refine — recorded
   here for the sprint review.

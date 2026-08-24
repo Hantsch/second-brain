@@ -78,6 +78,11 @@ export const qk = {
        probes every local preset's endpoint at once. */
     runtimeStatus: (runtime: string) => ['llm', 'runtimeStatus', runtime] as const,
     runtimeInstallPlan: (runtime: string) => ['llm', 'runtimeInstallPlan', runtime] as const,
+    /* llama.cpp-only (034, D4): the engine's own status (ownership + port)
+       and the derived start plan, each their own cache entry so a stop/start
+       can invalidate them without touching the generic `runtimeStatus`. */
+    llamaEngineStatus: () => ['llm', 'llamaEngineStatus'] as const,
+    llamaStartPlan: () => ['llm', 'llamaStartPlan'] as const,
   },
   dashboard: {
     data: () => ['dashboard', 'data'] as const,

@@ -7,7 +7,7 @@ created: 2026-08-12
 
 ## Requirement
 
-Capture and Ask are things I *do*, not places I go. Right now they each own a rail
+Capture and Ask are things I _do_, not places I go. Right now they each own a rail
 entry, which puts them on the same footing as Projects and Journal and makes the
 navigation harder to read than the app actually is.
 
@@ -15,7 +15,7 @@ Capture is also redundant: the global window (`Ctrl+Shift+Space`) does the same 
 from anywhere, including when the app is not in the foreground. It is the better path
 and it is already built.
 
-Ask is worse off as a screen than as an overlay: I want to ask *from inside* a
+Ask is worse off as a screen than as an overlay: I want to ask _from inside_ a
 context — in a project, in a module — and have the search scope already right.
 Navigating away to a separate screen loses exactly the context that would have made
 the question precise.
@@ -44,7 +44,7 @@ Target picture: [systems/navigation.md](../../systems/navigation.md).
 
 ## Open Questions
 
-- ~~Does the capture *screen* disappear entirely (the global window being the only
+- ~~Does the capture _screen_ disappear entirely (the global window being the only
   path), or does it stay as an overlay?~~ answered → Decisions (Sprint)
 - ~~Ask and the command palette are both `Ctrl+K`-shaped. One control with two modes,
   or two clearly separate controls?~~ answered → Decisions (Sprint)
@@ -286,12 +286,13 @@ without a `checkScreenList()` warning; both overlays appear in the a11y run.
 
 **Coverage** — every acceptance criterion, in order: rail entries gone → D5 · visible
 control plus palette → D3 + D6 · hotkeys incl. global `Ctrl+Shift+Space` → D5 (digits)
-+ D6 (`Ctrl+K`) + untouched `main/hotkey.ts` · ask as overlay with prefilled scope → D4
-+ D8 (+ D7 for the project filter) · ask keeps citations, "no evidence", file-back → D2
-+ D4 · capture keeps path and undo → D1 + D3 · `#/capture` / `#/ask` still land → D5 ·
-quick-capture window untouched → D5 (nothing under `src/main`; the quick-capture tests
-stay green) · freed hotkeys deliberate → D5 · honest "no model configured" → D2/D4
-(ask) and D1/D3 (capture, unchanged) · dashboard tiles still reach both → D5.
+
+- D6 (`Ctrl+K`) + untouched `main/hotkey.ts` · ask as overlay with prefilled scope → D4
+- D8 (+ D7 for the project filter) · ask keeps citations, "no evidence", file-back → D2
+- D4 · capture keeps path and undo → D1 + D3 · `#/capture` / `#/ask` still land → D5 ·
+  quick-capture window untouched → D5 (nothing under `src/main`; the quick-capture tests
+  stay green) · freed hotkeys deliberate → D5 · honest "no model configured" → D2/D4
+  (ask) and D1/D3 (capture, unchanged) · dashboard tiles still reach both → D5.
 
 ## Model Hints
 

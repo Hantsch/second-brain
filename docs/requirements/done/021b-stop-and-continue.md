@@ -241,6 +241,7 @@ frozen score and "last check was stopped" instead of presenting a partial findin
 current (D5).
 
 Code review (story-review-hard) found 3 confirmed bugs, since fixed and re-verified:
+
 - A first-ever partial run (no earlier complete report to freeze) showed a score computed from
   the half-finished findings instead of "unknown" — fixed in `present()`
   ([gardener-state.ts](../../src/main/gardener-state.ts)); the renderer now shows "no complete
@@ -255,6 +256,7 @@ Code review (story-review-hard) found 3 confirmed bugs, since fixed and re-verif
 
 Three further review findings were left unfixed, as plausible edge cases rather than confirmed
 defects, none of which the acceptance criteria exercise:
+
 - Resuming a run after the model became unreachable in between could store a "complete" run that
   never actually reran a check. Narrow window (model must disappear mid-pause), no reproduction.
 - `readStageIds` drops unknown stage ids from `plan` as well as from `completed` — only matters

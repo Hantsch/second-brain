@@ -20,6 +20,7 @@ import type { LlmGateway } from '@core/llm';
 import type { ProviderConfig, RecommendationSet, TaskKind } from '@shared/types';
 import type { LlmBridge } from './contracts';
 import { scanCapacityVerdict } from './ipc/machine-scan';
+import { ensureLlamaRunning } from './ipc/runtime/llamacpp-autostart';
 import { providerKeyId } from './secrets';
 import type { KeyStore } from './secrets';
 import type { Services } from './services';
@@ -51,11 +52,39 @@ function registryOf(services: Services): ProviderRegistry {
  */
 export function createGateway(services: Services): LlmGateway {
   const settings = services.settings.vault();
-  return new RoutingGateway({
+  const gateway = new RoutingGateway({
     routing: settings?.routing ?? { tasks: {}, defaults: {} },
     providers: providersOf(services),
     keys: coreKeys(services.keys),
   });
+  return withAutoStart(gateway, services);
+}
+
+/**
+ * Wraps the real gateway so every call that actually dispatches to a
+ * provider (`complete`, `stream`) first awaits `ensureLlamaRunning` (034,
+ * D6) — a no-op unless `machine.llamaAutoStart` is `'on-demand'` and the
+ * engine is installed but stopped. `isAvailable`/`routeFor` pass straight
+ * through unwrapped: they only answer a routing question, never a network
+ * call, so there is nothing for them to wait on.
+ *
+ * A thin object, not a new class: every call site already goes through
+ * `createGateway`, so this is the one place that needs to know the guard
+ * exists at all.
+ */
+function withAutoStart(gateway: LlmGateway, services: Services): LlmGateway {
+  return {
+    complete: async (req) => {
+      await ensureLlamaRunning(services);
+      return gateway.complete(req);
+    },
+    stream: async (req, onDelta) => {
+      await ensureLlamaRunning(services);
+      return gateway.stream(req, onDelta);
+    },
+    isAvailable: (task) => gateway.isAvailable(task),
+    routeFor: (task) => gateway.routeFor(task),
+  };
 }
 
 /** Writes a validated provider version back into the vault settings. */

@@ -84,9 +84,7 @@ export function RunBar({ progress, busy, cancelling, onCancel }: RunBarProps) {
         {remainingLabel !== null ? (
           <span className="sb-grun-remaining">{remainingLabel}</span>
         ) : null}
-        {noModelStage ? (
-          <span className="sb-grun-note">{t('garden.run.noModelStage')}</span>
-        ) : null}
+        {noModelStage ? <span className="sb-grun-note">{t('garden.run.noModelStage')}</span> : null}
         {progress?.startedAt ? (
           <span
             className="sb-grun-elapsed sb-mono"

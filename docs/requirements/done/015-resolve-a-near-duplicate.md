@@ -344,11 +344,13 @@ instead of being silently discarded (this closed a real gap found in review, see
 vault seeds a real near-duplicate pair.
 
 **Commit message:**
+
 ```
 015: resolve a near-duplicate — discard or supersede, undoable
 ```
 
 **Verification:**
+
 - `npm run build` — green.
 - `npm run lint` / `npm run typecheck` — green.
 - `npm test` — 2405 passed, 1 failed. The 1 failure is the pre-existing
@@ -399,6 +401,7 @@ vault seeds a real near-duplicate pair.
     near-duplicate pair) — accepted as noted, non-blocking.
 
 **Decisions made during the build (beyond what `## Decisions (Sprint)` already recorded):**
+
 - `discardPlan`/`discardPage`/`supersede` take a `deps: { store, index, ... }` object rather
   than a bare `store` — the plan's suggested `(store, { path, keep })` signature couldn't
   reach the index graph for inbound links, which `fixes.ts`'s helpers never needed.

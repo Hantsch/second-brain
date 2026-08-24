@@ -13,7 +13,7 @@ section behind a show/hide toggle, waiting-on entries can only be resolved.
 
 The only way to get either into a project today is to write a dump, then file it onto
 the project from the inbox. That path works, but it is a detour for "add a note to
-this project" — and because it is the *only* path, the project screen looks finished
+this project" — and because it is the _only_ path, the project screen looks finished
 while a core action is missing.
 
 I want to type a note into the project I am looking at, and I want to record "waiting
@@ -94,7 +94,7 @@ The project detail gets two write paths it is missing. The note needs new core +
 the existing `projects:patch`.
 
 1. **Core** — `src/core/vault/sections.ts` gains an additive `headingFor(body, aliases,
-   fallback)`; new `src/core/projects/sections.ts` maps `notes` → `['notizen','notes']`
+fallback)`; new `src/core/projects/sections.ts` maps `notes` → `['notizen','notes']`
    with the document language as fallback. Mirror: `src/core/areas/sections.ts`.
 2. **IPC + main** — two channels in `src/shared/ipc.ts`:
    `projects:createNote { slug, text, expectedHash? }` → `WriteResult & { block }`, and
@@ -315,13 +315,13 @@ before closing the story:
 - **F4** — The undo mutations for both new write paths (`saveNote`'s `removeNote` call,
   `saveWaiting`'s/`resolveWaiting`'s `projects:patch` call) don't send `expectedHash`, so
   an undo clicked after an external edit made in that window writes against the file's
-  *current* hash rather than failing as a conflict. Pre-existing pattern, shared with the
+  _current_ hash rather than failing as a conflict. Pre-existing pattern, shared with the
   original `resolveWaiting` undo this story mirrors.
 - **F5** — `removeBlock()` collapses 3+ consecutive blank lines to 2
   (`.replace(/\n{3,}/g, '\n\n')`) as part of tidying up after removing a block; if that
   collapsing region overlaps deliberate spacing elsewhere in the file, it's flattened too.
   Pre-existing in `src/core/capture/filing.ts`, not touched by D2.
-- **F6** — The *filing* path's `applyFiling()` (`src/core/capture/filing.ts`) still hardcodes
+- **F6** — The _filing_ path's `applyFiling()` (`src/core/capture/filing.ts`) still hardcodes
   `DEFAULT_SECTION = 'Notizen'` and doesn't consult `projectNotesHeading()` — so filing a
   dump (not the new hand-typed note composer) into a project whose file already uses
   `## Notes` would create a second, German-headed section instead of joining the existing

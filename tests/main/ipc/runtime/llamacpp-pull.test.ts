@@ -339,7 +339,28 @@ describe('llamacpp status — the three values', () => {
       },
     });
     expect(await part.status()).toBe('running');
-    expect(calls[0]).toBe('http://127.0.0.1:8080/v1/models');
+    // 034, D3: the app no longer starts the engine on the fixed 8080 but on a
+    // port out of 11435–11444, so the generic status probe scans that range.
+    expect(calls[0]).toBe('http://127.0.0.1:11435/v1/models');
+  });
+
+  it('finds a server further inside the range, not only on the first port', async () => {
+    const fs = fakeEngineFs();
+    await fs.fs
+      .createSink(engineBinaryPath(path.join(USER_DATA, 'runtimes/llamacpp'), 'linux'))
+      .close();
+    const calls: string[] = [];
+    const part = statusPart({
+      fs: fs.fs,
+      statusFetchImpl: async (url) => {
+        calls.push(url);
+        return { ok: url.includes(':11437/') } as Response;
+      },
+    });
+
+    expect(await part.status()).toBe('running');
+    // Probed in order and stopped at the first answer — 11435, 11436, 11437.
+    expect(calls).toHaveLength(3);
   });
 });
 

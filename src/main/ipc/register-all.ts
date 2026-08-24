@@ -25,9 +25,11 @@ import { createOllamaRuntimePart } from './ollama-runtime';
 import { projectHandlers } from './projects';
 import { reminderHandlers } from './reminders';
 import { hfSearchHandlers } from './runtime/hf-search';
+import { llamaAutoStartHandlers } from './runtime/llamacpp-autostart';
+import { createLlamaLifecycleStartPart } from './runtime/llamacpp-engine-start';
 import { createLlamaCppInstallPart } from './runtime/llamacpp-install';
+import { llamaLifecycleHandlers, productionLifecycleDeps } from './runtime/llamacpp-lifecycle';
 import { createLlamaCppPullPart } from './runtime/llamacpp-pull';
-import { createLlamaCppStartPart } from './runtime/llamacpp-start';
 import type { RuntimeRegistry } from './runtime/registry';
 import {
   createRuntimeRegistry,
@@ -45,22 +47,24 @@ import { vaultHandlers } from './vault';
 import { windowHandlers } from './window';
 
 /**
- * llama.cpp as one `RuntimeInstaller` (033, D6/D7/D9). Install (plan,
- * download, cancel, status, open — D6), the model pull (D7) and the minimal
- * start (D9 — `llama-server` with the story's fixed conservative flags) are
- * all wired here.
+ * llama.cpp as one `RuntimeInstaller` (033, D6/D7; 034, D3). Install (plan,
+ * download, cancel, status, open — 033 D6), the model pull (033 D7) and the
+ * start are all wired here. Since 034, D3 the start is the machine-derived,
+ * tracked one from `llamacpp-engine-start.ts` — 033's fixed-flag
+ * `llamacpp-start.ts` is gone, and the engine it starts is stopped again
+ * through `llm:stopLlamaEngine` and on `will-quit`.
  *
- * `status`'s server probe (D7) and `start`'s own readiness poll (D9) both
- * need an explicit `fetchImpl` to ever run at all — neither silently
- * defaults to the real network from an unconfigured caller — so the real
- * `fetch` is that explicit wiring, and this is the one place production
- * supplies it.
+ * `status`'s server probe and `start`'s port scan and readiness poll all need
+ * an explicit `fetchImpl` to ever run at all — none of them silently defaults
+ * to the real network from an unconfigured caller — so the real `fetch` is
+ * that explicit wiring (`productionLifecycleDeps`), and this is the one place
+ * production supplies it.
  */
 function llamaCppInstaller(services: Services): RuntimeInstaller {
   return {
     ...createLlamaCppInstallPart(services, { statusFetchImpl: fetch }),
     ...createLlamaCppPullPart(services),
-    ...createLlamaCppStartPart({ fetchImpl: fetch }),
+    ...createLlamaLifecycleStartPart(services, productionLifecycleDeps(services)),
     id: 'llamacpp',
   };
 }
@@ -106,6 +110,8 @@ export function buildHandlers(services: Services): HandlerMap {
     ...installChannelHandlers(runtimes),
     ...lifecycleChannelHandlers(runtimes),
     ...pullChannelHandlers(runtimes),
+    ...llamaLifecycleHandlers(services),
+    ...llamaAutoStartHandlers(services),
     ...hfSearchHandlers(services),
     ...dashboardHandlers(services),
     ...reminderHandlers(services),

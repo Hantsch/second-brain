@@ -433,12 +433,12 @@ document.
 **Trigger and read inside the unit.** The maintenance screen reports that something is
 due and links there.
 
-| Level    | Location                                                                                   |
-| -------- | ------------------------------------------------------------------------------------------ |
+| Level    | Location                                                                                             |
+| -------- | ---------------------------------------------------------------------------------------------------- |
 | Project  | The **Project knowledge** tab, already reserved in [systems/navigation.md](../systems/navigation.md) |
-| Module   | Inside the module view, next to the wiki pages                                             |
-| Area     | Inside the area, in the Notes screen (story 005)                                           |
-| Due-ness | Maintenance, as a finding that links to the unit                                           |
+| Module   | Inside the module view, next to the wiki pages                                                       |
+| Area     | Inside the area, in the Notes screen (story 005)                                                     |
+| Due-ness | Maintenance, as a finding that links to the unit                                                     |
 
 Rejected: doing all diffs in the maintenance screen. Confirming prose about a project
 without the project in front of you is the situation in which people click through.

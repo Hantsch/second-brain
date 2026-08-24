@@ -235,6 +235,7 @@ until nothing is left to migrate.
 **Commit message:** `024: filing writes headings in my document language`
 
 **Verification.**
+
 - `npm run typecheck` — clean (both `tsconfig.node.json` and `tsconfig.web.json`).
 - `npm run lint` — clean.
 - `npm test` — 190 files, 2704 tests, 0 failed (up from 2700 before the review-fix cycle below;
@@ -263,6 +264,7 @@ until nothing is left to migrate.
   only non-blocking findings left (see Decisions).
 
 **Decisions.**
+
 - Pass 2 found three write/read sites the story's own scope note ("journal/, areas/ and
   projects/ already resolve theirs") turned out not to actually cover, all fixed here because
   leaving them would recreate the exact dual-language-duplicate-section bug this story exists to

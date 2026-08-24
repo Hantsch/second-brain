@@ -30,7 +30,10 @@ function dayPath(date) {
 
 /** Zeitanteil des Dateinamens: Sekunden-Genauigkeit, Doppelpunkte durch `-` ersetzt, wie beim echten Codex-CLI. */
 function isoForFileName(date) {
-  return date.toISOString().replace(/\.\d{3}Z$/, '').replace(/:/g, '-');
+  return date
+    .toISOString()
+    .replace(/\.\d{3}Z$/, '')
+    .replace(/:/g, '-');
 }
 
 /** Eine Sitzung: Kopf mit Git-Kontext, ein Werkzeugaufruf, eine Antwort, Token-Zählung zum Schluss. */
@@ -126,11 +129,19 @@ function turnContext(session, stamp) {
 /** Die Aufforderung: `event_msg` und der `response_item`, den der Leser für den Turnus zählt. */
 function userTurn(session, stamp) {
   return [
-    { timestamp: stamp, type: 'event_msg', payload: { type: 'user_message', message: session.prompt } },
+    {
+      timestamp: stamp,
+      type: 'event_msg',
+      payload: { type: 'user_message', message: session.prompt },
+    },
     {
       timestamp: stamp,
       type: 'response_item',
-      payload: { type: 'message', role: 'user', content: [{ type: 'input_text', text: session.prompt }] },
+      payload: {
+        type: 'message',
+        role: 'user',
+        content: [{ type: 'input_text', text: session.prompt }],
+      },
     },
   ];
 }
@@ -142,12 +153,19 @@ function toolWork(session, stamp) {
     {
       timestamp: stamp,
       type: 'function_call',
-      payload: { call_id: 'call_1', name: 'shell', arguments: JSON.stringify({ command: ['bash', '-lc', session.command] }) },
+      payload: {
+        call_id: 'call_1',
+        name: 'shell',
+        arguments: JSON.stringify({ command: ['bash', '-lc', session.command] }),
+      },
     },
     {
       timestamp: stamp,
       type: 'function_call_output',
-      payload: { call_id: 'call_1', output: JSON.stringify({ output: session.commandOutput, metadata: { exit_code: 0 } }) },
+      payload: {
+        call_id: 'call_1',
+        output: JSON.stringify({ output: session.commandOutput, metadata: { exit_code: 0 } }),
+      },
     },
   ];
 }
@@ -158,7 +176,11 @@ function assistantTurn(session, stamp, tokens) {
     {
       timestamp: stamp,
       type: 'response_item',
-      payload: { type: 'message', role: 'assistant', content: [{ type: 'output_text', text: session.reply }] },
+      payload: {
+        type: 'message',
+        role: 'assistant',
+        content: [{ type: 'output_text', text: session.reply }],
+      },
     },
     {
       timestamp: stamp,
@@ -166,8 +188,16 @@ function assistantTurn(session, stamp, tokens) {
       payload: {
         type: 'token_count',
         info: {
-          total_token_usage: { input_tokens: tokens.input, output_tokens: tokens.output, total_tokens: tokens.input + tokens.output },
-          last_token_usage: { input_tokens: tokens.input, output_tokens: tokens.output, total_tokens: tokens.input + tokens.output },
+          total_token_usage: {
+            input_tokens: tokens.input,
+            output_tokens: tokens.output,
+            total_tokens: tokens.input + tokens.output,
+          },
+          last_token_usage: {
+            input_tokens: tokens.input,
+            output_tokens: tokens.output,
+            total_tokens: tokens.input + tokens.output,
+          },
           model_context_window: 128000,
         },
       },
@@ -209,6 +239,9 @@ export function seedCodexSessions(seeder, clock) {
     '',
   );
   /* Geschwister von `sessions/`, nicht darin — `defaultSessionIndexPath` in reader.ts kappt genau dieses Segment. */
-  seeder.write(`${CODEX_DIR.replace(/\/sessions$/, '')}/session_index.jsonl`, `${indexLines.join('\n')}\n`);
+  seeder.write(
+    `${CODEX_DIR.replace(/\/sessions$/, '')}/session_index.jsonl`,
+    `${indexLines.join('\n')}\n`,
+  );
   return CODEX_DIR;
 }

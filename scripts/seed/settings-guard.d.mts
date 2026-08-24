@@ -3,7 +3,4 @@
    sonst keine Typinformation. Signatur muss exakt zur Implementierung
    passen; kein any. */
 
-export declare function checkSettingsGuard(
-  settings: unknown,
-  vaultRoot: string,
-): string[];
+export declare function checkSettingsGuard(settings: unknown, vaultRoot: string): string[];

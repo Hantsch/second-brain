@@ -245,6 +245,50 @@ describe('RoutingGateway: Retry', () => {
     expect(sleeps).toHaveLength(2);
   });
 
+  /* 034, D7: llama.cpp is just another `openai-compatible` provider to the
+     gateway, so a `llama-server` that was killed (stop pressed, or the
+     process died on its own) has to come through this same, generic
+     mapping — the story adds no llama.cpp-specific error handling of its
+     own (Decisions, Q5). A dead TCP listener surfaces to `fetch` as a
+     `TypeError` with an `ECONNREFUSED`/`ECONNRESET`-shaped `code`, exactly
+     what Node raises for a refused or reset loopback connection. */
+  it('meldet einen abgebrochenen llama.cpp-Prozess als unreachable, nie als Hänger (034, D7)', async () => {
+    const connectionGone = (): Error =>
+      Object.assign(new Error('connect ECONNREFUSED 127.0.0.1:11435'), {
+        code: 'ECONNREFUSED',
+      });
+    const provider = failingProvider([connectionGone(), connectionGone(), connectionGone()]);
+    const llamaRoute: Routing = {
+      tasks: { 'query-answer': { providerId: 'llamacpp', model: 'local-model' } },
+      defaults: {},
+    };
+    const llamaProvider = providerConfig({
+      id: 'llamacpp',
+      label: 'llama.cpp (lokal)',
+      kind: 'openai-compatible',
+      local: true,
+      hasKey: false,
+      baseUrl: 'http://127.0.0.1:11435/v1',
+    });
+    const { gateway, sleeps } = harness({
+      routing: llamaRoute,
+      providers: [llamaProvider],
+      keys: new MemoryKeyStore(),
+      provider,
+    });
+
+    const startedAt = Date.now();
+    await expect(gateway.complete(ask)).rejects.toMatchObject({
+      name: 'LlmUnavailableError',
+      info: { reason: 'unreachable' },
+    });
+    // Bounded: the fake `sleep` never actually waits, and every attempt here
+    // fails synchronously — a real hang would not finish within a test
+    // timeout at all, let alone within one second of wall-clock time.
+    expect(Date.now() - startedAt).toBeLessThan(1000);
+    expect(sleeps).toHaveLength(2);
+  });
+
   it('deutet 401 als fehlenden Schlüssel', async () => {
     const provider = failingProvider([httpError(401)]);
     const { gateway } = harness({ routing: route, provider });

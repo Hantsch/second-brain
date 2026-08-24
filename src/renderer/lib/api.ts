@@ -190,6 +190,13 @@ export const api = {
       call('llm:openRuntimeInstaller', { runtime }),
     startLocalRuntime: (runtime: IpcRequest<'llm:startLocalRuntime'>['runtime']) =>
       call('llm:startLocalRuntime', { runtime }),
+    llamaEngineStatus: () => call('llm:llamaEngineStatus'),
+    llamaStartPlan: () => call('llm:llamaStartPlan'),
+    stopLlamaEngine: () => call('llm:stopLlamaEngine'),
+    setLlamaOverrides: (patch: IpcRequest<'llm:setLlamaOverrides'>) =>
+      call('llm:setLlamaOverrides', patch),
+    setLlamaAutoStart: (mode: IpcRequest<'llm:setLlamaAutoStart'>) =>
+      call('llm:setLlamaAutoStart', mode),
     pullModel: (
       runtime: IpcRequest<'llm:pullModel'>['runtime'],
       modelId: string,

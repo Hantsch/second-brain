@@ -231,7 +231,7 @@ both are disabled, the rail indicator (021a) shows a run is going, and no error 
 **Summary.** `gardener:run` now accepts `{ kinds?, module? }` as `scope`. Storage
 (`gardener-state.ts`) merges a scoped run's findings over the previous run's rather than
 replacing them, keeps `advice` and the frozen health score, and — after the review fix cycle —
-only removes previously-stored findings whose kind a stage of *this* run actually checked
+only removes previously-stored findings whose kind a stage of _this_ run actually checked
 (`checkedKinds`), so a scope naming only a model-only kind with no model routed deletes
 nothing. The run (`gardener-deps.ts`) skips out-of-scope checks and stages (including
 `journal-loose-ends`, which is skipped outright rather than run-then-discarded) and filters
@@ -241,11 +241,13 @@ scoped last check distinctly from a stopped one, with a "check everything"/"cont
 action. A resumed scoped run stays scoped instead of being laundered into a full run.
 
 **Commit message:**
+
 ```
 021c: scoped gardener runs (check only a part)
 ```
 
 **Verification.**
+
 - `npm run build` / `npm run typecheck` / `npm run lint`: green.
 - `npm test`: 2627/2628 passing; the one failure (`tests/core/wiki/module.test.ts`) is
   pre-existing and unrelated (German AGENTS.md template vs. the now-English
@@ -261,7 +263,7 @@ action. A resumed scoped run stays scoped instead of being laundered into a full
 - Live smoke (manual, via a throwaway Playwright driver over the seeded demo vault, since
   the standard `npm run shot` script doesn't yet know this new control): filtered to "Ohne
   Modul", clicked "check only this" — `gardener:report` came back with `scope: {"module":
-  null}`, `complete: false`, `checkedKinds` listing every mechanical check (no model routed),
+null}`, `complete: false`, `checkedKinds` listing every mechanical check (no model routed),
   health frozen at 89 with a `healthAsOf` date, and the finding count unchanged (10 before and
   after). The header showed "Letzte Prüfung: nur Modul Ohne Modul" plus "Alles prüfen",
   alongside the unchanged 021b "Stand ..., letzte vollständige Prüfung" wording. The dashboard

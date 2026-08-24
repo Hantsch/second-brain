@@ -190,15 +190,16 @@ describe('useGardenerProgress seeds from gardener:runStatus', () => {
     wrapper: (props: { children: ReactNode }) => ReactNode;
   } {
     const sb = {
-      invoke: vi.fn((channel: string, payload?: unknown) => Promise.resolve(invoke(channel, payload))),
+      invoke: vi.fn((channel: string, payload?: unknown) =>
+        Promise.resolve(invoke(channel, payload)),
+      ),
       on: () => () => undefined,
       off: vi.fn(),
     };
     window.sb = sb as unknown as typeof window.sb;
     const client = new QueryClient();
     return {
-      wrapper: ({ children }: { children: ReactNode }) =>
-        QueryClientProvider({ client, children }),
+      wrapper: ({ children }: { children: ReactNode }) => QueryClientProvider({ client, children }),
     };
   }
 
@@ -240,7 +241,9 @@ describe('useGardenerProgress seeds from gardener:runStatus', () => {
     const { result } = renderHook(() => useGardenerProgress(), { wrapper });
 
     /* Give the seed query a tick to settle, then confirm it never flips. */
-    await waitFor(() => expect(window.sb?.invoke).toHaveBeenCalledWith('gardener:runStatus', undefined));
+    await waitFor(() =>
+      expect(window.sb?.invoke).toHaveBeenCalledWith('gardener:runStatus', undefined),
+    );
     expect(result.current).toBeNull();
   });
 });

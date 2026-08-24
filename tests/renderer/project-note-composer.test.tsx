@@ -20,9 +20,7 @@ describe('ProjectNoteComposer', () => {
     render(<ProjectNoteComposer busy={false} onSave={vi.fn()} />);
 
     expect(screen.getByLabelText('Write a note')).toBeTruthy();
-    expect((screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement).disabled).toBe(
-      true,
-    );
+    expect((screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement).disabled).toBe(true);
   });
 
   it('does not call onSave for an empty or whitespace-only field', async () => {
@@ -34,9 +32,7 @@ describe('ProjectNoteComposer', () => {
     await userEvent.keyboard('{Control>}{Enter}{/Control}');
 
     expect(onSave).not.toHaveBeenCalled();
-    expect((screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement).disabled).toBe(
-      true,
-    );
+    expect((screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement).disabled).toBe(true);
   });
 
   it('saves via the button and clears the field once the write resolves', async () => {
@@ -63,7 +59,9 @@ describe('ProjectNoteComposer', () => {
   });
 
   it('keeps the text in the field when the write is rejected', async () => {
-    const onSave = vi.fn().mockRejectedValue(Object.assign(new Error('conflict'), { code: 'conflict' }));
+    const onSave = vi
+      .fn()
+      .mockRejectedValue(Object.assign(new Error('conflict'), { code: 'conflict' }));
     render(<ProjectNoteComposer busy={false} onSave={onSave} />);
 
     const field = screen.getByLabelText('Write a note');

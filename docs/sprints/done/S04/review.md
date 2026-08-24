@@ -7,12 +7,12 @@ stance next to it (listen / tips / analyse), and an interview button for when th
 empty. The day list gets a "not finished" filter, and a month calendar sits above it showing
 entries, mood and unfinished state.
 
-| Story | Status | Commit |
-| --- | --- | --- |
-| 011 — one entry instead of day and conversation | done | `4cf651d` |
-| 012 — the interview, for when I do not know what to write | done | `3434c84` |
-| 009 — filter for days that are not finished | done | `890118f` |
-| 010 — a calendar on top of the days | done | `173507f` |
+| Story                                                     | Status | Commit    |
+| --------------------------------------------------------- | ------ | --------- |
+| 011 — one entry instead of day and conversation           | done   | `4cf651d` |
+| 012 — the interview, for when I do not know what to write | done   | `3434c84` |
+| 009 — filter for days that are not finished               | done   | `890118f` |
+| 010 — a calendar on top of the days                       | done   | `173507f` |
 
 All four stories done, none blocked. Every story went through a `story-review-hard` clean-agent
 review; 011, 012 and 010 came back with real findings on the first pass and were fixed in the
@@ -55,7 +55,7 @@ relevant input for future planning:
 
 - **The journal's file format changed for the first time since M1 explicitly left it alone.**
   011 supersedes the "journal stays untouched" line in
-  [systems/navigation.md](../../systems/navigation.md); only the journal's *inner* structure
+  [systems/navigation.md](../../systems/navigation.md); only the journal's _inner_ structure
   changed, its place in the rail did not.
 - **Migration is opt-in, not automatic.** Legacy `## Day`/`## Conversation` files render fine
   unmigrated; folding one into the new stream is a deliberate, hash-guarded, per-day action. The

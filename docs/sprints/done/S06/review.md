@@ -7,11 +7,11 @@ terminal.
 
 ## Overview
 
-| Story | Status | Commit |
-| --- | --- | --- |
-| 019a — machine scan | done | `019a: machine scan — capacity verdict in the models tab` |
-| 019b — model recommendations | done | `019b: recommend one model per task, with cost, download size and the sensitive-task rule` |
-| 019c — guided local runtime | done | `019c: guided local runtime — install, start, and pull Ollama models from the app` |
+| Story                        | Status | Commit                                                                                     |
+| ---------------------------- | ------ | ------------------------------------------------------------------------------------------ |
+| 019a — machine scan          | done   | `019a: machine scan — capacity verdict in the models tab`                                  |
+| 019b — model recommendations | done   | `019b: recommend one model per task, with cost, download size and the sensitive-task rule` |
+| 019c — guided local runtime  | done   | `019c: guided local runtime — install, start, and pull Ollama models from the app`         |
 
 All three stories were already refined to `ready` before this sprint started; no clarification
 round or refine pass was needed. Build ran in list order (019a → 019b → 019c), each on its own

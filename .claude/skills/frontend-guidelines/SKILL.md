@@ -1,6 +1,6 @@
 ---
 name: frontend-guidelines
-description: "Frontend architecture rules and conventions for React/TypeScript apps using Atomic Design. Use when: creating or editing files in a frontend source tree; adding atoms/molecules/organisms/templates/pages; building forms, lists, dashboards or detail screens; introducing a new route; wiring server state with a data-fetching library (TanStack Query, SWR, RTK Query); adding UI-kit components (shadcn/ui, MUI, Chakra); adding icons; writing Storybook stories; rendering a name for another user/owner/author; adding or changing translatable strings; deciding which atomic layer a component or hook belongs in; reviewing a diff for layering, naming or duplication violations. DO NOT USE FOR: backend changes; infrastructure/Docker; auth/role/permission matrix changes; non-React frontends."
+description: 'Frontend architecture rules and conventions for React/TypeScript apps using Atomic Design. Use when: creating or editing files in a frontend source tree; adding atoms/molecules/organisms/templates/pages; building forms, lists, dashboards or detail screens; introducing a new route; wiring server state with a data-fetching library (TanStack Query, SWR, RTK Query); adding UI-kit components (shadcn/ui, MUI, Chakra); adding icons; writing Storybook stories; rendering a name for another user/owner/author; adding or changing translatable strings; deciding which atomic layer a component or hook belongs in; reviewing a diff for layering, naming or duplication violations. DO NOT USE FOR: backend changes; infrastructure/Docker; auth/role/permission matrix changes; non-React frontends.'
 ---
 
 <!-- tech-rules:managed 1.0.0 -->
@@ -39,20 +39,20 @@ encodes layer boundaries, file conventions, data-flow rules and a mandatory dupl
 
 ## Atomic Design Layer Map
 
-| Layer     | Folder (typical) | Holds | Forbidden |
-| --------- | ---------------- | --- | --- |
-| Atoms     | `src/atoms/`     | Smallest UI primitives; thin wrappers over UI-kit components | Business logic; direct domain types |
-| Molecules | `src/molecules/` | 2+ atoms composed into a meaningful piece (FormField, StatCard) | Page/domain logic; implicit prop spreading |
-| Organisms | `src/organisms/` | Reusable complex sections (DataTable, PageHeader, Modal, Form) | Direct data fetching - data comes via props |
-| Templates | `src/templates/` | Page layout shells with named slots | Domain content; one-off layouts living inside a page |
+| Layer     | Folder (typical) | Holds                                                                               | Forbidden                                                                    |
+| --------- | ---------------- | ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| Atoms     | `src/atoms/`     | Smallest UI primitives; thin wrappers over UI-kit components                        | Business logic; direct domain types                                          |
+| Molecules | `src/molecules/` | 2+ atoms composed into a meaningful piece (FormField, StatCard)                     | Page/domain logic; implicit prop spreading                                   |
+| Organisms | `src/organisms/` | Reusable complex sections (DataTable, PageHeader, Modal, Form)                      | Direct data fetching - data comes via props                                  |
+| Templates | `src/templates/` | Page layout shells with named slots                                                 | Domain content; one-off layouts living inside a page                         |
 | Pages     | `src/pages/`     | Route-level screens grouped by feature subfolder (`pages/<feature>/<Name>Page.tsx`) | Page files directly under `pages/`; structural `div`s / custom layout markup |
-| Features  | `src/features/`  | Domain modules (hooks, context, domain-specific components) | Cross-domain coupling |
-| Hooks     | `src/hooks/`     | Cross-cutting reusable hooks | Domain-specific logic (put it under `features/`) |
-| Services  | `src/services/`  | Query/mutation definitions for the server-state library | Component imports of raw `fetch`/`axios` |
-| Context   | `src/context/`   | Global UI state providers | Server state (use the data layer) |
-| Router    | `src/router/`    | Route definitions, guards, path constants | Inline string paths scattered across the codebase |
-| Types     | `src/types/`     | Shared DTOs / API shapes | Component-local prop types |
-| Lib       | `src/lib/`       | Pure utility functions | React imports |
+| Features  | `src/features/`  | Domain modules (hooks, context, domain-specific components)                         | Cross-domain coupling                                                        |
+| Hooks     | `src/hooks/`     | Cross-cutting reusable hooks                                                        | Domain-specific logic (put it under `features/`)                             |
+| Services  | `src/services/`  | Query/mutation definitions for the server-state library                             | Component imports of raw `fetch`/`axios`                                     |
+| Context   | `src/context/`   | Global UI state providers                                                           | Server state (use the data layer)                                            |
+| Router    | `src/router/`    | Route definitions, guards, path constants                                           | Inline string paths scattered across the codebase                            |
+| Types     | `src/types/`     | Shared DTOs / API shapes                                                            | Component-local prop types                                                   |
+| Lib       | `src/lib/`       | Pure utility functions                                                              | React imports                                                                |
 
 ## Layer Dependency Direction (hard rule)
 
@@ -169,7 +169,7 @@ pages. A page over the limit is a page doing an organism's job.
 
 ## Procedure: Render a Foreign Reference (user, account, owner, comment author)
 
-Many features render information *about another principal* - the author of a comment, a list's
+Many features render information _about another principal_ - the author of a comment, a list's
 owner, a friend tag. These views always exist from at least two perspectives (the actor, and one or
 more observers), and the data the frontend has on hand differs per perspective. This is the single
 biggest source of "looks fine on my account, broken on yours" bugs.
@@ -222,7 +222,7 @@ The concrete API is the project's: `defineMessages`/`FormattedMessage` for react
 `t()`/resource JSON for i18next. Follow whichever the repo already uses.
 
 Red flags: message definitions inside a `.tsx` file; hardcoded user-facing text in JSX in a project
-that *has* i18n; message IDs that do not share a prefix with their sibling messages.
+that _has_ i18n; message IDs that do not share a prefix with their sibling messages.
 
 ## Procedure: Add a UI-Kit Component (shadcn/ui, MUI)
 
@@ -236,17 +236,17 @@ that *has* i18n; message IDs that do not share a prefix with their sibling messa
 These cover the duplicate clusters that appear in every UI codebase. Create them early; do not let
 inline equivalents accumulate.
 
-| Primitive | Layer | Purpose |
-| --- | --- | --- |
-| `Button` | atom | Single source of truth for every clickable rectangle. Supports `as="a"` / `as={Link}` so a styled `<Link>` is never necessary. |
-| `Card` | atom | Reusable bordered surface with `padding` / `tone` / `interactive` variants. Forbids ad-hoc card markup. |
-| `Avatar` | atom | One avatar renderer with fallback. No inline `<img>` for user avatars anywhere else. |
-| `TextInput` / `TextArea` | atom | The only text input primitives. Raw `<input>` / `<textarea>` only inside these files. |
-| `BrandLockup` | molecule | The ONLY place that renders the brand mark, parameterised by `size` / `tone` / `showText`. Used by every header, hero and splash. |
-| `AvatarWithText` | molecule | Avatar + title + optional subtitle + optional trailing actions. Replaces every "flex items-center gap" + avatar + name block. |
-| `SectionHeader` | molecule | Accent bar + heading + optional description + actions slot. |
-| `PageHeader` | molecule | Page-level title + description + optional actions. |
-| `PageStatusMessage` | molecule | Centered empty/loading/error message. Replaces every ad-hoc status `div`. |
+| Primitive                | Layer    | Purpose                                                                                                                           |
+| ------------------------ | -------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `Button`                 | atom     | Single source of truth for every clickable rectangle. Supports `as="a"` / `as={Link}` so a styled `<Link>` is never necessary.    |
+| `Card`                   | atom     | Reusable bordered surface with `padding` / `tone` / `interactive` variants. Forbids ad-hoc card markup.                           |
+| `Avatar`                 | atom     | One avatar renderer with fallback. No inline `<img>` for user avatars anywhere else.                                              |
+| `TextInput` / `TextArea` | atom     | The only text input primitives. Raw `<input>` / `<textarea>` only inside these files.                                             |
+| `BrandLockup`            | molecule | The ONLY place that renders the brand mark, parameterised by `size` / `tone` / `showText`. Used by every header, hero and splash. |
+| `AvatarWithText`         | molecule | Avatar + title + optional subtitle + optional trailing actions. Replaces every "flex items-center gap" + avatar + name block.     |
+| `SectionHeader`          | molecule | Accent bar + heading + optional description + actions slot.                                                                       |
+| `PageHeader`             | molecule | Page-level title + description + optional actions.                                                                                |
+| `PageStatusMessage`      | molecule | Centered empty/loading/error message. Replaces every ad-hoc status `div`.                                                         |
 
 ## Proactive Duplicate Scan (mandatory before finishing an edit)
 
@@ -294,15 +294,15 @@ Red flags:
 
 ## Naming Cheat Sheet
 
-| Thing | Convention | Example |
-| --- | --- | --- |
-| Component and file | PascalCase | `DataTable.tsx` |
-| Hook | `use` + camelCase | `useMemberList` |
-| Service / queries file | camelCase | `memberService.ts` |
-| Context | PascalCase + `Context` | `AuthContext` |
-| Types / interfaces | PascalCase | `MemberDto`, `CreateMemberInput` |
-| Props interface | `<Component>Props` | `FormFieldProps` |
-| Global constants | UPPER_SNAKE_CASE | `API_BASE_URL` |
+| Thing                  | Convention             | Example                          |
+| ---------------------- | ---------------------- | -------------------------------- |
+| Component and file     | PascalCase             | `DataTable.tsx`                  |
+| Hook                   | `use` + camelCase      | `useMemberList`                  |
+| Service / queries file | camelCase              | `memberService.ts`               |
+| Context                | PascalCase + `Context` | `AuthContext`                    |
+| Types / interfaces     | PascalCase             | `MemberDto`, `CreateMemberInput` |
+| Props interface        | `<Component>Props`     | `FormFieldProps`                 |
+| Global constants       | UPPER_SNAKE_CASE       | `API_BASE_URL`                   |
 
 ## Completion Checklist
 

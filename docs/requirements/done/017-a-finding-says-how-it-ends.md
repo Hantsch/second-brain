@@ -346,7 +346,7 @@ finding — `restore`. `gardener.json` gained a `snoozed` map next to `dismissed
 splits a run into open `findings` and `hidden` (dismissed + still-snoozed, each with its state and
 `until`), and `save()` prunes a decision only when the completed run itself could have found the
 id again (kind-aware, `LLM_ONLY_KINDS` exempts machine-only runs; additionally exempts a
-model-audit *rejection* of an unchanged deterministic candidate — see Decisions). The garden
+model-audit _rejection_ of an unchanged deterministic candidate — see Decisions). The garden
 screen's filter gained a fourth `state` axis (`open`/`dismissed`/`snoozed`/`all`, `open`
 preselected) so hidden findings stay visible and reversible outside the outcome strip's lifetime;
 the health card now states the score is computed without N hidden findings (split
@@ -354,11 +354,13 @@ dismissed/snoozed) and links straight to them, and `garden.health.perfect` can n
 next to a non-empty hidden list.
 
 **Commit message.**
+
 ```
 017: a finding names its ways out, snooze/dismiss stay visible and reversible
 ```
 
 **Verification.**
+
 - `npm run lint` — green.
 - `npm run typecheck` — green.
 - `npm test` — 2470/2471 green; the one failure (`tests/core/wiki/module.test.ts:150`,
@@ -385,13 +387,14 @@ next to a non-empty hidden list.
 
 **Decisions (made without the user, checked against the story's Plan/Decisions/Acceptance
 Criteria):**
+
 - **Prune logic hardened beyond the story's stated rule.** The review found that a dismissed
   `near-duplicate`/`missing-page` id can vanish from a run's final `findings` not because the
-  vault changed, but because the model-audit step actively *rejected* an unchanged deterministic
+  vault changed, but because the model-audit step actively _rejected_ an unchanged deterministic
   candidate this run — `usedLlm === true` so the `LLM_ONLY_KINDS` exemption doesn't cover it, and
   the dismissal would be silently deleted on a mere model opinion, not a real resolution. Fixed by
   adding `StoredRun.consideredIds` (the ids the run's deterministic step plus confirmed model
-  findings produced, *before* the audit's rejection filter) and pruning against the union of
+  findings produced, _before_ the audit's rejection filter) and pruning against the union of
   `findings` and `consideredIds`, so a rejected-but-still-deterministically-present candidate
   survives. Backward compatible: an absent/empty `consideredIds` (older stored runs) reduces to
   the original `findings`-only check. This is additive to, not a replacement of, the story's

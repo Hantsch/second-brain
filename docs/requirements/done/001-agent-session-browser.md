@@ -264,6 +264,7 @@ cosmetic cleanup items (stray German comments in four new files, two dead i18n k
 cycle addressed all five; a second review pass verified each fix end-to-end (including tracing
 `IpcError.detail` across the main→preload→renderer boundary) and returned PASS with four
 non-blocking observations, none affecting an acceptance criterion:
+
 - `agents:transcript` doesn't call the new `requireSessionsDir` guard (unreachable in practice —
   the projects query fails first).
 - `useLinkAgentProject` invalidates the projects cache but not the sessions cache (no visible

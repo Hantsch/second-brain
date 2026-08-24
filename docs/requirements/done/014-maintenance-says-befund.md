@@ -190,6 +190,7 @@ match.
 **Commit message:** `014: German maintenance UI says "Befund" instead of "Ergebnis"`
 
 **Verification:**
+
 - `npm run typecheck` — green.
 - `npm run lint` — green.
 - `npm test` — green except one pre-existing, unrelated failure
@@ -215,6 +216,7 @@ match.
   run.
 
 **Decisions:**
+
 - The story's plan listed `tests/renderer/garden.test.tsx:715` under D1's step-3 test list,
   but that assertion (`'5 Ergebnisse'` in the `Pflege-Kachel` describe block) actually
   exercises `de-dashboard.ts`'s `tile.gardener.findingsMany` key, not any `de-garden.ts` key.

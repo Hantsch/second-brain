@@ -35,7 +35,7 @@ pair precedes 009/010 as a pair rather than interleaving them.
 
 **No concept behind M3.** [systems/navigation.md](../systems/navigation.md) explicitly
 left the journal untouched at the rail level; 011 supersedes only the line about the
-journal's *inner* structure staying untouched. The four stories are detailed enough to
+journal's _inner_ structure staying untouched. The four stories are detailed enough to
 cut from directly.
 
 **Open questions to resolve in the clarification round** (from the story files):

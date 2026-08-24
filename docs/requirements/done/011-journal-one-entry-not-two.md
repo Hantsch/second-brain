@@ -345,7 +345,7 @@ are now fixed, with regression tests:
 - **F1 (fixed).** `EntryStream`'s "is my pending paragraph already on disk" check compared
   the message against a whole `entry` block by exact equality — but `appendEntry` writes
   plain prose, so a message landing right after existing prose in the same "Day" section
-  merges into *one* `entry` block (`parseStream` doesn't split on blank lines within a
+  merges into _one_ `entry` block (`parseStream` doesn't split on blank lines within a
   run). The exact-equality check then never matched, and the just-sent paragraph rendered
   twice once the day refetched. Fixed to check `block.text.endsWith(live.message)`
   (`src/renderer/screens/journal/EntryStream.tsx`). Regression test:
@@ -353,7 +353,7 @@ are now fixed, with regression tests:
   Strom mit vorheriger Prosa verschmilzt".
 - **F2 (fixed).** `toView`'s fallback for a day with no `## Day`/`## Tag` heading at all
   (a hand-edited file) used `dayText()` — which deliberately strips embedded answer blocks
-  for *reading* (search, prompts, close-out) — as the *editable* text. Saving such a day
+  for _reading_ (search, prompts, close-out) — as the _editable_ text. Saving such a day
   via the pencil silently deleted any answer block that happened to sit in the heading-less
   prefix: the app's own words, lost with no conflict and no notice. Split `dayText()` into
   a new `rawDayText()` (headings/dialogue/facts stripped, answers kept — the edit surface's
@@ -398,7 +398,7 @@ Two findings were reviewed and left as documented, deliberate non-issues, not fi
 **Verification (after the review fixes, run directly, not self-reported by a sub-agent):**
 `npm run format:check` — red repo-wide (246 files) on a pre-existing CRLF-vs-LF
 environment condition (`core.autocrlf=true` vs. Prettier's `lf` default) that predates
-this story and touches files this story never modified; every file this story *did* touch
+this story and touches files this story never modified; every file this story _did_ touch
 passes `npx prettier --check` individually. `npm run lint` — clean. `npm run typecheck` —
 clean. `npm test` — 2069/2070 passing; the one failure
 (`tests/core/wiki/module.test.ts`, a docs/MODULE-SCHEMA.md drift check) is confirmed
@@ -416,7 +416,7 @@ way: D7's CSS made the composer `position: sticky` uniformly, which — once rea
 content made the one-column day taller than 720px — pinned the composer over the
 mood/energy/chips block instead of at the bottom of the page. Fixed by making the
 composer `position: static` (flows at the end of the column) in the narrow window only,
-and by reworking `scripts/shot.mjs`'s journal gate to check composer reachability *after*
+and by reworking `scripts/shot.mjs`'s journal gate to check composer reachability _after_
 scrolling to the end rather than requiring it to fit unscrolled — the same standard this
 script already applies to other long narrow-window screens.
 

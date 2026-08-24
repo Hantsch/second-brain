@@ -307,6 +307,7 @@ pull-progress shape with a free-disk refusal that names the actual MB figure. Ol
 test files pass unedited apart from the added `runtime: 'ollama'` field.
 
 **Decisions made during implementation (beyond the story's own Decisions section):**
+
 - The engine-build "why" reasoning is a structured `EngineBuildReason` discriminated union
   (`shared/types/llm.ts`), not a composed English sentence — core hands over facts (`gpuName`,
   confidence, requested/actual build), and `LocalRuntimeInstallDialog.tsx`'s `buildReasonText()`
@@ -329,13 +330,14 @@ test files pass unedited apart from the added `runtime: 'ollama'` field.
   observes `event:install-progress`'s `done` chunk, so the card reflects "installed" without
   requiring a manual "Erneut prüfen" click — this only matters for llama.cpp (Ollama's own download
   produces an installer, not a finished install) but is harmless for both.
-- Known, deliberately deferred limitation: the runtime card does not name *which build* was
+- Known, deliberately deferred limitation: the runtime card does not name _which build_ was
   installed after the fact (only `absent`/`installed-stopped`/`running`) — `LocalRuntimeStatus`
   carries no build field, and adding one needs a stored metadata marker next to the engine binary.
   Not required by any of the 11 acceptance criteria; left for a follow-up story if it turns out to
   matter to a real user.
 
 **Verification:**
+
 - `npm run format:check` — red repo-wide on ~550 pre-existing CRLF/LF files (known, unrelated);
   every file this story touched passes `prettier --check` individually.
 - `npm run lint` — clean, repo-wide.

@@ -129,7 +129,7 @@ and declined as well.
 All resolved on 2026-08-21. Kept here as the record of what was decided and why.
 
 1. **~~One story or several?~~** → Split into **019a–d**, order `scan → recommendation →
-   install → subscriptions`. The recommendation is what makes the install worth anything, and
+install → subscriptions`. The recommendation is what makes the install worth anything, and
    the recommendation needs the scan to know what fits. Each part ships and is useful alone.
    Note the ID deviation: [README.md](README.md) asks for plain three-digit IDs. These four
    carry a letter suffix on purpose, so the epic stays visible in the filename; `/build 019a`
@@ -179,12 +179,12 @@ All resolved on 2026-08-21. Kept here as the record of what was decided and why.
 **This file is the epic. Do not run `/build 019`.** It holds the vision, the full acceptance
 criteria and the decision record; the buildable work lives in four child stories.
 
-| Story | Scope | Depends on |
-| --- | --- | --- |
-| [019a](019a-machine-scan.md) | Machine scan: facts from main, verdict from core, card in the models tab | — |
-| [019b](019b-model-recommendations.md) | Catalogue, reachability, per-task recommendation, sensitive-task rule | 019a |
-| [019c](019c-guided-local-runtime.md) | Guided Ollama install and model pull with progress | 019a |
-| ~~[019d](019d-subscription-providers.md)~~ | Claude / ChatGPT plan instead of a metered key — **rejected 2026-08-21**, no permitted path | — |
+| Story                                      | Scope                                                                                       | Depends on |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------- | ---------- |
+| [019a](019a-machine-scan.md)               | Machine scan: facts from main, verdict from core, card in the models tab                    | —          |
+| [019b](019b-model-recommendations.md)      | Catalogue, reachability, per-task recommendation, sensitive-task rule                       | 019a       |
+| [019c](019c-guided-local-runtime.md)       | Guided Ollama install and model pull with progress                                          | 019a       |
+| ~~[019d](019d-subscription-providers.md)~~ | Claude / ChatGPT plan instead of a metered key — **rejected 2026-08-21**, no permitted path | —          |
 
 Coverage of the criteria above:
 

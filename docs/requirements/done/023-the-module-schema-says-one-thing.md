@@ -193,6 +193,7 @@ for an unrelated reason.
 **Commit message:** `023: module schema doc and code say the same thing`
 
 **Verification.**
+
 - `npm test` — 184 files, 2641 tests, 0 failed, 0 skipped, 0 todo. The previously-red byte-exact
   test (`tests/core/wiki/module.test.ts:392`) is green.
 - `npm run lint` — clean.
@@ -214,6 +215,7 @@ for an unrelated reason.
   creep, no weakened tests, no guardrail violations. No findings required fixing.
 
 **Decisions.**
+
 - The `format:check` failure is treated as a pre-existing, environment-only gap (Windows
   `core.autocrlf` vs. Prettier's `lf` default) and does not block this story's "done": AC2 asks
   for `npm test` fully green with no module-schema carve-out, which holds. This mirrors how prior

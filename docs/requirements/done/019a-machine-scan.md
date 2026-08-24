@@ -63,11 +63,11 @@ testable with fixtures. This is the split the epic's question 3 decided.
    `src/main/` — keep it in this one file.
 4. **GPU/VRAM** in the same file, one function per platform, each behind a hard timeout, each
    returning `null` plus a reason instead of throwing: PowerShell `Get-CimInstance
-   Win32_VideoController` on win32, `system_profiler SPDisplaysDataType -json` on darwin,
+Win32_VideoController` on win32, `system_profiler SPDisplaysDataType -json` on darwin,
    `lspci` on linux. Fixed argument arrays only, never a shell string — no user input reaches
    these calls and none may in future.
 5. **Judgement** in `src/core/llm/capacity.ts`: facts → `{ limitingFactor, maxComfortableParamsB,
-   maxPossibleParamsB, tiersThatFit, heuristic: true, unknowns: [] }`. Pure, no Electron, no
+maxPossibleParamsB, tiersThatFit, heuristic: true, unknowns: [] }`. Pure, no Electron, no
    `os`. The rule of thumb (params × bytes-per-weight at Q4 ≤ usable VRAM, else ≤ RAM at a
    penalty) lives here as named constants with a comment on where it comes from.
 6. **Renderer** `src/renderer/screens/settings/MachineCard.tsx`, mirroring the panel shape of
@@ -88,28 +88,28 @@ testable with fixtures. This is the split the epic's question 3 decided.
 `src/main/ipc/register-all.ts`. Mirror: [src/main/ipc/index.ts](../../src/main/ipc/index.ts)
 for the handler-factory shape. RAM, CPU cores, platform, arch, free disk. GPU fields present
 but hardcoded `null` with `detection: 'not-attempted'`.
-*Accepted when:* `npm run typecheck` is green and `tests/main/ipc-coverage.test.ts` passes with
+_Accepted when:_ `npm run typecheck` is green and `tests/main/ipc-coverage.test.ts` passes with
 the new channel registered.
 
-**D2 — GPU and VRAM detection per platform** *(risky, see Model Hints)* [x]
+**D2 — GPU and VRAM detection per platform** _(risky, see Model Hints)_ [x]
 `src/main/ipc/machine-scan.ts` only. Three platform functions, `execFile` with a fixed argument
 array and a hard timeout (~2 s), each returning `{ vramMb, gpuName, detection: 'detected' |
 'unknown', reason }`. A missing tool, a non-zero exit, an unparseable output and a timeout all
 land on `'unknown'` — never a throw, never a hang.
-*Accepted when:* the scan returns on this machine with a GPU name, and a unit test proves each
+_Accepted when:_ the scan returns on this machine with a GPU name, and a unit test proves each
 failure mode maps to `'unknown'` (inject the exec function, do not spawn in tests).
 
 **D3 — Capacity judgement in core** [x]
 New `src/core/llm/capacity.ts`, new `tests/core/llm/capacity.test.ts`. Pure function facts →
 verdict, with the heuristic constants named and commented. Handles the all-unknown case.
-*Accepted when:* the four fixture machines produce the expected `limitingFactor` and parameter
+_Accepted when:_ the four fixture machines produce the expected `limitingFactor` and parameter
 ceilings, and no Electron/`os` import exists in the file (ESLint enforces it).
 
 **D4 — Machine card in the models tab** [x]
 New `src/renderer/screens/settings/MachineCard.tsx`, `ModelsTab.tsx`,
 `src/renderer/lib/api.ts`, `src/renderer/i18n/de.ts`, `src/renderer/i18n/en.ts`. Mirror:
 `RoutingSection.tsx` for panel, loading and error shape.
-*Accepted when:* the card renders idle, running and result states in the built app, both
+_Accepted when:_ the card renders idle, running and result states in the built app, both
 languages have every key, and `npm run lint` reports no raw Tailwind palette class.
 
 ## Model Hints
@@ -185,6 +185,7 @@ output, timeout) degrades to `'unknown'`, never a throw, never a hang — proven
 exec seam, no real process spawning in tests.
 
 **Decisions**
+
 - D2: on win32, WMI's `AdapterRAM` is a 32-bit field and misreports VRAM for any card ≥4 GB
   (verified on the build machine: a 16 GB RTX 4080 reports exactly 4095 MB). Rather than pass on
   a wrong number, `vramMb` is reported `null` while `gpuName`/`gpuDetection: 'detected'` still
@@ -198,7 +199,7 @@ exec seam, no real process spawning in tests.
   from `src/core/llm/capacity.ts` into `src/shared/types/llm.ts` (re-exported from `capacity.ts`
   for existing callers), and `MachineScanResult` gained a `verdict` field populated by the main
   IPC handler calling `judgeCapacity(facts)`. Reason: `tsconfig.web.json` excludes `src/core`, so
-  the renderer cannot import from there directly; moving only the *type* declarations keeps
+  the renderer cannot import from there directly; moving only the _type_ declarations keeps
   "main detects, core judges" intact (`capacity.ts` stays pure and is the sole place the
   judgement logic lives) while letting the renderer type the result it receives over IPC.
   Reviewed and confirmed sound by the clean-agent review.
@@ -211,6 +212,7 @@ exec seam, no real process spawning in tests.
   and by the build succeeding, not by a screenshot of that state.
 
 **Commit message**
+
 ```
 019a: machine scan — capacity verdict in the models tab
 ```

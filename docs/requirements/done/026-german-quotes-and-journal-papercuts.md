@@ -125,7 +125,7 @@ the test plan are the proof.
 
 - [x] D1
 
-**D1 — The German catalogue closes its quotes.** *(renderer strings only)*
+**D1 — The German catalogue closes its quotes.** _(renderer strings only)_
 
 - `src/renderer/i18n/de.ts`, `de-agents.ts`, `de-dashboard.ts`, `de-garden.ts`, `de-journal.ts`,
   `de-journal-calendar.ts`, `de-notes.ts`, `de-projects.ts`, `de-screens.ts`, `de-settings.ts`,
@@ -138,7 +138,7 @@ changes only — no key, no `{placeholder}`, no wording.
 
 - [x] D2
 
-**D2 — No German quote in an English file.** *(renderer strings only)*
+**D2 — No German quote in an English file.** _(renderer strings only)_
 
 - `src/renderer/i18n/en-journal.ts` (string on line 153, section comment on line 52).
 
@@ -147,7 +147,7 @@ reads `Due date for “{text}”`.
 
 - [x] D3
 
-**D3 — The convention is written down and guarded.** *(docs + test)*
+**D3 — The convention is written down and guarded.** _(docs + test)_
 
 - `src/renderer/i18n/index.ts` — one sentence in the header comment.
 - `CLAUDE.md` — one clause in guardrail 7.
@@ -160,7 +160,7 @@ reverted again.
 
 - [x] D4
 
-**D4 — A loose end links to a real day, or not at all.** *(renderer, one tile)*
+**D4 — A loose end links to a real day, or not at all.** _(renderer, one tile)_
 
 - `src/renderer/components/tiles/LooseEndsTile.tsx` (the `day === null` branch around lines
   69-84).
@@ -172,7 +172,7 @@ and no navigation. A `?d=` with an empty value can no longer be produced.
 
 - [x] D5
 
-**D5 — Journal and health dates use `locale()`.** *(renderer, three lines)*
+**D5 — Journal and health dates use `locale()`.** _(renderer, three lines)_
 
 - `src/renderer/components/DayList.tsx`, `src/renderer/screens/journal/DayEntry.tsx`,
   `src/renderer/screens/garden/HealthCard.tsx` — import `locale` from `lib/format` (path per
@@ -255,4 +255,3 @@ Decisions:
   immediately via a diff/grep check and repaired by hand with exact string edits, re-verified
   against the same D1 acceptance (100/100 glyph counts, placeholders intact, full suite green
   afterward). No other file was affected; documented here for honesty, not because it's still open.
-

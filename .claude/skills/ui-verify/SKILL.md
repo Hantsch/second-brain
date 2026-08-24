@@ -32,16 +32,16 @@ is in the picture" and "what axe found" are the same state.
 ## The harness
 
 ```js
-import { _electron } from 'playwright'
+import { _electron } from 'playwright';
 
-const MAIN_ENTRY = 'out/main/index.cjs'
-const RENDERER_ENTRY = 'out/renderer/index.html'
+const MAIN_ENTRY = 'out/main/index.cjs';
+const RENDERER_ENTRY = 'out/renderer/index.html';
 
 /** A clear message instead of a Playwright stack trace when the build is missing. */
 export function ensureBuild() {
-  const missing = [MAIN_ENTRY, RENDERER_ENTRY].filter((p) => !existsSync(join(REPO_ROOT, p)))
+  const missing = [MAIN_ENTRY, RENDERER_ENTRY].filter((p) => !existsSync(join(REPO_ROOT, p)));
   if (missing.length > 0) {
-    throw new HarnessError(`Build missing (${missing.join(', ')}). Build first: npm run build`)
+    throw new HarnessError(`Build missing (${missing.join(', ')}). Build first: npm run build`);
   }
 }
 ```

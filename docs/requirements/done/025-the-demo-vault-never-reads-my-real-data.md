@@ -178,8 +178,9 @@ shape, locked by four unit tests (`tests/scripts/seed-settings-guard.test.ts`) p
 content, never the real machine's `~/.claude`/`~/.codex`. No file under `src/` was touched.
 
 **Decisions:**
+
 - The settings-guard's generic sweep skips the two dedicated session-dir fields by
-  matching on their *value*, not their key path (flagged by review as a latent,
+  matching on their _value_, not their key path (flagged by review as a latent,
   low-probability finding: a future unrelated setting whose value happened to equal one
   of the two session-dir paths would be silently skipped by the sweep too). Left unfixed:
   the settings schema is small and known, no such collision exists today, and tracking by

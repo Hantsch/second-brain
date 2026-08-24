@@ -425,7 +425,7 @@ Decisions taken during S08's clarification round (2026-08-23, user):
 - **029 — resource budget:** applies after the existing OS/headroom reserves (100% still isn't
   "all of it"); one global percentage, not separate RAM/VRAM budgets; default **80%**, a
   deliberate day-one behaviour change rather than a pure opt-in.
-- **030 — one name:** `Gaston` and the design system's `Gaston` are the *same* name, deliberately
+- **030 — one name:** `Gaston` and the design system's `Gaston` are the _same_ name, deliberately
   — not two names that needed disambiguating. `package.json`, the `appId`
   (`app.hantsch.guston` → `app.hantsch.gaston`) and both `src/main` call sites were renamed with
   it; the repository/checkout folder stays `second-brain`.

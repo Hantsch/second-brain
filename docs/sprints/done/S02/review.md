@@ -13,10 +13,10 @@ complete.
 **Goal reached**, with the same honest caveat as S01: both stories are built, reviewed and
 live-smoke-tested, but neither has had manual live acceptance by the user yet.
 
-| Story | Status | Commit |
-| ----- | ------ | ------ |
-| 005 — Notes — a home for the areas | done | `b4a8077` notes — a home for the areas |
-| 006 — Inbox becomes the "unfiled" filter in Notes | done | `0c16419` inbox becomes the unfiled filter in notes |
+| Story                                             | Status | Commit                                              |
+| ------------------------------------------------- | ------ | --------------------------------------------------- |
+| 005 — Notes — a home for the areas                | done   | `b4a8077` notes — a home for the areas              |
+| 006 — Inbox becomes the "unfiled" filter in Notes | done   | `0c16419` inbox becomes the unfiled filter in notes |
 
 **The rail is down to its final seven entries**: 1 Dashboard · 2 Projects · 3 Journal ·
 4 Knowledge · 5 Notes · 6 Maintenance · 7 Settings — contiguous digits, system entries visually

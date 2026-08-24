@@ -498,6 +498,81 @@ export type HfModelSearchResponse =
   ({ step: 'search' } & HfModelSearchOutcome) | ({ step: 'files' } & HfFileListOutcome);
 
 /**
+ * One installed `.gguf` file as far as the start-flag derivation (034, D1)
+ * needs to know it: big enough to size the GPU offload against, small enough
+ * that main can build it by looking at the file on disk. Deliberately no path
+ * — `core/llm/llama-args.ts` must stay pure, and a model path is exactly what
+ * guardrail 6 keeps out of anything derived (only main knows where the file
+ * lives). `paramsB`/`totalLayers` are `null` when unknown rather than a
+ * guessed zero (same convention as `MachineFacts`); 033 persists no metadata
+ * catalog, so both usually arrive parsed from the file name and the plan then
+ * marks its layer count as estimated.
+ */
+export interface LlamaModelFile {
+  fileName: string;
+  fileSizeMb: number;
+  paramsB: number | null;
+  totalLayers: number | null;
+}
+
+/**
+ * Where one value in a `LlamaStartPlan` came from. Closed set, read by the
+ * engine card (D4/D5) to label a row: `'manual'` is the hand-entered override
+ * (Decisions, Q1), `'floor'` is `MIN_CONTEXT_TOKENS` used because nothing
+ * larger fit (Decisions, Q4), `'fallback'` is a default substituted for a fact
+ * the machine scan couldn't determine, `'derived'` is the normal case.
+ */
+export type LlamaValueSource = 'derived' | 'manual' | 'floor' | 'fallback';
+
+/**
+ * One planned start value plus why it has that number. `reason` is a reason
+ * *code* with numbers in it (`'vram-fit:28/33'`), never a sentence — guardrail
+ * 7: the renderer turns the code into UI-language copy via `t()`. The
+ * vocabulary is documented at the top of `src/core/llm/llama-args.ts`.
+ */
+export interface LlamaStartValue<T> {
+  value: T;
+  source: LlamaValueSource;
+  reason: string;
+}
+
+/**
+ * A caveat about the plan the card has to show honestly (034, AC 3):
+ * `'cpu-only'` — no layer goes to the GPU; `'slow-floor-context'` — started at
+ * the context floor because nothing bigger fit (Decisions, Q4: warn, never
+ * refuse); `'facts-unknown'` — at least one machine fact was missing, so a
+ * default stood in for it.
+ */
+export type LlamaStartWarning = 'cpu-only' | 'slow-floor-context' | 'facts-unknown';
+
+/**
+ * The flags the llama.cpp engine would be started with, plus the reasoning
+ * behind each of them. Data, not copy — the card (D4) composes the sentences.
+ * `argv` carries only the derived flags: the model path and the port are
+ * spawn-time concerns main appends (D3), and a path in here would leak into
+ * every plan that crosses IPC (guardrail 6).
+ */
+export interface LlamaStartPlan {
+  gpuLayers: LlamaStartValue<number>;
+  contextTokens: LlamaStartValue<number>;
+  threads: LlamaStartValue<number>;
+  warnings: LlamaStartWarning[];
+  argv: string[];
+}
+
+/**
+ * The two numbers the user may set by hand behind the card's "advanced"
+ * disclosure (Decisions, Q1), stored machine-local as
+ * `machine.llamaOverrides`. `null` means "derive it" — never a magic 0, so
+ * clearing a field is a real state and not a value that happens to disable
+ * the GPU.
+ */
+export interface LlamaOverrides {
+  gpuLayers: number | null;
+  contextTokens: number | null;
+}
+
+/**
  * Why this target was picked, or why nothing was picked. Closed set. Lives in
  * `@shared/types` (not in `core/llm/recommend.ts`), so `src/shared/ipc.ts` —
  * used by the renderer via preload — can type the `llm:recommendModels`

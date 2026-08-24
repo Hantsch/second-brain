@@ -277,7 +277,10 @@ describe('Projekt- und Todo-Kanäle im Main', () => {
   it('schreibt `favorite` beim Patchen und erhält dabei unbekannte Nutzerfelder', async () => {
     await vault.write(
       WORK,
-      ((await vault.read(WORK)) ?? '').replace('type: project', 'type: project\nkostenstelle: 4711'),
+      ((await vault.read(WORK)) ?? '').replace(
+        'type: project',
+        'type: project\nkostenstelle: 4711',
+      ),
     );
     await harness.services.requireIndex().refresh?.([WORK]);
 

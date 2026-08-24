@@ -10,6 +10,7 @@ import { createKeyStore } from './secrets';
 import { createServices } from './services';
 import { SettingsService } from './settings';
 import { registerAllHandlers } from './ipc/register-all';
+import { stopOwnedLlamaEngineOnQuit } from './ipc/runtime/llamacpp-lifecycle';
 import { createMainWindow } from './window';
 import { syncQuickCaptureHotkey, unregisterHotkeys, watchQuickCaptureHotkey } from './hotkey';
 import { destroyQuickCapture } from './quick-capture';
@@ -128,4 +129,8 @@ app.on('will-quit', () => {
      not carry half a report. A stop the user asked for goes through
      `gardener:cancel` and says `'user'` instead. */
   cancelGardenerRun('shutdown');
+  /* What the app started, the app stops (034, AC 6): the llama.cpp engine is
+     tracked and not detached, so nothing else would ever end it. An engine
+     the app did not start is left running (Decisions, Q6). */
+  stopOwnedLlamaEngineOnQuit();
 });

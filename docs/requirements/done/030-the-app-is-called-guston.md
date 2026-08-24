@@ -171,15 +171,15 @@ strings: `tests/renderer/dashboard.test.tsx:843`, `tests/renderer/journal.test.t
 
 Exact sites (all one-liners):
 
-| key | file | now → then |
-| --- | --- | --- |
-| `app.name` | `de.ts:20`, `en.ts:20` | `Second brain` → `Gaston` |
-| `journal.turn.assistant` | `de-journal.ts:91`, `en-journal.ts:81` | `Second Brain` → `Gaston` |
-| `module.ask.purpose` | `de-dashboard.ts:65`, `en-dashboard.ts:57` | product name → `Gaston` |
-| `tile.ask.label` | `de-dashboard.ts:101`, `en-dashboard.ts:92` | product name → `Gaston` |
-| `screen.ask.empty.title` | `en-screens.ts:128` | `Ask your second brain` → `Ask Gaston` |
-| `onboarding.namePlaceholder` | `de-screens.ts:295`, `en-screens.ts:280` | `Zweites Hirn` / `Second brain` → a generic vault name, not the app name |
-| runtime hint | `de-settings-runtime.ts:36`, `en-settings-runtime.ts:35` | `Second brain` → `Gaston` |
+| key                          | file                                                     | now → then                                                               |
+| ---------------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `app.name`                   | `de.ts:20`, `en.ts:20`                                   | `Second brain` → `Gaston`                                                |
+| `journal.turn.assistant`     | `de-journal.ts:91`, `en-journal.ts:81`                   | `Second Brain` → `Gaston`                                                |
+| `module.ask.purpose`         | `de-dashboard.ts:65`, `en-dashboard.ts:57`               | product name → `Gaston`                                                  |
+| `tile.ask.label`             | `de-dashboard.ts:101`, `en-dashboard.ts:92`              | product name → `Gaston`                                                  |
+| `screen.ask.empty.title`     | `en-screens.ts:128`                                      | `Ask your second brain` → `Ask Gaston`                                   |
+| `onboarding.namePlaceholder` | `de-screens.ts:295`, `en-screens.ts:280`                 | `Zweites Hirn` / `Second brain` → a generic vault name, not the app name |
+| runtime hint                 | `de-settings-runtime.ts:36`, `en-settings-runtime.ts:35` | `Second brain` → `Gaston`                                                |
 
 German strings keep the `„…“` quote pair (story 026's rule). Sentence case, no emoji.
 Acceptance: `npm test` green with the updated assertions; no `de*.ts`/`en*.ts` file contains
@@ -197,7 +197,7 @@ key, `tests/renderer/i18n.test.ts`.
   `t('app.name')`. Mirror the surrounding rows exactly — no new atom, no new panel.
 - Guard test in `tests/renderer/i18n.test.ts`, mirroring the quote test at lines 164–191: it
   already loads every catalogue via `import.meta.glob('../../src/renderer/i18n/*.ts', { query:
-  '?raw', … })` into `SOURCES`. Add a case iterating `SOURCES` (all `de*`/`en*` files) with
+'?raw', … })` into `SOURCES`. Add a case iterating `SOURCES` (all `de*`/`en*` files) with
   `expect(source, \`${file} …\`).not.toMatch(/second[\s-]*brain|zweites hirn/i)`.
 
 Acceptance: About tab renders `Gaston`; the guard test fails if the old name is reintroduced into
@@ -220,12 +220,12 @@ assertions in `tests/main/journal-ipc.test.ts` and `tests/core/journal/interview
   keeps `> **Second Brain**` — a vault written by the old build looks exactly like that, and the
   manual walk needs a real one.
 - Tests: extend `tests/core/journal/dialog.test.ts` and `tests/core/index/journal.test.ts` with a
-  day containing an old-label turn *and* a new-label turn — both parse to `role: 'assistant'`,
+  day containing an old-label turn _and_ a new-label turn — both parse to `role: 'assistant'`,
   turn order and count are correct, and re-serialising does not rewrite the old label.
 - **Do not** update the many read-side fixtures that carry `> **Second Brain**` (e.g.
   `tests/fixtures/vault/journal/2026/08/2026-08-10.md:23`, `tests/core/journal/{legacy,coach,
-  sections,day,close}.test.ts`) — they are the backward-compatibility coverage. Only assertions
-  about what is *written* change.
+sections,day,close}.test.ts`) — they are the backward-compatibility coverage. Only assertions
+  about what is _written_ change.
 - `scripts/seed/module-methodik*.mjs`, `scripts/seed/raw-youtube.mjs` (`VIDEO_TITLE`), the slug
   `second-brain-methodik` and the mock titles in `src/renderer/lib/mock-fixtures.ts` /
   `mock-bridge.ts` stay verbatim.

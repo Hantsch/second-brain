@@ -63,14 +63,14 @@ start command again.
 
 Facts the steps below rely on:
 
-| Thing                                                          | Where                                             |
-| -------------------------------------------------------------- | ------------------------------------------------- |
-| Work projects `Kundenportal Relaunch`, `Orbit SSO-Migration`, `Rechnungsautomatisierung` | each names an agent working directory in `repos`  |
-| Work projects `Datenmigration Legacy-CRM`, `Angebot Praxisnetz Süd` | `repos` empty — **no** linked agent directory      |
-| Agent project `C:/development/demo/spielwiese`                  | 1 session, linked to **no** vault project          |
-| Knowledge modules (at least two, e.g. `identity-management`)    | Knowledge → tab "Module"                           |
-| UI language                                                     | German (`languages.ui: de`)                        |
-| LLM providers                                                   | **none configured** — every model path is in its honest "no model" state |
+| Thing                                                                                    | Where                                                                    |
+| ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Work projects `Kundenportal Relaunch`, `Orbit SSO-Migration`, `Rechnungsautomatisierung` | each names an agent working directory in `repos`                         |
+| Work projects `Datenmigration Legacy-CRM`, `Angebot Praxisnetz Süd`                      | `repos` empty — **no** linked agent directory                            |
+| Agent project `C:/development/demo/spielwiese`                                           | 1 session, linked to **no** vault project                                |
+| Knowledge modules (at least two, e.g. `identity-management`)                             | Knowledge → tab "Module"                                                 |
+| UI language                                                                              | German (`languages.ui: de`)                                              |
+| LLM providers                                                                            | **none configured** — every model path is in its honest "no model" state |
 
 ---
 
@@ -688,7 +688,7 @@ UI-only step, and why.
    application owns the combination, the app says so with a warning toast and the
    global hotkey never fires (story 007 hit exactly this). UC-6 keeps a UI
    fallback — the palette entry "Erfassen-Fenster" — which covers the capability
-   but not the *global* part of the criterion.
+   but not the _global_ part of the criterion.
 
 6. **The `raw/…` maintenance finding in UC-4/8 is not guaranteed.** Whether the
    demo vault produces a finding on a `raw/` path depends on which gardener

@@ -13,7 +13,7 @@ should be called **Knowledge**.
 And **Sources** must not sit beside it. Sources is the entrance to Knowledge — every
 ingested video, file, and URL ends up digested in a knowledge module. As two sibling
 rail entries, that relationship is invisible: a new user cannot tell that ingesting a
-source is how knowledge gets in. Sources belongs *inside* Knowledge, as its input
+source is how knowledge gets in. Sources belongs _inside_ Knowledge, as its input
 tab.
 
 Target picture and reasoning: [systems/navigation.md](../../systems/navigation.md).
@@ -47,7 +47,7 @@ would break existing vaults for a label.
 All resolved on 2026-08-13:
 
 - **Tab scope — both, at different levels.** The Knowledge top-level tab "Sources" is
-  the full ingest workbench over *all* sources, exactly today's screen. The module
+  the full ingest workbench over _all_ sources, exactly today's screen. The module
   detail keeps its existing sources tab, filtered to that module.
 - **Not the same component.** The top-level tab reuses today's sources screen body
   as-is (extracted into a tab component); the module detail's list stays as it is.
@@ -79,7 +79,7 @@ and its `go()` helper — extend it, do not add a second mechanism):
 
 The `tab` param therefore means two different things: with `m` absent it is the
 screen-level tab (`modules` | `sources`), with `m` present it is the module tab
-(`pages` | `graph` | `sources` | `log`), as today. `go()` currently *drops* `tab`
+(`pages` | `graph` | `sources` | `log`), as today. `go()` currently _drops_ `tab`
 whenever `m === null` (`ModulesScreen.tsx:52`) — that rule has to be loosened for the
 screen level while the `p`-only-on-pages rule stays.
 
@@ -268,7 +268,7 @@ the acceptance criteria and CLAUDE.md:
   would have duplicated the new title; it now reads "Module und Quellen" / "Modules and sources",
   following the overline-is-a-category convention of the neighbouring screens.
 - **The English button label reads "Take in a source for this module", not "Ingest into …".** The
-  existing English strings translate *aufnehmen* as "take in" throughout; a second vocabulary for
+  existing English strings translate _aufnehmen_ as "take in" throughout; a second vocabulary for
   the same act would have been the more expensive choice.
 - **`scripts/a11y.mjs` got a deep-state → screen lookup table.** The old ternary mapped anything
   not starting with `module` to `settings`, so the new `knowledge-sources` state could not be

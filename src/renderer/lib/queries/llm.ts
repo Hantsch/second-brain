@@ -13,6 +13,8 @@ import type { UseMutationResult, UseQueryResult } from '@tanstack/react-query';
 import type { IpcRequest, IpcResponse } from '@shared/ipc';
 import type {
   EngineBuildId,
+  LlamaOverrides,
+  LlamaStartPlan,
   LocalRuntimeStatus,
   MachineScanResult,
   ModelRef,
@@ -269,11 +271,10 @@ export interface RuntimeMutations {
   download: UseMutationResult<{ downloadId: string }, unknown, EngineBuildId | undefined>;
   cancelDownload: UseMutationResult<void, unknown, string>;
   openInstaller: UseMutationResult<{ opened: boolean; reason?: string }, unknown, void>;
-  start: UseMutationResult<
-    { started: boolean; status: LocalRuntimeStatus; reason?: 'timeout' | 'spawn-failed' },
-    unknown,
-    void
-  >;
+  /** Taken from the contract rather than restated: 034, D3 widened `reason`
+      by the four causes a llama.cpp start can name, and a copy here would be
+      a second, stale list of them. */
+  start: UseMutationResult<IpcResponse<'llm:startLocalRuntime'>, unknown, void>;
   /** Re-runs the install-precondition judgement for one specific build (033,
       D10) — what the install dialog's build select calls when the user picks
       a different option than the GPU-scan's preselected one, so the shown
@@ -308,13 +309,133 @@ export function useRuntimeMutations(runtime: RuntimeId): RuntimeMutations {
          overwriting the status unconditionally would flip the card away
          from it before the user ever saw why starting didn't work. */
       onSuccess: (result) => {
-        if (result.started) client.setQueryData(qk.llm.runtimeStatus(runtime), result.status);
+        if (result.started) {
+          client.setQueryData(qk.llm.runtimeStatus(runtime), result.status);
+          /* llama.cpp only (034, D4): a successful start also changes what
+             `llm:llamaEngineStatus`/`llm:llamaStartPlan` answer (ownership,
+             port, and — once overrides land in D5 — the plan itself), so the
+             detail view under this same card updates without a manual
+             refresh too. Ollama has no equivalent channel, so this is a
+             no-op for it. */
+          if (runtime === 'llamacpp') {
+            void client.invalidateQueries({ queryKey: qk.llm.llamaEngineStatus() });
+            void client.invalidateQueries({ queryKey: qk.llm.llamaStartPlan() });
+          }
+        }
       },
     }),
     replan: useMutation({
       mutationFn: (buildId: EngineBuildId) => api.llm.runtimeInstallPlan(runtime, buildId),
     }),
   };
+}
+
+/**
+ * llama.cpp's own status (034, D2/D4): `LocalRuntimeStatus` plus `ownedByApp`
+ * (Decisions, Q6) and the port it answers on. `staleTime: 0`/`gcTime: 0` for
+ * the same reason as `useRuntimeStatus`: this names a real process's state,
+ * and serving a cached answer after a stop/quit would show a server that no
+ * longer exists as still running.
+ */
+export function useLlamaEngineStatus(): UseQueryResult<IpcResponse<'llm:llamaEngineStatus'>> {
+  return useQuery({
+    queryKey: qk.llm.llamaEngineStatus(),
+    queryFn: api.llm.llamaEngineStatus,
+    retry: false,
+    staleTime: 0,
+    gcTime: 0,
+  });
+}
+
+/**
+ * The derived start plan (034, D1) for whatever `.gguf` file is currently
+ * installed — `null` when there is none. Unlike `useRuntimeInstallPlan`
+ * (manual-refetch-only, because that plan is only meaningful right before an
+ * install dialog opens), this is enabled by default: AC 3 wants the chosen
+ * values visible before the start is ever pressed, not only after.
+ */
+export function useLlamaStartPlan(): UseQueryResult<LlamaStartPlan | null> {
+  return useQuery({
+    queryKey: qk.llm.llamaStartPlan(),
+    queryFn: api.llm.llamaStartPlan,
+    retry: false,
+  });
+}
+
+export interface LlamaEngineMutations {
+  stop: UseMutationResult<{ stopped: boolean }, unknown, void>;
+}
+
+/**
+ * Stops the engine this app started (034, D3; Decisions, Q5 — never refused,
+ * a request in flight simply fails through the gateway's `unreachable`
+ * mapping). Refreshes both this module's own status query and the generic
+ * `runtimeStatus('llamacpp')` the card's three-state display reads, so both
+ * views flip back to "installed, stopped" together, without a manual
+ * refresh (AC 1).
+ */
+export function useLlamaEngineMutations(): LlamaEngineMutations {
+  const client = useQueryClient();
+  return {
+    stop: useMutation({
+      mutationFn: api.llm.stopLlamaEngine,
+      onSuccess: () => {
+        void client.invalidateQueries({ queryKey: qk.llm.llamaEngineStatus() });
+        void client.invalidateQueries({ queryKey: qk.llm.runtimeStatus('llamacpp') });
+      },
+    }),
+  };
+}
+
+/**
+ * Sets (or clears) one of the two advanced start-plan overrides (034, D5):
+ * the renderer validates the raw input via `parseLlamaOverrideInt` before
+ * this ever runs (`LlamaEngineDetails.tsx`), so a rejected value never
+ * reaches the channel — the same convention `useSetVramOverride` follows.
+ * The channel returns the freshly derived plan directly, and this writes it
+ * straight into `useLlamaStartPlan`'s own cache entry, so the card's readout
+ * (and the `source: 'manual'` wording on it) updates without a second
+ * `llm:llamaStartPlan` round trip.
+ */
+export function useSetLlamaOverrides(): UseMutationResult<
+  LlamaStartPlan | null,
+  unknown,
+  Partial<LlamaOverrides>
+> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: api.llm.setLlamaOverrides,
+    onSuccess: (result) => client.setQueryData(qk.llm.llamaStartPlan(), result),
+  });
+}
+
+/**
+ * The current auto-start mode (034, D6; Decisions Q2) — `AppSettings.machine
+ * .llamaAutoStart`, read off the same settings snapshot `useOverviewSettings`
+ * (`dashboard.ts`) already reads, not a new channel: this is a plain field on
+ * an object every screen can already ask for. `'manual'` (the default) while
+ * the snapshot hasn't loaded yet — the same value the setting itself
+ * defaults to, so the toggle never flashes "on" before its real value is in.
+ */
+export function useLlamaAutoStart(): 'manual' | 'on-demand' {
+  const { data } = useQuery({ queryKey: qk.settings.snapshot(), queryFn: api.settings.get });
+  return data?.app.machine.llamaAutoStart ?? 'manual';
+}
+
+/**
+ * Flips the auto-start mode (034, D6) through the dedicated
+ * `llm:setLlamaAutoStart` channel — machine-local fields aren't in
+ * `settings:setApp`'s allowed set, the same reason
+ * `useSetVramOverride`/`useSetResourceBudget` above have channels of their
+ * own. Invalidates the settings snapshot so the toggle (and anything else
+ * reading `AppSettings.machine`) reflects the change on its next read.
+ */
+export function useSetLlamaAutoStart(): UseMutationResult<void, unknown, 'manual' | 'on-demand'> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: api.llm.setLlamaAutoStart,
+    onSuccess: () => void client.invalidateQueries({ queryKey: qk.settings.snapshot() }),
+  });
 }
 
 export interface PullMutations {

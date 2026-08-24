@@ -8,7 +8,7 @@ created: 2026-08-12
 ## Requirement
 
 Agent work is part of the picture of a project, not a screen beside it. What the
-agents did *is* what happened on the project — that is exactly the answer to "what
+agents did _is_ what happened on the project — that is exactly the answer to "what
 did I last work on, and where did I leave off?"
 
 The link already exists twice, half each: the work trace in the project detail shows

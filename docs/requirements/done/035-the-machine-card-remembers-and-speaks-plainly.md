@@ -102,7 +102,7 @@ renderer-only.
 
 1. **Persist the raw detection, derive everything else on read.** New machine-local cache file
    `<userData>/machine-scan.json`, mirroring `src/main/secrets.ts` (own `version`, `readJson` /
-   `writeJsonAtomic` from `src/main/fs-json.ts`). It stores `scannedAt` plus the *pre-override*
+   `writeJsonAtomic` from `src/main/fs-json.ts`). It stores `scannedAt` plus the _pre-override_
    facts — the `{ ...base, ...gpu }` value inside `detectMachineFacts`
    ([machine-scan.ts:348](../../src/main/ipc/machine-scan.ts#L348)), before `applyVramOverride`.
    Because override and budget are re-applied on every read, AC 4 holds structurally: there is no
@@ -251,22 +251,22 @@ Expected: the honest empty state and the scan button, no invented numbers.
 
 ## Coverage
 
-| AC | Delivered by |
-| --- | --- |
-| Facts and verdict after restart, index-independent | D1, D2 |
-| States when the scan was taken, rescan always available | D1 (`scannedAt` kept), D2, D7 (meta line) |
-| Never-scanned machine keeps the honest empty state | D2 |
-| Stored result never contradicts current settings | D1 (derive on read) |
-| Manual VRAM entered and displayed in GB, fractional input | D3 |
-| Pre-existing manual figure keeps working | D3 (unit stays MB) |
-| Budget via slider, 10–100, one write per change | D4, D5 |
-| Slider is Gaston, tokens, keyboard, a11y name and value | D4 |
-| No parameter counts, plain-language headline, ceiling named | D6 |
-| Layout groups, controls recognisable | D7 |
-| Disclaimer, unknown list, manual badge, 028 conflict still work | D7 (regression), D3 (in GB) |
-| No hardcoded strings, both `de*`/`en*`, quotes, sentence case | D3, D5, D6 each carry their keys; D7 sweeps |
-| `npm run verify` green, the four required unit tests | D1 (restart, re-judge), D3 (GB bounds, comma, MB value), D7 |
-| `npm run seed && npm run shot`, both languages | D8 |
+| AC                                                              | Delivered by                                                |
+| --------------------------------------------------------------- | ----------------------------------------------------------- |
+| Facts and verdict after restart, index-independent              | D1, D2                                                      |
+| States when the scan was taken, rescan always available         | D1 (`scannedAt` kept), D2, D7 (meta line)                   |
+| Never-scanned machine keeps the honest empty state              | D2                                                          |
+| Stored result never contradicts current settings                | D1 (derive on read)                                         |
+| Manual VRAM entered and displayed in GB, fractional input       | D3                                                          |
+| Pre-existing manual figure keeps working                        | D3 (unit stays MB)                                          |
+| Budget via slider, 10–100, one write per change                 | D4, D5                                                      |
+| Slider is Gaston, tokens, keyboard, a11y name and value         | D4                                                          |
+| No parameter counts, plain-language headline, ceiling named     | D6                                                          |
+| Layout groups, controls recognisable                            | D7                                                          |
+| Disclaimer, unknown list, manual badge, 028 conflict still work | D7 (regression), D3 (in GB)                                 |
+| No hardcoded strings, both `de*`/`en*`, quotes, sentence case   | D3, D5, D6 each carry their keys; D7 sweeps                 |
+| `npm run verify` green, the four required unit tests            | D1 (restart, re-judge), D3 (GB bounds, comma, MB value), D7 |
+| `npm run seed && npm run shot`, both languages                  | D8                                                          |
 
 ## Done
 

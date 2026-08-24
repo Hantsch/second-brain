@@ -72,7 +72,7 @@ Before any refine agent starts:
 
 For every story in the sprint list whose requirement is still `draft`, ONE fresh `Agent`
 (`subagent_type: "general-purpose"`, **`model: "opus"`**, **`run_in_background: false`**) —
-all calls in ONE message. Several foreground calls in one message run concurrently *and*
+all calls in ONE message. Several foreground calls in one message run concurrently _and_
 block until all of them have returned, which is exactly what this phase wants; backgrounding
 them instead buys nothing and costs you the completion notifications. Prompt (self-contained,
 the agent does not know this session):
@@ -107,7 +107,7 @@ those stories. Stories still blocked afterwards are marked in their `sprint.md` 
 For every `ready` story ONE fresh `Agent` (`subagent_type: "general-purpose"`,
 **`model: "sonnet"`**, **`run_in_background: false`**) — strictly one after another (later
 stories build on earlier ones). Both parameters are written out on purpose: an unset `model`
-inherits the *session* model rather than this command's frontmatter and re-tiers the entire
+inherits the _session_ model rather than this command's frontmatter and re-tiers the entire
 agent tree below it, and an unset `run_in_background` means **background**, which for a
 story-long build is a coin flip on whether you ever hear back. Do **not** escalate the tier
 on your own — the hard tier is chosen per deliverable inside `/build`, from `## Model Hints`.
@@ -128,7 +128,7 @@ Prompt (self-contained):
   - Do not commit (the orchestrator does that).
   - **Progress trail:** get the real current timestamp by running a shell command
     (`date "+%Y-%m-%d %H:%M"` or the PowerShell equivalent `Get-Date -Format "yyyy-MM-dd
-    HH:mm"`) — never guess or estimate it — both right before delegating a deliverable and
+HH:mm"`) — never guess or estimate it — both right before delegating a deliverable and
     right after it returns, and append one line each time to `<sprints>/$1/progress.md`
     (create the file if it is missing):
     `- <YYYY-MM-DD HH:MM> · <story id> · D<n> <short title> · started|done|blocked`. It costs
@@ -163,14 +163,14 @@ and only on the sprint branch (never push, never on a `protected-branches` entry
 2. **`<sprints>/$1/testplan.md`** — delegate to ONE fresh `Agent` (`model: "sonnet"`,
    `run_in_background: false`), prompt:
    - Read the sprint's story files (`## Acceptance Criteria`, `## Test Plan (manual
-     acceptance)`) and check the surface that was actually built, in the code.
+acceptance)`) and check the surface that was actually built, in the code.
    - Write `<sprints>/$1/testplan.md`: per use case a step-by-step guide the user can follow
      without prior knowledge — **preparation** (how to start the app per the README, test
      content), **steps** (where to click, what to type), **expected result**. Only use cases
      from stories actually implemented in this sprint, no invented features.
    - **If `ui-acceptance-required: true` (P1):** steps for user-facing actions go
      exclusively through the real UI — never through a console command or a direct internal
-     call (a console is fine for *starting* the app). If such an action cannot be performed
+     call (a console is fine for _starting_ the app). If such an action cannot be performed
      through the UI, name it as a gap instead of writing a console workaround as a test
      step. Pure engine/backend stories without a surface are exempt (accepted via tests).
 3. **Update the roadmap** (`roadmap-path`): record the sprint under its milestone and update

@@ -53,3 +53,15 @@
 - 2026-08-23 23:08 · 033 · story review fix cycle (2 parallel agents) · done
 - 2026-08-23 23:08 · 033 · re-verification (typecheck/lint/test/build/seed/shot) · done
 - 2026-08-23 23:08 · 033 · closing (Done section filled, status left in-progress: AC8 needs live network+GPU) · done
+- 2026-08-23 23:13 · 034 · D1 pure llama.cpp start-plan derivation · started
+- 2026-08-23 23:21 · 034 · D1 pure llama.cpp start-plan derivation · done
+- 2026-08-23 23:22 · 034 · D2 status + start-plan contract (read-only) · started
+- 2026-08-23 23:37 · 034 · D2 status + start-plan contract (read-only) · done
+- 2026-08-23 23:37 · 034 · D3 start/stop/lifecycle · started
+- 2026-08-24 00:03 · 034 · D3 start/stop/lifecycle · done
+- 2026-08-24 00:03 · 034 · D4 engine card details · started
+- 2026-08-24 00:10 · 034 · D4 engine card details · done
+- 2026-08-24 00:10 · 034 · D5 advanced override row · started
+- 2026-08-24 00:26 · 034 · D5 advanced override row · done
+- 2026-08-24 00:26 · 034 · D6 auto-start mode · started
+- 2026-08-24 00:41 · 034 · D6 auto-start mode · done

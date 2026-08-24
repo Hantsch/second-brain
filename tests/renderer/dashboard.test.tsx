@@ -191,7 +191,12 @@ function mount(
         window: { width: 1440, height: 900 },
         startMinimized: false,
         onboarded: true,
-        machine: { vramOverrideMb: null, resourceBudgetPercent: 80 },
+        machine: {
+          vramOverrideMb: null,
+          resourceBudgetPercent: 80,
+          llamaAutoStart: 'manual',
+          llamaOverrides: { gpuLayers: null, contextTokens: null },
+        },
       },
       vault: options.overview === undefined ? null : vaultSettings(options.overview),
     }),
@@ -840,10 +845,7 @@ describe('Kacheln', () => {
         <Location />
       </>,
     );
-    await userEvent.type(
-      screen.getByLabelText('Frage an Gaston'),
-      'Was weiß ich über X?',
-    );
+    await userEvent.type(screen.getByLabelText('Frage an Gaston'), 'Was weiß ich über X?');
     await userEvent.click(screen.getByRole('button', { name: 'Fragen' }));
 
     expect(screen.getByTestId('location').textContent).toBe(

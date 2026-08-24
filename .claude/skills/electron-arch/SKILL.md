@@ -1,6 +1,6 @@
 ---
 name: electron-arch
-description: "Layering and security rules for Electron apps (main / preload / renderer + a pure shared layer). Use when: creating or editing anything under a main, preload or renderer source tree; creating a BrowserWindow or setting webPreferences; adding filesystem, registry, shell or child-process access; handling a path or any other value that came from the renderer; adding openExternal, navigation or window-open handling; setting a Content-Security-Policy or a permission handler; spawning a process; adding a module/feature to an Electron app; reviewing Electron code for privilege leaks. DO NOT USE FOR: web-only React apps; the IPC contract mechanics (use typed-ipc); backend services."
+description: 'Layering and security rules for Electron apps (main / preload / renderer + a pure shared layer). Use when: creating or editing anything under a main, preload or renderer source tree; creating a BrowserWindow or setting webPreferences; adding filesystem, registry, shell or child-process access; handling a path or any other value that came from the renderer; adding openExternal, navigation or window-open handling; setting a Content-Security-Policy or a permission handler; spawning a process; adding a module/feature to an Electron app; reviewing Electron code for privilege leaks. DO NOT USE FOR: web-only React apps; the IPC contract mechanics (use typed-ipc); backend services.'
 ---
 
 <!-- tech-rules:managed 1.0.0 -->
@@ -53,16 +53,16 @@ Any path that originates in the renderer is contained before use. One helper, us
 point:
 
 ```ts
-import { relative, sep } from 'node:path'
+import { relative, sep } from 'node:path';
 
 /**
  * Every path the renderer asks for must resolve inside the root the user picked.
  * The renderer is not trusted to stay in bounds on its own.
  */
 function assertInside(root: string, target: string): void {
-  const rel = relative(root, target)
+  const rel = relative(root, target);
   if (rel.startsWith('..') || (rel.length > 0 && rel.split(sep)[0] === '..')) {
-    throw new Error(`Path is outside the allowed root: ${target}`)
+    throw new Error(`Path is outside the allowed root: ${target}`);
   }
 }
 ```
@@ -88,42 +88,50 @@ Rules around it:
   ```ts
   const policy = isDev
     ? "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' ws: wss: http://localhost:* http://127.0.0.1:*"
-    : "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'"
+    : "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'";
 
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
-    callback({ responseHeaders: { ...details.responseHeaders, 'Content-Security-Policy': [policy] } })
-  })
+    callback({
+      responseHeaders: { ...details.responseHeaders, 'Content-Security-Policy': [policy] },
+    });
+  });
   ```
 
   The dev policy needs `unsafe-inline`/`unsafe-eval` for fast refresh and a websocket for HMR; the
   production policy must not.
+
 - **Deny all permission requests by default.** Most desktop apps need no camera, microphone,
   geolocation or notifications:
 
   ```ts
-  session.defaultSession.setPermissionRequestHandler((_contents, _permission, done) => done(false))
+  session.defaultSession.setPermissionRequestHandler((_contents, _permission, done) => done(false));
   ```
 
   Grant a specific permission explicitly if a feature genuinely needs it.
+
 - **Deny every window-open, and route external links to the browser** - after checking the scheme:
 
   ```ts
   window.webContents.setWindowOpenHandler(({ url }) => {
-    if (/^https?:\/\//i.test(url)) void shell.openExternal(url)
-    return { action: 'deny' }
-  })
+    if (/^https?:\/\//i.test(url)) void shell.openExternal(url);
+    return { action: 'deny' };
+  });
   ```
 
   The scheme test is the point: `shell.openExternal` on an unchecked URL hands the OS a `file:`,
   `smb:` or custom-protocol target chosen by whatever produced that string.
+
 - **Block navigation away from your own content:**
 
   ```ts
   window.webContents.on('will-navigate', (event, url) => {
-    const devServer = process.env['ELECTRON_RENDERER_URL']
-    const allowed = devServer ? url.startsWith(devServer) : url.startsWith('file://')
-    if (!allowed) { event.preventDefault(); log.warn(`blocked navigation to ${url}`) }
-  })
+    const devServer = process.env['ELECTRON_RENDERER_URL'];
+    const allowed = devServer ? url.startsWith(devServer) : url.startsWith('file://');
+    if (!allowed) {
+      event.preventDefault();
+      log.warn(`blocked navigation to ${url}`);
+    }
+  });
   ```
 
 - **Spawn with an argument array, never a shell string.** `spawn(exe, [arg1, arg2])`, no
@@ -134,8 +142,11 @@ Rules around it:
   over the state file and can start the same thing twice.
 
   ```ts
-  if (!app.requestSingleInstanceLock()) app.quit()
-  else app.on('second-instance', () => { /* restore and focus the existing window */ })
+  if (!app.requestSingleInstanceLock()) app.quit();
+  else
+    app.on('second-instance', () => {
+      /* restore and focus the existing window */
+    });
   ```
 
 - **No remote content in the app window.** If something must come from the network, it goes in the

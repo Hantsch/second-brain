@@ -74,7 +74,9 @@ function sweepForOutwardPaths(value, vaultRoot, path, skip, problems) {
     return;
   }
   if (Array.isArray(value)) {
-    value.forEach((item, index) => sweepForOutwardPaths(item, vaultRoot, `${path}[${index}]`, skip, problems));
+    value.forEach((item, index) =>
+      sweepForOutwardPaths(item, vaultRoot, `${path}[${index}]`, skip, problems),
+    );
     return;
   }
   if (value !== null && typeof value === 'object') {

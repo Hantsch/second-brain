@@ -188,7 +188,10 @@ describe('AGENTS.md', () => {
     // Der Schema-Rumpf bleibt der eine feste deutsche Text (Entscheidung Sprint 023).
     expect(agents).toContain('## Widersprüche');
 
-    const index = await IndexService.open(store, { persistence: null, now: () => new Date(NOW_MS) });
+    const index = await IndexService.open(store, {
+      persistence: null,
+      now: () => new Date(NOW_MS),
+    });
     const module = listModules(index).find((entry) => entry.slug === result.slug);
     expect(module?.title).toBe('Prompt patterns');
 

@@ -105,41 +105,41 @@ passes (D1-D4) so a regression is bisectable to one seam.
 ## Deliverables
 
 - [x] **D1 — scope predicates and stored shapes to core.** New `src/core/gardener/run-record.ts` and
-  `run-scope.ts` (moved verbatim from `gardener-state.ts`, comments included), exported from
-  `src/core/gardener/index.ts`. `src/main/gardener-state.ts` imports them and re-exports
-  `type StoredRun`; `src/main/ipc/gardener-deps.ts` and `src/main/ipc/gardener.ts` take
-  `narrowedScope`/`inScope`/`scopeAdmits`/`isRunComplete` from `@core/gardener`.
-  _Accept:_ `npm run typecheck && npm test` green, nothing under `tests/` changed.
-  _Files:_ 5. _Mirror:_ `src/core/gardener/progress.ts` (pure, `@shared/types` only).
+      `run-scope.ts` (moved verbatim from `gardener-state.ts`, comments included), exported from
+      `src/core/gardener/index.ts`. `src/main/gardener-state.ts` imports them and re-exports
+      `type StoredRun`; `src/main/ipc/gardener-deps.ts` and `src/main/ipc/gardener.ts` take
+      `narrowedScope`/`inScope`/`scopeAdmits`/`isRunComplete` from `@core/gardener`.
+      _Accept:_ `npm run typecheck && npm test` green, nothing under `tests/` changed.
+      _Files:_ 5. _Mirror:_ `src/core/gardener/progress.ts` (pure, `@shared/types` only).
 - [x] **D2 — JSON reading to core.** New `src/core/gardener/run-read.ts` with
-  `readStoredGardener(value): StoredGardener` plus every validator (`isFinding`, `readDays`,
-  `readStageIds`, `readHealthAsOf`, `readScope`, `readCheckedKinds`, `readFixed`, `readRun`).
-  `GardenerState.load` keeps only: read the file, hand the parsed value over, prune snoozes.
-  _Accept:_ the "unreadable file → null", "file without `snoozed`", "unknown kinds dropped" and
-  "scope that narrows nothing" tests pass unchanged. _Files:_ 3.
+      `readStoredGardener(value): StoredGardener` plus every validator (`isFinding`, `readDays`,
+      `readStageIds`, `readHealthAsOf`, `readScope`, `readCheckedKinds`, `readFixed`, `readRun`).
+      `GardenerState.load` keeps only: read the file, hand the parsed value over, prune snoozes.
+      _Accept:_ the "unreadable file → null", "file without `snoozed`", "unknown kinds dropped" and
+      "scope that narrows nothing" tests pass unchanged. _Files:_ 3.
 - [x] **D3 — save-time merge and pruning to core.** New `src/core/gardener/run-merge.ts` with
-  `applySavedRun(data, run, options): StoredGardener` over `mergeScoped`, `keptFixed`,
-  `outlivesRun`, `rederivedBy`, `consideredBy`. `GardenerState.save` becomes: apply, then write.
-  _Accept:_ every 021b/021c merge test passes unchanged, including "deletes no kind no stage of
-  this run looked for" and "keeps a fixed finding outside the scope". _Files:_ 3.
+      `applySavedRun(data, run, options): StoredGardener` over `mergeScoped`, `keptFixed`,
+      `outlivesRun`, `rederivedBy`, `consideredBy`. `GardenerState.save` becomes: apply, then write.
+      _Accept:_ every 021b/021c merge test passes unchanged, including "deletes no kind no stage of
+      this run looked for" and "keeps a fixed finding outside the scope". _Files:_ 3.
 - [x] **D4 — `present()` to core.** New `src/core/gardener/run-present.ts` with
-  `presentRun(data, today, resolved): GardenerReport | null`; the method delegates.
-  _Accept:_ frozen-score, `healthKnown: false` and scope/`checkedKinds` tests pass unchanged;
-  `src/main/gardener-state.ts` is under 300 lines. _Files:_ 3.
+      `presentRun(data, today, resolved): GardenerReport | null`; the method delegates.
+      _Accept:_ frozen-score, `healthKnown: false` and scope/`checkedKinds` tests pass unchanged;
+      `src/main/gardener-state.ts` is under 300 lines. _Files:_ 3.
 - [x] **D5 — run flow out of the channel file.** New `src/main/ipc/gardener-run.ts` holding the
-  `gardener:run` body (slot claim, resume/scope inheritance, cancel reason, save, report) as one
-  exported function; the handler in `ipc/gardener.ts` calls it.
-  _Accept:_ `tests/main/gardener-ipc.test.ts` passes unchanged, the `IPC_CHANNELS` coverage test
-  is green. _Files:_ 2. _Mirror:_ `src/main/ipc/journal-day.ts`.
+      `gardener:run` body (slot claim, resume/scope inheritance, cancel reason, save, report) as one
+      exported function; the handler in `ipc/gardener.ts` calls it.
+      _Accept:_ `tests/main/gardener-ipc.test.ts` passes unchanged, the `IPC_CHANNELS` coverage test
+      is green. _Files:_ 2. _Mirror:_ `src/main/ipc/journal-day.ts`.
 - [x] **D6 — fix and orphan helpers out of the channel file.** New `src/main/ipc/gardener-actions.ts`
-  with `findingOf`, `recordedHash`, `assertActionable`, `orphanPick` and the `linkOrphan` apply
-  step. _Accept:_ tests unchanged and green; `src/main/ipc/gardener.ts` under 300 lines.
-  _Files:_ 2. _Mirror:_ `src/main/ipc/area-note.ts`.
+      with `findingOf`, `recordedHash`, `assertActionable`, `orphanPick` and the `linkOrphan` apply
+      step. _Accept:_ tests unchanged and green; `src/main/ipc/gardener.ts` under 300 lines.
+      _Files:_ 2. _Mirror:_ `src/main/ipc/area-note.ts`.
 - [x] **D7 — ownership written down.** A one-sentence header per new file, the `gardener/` row in
-  `docs/ARCHITECTURE.md` extended by the five run-state modules and the two new main-side files,
-  the module list in `src/core/gardener/index.ts` extended. _Accept:_ `wc -l` over every file this
-  story created or touched is ≤ 300 (`ipc/gardener-deps.ts` excepted, see Decisions) and
-  `npm run verify` is green. _Files:_ ~3.
+      `docs/ARCHITECTURE.md` extended by the five run-state modules and the two new main-side files,
+      the module list in `src/core/gardener/index.ts` extended. _Accept:_ `wc -l` over every file this
+      story created or touched is ≤ 300 (`ipc/gardener-deps.ts` excepted, see Decisions) and
+      `npm run verify` is green. _Files:_ ~3.
 
 Coverage: AC 1 → D1-D6 (behaviour carried by the unchanged 021 tests, confirmed by the manual run
 below), AC 2 → D4, D6, D7, AC 3 → every D (its acceptance is "tests unchanged and green"),
@@ -183,6 +183,7 @@ each new file's header, in `docs/ARCHITECTURE.md`, and in `src/core/gardener/ind
 list.
 
 **Decisions.**
+
 - D3 (save-time merge/pruning) was built and reviewed line-by-line against the pre-diff code —
   `mergeScoped`/`keptFixed`/`outlivesRun`/`rederivedBy`/`consideredBy` behind `applySavedRun` are
   verbatim, including the exact order (`previous` captured before `run` replaces it, `fixed`

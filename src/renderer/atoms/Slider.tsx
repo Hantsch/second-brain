@@ -9,8 +9,10 @@
  * onCommit for a value that pointer-up/key-up already committed. */
 import { useRef, type InputHTMLAttributes } from 'react';
 
-export interface SliderProps
-  extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type' | 'value' | 'onChange'> {
+export interface SliderProps extends Omit<
+  InputHTMLAttributes<HTMLInputElement>,
+  'type' | 'value' | 'onChange'
+> {
   min: number;
   max: number;
   step: number;

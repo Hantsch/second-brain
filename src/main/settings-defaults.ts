@@ -31,7 +31,12 @@ export function defaultAppSettings(): AppSettings {
     window: { width: WINDOW_DEFAULT.width, height: WINDOW_DEFAULT.height },
     startMinimized: false,
     onboarded: false,
-    machine: { vramOverrideMb: null, resourceBudgetPercent: DEFAULT_RESOURCE_BUDGET_PERCENT },
+    machine: {
+      vramOverrideMb: null,
+      resourceBudgetPercent: DEFAULT_RESOURCE_BUDGET_PERCENT,
+      llamaAutoStart: 'manual',
+      llamaOverrides: { gpuLayers: null, contextTokens: null },
+    },
   };
 }
 

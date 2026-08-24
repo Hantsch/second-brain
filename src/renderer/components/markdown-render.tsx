@@ -129,7 +129,12 @@ function listItems(
   ));
 }
 
-function heading(refs: MarkdownRefs, token: Tokens.Heading, key: string, offset: number): ReactNode {
+function heading(
+  refs: MarkdownRefs,
+  token: Tokens.Heading,
+  key: string,
+  offset: number,
+): ReactNode {
   const level = Math.min(6, Math.max(2, token.depth + offset));
   const Tag = `h${level}` as 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
   return (
