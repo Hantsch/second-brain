@@ -1,6 +1,6 @@
 # Condensed layer — Concept
 
-Status: **Draft** (vision + requirements, no stories yet). This document fixes what the
+Status: see [ROADMAP.md](../ROADMAP.md) — the roadmap owns when and how far this is built. This document fixes what the
 Second Brain's condensed layer is: one machine-written synthesis artifact per unit —
 per knowledge module, per project, per area — rewritten section by section by a model,
 proposed as a diff, confirmed by the human. It replaces the append-only bullet

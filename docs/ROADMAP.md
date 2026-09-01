@@ -1,7 +1,7 @@
 # Roadmap
 
 **The** one source of status and planning: where we stand, what comes next, what is not planned
-at all yet. As of: 2026-08-23.
+at all yet. As of: 2026-09-01.
 
 Rules (so this document does not drift):
 
@@ -164,7 +164,7 @@ M4 was chosen next at the 2026-08-20 `/ai-scrum:roadmap plan`, now that M3 is ac
 
 Sprints:
 
-- [sprints/S05/sprint.md](sprints/done/S05/sprint.md) — a finding can be acted on (014, 015, 016,
+- [sprints/done/S05/sprint.md](sprints/done/S05/sprint.md) — a finding can be acted on (014, 015, 016,
   017), `done` — built, live acceptance pending
   ([review](sprints/done/S05/review.md) · [testplan](sprints/done/S05/testplan.md)). Story 020 (M6) rode
   along in the same sprint by direct user decision on 2026-08-21 — see M6 below and the
@@ -174,7 +174,7 @@ Gaps/notes:
 
 - **Built, not yet accepted.** All four M4 stories are implemented, reviewed and smoke-tested
   through the running app, but the manual acceptance walk is the user's — see
-  [sprints/S05/testplan.md](sprints/done/S05/testplan.md). The milestone is marked accepted only
+  [sprints/done/S05/testplan.md](sprints/done/S05/testplan.md). The milestone is marked accepted only
   after that.
 - **The `sources:` frontmatter citation variant (016) is out of scope**, by user decision in
   S05's clarification round. An orphan can be resolved by a body-line link only; citing a source
@@ -248,13 +248,13 @@ is no automatic expiry, the app may quote the user's own wording back at them, a
 (009) does not suppress its loose ends.
 
 Bundled into **S05** (M4) for scheduling by direct user decision on 2026-08-21, rather than
-cutting a fifth sprint for one story — see [sprints/S05/sprint.md](sprints/done/S05/sprint.md).
+cutting a fifth sprint for one story — see [sprints/done/S05/sprint.md](sprints/done/S05/sprint.md).
 Tracked as its own milestone here because it is not part of M4's "a finding can be acted on"
 scope.
 
 Sprints:
 
-- [sprints/S05/sprint.md](sprints/done/S05/sprint.md) — story 020 rode along in M4's sprint, `done`
+- [sprints/done/S05/sprint.md](sprints/done/S05/sprint.md) — story 020 rode along in M4's sprint, `done`
   — built, live acceptance pending
   ([review](sprints/done/S05/review.md) · [testplan](sprints/done/S05/testplan.md))
 
@@ -407,7 +407,7 @@ vault, honest "no model configured") for someone who isn't the app's author.
 
 Sprints:
 
-- [sprints/S08/sprint.md](sprints/S08/sprint.md) — it fits my machine, and I can pass it on
+- [sprints/done/S08/sprint.md](sprints/done/S08/sprint.md) — it fits my machine, and I can pass it on
   (028, 029, 030, 031), `done` (031 built, live acceptance pending)
 
 Decisions taken at the cut (2026-08-23, user):
@@ -473,7 +473,7 @@ value shown with one sentence on what it traded away.
 
 Sprints:
 
-- [sprints/S09/sprint.md](sprints/S09/sprint.md) — a small model, an engine that installs itself,
+- [sprints/done/S09/sprint.md](sprints/done/S09/sprint.md) — a small model, an engine that installs itself,
   and a start I can see (035, 032, 033, 034), `done`
 
 Decisions taken at the cut (2026-08-23, user):
@@ -513,21 +513,63 @@ found and fixed a process-lifecycle race between manual start and the D6 on-dema
 guard) but stays `in-progress`: this milestone's own risk note above came true — the author's
 machine cannot exercise "engine genuinely absent" or a real GPU/CPU-only start, so 034's live
 acceptance (start/stop, override row, foreign-runtime detection) is pending the test user's
-laptop, per story 031. See [sprints/S09/review.md](sprints/S09/review.md) and
-[sprints/S09/testplan.md](sprints/S09/testplan.md).
+laptop, per story 031. See [sprints/done/S09/review.md](sprints/done/S09/review.md) and
+[sprints/done/S09/testplan.md](sprints/done/S09/testplan.md).
 
 **Gaps/notes.** Same two carry-overs from S07/S08, still open (see "Open / unprioritised" below):
 `format:check` not green on Windows (CRLF), and the maintenance progress bar lost on navigation.
 
 ---
 
+### M12 — An area gathers itself — planned
+
+Concept: [concepts/condensed-layer.md](concepts/condensed-layer.md) — the first slice of it, cut
+on 2026-09-01 after the concept had been deferred three times (M9, M10, M11). One level only: the
+**area**, chosen by the user over the project level (greenfield, tab already reserved) and the
+module level (replaces the existing bullet mechanism).
+
+Four stories: the link between a day and an area that does not exist today (036), the artifact and
+the run that writes it (037), the diff that has to be read before anything is written (038), and
+the deterministic check that says a condensation has gone stale (039).
+
+What the choice of level costs and buys: the journal→area link has to be built first (036), and
+the artifact's file name collides with VAULT-FORMAT.md's no-dots rule (037-Q2) — but nothing has
+to be migrated. `wiki/overview.md`, CND-2, CND-17 and CND-35/36 belong to the module and project
+levels and are explicitly out of M12.
+
+Sprints:
+
+- [sprints/S10/sprint.md](sprints/S10/sprint.md) — an area gathers itself (036, 037, 038, 039),
+  `planned`
+
+Decisions taken at the cut (2026-09-01, user):
+
+- **The area level goes first**, not the project or module level.
+- **One level, not three.** The concept's reversal trigger for per-level sections (§7) is
+  evaluated when the second level is built, not in M12.
+- **The two open carve-outs do not ride along** — `format:check` never green on Windows (which
+  also blocks `npm run handoff`) and the maintenance progress bar lost on navigation stay in
+  "Open / unprioritised". M9 was the carve-out milestone two sprints ago.
+
+Open at the cut, to be decided in S10's clarification round: the artifact's `type:` (concept O2),
+its file name against the no-dots rule (O7), the soft size cap and whether it is per artifact or
+per section (O1), the input bounds (O3), and what happens when a run rewrites a section the human
+edited by hand (O8) — the last is the one that becomes a guardrail-2 problem if it is answered
+late.
+
+Risk carried knowingly: this is a write path that **deletes**. The undo copy in
+`.secondbrain/trash/`, the hash guard and the reject-with-reason path are the load-bearing part of
+the milestone, not the screen.
+
+---
+
 ## Open / unprioritised
 
-| Topic                                                         | State                                                                                                                                                                                                                                              | Next step                                                                                                                                                                                                                  |
-| ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Condensed layer (module / project / area)                     | Concept written 2026-08-18: [concepts/condensed-layer.md](concepts/condensed-layer.md). Supersedes the earlier "project knowledge from agent sessions" entry — that is now one of four project inputs. 40 requirements, 11 open points, no stories | `/ai-scrum:roadmap plan` — standing next-milestone candidate, deferred three times (2026-08-22 in favour of M9, twice on 2026-08-23 in favour of M10 and M11); depends on story 005 and the Project knowledge tab from 008 |
-| MCP interface for projects, knowledge and the condensed layer | Named as an outlook in [concepts/condensed-layer.md](concepts/condensed-layer.md) §14, deliberately without requirements                                                                                                                           | Own `/ai-scrum:concept` once the condensed artifacts exist                                                                                                                                                                 |
-| German docs migrated to English                               | Decided in `.claude/ai-scrum.md`; `docs/*.md` are still German                                                                                                                                                                                     | Own story once it stops being cosmetic                                                                                                                                                                                     |
-| `format:check` never green on Windows                         | Found in S07: 460 files fail prettier purely on CRLF line endings, including files no sprint has touched — `core.autocrlf` against a repo prettier expects in LF. Story 023 solved it for one file via `.gitattributes`                            | Own story — a repo-wide `.gitattributes`/prettier decision made once. Second never-green gate after the one M9 just retired                                                                                                |
-| Maintenance progress bar vanishes after navigation            | Found while smoke-testing 027 in S07, isolated to `src/renderer/lib/queries/gardener.ts`, confirmed pre-existing against a HEAD worktree — the backend answers `gardener:runStatus` correctly while the bar is gone                                | Small own story — visible, isolated, ready to pick up                                                                                                                                                                      |
-| Phase 2                                                       | Not defined                                                                                                                                                                                                                                        | Cut after phase 1 has been used                                                                                                                                                                                            |
+| Topic                                                         | State                                                                                                                                                                                                                                                                      | Next step                                                                                                                                                                                    |
+| ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Condensed layer (module / project levels)                     | Concept written 2026-08-18: [concepts/condensed-layer.md](concepts/condensed-layer.md). The **area** level is cut as M12 (S10); the module and project levels, CND-2, CND-17 (agent-session citation) and CND-35/36 (retiring the ingest's overview append) are still open | Next `/ai-scrum:roadmap plan` after M12 is accepted — the concept's §7 reversal trigger is evaluated at the second level, so the module or project level should follow soon rather than late |
+| MCP interface for projects, knowledge and the condensed layer | Named as an outlook in [concepts/condensed-layer.md](concepts/condensed-layer.md) §14, deliberately without requirements                                                                                                                                                   | Own `/ai-scrum:concept` once the condensed artifacts exist                                                                                                                                   |
+| German docs migrated to English                               | Decided in `.claude/ai-scrum.md`; `docs/*.md` are still German                                                                                                                                                                                                             | Own story once it stops being cosmetic                                                                                                                                                       |
+| `format:check` never green on Windows                         | Found in S07: 460 files fail prettier purely on CRLF line endings, including files no sprint has touched — `core.autocrlf` against a repo prettier expects in LF. Story 023 solved it for one file via `.gitattributes`                                                    | Own story — a repo-wide `.gitattributes`/prettier decision made once. Second never-green gate after the one M9 just retired                                                                  |
+| Maintenance progress bar vanishes after navigation            | Found while smoke-testing 027 in S07, isolated to `src/renderer/lib/queries/gardener.ts`, confirmed pre-existing against a HEAD worktree — the backend answers `gardener:runStatus` correctly while the bar is gone                                                        | Small own story — visible, isolated, ready to pick up                                                                                                                                        |
+| Phase 2                                                       | Not defined                                                                                                                                                                                                                                                                | Cut after phase 1 has been used                                                                                                                                                              |
