@@ -145,6 +145,7 @@ function day(patch: Partial<JournalDay> = {}): JournalDay {
     people: ['Miriam'],
     projects: [project.slug],
     tags: [],
+    areas: [],
     excerpt: DAY_TEXT,
     wordCount: 42,
     turns: 2,
@@ -238,7 +239,14 @@ const suggestion: JournalCloseSuggestion = {
     heuristic: true,
     createdAt: NOW.toISOString(),
   },
-  frontmatter: { people: ['Miriam'], projects: [project.slug], mood: 2, energy: null, tags: [] },
+  frontmatter: {
+    people: ['Miriam'],
+    projects: [project.slug],
+    areas: [],
+    mood: 2,
+    energy: null,
+    tags: [],
+  },
   heuristic: true,
 };
 
@@ -365,6 +373,7 @@ function renderJournal(extra: Handlers = {}): Rendered {
     'journal:list': () => [day(), earlierDay],
     'journal:get': () => view(),
     'projects:list': () => [project],
+    'areas:list': () => [],
     'llm:routing': () => routing(LOCAL_PROVIDER.id),
     'llm:tasks': () => TASKS,
     'llm:providers': () => [LOCAL_PROVIDER],
@@ -1160,7 +1169,7 @@ describe('Tagebuch: Tagesabschluss', () => {
       'journal:close': () => ({
         ...suggestion,
         proposal: { ...suggestion.proposal, todos: [], waitingOn: [] },
-        frontmatter: { people: [], projects: [], mood: null, energy: null, tags: [] },
+        frontmatter: { people: [], projects: [], areas: [], mood: null, energy: null, tags: [] },
       }),
     });
 

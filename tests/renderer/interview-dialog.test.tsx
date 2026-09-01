@@ -151,6 +151,7 @@ function todayView(): JournalDayView {
       people: [],
       projects: [],
       tags: [],
+      areas: [],
       excerpt: '',
       wordCount: 0,
       turns: 0,

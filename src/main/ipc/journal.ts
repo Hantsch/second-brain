@@ -121,6 +121,7 @@ function emptyDayDoc(date: string, language: DocLanguage): JournalDayDoc {
     people: [],
     projects: [],
     tags: [],
+    areas: [],
     excerpt: '',
     wordCount: 0,
     turns: 0,

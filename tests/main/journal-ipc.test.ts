@@ -543,6 +543,7 @@ describe('Tagebuch-Kanäle im Main', () => {
       frontmatter: {
         people: ['Tobias'],
         projects: [],
+        areas: [],
         mood: 2,
         energy: null,
         tags: [],
@@ -578,6 +579,90 @@ describe('Tagebuch-Kanäle im Main', () => {
     expect(project).toContain('Ladezeiten der Angebotsliste unter 1,5 s bringen');
   });
 
+  it('schreibt areas dazu, ohne andere Frontmatter-Felder oder den Text zu ändern', async () => {
+    const view = await harness.call('journal:get', { date: DATE });
+    const before = (await vault.read(DAY_PATH)) ?? '';
+
+    const applied = await harness.call('journal:applyClose', {
+      date: DATE,
+      todos: [],
+      frontmatter: {
+        people: [],
+        projects: [],
+        areas: ['health'],
+        mood: null,
+        energy: null,
+        tags: [],
+      },
+      expectedHash: view?.doc.hash,
+    });
+
+    expect(applied.written).toEqual([DAY_PATH]);
+    const day = (await vault.read(DAY_PATH)) ?? '';
+    /* Ein neuer Schlüssel entsteht im Blockstil, genau wie „people: [Tobias]"
+       weiter unten für ein neu angelegtes Element. */
+    expect(day).toMatch(/areas:\s*\n\s*- health/);
+    /* Sonst hat sich nichts verändert: kein anderes Feld, kein Fließtext. */
+    expect(day).toContain('people: [Miriam, Jonas]');
+    expect(day).toContain('projects: [kundenportal-relaunch]');
+    expect(day).toContain('mood: 3');
+    const dayLines = day.split('\n');
+    const beforeLines = before.split('\n');
+    expect(dayLines.slice(dayLines.indexOf('## Tag'))).toEqual(
+      beforeLines.slice(beforeLines.indexOf('## Tag')),
+    );
+  });
+
+  it('lässt eine leere areas-Liste die Datei unverändert und behält einen Bestand beim Zusammenführen', async () => {
+    const view = await harness.call('journal:get', { date: DATE });
+
+    /* Erst areas anlegen ... */
+    const first = await harness.call('journal:applyClose', {
+      date: DATE,
+      todos: [],
+      frontmatter: {
+        people: [],
+        projects: [],
+        areas: ['health'],
+        mood: null,
+        energy: null,
+        tags: [],
+      },
+      expectedHash: view?.doc.hash,
+    });
+    const afterFirst = (await vault.read(DAY_PATH)) ?? '';
+    expect(afterFirst).toMatch(/areas:\s*\n\s*- health/);
+
+    expect(first.written).toEqual([DAY_PATH]);
+
+    /* ... dann eine leere Liste schreiben: keine Änderung. */
+    const emptyRun = await harness.call('journal:applyClose', {
+      date: DATE,
+      todos: [],
+      frontmatter: { people: [], projects: [], areas: [], mood: null, energy: null, tags: [] },
+      expectedHash: (await harness.call('journal:get', { date: DATE }))?.doc.hash,
+    });
+    expect(emptyRun.written).toEqual([]);
+    expect((await vault.read(DAY_PATH)) ?? '').toBe(afterFirst);
+
+    /* Und ein weiterer Wert kommt dazu, statt „health" zu verdrängen. */
+    const second = await harness.call('journal:applyClose', {
+      date: DATE,
+      todos: [],
+      frontmatter: {
+        people: [],
+        projects: [],
+        areas: ['finances'],
+        mood: null,
+        energy: null,
+        tags: [],
+      },
+      expectedHash: (await harness.call('journal:get', { date: DATE }))?.doc.hash,
+    });
+    expect(second.written).toEqual([DAY_PATH]);
+    expect((await vault.read(DAY_PATH)) ?? '').toMatch(/areas:\s*\n\s*- health\s*\n\s*- finances/);
+  });
+
   it('schreibt nichts, wenn eine Zieldatei des Abschlusses fehlt', async () => {
     const before = (await vault.read(DAY_PATH)) ?? '';
 
@@ -602,7 +687,7 @@ describe('Tagebuch-Kanäle im Main', () => {
             project: 'kundenportal-relaunch',
           },
         ],
-        frontmatter: { people: [], projects: [], mood: null, energy: null, tags: [] },
+        frontmatter: { people: [], projects: [], areas: [], mood: null, energy: null, tags: [] },
       }),
     ).resolves.toMatchObject({ written: [DAY_PATH, PROJECT_PATH] });
 
@@ -620,7 +705,7 @@ describe('Tagebuch-Kanäle im Main', () => {
     const applied = await harness.call('journal:applyClose', {
       date: DATE,
       todos: [],
-      frontmatter: { people: [], projects: [], mood: null, energy: null, tags: [] },
+      frontmatter: { people: [], projects: [], areas: [], mood: null, energy: null, tags: [] },
       expectedHash: view?.doc.hash,
     });
 
@@ -639,7 +724,7 @@ describe('Tagebuch-Kanäle im Main', () => {
   });
 
   it('lässt einen zweiten Abschluss den Tag unangetastet, statt ihn umzudatieren', async () => {
-    const fields = { people: [], projects: [], mood: null, energy: null, tags: [] };
+    const fields = { people: [], projects: [], areas: [], mood: null, energy: null, tags: [] };
     await harness.call('journal:applyClose', { date: DATE, todos: [], frontmatter: fields });
     const once = (await vault.read(DAY_PATH)) ?? '';
     expect(once).toContain(`closed: ${DATE}`);
@@ -693,7 +778,14 @@ describe('Tagebuch-Kanäle im Main', () => {
           project: null,
         },
       ],
-      frontmatter: { people: ['Tobias'], projects: [], mood: null, energy: null, tags: [] },
+      frontmatter: {
+        people: ['Tobias'],
+        projects: [],
+        areas: [],
+        mood: null,
+        energy: null,
+        tags: [],
+      },
     });
 
     expect(applied.written).toEqual([path]);
@@ -710,7 +802,7 @@ describe('Tagebuch-Kanäle im Main', () => {
       harness.call('journal:applyClose', {
         date: '2026-08-05',
         todos: [],
-        frontmatter: { people: [], projects: [], mood: 3, energy: null, tags: [] },
+        frontmatter: { people: [], projects: [], areas: [], mood: 3, energy: null, tags: [] },
       }),
     ).rejects.toMatchObject({ code: 'not-found' });
     expect(await vault.exists('journal/2026/08/2026-08-05.md')).toBe(false);

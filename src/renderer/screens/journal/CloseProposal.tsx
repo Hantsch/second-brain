@@ -25,9 +25,12 @@ import { Button } from '../../atoms/Button';
 import { Card } from '../../atoms/Card';
 import { Checkbox } from '../../atoms/Checkbox';
 import { Icon } from '../../atoms/Icon';
+import { Select } from '../../atoms/Select';
+import { Tag } from '../../atoms/Tag';
 import { DueField } from '../../components/DueField';
 import { ErrorState } from '../../components/ErrorState';
 import { useT } from '../../i18n';
+import { useAreas } from '../../lib/queries/areas';
 import type { CloseProposalEdits } from '../../lib/close-proposal';
 import { useCloseProposal, patch } from '../../lib/close-proposal';
 
@@ -93,11 +96,13 @@ export function CloseProposal({
 }: CloseProposalProps) {
   const t = useT();
   const entry = useCloseProposal(date);
+  const availableAreas = useAreas().data ?? [];
 
   if (entry === undefined) return null;
   const { suggestion, edits } = entry;
   const rows = rowsOf(suggestion, edits);
   const keeps = (key: string): boolean => edits.keepField[key] !== false;
+  const areas = edits.areas ?? suggestion.frontmatter.areas;
 
   const patchTodo = (at: number, next: Partial<Pick<Row, 'keep' | 'todo'>>): void => {
     if ('keep' in next && next.keep !== undefined) {
@@ -123,6 +128,7 @@ export function CloseProposal({
   const frontmatter: JournalCloseSuggestion['frontmatter'] = {
     people: keeps('people') ? suggestion.frontmatter.people : [],
     projects: keeps('projects') ? suggestion.frontmatter.projects : [],
+    areas,
     tags: keeps('tags') ? suggestion.frontmatter.tags : [],
     mood: keeps('mood') ? suggestion.frontmatter.mood : null,
     energy: keeps('energy') ? suggestion.frontmatter.energy : null,
@@ -134,6 +140,7 @@ export function CloseProposal({
     chosen.length > 0 ||
     frontmatter.people.length > 0 ||
     frontmatter.projects.length > 0 ||
+    frontmatter.areas.length > 0 ||
     frontmatter.tags.length > 0 ||
     frontmatter.mood !== null ||
     frontmatter.energy !== null;
@@ -156,6 +163,22 @@ export function CloseProposal({
       <span className="sb-closefield-value">{value}</span>
     </li>
   );
+
+  /* Areas are chips plus an add-picker (036, D3) — never the single
+     all-or-nothing checkbox the other fields use, because a proposal here is
+     rarely all-or-nothing: the model may miss one area the user still wants
+     kept, or name one that doesn't belong. Only areas that exist in the vault
+     are ever offered by the picker. */
+  const removeArea = (slug: string): void => {
+    patch(date, { areas: areas.filter((existing) => existing !== slug) });
+  };
+  const addArea = (slug: string): void => {
+    if (slug.length === 0 || areas.includes(slug)) return;
+    patch(date, { areas: [...areas, slug] });
+  };
+  const pickableAreas = availableAreas.filter((area) => !areas.includes(area.slug));
+  const areaTitle = (slug: string): string =>
+    availableAreas.find((area) => area.slug === slug)?.title ?? slug;
 
   return (
     <Card padded={false} className="sb-proposal sb-close-proposal">
@@ -244,6 +267,34 @@ export function CloseProposal({
                   '',
                 )}
           </ul>
+        </fieldset>
+
+        <fieldset className="sb-proposal-group">
+          <legend className="gs-label">{t('journal.close.areas')}</legend>
+          {areas.length === 0 ? (
+            <p className="sb-panel-empty">{t('journal.close.areas.empty')}</p>
+          ) : (
+            <span className="sb-chips" role="group" aria-label={t('journal.close.areas')}>
+              {areas.map((slug) => (
+                <Tag
+                  key={slug}
+                  onRemove={() => removeArea(slug)}
+                  removeLabel={t('journal.close.areas.removeOf', { title: areaTitle(slug) })}
+                >
+                  {areaTitle(slug)}
+                </Tag>
+              ))}
+            </span>
+          )}
+          {pickableAreas.length === 0 ? null : (
+            <Select
+              aria-label={t('journal.close.areas.addLabel')}
+              placeholder={t('journal.close.areas.addPlaceholder')}
+              value=""
+              onChange={(event) => addArea(event.target.value)}
+              options={pickableAreas.map((area) => ({ value: area.slug, label: area.title }))}
+            />
+          )}
         </fieldset>
 
         {writes ? null : <p className="sb-panel-empty">{t('journal.close.nothing')}</p>}

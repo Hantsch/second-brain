@@ -409,6 +409,7 @@ const RESPONSES: MockResponses = {
       mood: 3,
       energy: 2,
       tags: [],
+      areas: [],
     },
     heuristic: true,
   }),

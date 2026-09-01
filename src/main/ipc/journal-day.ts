@@ -170,7 +170,7 @@ function union(existing: unknown, added: readonly string[]): string[] {
 /** The fields that actually get written. Empty lists change nothing. */
 function fieldPatch(doc: VaultDoc, fields: JournalFrontmatterFields): Record<string, unknown> {
   const patch: Record<string, unknown> = {};
-  for (const key of ['people', 'projects', 'tags'] as const) {
+  for (const key of ['people', 'projects', 'areas', 'tags'] as const) {
     const values = fields[key] ?? [];
     if (values.length === 0) continue;
     const merged = union(doc.frontmatter[key], values);

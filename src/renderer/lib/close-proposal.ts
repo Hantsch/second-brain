@@ -19,6 +19,15 @@ export interface CloseProposalEdits {
   keepTodo: Record<number, boolean>;
   dueTodo: Record<number, string | null>;
   keepField: Record<string, boolean>;
+  /**
+   * The area slugs to write, once touched — `null` as long as the user has
+   * neither removed a proposed chip nor added one from the picker, in which
+   * case `suggestion.frontmatter.areas` still applies as-is. Areas get their
+   * own field here rather than a `keepField` entry: the row is chips plus an
+   * add-picker (036, D3), not a single all-or-nothing checkbox like `people`
+   * or `projects`.
+   */
+  areas: string[] | null;
 }
 
 export interface CloseProposalEntry {
@@ -40,7 +49,10 @@ function subscribe(notify: () => void): () => void {
 
 /** Replaces the entry for `date` with a fresh suggestion and empty edits. */
 export function set(date: string, suggestion: JournalCloseSuggestion): void {
-  entries.set(date, { suggestion, edits: { keepTodo: {}, dueTodo: {}, keepField: {} } });
+  entries.set(date, {
+    suggestion,
+    edits: { keepTodo: {}, dueTodo: {}, keepField: {}, areas: null },
+  });
   emit();
 }
 

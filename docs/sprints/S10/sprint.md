@@ -1,7 +1,7 @@
 ---
 sprint: S10
-status: planned # planned | in-progress | done
-branch: # set by /sprint
+status: in-progress # planned | in-progress | done
+branch: sprint/10
 milestone: M12 — An area gathers itself
 ---
 

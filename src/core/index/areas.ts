@@ -17,12 +17,13 @@
  *   as one the app wrote.
  */
 
-import type { Area, AreaNote, Todo } from '@shared/types';
+import type { Area, AreaNote, JournalDay, Todo } from '@shared/types';
 import { AREA_ENTRY_LEVEL, areaSectionRanges } from '@core/areas';
 import { excerpt } from '@core/vault/doc';
 import { baseName, extName } from '@core/vault/paths';
 import { findSections } from '@core/vault/sections';
 import type { SectionRange } from '@core/vault/sections';
+import { toJournalDay } from './journal';
 import { asDate } from './text';
 import { scopeFor } from './todos';
 import type { IndexedDoc } from './types';
@@ -199,4 +200,28 @@ export function deriveAreas(docs: readonly IndexedDoc[], todos: readonly Todo[] 
   }
 
   return sortAreas(areas);
+}
+
+/**
+ * Journal days that name this area, oldest first — so a day-by-day read of an
+ * area's history reads top to bottom like the file it summarizes.
+ *
+ * Slug-exact only: a day's frontmatter `areas` list either carries the slug or
+ * it doesn't. Unlike `ProjectStatus`'s `mentions()`, there is no text-mention
+ * fallback here — the concept for this deliverable explicitly rejects
+ * guessing an area from prose at read time. A day without an `areas` key at
+ * all is simply not in the result.
+ */
+export function daysOfArea(docs: readonly IndexedDoc[], slug: string): JournalDay[] {
+  const days: JournalDay[] = [];
+  for (const doc of docs) {
+    if (doc.docType !== 'journal') continue;
+    const listed = Array.isArray(doc.frontmatter['areas'])
+      ? (doc.frontmatter['areas'] as unknown[]).some((entry) => entry === slug)
+      : false;
+    if (!listed) continue;
+    days.push(toJournalDay(doc));
+  }
+  days.sort((a, b) => (a.date === b.date ? 0 : a.date < b.date ? -1 : 1));
+  return days;
 }

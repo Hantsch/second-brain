@@ -191,6 +191,7 @@ export async function closeDay(
       text,
       date: day,
       projects: context.projects,
+      areas: context.areas,
       people: knownPeople(deps.index),
       tags: context.tags,
       waitingOn: tasks.waitingOn,
@@ -229,6 +230,7 @@ export async function closeDay(
     frontmatter: {
       people: facts.people,
       projects: facts.projects,
+      areas: facts.areas,
       mood: facts.mood,
       energy: facts.energy,
       tags: facts.tags,

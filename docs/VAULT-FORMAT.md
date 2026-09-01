@@ -239,6 +239,7 @@ mood: 3
 energy: 2
 people: [Stefan, Anna]
 projects: [nyota-auth0-migration]
+areas: [health]
 tags: [stress]
 ---
 
@@ -274,6 +275,13 @@ relabel them.
 
 `closed: YYYY-MM-DD` marks the day as finished — the calendar day, not a
 timestamp. Missing or `closed: null` means the day is still open.
+
+`people`, `projects`, `areas`, and `tags` are all optional, all merged rather
+than overwritten: day close only ever adds to whatever's already there, never
+removes an entry a previous close or a hand edit put in. `areas` holds slugs
+of `areas/<slug>.md`, the same way `projects` holds project slugs. A day
+without one of these keys — or without any of them — is exactly as valid as
+one with all four; nothing requires them to be present.
 
 The interview (story 012) is a scripted way of producing exactly this shape,
 not a new one: each of its fixed questions is written as the app's blockquote,

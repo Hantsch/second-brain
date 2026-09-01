@@ -220,6 +220,8 @@ export interface JournalDay {
   energy: number | null;
   people: string[];
   projects: string[];
+  /** Bereichs-Slugs, die dieser Tag nennt (`areas:daysOfArea`). */
+  areas: string[];
   tags: string[];
   /** Erste Zeilen des Eintrags. */
   excerpt: string;

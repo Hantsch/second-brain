@@ -187,6 +187,7 @@ export const journalDay: JournalDay = {
   people: ['Stefan'],
   projects: [project.slug],
   tags: [],
+  areas: [],
   excerpt: 'Vormittag mit dem Rollenkonzept verbracht.',
   wordCount: 180,
   turns: 2,

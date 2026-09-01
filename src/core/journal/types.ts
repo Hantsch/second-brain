@@ -17,6 +17,7 @@
  */
 
 import type {
+  Area,
   CoachMode,
   DocLanguage,
   FilingProposal,
@@ -75,6 +76,7 @@ export interface JournalIndexView {
   index(): { docs: readonly IndexedDoc[]; byPath: ReadonlyMap<string, IndexedDoc> };
   search(query: SearchQuery): SearchHit[];
   projects(): readonly Project[];
+  areas(): readonly Area[];
   modules(): readonly KnowledgeModule[];
 }
 
@@ -257,6 +259,9 @@ export interface JournalFrontmatterSuggestion {
   people: string[];
   /** Projekt-Slugs, die im Eintrag vorkommen. */
   projects: string[];
+  /** Bereichs-Slugs, die im Eintrag vorkommen. Nur das Modell schlaegt sie vor —
+      keine Heuristik ohne Modell (Ausnahme zu den anderen Feldern hier). */
+  areas: string[];
   mood: number | null;
   energy: number | null;
   tags: string[];

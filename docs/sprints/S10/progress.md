@@ -1,0 +1,9 @@
+- 2026-09-01 22:26 · 036 · D1 the close proposes areas (core) · started
+- 2026-09-01 22:29 · 036 · D1 the close proposes areas (core) · done
+- 2026-09-01 22:29 · 036 · D2 accepting writes areas (contract + write path) · started
+- 2026-09-01 22:32 · 036 · D2 accepting writes areas (contract + write path) · done
+- 2026-09-01 22:32 · 036 · D4 an area can name its days (query) · started
+- 2026-09-01 22:35 · 036 · D4 an area can name its days (query) · done
+- 2026-09-01 22:35 · 036 · D3 areas row in close panel (renderer) · started
+- 2026-09-01 22:45 · 036 · D3 areas row in close panel (renderer) · done
+- 2026-09-01 22:56 · 036 · story done (build+test+lint+typecheck green, review PASS, seed/shot smoke ok) · done

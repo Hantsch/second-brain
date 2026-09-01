@@ -23,6 +23,8 @@ export interface JournalCloseInput {
   date: string;
   /** Project slugs that may be assigned. Anything else is made up. */
   projects?: readonly { slug: string; title: string }[];
+  /** Area slugs that may be assigned. Anything else is made up. */
+  areas?: readonly { slug: string; title: string }[];
   /** People already appearing in the vault — so spelling stays consistent. */
   people?: readonly string[];
   /** Tags in common use in the vault. */
@@ -33,7 +35,7 @@ export interface JournalCloseInput {
 export const JOURNAL_CLOSE_SCHEMA: Record<string, unknown> = {
   type: 'object',
   additionalProperties: false,
-  required: ['people', 'projects'],
+  required: ['people', 'projects', 'areas'],
   properties: {
     people: {
       type: 'array',
@@ -44,6 +46,11 @@ export const JOURNAL_CLOSE_SCHEMA: Record<string, unknown> = {
       type: 'array',
       items: { type: 'string' },
       description: 'Projekt-Slugs aus der Liste, die der Text berührt.',
+    },
+    areas: {
+      type: 'array',
+      items: { type: 'string' },
+      description: 'Bereichs-Slugs aus der Liste, die der Text berührt.',
     },
     mood: {
       type: ['integer', 'null'],
@@ -67,6 +74,7 @@ export const JOURNAL_CLOSE_SCHEMA: Record<string, unknown> = {
 
 export function journalClosePrompt(input: JournalCloseInput, docLanguage: DocLanguage): ChatTurn[] {
   const projects = input.projects ?? [];
+  const areas = input.areas ?? [];
   const people = input.people ?? [];
   const tags = input.tags ?? [];
   return turns(
@@ -78,6 +86,9 @@ export function journalClosePrompt(input: JournalCloseInput, docLanguage: DocLan
       projects.length > 0
         ? `Zulässige Projekt-Slugs: ${projects.map((project) => project.slug).join(', ')}. Andere Werte sind nicht erlaubt.`
         : 'Es gibt keine Projekte; projects bleibt leer.',
+      areas.length > 0
+        ? `Zulässige Bereichs-Slugs: ${areas.map((area) => area.slug).join(', ')}. Andere Werte sind nicht erlaubt.`
+        : 'Es gibt keine Bereiche; areas bleibt leer.',
       'mood und energy sind Zahlen von 1 bis 5 und beschreiben, was der Text sagt — nicht, was du vermutest. Sagt der Text nichts, ist der Wert null.',
       'energy meint Kraft und Wachheit (müde, ausgelaugt, voller Energie), mood die Stimmung. Beides kann unabhängig voneinander fehlen.',
       'Keine Diagnose, keine Deutung, kein Rat. Du trägst nach, du beurteilst nicht.',
@@ -87,6 +98,9 @@ export function journalClosePrompt(input: JournalCloseInput, docLanguage: DocLan
     [
       projects.length > 0
         ? `Projekte:\n${projects.map((project) => `- ${project.slug}: ${project.title}`).join('\n')}\n`
+        : '',
+      areas.length > 0
+        ? `Bereiche:\n${areas.map((area) => `- ${area.slug}: ${area.title}`).join('\n')}\n`
         : '',
       people.length > 0 ? `Bekannte Personen: ${people.join(', ')}\n` : '',
       tags.length > 0 ? `Gebräuchliche Tags: ${tags.join(', ')}\n` : '',

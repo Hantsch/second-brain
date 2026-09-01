@@ -183,9 +183,21 @@ describe('journalClosePrompt', () => {
     expect(system).toContain('Es gibt keine Projekte');
   });
 
+  it('sagt ausdrücklich, wenn es keine Bereiche gibt', () => {
+    const system = systemOf(journalClosePrompt({ text: 'Kurz.', date: '2026-08-10' }, 'de'));
+    expect(system).toContain('Es gibt keine Bereiche');
+  });
+
   it('beschreibt die Antwortform mit Grenzen 1 bis 5', () => {
     const properties = JOURNAL_CLOSE_SCHEMA['properties'] as Record<string, unknown>;
-    expect(Object.keys(properties)).toEqual(['people', 'projects', 'mood', 'energy', 'tags']);
+    expect(Object.keys(properties)).toEqual([
+      'people',
+      'projects',
+      'areas',
+      'mood',
+      'energy',
+      'tags',
+    ]);
     expect(properties['mood']).toMatchObject({ type: ['integer', 'null'], minimum: 1, maximum: 5 });
   });
 });

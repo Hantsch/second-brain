@@ -299,6 +299,7 @@ describe('Welle E von einer Naht zur nächsten', () => {
         mood: null,
         energy: null,
         tags: [],
+        areas: [],
       },
     });
     expect(applied.written).toContain(DAY_PATH);

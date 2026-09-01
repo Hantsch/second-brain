@@ -58,6 +58,9 @@ describe('closeDay', () => {
 
     expect(suggestion?.frontmatter.people).toEqual(['Jonas', 'Miriam']);
     expect(suggestion?.frontmatter.projects).toEqual(['kundenportal-relaunch']);
+    /* Bereiche werden nie geraten — ohne Modell bleibt die Liste leer, auch wenn
+       ein Bereichsname im Text vorkäme. */
+    expect(suggestion?.frontmatter.areas).toEqual([]);
     expect(suggestion?.frontmatter.mood).toBe(2);
     expect(suggestion?.frontmatter.energy).toBe(2);
   });
@@ -147,6 +150,7 @@ describe('closeDay', () => {
       'extract-tasks': JSON.stringify({
         people: ['Miriam', 'Kerstin'],
         projects: ['kundenportal-relaunch', 'erfundenes-projekt'],
+        areas: ['gesundheit', 'erfundener-bereich'],
         mood: 2,
         energy: 1,
         tags: ['#Stress', 'abnahme'],
@@ -159,6 +163,9 @@ describe('closeDay', () => {
     expect(suggestion?.frontmatter.people).not.toContain('Kerstin');
     expect(suggestion?.frontmatter.people).toContain('Miriam');
     expect(suggestion?.frontmatter.projects).toEqual(['kundenportal-relaunch']);
+    /* 'gesundheit' gibt es im Bestand, 'erfundener-bereich' nicht: nur der
+       bekannte Slug bleibt übrig. */
+    expect(suggestion?.frontmatter.areas).toEqual(['gesundheit']);
     expect(suggestion?.frontmatter.energy).toBe(1);
     expect(suggestion?.frontmatter.tags).toContain('stress');
     expect(suggestion?.heuristic).toBe(false);

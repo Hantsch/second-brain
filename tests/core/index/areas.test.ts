@@ -12,7 +12,7 @@
    - The persisted index carries areas, so a restart shows the same screen. */
 
 import { describe, expect, it } from 'vitest';
-import { deriveAreas, parseAreaNotes } from '@core/index/areas';
+import { daysOfArea, deriveAreas, parseAreaNotes } from '@core/index/areas';
 import { buildIndex } from '@core/index/build';
 import { VaultIndexStore } from '@core/index/persist';
 import { IndexService } from '@core/index/service';
@@ -291,5 +291,53 @@ describe('areas in the index', () => {
     });
     expect(service.areas()).toBe(service.index().areas);
     expect(service.areas().map((area) => area.slug)).toEqual(['gesundheit']);
+  });
+});
+
+describe('daysOfArea', () => {
+  function journalDoc(partial: Partial<IndexedDoc> & { path: string }): IndexedDoc {
+    return makeDoc({ docType: 'journal', ...partial });
+  }
+
+  it('returns only the days whose frontmatter carries the exact slug, oldest first', () => {
+    const health1 = journalDoc({
+      path: 'journal/2026/07/2026-07-28.md',
+      frontmatter: { type: 'journal', date: '2026-07-28', areas: ['health'] },
+    });
+    const health2 = journalDoc({
+      path: 'journal/2026/08/2026-08-04.md',
+      frontmatter: { type: 'journal', date: '2026-08-04', areas: ['health', 'work'] },
+    });
+    const other = journalDoc({
+      path: 'journal/2026/08/2026-08-05.md',
+      frontmatter: { type: 'journal', date: '2026-08-05', areas: ['work'] },
+    });
+    const noAreas = journalDoc({
+      path: 'journal/2026/08/2026-08-06.md',
+      frontmatter: { type: 'journal', date: '2026-08-06' },
+    });
+
+    const days = daysOfArea([health1, health2, other, noAreas], 'health');
+
+    expect(days.map((day) => day.date)).toEqual(['2026-07-28', '2026-08-04']);
+  });
+
+  it('excludes a day with no areas key at all, without error', () => {
+    const noAreas = journalDoc({
+      path: 'journal/2026/08/2026-08-06.md',
+      frontmatter: { type: 'journal', date: '2026-08-06' },
+    });
+
+    expect(daysOfArea([noAreas], 'health')).toEqual([]);
+  });
+
+  it('ignores non-journal documents', () => {
+    const area = journalDoc({
+      path: 'areas/health.md',
+      docType: 'area',
+      frontmatter: { type: 'area', areas: ['health'] },
+    });
+
+    expect(daysOfArea([area], 'health')).toEqual([]);
   });
 });

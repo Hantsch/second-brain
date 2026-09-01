@@ -26,6 +26,7 @@ function day(date: string, patch: Partial<JournalDay> = {}): JournalDay {
     people: [],
     projects: [],
     tags: [],
+    areas: [],
     excerpt: '',
     wordCount: 0,
     turns: 0,

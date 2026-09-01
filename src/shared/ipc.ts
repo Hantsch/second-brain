@@ -219,6 +219,7 @@ export interface JournalFrontmatterFields {
   people: string[];
   /** Project slugs. */
   projects: string[];
+  areas: string[];
   mood: number | null;
   energy: number | null;
   tags: string[];

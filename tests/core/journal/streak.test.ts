@@ -25,6 +25,7 @@ function day(date: string, mood: number | null = null, energy: number | null = n
     people: [],
     projects: [],
     tags: [],
+    areas: [],
     excerpt: 'Text.',
     wordCount: 1,
     turns: 0,

@@ -164,6 +164,7 @@ export function toJournalDay(doc: IndexedDoc): JournalDay {
     energy: numberOf(doc.frontmatter['energy']),
     people: asStringList(doc.frontmatter['people']),
     projects: asStringList(doc.frontmatter['projects']),
+    areas: asStringList(doc.frontmatter['areas']),
     tags: doc.tags,
     excerpt: dayExcerpt(doc.body),
     wordCount: doc.words,

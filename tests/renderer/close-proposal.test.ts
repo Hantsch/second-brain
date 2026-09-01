@@ -26,7 +26,7 @@ function suggestion(date: string, reason = 'reason'): JournalCloseSuggestion {
       waitingOn: [],
       reason,
     },
-    frontmatter: { people: [], projects: [], mood: null, energy: null, tags: [] },
+    frontmatter: { people: [], projects: [], areas: [], mood: null, energy: null, tags: [] },
     heuristic: false,
   } as unknown as JournalCloseSuggestion;
 }
@@ -55,7 +55,12 @@ describe('close-proposal: set / patch / clear / useCloseProposal', () => {
 
     const { result } = renderHook(() => useCloseProposal('2026-08-20'));
     expect(result.current?.suggestion).toBe(s);
-    expect(result.current?.edits).toEqual({ keepTodo: {}, dueTodo: {}, keepField: {} });
+    expect(result.current?.edits).toEqual({
+      keepTodo: {},
+      dueTodo: {},
+      keepField: {},
+      areas: null,
+    });
   });
 
   it('patch updates only the named edit fields, leaving the rest untouched', () => {
@@ -75,6 +80,23 @@ describe('close-proposal: set / patch / clear / useCloseProposal', () => {
     /* The earlier patch to keepTodo survives a later, unrelated patch. */
     expect(result.current?.edits.keepTodo).toEqual({ 0: false });
     expect(result.current?.edits.keepField).toEqual({ mood: false });
+  });
+
+  it('patch sets the area slugs, leaving the other edit fields untouched', () => {
+    const s = suggestion('2026-08-20');
+    set('2026-08-20', s);
+
+    const { result } = renderHook(() => useCloseProposal('2026-08-20'));
+    act(() => patch('2026-08-20', { areas: ['gesundheit', 'finanzen'] }));
+
+    expect(result.current?.edits.areas).toEqual(['gesundheit', 'finanzen']);
+    expect(result.current?.edits.keepTodo).toEqual({});
+    expect(result.current?.edits.keepField).toEqual({});
+
+    act(() => patch('2026-08-20', { areas: [] }));
+
+    /* Emptying the set is a distinct, valid edit — not "unset". */
+    expect(result.current?.edits.areas).toEqual([]);
   });
 
   it('patch on a date with no entry does nothing', () => {
@@ -105,7 +127,12 @@ describe('close-proposal: set / patch / clear / useCloseProposal', () => {
 
     expect(result.current?.suggestion).toBe(second);
     expect(result.current?.suggestion).not.toBe(first);
-    expect(result.current?.edits).toEqual({ keepTodo: {}, dueTodo: {}, keepField: {} });
+    expect(result.current?.edits).toEqual({
+      keepTodo: {},
+      dueTodo: {},
+      keepField: {},
+      areas: null,
+    });
   });
 
   it('survives an unmount/remount within the session', () => {
