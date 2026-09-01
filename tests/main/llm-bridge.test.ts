@@ -10,11 +10,11 @@
    is a two-entry fixture instead of the live one, so no test touches the
    network. */
 
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type * as NodeOs from 'node:os';
 import type * as CoreLlm from '@core/llm';
 import type { CatalogueEntry } from '@core/llm';
-import type { RecommendationSet } from '@shared/types';
+import type { ProviderConfig, RecommendationSet } from '@shared/types';
 
 /* Hoisted with the `vi.mock` factories below, which need these values before
    the modules under test are imported. */
@@ -85,7 +85,14 @@ vi.mock('@core/llm', async (importOriginal) => {
   };
 });
 
-const { createLlmBridge } = await import('../../src/main/llm-bridge');
+/* The auto-start guard is the unit under test in the second suite below, not
+   a collaborator to exercise: the real one would probe ports and settings. */
+vi.mock('../../src/main/ipc/runtime/llamacpp-autostart', () => ({
+  ensureLlamaRunning: vi.fn(async () => undefined),
+}));
+
+const { createGateway, createLlmBridge } = await import('../../src/main/llm-bridge');
+const { ensureLlamaRunning } = await import('../../src/main/ipc/runtime/llamacpp-autostart');
 
 type Services = Parameters<typeof createLlmBridge>[0];
 
@@ -140,5 +147,84 @@ describe('buildRecommendations sees the manual VRAM override', () => {
 
     expect(cleared).toContain(fx.LARGE.id);
     expect(withOverride).not.toEqual(cleared);
+  });
+});
+
+/* 034, D6: the on-demand guard belongs to the local engine, so it may only
+   delay a call that is actually routed to it. Awaiting it on every dispatch
+   put up to `START_TIMEOUT_MS` (20 s) in front of a request headed for a
+   cloud provider that has no use for a llama-server at all. */
+describe('withAutoStart waits only for a call routed to llama.cpp', () => {
+  const TASK = 'title-tags';
+
+  function providerConfig(overrides: Partial<ProviderConfig> & { id: string }): ProviderConfig {
+    return {
+      label: 'provider',
+      kind: 'openai-compatible',
+      baseUrl: 'http://127.0.0.1:11435/v1',
+      hasKey: false,
+      local: true,
+      enabled: true,
+      models: [],
+      createdAt: '2026-08-23T10:00:00.000Z',
+      ...overrides,
+    };
+  }
+
+  const LLAMACPP = providerConfig({ id: 'llama-1', label: 'llama.cpp' });
+  /* Kind `'fake'` stands in for any non-local route: it needs no key and
+     never touches the network, so the dispatch below resolves without one. */
+  const CLOUD = providerConfig({
+    id: 'cloud-1',
+    label: 'Cloud',
+    kind: 'fake',
+    local: false,
+    baseUrl: 'https://api.example.com',
+  });
+
+  function routedTo(provider: ProviderConfig): Services {
+    return {
+      settings: {
+        vault: () => ({
+          providers: [provider],
+          routing: { tasks: { [TASK]: { providerId: provider.id, model: 'm' } }, defaults: {} },
+        }),
+        snapshot: () => ({ app: { machine: { llamaAutoStart: 'on-demand' } }, vault: null }),
+      },
+      keys: { get: () => 'key', set: () => undefined, remove: () => undefined },
+    } as unknown as Services;
+  }
+
+  async function dispatch(provider: ProviderConfig): Promise<void> {
+    vi.mocked(ensureLlamaRunning).mockClear();
+    await createGateway(routedTo(provider)).complete({
+      task: TASK,
+      messages: [{ role: 'user', content: 'x' }],
+      maxTokens: 8,
+    });
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('does not wait when the task is routed to a provider that is not the engine', async () => {
+    await dispatch(CLOUD);
+
+    expect(ensureLlamaRunning).not.toHaveBeenCalled();
+  });
+
+  it('waits when the task is routed to the llama.cpp provider', async () => {
+    // The only stub needed: the dispatch itself would otherwise open a socket
+    // to 127.0.0.1. No test here talks to a real engine.
+    vi.stubGlobal('fetch', async () => ({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({ choices: [{ message: { content: 'ok' } }] }),
+    }));
+
+    await dispatch(LLAMACPP);
+
+    expect(ensureLlamaRunning).toHaveBeenCalledTimes(1);
   });
 });

@@ -118,19 +118,26 @@ app.on('window-all-closed', () => {
 });
 
 app.on('will-quit', () => {
-  unregisterHotkeys();
-  destroyQuickCapture();
-  reminderNotifier?.stop();
-  reminderNotifier = null;
-  gardenerAutorun?.stop();
-  gardenerAutorun = null;
-  /* On the way out nothing of a running pass is kept (021b, D2): the atomic
-     write could not be awaited here anyway, and a vault being left behind must
-     not carry half a report. A stop the user asked for goes through
-     `gardener:cancel` and says `'user'` instead. */
-  cancelGardenerRun('shutdown');
-  /* What the app started, the app stops (034, AC 6): the llama.cpp engine is
-     tracked and not detached, so nothing else would ever end it. An engine
-     the app did not start is left running (Decisions, Q6). */
-  stopOwnedLlamaEngineOnQuit();
+  /* `finally`, not just "last in the list": every step above is best-effort
+     cleanup of in-process state, and one of them throwing must not be able to
+     leave a real OS process behind. The original error still propagates —
+     this only guarantees the engine is signalled on the way past. */
+  try {
+    unregisterHotkeys();
+    destroyQuickCapture();
+    reminderNotifier?.stop();
+    reminderNotifier = null;
+    gardenerAutorun?.stop();
+    gardenerAutorun = null;
+    /* On the way out nothing of a running pass is kept (021b, D2): the atomic
+       write could not be awaited here anyway, and a vault being left behind must
+       not carry half a report. A stop the user asked for goes through
+       `gardener:cancel` and says `'user'` instead. */
+    cancelGardenerRun('shutdown');
+  } finally {
+    /* What the app started, the app stops (034, AC 6): the llama.cpp engine is
+       tracked and not detached, so nothing else would ever end it. An engine
+       the app did not start is left running (Decisions, Q6). */
+    stopOwnedLlamaEngineOnQuit();
+  }
 });

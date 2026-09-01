@@ -65,3 +65,13 @@
 - 2026-08-24 00:26 · 034 · D5 advanced override row · done
 - 2026-08-24 00:26 · 034 · D6 auto-start mode · started
 - 2026-08-24 00:41 · 034 · D6 auto-start mode · done
+- 2026-09-01 20:20 · 034 · corrected: audit found D1-D6 code genuinely committed (commit a4ecd1d, mislabelled "prettier run and parts of 31"), plus D7 (privacy/redaction) also already implemented but never logged here. Verified all D1-D7 "Accepted when" clauses and all 10 Acceptance Criteria against the code — full PASS (audit agent report).
+- 2026-09-01 20:23 · 034 · story-review-hard (clean) · started
+- 2026-09-01 20:30 · 034 · story-review-hard (clean) · done (FAIL — confirmed process-lifecycle race between manual start and on-demand auto-start, plus 4 related findings)
+- 2026-09-01 20:31 · 034 · review-fix cycle 1 (5 confirmed findings) · started
+- 2026-09-01 20:42 · 034 · review-fix cycle 1 (5 confirmed findings) · done
+- 2026-09-01 20:44 · 034 · re-verification (typecheck/lint/test/build) · done
+- 2026-09-01 20:46 · 034 · fix verification review (story-review-hard) · started
+- 2026-09-01 20:51 · 034 · fix verification review (story-review-hard) · done (PASS, 2 low-severity non-blocking notes)
+- 2026-09-01 20:52 · 034 · live smoke (npm run seed && npm run shot) · done (screens render correctly; full start/stop click-through needs a real llama.cpp binary, not available in this environment — see Done section)
+- 2026-09-01 20:55 · 034 · closing (Done section filled, status left in-progress: live smoke steps 2-7 need a real llama.cpp install) · done

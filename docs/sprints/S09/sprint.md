@@ -1,7 +1,7 @@
 ---
 sprint: S09
-status: planned # planned | in-progress | done
-branch: # set by /sprint
+status: in-progress # planned | in-progress | done
+branch: sprint/09
 milestone: M11 — A local engine for a machine that is not mine
 ---
 
@@ -22,9 +22,9 @@ local model without leaving the app, and the card says which numbers it chose an
 
 <!-- Order = the order the build phase works through. Dependent stories go last. -->
 
-- [ ] 035 — The machine card remembers, and speaks plainly
-- [ ] 032 — A model that fits a weak machine
-- [ ] 033 — llama.cpp is a runtime the app can install
+- [x] 035 — The machine card remembers, and speaks plainly
+- [x] 032 — A model that fits a weak machine
+- [x] 033 — llama.cpp is a runtime the app can install
 - [ ] 034 — The engine starts with settings that fit this machine
 
 ## Notes

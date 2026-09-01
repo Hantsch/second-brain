@@ -110,6 +110,18 @@ export function invalidateProviders(client: ReturnType<typeof useQueryClient>): 
   void client.invalidateQueries({ queryKey: qk.settings.snapshot() });
 }
 
+/**
+ * What the derived llama.cpp start plan (034, D1) is computed from, besides
+ * the engine's own state: the resource budget and the VRAM override (029/028)
+ * and which `.gguf` file is installed. Every action that moves one of those
+ * has to say so here, or the card keeps showing values planned against the
+ * previous machine picture until it is remounted. Exported so `events.ts` can
+ * reuse it when a model pull finishes — a fresh `.gguf` is a new plan.
+ */
+export function invalidateLlamaStartPlan(client: ReturnType<typeof useQueryClient>): void {
+  void client.invalidateQueries({ queryKey: qk.llm.llamaStartPlan() });
+}
+
 export interface ProviderMutations {
   add: UseMutationResult<ProviderConfig, unknown, IpcRequest<'llm:addProvider'>>;
   update: UseMutationResult<ProviderConfig, unknown, IpcRequest<'llm:updateProvider'>>;
@@ -174,7 +186,10 @@ export function useSetVramOverride(): UseMutationResult<MachineScanResult, unkno
   const client = useQueryClient();
   return useMutation({
     mutationFn: api.llm.setVramOverride,
-    onSuccess: (result) => client.setQueryData(qk.llm.machineScan(), result),
+    onSuccess: (result) => {
+      client.setQueryData(qk.llm.machineScan(), result);
+      invalidateLlamaStartPlan(client);
+    },
   });
 }
 
@@ -189,7 +204,10 @@ export function useSetResourceBudget(): UseMutationResult<MachineScanResult, unk
   const client = useQueryClient();
   return useMutation({
     mutationFn: api.llm.setResourceBudget,
-    onSuccess: (result) => client.setQueryData(qk.llm.machineScan(), result),
+    onSuccess: (result) => {
+      client.setQueryData(qk.llm.machineScan(), result);
+      invalidateLlamaStartPlan(client);
+    },
   });
 }
 

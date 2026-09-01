@@ -17,7 +17,9 @@ import {
   setOwnedPort,
   stopLlamaEngine,
   stopOwnedLlamaEngineOnQuit,
+  trackOwnedEngine,
 } from '../../../../src/main/ipc/runtime/llamacpp-lifecycle';
+import { ensureLlamaRunning } from '../../../../src/main/ipc/runtime/llamacpp-autostart';
 import type { LlamaStartDeps } from '../../../../src/main/ipc/runtime/llamacpp-engine-start';
 import { startLlamaEngine } from '../../../../src/main/ipc/runtime/llamacpp-engine-start';
 import type {
@@ -27,7 +29,7 @@ import type {
 import { LLAMA_PORT_RANGE_START } from '../../../../src/main/ipc/runtime/llamacpp-status';
 import type { EngineFs } from '../../../../src/main/ipc/runtime/engine-fs';
 import type { FetchLike } from '../../../../src/core/llm';
-import type { LlamaOverrides, MachineFacts } from '../../../../src/shared/types';
+import type { LlamaOverrides, MachineFacts, ProviderConfig } from '../../../../src/shared/types';
 import type { Services } from '../../../../src/main/services';
 
 const USER_DATA = 'C:\\fake\\userData';
@@ -91,6 +93,12 @@ interface FakeSpawn {
  * event a failed spawn fires instead of throwing, and the `'exit'` event a
  * signalled process fires — unless `ignoresSignals` makes it the wedged
  * process the `SIGKILL` escalation exists for.
+ *
+ * Two rarer shapes on top: `throwsOnSpawn` for the failure `spawn` reports by
+ * throwing *synchronously* rather than through `'error'`, and `diesAfterSpawn`
+ * for a child that starts and then immediately dies — fired the moment
+ * anything listens for `'exit'`, so the case is deterministic rather than a
+ * timing race.
  */
 function fakeSpawn(
   options: {
@@ -98,12 +106,15 @@ function fakeSpawn(
     stderr?: string;
     failToSpawn?: boolean;
     ignoresSignals?: boolean;
+    throwsOnSpawn?: string;
+    diesAfterSpawn?: boolean;
   } = {},
 ): FakeSpawn {
   const calls: { file: string; args: readonly string[] }[] = [];
   const signals: string[] = [];
   const spawnFn: LlamaSpawnFn = (file, args) => {
     calls.push({ file, args });
+    if (options.throwsOnSpawn !== undefined) throw new Error(options.throwsOnSpawn);
     let onError: ((...args: unknown[]) => void) | null = null;
     let onExit: ((...args: unknown[]) => void) | null = null;
     let onData: ((chunk: unknown) => void) | null = null;
@@ -115,7 +126,10 @@ function fakeSpawn(
       },
       once: (event, listener) => {
         if (event === 'error') onError = listener;
-        else onExit = listener;
+        else {
+          onExit = listener;
+          if (options.diesAfterSpawn) queueMicrotask(() => onExit?.());
+        }
       },
       kill: (signal) => {
         signals.push(signal);
@@ -598,6 +612,68 @@ describe('startLlamaEngine — classified failures', () => {
     });
   });
 
+  it('classifies a spawn that throws synchronously, and logs no path (034, D7)', async () => {
+    // `spawn` reports almost everything through `'error'`, but an `EPERM` or
+    // an unrepresentable path throws right there. Un-caught, that error left
+    // this module as a raw `Error` — and `registry.ts` logs an unclassified
+    // throw with its message *and stack*, model path included.
+    const spawn = fakeSpawn({ throwsOnSpawn: `EPERM: spawn ${MODEL_PATH}` });
+    const deps = startDeps({ fetchImpl: fakeFetchOnPort(null), spawnFn: spawn.spawnFn });
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    const result = await startLlamaEngine(deps);
+
+    expect(result).toEqual({ started: false, status: 'absent', reason: 'spawn-failed' });
+    const logged = warn.mock.calls.map((call) => String(call[0])).join('\n');
+    expect(logged).not.toContain(MODEL_FILE);
+    expect(logged).not.toContain('\\');
+    warn.mockRestore();
+    // Nothing was tracked: a process that never came into being is not an
+    // orphan, and there must be no handle left claiming otherwise.
+    expect(await stopLlamaEngine(FAST_STOP)).toEqual({ stopped: false });
+  });
+
+  it('reports a child that dies during the poll at once, without waiting out the ceiling', async () => {
+    const spawn = fakeSpawn({ diesAfterSpawn: true });
+    const deps = startDeps({
+      fetchImpl: fakeFetchOnPort(null),
+      spawnFn: spawn.spawnFn,
+      // The production-sized ceiling on purpose: the point of the fix is that
+      // this number is never reached when the process is already gone.
+      startTimeoutMs: 20_000,
+      pollIntervalMs: 5,
+    });
+    const startedAt = Date.now();
+
+    const result = await startLlamaEngine(deps);
+
+    expect(result).toEqual({
+      started: false,
+      status: 'installed-stopped',
+      reason: 'spawn-failed',
+    });
+    expect(Date.now() - startedAt).toBeLessThan(1_000);
+  });
+
+  it('still prefers the stderr cause over the generic one when the child dies', async () => {
+    const spawn = fakeSpawn({
+      diesAfterSpawn: true,
+      stderr: 'ggml_backend_cuda_buffer_type_alloc_buffer: cudaMalloc failed: out of memory\n',
+    });
+    const deps = startDeps({
+      fetchImpl: fakeFetchOnPort(null),
+      spawnFn: spawn.spawnFn,
+      startTimeoutMs: 20_000,
+      pollIntervalMs: 5,
+    });
+
+    expect(await startLlamaEngine(deps)).toEqual({
+      started: false,
+      status: 'installed-stopped',
+      reason: 'out-of-memory',
+    });
+  });
+
   it('reports timeout when the engine never answers — and keeps it stoppable', async () => {
     const spawn = fakeSpawn();
     const deps = startDeps({ fetchImpl: fakeFetchOnPort(null), spawnFn: spawn.spawnFn });
@@ -613,6 +689,126 @@ describe('startLlamaEngine — classified failures', () => {
     expect(spawn.signals).toEqual([]);
     expect(await stopLlamaEngine(FAST_STOP)).toEqual({ stopped: true });
     expect(spawn.signals).toEqual(['SIGTERM']);
+  });
+});
+
+/* The orphan the "already tracked?" check alone could not prevent: two starts
+   that arrive together both pass it before either has spawned, and the loser's
+   handle is then dropped by `trackOwnedEngine` — a `llama-server` neither the
+   stop button nor the quit hook can ever reach again. */
+describe('startLlamaEngine — single-flight', () => {
+  it('joins a start already in flight instead of spawning a second engine', async () => {
+    const openPorts = new Set<number>();
+    const spawn = fakeSpawn({ onSpawn: () => openPorts.add(LLAMA_PORT_RANGE_START) });
+    const deps = startDeps({ fetchImpl: fakeFetchOnPorts(openPorts), spawnFn: spawn.spawnFn });
+
+    // Issued back to back, neither awaited in between — the real overlap, not
+    // two sequential calls that merely look concurrent.
+    const [first, second] = await Promise.all([startLlamaEngine(deps), startLlamaEngine(deps)]);
+
+    expect(first).toEqual({ started: true, status: 'running' });
+    expect(second).toEqual(first);
+    expect(spawn.calls).toHaveLength(1);
+    expect(await getLlamaEngineStatus(deps)).toEqual({
+      status: 'running',
+      ownedByApp: true,
+      port: LLAMA_PORT_RANGE_START,
+    });
+  });
+
+  it('lets the manual press and the on-demand auto-start share one spawn', async () => {
+    const openPorts = new Set<number>();
+    const spawn = fakeSpawn({ onSpawn: () => openPorts.add(LLAMA_PORT_RANGE_START) });
+    const deps = startDeps({ fetchImpl: fakeFetchOnPorts(openPorts), spawnFn: spawn.spawnFn });
+    // Exactly what production composes `ensureLlamaRunning`'s default `start`
+    // to (`createLlamaLifecycleStartPart` → `startLlamaEngine`), with this
+    // suite's fake seams in place of the real spawn and probe.
+    const autoStart = ensureLlamaRunning(autoStartServices(), {
+      getStatus: async () => ({ status: 'installed-stopped' as const }),
+      start: () => startLlamaEngine(deps),
+    });
+
+    await Promise.all([startLlamaEngine(deps), autoStart]);
+
+    expect(spawn.calls).toHaveLength(1);
+    // One handle, and it is the one that is tracked: a stop reaches it.
+    expect(await stopLlamaEngine(FAST_STOP)).toEqual({ stopped: true });
+    expect(spawn.signals).toEqual(['SIGTERM']);
+  });
+
+  it('starts again once the previous attempt has settled', async () => {
+    const openPorts = new Set<number>();
+    const spawn = fakeSpawn({ onSpawn: () => openPorts.add(LLAMA_PORT_RANGE_START) });
+    const deps = startDeps({ fetchImpl: fakeFetchOnPorts(openPorts), spawnFn: spawn.spawnFn });
+
+    await startLlamaEngine(deps);
+    await stopLlamaEngine(FAST_STOP);
+    openPorts.clear();
+    await startLlamaEngine(deps);
+
+    // The guard releases with the attempt; it is not a one-shot latch.
+    expect(spawn.calls).toHaveLength(2);
+  });
+});
+
+/** The slice of `Services` `ensureLlamaRunning` reads — on-demand mode and one
+    enabled llama.cpp-shaped provider, so the guard gets as far as `start`. */
+function autoStartServices(): Services {
+  const provider: ProviderConfig = {
+    id: 'llama-1',
+    label: 'llama.cpp',
+    kind: 'openai-compatible',
+    baseUrl: `http://127.0.0.1:${LLAMA_PORT_RANGE_START}/v1`,
+    hasKey: false,
+    local: true,
+    enabled: true,
+    models: [],
+    createdAt: '2026-08-23T10:00:00.000Z',
+  };
+  return {
+    settings: {
+      snapshot: () => ({ app: { machine: { llamaAutoStart: 'on-demand' } }, vault: null }),
+      vault: () => ({ providers: [provider] }),
+    },
+  } as unknown as Services;
+}
+
+describe('trackOwnedEngine', () => {
+  function child(): LlamaChildProcess {
+    return fakeSpawn({ ignoresSignals: true }).spawnFn('engine', [], {
+      detached: false,
+      stdio: ['ignore', 'ignore', 'pipe'],
+      windowsHide: true,
+    });
+  }
+
+  it('signals a live predecessor before its handle is dropped', () => {
+    const spawn = fakeSpawn({ ignoresSignals: true });
+    const options = {
+      detached: false as const,
+      stdio: ['ignore', 'ignore', 'pipe'] as const,
+      windowsHide: true as const,
+    };
+    const first = spawn.spawnFn('engine', [], options);
+    const second = spawn.spawnFn('engine', [], options);
+
+    trackOwnedEngine(first, LLAMA_PORT_RANGE_START);
+    trackOwnedEngine(second, LLAMA_PORT_RANGE_START + 1);
+
+    // Both signals belong to the predecessor: the replacement is the one the
+    // module still holds, and nothing else would ever reap the other.
+    expect(spawn.signals).toEqual(['SIGTERM', 'SIGKILL']);
+  });
+
+  it('hands back a probe over its own child, not over module ownership', async () => {
+    const hasExited = trackOwnedEngine(child(), LLAMA_PORT_RANGE_START);
+
+    expect(hasExited()).toBe(false);
+    // Giving up ownership is not the child exiting — the probe must not
+    // confuse the two, or a stop during the readiness poll would be read as
+    // a crash.
+    await stopLlamaEngine(FAST_STOP);
+    expect(hasExited()).toBe(false);
   });
 });
 

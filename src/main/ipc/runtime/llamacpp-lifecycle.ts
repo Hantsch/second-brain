@@ -114,8 +114,22 @@ export function setOwnedPort(port: number | null): void {
  * `llamacpp-engine-start.ts` and nowhere else. The `'exit'` listener is the
  * other half of the invariant above: ownership dies with the process, whether
  * or not anyone asked it to.
+ *
+ * Returns a live "has it exited yet" probe over *this* record, so the caller
+ * can watch its own child without attaching a second `'exit'` listener (which
+ * would race the one above for the right to clear ownership).
+ *
+ * A predecessor that is somehow still alive is signalled before its handle is
+ * dropped: the start path is single-flight, so this should never find one —
+ * but the moment before the overwrite is the last chance to reach a process
+ * that would otherwise become an orphan nobody holds a handle to.
  */
-export function trackOwnedEngine(child: LlamaChildProcess, port: number): void {
+export function trackOwnedEngine(child: LlamaChildProcess, port: number): () => boolean {
+  const previous = ownedEngineState;
+  if (previous && !previous.exited) {
+    signalChild(previous.child, 'SIGTERM');
+    signalChild(previous.child, 'SIGKILL');
+  }
   const tracked: TrackedEngine = { child, exited: false };
   child.once('exit', () => {
     tracked.exited = true;
@@ -126,6 +140,7 @@ export function trackOwnedEngine(child: LlamaChildProcess, port: number): void {
   });
   ownedEngineState = tracked;
   ownedPort = port;
+  return () => tracked.exited;
 }
 
 /** The engine this app started and that is still alive, or `null`. What

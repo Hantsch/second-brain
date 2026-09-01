@@ -15,7 +15,9 @@
  *    leaves a process the card and the quit hook can still end — an orphan is
  *    a process nobody holds a handle to, and no branch here produces one. And
  *    a start while an engine of ours is already tracked never becomes a
- *    second server whose predecessor's handle is overwritten.
+ *    second server whose predecessor's handle is overwritten — nor does a
+ *    start that arrives *while another start is still running*, which is what
+ *    the single-flight guard on `startLlamaEngine` is for.
  * 2. **Failures are classified, never passed through** (AC 5). The four causes
  *    the user can act on come from what is *known* — no binary, no model, no
  *    free port — or, where only the process knows, from a substring match on
@@ -153,18 +155,27 @@ export async function firstFreePort(
   return null;
 }
 
-/** Polls until the engine answers on its own port or the ceiling is reached. */
+/**
+ * Polls until the engine answers on its own port, the child dies, or the
+ * ceiling is reached. `hasExited` is the reason this is not a pure HTTP loop:
+ * a process that crashed a second after the spawn error grace period would
+ * otherwise be waited out for the full `START_TIMEOUT_MS` and then reported as
+ * a `'timeout'` — twenty seconds of nothing, and the wrong cause at the end
+ * of it.
+ */
 async function pollUntilReachable(
   fetchImpl: FetchLike,
   port: number,
   probeTimeoutMs: number,
   timeoutMs: number,
   pollIntervalMs: number,
-): Promise<boolean> {
+  hasExited: () => boolean,
+): Promise<'reachable' | 'died' | 'timeout'> {
   const deadline = Date.now() + timeoutMs;
   for (;;) {
-    if (await probeLlamaCppPort(fetchImpl, port, probeTimeoutMs)) return true;
-    if (Date.now() >= deadline) return false;
+    if (await probeLlamaCppPort(fetchImpl, port, probeTimeoutMs)) return 'reachable';
+    if (hasExited()) return 'died';
+    if (Date.now() >= deadline) return 'timeout';
     await wait(pollIntervalMs);
   }
 }
@@ -186,11 +197,38 @@ export interface LlamaStartDeps extends LlamaLifecycleDeps {
 }
 
 /**
+ * The one start attempt that may be in flight at a time — module state, for
+ * the same reason `llamacpp-lifecycle.ts`'s ownership is: it guards one
+ * physical engine, not one call. The check inside `runStart` ("do we already
+ * own one?") cannot do this on its own, because two callers that arrive
+ * together both pass it before either has spawned anything: the manual
+ * `llm:startLocalRuntime` press and `ensureLlamaRunning()`'s on-demand attempt
+ * are exactly that pair, and the loser's handle would be dropped by
+ * `trackOwnedEngine` — an untrackable server neither the stop button nor the
+ * quit hook could ever reach.
+ */
+let startInFlight: Promise<RuntimeStartOutcome> | null = null;
+
+/**
  * Starts the engine with D1's derived flags on the first free port, or names
  * one of the causes AC 5 lists. Never throws — every branch is a typed
  * `RuntimeStartOutcome`, the same contract Ollama's `start` keeps.
+ *
+ * Single-flight: a second call joins the attempt already running rather than
+ * spawning a second server. The check-and-set is synchronous (before any
+ * `await`), the same shape `llamacpp-autostart.ts`'s `ensureInFlight` uses —
+ * that guard stays where it is and now sits one level above this one, since
+ * it also skips the status probe a joined call has no use for.
  */
-export async function startLlamaEngine(deps: LlamaStartDeps = {}): Promise<RuntimeStartOutcome> {
+export function startLlamaEngine(deps: LlamaStartDeps = {}): Promise<RuntimeStartOutcome> {
+  if (startInFlight) return startInFlight;
+  startInFlight = runStart(deps).finally(() => {
+    startInFlight = null;
+  });
+  return startInFlight;
+}
+
+async function runStart(deps: LlamaStartDeps): Promise<RuntimeStartOutcome> {
   const { platform, userDataDir, fs, fetchImpl, timeoutMs } = resolveLifecycleDeps(deps);
 
   // A second spawn while an engine of ours is tracked would take a second
@@ -236,12 +274,27 @@ export async function startLlamaEngine(deps: LlamaStartDeps = {}): Promise<Runti
     return { started: false, status: 'installed-stopped', reason: 'model-missing' };
   }
 
-  // `plan.argv` carries only the derived flags; the model path and the port
-  // are spawn-time concerns D1 deliberately keeps out of anything that
-  // crosses IPC (guardrail 6).
-  const argv = [...plan.argv, '--port', String(port), '-m', path.join(modelDir, modelFile)];
-  const spawnFn = deps.spawnFn ?? nodeLlamaSpawn;
-  const engine = spawnEngine(spawnFn, llamaEngineBinaryPath(userDataDir, platform), argv);
+  // `spawn` reports almost every failure through the `'error'` event below,
+  // but not all of them: a bad argument type, an unrepresentable path, or an
+  // `EPERM` from the platform layer throws right here, synchronously. Outside
+  // a `try` that error would escape this module's "never throws, always a
+  // classified reason" contract — and `registry.ts` logs an unclassified
+  // throw with `console.error(error)`, message and stack included, which for
+  // a spawn error means the binary and model path in a log line (guardrail 6,
+  // AC 8). Hence: same classification as any other spawn failure, and a
+  // fixed, path-free note through `safeLlamaLogLine`.
+  let engine: { child: LlamaChildProcess; stderr: () => string };
+  try {
+    // `plan.argv` carries only the derived flags; the model path and the port
+    // are spawn-time concerns D1 deliberately keeps out of anything that
+    // crosses IPC (guardrail 6).
+    const argv = [...plan.argv, '--port', String(port), '-m', path.join(modelDir, modelFile)];
+    const spawnFn = deps.spawnFn ?? nodeLlamaSpawn;
+    engine = spawnEngine(spawnFn, llamaEngineBinaryPath(userDataDir, platform), argv);
+  } catch {
+    console.warn(safeLlamaLogLine('[llamacpp] die Engine konnte nicht gestartet werden'));
+    return { started: false, status: 'absent', reason: 'spawn-failed' };
+  }
 
   if (await awaitSpawnError(engine.child, deps.spawnErrorGraceMs ?? SPAWN_ERROR_GRACE_MS)) {
     // Nothing to track: a process that never started cannot be orphaned.
@@ -252,19 +305,31 @@ export async function startLlamaEngine(deps: LlamaStartDeps = {}): Promise<Runti
   }
 
   // Owned from here on — before the poll, not after it, so a stop pressed
-  // while the engine is still coming up reaches this process.
-  trackOwnedEngine(engine.child, port);
+  // while the engine is still coming up reaches this process. The returned
+  // probe is over this very child, so the poll below can tell "still loading"
+  // from "already dead" without a second `'exit'` listener.
+  const hasExited = trackOwnedEngine(engine.child, port);
 
-  const reachable = await pollUntilReachable(
+  const outcome = await pollUntilReachable(
     fetchImpl,
     port,
     timeoutMs,
     deps.startTimeoutMs ?? START_TIMEOUT_MS,
     deps.pollIntervalMs ?? START_POLL_INTERVAL_MS,
+    hasExited,
   );
-  if (reachable) {
+  if (outcome === 'reachable') {
     await adoptPortQuietly(deps, port);
     return { started: true, status: 'running' };
+  }
+
+  // A process that died on its own has already cleared its own ownership
+  // through the `'exit'` listener, so there is nothing left to track — and
+  // `'spawn-failed'` is the honest generic cause for it, not `'timeout'`: the
+  // ceiling was never reached.
+  const cause = classifyStderr(engine.stderr());
+  if (outcome === 'died') {
+    return { started: false, status: 'installed-stopped', reason: cause ?? 'spawn-failed' };
   }
 
   // Deliberately *not* killed here. On the hardware this story is for, a
@@ -272,10 +337,7 @@ export async function startLlamaEngine(deps: LlamaStartDeps = {}): Promise<Runti
   // it would make the engine look permanently unstartable on exactly the
   // machines that need it most. It stays tracked instead, so it is not an
   // orphan: the card can stop it, the quit hook stops it, and a later status
-  // read reports it honestly once it does answer. A process that died on its
-  // own (an allocation failure, say) has already cleared its own ownership
-  // through the `'exit'` listener.
-  const cause = classifyStderr(engine.stderr());
+  // read reports it honestly once it does answer.
   return { started: false, status: 'installed-stopped', reason: cause ?? 'timeout' };
 }
 

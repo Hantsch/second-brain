@@ -21,6 +21,7 @@ import type { ProviderConfig, RecommendationSet, TaskKind } from '@shared/types'
 import type { LlmBridge } from './contracts';
 import { scanCapacityVerdict } from './ipc/machine-scan';
 import { ensureLlamaRunning } from './ipc/runtime/llamacpp-autostart';
+import { looksLikeLlamaCppProvider } from './ipc/runtime/llamacpp-provider-port';
 import { providerKeyId } from './secrets';
 import type { KeyStore } from './secrets';
 import type { Services } from './services';
@@ -61,25 +62,47 @@ export function createGateway(services: Services): LlmGateway {
 }
 
 /**
- * Wraps the real gateway so every call that actually dispatches to a
+ * Does *this* task's route point at the llama.cpp engine? The gateway's own
+ * `routeFor` answers the routing half (explicit route → tier default →
+ * nothing, provider present and enabled), and `looksLikeLlamaCppProvider` —
+ * the same shape check `llamacpp-autostart.ts` uses, not a second heuristic —
+ * answers the rest.
+ *
+ * Without this, a task routed to Anthropic would wait out an on-demand
+ * llama.cpp start it has no use for: up to `START_TIMEOUT_MS` (20 s) added to
+ * a request that was never going to touch the local engine.
+ */
+function routesToLlamaCpp(gateway: LlmGateway, services: Services, task: TaskKind): boolean {
+  const ref = gateway.routeFor(task);
+  if (!ref) return false;
+  const provider = providersOf(services).find((candidate) => candidate.id === ref.providerId);
+  return provider !== undefined && looksLikeLlamaCppProvider(provider);
+}
+
+/**
+ * Wraps the real gateway so a call that actually dispatches to the llama.cpp
  * provider (`complete`, `stream`) first awaits `ensureLlamaRunning` (034,
  * D6) — a no-op unless `machine.llamaAutoStart` is `'on-demand'` and the
- * engine is installed but stopped. `isAvailable`/`routeFor` pass straight
- * through unwrapped: they only answer a routing question, never a network
- * call, so there is nothing for them to wait on.
+ * engine is installed but stopped. A call routed anywhere else does not wait
+ * at all. `isAvailable`/`routeFor` pass straight through unwrapped: they only
+ * answer a routing question, never a network call, so there is nothing for
+ * them to wait on.
  *
  * A thin object, not a new class: every call site already goes through
  * `createGateway`, so this is the one place that needs to know the guard
  * exists at all.
  */
 function withAutoStart(gateway: LlmGateway, services: Services): LlmGateway {
+  const ensureIfLocal = async (task: TaskKind): Promise<void> => {
+    if (routesToLlamaCpp(gateway, services, task)) await ensureLlamaRunning(services);
+  };
   return {
     complete: async (req) => {
-      await ensureLlamaRunning(services);
+      await ensureIfLocal(req.task);
       return gateway.complete(req);
     },
     stream: async (req, onDelta) => {
-      await ensureLlamaRunning(services);
+      await ensureIfLocal(req.task);
       return gateway.stream(req, onDelta);
     },
     isAvailable: (task) => gateway.isAvailable(task),

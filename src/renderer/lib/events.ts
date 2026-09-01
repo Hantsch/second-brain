@@ -8,7 +8,7 @@ import { appendStream } from './llm-stream';
 import { appendPull } from './pullStore';
 import { pushToast } from './toast';
 import { qk, VAULT_DEPENDENT_ROOTS } from './queries/keys';
-import { invalidateProviders } from './queries/llm';
+import { invalidateLlamaStartPlan, invalidateProviders } from './queries/llm';
 import { setLanguage } from '../i18n';
 
 function invalidateVaultDependent(client: QueryClient): void {
@@ -101,11 +101,17 @@ export function wireEvents(client: QueryClient): () => void {
      refreshes for every other provider-changing action, so the routing
      table's model list re-probes and picks the new model up on its next
      natural refresh (019c, F6) instead of staying silently stale. A
-     cancelled or failed pull changes nothing installed, so it skips this. */
+     cancelled or failed pull changes nothing installed, so it skips this.
+     A finished pull is also a new `.gguf` file on disk, which is what 034's
+     derived start plan is computed over — hence the second invalidation, so
+     the llama.cpp card plans against the model that is now actually there. */
   unsubscribes.push(
     sb.on('event:pull-progress', (chunk) => {
       appendPull(chunk.pullId, chunk);
-      if (chunk.done && chunk.error === undefined) invalidateProviders(client);
+      if (chunk.done && chunk.error === undefined) {
+        invalidateProviders(client);
+        invalidateLlamaStartPlan(client);
+      }
     }),
   );
 

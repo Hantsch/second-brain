@@ -161,6 +161,10 @@ describe('Ereignisse', () => {
     const keys = invalidate.mock.calls.map(([filter]) => JSON.stringify(filter?.queryKey));
     expect(keys).toContain(JSON.stringify(qk.llm.providers()));
     expect(keys).toContain(JSON.stringify(qk.llm.detect()));
+    /* 034: der abgeleitete Startplan rechnet über die installierte
+       `.gguf`-Datei. Ohne diese Wurzel plant die llama.cpp-Karte nach einem
+       Pull weiter gegen das Modell von vorher. */
+    expect(keys).toContain(JSON.stringify(qk.llm.llamaStartPlan()));
   });
 
   it('zieht nach einem abgebrochenen oder fehlgeschlagenen Pull nichts nach — nichts wurde installiert', async () => {
@@ -178,6 +182,56 @@ describe('Ereignisse', () => {
     });
 
     expect(invalidate).not.toHaveBeenCalled();
+  });
+});
+
+/* 034: der Startplan wird aus dem Ressourcenbudget (029) und der VRAM-Angabe
+   (028) abgeleitet. Wer eine der beiden Zahlen ändert, ändert den Plan — ohne
+   Invalidierung zeigt die llama.cpp-Karte bis zum nächsten Mounten Werte, die
+   gegen die alten Zahlen gerechnet wurden. */
+describe('034: Budget- und VRAM-Änderungen ziehen den Startplan nach', () => {
+  function wrapWithSpy(): {
+    client: QueryClient;
+    wrapper: (props: { children: ReactNode }) => ReactNode;
+  } {
+    const sb = {
+      invoke: vi.fn(() => Promise.resolve({})),
+      on: () => () => undefined,
+      off: vi.fn(),
+    };
+    window.sb = sb as unknown as typeof window.sb;
+    const client = new QueryClient();
+    return {
+      client,
+      wrapper: ({ children }: { children: ReactNode }) => QueryClientProvider({ client, children }),
+    };
+  }
+
+  async function invalidatedKeysAfter(
+    hookName: 'useSetResourceBudget' | 'useSetVramOverride',
+    value: number,
+  ): Promise<string[]> {
+    const { client, wrapper } = wrapWithSpy();
+    const invalidate = vi.spyOn(client, 'invalidateQueries');
+    const queries = await import('@renderer/lib/queries/llm');
+    const { result } = renderHook(() => queries[hookName](), { wrapper });
+
+    result.current.mutate(value);
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    return invalidate.mock.calls.map(([filter]) => JSON.stringify(filter?.queryKey));
+  }
+
+  it('nach dem Setzen des Ressourcenbudgets', async () => {
+    const keys = await invalidatedKeysAfter('useSetResourceBudget', 50);
+
+    expect(keys).toContain(JSON.stringify(qk.llm.llamaStartPlan()));
+  });
+
+  it('nach dem Setzen der VRAM-Angabe von Hand', async () => {
+    const keys = await invalidatedKeysAfter('useSetVramOverride', 16384);
+
+    expect(keys).toContain(JSON.stringify(qk.llm.llamaStartPlan()));
   });
 });
 

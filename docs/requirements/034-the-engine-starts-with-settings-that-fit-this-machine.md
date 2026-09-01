@@ -31,28 +31,28 @@ stopping it is not breaking the app.
 
 ## Acceptance Criteria
 
-- [ ] The engine can be started and stopped from `Settings → Models`, and the card shows which
+- [x] The engine can be started and stopped from `Settings → Models`, and the card shows which
       of the three states it is in (not installed / installed and stopped / running) without a
       manual refresh.
-- [ ] The values the app starts with are derived from the machine facts (detected plus
+- [x] The values the app starts with are derived from the machine facts (detected plus
       hand-entered, per 028) and the resource budget (029) — not from constants that ignore the
       machine.
-- [ ] The chosen values are visible before and after the start, with one sentence per value
+- [x] The chosen values are visible before and after the start, with one sentence per value
       saying what it traded away ("28 of 33 layers on the GPU — the rest runs on the CPU because
       9.6 GB of planned VRAM does not hold more").
-- [ ] The derivation is pure and lives in core: same facts and same budget in, same values out,
+- [x] The derivation is pure and lives in core: same facts and same budget in, same values out,
       no filesystem and no process. Spawning stays in main.
-- [ ] A failed start names a cause the user can act on — port already in use, model file missing,
+- [x] A failed start names a cause the user can act on — port already in use, model file missing,
       engine binary missing, out of memory — and never a raw error string from the process.
-- [ ] Stopping the engine leaves no orphaned process, and closing the app stops what the app
+- [x] Stopping the engine leaves no orphaned process, and closing the app stops what the app
       started.
-- [ ] With the engine stopped, every screen still works and the affected tasks report the honest
+- [x] With the engine stopped, every screen still works and the affected tasks report the honest
       "no model configured" state (guardrail 1). No dead screen, no hang.
-- [ ] Nothing about the engine's state or its command line is written into the vault, and no file
+- [x] Nothing about the engine's state or its command line is written into the vault, and no file
       path from the model directory appears in a log line (guardrail 6).
-- [ ] No hardcoded string in the renderer; every new key in both `de*.ts` and `en*.ts`, German
+- [x] No hardcoded string in the renderer; every new key in both `de*.ts` and `en*.ts`, German
       quotes as `„…“`.
-- [ ] Unit-tested: the derivation over at least four fixture machines (no GPU / small GPU /
+- [x] Unit-tested: the derivation over at least four fixture machines (no GPU / small GPU /
       large GPU / GPU reported as `null`) and at two budget settings, plus each named start
       failure. No test starts a real process.
 
@@ -101,6 +101,35 @@ stopping it is not breaking the app.
   is used when 033's catalog knows it; otherwise a landmark table `paramsB → layers` in core fills
   it in and the plan marks the value `estimated`. Reason: reading GGUF headers is filesystem work
   and would break the "derivation is pure" criterion.
+- **Manual start and on-demand auto-start share one single-flight guard.** A clean review found
+  that `startLlamaEngine` had no in-flight guard of its own, so a user pressing "start" while
+  `ensureLlamaRunning()` (D6) was mid-spawn for a background task could produce two spawned
+  processes, with the first handle silently dropped and unreachable by both the stop button and
+  the `will-quit` hook — a direct violation of "no orphaned process" (AC6). Fixed by making
+  `startLlamaEngine` itself the single point of truth (module-level in-flight promise); both the
+  manual IPC handler and `ensureLlamaRunning()` now converge on it. `trackOwnedEngine` also no
+  longer silently drops a live predecessor — it stops it first.
+- **Route-gated auto-start.** The same review found `withAutoStart` (D6) awaited
+  `ensureLlamaRunning()` on every LLM call regardless of which provider the task actually routed
+  to, which could add up to 20s to an unrelated Anthropic/OpenAI request. Fixed to only await the
+  guard when the resolved route is the llama.cpp provider.
+- **Dead-child poll short-circuit and crash-safe quit hook.** Two smaller robustness fixes from
+  the same review: the start poll now notices a child that exited before the port ever answered
+  and returns `'spawn-failed'` immediately instead of waiting out the full timeout; and
+  `will-quit` now stops an app-owned engine even if an earlier, unrelated cleanup step in the same
+  handler throws (previously the engine stop was last and could be skipped).
+- **Synchronous spawn failures are redacted like async ones.** A raw `spawn`/`path.join` throw
+  outside the async error path could have logged an unredacted `Error` (message/stack containing
+  the model path) to the console. Now caught and routed through the same `safeLlamaLogLine`
+  redaction and `'spawn-failed'` classification as every other spawn failure.
+- **Two low-severity items from the fix-verification pass, left as-is.** (1) The predecessor kill
+  in `trackOwnedEngine` uses SIGTERM+SIGKILL back-to-back with no grace window, unlike the normal
+  stop path's 2s grace — only reachable if the single-flight invariant above is ever broken, so
+  the cost is a leaked GPU allocation in a path that should not occur. (2) The "never throws"
+  contract on the main start function is still not fully true for a few pre-existing internal
+  calls (`fs.exists`, `firstGgufModel`, `getLlamaStartPlan`, the port probe) that predate this fix
+  and were out of scope for it. Neither blocks the acceptance criteria; both are candidates for a
+  future hardening pass, not this story.
 
 ## Open Questions
 
@@ -212,3 +241,43 @@ overrides })` → `LlamaStartPlan`. Calls `judgeCapacity` for `plannedVramMb`/`p
    it, confirm it returns to the derived value.
 
 ## Done
+
+**Summary.** A prior session had already implemented D1-D7 in full (pure llama.cpp start-plan
+derivation in core, status/lifecycle/spawn in main, the engine card + advanced overrides +
+auto-start toggle in the renderer, and log redaction), committed under `a4ecd1d`
+("prettier run and parts of 31") — but never verified the tree against a fresh review, and
+`docs/sprints/S09/progress.md` wrongly implied the work had been lost. This session audited the
+actual code against every Acceptance Criterion and every D's "Accepted when" clause (all PASS,
+see progress.md), then ran a clean `story-review-hard` review, which found one real blocker: a
+race between manual engine start and the D6 on-demand auto-start guard that could double-spawn
+`llama-server` and orphan the first process. Four related issues came out of the same review
+(unredacted spawn-throw error, auto-start guard firing regardless of route, dead-child poll not
+short-circuiting, `will-quit` not crash-safe against earlier cleanup throwing, stale renderer
+plan after a budget/VRAM change). All five were fixed in one pass, re-verified, and a second
+clean review confirmed PASS with two low-severity, non-blocking notes (documented under
+`## Decisions (Sprint)`).
+
+**Commit message.** `034: the engine starts with settings that fit this machine`
+
+**Verification.**
+- `npm run typecheck`, `npm run lint`, `npm run format:check` — clean.
+- `npm test` — 220 test files, 3160 tests, all passing (includes new tests added by the review-fix
+  cycle for the single-flight guard, route-gated auto-start, dead-child short-circuit,
+  crash-safe quit hook, and query invalidation).
+- `npm run build` — succeeds.
+- `npm run seed && npm run shot` — 64 screenshots, no console errors; `Settings → Models` renders
+  the machine card and both local-runtime cards (Ollama, llama.cpp) correctly for the
+  "not installed" state, which is genuine on this machine (no llama.cpp binary/model present).
+- Clean code review (`story-review-hard`), two passes: first FAIL (one confirmed blocker + four
+  related findings, all fixed), second PASS.
+
+**Open point — live smoke is partial.** This environment has no llama.cpp engine binary or GGUF
+model installed, so steps 2-7 of `## Test Plan (manual acceptance)` (installed/stopped → running
+→ stopped, foreign-runtime detection, quit-orphan check, advanced overrides against a real
+process) cannot be driven end-to-end here — only step 1 (the honest "not installed" state) and
+the renderer/unit/integration test coverage for the rest could be exercised headlessly. This
+matches the story's own anticipated outcome: acceptance of the start/stop/quit/foreign-runtime
+behavior against a genuine process needs a machine with the engine actually installed. Status is
+therefore left `in-progress` ("built, acceptance pending") rather than `done`, and the story stays
+in `docs/requirements/` (not moved to `done/`) until a user with a real llama.cpp install runs
+Test Plan steps 2-7.
