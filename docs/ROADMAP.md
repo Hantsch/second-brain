@@ -440,7 +440,7 @@ because it now also blocks the one command this milestone's second half is built
 
 ---
 
-### M11 — A local engine for a machine that is not mine — planned
+### M11 — A local engine for a machine that is not mine — built, acceptance pending
 
 No concept behind M11. Four user-written stories, cut on 2026-08-23 from one observation while
 looking at the provider setup: the app manages exactly one local runtime, and the first test user
@@ -474,7 +474,7 @@ value shown with one sentence on what it traded away.
 Sprints:
 
 - [sprints/S09/sprint.md](sprints/S09/sprint.md) — a small model, an engine that installs itself,
-  and a start I can see (035, 032, 033, 034), `planned`
+  and a start I can see (035, 032, 033, 034), `done`
 
 Decisions taken at the cut (2026-08-23, user):
 
@@ -506,6 +506,18 @@ Risk carried knowingly: 033 and 034 have 019c's acceptance problem in a sharper 
 test needs a machine where the engine is genuinely absent and the graphics card genuinely weak,
 and the build machine is neither. Expect at least one to end as "built, acceptance pending" until
 it runs on the test user's laptop — which is what story 031 in S08 exists to make possible.
+
+**S09 result (2026-09-01).** 035, 032, 033 are `done` and moved to
+[requirements/done/](requirements/done/). 034 is built and reviewed (a story-review-hard pass
+found and fixed a process-lifecycle race between manual start and the D6 on-demand auto-start
+guard) but stays `in-progress`: this milestone's own risk note above came true — the author's
+machine cannot exercise "engine genuinely absent" or a real GPU/CPU-only start, so 034's live
+acceptance (start/stop, override row, foreign-runtime detection) is pending the test user's
+laptop, per story 031. See [sprints/S09/review.md](sprints/S09/review.md) and
+[sprints/S09/testplan.md](sprints/S09/testplan.md).
+
+**Gaps/notes.** Same two carry-overs from S07/S08, still open (see "Open / unprioritised" below):
+`format:check` not green on Windows (CRLF), and the maintenance progress bar lost on navigation.
 
 ---
 
