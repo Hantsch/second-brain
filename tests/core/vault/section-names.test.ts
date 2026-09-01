@@ -20,6 +20,12 @@ describe('sectionNameFor', () => {
     expect(sectionNameFor('facts', 'en')).toBe('Facts');
     expect(sectionNameFor('dialogue', 'de')).toBe('Gespräch');
     expect(sectionNameFor('dialogue', 'en')).toBe('Conversation');
+    expect(sectionNameFor('patterns', 'de')).toBe('Muster');
+    expect(sectionNameFor('patterns', 'en')).toBe('Patterns');
+    expect(sectionNameFor('open', 'de')).toBe('Offen');
+    expect(sectionNameFor('open', 'en')).toBe('Open');
+    expect(sectionNameFor('directives', 'de')).toBe('Direktiven');
+    expect(sectionNameFor('directives', 'en')).toBe('Directives');
   });
 
   it('falls back to German for an unrecognized document language', () => {
@@ -40,6 +46,12 @@ describe('sectionKindOf', () => {
     expect(sectionKindOf('Tag')).toBe('day');
     expect(sectionKindOf('Conversation')).toBe('dialogue');
     expect(sectionKindOf('Gespräch')).toBe('dialogue');
+    expect(sectionKindOf('Muster')).toBe('patterns');
+    expect(sectionKindOf('Patterns')).toBe('patterns');
+    expect(sectionKindOf('Offen')).toBe('open');
+    expect(sectionKindOf('Open')).toBe('open');
+    expect(sectionKindOf('Direktiven')).toBe('directives');
+    expect(sectionKindOf('Directives')).toBe('directives');
   });
 
   /* „State" ist keine der beiden Dokumentsprachen, wurde von der Leseseite aber

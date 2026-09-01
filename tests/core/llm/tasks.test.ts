@@ -11,6 +11,7 @@ import {
   taskDefinition,
 } from '@core/llm';
 import { MODEL_TIERS } from '@shared/types';
+import { createEmptyGateway } from '../../fakes/llm';
 
 describe('Aufgabenkatalog', () => {
   it('deckt jede Aufgabe genau einmal ab', () => {
@@ -43,6 +44,7 @@ describe('Aufgabenkatalog', () => {
   it('markiert genau die persönlichen Aufgaben als sensibel', () => {
     expect(sensitiveTasks().sort()).toEqual([
       'classify-dump',
+      'condense-area',
       'extract-tasks',
       'journal-chat',
       'journal-loose-ends',
@@ -64,6 +66,7 @@ describe('Aufgabenkatalog', () => {
         .sort(),
     ).toEqual([
       'classify-dump',
+      'condense-area',
       'extract-tasks',
       'gardener-audit',
       'journal-loose-ends',
@@ -95,6 +98,18 @@ describe('Aufgabenkatalog', () => {
       if (task.kind === 'title-tags' || task.kind === 'query-rerank') continue;
       expect(task.minLocalParamsB).toBeUndefined();
     }
+  });
+
+  it('empfiehlt für das Verdichten eines Bereichs ein starkes, lokal empfohlenes Modell', () => {
+    const task = taskDefinition('condense-area');
+    expect(task.suggested).toBe('strong');
+    expect(task.sensitive).toBe(true);
+    expect(task.structured).toBe(true);
+    expect(task.streams).toBe(false);
+  });
+
+  it('ist ohne Route für condense-area nicht verfügbar', () => {
+    expect(createEmptyGateway().isAvailable('condense-area')).toBe(false);
   });
 
   it('wirft bei einer unbekannten Aufgabe', () => {

@@ -7,3 +7,27 @@
 - 2026-09-01 22:35 · 036 · D3 areas row in close panel (renderer) · started
 - 2026-09-01 22:45 · 036 · D3 areas row in close panel (renderer) · done
 - 2026-09-01 22:56 · 036 · story done (build+test+lint+typecheck green, review PASS, seed/shot smoke ok) · done
+- 2026-09-01 22:57 · 037 · D1 condensed vault file kind · started
+- 2026-09-01 22:59 · 037 · D1 condensed vault file kind · done
+- 2026-09-01 22:59 · 037 · D2 artifact section headings · started
+- 2026-09-01 23:00 · 037 · D2 artifact section headings · done
+- 2026-09-01 23:00 · 037 · D3 artifact read/write round-trip · started
+- 2026-09-01 23:06 · 037 · D3 artifact read/write round-trip · done
+- 2026-09-01 23:06 · 037 · D4 task kind condense-area · started
+- 2026-09-01 23:10 · 037 · D4 task kind condense-area · done
+- 2026-09-01 23:10 · 037 · D5 input selection · started
+- 2026-09-01 23:10 · 037 · D6 condense-area prompt · started
+- 2026-09-01 23:13 · 037 · D5 input selection · done
+- 2026-09-01 23:13 · 037 · D6 condense-area prompt · done
+- 2026-09-01 23:13 · 037 · D7 condenseArea run · started
+- 2026-09-01 23:25 · 037 · D7 condenseArea run · done
+- 2026-09-01 23:25 · 037 · D8 write helper · started
+- 2026-09-01 23:29 · 037 · D8 write helper · done
+- 2026-09-01 23:29 · 037 · verification (build/test/lint/typecheck) · started
+- 2026-09-01 23:39 · 037 · verification (build/test/lint/typecheck) · done
+- 2026-09-01 23:39 · 037 · code review · started
+- 2026-09-01 23:52 · 037 · code review · done (1 fix cycle)
+- 2026-09-01 23:52 · 037 · final verification · started
+- 2026-09-01 23:54 · 037 · final verification · done
+- 2026-09-01 23:54 · 037 · story closeout (Done section, AC ticks) · started
+- 2026-09-02 00:01 · 037 · story closeout (Done section, AC ticks, moved to done/) · done

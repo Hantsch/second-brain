@@ -38,6 +38,7 @@ const DOC_TYPES = new Set<string>([
   'note',
   'project',
   'area',
+  'condensed',
   'journal',
   'source',
   'entity',
@@ -83,6 +84,7 @@ export function docTypeFromPath(path: string): DocType {
   if (isInside('inbox', path)) return 'dump';
   if (isInside('journal', path)) return 'journal';
   if (/^projects\/[^/]+\/[^/]+\/project\.md$/.test(path)) return 'project';
+  if (/^areas\/[^/]+\.condensed\.md$/.test(path)) return 'condensed';
   if (isInside('areas', path)) return 'area';
   const wiki = /^modules\/[^/]+\/wiki\/(sources|entities|concepts)\//.exec(path);
   if (wiki !== null) {

@@ -161,6 +161,7 @@ const own = {
   'settings.fallback.journal-loose-ends': 'Lose Enden bleiben unentdeckt',
   'settings.fallback.project-status': 'Stand und nächster Schritt bleiben Handarbeit',
   'settings.fallback.gardener-audit': 'Die deterministischen Prüfungen laufen weiter',
+  'settings.fallback.condense-area': 'Die Bereichsseite bleibt, wie sie ist',
 
   'settings.machine.title': 'Diese Maschine',
   'settings.machine.scan': 'Diesen Rechner scannen',

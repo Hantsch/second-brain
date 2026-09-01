@@ -18,6 +18,7 @@ document is the contract: what isn't written here doesn't get written.
     work/<slug>/notes/        optional long-form notes for the project
     private/<slug>/project.md
   areas/<slug>.md             ongoing responsibilities with no end
+  areas/<slug>.condensed.md   condensed state for that area, sibling file
   modules/<slug>/             one knowledge module = one Karpathy wiki
     module.md                 module description
     wiki/index.md             catalog of all pages
@@ -31,6 +32,15 @@ document is the contract: what isn't written here doesn't get written.
     files/<date>-<slug>/      uploaded files
     web/<date>-<slug>.md      fetched pages
     web/<date>-<slug>.ingest.json   log as a sibling file, when there's no folder
+```
+
+`areas/<slug>.condensed.md` is the same kind of exception as
+`web/<date>-<slug>.ingest.json` above: a dotted sibling file rather than a
+folder, distinguished from `areas/<slug>.md` by the `.condensed.md` suffix. It
+belongs to a different document type (`condensed`, not `area`) even though it
+lives in the same folder next to the area it condenses.
+
+```
   .secondbrain/               derived, safe to delete
     vault.json                marker: version, name, created at
     settings.json              vault settings (travel with it)
@@ -209,6 +219,53 @@ already filed under the other one, and if a file somehow carries both, the one
 that's already there is the one new notes append to. A note dropped with no
 chosen target lands in the default area, `areas/notes.md`,
 created on first use.
+
+## Condensed area (areas/<slug>.condensed.md)
+
+```markdown
+---
+type: condensed
+title: Gesundheit — verdichtet
+condensed_at: 2026-08-10T09:15:00+02:00
+sources: [areas/gesundheit.md]
+---
+
+## Stand
+
+Die knappste, aktuelle Zusammenfassung: wo die Area gerade steht.
+
+## Muster
+
+Wiederkehrendes, das sich über mehrere Einträge in `sources` bestätigt hat.
+
+## Offen
+
+Was noch unklar ist oder als Nächstes ansteht.
+
+## Direktiven
+
+Handschriftliche Vorgaben des Nutzers. Dieser Abschnitt gehört ihm — ein
+Kondensationslauf liest ihn, schreibt ihn aber nie.
+```
+
+A condensed area is a derived, periodically refreshed digest of an area — the
+short version to read instead of the full history in `areas/<slug>.md`.
+`condensed_at` is an ISO-8601 timestamp with time zone, set every time the
+file is (re-)written. `sources` reuses the frontmatter key from wiki pages
+(see below): a list of vault-relative paths to whatever the digest was built
+from — normally the area file itself, but it may list more than one path.
+There is no separate evidence mechanism for condensed areas; the same
+`sources` field that backs wiki statements backs this digest.
+
+The body has four sections, in this order: `Stand`/`Status` holds the current
+state in prose; `Muster`/`Patterns` holds what recurs across sources;
+`Offen`/`Open` holds what's still unresolved. `Direktiven`/`Directives` is the
+one section a condensation run never touches — it is human-owned, exactly
+like the user's own paragraphs in a journal `Day`: whatever the user writes
+there survives every re-run untouched, the same way an area's `Notizen`
+section survives filing. Section headings follow the vault's configured
+document language, with the same de/en tolerance on read as the other
+sections in this document.
 
 ## Todos
 

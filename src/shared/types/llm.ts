@@ -81,7 +81,9 @@ export type TaskKind =
   /** Project status, next step, stagnation diagnosis. */
   | 'project-status'
   /** Maintenance run: find contradictions, stale claims, gaps. */
-  | 'gardener-audit';
+  | 'gardener-audit'
+  /** Condense an area's notes, todos and day entries into a shorter overview. */
+  | 'condense-area';
 
 export interface TaskDefinition {
   kind: TaskKind;

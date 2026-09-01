@@ -216,9 +216,10 @@ describe('the mandated rule: only a trains-on-input cloud model available', () =
     expect(candidates).toHaveLength(1);
   });
 
-  it('the sensitive task list is exactly the four personal-content tasks', () => {
+  it('the sensitive task list is exactly the five personal-content tasks', () => {
     expect(sensitiveTasks().sort()).toEqual([
       'classify-dump',
+      'condense-area',
       'extract-tasks',
       'journal-chat',
       'journal-loose-ends',
@@ -227,6 +228,7 @@ describe('the mandated rule: only a trains-on-input cloud model available', () =
 
   const sensitiveKinds: TaskKind[] = [
     'classify-dump',
+    'condense-area',
     'extract-tasks',
     'journal-chat',
     'journal-loose-ends',

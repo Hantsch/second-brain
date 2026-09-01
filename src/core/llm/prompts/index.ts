@@ -69,6 +69,14 @@ export {
   type GardenerAuditInput,
 } from './gardener-audit';
 export {
+  condenseAreaPrompt,
+  CONDENSE_AREA_SCHEMA,
+  CONDENSE_AREA_TARGET_CHARS,
+  CONDENSE_AREA_TARGET_WORDS,
+  type CondenseAreaInput,
+  type CondenseAreaSourceItem,
+} from './condense-area';
+export {
   clamp,
   documentLanguageRule,
   formatExcerpts,

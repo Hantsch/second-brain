@@ -139,7 +139,7 @@ export function parseAreaNotes(body: string, options: AreaNoteParseOptions = {})
  * same slug `areaPath()` builds and `core/capture/context` offers as a filing
  * target, so a deep link and a filing target mean the same area.
  */
-function areaSlug(path: string): string {
+export function areaSlug(path: string): string {
   const name = baseName(path);
   return name.slice(0, name.length - extName(name).length) || name;
 }

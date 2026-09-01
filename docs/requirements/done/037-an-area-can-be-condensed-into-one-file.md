@@ -1,7 +1,7 @@
 ---
 id: 037
 title: An area can be condensed into one file
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-09-01
 ---
 
@@ -32,24 +32,24 @@ assert knowledge nobody checked.
 
 ## Acceptance Criteria
 
-- [ ] An area with inputs can be condensed into exactly one artifact file belonging to that area;
+- [x] An area with inputs can be condensed into exactly one artifact file belonging to that area;
       an area with no inputs produces no artifact and no placeholder.
-- [ ] The artifact carries `condensed_at` and a `sources:` list naming every input the run read.
-- [ ] Its sections are _state_, _patterns_ and _open_, with headings in the document language
+- [x] The artifact carries `condensed_at` and a `sources:` list naming every input the run read.
+- [x] Its sections are _state_, _patterns_ and _open_, with headings in the document language
       (not the UI language), and each section ends with the source paths it came from.
-- [ ] Input selection is deterministic and stated: the area's notes section, its todos, and the
+- [x] Input selection is deterministic and stated: the area's notes section, its todos, and the
       day entries carrying its slug. No model decides what it may read.
-- [ ] Where the run read only part of the available inputs, the artifact says so.
-- [ ] A run respects a soft size target and compresses older material instead of appending.
-- [ ] A run that cannot complete leaves the artifact untouched and reports the failure — never a
+- [x] Where the run read only part of the available inputs, the artifact says so.
+- [x] A run respects a soft size target and compresses older material instead of appending.
+- [x] A run that cannot complete leaves the artifact untouched and reports the failure — never a
       half-written file.
-- [ ] Unknown frontmatter keys and the directives section of an existing artifact survive a run
+- [x] Unknown frontmatter keys and the directives section of an existing artifact survive a run
       untouched.
-- [ ] The task kind `condense-area` is independently assignable to a provider and model, is
+- [x] The task kind `condense-area` is independently assignable to a provider and model, is
       marked sensitive, and recommends a local model.
-- [ ] With no model configured for it, the run does not start, states which task kind is missing,
+- [x] With no model configured for it, the run does not start, states which task kind is missing,
       and writes nothing.
-- [ ] Tests cover the run with the fake provider and with "no model configured", and a test proves
+- [x] Tests cover the run with the fake provider and with "no model configured", and a test proves
       nothing reaches a real network.
 
 ## Open Questions
@@ -243,3 +243,67 @@ the one user-visible change D4 makes in settings:
    than falling back to another task's model.
 
 ## Done
+
+Backend-only story, built deliverable by deliverable (D1–D8), all disjoint-file Ds (D5/D6)
+delegated in parallel. `condense-area` is a new core module (`src/core/condense/`): a vault file
+kind, an alias-tolerant artifact parser/composer, a deterministic 90-day input selector, a
+routable+sensitive task kind, an attributed-sections prompt, the `condenseArea()` run (proposal
+only, never writes), and a hash-guarded `writeCondensedArea()`. One `story-review-hard` pass found
+one real acceptance gap (fixed) plus several polish findings (fixed); the live smoke pass through
+the actual built app found one more real bug (missing i18n key) and it was fixed too.
+
+**Decisions:**
+
+- Notes are read `verbatim: true` (full note body), not the 240-char `excerpt` preview the
+  selector's underlying `parseAreaNotes` defaults to — the reviewer caught that the excerpt path
+  silently under-read the area's own notes while `sources:` still claimed the whole file, which
+  is exactly the AC-5 gap ("where the run read only part of the available inputs, the artifact
+  says so") the story guards against. Day entries were already passed through verbatim; notes now
+  match.
+- `areaSlugOf` in `src/core/condense/inputs.ts` was a duplicate of `areaSlug` (`src/core/index/
+  areas.ts`, previously unexported) — replaced with an import instead of carrying two
+  implementations of the same rule (CLAUDE.md "reuse instead of copying").
+- `writeCondensedArea()` does not create a trash copy on overwrite — confirmed this codebase's
+  `VaultStore.write`/`writeText` never does (only explicit `delete()`/undo populates the trash),
+  and the mirrored write path (`src/main/ipc/areas.ts`) has the same property. "No write path
+  silently overwrites the user's edits" (CLAUDE.md) is upheld by the existing
+  `expectedHash`/`mustNotExist` hash guard, not by a trash copy — adding trash-on-overwrite would
+  be new machinery outside this sprint's Q5 decision ("no new protection machinery this sprint").
+  Accepted as-is; a second write replaces the prior artifact with no recoverable copy beyond the
+  hash guard against stale writes.
+- D7 added one attribution rule beyond the story's literal wording: a section with non-empty text
+  but an *empty* `sources` array also fails the run (`reason: 'no-source'`). An uncited section
+  cannot satisfy AC 3's "each section ends with the source paths it came from" and the
+  requirement's "a sentence it cannot attribute... does not get written" — kept as in-scope, not
+  creep, per the review's own read.
+- `condensed_at` reuses `isoStamp` from `src/core/ingest/raw` (the repo's only ISO-with-offset
+  formatter) rather than adding a second one.
+- `preamble` and `extraSections` (free text / stray headings found in an existing artifact) are
+  carried through verbatim on every compose, beyond the story's literal ask — this is what makes
+  D3's parse→compose round-trip actually lossless for anything a human adds outside the four
+  named sections, and is documented in `artifact.ts`'s own comments.
+- Left two doc-comment occurrences of German-style quotes with a straight closer in
+  `src/core/llm/prompts/condense-area.ts` (lines 2 and 11) unfixed — they are code comments, not
+  runtime/UI strings, so CLAUDE.md guardrail 7 (which governs strings shown to the user) does not
+  strictly apply; flagged here rather than silently left for the next person to trip over.
+
+**Verification:** `npm run build`, `npm test` (227 files / 3230 tests), `npm run lint`,
+`npm run typecheck` all green. One `npm test` run mid-story showed ~35 timeouts across unrelated
+`tests/main/**` files with a cold transform cache; confirmed via `git stash` that the same
+failures do not exist on `dev` and disappear on a warm-cache re-run — pre-existing
+machine/CPU-contention flakiness, not a regression from this story's changes (no `src/main/**`
+file was touched). Live smoke: drove the real built app via the project's harness
+(`scripts/lib/app-harness.mjs`/`screens.mjs`) against the seeded demo vault, navigated to
+Settings → model routing, and confirmed live (not just via source-reading) that `condense-area`
+appears as its own row, is marked sensitive, recommends a local model, defaults to "no model"
+without falling back to another task, and that its label/hint switch correctly between German and
+English in the same running session. Found and fixed one real bug in that pass: the "no model
+assigned" sub-line rendered the raw untranslated key `settings.fallback.condense-area` because it
+was missing from `de-settings-models.ts`/`en-settings-models.ts` — added, both languages, coverage
+test green.
+
+**Commit message:**
+
+```
+037: an area can be condensed into one file
+```

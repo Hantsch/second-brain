@@ -20,7 +20,16 @@ import { fold } from '@core/index/text';
 import { headingFor } from './sections';
 
 /** Every section kind used anywhere in the vault. Not every module uses all of them. */
-export type SectionKind = 'notes' | 'todos' | 'state' | 'day' | 'facts' | 'dialogue';
+export type SectionKind =
+  | 'notes'
+  | 'todos'
+  | 'state'
+  | 'day'
+  | 'facts'
+  | 'dialogue'
+  | 'patterns'
+  | 'open'
+  | 'directives';
 
 /** The headings of one document language. */
 export type SectionNames = Record<SectionKind, string>;
@@ -37,6 +46,9 @@ const NAMES: Record<DocLanguage, SectionNames> = {
     day: 'Tag',
     facts: 'Fakten',
     dialogue: 'Gespräch',
+    patterns: 'Muster',
+    open: 'Offen',
+    directives: 'Direktiven',
   },
   en: {
     notes: 'Notes',
@@ -45,6 +57,9 @@ const NAMES: Record<DocLanguage, SectionNames> = {
     day: 'Day',
     facts: 'Facts',
     dialogue: 'Conversation',
+    patterns: 'Patterns',
+    open: 'Open',
+    directives: 'Directives',
   },
 };
 
@@ -63,6 +78,9 @@ const ALIASES: Record<SectionKind, readonly string[]> = {
   day: ['tag', 'day'],
   facts: ['fakten', 'facts'],
   dialogue: ['gespraech', 'conversation'],
+  patterns: ['muster', 'patterns'],
+  open: ['offen', 'open'],
+  directives: ['direktiven', 'directives'],
 };
 
 /** The heading of this kind, in this document language. */

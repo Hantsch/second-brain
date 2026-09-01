@@ -21,6 +21,7 @@ export const TASK_KINDS: readonly TaskKind[] = [
   'journal-loose-ends',
   'project-status',
   'gardener-audit',
+  'condense-area',
 ];
 
 function definition(
@@ -118,6 +119,15 @@ export const TASK_DEFINITIONS: readonly TaskDefinition[] = [
   // Judgment over the entire vault — the largest input here by far, a report
   // of findings out.
   definition('gardener-audit', 'strong', { in: 15000, out: 1500 }, { structured: true }),
+  // Reads an area's own notes, todos and day entries carrying its slug —
+  // personal knowledge in, a condensed structured overview out. Sensitive
+  // like `journal-chat`.
+  definition(
+    'condense-area',
+    'strong',
+    { in: 8000, out: 1200 },
+    { sensitive: true, structured: true },
+  ),
 ];
 
 const BY_KIND = new Map<TaskKind, TaskDefinition>(TASK_DEFINITIONS.map((t) => [t.kind, t]));

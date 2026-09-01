@@ -25,7 +25,16 @@ export const VAULT_MARKER_FILE = '.secondbrain/vault.json';
 
 /** Was für ein Dokument eine Markdown-Datei ist. Steht im Frontmatter als `type`. */
 export type DocType =
-  'dump' | 'note' | 'project' | 'area' | 'journal' | 'source' | 'entity' | 'concept' | 'overview';
+  | 'dump'
+  | 'note'
+  | 'project'
+  | 'area'
+  | 'condensed'
+  | 'journal'
+  | 'source'
+  | 'entity'
+  | 'concept'
+  | 'overview';
 
 /** Arbeit oder Privat — die Trennung, die im Dashboard überall auftaucht. */
 export type Scope = 'work' | 'private';

@@ -191,6 +191,9 @@ export const de = {
   'task.gardener-audit.label': 'Befunde deuten',
   'task.gardener-audit.hint':
     'Findet Widersprüche, veraltete Aussagen und fehlende Seiten. Braucht Urteilsvermögen.',
+  'task.condense-area.label': 'Bereich verdichten',
+  'task.condense-area.hint':
+    'Liest Notizen, Todos und Tageseinträge eines Bereichs und schreibt eine kürzere Übersicht. Persönlicher Inhalt — ein lokales Modell ist ausdrücklich empfohlen.',
 
   /* Hinweise des Aufnehmens. Der Kern kennt keine Sprache und schickt einen Code
      (`IngestNoteCode`); hier steht der Satz dazu. Jede Absage ist eine Aussage über
