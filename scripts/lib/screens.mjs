@@ -93,6 +93,17 @@ export const DEEP_STATES = [
     wait: '.sb-inbox',
   },
   {
+    /* Story 038, D9: the condensed tab of an area, opened straight from the
+       address (`?a=<slug>&tab=condensed`, NotesScreen.tsx). `gesundheit` is
+       the area the seed condensed (scripts/seed/projects.mjs), so this shows
+       a real artifact, not an empty state. `.sb-condensed-artifact` only
+       renders once the existing digest has loaded — the proof that this is
+       the artifact, not the skeleton (AreaCondensedTab.tsx). */
+    id: 'notes-condensed',
+    hash: '/notes?a=gesundheit&tab=condensed',
+    wait: '.sb-condensed-artifact',
+  },
+  {
     id: 'module-page',
     hash: '/knowledge?m=identity-management&p=modules/identity-management/wiki/concepts/token-lebensdauer.md',
     wait: '.sb-md',

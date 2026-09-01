@@ -1,7 +1,7 @@
 ---
 id: 038
 title: I see what a condensation changes before it is written
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-09-01
 ---
 
@@ -29,22 +29,22 @@ kept, because a log nobody reads is ballast.
 
 ## Acceptance Criteria
 
-- [ ] Inside an area on the Notes screen I can trigger a condensation and see that one is running.
-- [ ] The proposal is shown as a diff, old against new, before anything is written; removals are
+- [x] Inside an area on the Notes screen I can trigger a condensation and see that one is running.
+- [x] The proposal is shown as a diff, old against new, before anything is written; removals are
       as visible as additions, and the per-section source lines are part of the diff.
-- [ ] Accepting writes hash-guarded against the hash the proposal was built from; a stale hash
+- [x] Accepting writes hash-guarded against the hash the proposal was built from; a stale hash
       discards the proposal as a conflict with a clear message, and never merges.
-- [ ] Every accepted write leaves an undo copy in `.secondbrain/trash/`.
-- [ ] Rejecting requires a reason — a bare dismiss is not offered — and writes nothing to the
+- [x] Every accepted write leaves an undo copy in `.secondbrain/trash/`.
+- [x] Rejecting requires a reason — a bare dismiss is not offered — and writes nothing to the
       artifact body.
-- [ ] The reason is appended to the artifact's directives section, and a later run reads it as an
+- [x] The reason is appended to the artifact's directives section, and a later run reads it as an
       instruction and never writes into that section.
-- [ ] With no model configured for `condense-area`, the area states this, names the task kind and
+- [x] With no model configured for `condense-area`, the area states this, names the task kind and
       links to the setting, instead of offering a dead trigger.
-- [ ] An existing artifact is readable in the area without a model.
-- [ ] Every path — trigger, diff, accept, reject-with-reason, conflict, no-model — is drivable
+- [x] An existing artifact is readable in the area without a model.
+- [x] Every path — trigger, diff, accept, reject-with-reason, conflict, no-model — is drivable
       through the real UI and covered by the manual test plan.
-- [ ] All UI strings exist in `de` and `en`; German quotes use `„…“`. Gaston atoms and tokens
+- [x] All UI strings exist in `de` and `en`; German quotes use `„…“`. Gaston atoms and tokens
       only, no ad-hoc markup, no raw Tailwind palette.
 
 ## Open Questions
@@ -154,7 +154,7 @@ Affected existing files: `src/shared/ipc.ts`, `src/shared/types/vault.ts` (Write
 
 ## Deliverables
 
-**D1 — Line diff in core**
+**D1 — Line diff in core** [x]
 Files: `src/core/condense/diff.ts` (new), `src/core/condense/index.ts` (new),
 `tests/core/condense/diff.test.ts` (new).
 Pure LCS line diff: `diffLines(before, after): DiffRow[]` with
@@ -165,7 +165,7 @@ Acceptance: identical input → all `context`; a pure deletion produces `removed
 a changed source line appears as one `removed` + one `added` row); a 2000-word artifact diffs in
 well under a second.
 
-**D2 — Undo copy before an overwrite**
+**D2 — Undo copy before an overwrite** [x]
 Files: `src/core/vault/types.ts`, `src/core/vault/fs-store.ts`, `src/core/vault/memory-store.ts`,
 `src/core/vault/trash.ts`, `tests/core/vault/trash.test.ts` (extend).
 `VaultStore` gains `snapshot(path): Promise<string | null>` — returns an undo token after copying
@@ -178,7 +178,7 @@ Acceptance: write → snapshot → overwrite → `undo(token)` restores byte-ide
 snapshot of a missing file returns `null` and creates nothing; `MemoryVaultStore` implements the
 same contract and the existing store tests still pass.
 
-**D3 — Accept and reject compositions**
+**D3 — Accept and reject compositions** [x]
 Files: `src/core/condense/apply.ts` (new), `src/core/condense/directives.ts` (new),
 `tests/core/condense/apply.test.ts` (new), `tests/core/condense/directives.test.ts` (new).
 `buildAcceptedDocument(proposal, currentContent)` → the artifact text to write: body sections from
@@ -192,7 +192,7 @@ untouched; two rejections produce two directive lines in order; rejecting with n
 yields a directives-only file whose body sections are absent; a reason containing Markdown control
 characters is stored as one line and cannot break the section.
 
-**D4 — IPC contract and main handlers**
+**D4 — IPC contract and main handlers** [x]
 Files: `src/shared/ipc.ts`, `src/shared/types/condense.ts` (new), `src/main/ipc/condense.ts`
 (new), `src/main/ipc/index.ts` (registration), `src/preload/index.ts` (allow-list is derived —
 verify), `src/renderer/lib/api.ts`, `tests/main/ipc-coverage.test.ts` (extend).
@@ -206,7 +206,7 @@ Acceptance: accept with a stale hash returns `conflict`, leaves the file byte-id
 no trash entry; accept with a fresh hash writes once and returns an undo token; `read` works with
 no model configured; every new channel is in the coverage test.
 
-**D5 — Tabs inside the area**
+**D5 — Tabs inside the area** [x]
 Files: `src/renderer/screens/notes/AreaSection.tsx`, `src/renderer/screens/notes/AreaNotesTab.tsx`
 (new), `src/renderer/screens/notes/AreaTodosTab.tsx` (new),
 `src/renderer/i18n/{en,de}-notes.ts`, `tests/renderer/notes/AreaSection.test.tsx` (extend).
@@ -218,7 +218,7 @@ Acceptance: notes and todos behave exactly as before (counts, add note, move not
 no new colour or spacing outside tokens; keys exist in `de` and `en` and the i18n parity test is
 green.
 
-**D6 — The condensed tab: read, no-model, trigger, running**
+**D6 — The condensed tab: read, no-model, trigger, running** [x]
 Files: `src/renderer/screens/notes/AreaCondensedTab.tsx` (new),
 `src/renderer/lib/queries/condense.ts` (new), `src/renderer/i18n/{en,de}-notes.ts`,
 `tests/renderer/notes/AreaCondensedTab.test.tsx` (new).
@@ -231,7 +231,7 @@ Acceptance: with routing removed the trigger is not rendered (not merely disable
 artifact is still readable; a run that fails shows the failure and leaves the tab in its previous
 state.
 
-**D7 — Diff view and accept**
+**D7 — Diff view and accept** [x]
 Files: `src/renderer/components/CondenseDiff.tsx` (new),
 `src/renderer/screens/notes/AreaCondensedTab.tsx`, `src/renderer/i18n/{en,de}-notes.ts`,
 `tests/renderer/components/CondenseDiff.test.tsx` (new).
@@ -243,7 +243,7 @@ Acceptance: a proposal that only deletes still shows a visibly non-empty diff; a
 shows the conflict message and leaves the artifact readable; the diff view uses `gs-*` atoms and
 tokens only.
 
-**D8 — Reject with a reason**
+**D8 — Reject with a reason** [x]
 Files: `src/renderer/components/CondenseRejectDialog.tsx` (new),
 `src/renderer/screens/notes/AreaCondensedTab.tsx`, `src/renderer/i18n/{en,de}-notes.ts`,
 `tests/renderer/components/CondenseRejectDialog.test.tsx` (new).
@@ -253,7 +253,7 @@ returns to the still-open proposal, it does not discard it).
 Acceptance: an empty reason cannot be submitted; a submitted reason appears in the artifact's
 directives section after reload; the proposal is gone and the artifact body is unchanged.
 
-**D9 — Acceptance surface: seed, screenshot, docs**
+**D9 — Acceptance surface: seed, screenshot, docs** [x]
 Files: `scripts/seed.mjs` (or the seed source it delegates to), `scripts/shot.mjs`,
 `docs/VAULT-FORMAT.md` (only if 037 has not already documented the artifact),
 `docs/systems/navigation.md` (the new area tab).
@@ -303,3 +303,69 @@ Run `npm run seed`, start the app, go to **Notes**.
    translated and German quotes are `„…“`.
 
 ## Done
+
+**Summary.** Built the confirmation path around 037's condensed artifact: a line-level LCS diff
+in core (`src/core/condense/diff.ts`), an undo-copy primitive on `VaultStore` (`snapshot()`,
+`.secondbrain/trash/` with `undo()` able to restore over an existing file), the accept/reject
+compositions (`apply.ts`, `directives.ts`), four new IPC channels
+(`condense:read/run/accept/reject`) with hash-guarded, never-merging writes, and the renderer:
+the area panel is now a three-tab layout (notes/todos/condensed), with the condensed tab covering
+all four states (no model / no artifact / artifact / running), a diff view where removals are as
+visible as additions (marker glyph + token surface, not colour alone, with an accessible label for
+each row kind), an accept flow, and a reject dialog that requires a sentence before anything is
+written. `npm run seed && npm run shot` was run against the real built app and produced
+`.screenshots/25-notes-condensed.png`, showing the seeded `areas/gesundheit.condensed.md` artifact
+(with an existing directive) rendered in the condensed tab.
+
+**Decisions.**
+- 037's real `CondenseAreaProposal` (`content`, no separate `before`) differs from the plan's
+  hoped-for `CondenseProposal` shape; the adaptation happens entirely in `condense:run`'s IPC
+  handler (`src/main/ipc/condense.ts`), which reads the existing file itself and builds the wire
+  `CondenseProposal` (`before`/`after`/`partialInputs`) from 037's result — `run.ts` itself is
+  untouched, per the plan's own instruction ("D3 adapts the type, not the run").
+- `buildAcceptedDocument()` (`src/core/condense/apply.ts`) stayed a documented passthrough rather
+  than a real seam: 037's `run.ts` already merges unknown frontmatter/directives via its `...current`
+  spread, so there was nothing left to rebuild at accept time. `condense:accept` writes
+  `proposal.after` directly; the function's doc comment says so honestly rather than claiming to be
+  on the call path.
+- Reject on an existing artifact splices the sanitized reason line directly into the raw text's
+  directives section (or appends a new directives section with a heading inferred from the
+  artifact's own existing language) instead of a full parse→compose round-trip — a full recompose
+  would have silently rewritten the three machine section headings and every `Aus:`/`From:` line
+  into whatever document language happened to be configured at reject time, which would have been
+  a body rewrite the acceptance criteria explicitly forbid on a reject.
+- `condense:accept` pre-checks the file's current hash/existence against `proposal.baseHash` and
+  throws the conflict itself *before* calling `snapshot()` — a stale-hash accept must create no
+  trash entry, and snapshotting unconditionally would have left an orphaned undo copy on every
+  conflict.
+- Reason validation for reject (`reason.trim().length === 0` → `invalid`) is enforced in the IPC
+  handler as well as the dialog — the UI is not the only gate against a bare rejection.
+- Out of scope, as decided in the story: deleting a condensed artifact from the UI, and enforcing
+  that a `condensed` document is never cited as evidence in query-answer. Both carried into the
+  sprint review's findings / the roadmap's "Open / unprioritised" table as follow-ups, not built here.
+
+**Verification.**
+- `npm run typecheck`, `npm run lint`, `npm test` (235 files / 3288 tests), `npm run build` — all
+  green, run once after the review-fix cycle.
+- `npm run seed && npm run shot` — run for real against the built app; produced
+  `.screenshots/25-notes-condensed.png` (condensed tab, seeded artifact with an existing directive,
+  honest "no model configured" state — the demo vault deliberately carries no LLM provider, the
+  same convention every other model-gated screen's screenshot already follows). The
+  trigger→diff→accept→reject round trip itself is covered by the fake-gateway IPC tests
+  (`tests/main/condense-ipc.test.ts`) and the renderer component/integration tests
+  (`tests/renderer/condense-*.test.tsx`), not by a live model call — this repo's QA rule forbids
+  tests (and, in this sandboxed environment, the seed harness) from touching a real LLM.
+- Code review (`story-review-hard`, per Model Hints): first pass **FAIL** with 9 findings, all on
+  the write path (orphaned trash entry on a conflicting accept; a TOCTOU gap in reject's hash
+  guard; reject silently rewriting section headings/source lines via a language-forced recompose;
+  no server-side reason validation; accept trusting the renderer-supplied `path` instead of
+  deriving it from `slug`; a hash returned from a second, independent read in both `condense:read`
+  and the original reject guard; a straight `"` instead of `„…"` in two German error strings; diff
+  row markers with no accessible label; the reject dialog's textarea staying pre-filled after a
+  successful submit) plus one doc-comment inaccuracy. All 9 + the doc comment were fixed in one
+  cycle; a second `story-review-hard` pass verified each fix individually (including probing the
+  new directive-splice logic's edge cases: last section in file, no trailing newline, no existing
+  directives section, directives-first, no frontmatter, a heading-like string inside a code fence)
+  and returned **PASS**.
+
+**Commit message:** `038: I see what a condensation changes before it is written`

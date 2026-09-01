@@ -354,6 +354,23 @@ const RESPONSES: MockResponses = {
     from: { ...writeResult, path: fx.area.path },
     to: { ...writeResult, path: 'areas/haus.md' },
   }),
+  /* Condensation (038, D4/D5-D9): fixed fixtures, no simulated model — the
+     screens driven by these channels are a later deliverable of this story. */
+  'condense:read': () => null,
+  'condense:run': () => ({
+    slug: fx.area.slug,
+    path: 'areas/gesundheit.condensed.md',
+    baseHash: null,
+    before: '',
+    after: '---\ntype: condensed\ntitle: Gesundheit\n---\n\n## Stand\n\nDemo-Stand.\n',
+    sources: [fx.area.path],
+  }),
+  'condense:accept': () => ({
+    path: 'areas/gesundheit.condensed.md',
+    hash: 'demo-hash',
+    undoToken: null,
+  }),
+  'condense:reject': () => ({ path: 'areas/gesundheit.condensed.md' }),
 
   'todos:list': () => [fx.todo],
   'todos:toggle': () => ({ ...fx.todo, state: 'done', doneAt: fx.NOW }),

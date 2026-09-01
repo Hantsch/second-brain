@@ -56,6 +56,39 @@ export const deNotes = {
   'notes.newArea.submit': 'Anlegen',
   'notes.newArea.duplicate': 'Diesen Bereich gibt es schon — wähle einen anderen Titel.',
 
+  // ── Tabs innerhalb eines Bereichs (Story 038, D5) ────────────────────────
+  'notes.area.tab.label': 'Bereichs-Tabs',
+  'notes.tab.notes': 'Notizen',
+  'notes.tab.todos': 'Aufgaben',
+  'notes.tab.condensed': 'Verdichtet',
+
+  // ── Der Verdichtet-Tab (Story 038, D6) ───────────────────────────────────
+  'notes.condensed.empty.title': 'Noch nicht verdichtet',
+  'notes.condensed.empty.body':
+    'Eine Verdichtung fasst diesen Bereich zu einer Seite zusammen, die ein Modell von da an aktuell hält.',
+  'notes.condensed.trigger': 'Diesen Bereich verdichten',
+  'notes.condensed.triggerAgain': 'Erneut verdichten',
+  'notes.condensed.running': 'Verdichtung läuft',
+  'notes.condensed.meta.condensedAt': 'Verdichtet am {date}',
+  'notes.condensed.meta.sources': '{count} Quellen',
+
+  // ── Diff und Übernahme (Story 038, D7) ───────────────────────────────────
+  'notes.condensed.diff.summary': '{removed} entfernt, {added} hinzugefügt',
+  'notes.condensed.diff.added': 'hinzugefügt',
+  'notes.condensed.diff.removed': 'entfernt',
+  'notes.condensed.accept': 'Übernehmen',
+  'notes.condensed.accept.conflict':
+    'Die Datei für {subject} hat sich seit diesem Vorschlag geändert. Verdichtung erneut ausführen.',
+
+  // ── Ablehnen mit Begründung (Story 038, D8) ──────────────────────────────
+  'notes.condensed.reject': 'Ablehnen',
+  'notes.condensed.reject.title': 'Diesen Vorschlag ablehnen',
+  'notes.condensed.reject.description':
+    'Eine Begründung ist erforderlich — sie bleibt beim Bereich, damit die nächste Verdichtung sie berücksichtigen kann.',
+  'notes.condensed.reject.fieldLabel': 'Begründung',
+  'notes.condensed.reject.placeholder': 'Was sollte sich ändern, bevor das übernommen wird?',
+  'notes.condensed.reject.submit': 'Ablehnen',
+
   // ── Notiz verschieben ────────────────────────────────────────────────────
   'notes.moveNote.action': 'In einen anderen Bereich verschieben',
   'notes.moveNote.title': 'Notiz verschieben',

@@ -66,6 +66,17 @@ function installMock(handlers: Handlers): Mock {
   };
 }
 
+/** Scopes queries to one area's `Panel` — both the default area and
+    "Gesundheit" render their own tablist once open, so an unscoped
+    `getByRole('tab', ...)` is ambiguous the moment more than one is
+    expanded (story 038, D5). */
+function withinArea(title: string): ReturnType<typeof within> {
+  const heading = screen.getByRole('heading', { level: 2, name: title });
+  const panel = heading.closest('.sb-panel');
+  if (panel === null) throw new Error(`no .sb-panel around the "${title}" heading`);
+  return within(panel as HTMLElement);
+}
+
 async function expectNoViolations(container: HTMLElement): Promise<void> {
   const result = await axe.run(container);
   expect(result.violations.map((violation) => `${violation.id}: ${violation.help}`)).toEqual([]);
@@ -240,16 +251,30 @@ describe('Notizen: Bereiche', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Notizen zeigen' }));
 
+    /* The notes tab is the default — no tab click needed to see the note. */
     expect(await screen.findByText(/Zwei Wochen Schlafprotokoll, ausführlich/)).toBeTruthy();
-    expect(screen.getByText(healthTodo.text)).toBeTruthy();
     await waitFor(() => expect(notesFor('gesundheit')).toEqual([{ slug: 'gesundheit' }]));
+
+    /* The todo only shows once the todos tab is selected — only one tab's
+       body renders at a time (story 038, D5). Scoped to "Gesundheit": the
+       always-open default area renders its own tablist too. */
+    await userEvent.click(withinArea('Gesundheit').getByRole('tab', { name: 'Aufgaben' }));
+    expect(await screen.findByText(healthTodo.text)).toBeTruthy();
   });
 
   it('öffnet den per ?a= benannten Bereich sofort', async () => {
     renderNotes('/notes?a=gesundheit');
 
     expect(await screen.findByText(/Zwei Wochen Schlafprotokoll, ausführlich/)).toBeTruthy();
-    expect(screen.getByText(healthTodo.text)).toBeTruthy();
+    await userEvent.click(withinArea('Gesundheit').getByRole('tab', { name: 'Aufgaben' }));
+    expect(await screen.findByText(healthTodo.text)).toBeTruthy();
+  });
+
+  it('öffnet direkt auf dem per ?tab= benannten Tab des per ?a= benannten Bereichs', async () => {
+    renderNotes('/notes?a=gesundheit&tab=todos');
+
+    expect(await screen.findByText(healthTodo.text)).toBeTruthy();
+    expect(screen.queryByText(/Zwei Wochen Schlafprotokoll, ausführlich/)).toBeNull();
   });
 });
 
@@ -521,6 +546,7 @@ describe('Notizen: ohne LLM und ohne A11y-Verstoß', () => {
 
     await screen.findByRole('heading', { name: 'Gesundheit' });
     await userEvent.click(screen.getByRole('button', { name: 'Notizen zeigen' }));
+    await userEvent.click(withinArea('Gesundheit').getByRole('tab', { name: 'Aufgaben' }));
     await screen.findByText(healthTodo.text);
     await userEvent.type(
       await screen.findByLabelText('Ein Gedanke, der für sich steht.'),
@@ -536,6 +562,8 @@ describe('Notizen: ohne LLM und ohne A11y-Verstoß', () => {
     const { container } = renderNotes();
 
     await userEvent.click(await screen.findByRole('button', { name: 'Notizen zeigen' }));
+    await screen.findByText(/Zwei Wochen Schlafprotokoll, ausführlich/);
+    await userEvent.click(withinArea('Gesundheit').getByRole('tab', { name: 'Aufgaben' }));
     await screen.findByText(healthTodo.text);
     await expectNoViolations(container);
   });

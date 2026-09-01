@@ -3,6 +3,7 @@ export * from './agents';
 export * from './domain';
 export * from './knowledge';
 export * from './capture';
+export * from './condense';
 export * from './gardener';
 export * from './overview';
 export * from './llm';

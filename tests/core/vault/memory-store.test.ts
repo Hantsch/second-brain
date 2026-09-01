@@ -16,7 +16,7 @@ describe('MemoryVaultStore', () => {
     });
     const doc = await store.read('areas/haus.md');
     expect(doc?.frontmatter['title']).toBe('Haus');
-    expect(store.snapshot()['areas/haus.md']).toContain('Text.');
+    expect(store.allFiles()['areas/haus.md']).toContain('Text.');
   });
 
   it('kennt angelegte Ordner, auch ohne Dateien darin', async () => {

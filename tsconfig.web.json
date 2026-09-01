@@ -26,6 +26,7 @@
     "src/renderer/**/*",
     "src/shared/**/*",
     "tests/renderer/**/*",
-    "src/core/llm/capacity-bands.ts"
+    "src/core/llm/capacity-bands.ts",
+    "src/core/condense/diff.ts"
   ]
 }

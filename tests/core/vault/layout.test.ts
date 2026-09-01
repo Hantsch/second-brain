@@ -62,7 +62,7 @@ describe('ensureStructure (Speicher)', () => {
   it('aendert beim zweiten Aufruf nichts', async () => {
     const store = new MemoryVaultStore();
     await ensureStructure(store, { name: 'Erst' });
-    const before = store.snapshot();
+    const before = store.allFiles();
 
     const second = await ensureStructure(store, { name: 'Anders' });
 
@@ -70,7 +70,7 @@ describe('ensureStructure (Speicher)', () => {
     expect(second.createdReadme).toBe(false);
     expect(second.createdDirs).toEqual([]);
     expect(second.name).toBe('Erst');
-    expect(store.snapshot()).toEqual(before);
+    expect(store.allFiles()).toEqual(before);
   });
 
   it('liest auch einen Marker mit dem aelteren Feld "created"', async () => {

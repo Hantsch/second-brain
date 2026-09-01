@@ -51,9 +51,20 @@ export interface TrashEntry {
   dir: boolean;
 }
 
+/**
+ * Warum diese Marke angelegt wurde — und damit, was `undo` am Zielort erwarten darf.
+ *
+ * `delete`: das Original ist weg, `undo` legt es in einen leeren Platz zurueck. Liegt
+ * dort wieder etwas, ist das ein Konflikt: fremder Inhalt wird nie ueberschrieben.
+ * `snapshot`: das Original blieb liegen und wurde danach ueberschrieben. Hier ist die
+ * belegte Zieldatei genau der Normalfall — `undo` legt die Kopie darueber.
+ */
+export type TrashKind = 'delete' | 'snapshot';
+
 export interface TrashManifest {
   token: string;
   deletedAt: string;
+  kind: TrashKind;
   entries: TrashEntry[];
 }
 
@@ -71,6 +82,9 @@ export function parseManifest(raw: string | null): TrashManifest | null {
     return {
       token: candidate.token,
       deletedAt: typeof candidate.deletedAt === 'string' ? candidate.deletedAt : '',
+      /* Aeltere Manifeste kennen `kind` nicht. Sie stammen ausnahmslos aus `delete`,
+         und das ist ohnehin die vorsichtige Lesart: nur sie schuetzt den Zielort. */
+      kind: candidate.kind === 'snapshot' ? 'snapshot' : 'delete',
       entries,
     };
   } catch {

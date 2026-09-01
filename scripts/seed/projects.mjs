@@ -121,6 +121,48 @@ eine halbe Stunde mehr.`;
   seeder.bump('areas');
   countTodos(seeder, gesundheit);
 
+  /* Ein bestehendes verdichtetes Artefakt (Story 038, D9): die Area wurde schon
+     einmal kondensiert, und der Nutzer hat danach eine eigene Direktive
+     hinterlassen — genau der Zustand, den `AreaCondensedTab.tsx` ohne Modell
+     lesbar zeigen muss (Guardrail 1) und in dem eine Direktive schon steht,
+     bevor je wieder kondensiert wird. Pfadform nach
+     `src/core/condense/paths.ts` (`condensedAreaPath`): `areas/<slug>.condensed.md`,
+     hier als Literal, da die Seed-Skripte bewusst nicht aus `@core/*` importieren. */
+  seeder.doc(
+    'areas/gesundheit.condensed.md',
+    {
+      type: 'condensed',
+      title: 'Gesundheit',
+      condensed_at: clock.at(-2, '08:00'),
+      sources: ['areas/gesundheit.md'],
+      lang: 'de',
+    },
+    `## Stand
+
+Der Rücken hält sich, solange die kurzen Pausen alle 45 Minuten eingehalten werden;
+das Rückentraining läuft an drei Tagen die Woche. Beim Schlaf steht ein Zweiwochen-
+Protokoll mit im Schnitt 6 h 40 min.
+Aus: areas/gesundheit.md
+
+## Muster
+
+An den drei Trainingstagen fällt der Schlaf im Schnitt eine halbe Stunde länger aus
+als an den übrigen — Bewegung und Schlafdauer hängen sichtbar zusammen.
+Aus: areas/gesundheit.md
+
+## Offen
+
+Der Termin beim Physiotherapeuten steht noch aus. Ob sich das Muster aus Training
+und Schlaf über einen längeren Zeitraum hält, ist mit zwei Wochen Protokoll noch
+nicht gesichert.
+Aus: areas/gesundheit.md
+
+## Direktiven
+
+Keine offenen Finanz-Themen hier aufnehmen.`,
+    clock.date(-2, '08:00'),
+  );
+
   const team = `## Worum es geht
 
 Die laufende Arbeit an Beziehungen, die kein Projekt sind: Wochenrückblick an Miriam,

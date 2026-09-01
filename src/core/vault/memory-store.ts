@@ -191,6 +191,7 @@ export class MemoryVaultStore implements VaultStore {
     const manifest: TrashManifest = {
       token,
       deletedAt: new Date(this.clock).toISOString(),
+      kind: 'delete',
       entries: [{ path: relative, dir: this.isDir(relative) }],
     };
     this.put(trashManifestPath(token), `${JSON.stringify(manifest, null, 2)}\n`);
@@ -204,6 +205,24 @@ export class MemoryVaultStore implements VaultStore {
     return { path: relative, undoToken: token };
   }
 
+  async snapshot(path: string): Promise<string | null> {
+    const relative = assertSafeVaultPath(path);
+    /* Nur Dateien stehen in `files` — ein Ordnerpfad faellt hier von selbst durch,
+       genau wie im `FsVaultStore`. */
+    const file = this.files.get(relative);
+    if (file === undefined) return null;
+    const token = createUndoToken();
+    const manifest: TrashManifest = {
+      token,
+      deletedAt: new Date(this.clock).toISOString(),
+      kind: 'snapshot',
+      entries: [{ path: relative, dir: false }],
+    };
+    this.put(trashPath(token, relative), file.content);
+    this.put(trashManifestPath(token), `${JSON.stringify(manifest, null, 2)}\n`);
+    return token;
+  }
+
   async undo(token: string): Promise<string[]> {
     const manifestPath = trashManifestPath(token);
     const manifest = parseManifest(this.files.get(manifestPath)?.content ?? null);
@@ -213,11 +232,17 @@ export class MemoryVaultStore implements VaultStore {
       const source = trashPath(token, entry.path);
       const stored = this.under(source);
       if (stored.length === 0) continue;
-      if (this.under(entry.path).length > 0) {
-        throw new VaultConflictError(
-          { path: entry.path, expectedHash: '', actualHash: '' },
-          'Am Zielort liegt schon wieder eine Datei.',
-        );
+      const blocking = this.under(entry.path);
+      if (blocking.length > 0) {
+        /* Wie im `FsVaultStore`: eine Sicherung darf ihre eigene Nachfolgerin
+           ersetzen, ein Loeschen darf fremden Inhalt nie ueberschreiben. */
+        if (manifest.kind !== 'snapshot') {
+          throw new VaultConflictError(
+            { path: entry.path, expectedHash: '', actualHash: '' },
+            'Am Zielort liegt schon wieder eine Datei.',
+          );
+        }
+        for (const candidate of blocking) this.files.delete(candidate);
       }
       for (const candidate of stored) {
         const file = this.files.get(candidate);
@@ -290,8 +315,11 @@ export class MemoryVaultStore implements VaultStore {
     }
   }
 
-  /** Nur fuer Tests: der rohe Inhalt aller Dateien. */
-  snapshot(): Record<string, string> {
+  /**
+   * Nur fuer Tests: der rohe Inhalt aller Dateien. Hiess frueher `snapshot()` —
+   * umbenannt, seit `snapshot(path)` im `VaultStore`-Vertrag den Papierkorb meint.
+   */
+  allFiles(): Record<string, string> {
     return Object.fromEntries([...this.files].map(([path, file]) => [path, file.content]));
   }
 }

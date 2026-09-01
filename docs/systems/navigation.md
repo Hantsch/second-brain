@@ -71,6 +71,11 @@ you never file simply stays a note. The old inbox becomes a filter on it
 ("unfiled"), which is what finally answers "what am I supposed to do here?" —
 nothing is required.
 
+Since story 038, an opened area carries three tabs — notes, todos, condensed — and
+`?tab=<notes|todos|condensed>` rides along with the existing `?a=<slug>` deep link to
+seed which one opens first, the same way `?a=` itself and `?filter=unfiled` are
+addressable states (`NotesScreen.tsx`).
+
 **Projects** absorb the agent sessions. The agent workload is part of the picture of
 a project, not a screen beside it. The all-sessions view stays as the entry point for
 agent projects that are not linked to a vault project yet.

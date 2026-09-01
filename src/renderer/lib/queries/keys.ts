@@ -36,6 +36,9 @@ export const qk = {
     list: () => ['areas', 'list'] as const,
     notes: (slug: string) => ['areas', 'notes', slug] as const,
   },
+  condense: {
+    read: (slug: string) => ['condense', 'read', slug] as const,
+  },
   journal: {
     list: () => ['journal', 'list'] as const,
     day: (date: string) => ['journal', 'day', date] as const,
@@ -123,6 +126,7 @@ export const VAULT_DEPENDENT_ROOTS: readonly string[] = [
   'projects',
   'todos',
   'areas',
+  'condense',
   'journal',
   'modules',
   /* Conversations live as files in the vault (`.secondbrain/chats/`): filing a

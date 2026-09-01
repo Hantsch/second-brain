@@ -10,6 +10,10 @@
  */
 
 export { areaSlugFromCondensedPath, condensedAreaPath, isCondensedAreaPath } from './paths';
+export { diffLines } from './diff';
+export type { DiffRow, DiffRowKind, LineDiffResult } from './diff';
+export { buildAcceptedDocument } from './apply';
+export { appendDirective } from './directives';
 export {
   CONDENSED_SECTIONS,
   CONDENSED_TYPE,

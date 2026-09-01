@@ -10,6 +10,9 @@
    `?a=<slug>` is the deep link into an area: that section starts open in
    addition to the default area (`slug === 'notes'`), which is always open —
    it is where an untargeted note lands, so it should never look empty.
+   `?tab=<notes|todos|condensed>` rides along with it (story 038, D5) and
+   seeds which of the area's own tabs opens first — it only ever applies to
+   the area named by `?a=`, everything else opens on its default tab.
 
    `?filter=unfiled` is the second parameter, from story 006: the inbox stopped
    being a place of its own, so the dumps nobody has filed yet are a filter
@@ -33,9 +36,19 @@ import { useAreaMutations, useAreas } from '../../lib/queries/areas';
 import { useDashboardData } from '../../lib/queries/dashboard';
 import { pushToast } from '../../lib/toast';
 import { UnfiledWorkspace } from '../inbox/UnfiledWorkspace';
+import type { AreaTab } from './AreaSection';
 import { AreaSection } from './AreaSection';
 import { NewAreaDialog } from './NewAreaDialog';
 import { NoteComposer } from './NoteComposer';
+
+const AREA_TABS: readonly AreaTab[] = ['notes', 'todos', 'condensed'];
+
+/** Reads `?tab=` back into an `AreaTab`, same defaulting `AreaSection` itself
+    falls back to when the prop is omitted — an unknown or absent value is
+    simply not passed down, so `initialTab`'s own default (`notes`) applies. */
+function areaTabFromParam(value: string | null): AreaTab | undefined {
+  return AREA_TABS.find((tab) => tab === value);
+}
 
 /** The address of the filter — used as a link target and read back from it. */
 const UNFILED = '/notes?filter=unfiled';
@@ -51,6 +64,7 @@ export function NotesScreen() {
   const [newAreaOpen, setNewAreaOpen] = useState(false);
 
   const wanted = params.get('a');
+  const wantedTab = areaTabFromParam(params.get('tab'));
   const unfiled = params.get('filter') === 'unfiled';
 
   const header = (
@@ -199,7 +213,13 @@ export function NotesScreen() {
         <ul className="sb-noteslist" aria-label={t('notes.list.aria')}>
           {areas.data.map((area) => (
             <li key={area.path}>
-              <AreaSection area={area} startOpen={area.slug === 'notes' || area.slug === wanted} />
+              <AreaSection
+                area={area}
+                startOpen={area.slug === 'notes' || area.slug === wanted}
+                {...(area.slug === wanted && wantedTab !== undefined
+                  ? { initialTab: wantedTab }
+                  : {})}
+              />
             </li>
           ))}
         </ul>

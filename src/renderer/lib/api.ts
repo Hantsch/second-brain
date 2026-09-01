@@ -94,6 +94,13 @@ export const api = {
     create: (title: string) => call('areas:create', { title }),
     moveNote: (request: IpcRequest<'areas:moveNote'>) => call('areas:moveNote', request),
   },
+  condense: {
+    read: (slug: string) => call('condense:read', { slug }),
+    run: (slug: string) => call('condense:run', { slug }),
+    accept: (proposal: IpcRequest<'condense:accept'>['proposal']) =>
+      call('condense:accept', { proposal }),
+    reject: (slug: string, reason: string) => call('condense:reject', { slug, reason }),
+  },
   journal: {
     list: (limit?: number) => call('journal:list', limit === undefined ? {} : { limit }),
     get: (date: string) => call('journal:get', { date }),

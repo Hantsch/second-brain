@@ -9,28 +9,35 @@
 import { useState } from 'react';
 import type { Area, AreaNote } from '@shared/types';
 import { Button } from '../../atoms/Button';
-import { IconButton } from '../../atoms/IconButton';
-import { ErrorState } from '../../components/ErrorState';
+import { Tabs } from '../../atoms/Tabs';
 import { Panel } from '../../components/Panel';
-import { Skeleton } from '../../components/Skeleton';
-import { TodoList } from '../../components/TodoList';
 import { useT } from '../../i18n';
 import { IpcCallError } from '../../lib/api';
 import { useAreaMutations, useAreaNotes, useAreas } from '../../lib/queries/areas';
 import { useAreaTodos, useTodoMutations } from '../../lib/queries/todos';
 import { pushToast } from '../../lib/toast';
+import { AreaCondensedTab } from './AreaCondensedTab';
+import { AreaNotesTab } from './AreaNotesTab';
+import { AreaTodosTab } from './AreaTodosTab';
 import { MoveNoteDialog } from './MoveNoteDialog';
+
+/** The three tabs inside an area section. */
+export type AreaTab = 'notes' | 'todos' | 'condensed';
 
 export interface AreaSectionProps {
   area: Area;
   /** Story decision: the default area (`slug === 'notes'`) and the area
       named by `?a=` start open, everything else starts closed. */
   startOpen: boolean;
+  /** Seeds the tab state once, from `?tab=` at the call site — same idea as
+      `startOpen` from `?a=`. Defaults to `notes` when absent or unknown. */
+  initialTab?: AreaTab;
 }
 
-export function AreaSection({ area, startOpen }: AreaSectionProps) {
+export function AreaSection({ area, startOpen, initialTab = 'notes' }: AreaSectionProps) {
   const t = useT();
   const [open, setOpen] = useState(startOpen);
+  const [tab, setTab] = useState<AreaTab>(initialTab);
   const [moving, setMoving] = useState<AreaNote | null>(null);
   const notes = useAreaNotes(open ? area.slug : null);
   const todos = useAreaTodos(open ? area.slug : null);
@@ -70,72 +77,24 @@ export function AreaSection({ area, startOpen }: AreaSectionProps) {
     >
       {!open ? null : (
         <div className="sb-areabody">
-          {notes.isPending ? (
-            <Skeleton lines={2} height={20} />
-          ) : area.noteCount === 0 ? (
-            <p className="sb-panel-empty">{t('notes.area.empty')}</p>
-          ) : (
-            <ul className="sb-areanotes">
-              {(notes.data ?? []).map((note) => (
-                <li key={note.line} className="sb-areanote">
-                  <div className="sb-areanote-head">
-                    {note.heading === null ? null : (
-                      <span className="sb-areanote-day sb-mono">{note.heading}</span>
-                    )}
-                    <IconButton
-                      icon="folder-open"
-                      size="sm"
-                      label={t('notes.moveNote.action')}
-                      className="sb-areanote-move"
-                      onClick={() => setMoving(note)}
-                    />
-                  </div>
-                  <p className="sb-areanote-text">{note.excerpt}</p>
-                </li>
-              ))}
-            </ul>
-          )}
+          <Tabs
+            aria-label={t('notes.area.tab.label')}
+            items={[
+              { id: 'notes', label: t('notes.tab.notes'), icon: 'file-text' },
+              { id: 'todos', label: t('notes.tab.todos'), icon: 'circle-check-big' },
+              { id: 'condensed', label: t('notes.tab.condensed'), icon: 'layers' },
+            ]}
+            value={tab}
+            onChange={(id) => setTab(id as AreaTab)}
+          />
 
-          <div className="sb-areatodos">
-            <div className="sb-areatodos-head">
-              <h3 className="sb-areatodos-title">{t('project.todos.title')}</h3>
-              {area.openTodoCount === 0 ? null : (
-                <span className="sb-panel-meta">{area.openTodoCount}</span>
-              )}
-            </div>
-            {failed === null ? null : (
-              <ErrorState error={failed} variant="secondary" subject={area.title} scrollIntoView />
-            )}
-            {todos.isPending ? (
-              <Skeleton lines={2} height={30} />
-            ) : (
-              <TodoList
-                todos={todos.data ?? []}
-                emptyText={t('project.todos.empty')}
-                busyId={
-                  todoMutations.toggle.isPending
-                    ? (todoMutations.toggle.variables ?? null)
-                    : todoMutations.update.isPending
-                      ? (todoMutations.update.variables?.id ?? null)
-                      : null
-                }
-                createBusy={todoMutations.create.isPending}
-                onToggle={(todo) => todoMutations.toggle.mutate(todo.id)}
-                onEdit={(todo, values) =>
-                  todoMutations.update.mutateAsync({ id: todo.id, ...values })
-                }
-                onCreate={(text, due, priority) =>
-                  todoMutations.create.mutateAsync({
-                    text,
-                    scope: area.scope,
-                    area: area.slug,
-                    due,
-                    priority,
-                  })
-                }
-              />
-            )}
-          </div>
+          {tab === 'notes' ? (
+            <AreaNotesTab area={area} notes={notes} onMove={(note) => setMoving(note)} />
+          ) : tab === 'todos' ? (
+            <AreaTodosTab area={area} todos={todos} todoMutations={todoMutations} failed={failed} />
+          ) : (
+            <AreaCondensedTab area={area} />
+          )}
         </div>
       )}
 

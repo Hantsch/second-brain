@@ -44,6 +44,39 @@ export const enNotes = {
   'notes.newArea.submit': 'Create',
   'notes.newArea.duplicate': 'This area already exists — choose a different title.',
 
+  // ── Tabs inside an area (story 038, D5) ─────────────────────────────────
+  'notes.area.tab.label': 'Area tabs',
+  'notes.tab.notes': 'Notes',
+  'notes.tab.todos': 'Todos',
+  'notes.tab.condensed': 'Condensed',
+
+  // ── The condensed tab (story 038, D6) ────────────────────────────────────
+  'notes.condensed.empty.title': 'Not condensed yet',
+  'notes.condensed.empty.body':
+    'A condensation folds this area into one page a model keeps current from here on.',
+  'notes.condensed.trigger': 'Condense this area',
+  'notes.condensed.triggerAgain': 'Condense again',
+  'notes.condensed.running': 'Condensation running',
+  'notes.condensed.meta.condensedAt': 'Condensed {date}',
+  'notes.condensed.meta.sources': '{count} sources',
+
+  // ── Diff and accept (story 038, D7) ──────────────────────────────────────
+  'notes.condensed.diff.summary': '{removed} removed, {added} added',
+  'notes.condensed.diff.added': 'added',
+  'notes.condensed.diff.removed': 'removed',
+  'notes.condensed.accept': 'Accept',
+  'notes.condensed.accept.conflict':
+    'The file for {subject} changed since this proposal was made. Run the condensation again.',
+
+  // ── Reject with a reason (story 038, D8) ─────────────────────────────────
+  'notes.condensed.reject': 'Reject',
+  'notes.condensed.reject.title': 'Reject this proposal',
+  'notes.condensed.reject.description':
+    'A reason is required — it is kept with the area so the next condensation can take it into account.',
+  'notes.condensed.reject.fieldLabel': 'Reason',
+  'notes.condensed.reject.placeholder': 'What should change before this is accepted?',
+  'notes.condensed.reject.submit': 'Reject',
+
   // ── Move note ────────────────────────────────────────────────────────────
   'notes.moveNote.action': 'Move to another area',
   'notes.moveNote.title': 'Move note',

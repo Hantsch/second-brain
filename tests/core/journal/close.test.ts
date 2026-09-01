@@ -87,11 +87,11 @@ describe('closeDay', () => {
 
   it('schreibt nichts — kein Byte im Vault ändert sich', async () => {
     const fixture = await fixtureWithEntry();
-    const before = fixture.store.snapshot();
+    const before = fixture.store.allFiles();
 
     await closeDay(fixture.closeDeps(emptyGateway()), DATE);
 
-    expect(fixture.store.snapshot()).toEqual(before);
+    expect(fixture.store.allFiles()).toEqual(before);
   });
 
   it('begründet den Vorschlag mit Zahlen und sagt, dass kein Modell beteiligt war', async () => {

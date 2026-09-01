@@ -31,3 +31,22 @@
 - 2026-09-01 23:54 · 037 · final verification · done
 - 2026-09-01 23:54 · 037 · story closeout (Done section, AC ticks) · started
 - 2026-09-02 00:01 · 037 · story closeout (Done section, AC ticks, moved to done/) · done
+- 2026-09-02 00:02 · 038 · start · started
+- 2026-09-02 00:02 · 038 · D1 line diff in core · started
+- 2026-09-02 00:09 · 038 · D1 line diff in core · done
+- 2026-09-02 00:02 · 038 · D2 undo copy before overwrite · started
+- 2026-09-02 00:09 · 038 · D2 undo copy before overwrite · done
+- 2026-09-02 00:10 · 038 · D3 accept and reject compositions · started
+- 2026-09-02 00:14 · 038 · D3 accept and reject compositions · done
+- 2026-09-02 00:16 · 038 · D4 IPC contract and main handlers · started
+- 2026-09-02 00:25 · 038 · D4 IPC contract and main handlers · done
+- 2026-09-02 00:26 · 038 · D5 tabs inside the area · started
+- 2026-09-02 00:31 · 038 · D5 tabs inside the area · done
+- 2026-09-02 00:31 · 038 · D6 condensed tab base states · started
+- 2026-09-02 00:38 · 038 · D6 condensed tab base states · done
+- 2026-09-02 00:38 · 038 · D7 diff view and accept · started
+- 2026-09-02 00:44 · 038 · D7 diff view and accept · done
+- 2026-09-02 00:44 · 038 · D8 reject with a reason · started
+- 2026-09-02 00:49 · 038 · D8 reject with a reason · done
+- 2026-09-02 00:50 · 038 · D9 acceptance surface seed/screenshot/docs · started
+- 2026-09-02 00:54 · 038 · D9 acceptance surface seed/screenshot/docs · done

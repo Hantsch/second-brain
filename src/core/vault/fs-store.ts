@@ -173,11 +173,32 @@ export class FsVaultStore implements VaultStore {
     const manifest: TrashManifest = {
       token,
       deletedAt: new Date().toISOString(),
+      kind: 'delete',
       entries: [{ path: relative, dir: info.isDirectory() }],
     };
     await this.writeText(trashManifestPath(token), `${JSON.stringify(manifest, null, 2)}\n`);
     await movePath(absolute, this.absolute(trashPath(token, relative)));
     return { path: relative, undoToken: token };
+  }
+
+  async snapshot(path: string): Promise<string | null> {
+    const relative = assertSafeVaultPath(path);
+    /* Liest die Datei, statt zu statten: `readTextOrNull` gibt bei ENOENT **und** bei
+       einem Ordner `null` — genau die beiden Faelle, in denen nichts zu sichern ist. */
+    const content = await readTextOrNull(this.absolute(relative));
+    if (content === null) return null;
+    const token = createUndoToken();
+    const manifest: TrashManifest = {
+      token,
+      deletedAt: new Date().toISOString(),
+      kind: 'snapshot',
+      entries: [{ path: relative, dir: false }],
+    };
+    /* Erst die Kopie, dann das Manifest: eine Marke ist damit nie gueltig, bevor der
+       Inhalt hinter ihr wirklich liegt. */
+    await this.writeText(trashPath(token, relative), content);
+    await this.writeText(trashManifestPath(token), `${JSON.stringify(manifest, null, 2)}\n`);
+    return token;
   }
 
   async undo(token: string): Promise<string[]> {
@@ -190,10 +211,16 @@ export class FsVaultStore implements VaultStore {
       const target = this.absolute(entry.path);
       if ((await statOrNull(source)) === null) continue;
       if ((await statOrNull(target)) !== null) {
-        throw new VaultConflictError(
-          { path: entry.path, expectedHash: '', actualHash: '' },
-          'Am Zielort liegt schon wieder eine Datei.',
-        );
+        /* Eine Sicherung gehoert ausdruecklich ueber die Datei zurueck, die sie
+           abgeloest hat — sonst waere der Schreibweg ohne Rueckweg. Nur bei einem
+           echten Loeschen ist ein belegter Zielort fremder Inhalt und ein Konflikt. */
+        if (manifest.kind !== 'snapshot') {
+          throw new VaultConflictError(
+            { path: entry.path, expectedHash: '', actualHash: '' },
+            'Am Zielort liegt schon wieder eine Datei.',
+          );
+        }
+        await removePath(target);
       }
       await movePath(source, target);
       restored.push(entry.path);

@@ -110,7 +110,7 @@ describe('VaultIndexStore: clear', () => {
     const { store, persistence } = await saved();
     await persistence.clear();
     expect(await persistence.load()).toBeNull();
-    expect([...Object.keys(store.snapshot())].some((path) => path.includes('trash'))).toBe(false);
+    expect([...Object.keys(store.allFiles())].some((path) => path.includes('trash'))).toBe(false);
   });
 
   it('tut nichts, wenn es nichts zu verwerfen gibt', async () => {

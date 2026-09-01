@@ -22,6 +22,7 @@ import type {
   Citation,
   ClaudeSession,
   CoachRequest,
+  CondenseProposal,
   DashboardData,
   DashboardLayout,
   DocLanguage,
@@ -451,6 +452,38 @@ export interface IpcRoutes {
     req: { from: string; to: string; line: number; expectedHash: string };
     res: { from: WriteResult; to: WriteResult };
   };
+
+  // ── Condensation (story 037/038) ────────────────────────────────────────
+  /**
+   * The existing condensed artifact of an area, `null` when it has never been
+   * condensed. Never touches the gateway — reading is always possible without
+   * a configured model.
+   */
+  'condense:read': {
+    req: { slug: string };
+    res: { content: string; hash: string; condensedAt: string; sources: string[] } | null;
+  };
+  /**
+   * Runs the condensation over the area's deterministic inputs and hands back a
+   * proposal (Guardrail 2: nothing is written here). Throws `llm-unavailable`,
+   * `invalid` (no inputs, or the model's reply could not be attributed to what
+   * it read), or `unknown` (the gateway call failed) instead of a proposal.
+   */
+  'condense:run': { req: { slug: string }; res: CondenseProposal };
+  /**
+   * Accepts a proposal: snapshots whatever currently sits at `proposal.path` (for
+   * undo), then writes `proposal.after` hash-guarded against `proposal.baseHash`.
+   * A stale hash comes back as `conflict` and leaves the file untouched.
+   */
+  'condense:accept': {
+    req: { proposal: CondenseProposal };
+    res: { path: string; hash: string; undoToken: string | null };
+  };
+  /**
+   * Records a rejection in the artifact's human-owned `Direktiven`/`Directives`
+   * section — the next run can read why. Never writes the machine sections.
+   */
+  'condense:reject': { req: { slug: string; reason: string }; res: { path: string } };
 
   // ── Todos ────────────────────────────────────────────────────────────────
   'todos:list': {
@@ -1153,6 +1186,10 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'areas:createNote',
   'areas:create',
   'areas:moveNote',
+  'condense:read',
+  'condense:run',
+  'condense:accept',
+  'condense:reject',
   'todos:list',
   'todos:toggle',
   'todos:create',

@@ -96,7 +96,7 @@ describe('createModule', () => {
       { title: 'Identity', description: 'Erste Fassung.' },
       { now: NOW_MS },
     );
-    const before = store.snapshot();
+    const before = store.allFiles();
 
     const again = await createModule(
       store,
@@ -106,7 +106,7 @@ describe('createModule', () => {
 
     expect(again.created).toEqual([]);
     expect(again.module.description).toBe('Erste Fassung.');
-    expect(store.snapshot()).toEqual(before);
+    expect(store.allFiles()).toEqual(before);
   });
 
   it('legt fehlende Dateien eines von Hand gebauten Moduls nach', async () => {
@@ -218,7 +218,7 @@ describe('listModules', () => {
   it('meldet ein frisches Modul ohne Ingest ehrlich mit null', async () => {
     const store = emptyStore();
     await createModule(store, { title: 'Frisch' }, { now: NOW_MS });
-    const fixture = await wikiFixture(store.snapshot());
+    const fixture = await wikiFixture(store.allFiles());
 
     const module = listModules(fixture.index).find((entry) => entry.slug === 'frisch');
     expect(module?.lastIngest).toBeNull();

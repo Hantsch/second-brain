@@ -111,6 +111,98 @@
   color: var(--text-heading);
 }
 
+/* ── Condensed tab (story 038, D6) ─────────────────────────────────────── */
+
+.sb-condensed {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.sb-condensed-artifact {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.sb-condensed-meta {
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+}
+.sb-condensed-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.sb-condensed-proposal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.sb-condensed-running {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--text-faint);
+}
+
+/* ── Condensation diff view (story 038, D7) ────────────────────────────── */
+
+.sb-condensediff {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.sb-condensediff-summary {
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+}
+.sb-condensediff-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.sb-condensediff-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+}
+.sb-condensediff-row--added {
+  background: var(--success-soft);
+  border-left: 2px solid var(--success);
+}
+.sb-condensediff-row--removed {
+  background: var(--danger-soft);
+  border-left: 2px solid var(--danger);
+}
+.sb-condensediff-row--context {
+  border-left: 2px solid transparent;
+}
+.sb-condensediff-marker {
+  flex-shrink: 0;
+  width: 1.5em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-faint);
+}
+.sb-condensediff-row--added .sb-condensediff-marker {
+  color: var(--success);
+}
+.sb-condensediff-row--removed .sb-condensediff-marker {
+  color: var(--danger);
+}
+.sb-condensediff-text {
+  white-space: pre-wrap;
+  font-size: var(--text-xs);
+  color: var(--text-body);
+}
+
 /* ── New area / move note dialogs ──────────────────────────────────────── */
 
 .sb-newarea {

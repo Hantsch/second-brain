@@ -119,6 +119,16 @@ export interface VaultStore {
   move(from: string, to: string, options?: MoveOptions): Promise<WriteResult>;
   /** Verschiebt nach `.secondbrain/trash/<token>/` und gibt die Marke zurueck. */
   delete(path: string): Promise<DeleteResult>;
+  /**
+   * Legt den **aktuellen** Stand einer Datei als Kopie in den Papierkorb, ohne das
+   * Original anzufassen — der Rueckweg fuer "Hash lesen → sichern → ueberschreiben".
+   * `undo(token)` legt die Kopie spaeter wieder ueber die inzwischen geaenderte
+   * Datei; anders als bei `delete` ist ein belegter Zielort hier kein Konflikt.
+   *
+   * `null`, wenn an dem Pfad keine Datei liegt — dann entsteht auch kein Eintrag im
+   * Papierkorb. Ordner sichert `snapshot` nicht; dafuer gibt es `delete`.
+   */
+  snapshot(path: string): Promise<string | null>;
   /** Stellt alles wieder her, was zu dieser Marke gehoert. Gibt die Pfade zurueck. */
   undo(token: string): Promise<string[]>;
 

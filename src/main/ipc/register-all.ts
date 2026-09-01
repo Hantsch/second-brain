@@ -11,6 +11,7 @@ import { areaHandlers } from './areas';
 import { captureHandlers } from './capture';
 import { chatHandlers } from './chat';
 import { claudeHandlers } from './claude';
+import { condenseHandlers } from './condense';
 import { dashboardHandlers } from './dashboard';
 import { gardenerHandlers } from './gardener';
 import { indexHandlers } from './index';
@@ -100,6 +101,7 @@ export function buildHandlers(services: Services): HandlerMap {
     ...captureHandlers(services),
     ...projectHandlers(services),
     ...areaHandlers(services),
+    ...condenseHandlers(services),
     ...todoHandlers(services),
     ...journalHandlers(services),
     ...moduleHandlers(services),
