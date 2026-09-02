@@ -1,6 +1,6 @@
 ---
 sprint: S10
-status: in-progress # planned | in-progress | done
+status: done # planned | in-progress | done
 branch: sprint/10
 milestone: M12 — An area gathers itself
 ---

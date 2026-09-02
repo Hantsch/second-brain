@@ -521,7 +521,7 @@ laptop, per story 031. See [sprints/done/S09/review.md](sprints/done/S09/review.
 
 ---
 
-### M12 — An area gathers itself — planned
+### M12 — An area gathers itself — built, acceptance pending
 
 Concept: [concepts/condensed-layer.md](concepts/condensed-layer.md) — the first slice of it, cut
 on 2026-09-01 after the concept had been deferred three times (M9, M10, M11). One level only: the
@@ -540,7 +540,7 @@ levels and are explicitly out of M12.
 Sprints:
 
 - [sprints/S10/sprint.md](sprints/S10/sprint.md) — an area gathers itself (036, 037, 038, 039),
-  `planned`
+  `done` ([review](sprints/S10/review.md) · [testplan](sprints/S10/testplan.md))
 
 Decisions taken at the cut (2026-09-01, user):
 
@@ -551,15 +551,41 @@ Decisions taken at the cut (2026-09-01, user):
   also blocks `npm run handoff`) and the maintenance progress bar lost on navigation stay in
   "Open / unprioritised". M9 was the carve-out milestone two sprints ago.
 
-Open at the cut, to be decided in S10's clarification round: the artifact's `type:` (concept O2),
-its file name against the no-dots rule (O7), the soft size cap and whether it is per artifact or
-per section (O1), the input bounds (O3), and what happens when a run rewrites a section the human
-edited by hand (O8) — the last is the one that becomes a guardrail-2 problem if it is answered
-late.
+Decisions taken in S10's clarification round (2026-09-01, user) — the concept's open points O1–O4,
+O7, O8 and O9, plus two of the stories' own open questions:
 
-Risk carried knowingly: this is a write path that **deletes**. The undo copy in
-`.secondbrain/trash/`, the hash guard and the reject-with-reason path are the load-bearing part of
-the milestone, not the screen.
+- **Artifact `type:`:** a new `DocType` (`condensed`), not a reuse of `overview` (O2).
+- **File name:** `areas/<slug>.condensed.md`, with an explicit dotted-file exception added to
+  VAULT-FORMAT.md (O7).
+- **Soft size cap:** ~2000 words / ~12k characters per artifact, not per section (O1).
+- **Input bounds:** the last ~90 days of tagged day entries, plus the area's full notes and todos
+  section (O3).
+- **Human edit vs. rewrite:** flagged in the diff, the user decides each time — never silently
+  overwritten (O8).
+- **Contradictions (O4):** a rule for the _state_ section, not their own section — the concept's
+  stated default, unchanged.
+- **Condensed artifacts as evidence (O9):** never cited when answering a question — always the
+  primary source. Not yet enforced in code (see Blocked / open in
+  [sprints/S10/review.md](sprints/S10/review.md)); carried below.
+- **Diff granularity:** whole-artifact, not per-section.
+- **Trigger placement:** its own tab on the area, next to notes and todos.
+- **Day-close area picker:** the close dialog can add an area the model did not propose, not
+  accept/remove only.
+- **Deleting a condensed artifact from the UI:** out of scope for M12; carried below.
+
+**S10 result (2026-09-02).** All four stories are `done` and moved to
+[requirements/done/](requirements/done/). Built on branch `sprint/10`, `npm run verify` green
+after every story; two review passes (037, 038) found and fixed real bugs before they shipped —
+see [sprints/S10/review.md](sprints/S10/review.md) for the full list. Live acceptance
+(manual walkthrough of [sprints/S10/testplan.md](sprints/S10/testplan.md)) is pending the user;
+the golden-path condensation run itself also needs a reachable local model to verify beyond the
+fake-provider tests, which the test plan flags explicitly.
+
+Risk that came true: this is a write path that **deletes**, and both stories built for it —
+undo copy in `.secondbrain/trash/`, the hash guard, the reject-with-reason path — turned out to be
+exactly where review found real issues (a reject-path hash-guard race, an orphaned trash entry on
+conflict, reject silently rewriting section headings). All fixed before the story closed; nothing
+outstanding.
 
 ---
 
@@ -567,7 +593,9 @@ the milestone, not the screen.
 
 | Topic                                                         | State                                                                                                                                                                                                                                                                      | Next step                                                                                                                                                                                    |
 | ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Condensed layer (module / project levels)                     | Concept written 2026-08-18: [concepts/condensed-layer.md](concepts/condensed-layer.md). The **area** level is cut as M12 (S10); the module and project levels, CND-2, CND-17 (agent-session citation) and CND-35/36 (retiring the ingest's overview append) are still open | Next `/ai-scrum:roadmap plan` after M12 is accepted — the concept's §7 reversal trigger is evaluated at the second level, so the module or project level should follow soon rather than late |
+| Condensed layer (module / project levels)                     | Concept written 2026-08-18: [concepts/condensed-layer.md](concepts/condensed-layer.md). The **area** level was built in M12 (S10, done 2026-09-02, acceptance pending); the module and project levels, CND-2, CND-17 (agent-session citation) and CND-35/36 (retiring the ingest's overview append) are still open | Next `/ai-scrum:roadmap plan` after M12 is accepted — the concept's §7 reversal trigger is evaluated at the second level, so the module or project level should follow soon rather than late |
+| Delete a condensed artifact from the UI                       | Deliberately out of scope for M12 (038-Q3, user decision 2026-09-01): the artifact is regenerable without loss except for the directives section, so deletion is a convenience, not a correctness requirement | Small own story once the area/module/project levels exist and the pattern is shared across them |
+| `query-answer` must never cite a condensed artifact as evidence | Deliberately out of scope for M12 (038-Q4 / concept O9, user decision 2026-09-01): the decision is made, but no code currently checks a document's `type` before offering it as evidence — a `condensed` document could in principle be surfaced today. This is the one M12 follow-up worth prioritising soon; it touches guardrail 3 directly | Own story, ideally before the module/project levels add more condensed documents to the index |
 | MCP interface for projects, knowledge and the condensed layer | Named as an outlook in [concepts/condensed-layer.md](concepts/condensed-layer.md) §14, deliberately without requirements                                                                                                                                                   | Own `/ai-scrum:concept` once the condensed artifacts exist                                                                                                                                   |
 | German docs migrated to English                               | Decided in `.claude/ai-scrum.md`; `docs/*.md` are still German                                                                                                                                                                                                             | Own story once it stops being cosmetic                                                                                                                                                       |
 | `format:check` never green on Windows                         | Found in S07: 460 files fail prettier purely on CRLF line endings, including files no sprint has touched — `core.autocrlf` against a repo prettier expects in LF. Story 023 solved it for one file via `.gitattributes`                                                    | Own story — a repo-wide `.gitattributes`/prettier decision made once. Second never-green gate after the one M9 just retired                                                                  |
