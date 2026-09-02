@@ -27,6 +27,11 @@ const WIKI_PAGE = /^modules\/([^/]+)\/wiki\/(sources|entities|concepts)\/[^/]+\.
 const WIKI_OVERVIEW = /^modules\/([^/]+)\/wiki\/overview\.md$/;
 const WIKI_LOG = /^modules\/([^/]+)\/wiki\/log\.md$/;
 const PROJECT = /^projects\/(?:work|private)\/([^/]+)\/project\.md$/;
+/* Mirrors `areaSlugFromCondensedPath` (`@core/condense/paths.ts`), plus the plain
+   area file itself: a `condensation-due` finding lists the area path first
+   (`areas/<slug>.md`), not the condensed sibling, and `FindingCard` opens
+   `paths[0]` — so both spellings have to land on the same route. */
+const AREA = /^areas\/([^/]+?)(?:\.condensed)?\.md$/;
 
 /** The place where this path is visible in the app — otherwise the file itself. */
 export function targetFor(path: string): PathTarget {
@@ -45,6 +50,13 @@ export function targetFor(path: string): PathTarget {
   const project = PROJECT.exec(path);
   if (project !== null) {
     return { kind: 'route', to: `/projects?p=${encodeURIComponent(project[1] ?? '')}` };
+  }
+  const area = AREA.exec(path);
+  if (area !== null) {
+    return {
+      kind: 'route',
+      to: `/notes?a=${encodeURIComponent(area[1] ?? '')}&tab=condensed`,
+    };
   }
   if (path.startsWith('inbox/')) return { kind: 'route', to: '/notes?filter=unfiled' };
   if (path.startsWith('raw/')) return { kind: 'route', to: '/knowledge?tab=sources' };

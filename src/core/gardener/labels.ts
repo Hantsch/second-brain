@@ -48,6 +48,15 @@ export interface GardenerLabels {
   missingPage(term: string, pages: number): FindingText;
   contradiction(first: string, second: string, note: string, named: boolean): FindingText;
   /**
+   * Verdichtung faellig, Artefakt vorhanden aber veraltet. `condensedAt` ist
+   * das `condensed_at` des Artefakts, `changedCount` die Zahl der aktuellen
+   * Eingaenge, die neu sind oder sich geaendert haben (dieselbe Zaehlung, die
+   * die Pruefung selbst ueber `isDue()`/`changedInputs()` trifft).
+   */
+  condensationDue(area: string, condensedAt: string, changedCount: number): FindingText;
+  /** Verdichtung faellig, noch kein Artefakt — kein `condensed_at`, kein Vergleich moeglich. */
+  condensationMissing(area: string): FindingText;
+  /**
    * Label of the button. It says what **happens** — the three actions that
    * write nothing are therefore called "open" rather than "file".
    */
@@ -66,6 +75,11 @@ function percent(value: number): string {
  */
 function daysAgo(count: number): string {
   return count === 1 ? '1 Tag' : `${count} Tagen`;
+}
+
+/** Singular/Plural für die Zahl geänderter Eingänge, wie `daysAgo` für Tage. */
+function changedInputsCount(count: number): string {
+  return count === 1 ? '1 Eingang hat sich geändert' : `${count} Eingänge haben sich geändert`;
 }
 
 const GERMAN_FIX_LABELS: Record<GardenerFix['action'], string> = {
@@ -186,6 +200,21 @@ export const GERMAN_GARDENER_LABELS: GardenerLabels = {
       detail: named
         ? `${note} Der Widerspruch ist auf der Seite benannt und bleibt stehen.`
         : `${note} Beide Fassungen bleiben stehen; benannt wird der Konflikt, nicht geglättet.`,
+    };
+  },
+
+  condensationDue(area: string, condensedAt: string, changedCount: number): FindingText {
+    return {
+      title: `Verdichtung fällig: ${area}`,
+      detail: `Zuletzt verdichtet am ${condensedAt}. ${changedInputsCount(changedCount)} seitdem.`,
+    };
+  },
+
+  condensationMissing(area: string): FindingText {
+    return {
+      title: `Noch keine Verdichtung: ${area}`,
+      detail:
+        'Es gibt Eingangsmaterial für diese Area, aber noch kein Verdichtungs-Artefakt. Verdichten stößt nur ein Mensch an.',
     };
   },
 

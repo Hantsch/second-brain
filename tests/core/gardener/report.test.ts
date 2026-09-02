@@ -3,9 +3,10 @@
    2. Halten Sortierung, Ausblenden und die Ehrlichkeit über `usedLlm`?
    3. Bleibt er auf 1000 Seiten unter drei Sekunden? */
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { runGardener, sortFindings } from '@core/gardener';
 import type { GardenerFinding, GardenerFindingKind } from '@shared/types';
+import { serialize } from '@core/vault/frontmatter';
 import { emptyGateway } from '../../helpers/llm';
 import { day } from '../../helpers/time';
 import { DEMO } from './demo-vault';
@@ -109,6 +110,68 @@ describe('runGardener über den Demo-Bestand', () => {
     expect(report.findings).toEqual([]);
     expect(report.healthKnown).toBe(false);
     expect(report.healthContributions).toEqual([]);
+  });
+});
+
+/* 039, D4: die Verdichtung-faellig-Pruefung ueber einen echten, ueber
+ * `IndexService` gelaufenen Bestand — anders als in `checks-condensed.test.ts`
+ * (handgebauter Kontext), hier zaehlt, dass `runGardener()` selbst ohne
+ * Modell dasselbe liefert und dabei keine Datei anfasst. */
+const CONDENSATION_AREA_SLUG = 'ruecken';
+const CONDENSATION_AREA_PATH = `areas/${CONDENSATION_AREA_SLUG}.md`;
+const CONDENSATION_DAY_PATH = 'journal/2026/07/2026-07-15.md';
+
+/** Eine Area mit Material und ganz ohne Artefakt — die "fehlende Variante". */
+function condensationDueFiles(): Record<string, string> {
+  return {
+    [CONDENSATION_AREA_PATH]: serialize(
+      { type: 'area', title: 'Rücken' },
+      '## Notizen\n\n### 2026-07-28\n\nDer Rücken meldet sich bei langen Sitzungen.\n',
+    ),
+    [CONDENSATION_DAY_PATH]: serialize(
+      {
+        type: 'journal',
+        title: 'Dienstag, 15. Juli 2026',
+        date: '2026-07-15',
+        mood: 3,
+        energy: 3,
+        people: [],
+        projects: [],
+        areas: [CONDENSATION_AREA_SLUG],
+        tags: [],
+        lang: 'de',
+      },
+      '## Tag\n\nRückenübungen gemacht.\n',
+    ),
+  };
+}
+
+describe('condensation-due über einen echten Bestand (039, D4)', () => {
+  it('bleibt ohne Gateway und mit einem nicht verfügbaren Gateway identisch — der Check hängt an keinem Modell', async () => {
+    const fixture = await gardenerFixture(condensationDueFiles());
+
+    const withoutGateway = await runGardener(fixture.deps(), { settings: SETTINGS });
+    const withUnavailableGateway = await runGardener(fixture.deps(emptyGateway()), {
+      settings: SETTINGS,
+      useLlm: true,
+    });
+
+    expect(of(withoutGateway.findings, 'condensation-due')).toHaveLength(1);
+    expect(withUnavailableGateway.findings.map((finding) => finding.id)).toEqual(
+      withoutGateway.findings.map((finding) => finding.id),
+    );
+    expect(withUnavailableGateway.usedLlm).toBe(false);
+  });
+
+  it('schreibt nichts in den Vault, obwohl eine Verdichtung fällig ist', async () => {
+    const fixture = await gardenerFixture(condensationDueFiles());
+    const writeMethods = ['write', 'create', 'writeText', 'append', 'move', 'delete'] as const;
+    const spies = writeMethods.map((method) => vi.spyOn(fixture.store, method));
+
+    const report = await runGardener(fixture.deps(), { settings: SETTINGS });
+
+    expect(of(report.findings, 'condensation-due')).toHaveLength(1);
+    for (const spy of spies) expect(spy).not.toHaveBeenCalled();
   });
 });
 

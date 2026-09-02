@@ -115,6 +115,7 @@ export const deGarden = {
   'garden.advice.missing-page': 'Für häufig genannte Begriffe eigene Seiten anlegen.',
   'garden.advice.loose-end':
     'Angekündigte Sätze aufgreifen — beantworten oder als erledigt weglegen.',
+  'garden.advice.condensation-due': 'Areas mit fälliger Verdichtung öffnen und neu verdichten.',
 
   // ── Befunde ───────────────────────────────────────────────────────────────
   'garden.findings.label': 'Befunde',
@@ -157,6 +158,7 @@ export const deGarden = {
   'garden.kind.unprocessed-source': 'Unverdichtete Quellen',
   'garden.kind.project-without-next-step': 'Projekte ohne nächsten Schritt',
   'garden.kind.loose-end': 'Lose Enden',
+  'garden.kind.condensation-due': 'Fällige Verdichtungen',
 
   'garden.countOne.orphan': '1 verwaiste Seite',
   'garden.countMany.orphan': '{count} verwaiste Seiten',
@@ -180,6 +182,8 @@ export const deGarden = {
   'garden.countMany.project-without-next-step': '{count} Projekte ohne nächsten Schritt',
   'garden.countOne.loose-end': '1 loses Ende',
   'garden.countMany.loose-end': '{count} lose Enden',
+  'garden.countOne.condensation-due': '1 fällige Verdichtung',
+  'garden.countMany.condensation-due': '{count} fällige Verdichtungen',
 
   // ── Karte ─────────────────────────────────────────────────────────────────
   'garden.card.files': 'Betroffene Dateien',

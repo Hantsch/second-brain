@@ -57,6 +57,7 @@ export {
   NEAR_DUPLICATE_THRESHOLD,
   brokenLinkCheck,
   checkedDay,
+  condensationDueCheck,
   indexDriftCheck,
   looseEndCheck,
   looseEndFinding,

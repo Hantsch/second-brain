@@ -5,7 +5,9 @@
 
 import { describe, expect, it } from 'vitest';
 import { applyFix, brokenLinkCheck, orphanCheck, orphanTargets } from '@core/gardener';
-import { NOW_MS } from '../../helpers/time';
+import { condensedAreaPath } from '@core/condense/paths';
+import { serialize } from '@core/vault/frontmatter';
+import { NOW_MS, day } from '../../helpers/time';
 import { DEMO } from './demo-vault';
 import {
   SETTINGS,
@@ -197,6 +199,54 @@ describe('orphanCheck', () => {
     expect(findings).toHaveLength(1);
     expect(findings[0]?.paths).toEqual(['modules/wissen/wiki/concepts/kanban.md']);
     expect(findings[0]?.fix).toBeNull();
+  });
+
+  it('meldet ein Verdichtungs-Artefakt nicht als Waise, obwohl niemand darauf verlinkt (039, AC7)', async () => {
+    // Nichts verlinkt je auf `areas/<slug>.condensed.md` — das ist der normale
+    // Zustand eines Artefakts. `orphanCheck` läuft aber ausschliesslich über
+    // `ctx.modules[].pages`, und dorthin gelangt das Artefakt nie: `isWikiPage()`
+    // (core/index/pages.ts) verlangt `modules/*/wiki/**`, ein Area-Pfad passt nie.
+    const areaSlug = 'gesundheit';
+    const artifactPath = condensedAreaPath(areaSlug);
+    const files = {
+      ...moduleFiles('wissen', [
+        {
+          type: 'concept',
+          slug: 'verwaist',
+          title: 'Andere Waise',
+          summary: 'Zeigt, dass echte Waisen weiter erkannt werden',
+          body: 'Diese Seite steht für sich allein.',
+        },
+      ]),
+      [`areas/${areaSlug}.md`]: serialize(
+        { type: 'area', title: 'Gesundheit', created: day(-30), updated: day(0), tags: [] },
+        'Laufen, schlafen, weniger Kaffee.\n',
+      ),
+      [artifactPath]: serialize(
+        {
+          type: 'condensed',
+          title: 'Gesundheit — verdichtet',
+          condensed_at: '2026-08-01T09:00:00+02:00',
+          sources: [`areas/${areaSlug}.md`],
+          source_hashes: {},
+          created: day(-1),
+          updated: day(0),
+          tags: [],
+        },
+        'Laufen, schlafen und weniger Kaffee bleiben die drei Hebel.\n',
+      ),
+    };
+    const fixture = await gardenerFixture(files);
+
+    const findings = orphanCheck.run(fixture.ctx({ settings: SETTINGS }));
+
+    // Die echte Waise im Modul wird weiterhin gemeldet — die Abwesenheit des
+    // Artefakts ist keine stille Unterdrueckung aller Befunde.
+    expect(findings.some((finding) => finding.paths[0] === artifactPath)).toBe(false);
+    expect(findings.some((finding) => finding.paths[0] === `areas/${areaSlug}.md`)).toBe(false);
+    expect(
+      findings.some((finding) => finding.paths[0] === 'modules/wissen/wiki/concepts/verwaist.md'),
+    ).toBe(true);
   });
 });
 

@@ -43,8 +43,21 @@ const PROJECT = [
   'waiting_on',
 ] as const;
 
-/** Verdichtete Area (`areas/<slug>.condensed.md`) — die Belege stehen in `sources`. */
-const CONDENSED = ['type', 'title', 'condensed_at', 'sources', 'created', 'updated', 'tags'] as const;
+/**
+ * Verdichtete Area (`areas/<slug>.condensed.md`) — die Belege stehen in
+ * `sources`, ihre Inhalts-Hashes direkt dahinter in `source_hashes`: das eine
+ * Feld kommentiert das andere und gehoert darum daneben, nicht ans Ende.
+ */
+const CONDENSED = [
+  'type',
+  'title',
+  'condensed_at',
+  'sources',
+  'source_hashes',
+  'created',
+  'updated',
+  'tags',
+] as const;
 
 const CANONICAL: Readonly<Record<string, readonly string[]>> = {
   project: PROJECT,

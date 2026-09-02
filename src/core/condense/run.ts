@@ -44,9 +44,10 @@ import {
   parseCondensedArtifact,
 } from './artifact';
 import type { CondensedArtifact, CondensedSectionContent, CondensedSectionKind } from './artifact';
-import { CONDENSE_DAY_WINDOW_DAYS, selectCondenseInputs } from './inputs';
+import { areaInputs, CONDENSE_DAY_WINDOW_DAYS, selectCondenseInputs } from './inputs';
 import type { CondenseInputSelection, CondenseTruncationReport } from './inputs';
 import { condensedAreaPath } from './paths';
+import { sourceHashesOf } from './sources';
 
 /** The one task kind this run needs. Named in the `no-model` result, per AC 10. */
 export const CONDENSE_AREA_TASK: TaskKind = 'condense-area';
@@ -103,7 +104,12 @@ export interface CondenseAreaProposal {
    * instead of an overwrite; `null` means "must not exist yet".
    */
   baseHash: string | null;
-  /** Every input path the run read — the same list as the artifact's `sources:`. */
+  /**
+   * Every input document the run read — the same list as the artifact's
+   * `sources:`, and the same inventory `areaInputs()` yields. Their hashes stand
+   * in the artifact's `source_hashes:` (story 039); the proposal itself carries
+   * only the paths, because that is all its readers show.
+   */
   sources: readonly string[];
   /** What the selector left out, or `null`. Already stated in `content`. */
   truncated: CondenseTruncationReport | null;
@@ -319,11 +325,21 @@ export async function condenseArea(
   const notice =
     selection.truncated === null ? '' : truncationNotice(selection.truncated, docLanguage);
   const kept = preambleWithoutNotice(current.preamble);
+  /* What gets recorded is the document inventory, not `inputs.paths`: the latter
+     is the *prompt's* view (one item per note, todo and day), and it omits the
+     area file entirely when that file happens to hold neither a note nor a todo.
+     Recording that narrower list would leave the area file unrecorded, and the
+     maintenance check — which asks `areaInputs()` — would then find it missing on
+     every single run and call the artifact due forever. Same selector on both
+     sides, or the hashes answer a different question than the one asked. */
+  const inventory = areaInputs(deps.docs, slug, { now });
+  const recorded = inventory.map((input) => input.path);
   const artifact: CondensedArtifact = {
     ...current,
     title: area?.title ?? (current.title.length > 0 ? current.title : slug),
     condensedAt,
-    sources: [...inputs.paths],
+    sources: recorded,
+    sourceHashes: sourceHashesOf(inventory),
     sections,
     preamble: [notice, kept].filter((part) => part.length > 0).join('\n\n'),
   };
@@ -335,7 +351,7 @@ export async function condenseArea(
     content: composeCondensedArtifact(artifact, docLanguage),
     condensedAt,
     baseHash: deps.existing === undefined ? null : sha256(deps.existing),
-    sources: [...inputs.paths],
+    sources: recorded,
     truncated: selection.truncated,
   };
 }

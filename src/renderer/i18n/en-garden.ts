@@ -99,6 +99,7 @@ export const enGarden = {
   'garden.advice.near-duplicate': 'Compare near duplicates and merge where it is the same thing.',
   'garden.advice.missing-page': 'Give frequently named terms their own pages.',
   'garden.advice.loose-end': 'Follow up on announced sentences — answer or mark them done.',
+  'garden.advice.condensation-due': 'Open areas with a condensation due and condense them again.',
 
   // ── Findings ──────────────────────────────────────────────────────────────
   'garden.findings.label': 'Results',
@@ -141,6 +142,7 @@ export const enGarden = {
   'garden.kind.unprocessed-source': 'Undistilled sources',
   'garden.kind.project-without-next-step': 'Projects without a next step',
   'garden.kind.loose-end': 'Loose ends',
+  'garden.kind.condensation-due': 'Condensations due',
 
   'garden.countOne.orphan': '1 orphaned page',
   'garden.countMany.orphan': '{count} orphaned pages',
@@ -164,6 +166,8 @@ export const enGarden = {
   'garden.countMany.project-without-next-step': '{count} projects without a next step',
   'garden.countOne.loose-end': '1 loose end',
   'garden.countMany.loose-end': '{count} loose ends',
+  'garden.countOne.condensation-due': '1 condensation due',
+  'garden.countMany.condensation-due': '{count} condensations due',
 
   // ── Card ──────────────────────────────────────────────────────────────────
   'garden.card.files': 'Files affected',

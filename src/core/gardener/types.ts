@@ -18,6 +18,7 @@
  */
 
 import type {
+  Area,
   DocLanguage,
   DumpItem,
   FindingSeverity,
@@ -57,6 +58,7 @@ export interface GardenerIndexView {
   dumps(): readonly DumpItem[];
   journal(): readonly JournalDay[];
   todos(): readonly Todo[];
+  areas(): readonly Area[];
 }
 
 /** Ein Modul mit seinen Seiten und seinem Katalog — einmal je Lauf gruppiert. */

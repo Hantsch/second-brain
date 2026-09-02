@@ -50,3 +50,24 @@
 - 2026-09-02 00:49 · 038 · D8 reject with a reason · done
 - 2026-09-02 00:50 · 038 · D9 acceptance surface seed/screenshot/docs · started
 - 2026-09-02 00:54 · 038 · D9 acceptance surface seed/screenshot/docs · done
+- 2026-09-02 01:26 · 039 · D1 the input inventory and the hash contract · started
+- 2026-09-02 01:38 · 039 · D1 the input inventory and the hash contract · done
+- 2026-09-02 01:38 · 039 · D2 the check · started
+- 2026-09-02 01:47 · 039 · D2 the check · done
+- 2026-09-02 01:47 · 039 · D3 sentences in both languages · started
+- 2026-09-02 01:51 · 039 · D3 sentences in both languages · done
+- 2026-09-02 01:51 · 039 · D4 conformance (no model, severity, scope, stop/continue) · started
+- 2026-09-02 01:56 · 039 · D4 conformance (no model, severity, scope, stop/continue) · done
+- 2026-09-02 01:56 · 039 · D5 exemptions and normal-document behaviour · done
+- 2026-09-02 01:56 · 039 · D6 the maintenance surface · started
+- 2026-09-02 02:00 · 039 · D6 the maintenance surface · done
+- 2026-09-02 02:00 · 039 · D7 seed and live smoke · started
+- 2026-09-02 02:06 · 039 · D7 seed and live smoke · done
+- 2026-09-02 02:06 · 039 · fix: umlaut transliteration in condensation-due labels · done
+- 2026-09-02 02:06 · 039 · verification (build/test/lint/typecheck) · started
+- 2026-09-02 02:10 · 039 · verification (build/test/lint/typecheck) · done
+- 2026-09-02 02:10 · 039 · code review (story-review-hard) · started
+- 2026-09-02 02:22 · 039 · code review (story-review-hard) · done (PASS, 6 findings, 1 fixed)
+- 2026-09-02 02:22 · 039 · final verification · started
+- 2026-09-02 02:23 · 039 · final verification · done
+- 2026-09-02 02:23 · 039 · story closeout (Done section, AC ticks, moved to done/) · done

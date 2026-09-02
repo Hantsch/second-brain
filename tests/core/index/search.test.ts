@@ -114,6 +114,32 @@ describe('SearchEngine: Filter', () => {
     expect(paths(hits)).toEqual(['projects/work/nyota-auth0-migration/project.md']);
   });
 
+  it('findet ein Verdichtungs-Artefakt wie jedes Dokument und filtert es ueber `types` (039, AC8)', () => {
+    // Ein Artefakt ist ein ganz normales `IndexedDoc` mit `docType: 'condensed'` —
+    // `SearchEngine.from` verzweigt nirgends nach `docType`, das ist keine
+    // Sonderbehandlung, sondern die Abwesenheit einer.
+    const artifact = makeDoc({
+      path: 'areas/gesundheit.condensed.md',
+      docType: 'condensed',
+      title: 'Gesundheit — verdichtet',
+      body: 'Vor Mitternacht ins Bett wirkt spuerbar auf die Konzentration am Vormittag.',
+    });
+    const docs = [...index.docs, artifact];
+    const combined = SearchEngine.from(docs);
+    const byPath = new Map(docs.map((doc) => [doc.path, doc]));
+    const search = (query: SearchQuery): SearchHit[] => combined.search(query, byPath);
+
+    const plain = search({ text: 'Konzentration am Vormittag' });
+    expect(plain.some((hit) => hit.path === artifact.path)).toBe(true);
+
+    const scoped = search({ text: 'Konzentration am Vormittag', types: ['condensed'] });
+    expect(scoped.map((hit) => hit.path)).toEqual([artifact.path]);
+    expect(scoped[0]?.docType).toBe('condensed');
+
+    const wrongType = search({ text: 'Konzentration am Vormittag', types: ['project'] });
+    expect(wrongType).toEqual([]);
+  });
+
   it('nach Modul', () => {
     const hits = find({ text: 'Rollen', module: 'identity-management' });
     expect(hits.length).toBeGreaterThan(0);

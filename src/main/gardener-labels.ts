@@ -27,6 +27,11 @@ function days(count: number): string {
   return count === 1 ? '1 day' : `${count} days`;
 }
 
+/** Singular/plural for the number of changed inputs, mirroring `days`. */
+function changedInputsCount(count: number): string {
+  return count === 1 ? '1 input has changed' : `${count} inputs have changed`;
+}
+
 const ENGLISH_FIX_LABELS: Record<GardenerFix['action'], string> = {
   'add-to-index': 'Add to the catalogue',
   'add-links': 'Add a reference',
@@ -143,6 +148,21 @@ export const ENGLISH_GARDENER_LABELS: GardenerLabels = {
       detail: named
         ? `${note} The contradiction is named on the page and stays.`
         : `${note} Both versions stay; the conflict gets named, not smoothed over.`,
+    };
+  },
+
+  condensationDue(area: string, condensedAt: string, changedCount: number): FindingText {
+    return {
+      title: `Condensation due: ${area}`,
+      detail: `Last condensed on ${condensedAt}. ${changedInputsCount(changedCount)} since.`,
+    };
+  },
+
+  condensationMissing(area: string): FindingText {
+    return {
+      title: `No condensation yet: ${area}`,
+      detail:
+        'The area has input material but no condensation artifact yet. Only a person starts a condensation.',
     };
   },
 

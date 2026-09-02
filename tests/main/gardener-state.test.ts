@@ -718,6 +718,7 @@ describe('Pflegezustand: ausblenden, vertagen, vergessen', () => {
       'unprocessed-source': true,
       'project-without-next-step': true,
       'loose-end': true,
+      'condensation-due': true,
     };
     expect([...GARDENER_FINDING_KINDS].sort()).toEqual(Object.keys(alle).sort());
   });

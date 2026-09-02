@@ -85,6 +85,32 @@ describe('derivePages: Graph', () => {
     expect(counts.get('second-brain-methodik')).toEqual({ sources: 0, entities: 1, concepts: 0 });
   });
 
+  it('nimmt ein Verdichtungs-Artefakt nicht in den Seitengraphen auf (039, AC7/AC8)', () => {
+    // `isWikiPage()` verlangt `modules/*/wiki/**` — ein `areas/<slug>.condensed.md`
+    // passt nie, egal welchen `docType` das Dokument traegt. Das ist die
+    // strukturelle Ausnahme, die 039 mit einem Test statt einer neuen Regel belegt.
+    const docs = [
+      makeDoc({
+        path: 'modules/m/wiki/concepts/a.md',
+        docType: 'concept',
+        frontmatter: { type: 'concept', title: 'A' },
+        body: 'Ein Begriff.',
+      }),
+      makeDoc({
+        path: 'areas/gesundheit.condensed.md',
+        docType: 'condensed',
+        frontmatter: { type: 'condensed', title: 'Gesundheit — verdichtet' },
+        body: 'Laufen, schlafen, weniger Kaffee.',
+      }),
+    ];
+    const { pages, counts } = derivePages(docs);
+    expect(pages.some((page) => page.path === 'areas/gesundheit.condensed.md')).toBe(false);
+    expect(pages.map((page) => page.slug)).toEqual(['a']);
+    // Ein Artefakt gehoert zu keinem Modul — die Zaehlung von `m` bleibt unberuehrt.
+    expect(counts.get('m')).toEqual({ sources: 0, entities: 0, concepts: 1 });
+    expect(counts.has('areas')).toBe(false);
+  });
+
   it('nimmt einen Selbstverweis nicht in den Graphen', () => {
     const docs = [
       makeDoc({

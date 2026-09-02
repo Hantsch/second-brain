@@ -11,6 +11,7 @@
 
 import type { Check } from '../types';
 import { brokenLinkCheck } from './broken-link';
+import { condensationDueCheck } from './condensation-due';
 import { indexDriftCheck } from './index-drift';
 import { looseEndCheck } from './loose-end';
 import { missingPageCheck } from './missing-page';
@@ -32,9 +33,11 @@ export const CHECKS: readonly Check[] = [
   unfiledDumpCheck,
   projectWithoutNextStepCheck,
   looseEndCheck,
+  condensationDueCheck,
 ];
 
 export { brokenLinkCheck } from './broken-link';
+export { condensationDueCheck } from './condensation-due';
 export { indexDriftCheck } from './index-drift';
 export {
   MAX_CANDIDATE_TERMS,

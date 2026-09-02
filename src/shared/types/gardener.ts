@@ -27,7 +27,9 @@ export type GardenerFindingKind =
   /** Project without a next step. */
   | 'project-without-next-step'
   /** A day announced something for a later day that never got a follow-up. */
-  | 'loose-end';
+  | 'loose-end'
+  /** An area's condensed artifact is missing or older than its material. */
+  | 'condensation-due';
 
 /**
  * Every finding kind this build knows, as a list. Needed wherever a kind
@@ -50,6 +52,7 @@ export const GARDENER_FINDING_KINDS: readonly GardenerFindingKind[] = [
   'unprocessed-source',
   'project-without-next-step',
   'loose-end',
+  'condensation-due',
 ];
 
 export type FindingSeverity = 'info' | 'warn' | 'high';

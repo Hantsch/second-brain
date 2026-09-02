@@ -6,6 +6,7 @@
  *
  * The module is deliberately split along "who owns the file": `artifact.ts` is
  * pure text work, `inputs.ts` decides what may be read without asking a model,
+ * `sources.ts` holds the hash contract between a run and the maintenance check,
  * and `run.ts` asks — and never writes.
  */
 
@@ -28,12 +29,22 @@ export {
   type CondensedSectionKind,
 } from './artifact';
 export {
+  areaInputs,
   CONDENSE_DAY_WINDOW_DAYS,
   selectCondenseInputs,
+  type CondenseInput,
   type CondenseInputSelection,
   type CondenseInputsOptions,
   type CondenseTruncationReport,
 } from './inputs';
+export {
+  recordedSources,
+  SOURCE_HASHES_FIELD,
+  sourceHashesIn,
+  sourceHashesOf,
+  sourcePaths,
+  type RecordedSource,
+} from './sources';
 export {
   CONDENSE_AREA_TASK,
   condenseArea,

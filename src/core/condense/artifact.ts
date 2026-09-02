@@ -32,6 +32,7 @@ import { canonicalOrder } from '@core/vault/frontmatter-order';
 import { sectionKindOf, sectionNameFor } from '@core/vault/section-names';
 import type { SectionKind } from '@core/vault/section-names';
 import { findSections } from '@core/vault/sections';
+import { SOURCE_HASHES_FIELD, sourceHashesIn, sourcePaths } from './sources';
 
 /** Der Dokumenttyp dieser Datei — zugleich der Schluessel der Feldreihenfolge. */
 export const CONDENSED_TYPE = 'condensed';
@@ -40,7 +41,13 @@ export const CONDENSED_TYPE = 'condensed';
 const SECTION_LEVEL = 2;
 
 /** Frontmatter-Felder, die dieses Modul selbst setzt. Alles andere wird durchgereicht. */
-const OWNED_FIELDS: readonly string[] = ['type', 'title', 'condensed_at', 'sources'];
+const OWNED_FIELDS: readonly string[] = [
+  'type',
+  'title',
+  'condensed_at',
+  'sources',
+  SOURCE_HASHES_FIELD,
+];
 
 /** Die drei Abschnitte, die ein Lauf schreibt — `directives` gehoert dem Menschen. */
 export type CondensedSectionKind = Extract<SectionKind, 'state' | 'patterns' | 'open'>;
@@ -78,6 +85,12 @@ export interface CondensedArtifact {
   condensedAt: string;
   /** Alle Eingaben, aus denen die Datei gebaut wurde. */
   sources: string[];
+  /**
+   * Pfad → sha256 des Eingabedokuments zum Zeitpunkt des Laufs (Story 039).
+   * Nur eine Anmerkung zu `sources`: ein Pfad ohne Eintrag ist kein Fehler,
+   * sondern heisst „dazu weiss die Datei nichts" (siehe `./sources`).
+   */
+  sourceHashes: Record<string, string>;
   sections: Record<CondensedSectionKind, CondensedSectionContent>;
   directives: CondensedDirectives;
   /** Jedes Frontmatter-Feld, das dieses Modul nicht besitzt, in Dateireihenfolge. */
@@ -94,6 +107,7 @@ export function emptyCondensedArtifact(): CondensedArtifact {
     title: '',
     condensedAt: '',
     sources: [],
+    sourceHashes: {},
     sections: {
       state: { text: '', sources: [] },
       patterns: { text: '', sources: [] },
@@ -128,7 +142,8 @@ export function parseCondensedArtifact(content: string): CondensedArtifact {
   const artifact = emptyCondensedArtifact();
   artifact.title = textOf(parsed.frontmatter['title']);
   artifact.condensedAt = textOf(parsed.frontmatter['condensed_at']);
-  artifact.sources = stringList(parsed.frontmatter['sources']);
+  artifact.sources = sourcePaths(parsed.frontmatter);
+  artifact.sourceHashes = sourceHashesIn(parsed.frontmatter);
   artifact.extraFrontmatter = unownedFields(parsed.frontmatter);
   readBody(parsed.body, artifact);
   return artifact;
@@ -186,11 +201,15 @@ function splitSourceLine(content: string): CondensedSectionContent {
 }
 
 function frontmatterOf(artifact: CondensedArtifact): Frontmatter {
+  const hashes = artifact.sourceHashes;
   return orderFields({
     type: CONDENSED_TYPE,
     title: artifact.title.length > 0 ? artifact.title : undefined,
     condensed_at: artifact.condensedAt.length > 0 ? artifact.condensedAt : undefined,
     sources: cleanPaths(artifact.sources),
+    /* Ohne Eintraege gar kein Feld: eine leere Abbildung sagt dasselbe wie ihr
+       Fehlen und wuerde nur jede Datei um eine Zeile Rauschen laenger machen. */
+    [SOURCE_HASHES_FIELD]: Object.keys(hashes).length > 0 ? { ...hashes } : undefined,
     ...artifact.extraFrontmatter,
   });
 }
@@ -268,10 +287,4 @@ function cleanPaths(paths: readonly string[]): string[] {
 
 function textOf(value: unknown): string {
   return typeof value === 'string' ? value.trim() : '';
-}
-
-function stringList(value: unknown): string[] {
-  if (typeof value === 'string') return cleanPaths([value]);
-  if (!Array.isArray(value)) return [];
-  return cleanPaths(value.filter((item): item is string => typeof item === 'string'));
 }

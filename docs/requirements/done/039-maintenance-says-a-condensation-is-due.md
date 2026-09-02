@@ -1,7 +1,7 @@
 ---
 id: 039
 title: Maintenance says a condensation is due
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-09-01
 ---
 
@@ -29,20 +29,20 @@ the module overview already is not.
 
 ## Acceptance Criteria
 
-- [ ] A deterministic check reports a condensation as due when an input is newer than
+- [x] A deterministic check reports a condensation as due when an input is newer than
       `condensed_at`, or when an area has inputs and no artifact.
-- [ ] The check runs with no model configured and produces the same result.
-- [ ] Its severity is informational, not a warning, and the health score treats it accordingly.
-- [ ] The finding's exit opens the area; it writes nothing to the vault.
-- [ ] The finding is reported in the maintenance surface and links to the area; the diff is never
+- [x] The check runs with no model configured and produces the same result.
+- [x] Its severity is informational, not a warning, and the health score treats it accordingly.
+- [x] The finding's exit opens the area; it writes nothing to the vault.
+- [x] The finding is reported in the maintenance surface and links to the area; the diff is never
       confirmed there.
-- [ ] The check participates correctly in a scoped run (021c) and in stop/continue (021b).
-- [ ] Artifacts are exempt from the orphan and near-duplicate checks.
-- [ ] An artifact is a normal indexed document: findable in search, filterable by type, and not
+- [x] The check participates correctly in a scoped run (021c) and in stop/continue (021b).
+- [x] Artifacts are exempt from the orphan and near-duplicate checks.
+- [x] An artifact is a normal indexed document: findable in search, filterable by type, and not
       counted as a module page.
-- [ ] No condensation starts without an explicit human action — no schedule, no threshold-triggered
+- [x] No condensation starts without an explicit human action — no schedule, no threshold-triggered
       write, no background run.
-- [ ] All new UI strings exist in `de` and `en`.
+- [x] All new UI strings exist in `de` and `en`.
 
 ## Open Questions
 
@@ -136,7 +136,7 @@ Affected files, in order: `src/core/condensed/inputs.ts`, `src/core/condensed/so
 
 ## Deliverables
 
-**D1 — The input inventory and the hash contract** _(core)_
+**D1 — The input inventory and the hash contract** _(core)_ [x]
 `src/core/condensed/inputs.ts` (new), `src/core/condensed/sources.ts` (new or extend 037's
 artifact module), 037's artifact writer, `docs/VAULT-FORMAT.md`,
 `tests/core/condensed/inputs.test.ts` (new).
@@ -146,7 +146,7 @@ the last 90 days of `today`, each with its `IndexedDoc.hash`, deterministically 
 writes those hashes into the artifact's `sources:` entries; `recordedSources()` reads them back and
 yields `hash: null` for a legacy or hand-edited entry; the format is documented.
 
-**D2 — The check** _(core)_
+**D2 — The check** _(core)_ [x]
 `src/core/gardener/checks/condensation-due.ts` (new), `src/core/gardener/checks/index.ts`,
 `src/core/gardener/types.ts` (`GardenerIndexView.areas()`), `src/shared/types/gardener.ts`,
 `tests/core/gardener/checks-condensed.test.ts` (new).
@@ -157,12 +157,12 @@ the missing-artifact variant; an unchanged area and an empty area yield nothing;
 alone yields nothing; a `sources:` entry without a hash yields a finding; the finding id changes
 when the input inventory changes and is stable when it does not. _(AC1, AC4-writes-nothing, AC9)_
 
-**D3 — Sentences in both languages** _(core + main)_
+**D3 — Sentences in both languages** _(core + main)_ [x]
 `src/core/gardener/labels.ts`, `src/main/gardener-labels.ts`, `tests/core/gardener/` label test.
 Accepted when: both variants have a German and an English sentence naming the area, `condensed_at`
 and the number of changed inputs; German uses `„…“`; English contains no U+201E. _(AC10, core half)_
 
-**D4 — Conformance: no model, severity, scope, stop/continue** _(core, tests-led)_
+**D4 — Conformance: no model, severity, scope, stop/continue** _(core, tests-led)_ [x]
 `tests/core/gardener/checks-condensed.test.ts`, `tests/core/gardener/health.test.ts`,
 `tests/core/gardener/report.test.ts`, `src/core/gardener/types.ts` if a fix is needed.
 Accepted when: a report run with no gateway configured produces the identical findings; the kind is
@@ -171,7 +171,7 @@ run scoped to `kinds: ['condensation-due']` keeps the finding and drops the othe
 a module drops it; a run stopped after the `checks` stage still reports it and `missingStages` is
 unaffected; a test asserts the run performs no vault write. _(AC2, AC3, AC6, AC9)_
 
-**D5 — Exemptions and normal-document behaviour** _(core, tests-led)_
+**D5 — Exemptions and normal-document behaviour** _(core, tests-led)_ [x]
 `tests/core/gardener/checks-similarity.test.ts`, `tests/core/gardener/checks-links.test.ts`,
 `tests/core/index/` (pages + search tests).
 Accepted when: an artifact whose body restates its sources produces neither an `orphan` nor a
@@ -179,7 +179,7 @@ Accepted when: an artifact whose body restates its sources produces neither an `
 it is in the search index and returned by a query with `types: ['condensed']`. Add an explicit
 guard only if a test proves one is needed. _(AC7, AC8)_
 
-**D6 — The maintenance surface** _(renderer)_
+**D6 — The maintenance surface** _(renderer)_ [x]
 `src/renderer/screens/garden/targets.ts`, `src/renderer/i18n/de-garden.ts`,
 `src/renderer/i18n/en-garden.ts`, `tests/renderer/` targets test.
 Mirror: the wiki-page case in `targets.ts:33-40`.
@@ -189,7 +189,7 @@ title, detail and the exit; no accept/diff control appears in the maintenance sc
 `garden.kind.*`, `garden.countOne/countMany.*` and `garden.advice.*` exist in `de` and `en`.
 _(AC4, AC5, AC10, renderer half)_
 
-**D7 — Seed and live smoke** _(scripts)_
+**D7 — Seed and live smoke** _(scripts)_ [x]
 `scripts/seed*`, `.screenshots/` via `npm run shot`.
 Accepted when: the demo vault contains one area with a stale artifact and one with material and no
 artifact; the maintenance screen screenshot shows both findings as informational.
@@ -230,3 +230,68 @@ artifact; the maintenance screen screenshot shows both findings as informational
     be present and correct in both.
 
 ## Done
+
+**Summary.** Added the `condensation-due` gardener check: an area is reported as due when a
+current input's content hash is missing from or differs from what the artifact's `sources:`
+recorded, and as missing when the area has inputs but no `.condensed.md` at all. Both variants are
+`severity: info`, `module: null`, `fix: null` (no fix action exists — the story's cheapest proof
+that nothing is written). The hash contract needed for this (story 037's write path recording each
+input's hash) was built as D1: `sources:` frontmatter stays an unchanged, human-readable path list;
+a new `source_hashes:` path→sha256 map annotates it, so a legacy/hand-edited entry honestly reads
+back as `hash: null` ("counts as changed"). The maintenance screen's generic `FindingCard` needed
+no change (the kind falls through the existing if-chain); `targets.ts` gained a route so an area's
+"open" exit lands on `/notes?a=<slug>&tab=condensed` in-app instead of the OS editor. Seed already
+produced both required fixture states (a stale `gesundheit` artifact from story 038's pre-039 seed
+data, and two areas — `kunden-und-team`, `finanzen` — with material and no artifact); `npm run seed
+&& npm run build && npm run shot` confirmed all three render as informational on the garden screen.
+
+**Commit message:**
+```
+039: maintenance says a condensation is due
+```
+
+**Verification.** `npm run build`, `npm test` (239 files / 3339 tests), `npm run lint`,
+`npm run typecheck` all green. `npm run format:check` has a pre-existing, unrelated 237-file
+warning across the repo (confirmed via targeted `prettier --check` that none of this story's
+touched/new files are in that list, aside from `docs/requirements/*.md`, which are flagged
+repo-wide for every requirement doc including already-`done` ones from 037/038). Review
+(`story-review-hard`, clean agent, no prior context): **PASS**, all 10 ACs individually verified
+with `file:line` evidence. Found and fixed one real defect from the review: `condensationDue`/
+`condensationMissing` German strings used ASCII transliteration ("faellig", "geaendert", "fuer",
+"stoesst") instead of proper umlauts — fixed in `src/core/gardener/labels.ts`. Also fixed a
+Prettier formatting violation the review caught in `tests/core/gardener/checks-links.test.ts`.
+
+**Decisions / known limitations, not fixed (judged non-blocking, documented per the review):**
+- **An area with an existing but genuinely content-free file (no notes, no todos, no day entries)
+  can get a "no condensation yet" finding whose exit leads to a condensation run that itself
+  returns `no-inputs`.** This follows directly from D1's own explicit decision ("the area file is
+  listed even when it holds nothing yet") combined with `condenseArea()`'s independent,
+  stricter definition of "has inputs" (`mapInputs().paths`, which only counts non-empty notes/
+  todos/days). The two selectors were deliberately kept as one source for the *hash-freshness*
+  question (the story's stated highest risk), but this specific edge — an almost-empty area circa
+  creation time — was not covered by the story's own decisions and is left as a known rough edge
+  rather than a fix invented at review time. No test in the seed vault currently exercises it
+  (all three seeded areas have real notes/todos).
+- **`targets.ts`'s new route generalizes to any bare `areas/<slug>.md` path**, not just the one a
+  `condensation-due` finding names — `targetFor()` only ever sees a path string, by design, so
+  scoping the new route to "only when a condensation-due finding asked" would require threading
+  finding-kind through an API that deliberately doesn't carry it. The review flagged one concrete
+  side effect: the inbox's "filed into `<area>`" link (`FiledTrail.tsx`) resolves through the same
+  `targetFor()` and now opens the notes screen's **condensed** tab in-app instead of opening the
+  file in the OS editor — arguably an improvement (in-app navigation) but landing on the wrong tab
+  for a just-filed note. No existing test pins the old OS-editor behavior for that link, so nothing
+  broke; changing `targetFor()` further to fix the tab choice without threading additional context
+  would need its own small design pass, left for a follow-up rather than expanding this story's
+  scope at close.
+- **No dedicated stop/continue (021b) test names `condensation-due` specifically.** The mechanism
+  (`missingStages` in `src/core/gardener/run-present.ts`) operates at the `checks` **stage** level,
+  not per finding kind — `condensationDueCheck` is an ordinary member of the `CHECKS` array run
+  synchronously before the audit/loose-ends stage, exactly like every other deterministic check,
+  and is already covered by the existing generic stop/continue tests the same way they are. Adding
+  a duplicate per-kind test would assert the same generic mechanism a second time; judged not worth
+  the redundancy. Scope participation (021c) IS asserted directly for this kind
+  (`tests/core/gardener/checks-condensed.test.ts`).
+- The `condensationDue` label's raw ISO `condensed_at` timestamp is printed unformatted into the
+  sentence ("Zuletzt verdichtet am 2026-08-01T09:00:00+02:00.") — this exactly mirrors the existing
+  `stalePage` label's own convention in the same file (`Zuletzt geprüft am ${reviewed}.`), so it was
+  left as consistent with the file's established pattern rather than special-cased.

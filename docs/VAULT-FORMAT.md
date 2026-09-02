@@ -227,7 +227,10 @@ created on first use.
 type: condensed
 title: Gesundheit — verdichtet
 condensed_at: 2026-08-10T09:15:00+02:00
-sources: [areas/gesundheit.md]
+sources: [areas/gesundheit.md, journal/2026/07/2026-07-15.md]
+source_hashes:
+  areas/gesundheit.md: 9f2c1b…
+  journal/2026/07/2026-07-15.md: 4ad07e…
 ---
 
 ## Stand
@@ -253,9 +256,20 @@ short version to read instead of the full history in `areas/<slug>.md`.
 `condensed_at` is an ISO-8601 timestamp with time zone, set every time the
 file is (re-)written. `sources` reuses the frontmatter key from wiki pages
 (see below): a list of vault-relative paths to whatever the digest was built
-from — normally the area file itself, but it may list more than one path.
-There is no separate evidence mechanism for condensed areas; the same
-`sources` field that backs wiki statements backs this digest.
+from — the area file itself plus the journal days carrying the area's slug
+within the last 90 days. There is no separate evidence mechanism for condensed
+areas; the same `sources` field that backs wiki statements backs this digest.
+
+`source_hashes` annotates that list: for each path, the sha256 of that whole
+file as it stood when the digest was written — the same hash the index and the
+vault's conflict detection use. It is what lets the maintenance run say a
+condensation is due without opening a file and without a model: it compares the
+recorded hashes against the current ones. A path in `sources` with **no** entry
+in `source_hashes` counts as changed, not as current — that is the case for a
+file written before this field existed, and for a path a user added to `sources`
+by hand. The app would rather say "I cannot tell this is still current" than
+assume freshness. `condensed_at` is not the comparison basis; it is a timestamp
+for the reader, and a file touched without being changed is not new material.
 
 The body has four sections, in this order: `Stand`/`Status` holds the current
 state in prose; `Muster`/`Patterns` holds what recurs across sources;

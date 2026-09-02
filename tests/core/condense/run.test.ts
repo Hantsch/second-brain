@@ -9,7 +9,9 @@ import { resolve } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { condenseArea, CONDENSE_AREA_TASK } from '@core/condense/run';
 import type { CondenseAreaProposal } from '@core/condense/run';
-import { CONDENSE_DAY_WINDOW_DAYS } from '@core/condense/inputs';
+import { areaInputs, CONDENSE_DAY_WINDOW_DAYS } from '@core/condense/inputs';
+import { recordedSources } from '@core/condense/sources';
+import { parse } from '@core/vault/frontmatter';
 import { sha256 } from '@core/vault/hash';
 import type { IndexedDoc } from '@core/index/types';
 import { createEmptyGateway, createFakeGateway } from '../../fakes/llm';
@@ -117,6 +119,74 @@ describe('condenseArea', () => {
     expect(proposal.content).toContain('Der Rücken ist das Thema.');
     expect(proposal.content).toContain(`Aus: ${AREA_PATH}, ${RECENT_DAY_PATH}`);
     expect(proposal.truncated).toBeNull();
+  });
+
+  /* Story 039: the run is what records the hashes the maintenance check later
+     compares against. The pairing is what matters — the recorded inventory has
+     to be the same one `areaInputs()` answers with, or the check compares
+     against a different question and every artifact is due (or fresh) forever. */
+  it('records the hash of every input, exactly as areaInputs sees them', async () => {
+    const { gateway } = gatewayWith(reply());
+    const all = docs();
+
+    const proposal = asProposal(await condenseArea({ docs: all, gateway, now: NOW }, 'gesundheit'));
+
+    const recorded = recordedSources(parse(proposal.content).frontmatter);
+    expect(recorded).toEqual(areaInputs(all, 'gesundheit', { now: NOW }));
+  });
+
+  it('records the area file even when it holds neither a note nor a todo', async () => {
+    /* The model never sees such a file, so the prompt's own input list leaves it
+       out. Recording that list would leave the area file unrecorded and make the
+       check report the artifact as due on every run, forever. */
+    const emptyArea = makeDoc({
+      path: AREA_PATH,
+      docType: 'area',
+      title: 'Gesundheit',
+      frontmatter: { type: 'area', title: 'Gesundheit' },
+      body: '',
+    });
+    const all = [emptyArea, recentDay()];
+    const { gateway } = gatewayWith(
+      JSON.stringify({
+        state: { text: 'Rückenübungen laufen.', sources: [RECENT_DAY_PATH] },
+        patterns: { text: 'Bewegung hilft.', sources: [RECENT_DAY_PATH] },
+        open: { text: 'Nichts offen.', sources: [RECENT_DAY_PATH] },
+      }),
+    );
+
+    const proposal = asProposal(await condenseArea({ docs: all, gateway, now: NOW }, 'gesundheit'));
+
+    expect(proposal.sources).toEqual([AREA_PATH, RECENT_DAY_PATH]);
+    expect(recordedSources(parse(proposal.content).frontmatter)).toEqual([
+      { path: AREA_PATH, hash: emptyArea.hash },
+      { path: RECENT_DAY_PATH, hash: recentDay().hash },
+    ]);
+  });
+
+  it('records a changed input with its new hash on the next run', async () => {
+    const { gateway } = gatewayWith(reply());
+    const edited = docs().map((doc) =>
+      doc.path === RECENT_DAY_PATH
+        ? makeDoc({
+            path: doc.path,
+            docType: 'journal',
+            frontmatter: doc.frontmatter,
+            body: `${doc.body}\nNachtrag am Abend.`,
+          })
+        : doc,
+    );
+
+    const first = asProposal(await condenseArea({ docs: docs(), gateway, now: NOW }, 'gesundheit'));
+    const second = asProposal(
+      await condenseArea({ docs: edited, gateway, now: NOW }, 'gesundheit'),
+    );
+
+    const before = recordedSources(parse(first.content).frontmatter);
+    const after = recordedSources(parse(second.content).frontmatter);
+    expect(after.map((entry) => entry.path)).toEqual(before.map((entry) => entry.path));
+    expect(after[1]?.hash).not.toBe(before[1]?.hash);
+    expect(after[0]?.hash).toBe(before[0]?.hash);
   });
 
   it('carries the hash of the artifact it was built from, for D8 to write against', async () => {

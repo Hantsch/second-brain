@@ -99,6 +99,7 @@ function formatSummary(seeder, findings) {
     `  unverdichtete Quelle   ${findings.unprocessedSources.join(', ')}`,
     `  liegengebliebener Dump ${findings.unfiledDumps.join(', ')}`,
     `  ohne nächsten Schritt  ${findings.withoutNextStep.join(', ')}`,
+    `  Verdichtung fällig     ${findings.condensationDue.join(', ')}`,
     '',
     `  Claude-Sitzungen  ${count('claudeSessions')}  (eigene Ablage, nicht das echte ~/.claude)`,
     `  Codex-Sitzungen   ${count('codexSessions')}  (eigene Ablage, nicht das echte ~/.codex)`,

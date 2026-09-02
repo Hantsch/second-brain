@@ -12,7 +12,10 @@ import {
   nearDuplicateCheck,
   shingles,
 } from '@core/gardener';
-import { SETTINGS, moduleFixture } from './fixtures';
+import { condensedAreaPath } from '@core/condense/paths';
+import { serialize } from '@core/vault/frontmatter';
+import { day } from '../../helpers/time';
+import { SETTINGS, gardenerFixture, moduleFiles, moduleFixture } from './fixtures';
 
 const LIST = `Die Angebotsliste im Kundenportal lädt bei vierhundert Einträgen langsam, weil für jede
 Zeile die Berechtigungen einzeln nachgeladen werden. Ein Sammelaufruf würde die Zahl der
@@ -152,6 +155,43 @@ describe('nearDuplicateCheck', () => {
     ]);
 
     expect(nearDuplicateCheck.run(fixture.ctx({ settings: SETTINGS }))).toEqual([]);
+  });
+
+  it('meldet ein Verdichtungs-Artefakt nicht als Beinahe-Dublette, obwohl es seine Quelle wörtlich wiederholt (039, AC7)', async () => {
+    // Die Area und ihr Artefakt teilen fast denselben Text — genau das, was eine
+    // Verdichtung tun soll. `docType: 'condensed'` hält den Pfad aber schon
+    // ausserhalb des Seitengraphen (`isWikiPage()` prüft nur `modules/*/wiki/**`),
+    // also darf hier gar kein Vergleich stattfinden, egal wie ähnlich der Text ist.
+    const areaSlug = 'gesundheit';
+    const artifactPath = condensedAreaPath(areaSlug);
+    const files = {
+      ...moduleFiles('wissen', [
+        { type: 'concept', slug: 'ladezeiten', title: 'Ladezeiten', summary: 'Erste', body: LIST },
+      ]),
+      [`areas/${areaSlug}.md`]: serialize(
+        { type: 'area', title: 'Gesundheit', created: day(-30), updated: day(0), tags: [] },
+        LIST,
+      ),
+      [artifactPath]: serialize(
+        {
+          type: 'condensed',
+          title: 'Gesundheit — verdichtet',
+          condensed_at: '2026-08-01T09:00:00+02:00',
+          sources: [`areas/${areaSlug}.md`],
+          source_hashes: {},
+          created: day(-1),
+          updated: day(0),
+          tags: [],
+        },
+        LIST_AGAIN,
+      ),
+    };
+    const fixture = await gardenerFixture(files);
+
+    const findings = nearDuplicateCheck.run(fixture.ctx({ settings: SETTINGS }));
+
+    expect(findings.some((finding) => finding.paths.includes(artifactPath))).toBe(false);
+    expect(findings.some((finding) => finding.paths.includes(`areas/${areaSlug}.md`))).toBe(false);
   });
 
   it('liegt bei umformuliertem Text über, bei fremdem Text weit unter der Schwelle', () => {

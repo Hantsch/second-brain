@@ -7,7 +7,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { CONDENSE_DAY_WINDOW_DAYS, selectCondenseInputs } from '@core/condense/inputs';
+import { areaInputs, CONDENSE_DAY_WINDOW_DAYS, selectCondenseInputs } from '@core/condense/inputs';
 import type { IndexedDoc } from '@core/index/types';
 import { makeDoc } from '../index/fixtures';
 
@@ -129,5 +129,104 @@ describe('selectCondenseInputs', () => {
     const source = readFileSync(resolve(__dirname, '../../../src/core/condense/inputs.ts'), 'utf8');
     const importLines = source.split('\n').filter((line) => line.trim().startsWith('import'));
     expect(importLines.join('\n')).not.toMatch(/llm|gateway/i);
+  });
+});
+
+/* The document inventory (story 039, D1). This is the selector both a run and the
+   maintenance check ask, so what matters here is not only *which* documents come
+   back but that the answer is one document per file, deterministic in order, and
+   carries the index's own hash — a wrong pairing would make an artifact
+   permanently due or permanently fresh without anything failing. */
+describe('areaInputs', () => {
+  it('returns the area file first, then the in-window days oldest first', () => {
+    const inputs = areaInputs(docs(), 'gesundheit', { now: NOW });
+
+    expect(inputs.map((input) => input.path)).toEqual([
+      'areas/gesundheit.md',
+      'journal/2026/07/2026-07-15.md',
+    ]);
+  });
+
+  it('carries the IndexedDoc.hash of each document', () => {
+    const all = docs();
+    const inputs = areaInputs(all, 'gesundheit', { now: NOW });
+
+    for (const input of inputs) {
+      const doc = all.find((candidate) => candidate.path === input.path);
+      expect(input.hash).toBe(doc?.hash);
+      expect(input.hash.length).toBeGreaterThan(0);
+    }
+    // Two different documents, two different hashes — otherwise a comparison
+    // over them could not tell them apart.
+    expect(inputs[0]?.hash).not.toBe(inputs[1]?.hash);
+  });
+
+  it('is one entry per document, not per note or per todo', () => {
+    // The fixture area holds two notes and two todos, all inside one file.
+    const inputs = areaInputs([areaDoc()], 'gesundheit', { now: NOW });
+    expect(inputs).toHaveLength(1);
+  });
+
+  it('lists the area file even when it holds neither a note nor a todo', () => {
+    /* The pairing guard: the prompt's own input list omits an empty area file,
+       so recording that list instead of this inventory would leave the area file
+       unrecorded and the artifact due on every single run. */
+    const emptyArea = makeDoc({
+      path: 'areas/gesundheit.md',
+      docType: 'area',
+      title: 'Gesundheit',
+      frontmatter: { type: 'area', title: 'Gesundheit' },
+      body: '',
+    });
+
+    const inputs = areaInputs([emptyArea, RECENT_DAY], 'gesundheit', { now: NOW });
+    expect(inputs.map((input) => input.path)).toEqual([
+      'areas/gesundheit.md',
+      'journal/2026/07/2026-07-15.md',
+    ]);
+  });
+
+  it('uses the same 90-day window as the input selection', () => {
+    const paths = areaInputs(docs(), 'gesundheit', { now: NOW }).map((input) => input.path);
+    expect(paths).not.toContain(OLD_DAY.path);
+    // Same bound, same source of truth — the constant is not repeated here.
+    expect(CONDENSE_DAY_WINDOW_DAYS).toBe(90);
+  });
+
+  it('excludes days that do not carry the slug', () => {
+    const paths = areaInputs(docs(), 'gesundheit', { now: NOW }).map((input) => input.path);
+    expect(paths).not.toContain(NO_AREAS_DAY.path);
+    expect(paths).not.toContain(OTHER_AREA_DAY.path);
+  });
+
+  it('returns only the days for a slug that has no area file', () => {
+    const withoutArea = [RECENT_DAY, NO_AREAS_DAY, OTHER_AREA_DAY];
+    const inputs = areaInputs(withoutArea, 'gesundheit', { now: NOW });
+    expect(inputs.map((input) => input.path)).toEqual(['journal/2026/07/2026-07-15.md']);
+  });
+
+  it('returns nothing for an area with no file and no days', () => {
+    expect(areaInputs(docs(), 'unbekannt', { now: NOW })).toEqual([]);
+  });
+
+  it('is stable across repeated calls on unchanged documents', () => {
+    expect(areaInputs(docs(), 'gesundheit', { now: NOW })).toEqual(
+      areaInputs(docs(), 'gesundheit', { now: NOW }),
+    );
+  });
+
+  it('reports a different hash once the content of a document changed', () => {
+    const before = areaInputs(docs(), 'gesundheit', { now: NOW });
+    const edited = docs().map((doc) =>
+      doc.path === RECENT_DAY.path
+        ? journalDoc({ path: doc.path, frontmatter: doc.frontmatter, body: 'Nachtrag am Abend.' })
+        : doc,
+    );
+    const after = areaInputs(edited, 'gesundheit', { now: NOW });
+
+    expect(after.map((input) => input.path)).toEqual(before.map((input) => input.path));
+    expect(after[1]?.hash).not.toBe(before[1]?.hash);
+    // The untouched area file keeps its hash — only what changed looks changed.
+    expect(after[0]?.hash).toBe(before[0]?.hash);
   });
 });

@@ -4,7 +4,7 @@
    - ein leerer Bestand hat keine Gesundheit, nicht 100 und nicht 0. */
 
 import { describe, expect, it } from 'vitest';
-import { FULL_ROT_PENALTY_PER_UNIT, healthScore, vaultSize } from '@core/gardener';
+import { FULL_ROT_PENALTY_PER_UNIT, healthScore, SEVERITY_WEIGHT, vaultSize } from '@core/gardener';
 import type { FindingSeverity, GardenerFinding, GardenerFindingKind } from '@shared/types';
 import { SETTINGS, demoFixture, gardenerFixture } from './fixtures';
 
@@ -69,6 +69,18 @@ describe('healthScore', () => {
     const light = healthScore(many('orphan', 'info', 4), 30).score ?? 0;
 
     expect(heavy).toBeLessThan(light);
+  });
+
+  it('kostet ein condensation-due-Befund genau SEVERITY_WEIGHT.info (039, D4)', () => {
+    // 30 Einheiten, ein einzelner `info`-Befund: Budget 90, Verlust 100·1/90 ≈
+    // 1.11 — gerundet exakt das Gewicht aus der Tabelle, keine eigene Rechnung
+    // fuer diese Art.
+    const result = healthScore(many('condensation-due', 'info', 1), 30);
+
+    expect(result.contributions).toHaveLength(1);
+    expect(result.contributions[0]?.kind).toBe('condensation-due');
+    expect(result.contributions[0]?.points).toBe(SEVERITY_WEIGHT.info);
+    expect(SEVERITY_WEIGHT.info).toBe(1);
   });
 
   it('fällt auf null, wenn auf jede Einheit ein mittelschwerer Befund kommt', () => {
