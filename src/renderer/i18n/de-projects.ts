@@ -126,7 +126,46 @@ export const deProjects = {
 
   'project.tab.label': 'Projektansicht wählen',
   'project.tab.overview': 'Überblick',
+  'project.tab.knowledge': 'Wissen',
   'project.tab.sessions': 'Sitzungen',
+
+  // ── Der Wissen-Tab (Story 045, D4) ────────────────────────────────────────
+  'project.condensed.empty.title': 'Noch nicht verdichtet',
+  'project.condensed.empty.body':
+    'Eine Verdichtung fasst dieses Projekt zu einer Seite zusammen, die ein Modell von da an aktuell hält.',
+  'project.condensed.trigger': 'Dieses Projekt verdichten',
+  'project.condensed.triggerAgain': 'Erneut verdichten',
+  'project.condensed.running': 'Verdichtung läuft',
+  'project.condensed.meta.condensedAt': 'Verdichtet am {date}',
+  'project.condensed.meta.sources': '{count} Quellen',
+  'project.condensed.notEvidence':
+    'Diese Verdichtung wird nicht als Beleg zitiert — Antworten verweisen stattdessen auf ihre Quellen.',
+
+  'project.condensed.diff.summary': '{removed} entfernt, {added} hinzugefügt',
+  'project.condensed.diff.added': 'hinzugefügt',
+  'project.condensed.diff.removed': 'entfernt',
+  'project.condensed.accept': 'Übernehmen',
+  'project.condensed.accept.conflict':
+    'Die Datei für {subject} hat sich seit diesem Vorschlag geändert. Verdichtung erneut ausführen.',
+
+  'project.condensed.reject': 'Ablehnen',
+  'project.condensed.reject.title': 'Diesen Vorschlag ablehnen',
+  'project.condensed.reject.description':
+    'Eine Begründung ist erforderlich — sie bleibt beim Projekt, damit die nächste Verdichtung sie berücksichtigen kann.',
+  'project.condensed.reject.fieldLabel': 'Begründung',
+  'project.condensed.reject.placeholder': 'Was sollte sich ändern, bevor das übernommen wird?',
+  'project.condensed.reject.submit': 'Ablehnen',
+
+  'project.condensed.delete.action': 'Verdichtung löschen',
+  'project.condensed.delete.title': '„{path}“ löschen?',
+  'project.condensed.delete.description':
+    'Abschnitte und Quellen darin lassen sich neu erzeugen — ein späterer Lauf baut sie aus dem Projekt wieder auf.',
+  'project.condensed.delete.directivesLost':
+    'Der Direktiven-Abschnitt ist der einzige Teil, den kein späterer Lauf wiederherstellen kann — er kam ausschließlich aus dem, was du selbst dort hineingeschrieben hast.',
+  'project.condensed.delete.confirm': 'Löschen',
+  'project.condensed.delete.done': 'Verdichtung gelöscht.',
+  'project.condensed.delete.conflict':
+    'Die Datei für {subject} hat sich seit dem letzten Lesen geändert. Es wurde nichts gelöscht.',
 
   'project.trace.title': 'Arbeitsspur',
   'project.trace.lastTouch': 'Letzte Spur {age}',

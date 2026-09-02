@@ -21,3 +21,14 @@
 - 2026-09-02 21:55 · 044 · final verify green (build/test/lint/typecheck; format clean on story files) · done
 - 2026-09-02 21:58 · 044 · live smoke (seed+shot) verified condense-project settings row · done
 - 2026-09-02 21:58 · 044 · Done section filled, ACs ticked, status: done, moved to done/, INDEX.md updated · done
+- 2026-09-02 21:59 · 045 · D1 unit discriminator: contract and client plumbing · started
+- 2026-09-02 22:07 · 045 · D1 unit discriminator: contract and client plumbing · done
+- 2026-09-02 22:07 · 045 · D2 main: project branch of every condense handler · started
+- 2026-09-02 22:07 · 045 · D2 main: project branch of every condense handler · done
+- 2026-09-02 22:23 · 045 · D3 extract level-agnostic condensed panel · started
+- 2026-09-02 22:23 · 045 · D3 extract level-agnostic condensed panel · done
+- 2026-09-02 22:30 · 045 · D4 the Project knowledge tab · started
+- 2026-09-02 22:30 · 045 · D4 the Project knowledge tab · done
+- 2026-09-02 22:43 · 045 · D5 acceptance surface: seed, screenshot, navigation doc · started
+- 2026-09-02 22:43 · 045 · D5 acceptance surface: seed, screenshot, navigation doc · done
+- 2026-09-02 23:15 · 045 · story complete: verify + review pass + docs filed · done

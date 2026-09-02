@@ -1,4 +1,11 @@
 /**
+ * The two condensable levels (story 045): an area or a project. The five
+ * `condense:*` channels take this discriminator instead of each level
+ * duplicating its own set of channels.
+ */
+export type CondenseUnit = 'area' | 'project';
+
+/**
  * The wire shape of a condensation proposal (story 038, D4).
  *
  * `@core/condense/run.ts`'s own `CondenseAreaProposal` (037) has `content` (the
@@ -10,6 +17,7 @@
  * has something to diff against without re-reading the file itself.
  */
 export interface CondenseProposal {
+  unit: CondenseUnit;
   slug: string;
   path: string;
   /** `null` when no artifact exists yet — mirrors `CondenseAreaProposal.baseHash`. */

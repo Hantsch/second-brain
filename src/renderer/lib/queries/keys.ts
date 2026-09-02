@@ -37,7 +37,12 @@ export const qk = {
     notes: (slug: string) => ['areas', 'notes', slug] as const,
   },
   condense: {
-    read: (slug: string) => ['condense', 'read', slug] as const,
+    /** `unit` is part of the key — an area and a project can share a slug,
+        and without the discriminator they'd collide on one cache entry:
+        opening the area's tab would then serve its content, hash and path
+        to the project's tab (and vice versa), asking the human to confirm
+        the wrong artifact (045 review finding). */
+    read: (unit: string, slug: string) => ['condense', 'read', unit, slug] as const,
   },
   journal: {
     list: () => ['journal', 'list'] as const,

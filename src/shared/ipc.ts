@@ -23,6 +23,7 @@ import type {
   ClaudeSession,
   CoachRequest,
   CondenseProposal,
+  CondenseUnit,
   DashboardData,
   DashboardLayout,
   DocLanguage,
@@ -460,20 +461,28 @@ export interface IpcRoutes {
    * a configured model.
    */
   'condense:read': {
-    req: { slug: string };
-    res: { content: string; hash: string; condensedAt: string; sources: string[] } | null;
+    req: { unit: CondenseUnit; slug: string };
+    res: {
+      content: string;
+      hash: string;
+      path: string;
+      condensedAt: string;
+      sources: string[];
+    } | null;
   };
   /**
-   * Runs the condensation over the area's deterministic inputs and hands back a
+   * Runs the condensation over the unit's deterministic inputs and hands back a
    * proposal (Guardrail 2: nothing is written here). Throws `llm-unavailable`,
    * `invalid` (no inputs, or the model's reply could not be attributed to what
    * it read), or `unknown` (the gateway call failed) instead of a proposal.
    */
-  'condense:run': { req: { slug: string }; res: CondenseProposal };
+  'condense:run': { req: { unit: CondenseUnit; slug: string }; res: CondenseProposal };
   /**
    * Accepts a proposal: snapshots whatever currently sits at `proposal.path` (for
    * undo), then writes `proposal.after` hash-guarded against `proposal.baseHash`.
    * A stale hash comes back as `conflict` and leaves the file untouched.
+   * `proposal.unit` carries which level this is — the request has no separate
+   * `unit` field, it rides inside the proposal.
    */
   'condense:accept': {
     req: { proposal: CondenseProposal };
@@ -483,7 +492,10 @@ export interface IpcRoutes {
    * Records a rejection in the artifact's human-owned `Direktiven`/`Directives`
    * section — the next run can read why. Never writes the machine sections.
    */
-  'condense:reject': { req: { slug: string; reason: string }; res: { path: string } };
+  'condense:reject': {
+    req: { unit: CondenseUnit; slug: string; reason: string };
+    res: { path: string };
+  };
   /**
    * Deletes the condensed artifact outright (043, D1) — the way back to "never
    * condensed", unlike `condense:reject`, which keeps the artifact and only
@@ -495,7 +507,7 @@ export interface IpcRoutes {
    * removed outright.
    */
   'condense:delete': {
-    req: { slug: string; expectedHash: string };
+    req: { unit: CondenseUnit; slug: string; expectedHash: string };
     res: { path: string; undoToken: string };
   };
 

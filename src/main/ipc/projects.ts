@@ -68,15 +68,32 @@ async function derive(services: Services, path: string): Promise<Project> {
   return project;
 }
 
-/** The project for a slug — from the index, otherwise from the file. */
-async function projectFor(services: Services, slug: string): Promise<Project> {
+/**
+ * The project for a slug — from the index, otherwise from the file — or `null`
+ * when the vault has no such project.
+ *
+ * Exported for `condense-unit.ts` (story 045, D2): a condense request has to
+ * find a project's folder the same way this module does, or it would derive an
+ * artifact path from a slug nobody resolved. It answers `invalid` instead of
+ * `not-found` for an unresolvable slug, hence the null return rather than
+ * `projectFor`'s throw.
+ */
+export async function findProject(services: Services, slug: string): Promise<Project | null> {
   const found = known(services).find((project) => project.slug === slug);
   if (found !== undefined) return found;
   for (const scope of SCOPES) {
     const path = projectPath(scope, slug);
     if (await store(services).exists(path)) return derive(services, path);
   }
-  throw fail('not-found', `dieses Projekt gibt es nicht: ${slug}`);
+  return null;
+}
+
+/** The project for a slug, or a refusal — the same lookup, for callers that
+    treat a missing project as an error. */
+async function projectFor(services: Services, slug: string): Promise<Project> {
+  const project = await findProject(services, slug);
+  if (project === null) throw fail('not-found', `dieses Projekt gibt es nicht: ${slug}`);
+  return project;
 }
 
 /** Project file and document in one go — both write paths need both. */

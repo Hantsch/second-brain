@@ -32,7 +32,7 @@ export function CondenseRejectDialog({
 
   /* Clears on every path out of the dialog, not only `close()` — a successful
      submit closes the dialog through its own callback (`setRejectOpen(false)`
-     in `AreaCondensedTab`) rather than calling `close()` here, so relying on
+     in `CondensedUnitPanel`) rather than calling `close()` here, so relying on
      `close()` alone would leave the previous reason showing the next time the
      dialog opens. Adjusting state during render (comparing to the previous
      `open` prop) rather than in an effect: no extra render pass, and no

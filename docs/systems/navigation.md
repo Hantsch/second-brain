@@ -80,6 +80,11 @@ addressable states (`NotesScreen.tsx`).
 a project, not a screen beside it. The all-sessions view stays as the entry point for
 agent projects that are not linked to a vault project yet.
 
+Since story 045, an opened project carries a knowledge tab alongside overview and
+sessions, and `?tab=knowledge` rides along with the existing `?p=<slug>` deep link to
+seed which one opens first, the same way an area's `?tab=condensed` is addressable
+(`ProjectDetail.tsx`, `ProjectKnowledgeTab.tsx`).
+
 **Capture and Ask** lose their rail entries and keep their screens as overlays. The
 global capture window stays exactly as it is — it is already the better path.
 
@@ -99,9 +104,6 @@ global capture window stays exactly as it is — it is already the better path.
 
 ## Not part of this
 
-- **Project knowledge condensed from agent sessions** — a feature, not navigation.
-  Needs its own concept: what gets condensed, when, from what, and how the human
-  confirms it.
 - **The dashboard tile system** stays as it is. Only the "unfiled" strip is added.
 - ~~**Journal** is untouched.~~ Its place in the rail is unchanged: notes and the
   journal stay separate, dated day entries with a coach on one side, undated

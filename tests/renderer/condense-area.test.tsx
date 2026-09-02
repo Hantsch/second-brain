@@ -61,6 +61,7 @@ const AREA = { slug: 'gesundheit', title: 'Gesundheit' };
 const ARTIFACT = {
   content: 'Verdichteter Überblick über den Bereich Gesundheit.',
   hash: 'hash-condensed',
+  path: 'areas/gesundheit.condensed.md',
   condensedAt: '2026-08-10T09:00:00+02:00',
   sources: ['areas/gesundheit.md'],
 };
@@ -128,6 +129,23 @@ describe('Verdichtet-Tab (Story 038, D6)', () => {
     expect(screen.queryByRole('button', { name: 'Erneut verdichten' })).toBeNull();
   });
 
+  it('zeigt einen ehrlichen Fehler statt des Leerzustands, wenn das Lesen des Artefakts fehlschlägt', async () => {
+    setLanguage('de');
+    renderTab({
+      ...ROUTED,
+      'condense:read': () => {
+        throw ipcError('invalid');
+      },
+    });
+
+    /* A read failure (e.g. the main-process guard refusing a project whose
+       frontmatter disagrees with its folder) must say so plainly — never
+       fall through to "not condensed yet", which would claim nothing was
+       ever condensed. */
+    expect(await screen.findByText('„Gesundheit“ passt nicht.')).toBeTruthy();
+    expect(screen.queryByText('Noch nicht verdichtet')).toBeNull();
+  });
+
   it('zeigt bei geroutetem Modell ohne Artefakt einen Leerzustand mit Auslöser', async () => {
     setLanguage('de');
     renderTab(ROUTED);
@@ -164,6 +182,7 @@ describe('Verdichtet-Tab (Story 038, D6)', () => {
     ).toBe(true);
 
     resolveRun({
+      unit: 'area',
       slug: AREA.slug,
       path: 'areas/gesundheit.md',
       baseHash: null,
@@ -199,6 +218,7 @@ describe('Verdichtet-Tab (Story 038, D6)', () => {
   it('zeigt nach einem Lauf den Diff mit Übernehmen-Button, schreibt aber nichts von selbst', async () => {
     setLanguage('de');
     const proposal: CondenseProposal = {
+      unit: 'area',
       slug: AREA.slug,
       path: 'areas/gesundheit.md',
       baseHash: 'hash-before',
@@ -220,6 +240,7 @@ describe('Verdichtet-Tab (Story 038, D6)', () => {
   it('verwirft den Vorschlag bei einem Konflikt und zeigt eine Meldung, das Artefakt bleibt lesbar', async () => {
     setLanguage('de');
     const proposal: CondenseProposal = {
+      unit: 'area',
       slug: AREA.slug,
       path: 'areas/gesundheit.md',
       baseHash: 'hash-before',
@@ -247,6 +268,7 @@ describe('Verdichtet-Tab (Story 038, D6)', () => {
   it('lehnt einen Vorschlag mit Begründung ab (D8) — der Vorschlag verschwindet danach', async () => {
     setLanguage('de');
     const proposal: CondenseProposal = {
+      unit: 'area',
       slug: AREA.slug,
       path: 'areas/gesundheit.md',
       baseHash: 'hash-before',
@@ -271,6 +293,7 @@ describe('Verdichtet-Tab (Story 038, D6)', () => {
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Übernehmen' })).toBeNull());
     const rejectCall = sb.calls.find((entry) => entry.channel === 'condense:reject');
     expect(rejectCall?.payload).toEqual({
+      unit: 'area',
       slug: AREA.slug,
       reason: 'Zu ungenau, bitte noch einmal.',
     });
@@ -279,6 +302,7 @@ describe('Verdichtet-Tab (Story 038, D6)', () => {
   it('leert die Begründung nach einer erfolgreichen Ablehnung, statt sie beim nächsten Öffnen erneut zu zeigen', async () => {
     setLanguage('de');
     const proposal: CondenseProposal = {
+      unit: 'area',
       slug: AREA.slug,
       path: 'areas/gesundheit.md',
       baseHash: 'hash-before',
@@ -335,6 +359,7 @@ describe('Verdichtung löschen (Story 043, D2)', () => {
     setLanguage('de');
     let artifactDeleted = false;
     const proposal: CondenseProposal = {
+      unit: 'area',
       slug: AREA.slug,
       path: 'areas/gesundheit.md',
       baseHash: 'hash-before',
@@ -368,7 +393,11 @@ describe('Verdichtung löschen (Story 043, D2)', () => {
 
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     const deleteCall = sb.calls.find((entry) => entry.channel === 'condense:delete');
-    expect(deleteCall?.payload).toEqual({ slug: AREA.slug, expectedHash: ARTIFACT.hash });
+    expect(deleteCall?.payload).toEqual({
+      unit: 'area',
+      slug: AREA.slug,
+      expectedHash: ARTIFACT.hash,
+    });
 
     expect(await screen.findByText('Noch nicht verdichtet')).toBeTruthy();
     expect(screen.queryByText('Verdichteter Überblick über den Bereich Gesundheit.')).toBeNull();

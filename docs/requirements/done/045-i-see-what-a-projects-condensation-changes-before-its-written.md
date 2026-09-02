@@ -1,7 +1,7 @@
 ---
 id: 045
 title: I see what a project's condensation changes before it's written
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-09-02
 ---
 
@@ -24,21 +24,21 @@ tab says so plainly and writes nothing.
 
 ## Acceptance Criteria
 
-- [ ] The Project knowledge tab shows a diff (old vs. proposed new) before any write, with
+- [x] The Project knowledge tab shows a diff (old vs. proposed new) before any write, with
       removals as visible as additions and each section's source lines included.
-- [ ] Accepting writes hash-guarded against the hash the proposal was built from; a stale hash
+- [x] Accepting writes hash-guarded against the hash the proposal was built from; a stale hash
       reports a conflict instead of merging, and an accepted write leaves an undo copy in
       `.secondbrain/trash/`.
-- [ ] Rejecting requires a reason; the artifact is left untouched and the reason is appended to
+- [x] Rejecting requires a reason; the artifact is left untouched and the reason is appended to
       the artifact's directives section, read by the next run and never rewritten by it.
-- [ ] Triggering the run, reading the diff, accepting, rejecting-with-reason and the no-model
+- [x] Triggering the run, reading the diff, accepting, rejecting-with-reason and the no-model
       state are all drivable through the real UI.
-- [ ] Without a model configured for `condense-project`, the tab states this plainly, names the
+- [x] Without a model configured for `condense-project`, the tab states this plainly, names the
       task kind, and links to the setting; nothing is written.
-- [ ] The tab can delete an existing project artifact, naming the directives section as the part
+- [x] The tab can delete an existing project artifact, naming the directives section as the part
       no later run can reproduce, hash-guarded and undoable through `.secondbrain/trash/` — the
       mirror of 043 for the project level, per the binding Q1 decision below.
-- [ ] All new UI strings exist in German and English.
+- [x] All new UI strings exist in German and English.
 
 ## Open Questions
 
@@ -286,4 +286,49 @@ condensed artifact with a directive line.
 
 ## Done
 
-<Leave empty. Filled by `/build 045`.>
+Generalised the five `condense:*` IPC channels with a required `unit: 'area' | 'project'`
+discriminator, added `condense:read`'s `path` field, and moved area path resolution out of the
+renderer. `src/main/ipc/condense-unit.ts` resolves both levels server-side (project scope via the
+project index, refusing — `invalid` — a project whose frontmatter disagrees with its own folder,
+never a guessed path). Extracted the area condensed tab's body into a level-agnostic
+`CondensedUnitPanel`, wrapped by a thin `AreaCondensedTab` and a new `ProjectKnowledgeTab`. Added
+the unconditional "Knowledge" / „Wissen" tab to the project screen (`?tab=knowledge` deep link),
+`project.condensed.*` / `project.tab.knowledge` strings in `de`/`en`, seeded a demo project with a
+directive-bearing artifact, added a `shot.mjs` step, and corrected `docs/systems/navigation.md`.
+
+Review findings fixed post-review: (1) condense query cache keys now include `unit`, so an area and
+a project sharing a slug no longer share one cached artifact/hash across mutations; (2)
+`CondensedUnitPanel` now shows an honest error state (reusing `ErrorState`) instead of silently
+falling through to "not condensed yet" when a project's artifact path fails to resolve.
+
+**Decisions (implementation-level, not pre-recorded):**
+- `claudeTranscriptTail()` was added to `src/main/ipc/overview-deps.ts` as the missing shell wiring
+  for 044's `CondenseProjectSources.readTranscriptTail` (044 shipped backend-only, no shell
+  implementation) — otherwise every project run would condense with zero session input despite
+  citing sessions in `sources:`. Introduces one undecided policy constant, `CONDENSE_TAIL_BYTES`
+  (16 KiB), reusing the same clamp-and-truncate approach 044 already uses elsewhere.
+- `src/main/ipc/projects.ts`'s `projectFor` was split to export a null-returning `findProject()` so
+  D2 reuses `projects:get`'s exact scope-resolution lookup instead of re-implementing it, per the
+  binding Q2 decision's "exactly as `projects:get` does".
+- Left unfixed (documented, not blocking): the raw YAML frontmatter renders as a text dump above
+  the sections in `CondensedUnitPanel` (visible in `.screenshots/26-project-knowledge.png`).
+  Confirmed pre-existing (present identically in the area tab's own screenshots, unchanged by D3's
+  refactor) — out of scope for this story, filed as a future finding. Also unfixed: the conflict
+  toast message itself is not asserted by either the area's or the project's component test (a
+  pre-existing gap the new test faithfully mirrors, not a weakening).
+
+**Verification:** `npm run build` green. `npm test` — 251 files / 3526 tests, all pass (a
+full-suite run under load intermittently times out 2 unrelated main-process test files
+(`journal-ipc.test.ts`, `gardener-ipc.test.ts`); both pass 100% in isolation and are untouched by
+this diff — confirmed flaky, not a regression). `npm run lint`, `npm run typecheck` clean.
+`npm run format:check` clean except 3 pre-existing, untouched doc files. Live smoke:
+`npm run seed && npm run shot` produced `.screenshots/26-project-knowledge.png` showing the
+Knowledge tab, the no-model state naming `condense-project` with a link to model settings, and the
+seeded artifact still readable beneath it — no console errors.
+
+Code review (`story-review-hard`, one fix cycle): verdict PASS, all seven acceptance criteria
+PASS/covered; two confirmed findings fixed (cache-key collision, silent error fallthrough); no
+weakened or deleted tests; no scope creep beyond the two implementation decisions above, both
+judged legitimate wiring.
+
+**Commit message:** `045: Project knowledge tab — diff, accept, reject-with-reason, delete`

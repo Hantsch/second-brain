@@ -104,6 +104,17 @@ export const DEEP_STATES = [
     wait: '.sb-condensed-artifact',
   },
   {
+    /* Story 045, D5: the knowledge tab of a project, opened straight from the
+       address (`?p=<slug>&tab=knowledge`, ProjectDetail.tsx). `orbit-sso-migration`
+       is the project the seed condensed (scripts/seed/projects.mjs), so this shows
+       a real artifact, not an empty state — the same reasoning as `notes-condensed`
+       above, one level down. `.sb-condensed-artifact` only renders once the
+       existing digest has loaded (CondensedUnitPanel.tsx, shared with the area). */
+    id: 'project-knowledge',
+    hash: '/projects?p=orbit-sso-migration&tab=knowledge',
+    wait: '.sb-condensed-artifact',
+  },
+  {
     id: 'module-page',
     hash: '/knowledge?m=identity-management&p=modules/identity-management/wiki/concepts/token-lebensdauer.md',
     wait: '.sb-md',

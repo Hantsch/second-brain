@@ -95,12 +95,16 @@ export const api = {
     moveNote: (request: IpcRequest<'areas:moveNote'>) => call('areas:moveNote', request),
   },
   condense: {
-    read: (slug: string) => call('condense:read', { slug }),
-    run: (slug: string) => call('condense:run', { slug }),
+    read: (unit: IpcRequest<'condense:read'>['unit'], slug: string) =>
+      call('condense:read', { unit, slug }),
+    run: (unit: IpcRequest<'condense:run'>['unit'], slug: string) =>
+      call('condense:run', { unit, slug }),
     accept: (proposal: IpcRequest<'condense:accept'>['proposal']) =>
       call('condense:accept', { proposal }),
-    reject: (slug: string, reason: string) => call('condense:reject', { slug, reason }),
-    delete: (slug: string, expectedHash: string) => call('condense:delete', { slug, expectedHash }),
+    reject: (unit: IpcRequest<'condense:reject'>['unit'], slug: string, reason: string) =>
+      call('condense:reject', { unit, slug, reason }),
+    delete: (unit: IpcRequest<'condense:delete'>['unit'], slug: string, expectedHash: string) =>
+      call('condense:delete', { unit, slug, expectedHash }),
   },
   journal: {
     list: (limit?: number) => call('journal:list', limit === undefined ? {} : { limit }),

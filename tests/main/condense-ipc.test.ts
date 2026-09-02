@@ -3,6 +3,12 @@
  * core level (`tests/core/condense/*`), so this file is about what the IPC
  * seam adds — the `CondenseProposal` wire shape, the accept path's
  * snapshot-then-write, and the conflict a stale hash must produce.
+ *
+ * Story 045, D2 adds the second level: the same five channels with
+ * `unit: 'project'`. What is worth testing there is not the run (044 covers it)
+ * but the path — a project's artifact path comes from a scope lookup through the
+ * index, not from a slug template, so the tests below pin down that every write,
+ * snapshot and delete lands in that project's own folder and nowhere else.
  */
 
 import { mkdtemp, rm } from 'node:fs/promises';
@@ -14,6 +20,7 @@ import type { GardenerContext } from '@core/gardener';
 import type { IpcChannel, IpcRequest, IpcResponse } from '@shared/ipc';
 import type { CondenseProposal } from '@shared/types';
 import { gardenerIndex } from '../../src/main/ipc/gardener-deps';
+import { CLAUDE_PROJECTS_DIR, WORK_PROJECT } from '../fixtures';
 import { createFetchFake, jsonResponse } from '../fakes/llm';
 import { createTempVault } from '../helpers/vault';
 import type { TempVault } from '../helpers/vault';
@@ -32,6 +39,14 @@ type Handlers = Partial<{
 
 const CONDENSED_PATH = 'areas/gesundheit.condensed.md';
 const AREA_PATH = 'areas/gesundheit.md';
+
+/* The fixture vault's work project, and the two paths of its folder. The private
+   fixture project is the neighbour every path assertion is measured against: no
+   request about `kundenportal-relaunch` may ever touch it. */
+const PROJECT_SLUG = WORK_PROJECT;
+const PROJECT_FILE = `projects/work/${WORK_PROJECT}/project.md`;
+const PROJECT_CONDENSED = `projects/work/${WORK_PROJECT}/condensed.md`;
+const OTHER_PROJECT_CONDENSED = 'projects/private/hochbeet-bauen/condensed.md';
 
 async function createHarness(userDataDir: string) {
   const { FsVaultStore } = await import('@core/vault');
@@ -80,11 +95,15 @@ function condensationDueFindings(services: Harness['services']) {
   return condensationDueCheck.run(ctx);
 }
 
-/** Routes `condense-area` to a fake provider that answers with the given three
-    machine sections — the minimum a `condense:run` needs to reach `kind: 'proposal'`
-    instead of falling back to `llm-unavailable`. Mirrors the routing helper
-    `gardener-ipc.test.ts` uses for `journal-loose-ends`. */
-async function routeCondenseAreaTo(harness: Harness, sections: Record<string, unknown>) {
+/** Routes one condense task to a fake provider that answers with the given
+    machine sections — the minimum a `condense:run` needs to reach
+    `kind: 'proposal'` instead of falling back to `llm-unavailable`. Mirrors the
+    routing helper `gardener-ipc.test.ts` uses for `journal-loose-ends`. */
+async function routeCondenseTo(
+  harness: Harness,
+  task: 'condense-area' | 'condense-project',
+  sections: Record<string, unknown>,
+) {
   await harness.services.settings.setVaultSection('providers', [
     {
       id: 'local-1',
@@ -99,7 +118,7 @@ async function routeCondenseAreaTo(harness: Harness, sections: Record<string, un
     },
   ]);
   await harness.services.settings.setVaultSection('routing', {
-    tasks: { 'condense-area': { providerId: 'local-1', model: 'qwen2.5:14b' } },
+    tasks: { [task]: { providerId: 'local-1', model: 'qwen2.5:14b' } },
     defaults: {},
   });
   const fake = createFetchFake(() =>
@@ -120,18 +139,27 @@ describe('condense channels in main', () => {
     userDataDir = await mkdtemp(join(tmpdir(), 'sb-userdata-condense-'));
     harness = await createHarness(userDataDir);
     await harness.services.openVault(vault.root);
+    /* The sessions of a project condensation are read from disk, and
+       `overview.useClaudeSessions` defaults to true — so this points the reader
+       at the fixture sessions. Without it a project run would read the *real*
+       `~/.claude` of whoever runs the suite. */
+    await harness.services.settings.patchVault({
+      overview: { claudeProjectsDir: CLAUDE_PROJECTS_DIR },
+    });
   });
 
   afterEach(async () => {
     await harness.services.closeVault();
     await vault.cleanup();
     await rm(userDataDir, { recursive: true, force: true });
+    /* A `fetch` stub from one test must not answer for the next one. */
+    vi.unstubAllGlobals();
   });
 
   // ── Reading ────────────────────────────────────────────────────────────────
 
   it('reads null when the area has never been condensed', async () => {
-    expect(await harness.call('condense:read', { slug: 'gesundheit' })).toBeNull();
+    expect(await harness.call('condense:read', { unit: 'area', slug: 'gesundheit' })).toBeNull();
   });
 
   it('reads the existing artifact with its hash and sources', async () => {
@@ -151,7 +179,7 @@ describe('condense channels in main', () => {
     ].join('\n');
     await vault.write(CONDENSED_PATH, content);
 
-    const read = await harness.call('condense:read', { slug: 'gesundheit' });
+    const read = await harness.call('condense:read', { unit: 'area', slug: 'gesundheit' });
 
     expect(read?.content).toBe(content);
     expect(read?.condensedAt).toBe('2026-08-01T10:00:00+02:00');
@@ -162,7 +190,9 @@ describe('condense channels in main', () => {
   // ── Running ────────────────────────────────────────────────────────────────
 
   it('says which task has no model configured, without writing anything', async () => {
-    await expect(harness.call('condense:run', { slug: 'gesundheit' })).rejects.toMatchObject({
+    await expect(
+      harness.call('condense:run', { unit: 'area', slug: 'gesundheit' }),
+    ).rejects.toMatchObject({
       code: 'llm-unavailable',
       detail: { task: 'condense-area' },
     });
@@ -173,6 +203,7 @@ describe('condense channels in main', () => {
 
   function proposalFor(after: string, baseHash: string | null): CondenseProposal {
     return {
+      unit: 'area',
       slug: 'gesundheit',
       path: CONDENSED_PATH,
       baseHash,
@@ -273,6 +304,7 @@ describe('condense channels in main', () => {
 
   it('records a rejection as a minimal artifact when none existed yet', async () => {
     const result = await harness.call('condense:reject', {
+      unit: 'area',
       slug: 'gesundheit',
       reason: 'Der Ton trifft es nicht.',
     });
@@ -285,9 +317,14 @@ describe('condense channels in main', () => {
   });
 
   it('appends a second rejection to the existing directives, keeping the first', async () => {
-    await harness.call('condense:reject', { slug: 'gesundheit', reason: 'Erster Grund.' });
+    await harness.call('condense:reject', {
+      unit: 'area',
+      slug: 'gesundheit',
+      reason: 'Erster Grund.',
+    });
 
     const result = await harness.call('condense:reject', {
+      unit: 'area',
       slug: 'gesundheit',
       reason: 'Zweiter Grund.',
     });
@@ -300,7 +337,7 @@ describe('condense channels in main', () => {
 
   it('refuses a blank reason without writing anything', async () => {
     await expect(
-      harness.call('condense:reject', { slug: 'gesundheit', reason: '   ' }),
+      harness.call('condense:reject', { unit: 'area', slug: 'gesundheit', reason: '   ' }),
     ).rejects.toMatchObject({ code: 'invalid' });
 
     expect(await vault.exists(CONDENSED_PATH)).toBe(false);
@@ -325,7 +362,11 @@ describe('condense channels in main', () => {
 
     try {
       await expect(
-        harness.call('condense:reject', { slug: 'gesundheit', reason: 'Zu ungenau.' }),
+        harness.call('condense:reject', {
+          unit: 'area',
+          slug: 'gesundheit',
+          reason: 'Zu ungenau.',
+        }),
       ).rejects.toMatchObject({ code: 'conflict' });
     } finally {
       spy.mockRestore();
@@ -343,6 +384,7 @@ describe('condense channels in main', () => {
     const hash = (await vault.store.read(CONDENSED_PATH))?.hash ?? '';
 
     const result = await harness.call('condense:delete', {
+      unit: 'area',
       slug: 'gesundheit',
       expectedHash: hash,
     });
@@ -362,9 +404,9 @@ describe('condense channels in main', () => {
     await harness.services.requireIndex().refresh?.();
     const hash = (await vault.store.read(CONDENSED_PATH))?.hash ?? '';
 
-    await harness.call('condense:delete', { slug: 'gesundheit', expectedHash: hash });
+    await harness.call('condense:delete', { unit: 'area', slug: 'gesundheit', expectedHash: hash });
 
-    expect(await harness.call('condense:read', { slug: 'gesundheit' })).toBeNull();
+    expect(await harness.call('condense:read', { unit: 'area', slug: 'gesundheit' })).toBeNull();
     const docs = gardenerIndex(harness.services).index().docs;
     expect(docs.some((doc) => doc.path === CONDENSED_PATH)).toBe(false);
   });
@@ -374,7 +416,11 @@ describe('condense channels in main', () => {
     await vault.write(CONDENSED_PATH, content);
 
     await expect(
-      harness.call('condense:delete', { slug: 'gesundheit', expectedHash: 'von-vorgestern' }),
+      harness.call('condense:delete', {
+        unit: 'area',
+        slug: 'gesundheit',
+        expectedHash: 'von-vorgestern',
+      }),
     ).rejects.toMatchObject({ code: 'conflict' });
 
     expect(await vault.read(CONDENSED_PATH)).toBe(content);
@@ -384,7 +430,11 @@ describe('condense channels in main', () => {
 
   it('refuses to delete an artifact that does not exist', async () => {
     await expect(
-      harness.call('condense:delete', { slug: 'gesundheit', expectedHash: 'irgendein-hash' }),
+      harness.call('condense:delete', {
+        unit: 'area',
+        slug: 'gesundheit',
+        expectedHash: 'irgendein-hash',
+      }),
     ).rejects.toMatchObject({ code: 'invalid' });
   });
 
@@ -394,7 +444,7 @@ describe('condense channels in main', () => {
     await harness.services.requireIndex().refresh?.();
     const hash = (await vault.store.read(CONDENSED_PATH))?.hash ?? '';
 
-    await harness.call('condense:delete', { slug: 'gesundheit', expectedHash: hash });
+    await harness.call('condense:delete', { unit: 'area', slug: 'gesundheit', expectedHash: hash });
 
     const findings = condensationDueFindings(harness.services);
     expect(findings).toHaveLength(1);
@@ -408,20 +458,21 @@ describe('condense channels in main', () => {
     // A rejection first, so the artifact has a non-empty "Direktiven" section —
     // the state a plain reject (038) would leave behind.
     await harness.call('condense:reject', {
+      unit: 'area',
       slug: 'gesundheit',
       reason: 'Der Ton trifft es nicht.',
     });
     const hash = (await vault.store.read(CONDENSED_PATH))?.hash ?? '';
 
-    await harness.call('condense:delete', { slug: 'gesundheit', expectedHash: hash });
+    await harness.call('condense:delete', { unit: 'area', slug: 'gesundheit', expectedHash: hash });
 
-    await routeCondenseAreaTo(harness, {
+    await routeCondenseTo(harness, 'condense-area', {
       state: { text: 'Rücken und Schlaf im Blick.', sources: [AREA_PATH] },
       patterns: { text: 'Kurze Pausen wirken mehr als langes Liegen.', sources: [AREA_PATH] },
       open: { text: 'Themen bleiben aktuell.', sources: [AREA_PATH] },
     });
 
-    const proposal = await harness.call('condense:run', { slug: 'gesundheit' });
+    const proposal = await harness.call('condense:run', { unit: 'area', slug: 'gesundheit' });
 
     expect(proposal.after).not.toContain('Der Ton trifft es nicht.');
     const directivesBody = proposal.after.split(/## (?:Direktiven|Directives)/)[1]?.trim() ?? '';
@@ -430,8 +481,283 @@ describe('condense channels in main', () => {
 
   it('requires an open vault', async () => {
     await harness.services.closeVault();
-    await expect(harness.call('condense:read', { slug: 'gesundheit' })).rejects.toMatchObject({
+    await expect(
+      harness.call('condense:read', { unit: 'area', slug: 'gesundheit' }),
+    ).rejects.toMatchObject({
       code: 'no-vault',
     });
+  });
+
+  // ── The project level (045, D2) ──────────────────────────────────────────
+
+  /** A project artifact as a run would leave it: the four machine sections of
+      docs/VAULT-FORMAT.md, in German, plus the frontmatter contract. */
+  function projectArtifact(state: string): string {
+    return [
+      '---',
+      'type: condensed',
+      'title: Kundenportal Relaunch — verdichtet',
+      'condensed_at: 2026-08-01T10:00:00+02:00',
+      'sources:',
+      `  - ${PROJECT_FILE}`,
+      '---',
+      '',
+      '## Stand',
+      '',
+      state,
+      '',
+      '## Nächster Schritt',
+      '',
+      'Abnahmeprotokoll mit Miriam durchgehen.',
+      '',
+      '## Wartet auf',
+      '',
+      'Jonas: Fallback für abgelaufene Sitzungen.',
+      '',
+      '## Gelernt',
+      '',
+      'Sammelaufrufe schlagen Einzelabfragen.',
+      '',
+    ].join('\n');
+  }
+
+  function projectProposal(after: string, baseHash: string | null): CondenseProposal {
+    return {
+      unit: 'project',
+      slug: PROJECT_SLUG,
+      path: PROJECT_CONDENSED,
+      baseHash,
+      before: '',
+      after,
+      sources: [PROJECT_FILE],
+    };
+  }
+
+  /** Every machine section cites `project.md`, which the run always reads — so
+      the reply passes attribution without the test having to predict which
+      journal days or sessions came along. */
+  function projectSections(): Record<string, unknown> {
+    return {
+      state: { text: 'Die Angebotsliste liegt auf dem Testsystem.', sources: [PROJECT_FILE] },
+      'next-step': { text: 'Abnahmeprotokoll mit Miriam.', sources: [PROJECT_FILE] },
+      'waiting-on': { text: 'Jonas liefert den Fallback.', sources: [PROJECT_FILE] },
+      learned: { text: 'Einzelabfragen pro Zeile kosten am meisten.', sources: [PROJECT_FILE] },
+    };
+  }
+
+  it('reads null when the project has never been condensed', async () => {
+    expect(await harness.call('condense:read', { unit: 'project', slug: PROJECT_SLUG })).toBeNull();
+  });
+
+  it('reads a project artifact and answers with the path inside its own folder', async () => {
+    const content = projectArtifact('Auf dem Testsystem.');
+    await vault.write(PROJECT_CONDENSED, content);
+
+    const read = await harness.call('condense:read', { unit: 'project', slug: PROJECT_SLUG });
+
+    expect(read?.path).toBe(PROJECT_CONDENSED);
+    expect(read?.content).toBe(content);
+    expect(read?.condensedAt).toBe('2026-08-01T10:00:00+02:00');
+    expect(read?.sources).toEqual([PROJECT_FILE]);
+    expect(read?.hash).toBe((await vault.store.read(PROJECT_CONDENSED))?.hash);
+  });
+
+  it('refuses an unknown project slug on every channel, without guessing a path', async () => {
+    const slug = 'gibt-es-nicht';
+
+    await expect(harness.call('condense:read', { unit: 'project', slug })).rejects.toMatchObject({
+      code: 'invalid',
+    });
+    await expect(harness.call('condense:run', { unit: 'project', slug })).rejects.toMatchObject({
+      code: 'invalid',
+    });
+    await expect(
+      harness.call('condense:accept', {
+        proposal: {
+          ...projectProposal('egal', null),
+          slug,
+          path: `projects/work/${slug}/condensed.md`,
+        },
+      }),
+    ).rejects.toMatchObject({ code: 'invalid' });
+    await expect(
+      harness.call('condense:reject', { unit: 'project', slug, reason: 'Passt nicht.' }),
+    ).rejects.toMatchObject({ code: 'invalid' });
+    await expect(
+      harness.call('condense:delete', { unit: 'project', slug, expectedHash: 'irgendeiner' }),
+    ).rejects.toMatchObject({ code: 'invalid' });
+
+    expect(await vault.exists(`projects/work/${slug}/condensed.md`)).toBe(false);
+    expect(await vault.exists(`projects/private/${slug}/condensed.md`)).toBe(false);
+  });
+
+  it('runs a project and proposes an artifact inside that project’s own folder', async () => {
+    const fake = await routeCondenseTo(harness, 'condense-project', projectSections());
+
+    const proposal = await harness.call('condense:run', { unit: 'project', slug: PROJECT_SLUG });
+
+    expect(proposal.unit).toBe('project');
+    expect(proposal.slug).toBe(PROJECT_SLUG);
+    expect(proposal.path).toBe(PROJECT_CONDENSED);
+    expect(proposal.baseHash).toBeNull();
+    expect(proposal.before).toBe('');
+    expect(proposal.after).toContain('type: condensed');
+    expect(proposal.after).toContain('## Stand');
+    expect(proposal.sources).toContain(PROJECT_FILE);
+    // Guardrail 2: a run proposes; the file appears only on accept.
+    expect(await vault.exists(PROJECT_CONDENSED)).toBe(false);
+    // The linked fixture session is read and cited as its agent ref (044, D12),
+    // and its transcript tail — read here in the shell — reached the prompt.
+    expect(proposal.sources.some((source) => source.startsWith('agent:claude/'))).toBe(true);
+    const sent = JSON.stringify(fake.calls[0]?.body ?? {});
+    expect(sent).toContain('bei 400 Angeboten sind das 400 Abfragen');
+    expect(String(fake.calls[0]?.url)).toContain('localhost');
+  });
+
+  it('names condense-project when no model is configured, and writes nothing', async () => {
+    await expect(
+      harness.call('condense:run', { unit: 'project', slug: PROJECT_SLUG }),
+    ).rejects.toMatchObject({ code: 'llm-unavailable', detail: { task: 'condense-project' } });
+
+    expect(await vault.exists(PROJECT_CONDENSED)).toBe(false);
+  });
+
+  it('accepts a project proposal over an existing artifact and leaves an undo copy', async () => {
+    const before = projectArtifact('Alt.');
+    await vault.write(PROJECT_CONDENSED, before);
+    const hash = (await vault.store.read(PROJECT_CONDENSED))?.hash ?? '';
+    const after = projectArtifact('Neu.');
+
+    const result = await harness.call('condense:accept', {
+      proposal: projectProposal(after, hash),
+    });
+
+    expect(result.path).toBe(PROJECT_CONDENSED);
+    expect(await vault.read(PROJECT_CONDENSED)).toBe(after);
+    expect(result.hash).toBe((await vault.store.read(PROJECT_CONDENSED))?.hash);
+    expect(result.undoToken).not.toBeNull();
+    const allPaths = await vault.store.list({ includeInternal: true });
+    expect(allPaths.some((path) => path.includes('trash'))).toBe(true);
+    // The copy in the trash is the version the diff was built from, byte for byte.
+    await vault.store.undo(result.undoToken ?? '');
+    expect(await vault.read(PROJECT_CONDENSED)).toBe(before);
+    expect(harness.events).toHaveBeenCalledWith('event:vault-changed', {
+      paths: [PROJECT_CONDENSED],
+      external: false,
+    });
+  });
+
+  it('refuses a stale project hash: file byte-identical, no trash entry, no neighbour touched', async () => {
+    const before = projectArtifact('Alt.');
+    await vault.write(PROJECT_CONDENSED, before);
+
+    await expect(
+      harness.call('condense:accept', {
+        proposal: projectProposal(projectArtifact('Neu.'), 'von-vorgestern'),
+      }),
+    ).rejects.toMatchObject({ code: 'conflict' });
+
+    expect(await vault.read(PROJECT_CONDENSED)).toBe(before);
+    const allPaths = await vault.store.list({ includeInternal: true });
+    expect(allPaths.some((path) => path.includes('trash'))).toBe(false);
+    expect(await vault.exists(OTHER_PROJECT_CONDENSED)).toBe(false);
+  });
+
+  it('accept derives the project path from the slug, not from a tampered proposal.path', async () => {
+    const before = projectArtifact('Alt.');
+    await vault.write(PROJECT_CONDENSED, before);
+    const hash = (await vault.store.read(PROJECT_CONDENSED))?.hash ?? '';
+    const after = projectArtifact('Neu.');
+    /* A path pointing at the *other* fixture project: the request names
+       `kundenportal-relaunch`, so nothing may happen in `hochbeet-bauen`. */
+    const tampered: CondenseProposal = {
+      ...projectProposal(after, hash),
+      path: OTHER_PROJECT_CONDENSED,
+    };
+
+    const result = await harness.call('condense:accept', { proposal: tampered });
+
+    expect(result.path).toBe(PROJECT_CONDENSED);
+    expect(await vault.read(PROJECT_CONDENSED)).toBe(after);
+    expect(await vault.exists(OTHER_PROJECT_CONDENSED)).toBe(false);
+  });
+
+  it('a project rejection appends one directive line and touches no machine section', async () => {
+    const before = projectArtifact('Auf dem Testsystem.');
+    await vault.write(PROJECT_CONDENSED, before);
+
+    const result = await harness.call('condense:reject', {
+      unit: 'project',
+      slug: PROJECT_SLUG,
+      reason: 'Der nächste Schritt ist zu unkonkret.',
+    });
+
+    expect(result.path).toBe(PROJECT_CONDENSED);
+    const raw = (await vault.read(PROJECT_CONDENSED)) ?? '';
+    /* Everything up to the new directives section is the file as it was — the
+       four machine sections and the frontmatter byte for byte, so the reason was
+       spliced in rather than the body recomposed. */
+    const [head, directives = ''] = raw.split('## Direktiven');
+    expect(head).toBe(`${before.replace(/\s+$/, '')}\n\n`);
+    expect(directives.trim()).toBe('Der nächste Schritt ist zu unkonkret.');
+  });
+
+  it('deletes a project artifact, offers a restorable undo token, and then reads null', async () => {
+    const content = projectArtifact('Auf dem Testsystem.');
+    await vault.write(PROJECT_CONDENSED, content);
+    await harness.services.requireIndex().refresh?.();
+    const hash = (await vault.store.read(PROJECT_CONDENSED))?.hash ?? '';
+
+    const result = await harness.call('condense:delete', {
+      unit: 'project',
+      slug: PROJECT_SLUG,
+      expectedHash: hash,
+    });
+
+    expect(result.path).toBe(PROJECT_CONDENSED);
+    expect(result.undoToken.length).toBeGreaterThan(0);
+    expect(await vault.exists(PROJECT_CONDENSED)).toBe(false);
+    expect(await harness.call('condense:read', { unit: 'project', slug: PROJECT_SLUG })).toBeNull();
+
+    await vault.store.undo(result.undoToken);
+
+    expect(await vault.read(PROJECT_CONDENSED)).toBe(content);
+  });
+
+  it('refuses to delete a project artifact that does not exist', async () => {
+    await expect(
+      harness.call('condense:delete', {
+        unit: 'project',
+        slug: PROJECT_SLUG,
+        expectedHash: 'irgendein-hash',
+      }),
+    ).rejects.toMatchObject({ code: 'invalid' });
+  });
+
+  it('reads, rejects and deletes a project artifact without a model and without a network', async () => {
+    /* Nothing is routed in this test: only `condense:run` needs a model. A
+       `fetch` that would answer is installed anyway, so a request escaping to
+       the network shows up as a recorded call instead of as a green test. */
+    const fake = createFetchFake(() => jsonResponse({}));
+    vi.stubGlobal('fetch', fake.fetch);
+    await vault.write(PROJECT_CONDENSED, projectArtifact('Auf dem Testsystem.'));
+
+    const read = await harness.call('condense:read', { unit: 'project', slug: PROJECT_SLUG });
+    expect(read?.path).toBe(PROJECT_CONDENSED);
+
+    await harness.call('condense:reject', {
+      unit: 'project',
+      slug: PROJECT_SLUG,
+      reason: 'Zu allgemein.',
+    });
+    const hash = (await vault.store.read(PROJECT_CONDENSED))?.hash ?? '';
+    const deleted = await harness.call('condense:delete', {
+      unit: 'project',
+      slug: PROJECT_SLUG,
+      expectedHash: hash,
+    });
+
+    expect(deleted.path).toBe(PROJECT_CONDENSED);
+    expect(fake.calls).toHaveLength(0);
   });
 });

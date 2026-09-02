@@ -1,39 +1,39 @@
-/* Wiring for the condensation channels (story 038, D4): read the existing
- * artifact, run a proposal, accept it, or record a rejection.
+/* Wiring for the condensation channels (story 038, D4; project level 045, D2):
+ * read the existing artifact, run a proposal, accept it, record a rejection, or
+ * delete it.
  *
- * Two decisions that aren't otherwise visible in the code:
+ * Three decisions that aren't otherwise visible in the code:
  *
  * - **`condense:accept` does not go through `@core/condense/write.ts`'s
- *   `writeCondensedArea()`.** That helper only knows 037's own
- *   `CondenseAreaProposal` (`.content`), while the wire shape here is
+ *   `writeCondensedArea()`/`writeCondensedProject()`.** Those helpers only know
+ *   the core runs' own proposals (`.content`), while the wire shape here is
  *   `CondenseProposal` (`.after`) — the two differ on purpose (see
  *   `src/shared/types/condense.ts`). More importantly, accepting also has to
- *   `snapshot()` the file first (for undo), which `writeCondensedArea()` never
- *   does — it was built for a caller that doesn't need undo. So this handler
- *   calls `VaultStore.snapshot()` then `writeText()` directly rather than
- *   forcing a proposal through a helper whose contract doesn't fit.
+ *   `snapshot()` the file first (for undo), which those helpers never do — they
+ *   were built for a caller that doesn't need undo. So this handler calls
+ *   `VaultStore.snapshot()` then `writeText()` directly rather than forcing a
+ *   proposal through a helper whose contract doesn't fit.
  * - **The index needs a full `readonly IndexedDoc[]`,** not the narrower lists
  *   the shell's `IndexLike` otherwise exposes (`areas()`, `todos()`, ...) —
- *   `condenseArea()`'s own input selection reads notes, todos and journal days
- *   itself from the raw doc list. The same structural-check pattern as
+ *   both runs' input selection reads notes, todos and journal days itself from
+ *   the raw doc list. The same structural-check pattern as
  *   `wiki-bridge.ts`/`overview-deps.ts` gets it: `index()` is the one method
  *   every real `IndexService` has and this module needs.
+ * - **Every level-specific decision lives in `./condense-unit`.** Which file a
+ *   request addresses, which run produces it and which task kind it needs are
+ *   resolved there; the five handlers below are level-agnostic and keep exactly
+ *   one pre-check, one snapshot, one hash-guarded write and one trash move
+ *   between them, for the area and the project alike.
  */
 
 import { FsVaultStore } from '@core/vault';
 import { sha256 } from '@core/vault/hash';
 import { VaultConflictError } from '@core/vault/types';
 import type { VaultStore } from '@core/vault/types';
-import {
-  appendDirective,
-  condenseArea,
-  condensedAreaPath,
-  parseCondensedArtifact,
-  partialInputsNote,
-} from '@core/condense';
-import type { CondenseAreaDeps } from '@core/condense';
+import { appendDirective, partialInputsNote } from '@core/condense';
 import type { IndexedDoc } from '@core/index/types';
 import type { CondenseProposal } from '@shared/types';
+import { artifactHeader, resolveCondenseUnit, runCondenseUnit } from './condense-unit';
 import type { HandlerMap } from './registry';
 import { defineHandlers, fail } from './registry';
 import { docLanguage, settle } from './wiki-bridge';
@@ -68,41 +68,48 @@ function condenseStore(services: Services): VaultStore {
 
 export function condenseHandlers(services: Services): HandlerMap {
   return defineHandlers({
-    'condense:read': async ({ slug }) => {
-      const path = condensedAreaPath(slug);
-      const content = await condenseStore(services).readText(path);
+    'condense:read': async ({ unit, slug }) => {
+      const target = await resolveCondenseUnit(services, unit, slug);
+      const content = await condenseStore(services).readText(target.path);
       if (content === null) return null;
-      const artifact = parseCondensedArtifact(content);
+      const header = artifactHeader(target.unit, content);
       // The hash describes exactly the text just read — not a second, independent
       // read of the file, which could observe a different state under a
       // concurrent external edit and return a hash for content that isn't `content`.
       const hash = sha256(content);
-      return { content, hash, condensedAt: artifact.condensedAt, sources: [...artifact.sources] };
+      return {
+        content,
+        hash,
+        path: target.path,
+        condensedAt: header.condensedAt,
+        sources: header.sources,
+      };
     },
 
-    'condense:run': async ({ slug }) => {
+    'condense:run': async ({ unit, slug }) => {
+      const target = await resolveCondenseUnit(services, unit, slug);
       const store = condenseStore(services);
-      const path = condensedAreaPath(slug);
-      const existingText = await store.readText(path);
-      const deps: CondenseAreaDeps = {
+      const existingText = await store.readText(target.path);
+      const language = docLanguage(services);
+      const result = await runCondenseUnit(services, target, {
         docs: condenseDocs(services),
         gateway: createGateway(services),
-        docLanguage: docLanguage(services),
-        ...(existingText === null ? {} : { existing: existingText }),
-      };
-      const result = await condenseArea(deps, slug);
+        docLanguage: language,
+        existing: existingText,
+      });
 
       if (result.kind === 'proposal') {
         const proposal: CondenseProposal = {
-          slug: result.slug,
-          path: result.path,
+          unit: target.unit,
+          slug: target.slug,
+          path: target.path,
           baseHash: result.baseHash,
           before: existingText ?? '',
           after: result.content,
           sources: [...result.sources],
-          ...(result.truncated === null
+          ...(result.truncatedCount === null
             ? {}
-            : { partialInputs: partialInputsNote(result.truncated.count, docLanguage(services)) }),
+            : { partialInputs: partialInputsNote(result.truncatedCount, language) }),
         };
         return proposal;
       }
@@ -126,9 +133,11 @@ export function condenseHandlers(services: Services): HandlerMap {
 
     'condense:accept': async ({ proposal }) => {
       const store = condenseStore(services);
-      // Derived from the slug, not taken from `proposal.path` — every other
-      // handler in this file distrusts the renderer-supplied path the same way.
-      const path = condensedAreaPath(proposal.slug);
+      /* Derived from `unit` + `slug`, not taken from `proposal.path` — every
+         other handler in this file distrusts the renderer-supplied path the
+         same way, and for a project the path is resolved through the index
+         (`./condense-unit`) rather than templated from the slug. */
+      const { path } = await resolveCondenseUnit(services, proposal.unit, proposal.slug);
       /* A pre-check against the proposal's own `baseHash`, BEFORE `snapshot()`:
          a stale hash must discard the proposal as a conflict without creating a
          trash entry. `snapshot()` unconditionally copies the current file into
@@ -168,13 +177,16 @@ export function condenseHandlers(services: Services): HandlerMap {
       return { path: result.path, hash: result.hash, undoToken };
     },
 
-    'condense:reject': async ({ slug, reason }) => {
+    'condense:reject': async ({ unit, slug, reason }) => {
+      const { path } = await resolveCondenseUnit(services, unit, slug);
       if (reason.trim().length === 0) {
         throw fail('invalid', 'eine Begründung ist erforderlich, um abzulehnen');
       }
       const store = condenseStore(services);
-      const path = condensedAreaPath(slug);
       const existingText = await store.readText(path);
+      /* `appendDirective` splices one line into the human-owned directives
+         section of the raw text — it never recomposes the body, so no machine
+         section of either level is touched (see `@core/condense/directives`). */
       const content = appendDirective(existingText, reason, docLanguage(services));
       /* The guard hashes `existingText` itself — the exact bytes `content` was
          built from — instead of re-reading the file a second time. A second,
@@ -189,9 +201,9 @@ export function condenseHandlers(services: Services): HandlerMap {
       return { path: result.path };
     },
 
-    'condense:delete': async ({ slug, expectedHash }) => {
+    'condense:delete': async ({ unit, slug, expectedHash }) => {
+      const { path } = await resolveCondenseUnit(services, unit, slug);
       const store = condenseStore(services);
-      const path = condensedAreaPath(slug);
       /* Hashed BEFORE `delete()`, exactly like `condense:accept`'s pre-check
          (see the comment there): a stale hash must refuse without moving the
          file into the trash, and `store.delete()` has no hash guard of its

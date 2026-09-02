@@ -15,6 +15,10 @@
    right below the head — where the change was made. Every other write
    belongs to the Overview tab and reports itself there.
 
+   The Knowledge tab (story 045, D4) is unconditional, unlike Sessions: every
+   project can be condensed, whether or not it has an agent working directory,
+   so it is always offered.
+
    The Sessions tab is only offered when there is something in it: a project
    with no agent working directory would carry an empty tab forever. What
    counts as "there is something" is decided from what the project itself
@@ -38,10 +42,11 @@ import { useAgentProjects } from '../../lib/queries/agents';
 import { useOverviewSettings } from '../../lib/queries/dashboard';
 import { useProjectMutations } from '../../lib/queries/projects';
 import { ProjectHead } from './ProjectHead';
+import { ProjectKnowledgeTab } from './ProjectKnowledgeTab';
 import { ProjectOverviewTab } from './ProjectOverviewTab';
 import { ProjectSessionsTab } from './ProjectSessionsTab';
 
-export type ProjectTab = 'overview' | 'sessions';
+export type ProjectTab = 'overview' | 'knowledge' | 'sessions';
 
 /** Where the detail stands, and how it gets somewhere else. */
 export interface ProjectView {
@@ -102,8 +107,10 @@ export function ProjectDetail({ project, doc, view, now }: ProjectDetailProps) {
   /* A tab that isn't offered must not be open either: `?tab=sessions` on a
      project without a link shows the overview instead of a body no click can
      get back out of. The address stays as it is — it belongs to the screen,
-     and with the switch on, the same link leads into the tab again. */
-  const tab: ProjectTab = offersSessions ? view.tab : 'overview';
+     and with the switch on, the same link leads into the tab again. Knowledge
+     carries no such condition — it is unconditional, so `view.tab` applies to
+     it as-is. */
+  const tab: ProjectTab = view.tab === 'sessions' && !offersSessions ? 'overview' : view.tab;
 
   const setStatus = (status: ProjectStatus): void => {
     setSavedStatus(null);
@@ -152,12 +159,17 @@ export function ProjectDetail({ project, doc, view, now }: ProjectDetailProps) {
         aria-label={t('project.tab.label')}
         items={[
           { id: 'overview', label: t('project.tab.overview'), icon: 'file-text' },
+          { id: 'knowledge', label: t('project.tab.knowledge'), icon: 'layers' },
           ...(offersSessions
             ? [{ id: 'sessions', label: t('project.tab.sessions'), icon: 'workflow' }]
             : []),
         ]}
         value={tab}
-        onChange={(id) => view.go({ tab: id === 'sessions' ? 'sessions' : 'overview' })}
+        onChange={(id) =>
+          view.go({
+            tab: id === 'sessions' ? 'sessions' : id === 'knowledge' ? 'knowledge' : 'overview',
+          })
+        }
       />
 
       {tab === 'sessions' ? (
@@ -168,6 +180,8 @@ export function ProjectDetail({ project, doc, view, now }: ProjectDetailProps) {
           go={(next) => view.go(next)}
           {...(now === undefined ? {} : { now })}
         />
+      ) : tab === 'knowledge' ? (
+        <ProjectKnowledgeTab project={project} />
       ) : (
         <ProjectOverviewTab project={project} doc={doc} {...(now === undefined ? {} : { now })} />
       )}

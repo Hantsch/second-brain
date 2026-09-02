@@ -357,7 +357,8 @@ const RESPONSES: MockResponses = {
   /* Condensation (038, D4/D5-D9): fixed fixtures, no simulated model — the
      screens driven by these channels are a later deliverable of this story. */
   'condense:read': () => null,
-  'condense:run': () => ({
+  'condense:run': ({ unit }) => ({
+    unit,
     slug: fx.area.slug,
     path: 'areas/gesundheit.condensed.md',
     baseHash: null,

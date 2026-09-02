@@ -3,7 +3,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { UseMutationResult, UseQueryResult } from '@tanstack/react-query';
-import type { CondenseProposal } from '@shared/types';
+import type { CondenseProposal, CondenseUnit } from '@shared/types';
 import { api } from '../api';
 import { qk } from './keys';
 import { useVaultReady } from './data';
@@ -11,26 +11,39 @@ import { useVaultReady } from './data';
 export type CondensedArea = {
   content: string;
   hash: string;
+  /** Where the artifact actually lies, as the read resolved it — a project's
+      path needs the scope, so the renderer never derives it itself. */
+  path: string;
   condensedAt: string;
   sources: string[];
 } | null;
 
 /** The existing condensed artifact of an area, read from the file — never
     gated on a model being routed (Guardrail 1: reading never needs an LLM). */
-export function useCondensedArea(slug: string | null): UseQueryResult<CondensedArea> {
+export function useCondensedArea(
+  unit: CondenseUnit,
+  slug: string | null,
+): UseQueryResult<CondensedArea> {
   const ready = useVaultReady();
   return useQuery({
-    queryKey: qk.condense.read(slug ?? ''),
-    queryFn: () => api.condense.read(slug ?? ''),
+    queryKey: qk.condense.read(unit, slug ?? ''),
+    queryFn: () => api.condense.read(unit, slug ?? ''),
     enabled: ready && slug !== null && slug.length > 0,
   });
 }
 
-/** Runs the condensation over an area's deterministic inputs. The resulting
-    proposal is transient renderer state owned by the caller (`AreaCondensedTab`)
+export interface RunCondenseArgs {
+  unit: CondenseUnit;
+  slug: string;
+}
+
+/** Runs the condensation over a unit's deterministic inputs. The resulting
+    proposal is transient renderer state owned by the caller (`CondensedUnitPanel`)
     — nothing is written yet, so no cache invalidation belongs here. */
-export function useCondenseRun(): UseMutationResult<CondenseProposal, unknown, string> {
-  return useMutation({ mutationFn: (slug: string) => api.condense.run(slug) });
+export function useCondenseRun(): UseMutationResult<CondenseProposal, unknown, RunCondenseArgs> {
+  return useMutation({
+    mutationFn: ({ unit, slug }: RunCondenseArgs) => api.condense.run(unit, slug),
+  });
 }
 
 /** Accepts a proposal — the only path that actually writes
@@ -46,12 +59,13 @@ export function useCondenseAccept(): UseMutationResult<
   return useMutation({
     mutationFn: (proposal: CondenseProposal) => api.condense.accept(proposal),
     onSuccess: (_result, proposal) => {
-      void client.invalidateQueries({ queryKey: qk.condense.read(proposal.slug) });
+      void client.invalidateQueries({ queryKey: qk.condense.read(proposal.unit, proposal.slug) });
     },
   });
 }
 
 export interface RejectCondenseArgs {
+  unit: CondenseUnit;
   slug: string;
   reason: string;
 }
@@ -68,14 +82,16 @@ export function useCondenseReject(): UseMutationResult<
 > {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: ({ slug, reason }: RejectCondenseArgs) => api.condense.reject(slug, reason),
-    onSuccess: (_result, { slug }) => {
-      void client.invalidateQueries({ queryKey: qk.condense.read(slug) });
+    mutationFn: ({ unit, slug, reason }: RejectCondenseArgs) =>
+      api.condense.reject(unit, slug, reason),
+    onSuccess: (_result, { unit, slug }) => {
+      void client.invalidateQueries({ queryKey: qk.condense.read(unit, slug) });
     },
   });
 }
 
 export interface DeleteCondenseArgs {
+  unit: CondenseUnit;
   slug: string;
   expectedHash: string;
 }
@@ -94,10 +110,10 @@ export function useCondenseDelete(): UseMutationResult<
 > {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: ({ slug, expectedHash }: DeleteCondenseArgs) =>
-      api.condense.delete(slug, expectedHash),
-    onSuccess: (_result, { slug }) => {
-      void client.invalidateQueries({ queryKey: qk.condense.read(slug) });
+    mutationFn: ({ unit, slug, expectedHash }: DeleteCondenseArgs) =>
+      api.condense.delete(unit, slug, expectedHash),
+    onSuccess: (_result, { unit, slug }) => {
+      void client.invalidateQueries({ queryKey: qk.condense.read(unit, slug) });
       void client.invalidateQueries({ queryKey: qk.gardener.report() });
     },
   });

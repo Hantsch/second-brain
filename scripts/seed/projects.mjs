@@ -85,6 +85,61 @@ function writeProject(seeder, clock, project) {
   }
 }
 
+/**
+ * Ein bestehendes verdichtetes Artefakt fürs Projekt `orbit-sso-migration`
+ * (Story 045, D5): dasselbe Muster wie die verdichtete Area weiter unten
+ * (`areas/gesundheit.condensed.md`, Story 038 D9), nur mit den vier
+ * Projekt-Abschnitten aus `src/core/condense/artifact.ts`
+ * (`PROJECT_SECTIONS`: Stand, Nächster Schritt, Wartet auf, Gelernt) statt den
+ * drei der Area, plus einer eigenen Direktive. Pfadform nach
+ * `src/core/condense/paths.ts` (`condensedProjectPath`):
+ * `projects/<scope>/<slug>/condensed.md`, hier als Literal aus demselben Grund
+ * wie dort — die Seed-Skripte importieren bewusst nicht aus `@core/*`. Lässt
+ * `ProjectKnowledgeTab.tsx` ohne Modell ein echtes Artefakt zeigen, nicht den
+ * Leerzustand.
+ */
+function seedCondensedProject(seeder, clock) {
+  seeder.doc(
+    'projects/work/orbit-sso-migration/condensed.md',
+    {
+      type: 'condensed',
+      title: 'Orbit SSO-Migration',
+      condensed_at: clock.at(-2, '16:30'),
+      sources: ['projects/work/orbit-sso-migration/project.md'],
+      lang: 'de',
+    },
+    `## Stand
+
+Die Migration steht still: das Rollenkonzept liegt seit zwölf Tagen bei Tobias, ohne
+seine Freigabe darf der Testmandant nicht angelegt werden. Terraform-Module,
+Gruppenabbildung und Abnahmefälle sind vorbereitet.
+Aus: projects/work/orbit-sso-migration/project.md
+
+## Nächster Schritt
+
+Nach der Freigabe des Rollenkonzepts den Testmandanten aufsetzen und die Gruppen
+importieren.
+Aus: projects/work/orbit-sso-migration/project.md
+
+## Wartet auf
+
+Tobias auf die Freigabe des Rollenkonzepts, seit zwölf Tagen überfällig. Halim auf den
+Zugang zum Testmandanten.
+Aus: projects/work/orbit-sso-migration/project.md
+
+## Gelernt
+
+Die Frage, ob Unterorganisationen die Rollen der Elternorganisation erben, entscheidet
+die Zahl der anzulegenden Gruppen — das war vorher nicht klar.
+Aus: projects/work/orbit-sso-migration/project.md
+
+## Direktiven
+
+Bei jedem Lauf explizit nennen, ob das Rollenkonzept inzwischen freigegeben ist.`,
+    clock.date(-2, '16:30'),
+  );
+}
+
 /** Zwei laufende Verantwortungen ohne Ende — der Scope steht im Frontmatter. */
 function seedAreas(seeder, clock) {
   const day = clock.day;
@@ -229,5 +284,6 @@ export function seedProjects(seeder, clock) {
   for (const project of [...workProjects(clock), ...privateProjects(clock)]) {
     writeProject(seeder, clock, project);
   }
+  seedCondensedProject(seeder, clock);
   seedAreas(seeder, clock);
 }

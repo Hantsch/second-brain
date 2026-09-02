@@ -123,7 +123,46 @@ export const enProjects = {
 
   'project.tab.label': 'Choose project view',
   'project.tab.overview': 'Overview',
+  'project.tab.knowledge': 'Knowledge',
   'project.tab.sessions': 'Sessions',
+
+  // ── The knowledge tab (story 045, D4) ─────────────────────────────────────
+  'project.condensed.empty.title': 'Not condensed yet',
+  'project.condensed.empty.body':
+    'A condensation folds this project into one page a model keeps current from here on.',
+  'project.condensed.trigger': 'Condense this project',
+  'project.condensed.triggerAgain': 'Condense again',
+  'project.condensed.running': 'Condensation running',
+  'project.condensed.meta.condensedAt': 'Condensed {date}',
+  'project.condensed.meta.sources': '{count} sources',
+  'project.condensed.notEvidence':
+    'This condensation is not cited as evidence — answers point to its sources instead.',
+
+  'project.condensed.diff.summary': '{removed} removed, {added} added',
+  'project.condensed.diff.added': 'added',
+  'project.condensed.diff.removed': 'removed',
+  'project.condensed.accept': 'Accept',
+  'project.condensed.accept.conflict':
+    'The file for {subject} changed since this proposal was made. Run the condensation again.',
+
+  'project.condensed.reject': 'Reject',
+  'project.condensed.reject.title': 'Reject this proposal',
+  'project.condensed.reject.description':
+    'A reason is required — it is kept with the project so the next condensation can take it into account.',
+  'project.condensed.reject.fieldLabel': 'Reason',
+  'project.condensed.reject.placeholder': 'What should change before this is accepted?',
+  'project.condensed.reject.submit': 'Reject',
+
+  'project.condensed.delete.action': 'Delete condensation',
+  'project.condensed.delete.title': 'Delete “{path}”?',
+  'project.condensed.delete.description':
+    'Its sections and sources are regenerable — a later run rebuilds them from the project.',
+  'project.condensed.delete.directivesLost':
+    'The directives section is the one part no later run can reproduce — it only ever came from what you wrote there yourself.',
+  'project.condensed.delete.confirm': 'Delete',
+  'project.condensed.delete.done': 'Condensation deleted.',
+  'project.condensed.delete.conflict':
+    'The file for {subject} changed since it was last read. Nothing was deleted.',
 
   'project.trace.title': 'Work trace',
   'project.trace.lastTouch': 'Last trace {age}',

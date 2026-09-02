@@ -44,10 +44,10 @@ import { DEFAULT_FILTER, visibleProjects } from './filter';
 import type { ProjectFilter } from './filter';
 import { useListKeys } from './use-project-keys';
 
-/* `sessions` is the detail's second tab, not a third layout: it falls into
-   the same list-plus-detail branch as `list`, and the screen's own tab bar
-   shows `list` as the selected one. */
-type Tab = 'list' | 'todos' | 'sessions';
+/* `sessions` and `knowledge` are the detail's own tabs, not a third layout:
+   they fall into the same list-plus-detail branch as `list`, and the
+   screen's own tab bar shows `list` as the selected one. */
+type Tab = 'list' | 'todos' | 'sessions' | 'knowledge';
 
 /** What `go` may change; an omitted field keeps its current value. */
 interface Nav {
@@ -59,7 +59,8 @@ interface Nav {
 
 function tabOf(value: string | null): Tab {
   if (value === 'todos') return 'todos';
-  return value === 'sessions' ? 'sessions' : 'list';
+  if (value === 'sessions') return 'sessions';
+  return value === 'knowledge' ? 'knowledge' : 'list';
 }
 
 function agentOf(value: string | null): AgentKind {
@@ -275,7 +276,8 @@ export function ProjectsScreen() {
               project={detail.data.project}
               doc={detail.data.doc}
               view={{
-                tab: tab === 'sessions' ? 'sessions' : 'overview',
+                tab:
+                  tab === 'sessions' ? 'sessions' : tab === 'knowledge' ? 'knowledge' : 'overview',
                 agent,
                 sessionId,
                 go: (next) =>
@@ -285,7 +287,9 @@ export function ProjectsScreen() {
                         ? undefined
                         : next.tab === 'sessions'
                           ? 'sessions'
-                          : 'list',
+                          : next.tab === 'knowledge'
+                            ? 'knowledge'
+                            : 'list',
                     a: next.a,
                     s: next.s,
                   }),

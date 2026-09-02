@@ -16,6 +16,7 @@
      `event:vault-changed` would invalidate the dashboard that's currently
      querying — a loop. */
 
+import { readTranscriptPage } from '@core/agents';
 import { ClaudeSessionReader, linkSessions, nodeClaudeFileSystem } from '@core/claude';
 import type { OverviewIndex } from '@core/overview';
 import type { ClaudeSession, OverviewSettings } from '@shared/types';
@@ -121,6 +122,54 @@ export function claudeReader(services: Services): ClaudeSessionReader {
     fs: nodeClaudeFileSystem(),
     projectsDir: overviewSettings(services)?.claudeProjectsDir ?? null,
   });
+}
+
+/**
+ * How many bytes of a session file the condensation's tail read looks at.
+ * `CONDENSE_SESSION_TAIL_CHARS` (2000) is the clamp the selector then applies to
+ * the text returned below; 16 KiB of JSONL holds that much message text with
+ * room to spare, while staying far below `TRANSCRIPT_PAGE_BYTES` (128 KiB) —
+ * one such page per session would blow a prompt's whole input budget
+ * (story 044, D14).
+ */
+const CONDENSE_TAIL_BYTES = 16 * 1024;
+
+/**
+ * The tail of one Claude session's transcript as plain text, oldest turn first —
+ * what `condenseProject()` reads through `CondenseProjectSources.readTranscriptTail`.
+ *
+ * That contract says an empty, unreadable or missing session file yields `''`
+ * rather than an error: a condensation must not fail because a transcript was
+ * rotated away between listing the sessions and reading them.
+ *
+ * Only `user`/`assistant` message text goes in. Tool calls are left out — they
+ * are mostly file paths, and they would spend the prompt's budget on the part of
+ * a session that says the least about where the work stopped.
+ */
+export async function claudeTranscriptTail(
+  services: Services,
+  session: ClaudeSession,
+): Promise<string> {
+  try {
+    const file = await claudeReader(services).findFile(session.id);
+    if (file === null || file.size <= 0) return '';
+    const from = Math.max(0, file.size - CONDENSE_TAIL_BYTES);
+    const page = await readTranscriptPage(
+      nodeClaudeFileSystem(),
+      { agent: 'claude', file },
+      /* The `+` says "this offset sits inside a line", so the first, half-read
+         record of the window is dropped instead of parsed into a broken entry. */
+      from === 0 ? null : `${from}+`,
+      { pageBytes: CONDENSE_TAIL_BYTES },
+    );
+    return page.entries
+      .filter((entry) => entry.kind === 'user' || entry.kind === 'assistant')
+      .map((entry) => (entry.text ?? '').trim())
+      .filter((text) => text.length > 0)
+      .join('\n');
+  } catch {
+    return '';
+  }
 }
 
 /**

@@ -1275,6 +1275,70 @@ describe('Herkunft des nächsten Schritts', () => {
   });
 });
 
+// ── Wissen-Tab (Story 045, D4) ────────────────────────────────────────────────
+
+/* Der Wissen-Tab ist unbedingt — anders als Sitzungen steht er immer da,
+   unabhaengig von einem verknuepften Arbeitsverzeichnis. Sein Inhalt (der
+   ganze Zustandsautomat: kein Modell, Leerzustand, Diff, Ablehnen, Loeschen,
+   Konflikt) ist bereits in `condense-project.test.tsx` gedeckt — hier wird
+   nur geprüft, dass der Screen den Tab anbietet und die Adresse ihn
+   direkt oeffnet. */
+describe('Wissen-Tab (Story 045, D4)', () => {
+  it('bietet den Wissen-Tab immer an, auch ohne Arbeitsverzeichnis', async () => {
+    mount({ at: '/projects?p=hochbeet-bauen' });
+    await detailReady();
+
+    expect(screen.getByRole('tab', { name: 'Wissen' })).toBeTruthy();
+  });
+
+  it('oeffnet den Wissen-Tab direkt ueber die Adresse', async () => {
+    mount({
+      at: '/projects?p=kundenportal-relaunch&tab=knowledge',
+      extra: {
+        'condense:read': () => null,
+        'llm:routing': () => ({
+          tasks: { 'condense-project': { providerId: 'local', model: 'qwen' } },
+          defaults: {},
+        }),
+      },
+    });
+    await detailReady();
+
+    expect(screen.getByRole('tab', { name: 'Wissen' }).getAttribute('aria-selected')).toBe('true');
+    expect(await screen.findByText('Noch nicht verdichtet')).toBeTruthy();
+  });
+
+  it('haelt die Projektliste beim Wissen-Tab ausgewaehlt', async () => {
+    mount({
+      at: '/projects?p=kundenportal-relaunch&tab=knowledge',
+      extra: { 'condense:read': () => null },
+    });
+    await detailReady();
+
+    const list = screen.getByRole('list', { name: 'Projekte' });
+    const row = within(list).getByText('Kundenportal Relaunch').closest('button');
+    expect(row?.getAttribute('aria-current')).toBe('true');
+  });
+
+  it('wechselt per Klick in den Wissen-Tab und schreibt das in die Adresse', async () => {
+    mount({
+      extra: {
+        'condense:read': () => null,
+        'llm:routing': () => ({
+          tasks: { 'condense-project': { providerId: 'local', model: 'qwen' } },
+          defaults: {},
+        }),
+      },
+    });
+    await detailReady();
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Wissen' }));
+
+    await waitFor(() => expect(query()['tab']).toBe('knowledge'));
+    expect(await screen.findByText('Noch nicht verdichtet')).toBeTruthy();
+  });
+});
+
 // ── Sitzungen im Projekt ─────────────────────────────────────────────────────
 
 /** Oeffnet das Detail und darin den Sitzungen-Tab. */
