@@ -1,7 +1,7 @@
 ---
 id: 043
 title: I can delete a condensed artifact
-status: ready # draft -> ready -> in-progress -> done
+status: in-progress # draft -> ready -> in-progress -> done
 created: 2026-09-02
 ---
 
@@ -25,21 +25,21 @@ of the file that cannot be recomputed.
 
 ## Acceptance Criteria
 
-- [ ] The area's condensed tab can delete an existing artifact. With no artifact there is no dead
+- [x] The area's condensed tab can delete an existing artifact. With no artifact there is no dead
       control.
-- [ ] Before deleting, it says what goes — naming explicitly that the directives section is the
+- [x] Before deleting, it says what goes — naming explicitly that the directives section is the
       part no later run can reproduce.
-- [ ] The delete is undoable through the existing trash path (`.secondbrain/trash/`,
+- [x] The delete is undoable through the existing trash path (`.secondbrain/trash/`,
       `VaultStore.snapshot`), like 038's accept.
-- [ ] It is hash-guarded: a stale hash reports a conflict instead of removing a file that changed
+- [x] It is hash-guarded: a stale hash reports a conflict instead of removing a file that changed
       since it was read.
-- [ ] Afterwards the tab is honestly back in its "never condensed" state, and 039's
+- [x] Afterwards the tab is honestly back in its "never condensed" state, and 039's
       `condensation-due` check reports the area as having material and no artifact.
-- [ ] The index drops the document: it stops appearing in search and in the maintenance counts.
-- [ ] A condensation run started after a delete does not silently resurrect the deleted
+- [x] The index drops the document: it stops appearing in search and in the maintenance counts.
+- [x] A condensation run started after a delete does not silently resurrect the deleted
       directives.
-- [ ] Deleting never touches the LLM gateway and works with no model configured.
-- [ ] All new strings exist in `de` and `en`.
+- [x] Deleting never touches the LLM gateway and works with no model configured.
+- [x] All new strings exist in `de` and `en`.
 
 ## Open Questions
 
@@ -148,7 +148,7 @@ already shows without a routed model.
 
 ## Deliverables
 
-**D1 — `condense:delete`: contract, handler, index settle**
+**D1 — `condense:delete`: contract, handler, index settle** [x]
 Files: `src/shared/ipc.ts`, `src/main/ipc/condense.ts`, `src/renderer/lib/api.ts`,
 `src/renderer/lib/mock-bridge.ts`, `tests/main/ipc-coverage.test.ts` (extend),
 `tests/main/condense-ipc.test.ts` (extend).
@@ -166,7 +166,7 @@ delete `condense:read` returns `null`, the index no longer contains the document
 delete produces a proposal with no directives section; every path passes with no model configured
 and every new channel is in the coverage test.
 
-**D2 — Delete button, confirmation dialog, i18n**
+**D2 — Delete button, confirmation dialog, i18n** [x]
 Files: `src/renderer/components/CondenseDeleteDialog.tsx` (new),
 `src/renderer/screens/notes/AreaCondensedTab.tsx`, `src/renderer/lib/queries/condense.ts`,
 `src/renderer/i18n/en-notes.ts`, `src/renderer/i18n/de-notes.ts`,
@@ -186,7 +186,7 @@ confirm names the directives section; confirming removes the artifact and the ta
 conflict toast and leaves the artifact readable; the delete control is present and usable in the
 no-model state; the i18n parity test is green.
 
-**D3 — Acceptance surface: screenshot and test plan**
+**D3 — Acceptance surface: screenshot and test plan** [x]
 Files: `scripts/shot.mjs`, and `scripts/seed*` only if the seeded area with an artifact plus a
 directive from 038's D9 is no longer there.
 Adds a step that opens the condensed tab of the seeded area and captures the delete confirmation,
@@ -233,3 +233,57 @@ artifact with a directive line (`areas/gesundheit.condensed.md`), condensed tab.
    translated and German quotes are `„…“`.
 
 ## Done
+
+Built D1–D3: a new `condense:delete` IPC channel derives the artifact path server-side from `slug`,
+hash-guards against `expectedHash` (mirroring `condense:accept`'s pre-check/TOCTOU pattern), reuses
+`VaultStore.delete()` for the trash move + `undoToken`, and calls `settle()` so the index drops the
+document immediately. The condensed tab gained a `variant="danger"` delete button (rendered only when
+an artifact exists), a static-text `CondenseDeleteDialog` naming the file and the directives section
+explicitly, and new `notes.condensed.delete.*` keys in `en`/`de`. `scripts/shot.mjs` gained a step that
+opens the seeded `gesundheit` area's condensed tab and screenshots the open confirmation without
+confirming.
+
+A clean `story-review-hard` review (data-loss-risk path) returned PASS with 4 findings; 2 were fixed
+(wrong "run the condensation again" text on the delete-conflict toast, replaced with a delete-specific
+key; a renderer test whose name claimed the tab falls back to the empty state but never asserted it,
+now made stateful and actually asserting it). The other 2 were reviewed and left as-is with reasons
+below.
+
+**Decisions:**
+
+- The `tsconfig.web.json` widening (flagged by review as out-of-plan) adds `src/core/vault/paths.ts`,
+  `slug.ts`, `types.ts` and `src/core/condense/paths.ts` to the renderer's explicit core allowlist so
+  `CondenseDeleteDialog` can reuse `condensedAreaPath(slug)` instead of duplicating the
+  `areas/<slug>.condensed.md` naming convention in the renderer. Verified Node/Electron-free (pure
+  string/type logic only) — kept as the smaller duplication-avoiding change rather than reverted.
+- `qk.gardener.report()` invalidation (mirroring accept/reject) triggers a refetch, but
+  `gardener:report` reads the last stored maintenance run rather than recomputing
+  (`src/main/ipc/gardener.ts:8`, pre-existing, documented app behavior) — so the Garden screen's
+  displayed counts update on the next maintenance run, not instantly on delete. The underlying
+  `condensation-due` check itself is verified correct immediately after a delete
+  (`tests/main/condense-ipc.test.ts`). Not a regression from this story; parity with how accept/reject
+  already behave. Left unchanged.
+- No undo button in the UI (per Q1/refine decision) — the trash copy is the way back, same parity as
+  038's accept.
+
+**Verification:** `npm run build`, `npm test` (244 files / 3404 tests), `npm run lint`,
+`npm run typecheck` all green after the fix cycle. (`format:check` is not yet in this sprint's gate per
+041.) One `overview-flow.test.ts` timeout observed on the first full-suite run was confirmed a
+pre-existing flake unrelated to this diff (passes in isolation; file untouched by this story).
+
+**Live smoke:** `npm run seed && npm run shot` (via a D3 agent, and again manually) produced a real
+screenshot of the delete confirmation dialog on the seeded `gesundheit` area
+(`.screenshots/notes-condensed-delete.png`), showing the correct file name, the "regenerable from
+sources" line, and the directives-not-reproducible sentence. This exercises the UI-rendering half of
+the flow live, but the full manual test plan (confirm-and-delete, undo inspection in
+`.secondbrain/trash/`, index/search drop, conflict, no-model, German) was not driven end-to-end through
+a live interactive session in this build — per the project profile's P2 fallback, status is left
+`in-progress` rather than `done`, and the story is handed over as **built, acceptance pending**: a
+human (or a future live-smoke session) should run the 8-step manual test plan above once, most
+importantly steps 3 (undo), 5 (no resurrection with a routed model) and 6 (conflict).
+
+**Commit message:**
+
+```
+043: delete a condensed artifact
+```

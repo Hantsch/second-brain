@@ -91,6 +91,18 @@ export const deNotes = {
   'notes.condensed.reject.placeholder': 'Was sollte sich ändern, bevor das übernommen wird?',
   'notes.condensed.reject.submit': 'Ablehnen',
 
+  // ── Artefakt vollständig löschen (Story 043, D2) ─────────────────────────
+  'notes.condensed.delete.action': 'Verdichtung löschen',
+  'notes.condensed.delete.title': '„{path}“ löschen?',
+  'notes.condensed.delete.description':
+    'Abschnitte und Quellen darin lassen sich neu erzeugen — ein späterer Lauf baut sie aus dem Bereich wieder auf.',
+  'notes.condensed.delete.directivesLost':
+    'Der Direktiven-Abschnitt ist der einzige Teil, den kein späterer Lauf wiederherstellen kann — er kam ausschließlich aus dem, was du selbst dort hineingeschrieben hast.',
+  'notes.condensed.delete.confirm': 'Löschen',
+  'notes.condensed.delete.done': 'Verdichtung gelöscht.',
+  'notes.condensed.delete.conflict':
+    'Die Datei für {subject} hat sich seit dem letzten Lesen geändert. Es wurde nichts gelöscht.',
+
   // ── Notiz verschieben ────────────────────────────────────────────────────
   'notes.moveNote.action': 'In einen anderen Bereich verschieben',
   'notes.moveNote.title': 'Notiz verschieben',

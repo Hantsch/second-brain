@@ -196,5 +196,28 @@ export function condenseHandlers(services: Services): HandlerMap {
       await settle(services, [path], 'condense');
       return { path: result.path };
     },
+
+    'condense:delete': async ({ slug, expectedHash }) => {
+      const store = condenseStore(services);
+      const path = condensedAreaPath(slug);
+      /* Hashed BEFORE `delete()`, exactly like `condense:accept`'s pre-check
+         (see the comment there): a stale hash must refuse without moving the
+         file into the trash, and `store.delete()` has no hash guard of its
+         own to lean on — the same TOCTOU window as accept's, closed no
+         further here than it is there. */
+      const currentHash = await store.hash(path);
+      if (currentHash === null) {
+        throw fail('invalid', `für „${slug}“ gibt es kein Verdichtungsartefakt zum Löschen`);
+      }
+      if (currentHash !== expectedHash) {
+        throw new VaultConflictError(
+          { path, expectedHash, actualHash: currentHash },
+          'Die Datei wurde zwischenzeitlich geändert.',
+        );
+      }
+      const { undoToken } = await store.delete(path);
+      await settle(services, [path], 'condense');
+      return { path, undoToken };
+    },
   });
 }

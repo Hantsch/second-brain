@@ -9,11 +9,15 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { condensationDueCheck, GERMAN_GARDENER_LABELS, limits } from '@core/gardener';
+import type { GardenerContext } from '@core/gardener';
 import type { IpcChannel, IpcRequest, IpcResponse } from '@shared/ipc';
 import type { CondenseProposal } from '@shared/types';
+import { gardenerIndex } from '../../src/main/ipc/gardener-deps';
+import { createFetchFake, jsonResponse } from '../fakes/llm';
 import { createTempVault } from '../helpers/vault';
 import type { TempVault } from '../helpers/vault';
-import { freezeTime } from '../helpers/time';
+import { freezeTime, TODAY } from '../helpers/time';
 
 /* No Electron in tests: no windows, no encryption. */
 vi.mock('electron', () => ({
@@ -27,6 +31,7 @@ type Handlers = Partial<{
 }>;
 
 const CONDENSED_PATH = 'areas/gesundheit.condensed.md';
+const AREA_PATH = 'areas/gesundheit.md';
 
 async function createHarness(userDataDir: string) {
   const { FsVaultStore } = await import('@core/vault');
@@ -57,6 +62,52 @@ async function createHarness(userDataDir: string) {
 }
 
 type Harness = Awaited<ReturnType<typeof createHarness>>;
+
+/** The findings `condensationDueCheck` (story 039) reports over this vault's real
+    index — the same check the maintenance run wires up, but called directly here
+    so a delete's effect on it doesn't depend on running the whole gardener. */
+function condensationDueFindings(services: Harness['services']) {
+  const ctx: GardenerContext = {
+    index: gardenerIndex(services),
+    modules: [],
+    limits: limits(),
+    today: TODAY,
+    ranAt: new Date().toISOString(),
+    labels: GERMAN_GARDENER_LABELS,
+    docLanguage: 'de',
+    replyLanguage: 'de',
+  };
+  return condensationDueCheck.run(ctx);
+}
+
+/** Routes `condense-area` to a fake provider that answers with the given three
+    machine sections — the minimum a `condense:run` needs to reach `kind: 'proposal'`
+    instead of falling back to `llm-unavailable`. Mirrors the routing helper
+    `gardener-ipc.test.ts` uses for `journal-loose-ends`. */
+async function routeCondenseAreaTo(harness: Harness, sections: Record<string, unknown>) {
+  await harness.services.settings.setVaultSection('providers', [
+    {
+      id: 'local-1',
+      label: 'Lokal',
+      kind: 'openai-compatible',
+      baseUrl: 'http://localhost:11434/v1',
+      hasKey: false,
+      local: true,
+      enabled: true,
+      models: ['qwen2.5:14b'],
+      createdAt: '2026-08-10T12:00:00.000Z',
+    },
+  ]);
+  await harness.services.settings.setVaultSection('routing', {
+    tasks: { 'condense-area': { providerId: 'local-1', model: 'qwen2.5:14b' } },
+    defaults: {},
+  });
+  const fake = createFetchFake(() =>
+    jsonResponse({ choices: [{ message: { content: JSON.stringify(sections) } }] }),
+  );
+  vi.stubGlobal('fetch', fake.fetch);
+  return fake;
+}
 
 describe('condense channels in main', () => {
   let vault: TempVault;
@@ -282,6 +333,99 @@ describe('condense channels in main', () => {
 
     // Nothing from the stale read was written over the external edit.
     expect(await vault.read(CONDENSED_PATH)).toBe(externalEdit);
+  });
+
+  // ── Deleting (043, D1) ───────────────────────────────────────────────────
+
+  it('deletes a fresh-hash artifact, offers an undo token, and undo restores it byte-identical', async () => {
+    const content = '---\ntype: condensed\ntitle: Gesundheit\n---\n\n## Stand\n\nAlt.\n';
+    await vault.write(CONDENSED_PATH, content);
+    const hash = (await vault.store.read(CONDENSED_PATH))?.hash ?? '';
+
+    const result = await harness.call('condense:delete', {
+      slug: 'gesundheit',
+      expectedHash: hash,
+    });
+
+    expect(result.path).toBe(CONDENSED_PATH);
+    expect(await vault.exists(CONDENSED_PATH)).toBe(false);
+    expect(result.undoToken.length).toBeGreaterThan(0);
+
+    await vault.store.undo(result.undoToken);
+
+    expect(await vault.read(CONDENSED_PATH)).toBe(content);
+  });
+
+  it('a fresh-hash delete drops the document from the index', async () => {
+    const content = '---\ntype: condensed\ntitle: Gesundheit\n---\n\n## Stand\n\nAlt.\n';
+    await vault.write(CONDENSED_PATH, content);
+    await harness.services.requireIndex().refresh?.();
+    const hash = (await vault.store.read(CONDENSED_PATH))?.hash ?? '';
+
+    await harness.call('condense:delete', { slug: 'gesundheit', expectedHash: hash });
+
+    expect(await harness.call('condense:read', { slug: 'gesundheit' })).toBeNull();
+    const docs = gardenerIndex(harness.services).index().docs;
+    expect(docs.some((doc) => doc.path === CONDENSED_PATH)).toBe(false);
+  });
+
+  it('refuses a stale hash, leaves the file byte-identical and creates no trash entry', async () => {
+    const content = '---\ntype: condensed\ntitle: Gesundheit\n---\n\n## Stand\n\nAlt.\n';
+    await vault.write(CONDENSED_PATH, content);
+
+    await expect(
+      harness.call('condense:delete', { slug: 'gesundheit', expectedHash: 'von-vorgestern' }),
+    ).rejects.toMatchObject({ code: 'conflict' });
+
+    expect(await vault.read(CONDENSED_PATH)).toBe(content);
+    const allPaths = await vault.store.list({ includeInternal: true });
+    expect(allPaths.some((path) => path.includes('trash'))).toBe(false);
+  });
+
+  it('refuses to delete an artifact that does not exist', async () => {
+    await expect(
+      harness.call('condense:delete', { slug: 'gesundheit', expectedHash: 'irgendein-hash' }),
+    ).rejects.toMatchObject({ code: 'invalid' });
+  });
+
+  it('after a delete, 039s condensation-due check reports the area as material without an artifact', async () => {
+    const content = '---\ntype: condensed\ntitle: Gesundheit\n---\n\n## Stand\n\nAlt.\n';
+    await vault.write(CONDENSED_PATH, content);
+    await harness.services.requireIndex().refresh?.();
+    const hash = (await vault.store.read(CONDENSED_PATH))?.hash ?? '';
+
+    await harness.call('condense:delete', { slug: 'gesundheit', expectedHash: hash });
+
+    const findings = condensationDueFindings(harness.services);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.kind).toBe('condensation-due');
+    // The "missing artifact" variant names only the area file — the "existing but
+    // stale" variant would also name the (now gone) artifact path.
+    expect(findings[0]?.paths).toEqual([AREA_PATH]);
+  });
+
+  it('condense:run after a delete starts fresh: no directive carries over from before', async () => {
+    // A rejection first, so the artifact has a non-empty "Direktiven" section —
+    // the state a plain reject (038) would leave behind.
+    await harness.call('condense:reject', {
+      slug: 'gesundheit',
+      reason: 'Der Ton trifft es nicht.',
+    });
+    const hash = (await vault.store.read(CONDENSED_PATH))?.hash ?? '';
+
+    await harness.call('condense:delete', { slug: 'gesundheit', expectedHash: hash });
+
+    await routeCondenseAreaTo(harness, {
+      state: { text: 'Rücken und Schlaf im Blick.', sources: [AREA_PATH] },
+      patterns: { text: 'Kurze Pausen wirken mehr als langes Liegen.', sources: [AREA_PATH] },
+      open: { text: 'Themen bleiben aktuell.', sources: [AREA_PATH] },
+    });
+
+    const proposal = await harness.call('condense:run', { slug: 'gesundheit' });
+
+    expect(proposal.after).not.toContain('Der Ton trifft es nicht.');
+    const directivesBody = proposal.after.split(/## (?:Direktiven|Directives)/)[1]?.trim() ?? '';
+    expect(directivesBody).toBe('');
   });
 
   it('requires an open vault', async () => {

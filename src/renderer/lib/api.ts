@@ -100,6 +100,7 @@ export const api = {
     accept: (proposal: IpcRequest<'condense:accept'>['proposal']) =>
       call('condense:accept', { proposal }),
     reject: (slug: string, reason: string) => call('condense:reject', { slug, reason }),
+    delete: (slug: string, expectedHash: string) => call('condense:delete', { slug, expectedHash }),
   },
   journal: {
     list: (limit?: number) => call('journal:list', limit === undefined ? {} : { limit }),

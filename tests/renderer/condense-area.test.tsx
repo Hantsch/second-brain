@@ -24,8 +24,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { IpcChannel, IpcError, IpcRequest, IpcResponse } from '@shared/ipc';
 import type { CondenseProposal } from '@shared/types';
 import { AreaCondensedTab } from '@renderer/screens/notes/AreaCondensedTab';
+import { ToastHost } from '@renderer/components/ToastHost';
 import type { SbBridge } from '@renderer/lib/bridge';
 import { setLanguage } from '@renderer/i18n';
+import { clearToasts } from '@renderer/lib/toast';
 
 function ipcError(code: IpcError['code']): Error {
   return Object.assign(new Error(code), { code });
@@ -94,6 +96,7 @@ function renderTab(extra: Handlers): { sb: Mock; container: HTMLElement } {
     <QueryClientProvider client={client}>
       <MemoryRouter>
         <AreaCondensedTab area={AREA} />
+        <ToastHost />
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -102,6 +105,7 @@ function renderTab(extra: Handlers): { sb: Mock; container: HTMLElement } {
 
 afterEach(() => {
   delete window.sb;
+  clearToasts();
 });
 
 /* jsdom kennt `scrollIntoView` nicht. Ohne Attrappe stirbt `ErrorState` daran
@@ -305,5 +309,95 @@ describe('Verdichtet-Tab (Story 038, D6)', () => {
     const secondDialog = within(await screen.findByRole('dialog'));
 
     expect((secondDialog.getByLabelText('Begründung') as HTMLTextAreaElement).value).toBe('');
+  });
+});
+
+describe('Verdichtung löschen (Story 043, D2)', () => {
+  it('zeigt ohne Artefakt gar keine Löschen-Schaltfläche', async () => {
+    setLanguage('de');
+    renderTab(ROUTED);
+
+    expect(await screen.findByText('Noch nicht verdichtet')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Verdichtung löschen' })).toBeNull();
+  });
+
+  it('bietet die Löschen-Schaltfläche auch ohne geroutetes Modell an', async () => {
+    setLanguage('de');
+    renderTab({ ...NOT_ROUTED, 'condense:read': () => ARTIFACT });
+
+    expect(
+      await screen.findByText('Verdichteter Überblick über den Bereich Gesundheit.'),
+    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Verdichtung löschen' })).toBeTruthy();
+  });
+
+  it('löscht das Artefakt und zeigt danach den Leerzustand „nie verdichtet“, ein offener Vorschlag verschwindet mit', async () => {
+    setLanguage('de');
+    let artifactDeleted = false;
+    const proposal: CondenseProposal = {
+      slug: AREA.slug,
+      path: 'areas/gesundheit.md',
+      baseHash: 'hash-before',
+      before: 'Alte Zeile.',
+      after: 'Neue Zeile.',
+      sources: [],
+    };
+    const { sb } = renderTab({
+      ...ROUTED,
+      // Stateful like the query cache it stands in for: still the artifact
+      // until the delete lands, then gone — so the invalidation the delete
+      // mutation triggers actually surfaces a different response, the way a
+      // real re-read of the file would.
+      'condense:read': () => (artifactDeleted ? null : ARTIFACT),
+      'condense:run': () => proposal,
+      'condense:delete': () => {
+        artifactDeleted = true;
+        return { path: 'areas/gesundheit.condensed.md', undoToken: 'token-1' };
+      },
+    });
+
+    // Bring up an open proposal first, so the delete can be checked to clear
+    // it too — deleting the artifact a proposal was built against must not
+    // leave that proposal sitting there offering to write it back.
+    await userEvent.click(await screen.findByRole('button', { name: 'Erneut verdichten' }));
+    await screen.findByRole('button', { name: 'Übernehmen' });
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Verdichtung löschen' }));
+    const dialog = within(await screen.findByRole('dialog'));
+    await userEvent.click(dialog.getByRole('button', { name: 'Löschen' }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    const deleteCall = sb.calls.find((entry) => entry.channel === 'condense:delete');
+    expect(deleteCall?.payload).toEqual({ slug: AREA.slug, expectedHash: ARTIFACT.hash });
+
+    expect(await screen.findByText('Noch nicht verdichtet')).toBeTruthy();
+    expect(screen.queryByText('Verdichteter Überblick über den Bereich Gesundheit.')).toBeNull();
+    /* The open proposal from before the delete is gone too. */
+    expect(screen.queryByRole('button', { name: 'Übernehmen' })).toBeNull();
+  });
+
+  it('zeigt bei einem Konflikt beim Löschen die vorhandene Konfliktmeldung, das Artefakt bleibt lesbar', async () => {
+    setLanguage('de');
+    renderTab({
+      ...ROUTED,
+      'condense:read': () => ARTIFACT,
+      'condense:delete': () => {
+        throw ipcError('conflict');
+      },
+    });
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Verdichtung löschen' }));
+    const dialog = within(await screen.findByRole('dialog'));
+    await userEvent.click(dialog.getByRole('button', { name: 'Löschen' }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(
+      await screen.findByText(
+        /Die Datei für Gesundheit hat sich seit dem letzten Lesen geändert\./,
+      ),
+    ).toBeTruthy();
+    /* The artifact stays readable — a conflicting delete never removes it. */
+    expect(screen.getByText('Verdichteter Überblick über den Bereich Gesundheit.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Verdichtung löschen' })).toBeTruthy();
   });
 });

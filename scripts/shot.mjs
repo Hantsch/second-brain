@@ -1290,6 +1290,54 @@ async function shootPageConflict(session, shooter, log, skipped) {
   }
 }
 
+/**
+ * Story 043, D3: die Löschbestätigung im Verdichtungs-Reiter des Bereichs, den
+ * der Seed schon mit einer Verdichtung samt Direktive ausstattet (`gesundheit`,
+ * `areas/gesundheit.condensed.md`, scripts/seed/projects.mjs — derselbe
+ * Bereich, den auch `notes-condensed` in DEEP_STATES fotografiert). Der Dialog
+ * ist die ganze Aussage dieser Story: er muss sagen, dass die Direktiven der
+ * eine Teil sind, den kein späterer Lauf wiederherstellt — deshalb wird er hier
+ * geöffnet und fotografiert.
+ *
+ * „Löschen" wird nie gedrückt: ein echtes Löschen nähme dem Demo-Vault seine
+ * Verdichtung für den Rest dieses Laufs und für jeden Lauf danach, bis erneut
+ * geseedet wird — genau das Gegenteil von dem, was diese Aufnahme zeigen soll.
+ */
+async function shootCondenseDelete(session, shooter, log, skipped) {
+  const ready = await gotoHash(session.page, '/notes?a=gesundheit&tab=condensed', {
+    wait: '.sb-condensed-artifact',
+  });
+  if (!ready) {
+    skipped.push('Verdichtung löschen: die Verdichtung von „gesundheit" stand nicht im Reiter');
+    return;
+  }
+  const button = session.page.getByRole('button', { name: 'Verdichtung löschen' });
+  const there = await button.waitFor({ state: 'visible', timeout: 4000 }).then(
+    () => true,
+    () => false,
+  );
+  if (!there) {
+    skipped.push('Verdichtung löschen: der Löschen-Knopf stand nicht im Reiter');
+    return;
+  }
+  await button.click();
+  const dialog = session.page.getByRole('dialog');
+  const open = await dialog.waitFor({ state: 'visible', timeout: 4000 }).then(
+    () => true,
+    () => false,
+  );
+  await settle(session.page);
+  if (open) {
+    log(
+      `  Löschbestätigung → ${await shooter.shotAs('notes-condensed-delete.png', session.page)}`,
+    );
+  } else {
+    skipped.push('Verdichtung löschen: der Knopf öffnete keinen Dialog');
+  }
+  /* Vorhang weg, ohne zu bestätigen — siehe Kommentar oben. */
+  await closeOverlay(session.page);
+}
+
 /** Wie viel von der Meldung im Rollbereich steht — in Pixeln, nicht im Gefühl. */
 function measureAlert(page) {
   return page.evaluate(() => {
@@ -1494,6 +1542,9 @@ async function main() {
     await shootSourceDetail(session, shooter, log, skipped);
     await shootSourceJobs(session, shooter, log, skipped);
     await shootDeepStates(session, shooter, log, skipped);
+    if (options.screens.includes('notes')) {
+      await shootCondenseDelete(session, shooter, log, skipped);
+    }
     if (options.screens.includes('knowledge')) {
       await shootPageConflict(session, shooter, log, skipped);
     }

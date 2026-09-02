@@ -484,6 +484,20 @@ export interface IpcRoutes {
    * section — the next run can read why. Never writes the machine sections.
    */
   'condense:reject': { req: { slug: string; reason: string }; res: { path: string } };
+  /**
+   * Deletes the condensed artifact outright (043, D1) — the way back to "never
+   * condensed", unlike `condense:reject`, which keeps the artifact and only
+   * records a reason. `expectedHash` guards exactly like `condense:accept`'s
+   * `proposal.baseHash`: a stale hash comes back as `conflict` and leaves the
+   * file byte-identical. An artifact that doesn't exist at all is `invalid` —
+   * there is nothing to delete. `undoToken` is the way back: the file moves
+   * into `.secondbrain/trash/` (same contract as `vault:delete`), it is never
+   * removed outright.
+   */
+  'condense:delete': {
+    req: { slug: string; expectedHash: string };
+    res: { path: string; undoToken: string };
+  };
 
   // ── Todos ────────────────────────────────────────────────────────────────
   'todos:list': {
@@ -1209,6 +1223,7 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'condense:run',
   'condense:accept',
   'condense:reject',
+  'condense:delete',
   'todos:list',
   'todos:toggle',
   'todos:create',

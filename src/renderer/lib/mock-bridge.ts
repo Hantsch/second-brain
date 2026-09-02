@@ -371,6 +371,7 @@ const RESPONSES: MockResponses = {
     undoToken: null,
   }),
   'condense:reject': () => ({ path: 'areas/gesundheit.condensed.md' }),
+  'condense:delete': () => ({ path: 'areas/gesundheit.condensed.md', undoToken: 'demo-undo' }),
 
   'todos:list': () => [fx.todo],
   'todos:toggle': () => ({ ...fx.todo, state: 'done', doneAt: fx.NOW }),

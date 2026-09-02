@@ -26,3 +26,10 @@
 - 2026-09-02 14:25 · 042 · D8 regression tests and the named cause · started
 - 2026-09-02 14:09 · 042 · D8 regression tests and the named cause · done
 - 2026-09-02 15:17 · 042 · story built, verify green, review PASS after 2 fix cycles, live smoke partial (needs a configured model for full manual acceptance) — status left in-progress · done
+- 2026-09-02 15:19 · 043 · D1 condense:delete contract, handler, index settle · started
+- 2026-09-02 15:32 · 043 · D1 condense:delete contract, handler, index settle · done
+- 2026-09-02 15:32 · 043 · D2 delete button, confirmation dialog, i18n · started
+- 2026-09-02 15:44 · 043 · D2 delete button, confirmation dialog, i18n · done
+- 2026-09-02 15:44 · 043 · D3 acceptance surface: screenshot and test plan · started
+- 2026-09-02 15:48 · 043 · D3 acceptance surface: screenshot and test plan · done
+- 2026-09-02 16:11 · 043 · story built, verify green, review PASS with 2 findings fixed (delete-conflict message, empty-state test coverage), live smoke partial (dialog screenshot only, full flow not driven live) — status left in-progress · done

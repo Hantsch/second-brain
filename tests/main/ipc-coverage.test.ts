@@ -112,6 +112,14 @@ describe('033: llm:searchModelFiles', () => {
   });
 });
 
+describe('043: condense:delete', () => {
+  it('ist im Vertrag, hat einen Handler und ist im Preload-Allowlist', () => {
+    expect(IPC_CHANNELS).toContain('condense:delete');
+    expect(channels).toContain('condense:delete');
+    expect(typeof handlers.get('condense:delete')).toBe('function');
+  });
+});
+
 describe('Preload-Freigabe', () => {
   function bridge(): {
     invoke: (channel: string, payload?: unknown) => Promise<unknown>;

@@ -27,6 +27,10 @@
     "src/shared/**/*",
     "tests/renderer/**/*",
     "src/core/llm/capacity-bands.ts",
-    "src/core/condense/diff.ts"
+    "src/core/condense/diff.ts",
+    "src/core/condense/paths.ts",
+    "src/core/vault/paths.ts",
+    "src/core/vault/slug.ts",
+    "src/core/vault/types.ts"
   ]
 }

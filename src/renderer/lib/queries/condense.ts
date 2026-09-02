@@ -74,3 +74,31 @@ export function useCondenseReject(): UseMutationResult<
     },
   });
 }
+
+export interface DeleteCondenseArgs {
+  slug: string;
+  expectedHash: string;
+}
+
+/** Deletes the condensed artifact outright (043) — unlike reject, nothing of
+    it survives, directives included. A stale `expectedHash` fails with a
+    `conflict` instead of deleting; the caller decides what to show for that.
+    `qk.gardener.report()` is invalidated alongside the artifact itself: a
+    maintenance report that already flagged this area as due for a
+    condensation refresh must not keep pointing at a file that no longer
+    exists. */
+export function useCondenseDelete(): UseMutationResult<
+  { path: string; undoToken: string },
+  unknown,
+  DeleteCondenseArgs
+> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ slug, expectedHash }: DeleteCondenseArgs) =>
+      api.condense.delete(slug, expectedHash),
+    onSuccess: (_result, { slug }) => {
+      void client.invalidateQueries({ queryKey: qk.condense.read(slug) });
+      void client.invalidateQueries({ queryKey: qk.gardener.report() });
+    },
+  });
+}

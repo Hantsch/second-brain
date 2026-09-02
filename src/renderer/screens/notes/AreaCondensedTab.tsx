@@ -22,10 +22,12 @@
 
 import { useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
+import { condensedAreaPath } from '@core/condense/paths';
 import { diffLines } from '@core/condense/diff';
 import type { CondenseProposal } from '@shared/types';
 import { Button } from '../../atoms/Button';
 import { Spinner } from '../../atoms/Spinner';
+import { CondenseDeleteDialog } from '../../components/CondenseDeleteDialog';
 import { CondenseDiff } from '../../components/CondenseDiff';
 import { CondenseRejectDialog } from '../../components/CondenseRejectDialog';
 import { EmptyState } from '../../components/EmptyState';
@@ -38,6 +40,7 @@ import { IpcCallError } from '../../lib/api';
 import { formatDate } from '../../lib/format';
 import {
   useCondenseAccept,
+  useCondenseDelete,
   useCondenseReject,
   useCondenseRun,
   useCondensedArea,
@@ -64,9 +67,12 @@ export function AreaCondensedTab({ area }: AreaCondensedTabProps) {
   const run = useCondenseRun();
   const accept = useCondenseAccept();
   const reject = useCondenseReject();
+  const del = useCondenseDelete();
   const [proposal, setProposal] = useState<CondenseProposal | null>(null);
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectError, setRejectError] = useState<unknown>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState<unknown>(null);
 
   const trigger = (): void => {
     if (run.isPending) return;
@@ -125,6 +131,39 @@ export function AreaCondensedTab({ area }: AreaCondensedTabProps) {
     );
   };
 
+  const condensedPath = condensedAreaPath(area.slug);
+
+  const deleteArtifact = (expectedHash: string): void => {
+    if (del.isPending) return;
+    setDeleteError(null);
+    del.mutate(
+      { slug: area.slug, expectedHash },
+      {
+        onSuccess: () => {
+          setDeleteOpen(false);
+          // Clears any open proposal — one built before the delete would
+          // otherwise sit there offering to write the deleted directives back.
+          setProposal(null);
+          pushToast('success', { message: 'notes.condensed.delete.done' });
+        },
+        onError: (error) => {
+          const code = error instanceof IpcCallError ? error.code : 'unknown';
+          if (code === 'conflict') {
+            setDeleteOpen(false);
+            pushToast('error', {
+              message: 'notes.condensed.delete.conflict',
+              values: { subject: area.title },
+            });
+            return;
+          }
+          /* Any other error keeps the dialog open and the artifact readable
+             underneath it — a failed delete must not silently discard it. */
+          setDeleteError(error);
+        },
+      },
+    );
+  };
+
   const artifactBlock = (data: NonNullable<typeof artifact.data>): ReactNode => (
     <div className="sb-condensed-artifact">
       <p className="sb-condensed-meta sb-mono">
@@ -135,6 +174,22 @@ export function AreaCondensedTab({ area }: AreaCondensedTabProps) {
       </p>
       <div className="sb-md">{renderMarkdown(data.content, { wikilink: plainWikilink })}</div>
       <span className="gs-hint">{t('notes.condensed.notEvidence')}</span>
+      <div className="sb-condensed-actions">
+        <Button variant="danger" icon="trash-2" onClick={() => setDeleteOpen(true)}>
+          {t('notes.condensed.delete.action')}
+        </Button>
+      </div>
+      <CondenseDeleteDialog
+        open={deleteOpen}
+        path={condensedPath}
+        busy={del.isPending}
+        error={deleteError}
+        onClose={() => {
+          setDeleteOpen(false);
+          setDeleteError(null);
+        }}
+        onSubmit={() => deleteArtifact(data.hash)}
+      />
     </div>
   );
 

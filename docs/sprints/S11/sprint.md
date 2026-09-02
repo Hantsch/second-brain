@@ -25,7 +25,7 @@ path under it, and the gate that has been red since S07 is information again.
 
 - [ ] 040 — An answer cites the source, never the condensation
 - [x] 042 — A maintenance run stays visible wherever I am (built, live acceptance pending — see review.md)
-- [ ] 043 — I can delete a condensed artifact
+- [x] 043 — I can delete a condensed artifact (built, live acceptance pending — see review.md)
 - [ ] 041 — The format gate is green on Windows
 
 ## Notes

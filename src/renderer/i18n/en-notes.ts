@@ -79,6 +79,18 @@ export const enNotes = {
   'notes.condensed.reject.placeholder': 'What should change before this is accepted?',
   'notes.condensed.reject.submit': 'Reject',
 
+  // ── Delete the artifact outright (story 043, D2) ─────────────────────────
+  'notes.condensed.delete.action': 'Delete condensation',
+  'notes.condensed.delete.title': 'Delete “{path}”?',
+  'notes.condensed.delete.description':
+    'Its sections and sources are regenerable — a later run rebuilds them from the area.',
+  'notes.condensed.delete.directivesLost':
+    'The directives section is the one part no later run can reproduce — it only ever came from what you wrote there yourself.',
+  'notes.condensed.delete.confirm': 'Delete',
+  'notes.condensed.delete.done': 'Condensation deleted.',
+  'notes.condensed.delete.conflict':
+    'The file for {subject} changed since it was last read. Nothing was deleted.',
+
   // ── Move note ────────────────────────────────────────────────────────────
   'notes.moveNote.action': 'Move to another area',
   'notes.moveNote.title': 'Move note',
