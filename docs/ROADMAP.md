@@ -655,7 +655,7 @@ Gaps/notes:
 
 ---
 
-### M14 — A project gathers itself — planned
+### M14 — A project gathers itself — built, acceptance pending
 
 Concept: [concepts/condensed-layer.md](concepts/condensed-layer.md) — the second slice, cut on
 2026-09-02. The area level (M12) is built; the module and project levels were both still open. The
@@ -674,7 +674,8 @@ already finds journal entries naming a project.
 Sprints:
 
 - [sprints/S12/sprint.md](sprints/S12/sprint.md) — a project gathers itself (044, 045, 046),
-  `planned`
+  `done` (built 2026-09-02; [review](sprints/S12/review.md),
+  [testplan](sprints/S12/testplan.md); live acceptance pending)
 
 Decisions taken at the cut (2026-09-02, user):
 
@@ -687,8 +688,26 @@ Decisions taken at the cut (2026-09-02, user):
   walkthrough against real data — this sprint adds more surface on top without reducing that risk.
 - **The module level stays open**, gated on the same live-acceptance question plus its own added
   cost (retiring `updateOverview()`). Revisit after M14.
-- Six open questions carried into refine, none resolved at the cut — see
-  [sprints/S12/sprint.md](sprints/S12/sprint.md)'s Notes and each story's `## Open Questions`.
+- Six open questions carried into refine — all resolved with the user in `/sprint 12`'s
+  clarification round (bundled `AskUserQuestion`), recorded under each story's
+  `## Decisions (Sprint)`: sensitivity, agent-session citation form, size cap/input bounds,
+  contradictions handling, human-edit-vs-rewrite, delete affordance, IPC channel shape (the five
+  `condense:*` channels were generalised with a `unit` discriminator rather than duplicated per
+  level), and the due-ness badge scope (Maintenance only, no project-overview badge this sprint).
+
+Gaps/notes:
+
+- The concept's §7 reversal trigger (per-level sections vs. a uniform shape) was evaluated at
+  044's refine and did **not** flip: the project prompt carries rules the area prompt does not
+  (a fourth input group, the session citation form, `waiting_on`), so per-level sections stay.
+- 044 shipped `condense-project`'s core/run/write layer without the shell dependency for reading
+  an agent session transcript (`readTranscriptTail`); 045 had to add `claudeTranscriptTail()` to
+  make the citation carry real content. A cross-story interface handoff that should have been
+  named explicitly in 044's Done section.
+- A project-overview "possibly outdated" badge (mirroring story 004's area badge) was deliberately
+  deferred — candidate follow-up story if due-ness should be visible outside Maintenance.
+- One pre-existing, unrelated finding surfaced: the condensed panel renders raw YAML frontmatter
+  as a text dump, present identically in the area tab before this sprint — filed, not fixed.
 
 ---
 
@@ -696,7 +715,7 @@ Decisions taken at the cut (2026-09-02, user):
 
 | Topic                                                         | State                                                                                                                                                                                                                                                                                                              | Next step                                                                                                                                                                                                                            |
 | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Condensed layer (module level)                                | Concept written 2026-08-18: [concepts/condensed-layer.md](concepts/condensed-layer.md). The **area** level was built in M12 (S10, done 2026-09-02, acceptance pending); the **project** level was cut as M14 (S12, planned) on 2026-09-02, ahead of any live acceptance, by direct user decision. The **module** level — CND-2, CND-17 (agent-session citation), CND-35/36 (retiring the ingest's overview append) — is still open | Own `/roadmap plan` once M14 is built. The concept's §7 reversal trigger (per-level vs. one shared shape) is evaluated once the project level exists, i.e. after M14 |
+| Condensed layer (module level)                                | Concept written 2026-08-18: [concepts/condensed-layer.md](concepts/condensed-layer.md). The **area** level was built in M12 (S10, done 2026-09-02, acceptance pending); the **project** level was built as M14 (S12, done 2026-09-02, acceptance pending). The **module** level — CND-2, CND-17 (agent-session citation), CND-35/36 (retiring the ingest's overview append) — is still open | Own `/roadmap plan` for the module level. The concept's §7 reversal trigger was evaluated at M14's refine and did not flip (see M14's Gaps/notes) |
 | MCP interface for projects, knowledge and the condensed layer | Named as an outlook in [concepts/condensed-layer.md](concepts/condensed-layer.md) §14, deliberately without requirements                                                                                                                                                                                           | Own `/ai-scrum:concept` once the condensed artifacts exist                                                                                                                                                                           |
 | German docs migrated to English                               | Decided in `.claude/ai-scrum.md`; only `docs/MODULE-SCHEMA.md` is still German now — and story 023 pinned it `eol=lf` and byte-exact against `MODULE_SCHEMA_TEMPLATE`, so migrating it means changing code too                                                                                                     | Own story once it stops being cosmetic                                                                                                                                                                                               |
 | Phase 2                                                       | Not defined                                                                                                                                                                                                                                                                                                        | Cut after phase 1 has been used                                                                                                                                                                                                      |
