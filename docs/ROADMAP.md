@@ -1,7 +1,7 @@
 # Roadmap
 
 **The** one source of status and planning: where we stand, what comes next, what is not planned
-at all yet. As of: 2026-09-01.
+at all yet. As of: 2026-09-02.
 
 Rules (so this document does not drift):
 
@@ -101,8 +101,10 @@ Gaps/notes:
   `vault/` (meant to keep the user's real vault data out of the repo) was unanchored and
   matched any directory named `vault` anywhere in the tree, including the core vault module.
   Fixed in a standalone commit on the S03 branch (`af519ef`): anchored to `/vault/`, module
-  added. Confirmed missing from both `main` and `dev` before the fix — needs the S03 branch
-  merged to actually land the core module in history.
+  added. Confirmed missing from both `main` and `dev` before the fix — needed the S03 branch
+  merged to actually land the core module in history. **Resolved:** `dev` carries the anchored
+  `/vault/` rule and all 19 `src/core/vault/` files are tracked (checked 2026-09-02). Still
+  missing on `main`, which is ten sprints behind — it lands with the next release merge.
 - **The "last worked on" marker (013) is computed over the filtered list**, not globally — under
   a narrowed scope filter it marks the most recent project within that scope. Intentional and
   tested, not a defect.
@@ -539,8 +541,8 @@ levels and are explicitly out of M12.
 
 Sprints:
 
-- [sprints/S10/sprint.md](sprints/S10/sprint.md) — an area gathers itself (036, 037, 038, 039),
-  `done` ([review](sprints/S10/review.md) · [testplan](sprints/S10/testplan.md))
+- [sprints/done/S10/sprint.md](sprints/done/S10/sprint.md) — an area gathers itself (036, 037, 038, 039),
+  `done` ([review](sprints/done/S10/review.md) · [testplan](sprints/done/S10/testplan.md))
 
 Decisions taken at the cut (2026-09-01, user):
 
@@ -566,7 +568,7 @@ O7, O8 and O9, plus two of the stories' own open questions:
   stated default, unchanged.
 - **Condensed artifacts as evidence (O9):** never cited when answering a question — always the
   primary source. Not yet enforced in code (see Blocked / open in
-  [sprints/S10/review.md](sprints/S10/review.md)); carried below.
+  [sprints/done/S10/review.md](sprints/done/S10/review.md)); carried below.
 - **Diff granularity:** whole-artifact, not per-section.
 - **Trigger placement:** its own tab on the area, next to notes and todos.
 - **Day-close area picker:** the close dialog can add an area the model did not propose, not
@@ -576,8 +578,8 @@ O7, O8 and O9, plus two of the stories' own open questions:
 **S10 result (2026-09-02).** All four stories are `done` and moved to
 [requirements/done/](requirements/done/). Built on branch `sprint/10`, `npm run verify` green
 after every story; two review passes (037, 038) found and fixed real bugs before they shipped —
-see [sprints/S10/review.md](sprints/S10/review.md) for the full list. Live acceptance
-(manual walkthrough of [sprints/S10/testplan.md](sprints/S10/testplan.md)) is pending the user;
+see [sprints/done/S10/review.md](sprints/done/S10/review.md) for the full list. Live acceptance
+(manual walkthrough of [sprints/done/S10/testplan.md](sprints/done/S10/testplan.md)) is pending the user;
 the golden-path condensation run itself also needs a reachable local model to verify beyond the
 fake-provider tests, which the test plan flags explicitly.
 
@@ -589,15 +591,62 @@ outstanding.
 
 ---
 
+### M13 — Evidence stays primary, and the gate turns green — planned
+
+The follow-ups M12 left behind, plus the two never-green carve-outs this table has been carrying
+since S07. One of the four closes a guardrail: an answer can cite a condensed artifact today,
+because `core/index/build.ts` indexes it as an ordinary document and the answer path never checks a
+document's type. The other three are papercuts with a long tail — a gate that is red before the
+first test runs, a progress bar that forgets a maintenance run that is still going, and an artifact
+that can only be deleted from outside the app.
+
+Four stories: the guardrail (040), the run made visible wherever I am (042), the delete (043), and
+the line-ending decision (041) last, because it rewrites up to 1077 files in one commit.
+
+Sprints:
+
+- [sprints/S11/sprint.md](sprints/S11/sprint.md) — evidence stays primary, and the gate turns
+  green (040, 042, 043, 041), `planned`
+
+Decisions taken at the cut (2026-09-02, user):
+
+- **Carve-outs before the condensed layer's second level.** The module and project levels stay
+  gated on M12 being accepted; nothing in M13 depends on an unaccepted milestone.
+- **All four candidate stories ride along**, including the delete (043), which this table had
+  suggested holding back until the pattern could be shared across levels.
+- **The clarification round was pulled forward into the plan.** Twelve open questions were
+  settled the same day, recorded per story under `## Decisions (Sprint)` and marked `(User)`. The
+  four that shape the milestone: LF becomes the repository's canonical byte via repo-wide
+  `* text=auto eol=lf` (041-Q1); the evidence rule covers `condensed` only and leaves a module's
+  `overview.md` as it is, held in one named list so a second type is one entry (040-Q3); the
+  artifact stays findable in search and is excluded from citations only, with one line on the
+  condensed tab saying so (040-Q2/Q4); and deleting an artifact takes the directives section with
+  it (043-Q1).
+- **042 was widened past its carve-out framing.** Progress moves into the shell and is visible
+  from every screen, and closing the app mid-run warns and offers stop-and-close through 021b's
+  stop path — so the story now reaches the shell and `src/main/` instead of one renderer hook.
+
+Gaps/notes:
+
+- The live acceptance backlog is the standing open item: M4, M6, M9, M10, M11 and M12 are all
+  built with acceptance pending. M13 was cut so it cannot be invalidated by what those
+  walkthroughs find, but the backlog does not shrink on its own.
+- Three questions stay open on purpose, and all three are refine's to answer rather than the
+  user's: the vendored Gaston stylesheet under the new line-ending rule (041-Q4), the actual cause
+  of the navigation bug — which must be established and named before the strip is hoisted, or it
+  gets hidden instead of fixed (042-Q1), and whether the delete gets its own `condense:delete`
+  channel or a generic vault delete (043-Q2).
+- 041 adding `format:check` to the verify list in `.claude/ai-scrum.md` (041-Q3) means every story
+  from S12 on has a fourth gate to pass. Intended: a gate no story may rely on is how this one
+  went red in the first place.
+
+---
+
 ## Open / unprioritised
 
 | Topic                                                         | State                                                                                                                                                                                                                                                                      | Next step                                                                                                                                                                                    |
 | ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Condensed layer (module / project levels)                     | Concept written 2026-08-18: [concepts/condensed-layer.md](concepts/condensed-layer.md). The **area** level was built in M12 (S10, done 2026-09-02, acceptance pending); the module and project levels, CND-2, CND-17 (agent-session citation) and CND-35/36 (retiring the ingest's overview append) are still open | Next `/ai-scrum:roadmap plan` after M12 is accepted — the concept's §7 reversal trigger is evaluated at the second level, so the module or project level should follow soon rather than late |
-| Delete a condensed artifact from the UI                       | Deliberately out of scope for M12 (038-Q3, user decision 2026-09-01): the artifact is regenerable without loss except for the directives section, so deletion is a convenience, not a correctness requirement | Small own story once the area/module/project levels exist and the pattern is shared across them |
-| `query-answer` must never cite a condensed artifact as evidence | Deliberately out of scope for M12 (038-Q4 / concept O9, user decision 2026-09-01): the decision is made, but no code currently checks a document's `type` before offering it as evidence — a `condensed` document could in principle be surfaced today. This is the one M12 follow-up worth prioritising soon; it touches guardrail 3 directly | Own story, ideally before the module/project levels add more condensed documents to the index |
+| Condensed layer (module / project levels)                     | Concept written 2026-08-18: [concepts/condensed-layer.md](concepts/condensed-layer.md). The **area** level was built in M12 (S10, done 2026-09-02, acceptance pending); the module and project levels, CND-2, CND-17 (agent-session citation) and CND-35/36 (retiring the ingest's overview append) are still open | Next `/roadmap plan` after M12 is accepted — M13 was cut ahead of it for exactly that reason. The concept's §7 reversal trigger is evaluated at the second level, so the module or project level should follow soon rather than late |
 | MCP interface for projects, knowledge and the condensed layer | Named as an outlook in [concepts/condensed-layer.md](concepts/condensed-layer.md) §14, deliberately without requirements                                                                                                                                                   | Own `/ai-scrum:concept` once the condensed artifacts exist                                                                                                                                   |
-| German docs migrated to English                               | Decided in `.claude/ai-scrum.md`; `docs/*.md` are still German                                                                                                                                                                                                             | Own story once it stops being cosmetic                                                                                                                                                       |
-| `format:check` never green on Windows                         | Found in S07: 460 files fail prettier purely on CRLF line endings, including files no sprint has touched — `core.autocrlf` against a repo prettier expects in LF. Story 023 solved it for one file via `.gitattributes`                                                    | Own story — a repo-wide `.gitattributes`/prettier decision made once. Second never-green gate after the one M9 just retired                                                                  |
-| Maintenance progress bar vanishes after navigation            | Found while smoke-testing 027 in S07, isolated to `src/renderer/lib/queries/gardener.ts`, confirmed pre-existing against a HEAD worktree — the backend answers `gardener:runStatus` correctly while the bar is gone                                                        | Small own story — visible, isolated, ready to pick up                                                                                                                                        |
+| German docs migrated to English                               | Decided in `.claude/ai-scrum.md`; only `docs/MODULE-SCHEMA.md` is still German now — and story 023 pinned it `eol=lf` and byte-exact against `MODULE_SCHEMA_TEMPLATE`, so migrating it means changing code too                                                                                                                                                                                                             | Own story once it stops being cosmetic                                                                                                                                                       |
 | Phase 2                                                       | Not defined                                                                                                                                                                                                                                                                | Cut after phase 1 has been used                                                                                                                                                              |
