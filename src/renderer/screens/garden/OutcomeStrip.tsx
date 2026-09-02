@@ -34,8 +34,6 @@ export type Outcome =
   | { kind: 'discarded'; file: string; undoToken: string }
   /** A fix was reverted; `kept` was left untouched. */
   | { kind: 'undone'; kept: string[] }
-  /** A run was cancelled. */
-  | { kind: 'cancelled' }
   /** An action that writes nothing: the second file remains as a path. */
   | { kind: 'opened'; paths: string[] };
 
@@ -70,7 +68,6 @@ function sentence(
     return { key: 'garden.card.discarded', values: { file: outcome.file } };
   }
   if (outcome.kind === 'undone') return { key: 'garden.card.undone' };
-  if (outcome.kind === 'cancelled') return { key: 'garden.run.cancelled' };
   return { key: 'garden.card.opened', values: { path: outcome.paths[0] ?? '' } };
 }
 

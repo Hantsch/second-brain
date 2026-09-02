@@ -10,7 +10,6 @@ import { countOpenDays } from '../lib/journal-open';
 import { useJournalDays } from '../lib/queries/data';
 import { SCREENS, type ScreenDef } from '../lib/screens';
 import { todayIso } from './DayList';
-import { GardenerIndicator } from './GardenerIndicator';
 import { VaultIndicator } from './VaultIndicator';
 
 /* No tooltip on the rail entries: the label and key are already visibly next
@@ -66,7 +65,6 @@ export function Rail() {
       <div className="sb-rail-nav">{placeScreens.map(renderItem)}</div>
       <div className="sb-rail-foot">
         <div className="sb-rail-nav">{systemScreens.map(renderItem)}</div>
-        <GardenerIndicator />
         <VaultIndicator />
       </div>
     </nav>

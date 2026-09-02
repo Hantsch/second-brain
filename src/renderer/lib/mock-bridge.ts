@@ -750,6 +750,8 @@ const RESPONSES: MockResponses = {
   'window:minimize': () => undefined,
   'window:toggleMaximize': () => ({ maximized: false }),
   'window:close': () => undefined,
+  'window:confirmClose': () => undefined,
+  'window:cancelClose': () => undefined,
   'window:isMaximized': () => false,
   'window:show': () => undefined,
 

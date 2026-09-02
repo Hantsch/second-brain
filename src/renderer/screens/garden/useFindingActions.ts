@@ -42,7 +42,6 @@ export interface FindingActions {
   busyId: string | null;
   undoable: boolean;
   reset: () => void;
-  cancelled: () => void;
   applyFix: (finding: GardenerFinding) => void;
   dismiss: (finding: GardenerFinding) => void;
   /** `until` is the day the finding returns — the strip names it. */
@@ -286,7 +285,6 @@ export function useFindingActions(
     busyId,
     undoable,
     reset: () => setOutcome(null),
-    cancelled: () => setOutcome({ kind: 'cancelled' }),
     applyFix,
     dismiss,
     snooze,

@@ -7,14 +7,10 @@ export const enGarden = {
   'garden.run.again': 'Check again',
   'garden.run.cancel': 'Cancel check',
   'garden.run.running': 'Check running',
-  /* 021a, D5: the rail indicator — visible from any screen, not just the
-     maintenance screen itself, hence its own text instead of `garden.run.running`. */
-  'garden.run.railIndicator': 'Maintenance run going',
   'garden.run.check': 'Check: {check}',
   'garden.run.audit': 'The model is interpreting the results',
   'garden.run.looseEnds': 'The model is checking loose ends',
   'garden.run.step': '{done} of {total}',
-  'garden.run.cancelled': 'Cancelled. The last report stays as it was.',
   'garden.run.remaining': 'Still to come: {list}',
   'garden.run.stage.checks': 'checks',
   'garden.run.stage.audit': 'contradictions',
@@ -51,6 +47,9 @@ export const enGarden = {
      says so honestly, instead of staying quiet about it. */
   'garden.stopped.title': 'Stopped partway.',
   'garden.stopped.missing': 'Missing stages: {list}.',
+  /* 042, D4: button on the run strip to put the offer away without
+     continuing — the strip is then empty again until the next run starts. */
+  'garden.stopped.dismiss': 'Dismiss',
 
   // ── Health ────────────────────────────────────────────────────────────────
   'garden.health.label': 'Health',
@@ -268,4 +267,13 @@ export const enGarden = {
   'garden.llm.title': 'What a model would also find',
   'garden.llm.body':
     'Contradictions between two pages, near duplicates and frequently named terms without their own page. Everything beyond that is listed above in full.',
+
+  // ── Closing during a run (042, D7) ───────────────────────────────────────
+  /* Only the stop is offered, never a plain "close anyway" — a write could
+     still be in progress (the story's Decisions). */
+  'garden.quit.title': 'A maintenance run is still going.',
+  'garden.quit.body':
+    'Stopping it now ends it cleanly, the same way the strip’s own stop button would. Closing without stopping is not offered — a write could still be in progress.',
+  'garden.quit.stopAndClose': 'Stop run and close',
+  'garden.quit.cancel': 'Cancel',
 } as const;

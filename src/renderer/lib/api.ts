@@ -269,6 +269,8 @@ export const api = {
     minimize: () => call('window:minimize'),
     toggleMaximize: () => call('window:toggleMaximize'),
     close: () => call('window:close'),
+    confirmClose: () => call('window:confirmClose'),
+    cancelClose: () => call('window:cancelClose'),
     isMaximized: () => call('window:isMaximized'),
     show: () => call('window:show'),
   },

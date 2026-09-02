@@ -1,0 +1,256 @@
+/* 042, D6: the veto in front of `close` and `before-quit` while a maintenance
+   run is going.
+
+   The thing worth testing here is not that the warning appears — it is that
+   every path out of the warning ends somewhere, and that no path vetoes twice.
+   A second `preventDefault()` on an already-answered close is what turns a
+   display problem into an app that cannot be closed, so each case below counts
+   the preventDefaults rather than just checking the outcome.
+
+   AC 8 in particular: cancelling leaves both the run and the window alone. A
+   cancel that only cleared the flag and left the dead-man timer running would
+   still close the window `CONFIRM_TIMEOUT_MS` later, i.e. it would postpone the
+   close instead of calling it off — which is why the timer is asserted on
+   directly, with fake timers wound past it. */
+
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { BrowserWindow } from 'electron';
+import type * as GardenerRunState from '../../src/main/gardener-run-state';
+import type { Services } from '../../src/main/services';
+
+const vault = vi.hoisted(() => ({ running: true }));
+
+const electron = vi.hoisted(() => {
+  const appHandlers = new Map<string, (event: { preventDefault: () => void }) => void>();
+  return {
+    appHandlers,
+    app: {
+      quit: vi.fn(),
+      on: (event: string, listener: (e: { preventDefault: () => void }) => void) => {
+        appHandlers.set(event, listener);
+      },
+    },
+  };
+});
+
+vi.mock('electron', () => ({ app: electron.app, BrowserWindow: class {} }));
+
+/* Spread the real module so every other export stays itself; only the one
+   question the guard asks it is under this test's control. */
+vi.mock('../../src/main/gardener-run-state', async (importOriginal) => ({
+  ...(await importOriginal<typeof GardenerRunState>()),
+  gardenerRunning: () => vault.running,
+}));
+
+const { CONFIRM_TIMEOUT_MS, attachCloseGuard, cancelClose, confirmClose } =
+  await import('../../src/main/close-guard');
+
+interface Harness {
+  /** The user asks to close the window — Electron's `close` event. */
+  requestClose: () => void;
+  /** How often the close was vetoed, over all attempts. */
+  prevented: () => number;
+  /** How often the guard actually carried a close out. */
+  closeCalls: () => number;
+  events: () => string[];
+  /** D6 review fix: the window must be surfaced before the prompt is shown. */
+  show: ReturnType<typeof vi.fn>;
+  focus: ReturnType<typeof vi.fn>;
+  restore: ReturnType<typeof vi.fn>;
+  /** Lets a test simulate the window being minimized when the close arrives. */
+  setMinimized: (value: boolean) => void;
+}
+
+/** A main window and a service container reduced to what the guard touches. */
+function attachHarness(): Harness {
+  const closeListeners: ((event: { preventDefault: () => void }) => void)[] = [];
+  const events: string[] = [];
+  let prevented = 0;
+  let closeCalls = 0;
+  let minimized = false;
+  const show = vi.fn();
+  const focus = vi.fn();
+  const restore = vi.fn(() => void (minimized = false));
+
+  const requestClose = (): void => {
+    const event = { preventDefault: () => void (prevented += 1) };
+    for (const listener of closeListeners) listener(event);
+  };
+
+  /* Cast because the guard only ever calls `on`, `isDestroyed`, `close`,
+     `isMinimized`, `restore`, `show` and `focus` on the window and
+     `mainWindow`/`sendEvent` on the container — a real `BrowserWindow` cannot
+     exist in this process at all. */
+  const window = {
+    on: (event: string, listener: (e: { preventDefault: () => void }) => void) => {
+      if (event === 'close') closeListeners.push(listener);
+    },
+    isDestroyed: () => false,
+    isMinimized: () => minimized,
+    restore,
+    show,
+    focus,
+    /* Electron runs the `close` listeners again on a retry, so the retry is
+       modelled too: a guard that vetoed its own confirmed close would show up
+       here as a second preventDefault. */
+    close: () => {
+      closeCalls += 1;
+      requestClose();
+    },
+  } as unknown as BrowserWindow;
+
+  const services = {
+    mainWindow: () => window,
+    sendEvent: (name: string) => void events.push(name),
+  } as unknown as Services;
+
+  attachCloseGuard(services, window);
+  return {
+    requestClose,
+    prevented: () => prevented,
+    closeCalls: () => closeCalls,
+    events: () => events,
+    show,
+    focus,
+    restore,
+    setMinimized: (value) => void (minimized = value),
+  };
+}
+
+beforeEach(() => {
+  vi.useFakeTimers();
+  vault.running = true;
+  electron.app.quit.mockClear();
+});
+
+afterEach(() => {
+  /* Drops whatever timer a test left standing along with the fake clock. */
+  vi.useRealTimers();
+});
+
+describe('close guard', () => {
+  it('vetoes once and asks, while a run is going', () => {
+    const app = attachHarness();
+    app.requestClose();
+    expect(app.prevented()).toBe(1);
+    expect(app.events()).toEqual(['event:close-requested']);
+    expect(app.closeCalls()).toBe(0);
+  });
+
+  it('does not veto when no run is going', () => {
+    vault.running = false;
+    const app = attachHarness();
+    app.requestClose();
+    expect(app.prevented()).toBe(0);
+    expect(app.events()).toEqual([]);
+  });
+
+  it('lets the confirmed close through without vetoing it a second time', () => {
+    const app = attachHarness();
+    app.requestClose();
+    confirmClose();
+    expect(app.closeCalls()).toBe(1);
+    expect(app.prevented()).toBe(1);
+  });
+
+  it('closes anyway when the renderer never answers', () => {
+    const app = attachHarness();
+    app.requestClose();
+    vi.advanceTimersByTime(CONFIRM_TIMEOUT_MS);
+    expect(app.closeCalls()).toBe(1);
+    expect(app.prevented()).toBe(1);
+  });
+
+  it('leaves run and window alone on cancel — the timer goes with the veto', () => {
+    const app = attachHarness();
+    app.requestClose();
+    cancelClose();
+    vi.advanceTimersByTime(CONFIRM_TIMEOUT_MS * 10);
+    expect(app.closeCalls()).toBe(0);
+    expect(electron.app.quit).not.toHaveBeenCalled();
+  });
+
+  it('judges a close after a cancel from scratch', () => {
+    const app = attachHarness();
+    app.requestClose();
+    cancelClose();
+    app.requestClose();
+    expect(app.prevented()).toBe(2);
+    expect(app.events()).toEqual(['event:close-requested', 'event:close-requested']);
+    expect(app.closeCalls()).toBe(0);
+  });
+
+  it('authorises nothing when a confirm arrives after the cancel', () => {
+    const app = attachHarness();
+    app.requestClose();
+    cancelClose();
+    /* A stale answer: the prompt it belonged to is gone. It must not leave a
+       standing permission behind, so the next close is still asked about. */
+    confirmClose();
+    expect(app.closeCalls()).toBe(0);
+    app.requestClose();
+    expect(app.prevented()).toBe(2);
+  });
+
+  it('restores, shows and focuses a hidden/minimized window before the prompt (D6 review fix)', () => {
+    /* A minimized (or otherwise hidden) window showing an invisible confirm
+       dialog is, from AC7's point of view, indistinguishable from no confirm
+       at all: the dead-man timer still fires and the run still dies mid-write
+       — the user just never saw anything to answer. */
+    const app = attachHarness();
+    app.setMinimized(true);
+
+    app.requestClose();
+
+    expect(app.restore).toHaveBeenCalledTimes(1);
+    expect(app.show).toHaveBeenCalledTimes(1);
+    expect(app.focus).toHaveBeenCalledTimes(1);
+    expect(app.prevented()).toBe(1);
+    expect(app.events()).toEqual(['event:close-requested']);
+  });
+
+  it('shows and focuses even when the window is not minimized, but does not restore', () => {
+    const app = attachHarness();
+
+    app.requestClose();
+
+    expect(app.restore).not.toHaveBeenCalled();
+    expect(app.show).toHaveBeenCalledTimes(1);
+    expect(app.focus).toHaveBeenCalledTimes(1);
+  });
+
+  it('confirms a vetoed quit and actually retries app.quit() (D6 review fix)', () => {
+    /* The cancel branch right below already proves the veto never quits; this
+       is the missing other half — the happy path all the way to a real
+       `app.quit()` call once the renderer answers. */
+    attachHarness();
+    const quit = electron.appHandlers.get('before-quit');
+    if (!quit) throw new Error('no before-quit handler registered');
+
+    let prevented = 0;
+    quit({ preventDefault: () => void (prevented += 1) });
+    expect(prevented).toBe(1);
+    expect(electron.app.quit).not.toHaveBeenCalled();
+
+    confirmClose();
+
+    expect(electron.app.quit).toHaveBeenCalledTimes(1);
+  });
+
+  it('cancels a vetoed quit without ever quitting', () => {
+    /* `before-quit` is app-level and registered exactly once, so it keeps the
+       container from the first attachment — deliberate, and the reason this
+       case only asserts things that hold regardless of which window it asks. */
+    attachHarness();
+    const quit = electron.appHandlers.get('before-quit');
+    if (!quit) throw new Error('no before-quit handler registered');
+
+    let prevented = 0;
+    quit({ preventDefault: () => void (prevented += 1) });
+    expect(prevented).toBe(1);
+
+    cancelClose();
+    vi.advanceTimersByTime(CONFIRM_TIMEOUT_MS * 10);
+    expect(electron.app.quit).not.toHaveBeenCalled();
+  });
+});

@@ -1130,6 +1130,25 @@ export interface IpcRoutes {
   'window:minimize': { req: void; res: void };
   'window:toggleMaximize': { req: void; res: { maximized: boolean } };
   'window:close': { req: void; res: void };
+  /**
+   * The renderer's answer to `event:close-requested` (042, D6): the user has
+   * seen what closing would cost — a maintenance run that is still going — and
+   * wants to close anyway. Lets the vetoed close through and carries out
+   * exactly that close, so confirming ends up in the same place the title
+   * bar's × would have. Never refused: a confirm that no veto is waiting for
+   * changes nothing at all, rather than closing a window nobody asked to
+   * close.
+   */
+  'window:confirmClose': { req: void; res: void };
+  /**
+   * The other answer to `event:close-requested` (042, D6, AC 8): leave both the
+   * run and the window alone. Drops the vetoed close for good — including the
+   * guard's dead-man timer, which would otherwise close the window a few
+   * seconds after the user said not to. Only this one attempt is dropped: the
+   * next close is judged from scratch, so cancelling is never an authorisation
+   * for anything later. Never refused, exactly as `window:confirmClose`.
+   */
+  'window:cancelClose': { req: void; res: void };
   'window:isMaximized': { req: void; res: boolean };
   /**
    * Brings the main window to the front (from the tray icon, from the
@@ -1301,6 +1320,8 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'window:minimize',
   'window:toggleMaximize',
   'window:close',
+  'window:confirmClose',
+  'window:cancelClose',
   'window:isMaximized',
   'window:show',
   'shell:openPath',
@@ -1395,6 +1416,19 @@ export interface IpcEvents {
   'event:capture-focus': { text?: string };
   'event:vault-status': VaultStatus;
   'event:settings': SettingsSnapshot;
+  /**
+   * A close or a quit was vetoed because a maintenance run is going (042, D6)
+   * — the prompt for whether that run may be killed. By the time this arrives
+   * main has already called `preventDefault()`; the close happens once
+   * `window:confirmClose` comes back, or after the guard's ~5 s dead-man timer
+   * gives up on an answer (an unanswerable prompt must never be able to make
+   * the app unclosable).
+   *
+   * Payload-free on purpose: what the prompt shows about the run is already in
+   * the renderer's progress store, fed by `event:gardener-progress`. A second
+   * copy of it here could only ever disagree with that one.
+   */
+  'event:close-requested': void;
 }
 
 export type IpcEventName = keyof IpcEvents;
@@ -1412,6 +1446,7 @@ export const IPC_EVENTS: readonly IpcEventName[] = [
   'event:capture-focus',
   'event:vault-status',
   'event:settings',
+  'event:close-requested',
 ];
 
 /** Errors that come back over IPC carry this shape. */

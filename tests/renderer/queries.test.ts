@@ -8,11 +8,21 @@
  *   nichts; die Ansicht bleibt nach einer Dateiänderung stehen.
  */
 
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { qk, VAULT_DEPENDENT_ROOTS } from '@renderer/lib/queries/keys';
+import {
+  dismissGardenerStopped,
+  getGardenerProgress,
+  markGardenerStopped,
+  seedGardenerProgress,
+  seedGardenerProgressOnReady,
+  setGardenerProgress,
+  useGardenerProgress,
+  useGardenerStopped,
+} from '@renderer/lib/gardener-progress';
 import type { IpcEventName, IpcEvents } from '@shared/ipc';
 
 type KeyFactory = (...args: string[]) => readonly unknown[];
@@ -62,6 +72,36 @@ describe('Query-Keys', () => {
     expect(VAULT_DEPENDENT_ROOTS).toContain('modules');
   });
 });
+
+type ProgressEvent = IpcEvents['event:gardener-progress'];
+
+/** One step of a run that is going, distinguishable by its `percent`. */
+function running(percent: number): ProgressEvent {
+  return {
+    phase: 'checks',
+    check: 'orphan',
+    done: 2,
+    total: 9,
+    running: true,
+    stage: 'checks',
+    percent,
+    remaining: [],
+    startedAt: '2026-08-22T10:00:00+02:00',
+    trigger: 'user',
+  };
+}
+
+/** The last thing a run says — finished, cancelled or failed, all the same. */
+function finished(): ProgressEvent {
+  return {
+    ...running(100),
+    phase: 'done',
+    check: null,
+    done: 9,
+    running: false,
+    stage: 'done',
+  };
+}
 
 /* Ein Pflegelauf endet auch ohne offenen Pflege-Screen — beim Öffnen des Vaults
    (`gardener.runOnOpen`). Daran hängen drei Ansichten, und wenn eine davon
@@ -128,6 +168,17 @@ describe('Ereignisse', () => {
     expect(keys).toContain(JSON.stringify(qk.gardener.report()));
     expect(keys).toContain(JSON.stringify(qk.dashboard.data()));
     expect(keys).toContain(JSON.stringify(qk.modules.list()));
+  });
+
+  /* 042, D1: der Fortschritt geht in den Speicher außerhalb von React, und
+     zwar über genau diese Verdrahtung — sie hängt am Fenster, nicht an einem
+     Screen, und ist damit auch dann da, wenn niemand zusieht. */
+  it('schreibt jeden Fortschritt in den Speicher außerhalb von React', async () => {
+    const { emit } = await wire();
+
+    emit('event:gardener-progress', running(11));
+
+    expect(getGardenerProgress()).toMatchObject({ running: true, percent: 11 });
   });
 
   /* 019c, F6: without this, a freshly pulled model never becomes visible as
@@ -237,67 +288,120 @@ describe('034: Budget- und VRAM-Änderungen ziehen den Startplan nach', () => {
 
 /* 021a, D4: mounting the maintenance screen mid-run must show the running bar
    right away, not only once the next `event:gardener-progress` tick arrives —
-   which, for a run already underway, may be seconds out. `useGardenerProgress`
-   seeds itself from `gardener:runStatus` on mount for exactly that reason. */
+   which, for a run already underway, may be seconds out. Hence the seed from
+   `gardener:runStatus`.
+ *
+ * 042, D1: that seed — and the live progress with it — no longer lives in a
+ * hook. A `useQuery` seed went stale in the cache and the `useState` live layer
+ * died with the screen, so navigating away mid-run and back showed no bar at
+ * all. Both now live in `gardener-progress.ts`, and what is checked here is
+ * that store's contract: it seeds, it survives having no component at all, and
+ * its slow seed can never overwrite a newer live event. */
 describe('useGardenerProgress seeds from gardener:runStatus', () => {
-  function wrapWithClient(invoke: (channel: string, payload?: unknown) => unknown): {
-    wrapper: (props: { children: ReactNode }) => ReactNode;
-  } {
+  /** Installs a bridge whose `gardener:runStatus` answers with `runStatus()`. */
+  function installBridge(runStatus: () => unknown): void {
     const sb = {
-      invoke: vi.fn((channel: string, payload?: unknown) =>
-        Promise.resolve(invoke(channel, payload)),
+      invoke: vi.fn((channel: string) =>
+        Promise.resolve(channel === 'gardener:runStatus' ? runStatus() : null),
       ),
       on: () => () => undefined,
       off: vi.fn(),
     };
     window.sb = sb as unknown as typeof window.sb;
-    const client = new QueryClient();
-    return {
-      wrapper: ({ children }: { children: ReactNode }) => QueryClientProvider({ client, children }),
-    };
   }
 
-  it('shows the running snapshot immediately when a run is already going', async () => {
-    const { wrapper } = wrapWithClient((channel) => {
-      if (channel === 'vault:status') return { ready: true, indexing: false };
-      if (channel === 'gardener:runStatus') {
-        return {
-          phase: 'checks',
-          check: 'orphan',
-          done: 2,
-          total: 9,
-          running: true,
-          stage: 'checks',
-          percent: 22,
-          remaining: [],
-          startedAt: new Date().toISOString(),
-          trigger: 'user',
-        };
-      }
-      return null;
-    });
+  beforeEach(() => {
+    /* The store outlives a test the way it outlives a screen — that is the
+       whole point of it. So each test puts it back to "no run going" itself. */
+    setGardenerProgress(finished());
+    dismissGardenerStopped();
+  });
 
-    const { useGardenerProgress } = await import('@renderer/lib/queries/gardener');
-    const { result } = renderHook(() => useGardenerProgress(), { wrapper });
+  afterEach(() => {
+    delete window.sb;
+  });
+
+  it('shows the running snapshot when a run is already going', async () => {
+    installBridge(() => running(22));
+    const { result } = renderHook(() => useGardenerProgress());
+    expect(result.current).toBeNull();
+
+    await seedGardenerProgress();
 
     await waitFor(() => expect(result.current?.running).toBe(true));
-    expect(result.current).toMatchObject({ running: true, trigger: 'user' });
+    expect(result.current).toMatchObject({ running: true, trigger: 'user', percent: 22 });
   });
 
   it('stays null when no run is going', async () => {
-    const { wrapper } = wrapWithClient((channel) => {
-      if (channel === 'vault:status') return { ready: true, indexing: false };
-      if (channel === 'gardener:runStatus') return null;
-      return null;
+    installBridge(() => null);
+
+    await seedGardenerProgress();
+
+    expect(window.sb?.invoke).toHaveBeenCalledWith('gardener:runStatus', undefined);
+    expect(getGardenerProgress()).toBeNull();
+  });
+
+  /* The original bug, in one test: `bridge().on` does not replay, so anything
+     that only a mounted component collected was lost for good. */
+  it('keeps an event that arrived while no component was mounted', () => {
+    setGardenerProgress(running(40));
+
+    const first = renderHook(() => useGardenerProgress());
+    expect(first.result.current).toMatchObject({ percent: 40 });
+    first.unmount();
+
+    setGardenerProgress(running(60));
+
+    expect(renderHook(() => useGardenerProgress()).result.current).toMatchObject({ percent: 60 });
+  });
+
+  /* The seed is a round-trip; a run finishing right as a screen opens produces
+     exactly this order. Without the generation guard the bar would jump back to
+     "checking" after the run was already over — and stay there. */
+  it('never lets a slow seed overwrite a newer live event', async () => {
+    let answer: (snapshot: ProgressEvent | null) => void = () => undefined;
+    window.sb = {
+      invoke: vi.fn(
+        () =>
+          new Promise((resolve) => {
+            answer = resolve;
+          }),
+      ),
+      on: () => () => undefined,
+      off: vi.fn(),
+    } as unknown as typeof window.sb;
+
+    const seeding = seedGardenerProgress();
+    setGardenerProgress(running(80));
+    answer(running(5));
+    await seeding;
+
+    expect(getGardenerProgress()).toMatchObject({ percent: 80 });
+  });
+
+  it('clears the bar once the run reports it is no longer running', () => {
+    setGardenerProgress(running(50));
+
+    setGardenerProgress(finished());
+
+    expect(getGardenerProgress()).toBeNull();
+  });
+
+  /* 042 review, N2: `stoppedInSession` used to survive a vault switch — stop a
+     run in vault A, don't dismiss it, open vault B, and the strip still
+     offered "continue" there, resuming vault A's run against vault B. The
+     vault going not-ready is exactly the signal that whatever was stopped
+     belonged to the vault that just closed, so it must be cleared alongside
+     `seededForCurrentReadySpan`. */
+  it('clears a stopped-partway flag once the vault becomes not ready, so it cannot follow into a different vault', () => {
+    markGardenerStopped();
+    const { result } = renderHook(() => useGardenerStopped());
+    expect(result.current).toBe(true);
+
+    act(() => {
+      seedGardenerProgressOnReady(false);
     });
 
-    const { useGardenerProgress } = await import('@renderer/lib/queries/gardener');
-    const { result } = renderHook(() => useGardenerProgress(), { wrapper });
-
-    /* Give the seed query a tick to settle, then confirm it never flips. */
-    await waitFor(() =>
-      expect(window.sb?.invoke).toHaveBeenCalledWith('gardener:runStatus', undefined),
-    );
-    expect(result.current).toBeNull();
+    expect(result.current).toBe(false);
   });
 });

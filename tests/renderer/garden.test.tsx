@@ -22,19 +22,12 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, useLocation } from 'react-router-dom';
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import axe from 'axe-core';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type {
-  IpcChannel,
-  IpcEventName,
-  IpcEvents,
-  IpcRequest,
-  IpcResponse,
-  JournalDayView,
-} from '@shared/ipc';
+import type { IpcChannel, IpcEvents, IpcRequest, IpcResponse, JournalDayView } from '@shared/ipc';
 import type {
   GardenerFinding,
   GardenerHiddenFinding,
@@ -61,6 +54,7 @@ import { writeTargetOf } from '@renderer/screens/garden/fixes';
 import { contradictionPassage } from '@renderer/screens/garden/sections';
 import { targetFor } from '@renderer/screens/garden/targets';
 import { setLanguage } from '@renderer/i18n';
+import { setGardenerProgress } from '@renderer/lib/gardener-progress';
 import { formatDate } from '@renderer/lib/format';
 import { clearToasts } from '@renderer/lib/toast';
 import type { SbBridge } from '@renderer/lib/bridge';
@@ -115,13 +109,6 @@ function installMock(handlers: SbHandlers): void {
       listeners.get(event)?.delete(callback);
     },
   } as unknown as SbBridge;
-}
-
-/** Ein Ereignis aus dem Hauptprozess — so kommt Fortschritt in den Screen. */
-function emit<E extends IpcEventName>(event: E, payload: IpcEvents[E]): void {
-  act(() => {
-    for (const callback of listeners.get(event) ?? []) callback(payload);
-  });
 }
 
 function calls(channel: IpcChannel): unknown[] {
@@ -578,6 +565,23 @@ beforeEach(() => {
   sent.length = 0;
   listeners.clear();
   clearToasts();
+  /* Der Fortschritts-Speicher lebt außerhalb von React (042, D2/D3) und damit
+     außerhalb jeder Testisolation, die `render` sonst mitbrächte — ohne
+     Rücksetzen würde ein Test, der einen laufenden Lauf setzt, den nächsten
+     mit demselben Zustand starten lassen. `running: false` normalisiert
+     intern zu `null` (`apply` in `gardener-progress.ts`). */
+  setGardenerProgress({
+    phase: 'done',
+    check: null,
+    done: 0,
+    total: 0,
+    running: false,
+    stage: 'done',
+    percent: 100,
+    remaining: [],
+    startedAt: NOW,
+    trigger: 'auto',
+  });
   /* jsdom kennt `scrollIntoView` nicht. Ohne Attrappe stirbt die Fehlerkarte an
      der Zeile, die den Fehler in den Sichtbereich rollt. */
   Element.prototype.scrollIntoView = () => undefined;
@@ -703,188 +707,22 @@ describe('Pflege ohne Lauf', () => {
   });
 });
 
-// ── Lauf mit Fortschritt ────────────────────────────────────────────────────
-
-describe('Lauf', () => {
-  it('zeigt, welche Prüfung läuft, und bricht ab', async () => {
-    installMock(
-      handlers(REPORT, {
-        /* Der Lauf endet erst, wenn der Test ihn enden lässt. */
-        'gardener:run': () => new Promise(() => undefined) as unknown as GardenerReport,
-      }),
-    );
-    wrap(<GardenScreen />);
-    await screen.findByText('72');
-
-    await userEvent.click(screen.getByRole('button', { name: 'Neu prüfen' }));
-    emit('event:gardener-progress', {
-      phase: 'checks',
-      check: 'broken-link',
-      done: 2,
-      total: 10,
-      running: true,
-      stage: 'checks',
-      percent: 20,
-      remaining: [],
-      startedAt: new Date().toISOString(),
-      trigger: 'user',
-    });
-
-    expect(await screen.findByText('Prüfung: Kaputte Wikilinks')).toBeTruthy();
-    expect(screen.getByText('2 von 10')).toBeTruthy();
-    expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe('20');
-
-    await userEvent.click(screen.getByRole('button', { name: 'Prüfung abbrechen' }));
-    expect(calls('gardener:cancel')).toEqual([undefined]);
-    expect(
-      await screen.findByText('Abgebrochen. Der letzte Bericht bleibt, wie er war.'),
-    ).toBeTruthy();
-  });
-
-  it('nennt beim Deuten das Modell und nicht eine Prüfung', async () => {
-    installMock(
-      handlers(REPORT, {
-        'gardener:run': () => new Promise(() => undefined) as unknown as GardenerReport,
-      }),
-    );
-    wrap(<GardenScreen />);
-    await screen.findByText('72');
-    await userEvent.click(screen.getByRole('button', { name: 'Neu prüfen' }));
-
-    emit('event:gardener-progress', {
-      phase: 'audit',
-      check: null,
-      done: 10,
-      total: 11,
-      running: true,
-      stage: 'audit',
-      percent: 14,
-      remaining: [],
-      startedAt: new Date().toISOString(),
-      trigger: 'user',
-    });
-
-    expect(await screen.findByText('Das Modell deutet die Befunde')).toBeTruthy();
-  });
-
-  /* 021a D2: the bar renders `percent` as-is (never a recomputed flat count),
-     names what is still ahead, and ticks a `m:ss` elapsed clock from
-     `startedAt` — the reason the user can see the run is alive even while the
-     percentage itself stands still during a model stage. */
-  it('nennt die noch ausstehenden Stufen und zählt die Laufzeit hoch', async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    try {
-      installMock(
-        handlers(REPORT, {
-          'gardener:run': () => new Promise(() => undefined) as unknown as GardenerReport,
-        }),
-      );
-      wrap(<GardenScreen />);
-      await screen.findByText('72');
-      await userEvent.click(screen.getByRole('button', { name: 'Neu prüfen' }));
-
-      emit('event:gardener-progress', {
-        phase: 'checks',
-        check: 'broken-link',
-        done: 2,
-        total: 10,
-        running: true,
-        stage: 'checks',
-        percent: 8,
-        remaining: ['audit', 'loose-ends'],
-        startedAt: new Date().toISOString(),
-        trigger: 'user',
-      });
-
-      expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe('8');
-      expect(await screen.findByText('Noch aus: Widersprüche, lose Enden')).toBeTruthy();
-      expect(screen.getByText('0:00')).toBeTruthy();
-
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(2000);
-      });
-
-      expect(await screen.findByText('0:02')).toBeTruthy();
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-});
-
-// ── Ohne Modell-Stufe und kein Zweitlauf (021a D6) ───────────────────────────
-
-describe('Lauf ohne Modell-Stufe', () => {
-  it('erklärt die kürzere Stufenliste, statt sie stillschweigend zu zeigen', async () => {
-    installMock(
-      handlers(REPORT, {
-        'gardener:run': () => new Promise(() => undefined) as unknown as GardenerReport,
-      }),
-    );
-    wrap(<GardenScreen />);
-    await screen.findByText('72');
-    await userEvent.click(screen.getByRole('button', { name: 'Neu prüfen' }));
-
-    /* `useLlm: false` für diesen Lauf: der Stufenplan (`@core/gardener/progress`)
-       enthält von Anfang an nur `checks` — `remaining` nennt nie `audit` oder
-       `loose-ends`, weil es sie im Plan gar nicht gibt. */
-    emit('event:gardener-progress', {
-      phase: 'checks',
-      check: 'broken-link',
-      done: 2,
-      total: 10,
-      running: true,
-      stage: 'checks',
-      percent: 20,
-      remaining: [],
-      startedAt: new Date().toISOString(),
-      trigger: 'user',
-    });
-
-    expect(
-      await screen.findByText(
-        'Keine Modell-Stufe — Widersprüche und lose Enden werden nicht geprüft.',
-      ),
-    ).toBeTruthy();
-    expect(screen.queryByText(/^Noch aus:/)).toBeNull();
-  });
-
-  it('nennt bei einer Modell-Stufe im Plan keine erfundene Erklärung', async () => {
-    installMock(
-      handlers(REPORT, {
-        'gardener:run': () => new Promise(() => undefined) as unknown as GardenerReport,
-      }),
-    );
-    wrap(<GardenScreen />);
-    await screen.findByText('72');
-    await userEvent.click(screen.getByRole('button', { name: 'Neu prüfen' }));
-
-    /* Derselbe `checks`-Schritt, aber mit einer Modell-Stufe noch aus — die
-       Zeile darf hier nicht erscheinen, sonst wäre sie eine Behauptung ohne
-       Deckung. */
-    emit('event:gardener-progress', {
-      phase: 'checks',
-      check: 'broken-link',
-      done: 2,
-      total: 10,
-      running: true,
-      stage: 'checks',
-      percent: 8,
-      remaining: ['audit'],
-      startedAt: new Date().toISOString(),
-      trigger: 'user',
-    });
-
-    await screen.findByText('Noch aus: Widersprüche');
-    expect(
-      screen.queryByText('Keine Modell-Stufe — Widersprüche und lose Enden werden nicht geprüft.'),
-    ).toBeNull();
-  });
-});
+/* The running-progress UI itself (the bar, the cancel button, the elapsed
+   clock, the "no model stage" note) moved out of this screen into `RunStrip`
+   (042, D3) — it now lives in `AppShell`, mounted once for the whole app, not
+   remounted per screen. Those behaviors are covered where the component now
+   lives, not here; what stays worth covering on this screen is that a run
+   already going — reported via the same progress store — locks out a second
+   one, which is exactly what `Kein Zweitlauf ohne Vorwarnung` below checks. */
 
 describe('Kein Zweitlauf ohne Vorwarnung', () => {
-  /* Ein Lauf, der schon geht — egal wodurch ausgelöst — kommt über genau den
-     Weg herein, den D4 dafür gebaut hat: die Attrappe für `gardener:runStatus`
-     beantwortet die Frage schon beim Mount, bevor je ein Ereignis eintrifft. */
+  /* Ein Lauf, der schon geht — egal wodurch ausgelöst. Seit 042 D3 lebt der
+     Fortschritt in einem eigenen Modul-Speicher außerhalb von React
+     (`gardener-progress.ts`), gefüttert von `wireEvents`, das dieser Test
+     nicht verdrahtet — deshalb wird der Speicher direkt gesetzt, statt über
+     eine Attrappe für `gardener:runStatus` zu hoffen, dass irgendetwas ihn
+     beim Mount abfragt (das tut inzwischen nur noch `AppShell`, nicht mehr
+     dieser Screen). */
   function runningSnapshot(): IpcEvents['event:gardener-progress'] {
     return {
       phase: 'checks',
@@ -901,7 +739,8 @@ describe('Kein Zweitlauf ohne Vorwarnung', () => {
   }
 
   it('sperrt „jetzt prüfen" mit sichtbarem Grund, statt die Fehlermeldung abzuwarten', async () => {
-    installMock(handlers(REPORT, { 'gardener:runStatus': () => runningSnapshot() }));
+    installMock(handlers(REPORT));
+    setGardenerProgress(runningSnapshot());
     wrap(<GardenScreen />);
     await screen.findByText('72');
 
@@ -1074,22 +913,22 @@ describe('Nur dies prüfen', () => {
   });
 
   it('ist gesperrt, während ein Lauf schon geht', async () => {
-    installMock(
-      handlers(REPORT, {
-        'gardener:runStatus': () => ({
-          phase: 'checks',
-          check: 'broken-link',
-          done: 2,
-          total: 10,
-          running: true,
-          stage: 'checks',
-          percent: 20,
-          remaining: [],
-          startedAt: NOW,
-          trigger: 'auto',
-        }),
-      }),
-    );
+    /* 042 D3: der Fortschritt lebt im Modul-Speicher, nicht mehr hinter einer
+       `gardener:runStatus`-Attrappe, die nur `AppShell` abfragt — siehe die
+       Erklärung bei `Kein Zweitlauf ohne Vorwarnung` oben. */
+    installMock(handlers(REPORT));
+    setGardenerProgress({
+      phase: 'checks',
+      check: 'broken-link',
+      done: 2,
+      total: 10,
+      running: true,
+      stage: 'checks',
+      percent: 20,
+      remaining: [],
+      startedAt: NOW,
+      trigger: 'auto',
+    });
     wrap(<GardenScreen />);
     await screen.findByText('72');
 

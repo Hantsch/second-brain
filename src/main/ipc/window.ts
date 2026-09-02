@@ -4,6 +4,7 @@
 import { BrowserWindow } from 'electron';
 import type { HandlerMap } from './registry';
 import { defineHandlers } from './registry';
+import { cancelClose, confirmClose } from '../close-guard';
 import type { Services } from '../services';
 
 function target(services: Services): BrowserWindow | null {
@@ -26,6 +27,23 @@ export function windowHandlers(services: Services): HandlerMap {
 
     'window:close': () => {
       target(services)?.close();
+    },
+
+    /* The answer to `event:close-requested` (042, D6): close anyway, even
+       though a maintenance run is going. Deliberately not `close()` here —
+       the guard carries out exactly the close it vetoed, and only it knows
+       which one that was; closing from here would sidestep the flag that keeps
+       the retry from being vetoed a second time. */
+    'window:confirmClose': () => {
+      confirmClose();
+    },
+
+    /* The opposite answer (AC 8): leave the run and the window alone. Without
+       this the guard's dead-man timer would close the window a few seconds
+       after the user said not to — a cancel that only postpones is not a
+       cancel. */
+    'window:cancelClose': () => {
+      cancelClose();
     },
 
     'window:isMaximized': () => target(services)?.isMaximized() ?? false,

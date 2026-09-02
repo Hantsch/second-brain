@@ -33,7 +33,6 @@ import { useLanguage, useT } from '../../i18n';
 import { api } from '../../lib/api';
 import { formatAge } from '../../lib/format';
 import {
-  useGardenerCancel,
   useGardenerMutations,
   useGardenerProgress,
   useGardenerReport,
@@ -44,7 +43,6 @@ import { useModuleMutations } from '../../lib/queries/modules';
 import { FindingList } from './FindingList';
 import { HealthCard } from './HealthCard';
 import { OutcomeStrip } from './OutcomeStrip';
-import { RunBar } from './RunBar';
 import { useFindingActions } from './useFindingActions';
 import { ALL_FILTERS } from './filter';
 import type { FindingFilterState } from './filter';
@@ -52,7 +50,7 @@ import { scopeLabel } from './scope';
 import { targetFor } from './targets';
 
 /* 021b, D4: names a missing stage in the "stopped partway" notice — the same
-   labels `RunBar`'s "still to come" line uses for a running plan's remaining
+   labels `RunStrip`'s "still to come" line uses for a running plan's remaining
    stages, so a stage is never called two different things on this screen. */
 const STAGE_LABEL_KEYS: Record<GardenerStageId, string> = {
   checks: 'garden.run.stage.checks',
@@ -66,7 +64,6 @@ export function GardenScreen() {
   const navigate = useNavigate();
   const report = useGardenerReport();
   const run = useGardenerRun();
-  const cancel = useGardenerCancel();
   const progress = useGardenerProgress();
   const mutations = useGardenerMutations();
   const pages = useModuleMutations();
@@ -90,7 +87,6 @@ export function GardenScreen() {
     busyId,
     undoable,
     reset,
-    cancelled,
     applyFix,
     dismiss,
     snooze,
@@ -144,10 +140,6 @@ export function GardenScreen() {
     run.mutate({ resume: true });
   };
 
-  const stop = (): void => {
-    cancel.mutate(undefined, { onSuccess: cancelled });
-  };
-
   /* 021c, D3: "check only this" — the same run mutation as "check now", just
      scoped to whatever the filter currently narrows to. Guarded the same way
      `start`/`resume` are: a run already going must not accept a second one. */
@@ -191,7 +183,6 @@ export function GardenScreen() {
 
   const failed =
     run.error ??
-    cancel.error ??
     mutations.fix.error ??
     mutations.dismiss.error ??
     mutations.undismiss.error ??
@@ -206,12 +197,6 @@ export function GardenScreen() {
 
   const notes = (
     <>
-      <RunBar
-        progress={progress}
-        busy={run.isPending}
-        cancelling={cancel.isPending}
-        onCancel={stop}
-      />
       {outcome === null ? null : (
         <OutcomeStrip
           outcome={outcome}

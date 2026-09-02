@@ -9,3 +9,20 @@
 - 2026-09-02 12:42 · 040 · D5 condensed tab not-evidence hint · started
 - 2026-09-02 12:44 · 040 · D5 condensed tab not-evidence hint · done
 - 2026-09-02 13:08 · 040 · story closed (verify green, review PASS after 1 fix cycle, live smoke confirmed) · done
+- 2026-09-02 13:09 · 042 · D1 the progress store, outside React · started
+- 2026-09-02 13:19 · 042 · D1 the progress store, outside React · done
+- 2026-09-02 13:19 · 042 · D2 seed on vault-ready, still no polling · started
+- 2026-09-02 13:28 · 042 · D2 seed on vault-ready, still no polling · done
+- 2026-09-02 13:28 · 042 · D3 RunStrip in the shell, neutral tokens · started
+- 2026-09-02 13:45 · 042 · D3 RunStrip in the shell, neutral tokens · done
+- 2026-09-02 13:45 · 042 · D4 stop and continue on the strip · started
+- 2026-09-02 13:56 · 042 · D4 stop and continue on the strip · done
+- 2026-09-02 13:56 · 042 · D5 retire the rail indicator · started
+- 2026-09-02 14:02 · 042 · D5 retire the rail indicator · done
+- 2026-09-02 14:02 · 042 · D6 main-process close and quit guard · started
+- 2026-09-02 14:10 · 042 · D6 main-process close and quit guard · done
+- 2026-09-02 14:10 · 042 · D7 the warning dialog · started
+- 2026-09-02 14:25 · 042 · D7 the warning dialog · done
+- 2026-09-02 14:25 · 042 · D8 regression tests and the named cause · started
+- 2026-09-02 14:09 · 042 · D8 regression tests and the named cause · done
+- 2026-09-02 15:17 · 042 · story built, verify green, review PASS after 2 fix cycles, live smoke partial (needs a configured model for full manual acceptance) — status left in-progress · done

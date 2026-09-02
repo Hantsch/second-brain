@@ -8,23 +8,43 @@
      "not checked yet" — and no number.
    - **The run is a mutation, not a `refetch`.** It writes (the report) and
      costs time; as a query, every mount would restart it.
-   - **Progress hangs off the event, not the cache.** `event:gardener-progress`
-     fires several times per second; writing every chunk into the query cache
-     would re-render half the screen. Hence a small dedicated store, exactly
-     like the reply stream (`llm-stream.ts`) — and a subscription that lives
-     only as long as the screen is open. */
+   - **Progress hangs off neither the event nor the cache — it has its own
+     store.** `event:gardener-progress` fires several times per second, so the
+     query cache is the wrong place for it, and a subscription that lives as
+     long as the screen was the wrong place too: that was 042's bug, because a
+     remount then had nothing to read. It lives in
+     [gardener-progress.ts](../gardener-progress.ts) instead, fed by
+     `wireEvents`; `useGardenerProgress` is re-exported below so call sites
+     import it from here as before. */
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { QueryClient, UseMutationResult, UseQueryResult } from '@tanstack/react-query';
-import type { IpcEvents, IpcRequest, IpcResponse } from '@shared/ipc';
+import type { IpcRequest, IpcResponse } from '@shared/ipc';
 import type { GardenerFinding, GardenerReport } from '@shared/types';
 import { api } from '../api';
-import { bridge } from '../bridge';
 import { qk } from './keys';
 import { useVaultReady } from './data';
+import { seedGardenerProgressOnReady } from '../gardener-progress';
 
-export type GardenerProgress = IpcEvents['event:gardener-progress'];
+export type { GardenerProgress } from '../gardener-progress';
+export { useGardenerProgress } from '../gardener-progress';
+
+/**
+ * Seeds the progress store once per vault-ready transition (042, D2) — a
+ * round-trip to `gardener:runStatus` for the case that a run was already
+ * going before anything was there to hear its events. Safe to call from
+ * several places at once: the actual request is de-duplicated by the module
+ * flag in `gardener-progress.ts`, not by how many components mounted this
+ * hook. No polling — this fires on the `ready` transition only, never on an
+ * interval or on every mount.
+ */
+export function useSeedGardenerProgress(): void {
+  const ready = useVaultReady();
+  useEffect(() => {
+    seedGardenerProgressOnReady(ready);
+  }, [ready]);
+}
 export type FixResult = IpcResponse<'gardener:applyFix'>;
 export type UndoFixResult = IpcResponse<'gardener:undoFix'>;
 export type DiscardPlanResult = IpcResponse<'gardener:discardPlan'>;
@@ -164,44 +184,4 @@ export function useGardenerMutations(): GardenerMutations {
       retry: false,
     }),
   };
-}
-
-/**
- * The progress of the running maintenance run. `null` means: none is running
- * right now. Seeded from `gardener:runStatus` on mount (021a, D4) — a screen
- * opened mid-run must show the bar right away, not wait for the next
- * `event:gardener-progress` tick, which may be seconds out. The subscription
- * then lives as long as the screen does and layers live updates on top;
- * progress that nobody watches doesn't need to be collected.
- */
-export function useGardenerProgress(): GardenerProgress | null {
-  const ready = useVaultReady();
-  const [progress, setProgress] = useState<GardenerProgress | null>(null);
-  /* Once a live event has arrived, it is the newer truth — the seed must
-     never overwrite it, even if the query resolves after that first event
-     (e.g. a run finishing right as the screen mounts). */
-  const liveEventSeen = useRef(false);
-
-  const { data: seed } = useQuery({
-    queryKey: qk.gardener.runStatus(),
-    queryFn: api.gardener.runStatus,
-    enabled: ready,
-    /* A one-shot read of "is a run going right now" — nothing here changes
-       under a refetch that the live event stream wouldn't already report. */
-    staleTime: Infinity,
-    gcTime: 0,
-  });
-
-  useEffect(() => {
-    if (seed && !liveEventSeen.current) setProgress(seed);
-  }, [seed]);
-
-  useEffect(() => {
-    return bridge().on('event:gardener-progress', (next) => {
-      liveEventSeen.current = true;
-      setProgress(next.running ? next : null);
-    });
-  }, []);
-
-  return progress;
 }

@@ -84,6 +84,69 @@
   border-radius: 0;
 }
 
+/* ── Run strip ──────────────────────────────────────────────────────────── */
+
+/* A maintenance run's status, visible on every route (042, D3) — mounted
+   once in `AppShell`, between the title bar and the routed content. Neutral
+   tokens only, deliberately: this strip is not a screen's focal point, so it
+   must not carry the one teal accent that belongs to whatever action does
+   (CLAUDE.md, one accent per screen). No `--accent`/`--accent-soft` here. */
+.sb-runstrip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--surface-sunken);
+}
+.sb-runstrip-text {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.sb-runstrip-what {
+  font-size: var(--text-sm);
+  color: var(--text-body);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sb-runstrip-remaining {
+  font-size: var(--text-xs);
+  color: var(--text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* 021a D6: the honest note that a run without a model skips the model
+   stages entirely — a full sentence, so it wraps instead of clipping. */
+.sb-runstrip-note {
+  font-size: var(--text-xs);
+  color: var(--text-faint);
+}
+.sb-runstrip-elapsed {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.sb-runstrip-track {
+  display: block;
+  flex: 1;
+  min-width: 80px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--surface-raised);
+  overflow: hidden;
+}
+/* Muted fill on purpose — see the header comment. */
+.sb-runstrip-fill {
+  display: block;
+  height: 100%;
+  background: var(--fog-500);
+  border-radius: var(--radius-full);
+}
+
 /* ── Rail ───────────────────────────────────────────────────────────────── */
 
 .sb-body {

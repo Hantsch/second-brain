@@ -4,6 +4,7 @@
 
 import type { QueryClient } from '@tanstack/react-query';
 import { bridge } from './bridge';
+import { setGardenerProgress } from './gardener-progress';
 import { appendStream } from './llm-stream';
 import { appendPull } from './pullStore';
 import { pushToast } from './toast';
@@ -62,15 +63,21 @@ export function wireEvents(client: QueryClient): () => void {
     }),
   );
 
-  /* A maintenance run can also finish while nobody is on the maintenance
+  /* Progress lives in `gardener-progress`, not the query cache — several
+     events per second, and this is the one listener for them: it is wired once
+     with the window and never unmounts, so a screen mounting mid-run reads the
+     current step instead of the nothing an own subscription would have (042).
+
+     A maintenance run can also finish while nobody is on the maintenance
      screen — when opening the vault, for instance (`gardener.runOnOpen`). More
      than the report hangs off this afterward: the dashboard shows the health
      score, the module cards their module's finding count. Without this spot,
      the old number would still be showing there, and two screens would say
      different things about the same run. */
   unsubscribes.push(
-    sb.on('event:gardener-progress', ({ phase }) => {
-      if (phase !== 'done') return;
+    sb.on('event:gardener-progress', (progress) => {
+      setGardenerProgress(progress);
+      if (progress.phase !== 'done') return;
       void client.invalidateQueries({ queryKey: qk.gardener.report() });
       void client.invalidateQueries({ queryKey: qk.dashboard.data() });
       void client.invalidateQueries({ queryKey: qk.modules.list() });

@@ -5,6 +5,7 @@
 
 import { app, BrowserWindow } from 'electron';
 import { APP_ID } from './app-identity';
+import { attachCloseGuard } from './close-guard';
 import { attachCore } from './core-bridge';
 import { createKeyStore } from './secrets';
 import { createServices } from './services';
@@ -79,6 +80,10 @@ async function start(): Promise<void> {
   const services = await bootstrap();
   const window = createMainWindow(services);
   services.setMainWindow(window);
+  /* Ask before closing kills a running maintenance pass (042, D6). A layer in
+     front of `will-quit`'s `cancelGardenerRun('shutdown')` below, which stays
+     the last-resort net for every close this one lets through. */
+  attachCloseGuard(services, window);
 
   /* The hidden quick-capture window must not keep the app alive. */
   window.on('closed', () => {
@@ -96,6 +101,7 @@ async function start(): Promise<void> {
     if (BrowserWindow.getAllWindows().length === 0) {
       const next = createMainWindow(services);
       services.setMainWindow(next);
+      attachCloseGuard(services, next);
     }
   });
 

@@ -1,7 +1,7 @@
 ---
 id: 042
 title: A maintenance run stays visible wherever I am
-status: ready # draft -> ready -> in-progress -> done
+status: in-progress # draft -> ready -> in-progress -> done
 created: 2026-09-02
 ---
 
@@ -28,25 +28,25 @@ instead of letting the process die in the middle of a write.
 
 ## Acceptance Criteria
 
-- [ ] While a run is going, a progress strip is visible from every screen, not only from
+- [x] While a run is going, a progress strip is visible from every screen, not only from
       maintenance.
-- [ ] Starting a run and navigating anywhere keeps it visible with current values — the original
+- [x] Starting a run and navigating anywhere keeps it visible with current values — the original
       bug is gone because nothing unmounts, not because a remount re-seeds in time.
-- [ ] Stop and continue (021b) are reachable from the strip itself.
-- [ ] A run that finishes while I am elsewhere reads as finished, and the strip then goes away.
-- [ ] With no run going there is no strip. The fix does not trade this bug for a phantom bar.
-- [ ] The strip introduces no second Teal accent: the current screen's primary action keeps the one
+- [x] Stop and continue (021b) are reachable from the strip itself.
+- [x] A run that finishes while I am elsewhere reads as finished, and the strip then goes away.
+- [x] With no run going there is no strip. The fix does not trade this bug for a phantom bar.
+- [x] The strip introduces no second Teal accent: the current screen's primary action keeps the one
       focus point.
-- [ ] Closing the app during a run warns and offers stop-and-close; the run ends through 021b's
+- [x] Closing the app during a run warns and offers stop-and-close; the run ends through 021b's
       stop path rather than being killed mid-write.
-- [ ] Cancelling that warning leaves both the run and the window alone.
-- [ ] The warning covers the real window close — the title bar's close, `Alt+F4`, a tray quit —
+- [x] Cancelling that warning leaves both the run and the window alone.
+- [x] The warning covers the real window close — the title bar's close, `Alt+F4`, a tray quit —
       not only an in-app button.
-- [ ] No polling is introduced; the strip stays on the existing seed-plus-event mechanism.
-- [ ] Regression tests cover unmount/remount during a run, and close-during-a-run.
-- [ ] The cause of the original navigation bug is named in the Done section, not just the symptom,
+- [x] No polling is introduced; the strip stays on the existing seed-plus-event mechanism.
+- [x] Regression tests cover unmount/remount during a run, and close-during-a-run.
+- [x] The cause of the original navigation bug is named in the Done section, not just the symptom,
       so the next screen that needs live progress does not repeat it.
-- [ ] All new strings exist in `de` and `en`.
+- [x] All new strings exist in `de` and `en`.
 
 ## Open Questions
 
@@ -191,7 +191,7 @@ Order matters: the store first, then the surface, then main.
 
 ## Deliverables
 
-**D1 — the progress store, outside React**
+**D1 — the progress store, outside React** — [x]
 Files: new `src/renderer/lib/gardener-progress.ts`; `src/renderer/lib/events.ts`;
 `src/renderer/lib/queries/gardener.ts`. Mirror: `src/renderer/lib/pullStore.ts`.
 Acceptance: no `useQuery` and no `useState` left in the progress path; a live event received
@@ -200,14 +200,14 @@ overwrite a newer live event (generation guard); `tests/renderer/queries.test.ts
 "useGardenerProgress seeds from gardener:runStatus" block (from line 242) is rewritten against
 the store and stays green.
 
-**D2 — seed on vault-ready, still no polling**
+**D2 — seed on vault-ready, still no polling** — [x]
 Files: `src/renderer/lib/gardener-progress.ts`, `src/renderer/lib/queries/gardener.ts`
 (read `useVaultReady` from `lib/queries/data.ts:55`).
 Acceptance: a screen opened mid-run shows values after one `gardener:runStatus` round-trip; the
 seed fires once per ready-transition, not per mount; no `refetchInterval`, `setInterval` or
 `refetchOnMount` anywhere in the path (grep-checkable).
 
-**D3 — `RunStrip` in the shell, neutral tokens**
+**D3 — `RunStrip` in the shell, neutral tokens** — [x]
 Files: new `src/renderer/components/RunStrip.tsx` (moved from
 `src/renderer/screens/garden/RunBar.tsx`, deleted), `src/renderer/components/AppShell.tsx`,
 `src/renderer/styles/app/shell.css`, `src/renderer/styles/app/garden.css` (remove `sb-grun`),
@@ -217,7 +217,7 @@ Acceptance: strip visible on every route while a run is going and absent with no
 its CSS**; the maintenance screen shows exactly one strip; `tests/renderer/garden.test.tsx`
 adjusted.
 
-**D4 — stop and continue on the strip**
+**D4 — stop and continue on the strip** — [x]
 Files: `src/renderer/components/RunStrip.tsx`, `src/renderer/lib/gardener-progress.ts`,
 `src/renderer/i18n/de-garden.ts`, `src/renderer/i18n/en-garden.ts`.
 Acceptance: stop from any screen goes through `gardener:cancel` (021b's `'user'` path, partial
@@ -225,13 +225,13 @@ report kept); the strip then shows "stopped partway" with continue (`gardener:ru
 { resume: true }`) and a dismiss; after dismiss, continue, or a fresh app start the strip is
 gone. Reuses `garden.stopped.*` / `garden.run.continue`.
 
-**D5 — retire the rail indicator**
+**D5 — retire the rail indicator** — [x]
 Files: `src/renderer/components/Rail.tsx`, delete
 `src/renderer/components/GardenerIndicator.tsx`, `tests/renderer/rail.test.tsx`, i18n
 (`garden.run.railIndicator` removed from both languages).
 Acceptance: no rail entry for a run, no orphan i18n key, rail test green.
 
-**D6 — main-process close and quit guard**
+**D6 — main-process close and quit guard** — [x]
 Files: new `src/main/close-guard.ts`, `src/main/index.ts`, `src/main/ipc/window.ts`,
 `src/shared/ipc.ts`. Mirror: `src/main/index.ts:120-143` (`will-quit`) for the
 best-effort/`finally` style, `tests/main/will-quit.test.ts` for the test shape.
@@ -240,7 +240,7 @@ Acceptance: with a run going, `close` and `before-quit` are vetoed once and
 no run going nothing is vetoed; the renderer staying silent for ~5 s lets the close proceed;
 `tests/main/ipc-coverage.test.ts` green with the new channel and event.
 
-**D7 — the warning dialog**
+**D7 — the warning dialog** — [x]
 Files: new `src/renderer/components/QuitDuringRunDialog.tsx`,
 `src/renderer/components/AppShell.tsx`, `src/renderer/lib/api.ts`,
 `src/renderer/i18n/de-garden.ts`, `src/renderer/i18n/en-garden.ts`. Mirror:
@@ -249,7 +249,7 @@ Acceptance: "stop run and close" cancels via `gardener:cancel` and only then cal
 `window:confirmClose`; "cancel" leaves run and window untouched and the strip still running;
 `Escape` behaves as cancel; both `garden.quit.*` keys exist in `de` and `en`.
 
-**D8 — regression tests and the named cause**
+**D8 — regression tests and the named cause** — [x]
 Files: `tests/renderer/queries.test.ts`, new `tests/renderer/run-strip.test.tsx`, new
 `tests/main/close-guard.test.ts`.
 Acceptance: a test unmounts and remounts the strip's host mid-run and asserts the values are
@@ -323,3 +323,123 @@ is where the gap used to be).
 | 13 all strings in `de` and `en`                 | D4, D5, D7     |
 
 ## Done
+
+### Summary
+
+Maintenance-run progress moved out of React entirely into a module-level store
+(`src/renderer/lib/gardener-progress.ts`, mirroring `pullStore.ts`), fed once by
+`wireEvents` and seeded imperatively (with a generation guard) on the vault-ready
+transition. `RunStrip` (replacing `RunBar`) mounts once in `AppShell`, between the
+title bar and the body, so a run started on the garden screen stays visible — with
+live values, a stop button, and a "stopped partway / continue" offer — from every
+route, and disappears cleanly when nothing is running. On the main side, a new
+`close-guard.ts` vetoes `window.close()` and `app.on('before-quit')` exactly once
+while a run is going, asks the renderer via `event:close-requested`, and lets the
+close through on `window:confirmClose`, drops it cleanly on `window:cancelClose`
+(added mid-build — see Decisions), or lets it proceed after a 5s dead-man timeout
+if the renderer never answers. `QuitDuringRunDialog` is the renderer side of that
+conversation, routing "stop run and close" through 021b's own cancel path before
+ever confirming the close.
+
+### The established cause (AC 12)
+
+Two defects that only bit together (full analysis in "Q1 — the established cause"
+above, kept here as the short form the AC asks for):
+
+1. **A frozen query cache.** The old `useGardenerProgress` seeded via `useQuery`
+   with `staleTime: Infinity` and `gcTime: 0`, and the rail's permanent
+   `GardenerIndicator` held one observer of that query alive for the app's entire
+   session — so `gcTime: 0` never actually evicted the entry, and a remounted
+   screen was handed the `null` fetched once at boot, with no refetch ever firing.
+2. **Component-lifetime live state.** The live layer was a `useState` local to
+   each hook instance. Unmounting the garden screen threw it away; `bridge().on`
+   does not replay past events, so the next mount saw nothing until the next
+   `event:gardener-progress` — which, during the model-backed `audit` stage, can
+   be many seconds away.
+
+Hoisting markup alone would not have fixed either half — a shell component with
+its own `useState` still loses everything on remount, and the frozen query cache
+stays frozen regardless of where its JSX lives. The fix moves the state out of
+React altogether: no query cache that can go stale, no component lifetime that
+can take the state with it.
+
+### Decisions
+
+- **`window:cancelClose` was added mid-build, not in the original D6 plan.**
+  D6's first pass only wired `window:confirmClose` (stop-and-close). The story's
+  own review (round 1) caught the gap: without an explicit "leave me alone"
+  channel, the ~5s dead-man timer would close the window anyway a few seconds
+  after the user pressed "cancel" — silently violating AC 8. Added `endCycle()`
+  as the one place a veto cycle is ever torn down; `cancelClose()` runs it without
+  setting `confirmed`, so the next close is judged fresh.
+- **The `cancelled` outcome (OutcomeStrip/useFindingActions) was retired, not
+  restored**, after the review found the maintenance screen no longer announced
+  a stop. `RunStrip`'s stop button is deliberately screen-agnostic (mountable
+  once in the shell) and cannot reach into one screen's local outcome state — the
+  strip's own error-surfaced "stopped partway" message is the one confirmation
+  now, replacing the old per-screen toast. The dead type/i18n key were removed
+  end to end (zero remaining references, confirmed by grep and by
+  `tests/renderer/i18n.test.ts`'s exact key↔source check).
+- **`RunStrip` suppresses only its static "stopped partway" view on `/garden`**,
+  because `GardenScreen`'s own persisted `canContinue` banner (from the saved
+  report, not the session flag) already says the same thing there with its own
+  working continue button — showing both would repeat the exact "two chrome
+  elements, one fact" mistake the rail indicator's retirement (D5) was written
+  to avoid. Live progress still renders on `/garden` (D3's "exactly one strip"
+  requirement), only the idle stopped-offer is hidden there.
+- **`stoppedInSession` clears itself whenever a live run starts**, not only via
+  the strip's own continue/dismiss buttons. The review's first pass found the
+  flag surviving a run that finished normally some other way (a plain "check
+  now" click, a resume from the persisted banner) and showing a phantom
+  "stopped partway" afterwards — a direct AC 5 violation. It also clears on a
+  vault becoming not-ready, so a stop in one vault cannot offer "continue" into
+  a different one.
+- **A close-warning window/quit-path fix beyond the plan's letter:** `guard()`
+  now restores/shows/focuses the main window before sending
+  `event:close-requested`, so a `before-quit` fired while the window is hidden
+  or minimized (the macOS-menu / future-tray path AC 9 anticipates) still shows
+  a visible prompt instead of silently running out the dead-man timer.
+
+### Verification
+
+- `npm run build`, `npm test` (243 files / 3389 tests), `npm run lint`,
+  `npm run typecheck` — all green. (`format:check` is not yet part of this
+  sprint's gate per 041; a pre-existing repo-wide CRLF/`endOfLine` mismatch
+  affects ~1070 untouched files and is unrelated to this story.)
+- Clean-agent review (`story-review-hard`): round 1 **FAIL** with 8 findings
+  (one AC-breaking: the phantom "stopped partway" strip; one guardrail-1
+  violation: no error surface on stop/continue; a coverage loss from deleted
+  `RunBar` tests; dead code from the retired `cancelled` outcome; a duplicate
+  "stopped partway" banner; an untested `before-quit` confirm path; an untested
+  `QuitDuringRunDialog`; a window-visibility gap on `before-quit`). All 8 fixed
+  in one parallel fix cycle across disjoint files, plus a small follow-up for a
+  vault-switch edge case the fix itself surfaced. Round 2 **PASS**, all 13 ACs
+  individually verified PASS with file:line evidence; no scope creep, no
+  weakened tests, no layering violations.
+- **Live smoke: partial pass, manual acceptance still open.** Ran the built app
+  via a bespoke Playwright `_electron` script against `.demo-vault/` (seeded,
+  no LLM configured, per the seed's own design). Confirmed live: the strip
+  appears the moment a run starts, uses neutral tokens (`rgb(7, 11, 17)`
+  background, grey border — nowhere near the teal accent), and disappears
+  cleanly with no phantom bar once a run settles; the close guard correctly
+  does **not** veto a close when no run is active. Could **not** confirm live:
+  the strip surviving navigation, stop/continue from another screen, and the
+  close-during-a-run dialog actually appearing — because the demo vault's
+  gardener run (ten mechanical checks, no `audit`/`loose-ends` stage without a
+  model) completes in well under a second, faster than a scripted multi-step
+  interaction can reliably race against. This is exactly why the story's own
+  `## Test Plan (manual acceptance)` opens with "start the app on `.demo-vault/`
+  **with a model configured** — the `audit` stage is where the gap used to be":
+  these specific properties need real wall-clock duration to observe, which
+  only a configured model provides. All of them are covered by targeted,
+  deterministic automated tests instead
+  (`tests/renderer/run-strip.test.tsx`, `tests/main/close-guard.test.ts`,
+  `tests/renderer/quit-during-run-dialog.test.tsx`), and were independently
+  re-verified by the round-2 review. Status is left `in-progress`; the manual
+  acceptance owner should configure a model and run the 8 steps already
+  written in `## Test Plan (manual acceptance)` above before flipping this to
+  `done`.
+
+### Commit message
+
+042: strip lives in the shell; close guard warns during a run

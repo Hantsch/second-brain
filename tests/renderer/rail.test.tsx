@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
-/* 021a, D5: the maintenance indicator in the rail foot must be visible from
-   any screen — not only the maintenance screen itself — and only while a run
-   is actually going. Rendered here on a non-garden route (`/journal`) with
-   `GardenerIndicator`'s own hook (`useGardenerProgress`), the same one
-   `RunBar` uses, so this test exercises the real wiring, not a stand-in. */
+/* 042, D5: the rail no longer carries its own maintenance-run indicator — a
+   run going is now surfaced by `RunStrip` in the app shell (see
+   `src/renderer/components/RunStrip.tsx`, mounted in `AppShell.tsx`), not by
+   a rail entry. This file keeps the baseline smoke test that the rail
+   renders its regular navigation and the vault indicator; the former
+   `GardenerIndicator`-in-the-rail tests were removed with that component. */
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -61,42 +62,19 @@ afterEach(() => {
   delete window.sb;
 });
 
-describe('GardenerIndicator in the rail foot', () => {
-  it('shows a maintenance run going, on a screen other than the maintenance screen', async () => {
+describe('Rail', () => {
+  it('renders the vault indicator regardless of a maintenance run going', async () => {
     installMock({
       'vault:status': () => READY_STATUS,
       'journal:list': () => [],
-      'gardener:runStatus': () => ({
-        phase: 'checks',
-        check: 'orphan',
-        done: 2,
-        total: 9,
-        running: true,
-        stage: 'checks',
-        percent: 22,
-        remaining: [],
-        startedAt: '2026-08-22T10:00:00+02:00',
-        trigger: 'user',
-      }),
     });
 
     renderRail('/journal');
 
-    const indicator = await screen.findByRole('button', { name: /Wartungslauf läuft/ });
-    expect(indicator).toBeTruthy();
-  });
-
-  it('renders nothing while no run is going', async () => {
-    installMock({
-      'vault:status': () => READY_STATUS,
-      'journal:list': () => [],
-      'gardener:runStatus': () => null,
-    });
-
-    renderRail('/journal');
-
-    /* Give the seed query a tick to settle, then confirm nothing appeared. */
-    await screen.findByRole('button', { name: 'Vault-Status, öffnet die Einstellungen' });
+    expect(
+      await screen.findByRole('button', { name: 'Vault-Status, öffnet die Einstellungen' }),
+    ).toBeTruthy();
+    /* No dedicated rail entry for a run — that's RunStrip's job now (D3). */
     expect(screen.queryByRole('button', { name: /Wartungslauf läuft/ })).toBeNull();
   });
 });

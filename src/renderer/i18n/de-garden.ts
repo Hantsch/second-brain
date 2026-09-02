@@ -18,14 +18,10 @@ export const deGarden = {
   'garden.run.again': 'Neu prüfen',
   'garden.run.cancel': 'Prüfung abbrechen',
   'garden.run.running': 'Prüfung läuft',
-  /* 021a, D5: die Rail-Anzeige — sichtbar auf jedem Screen, nicht nur auf der
-     Pflege-Seite selbst, daher ein eigener Text statt `garden.run.running`. */
-  'garden.run.railIndicator': 'Wartungslauf läuft',
   'garden.run.check': 'Prüfung: {check}',
   'garden.run.audit': 'Das Modell deutet die Befunde',
   'garden.run.looseEnds': 'Das Modell prüft lose Enden',
   'garden.run.step': '{done} von {total}',
-  'garden.run.cancelled': 'Abgebrochen. Der letzte Bericht bleibt, wie er war.',
   'garden.run.remaining': 'Noch aus: {list}',
   'garden.run.stage.checks': 'Prüfungen',
   'garden.run.stage.audit': 'Widersprüche',
@@ -64,6 +60,10 @@ export const deGarden = {
      verschweigen. */
   'garden.stopped.title': 'Vorzeitig gestoppt.',
   'garden.stopped.missing': 'Fehlende Stufen: {list}.',
+  /* 042, D4: Knopf auf dem Laufstreifen, um das Angebot ohne Fortsetzung
+     wegzulegen — danach ist der Streifen wieder leer, bis der nächste Lauf
+     startet. */
+  'garden.stopped.dismiss': 'Verwerfen',
 
   // ── Gesundheit ────────────────────────────────────────────────────────────
   'garden.health.label': 'Gesundheit',
@@ -286,4 +286,13 @@ export const deGarden = {
   'garden.llm.title': 'Was ein Modell zusätzlich fände',
   'garden.llm.body':
     'Widersprüche zwischen zwei Seiten, Beinahe-Dubletten und häufig genannte Begriffe ohne eigene Seite. Alles darüber steht oben vollständig.',
+
+  // ── Schließen während eines Laufs (042, D7) ──────────────────────────────
+  /* Nur der Stopp wird angeboten, kein „trotzdem schließen“ — ein Schreib-
+     vorgang könnte noch laufen (Decisions der Story). */
+  'garden.quit.title': 'Ein Pflegelauf läuft noch.',
+  'garden.quit.body':
+    'Ihn jetzt zu stoppen beendet ihn sauber — genau wie der Stopp-Knopf im Laufstreifen. Schließen ohne zu stoppen wird nicht angeboten: Ein Schreibvorgang könnte noch laufen.',
+  'garden.quit.stopAndClose': 'Lauf stoppen und schließen',
+  'garden.quit.cancel': 'Abbrechen',
 } as const;
