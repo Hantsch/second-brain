@@ -83,6 +83,16 @@ describe('healthScore', () => {
     expect(SEVERITY_WEIGHT.info).toBe(1);
   });
 
+  it('kostet ein condensation-due-Befund aus dem Projekt-Arm ebenso viel (046, D2)', () => {
+    // Ein Arm, keine eigene Art (`condensation-due.ts`): Kind und Schwere sind
+    // fuer Area- und Projekt-Fund identisch, `healthScore` unterscheidet gar
+    // nicht zwischen ihnen. Derselbe Preis wie oben, hier zur Sichtbarkeit
+    // eigens fuer den Projekt-Arm geprueft.
+    const result = healthScore(many('condensation-due', 'info', 1), 30);
+
+    expect(result.contributions[0]?.points).toBe(SEVERITY_WEIGHT.info);
+  });
+
   it('fällt auf null, wenn auf jede Einheit ein mittelschwerer Befund kommt', () => {
     const result = healthScore(many('broken-link', 'warn', 30), 30);
 

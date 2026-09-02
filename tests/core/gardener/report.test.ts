@@ -36,6 +36,9 @@ describe('runGardener über den Demo-Bestand', () => {
       'unfiled-dump': 1,
       'unprocessed-source': 1,
       'project-without-next-step': 1,
+      /* 046: jedes der drei laufenden Demo-Projekte hat Material und noch kein
+         `condensed.md` — die fehlende Variante, einmal je Projekt. */
+      'condensation-due': 3,
     });
     expect(of(report.findings, 'orphan')[0]?.paths).toContain(DEMO.scim);
     expect(of(report.findings, 'broken-link')[0]?.title).toContain('device-code-flow');
@@ -46,6 +49,12 @@ describe('runGardener über den Demo-Bestand', () => {
     expect(of(report.findings, 'project-without-next-step')[0]?.paths).toEqual([
       DEMO.projectWithoutStep,
     ]);
+    const condensation = of(report.findings, 'condensation-due');
+    // Das noch nicht existierende Artefakt zuerst, `project.md` dahinter.
+    expect(condensation.every((finding) => finding.paths[0]?.endsWith('/condensed.md'))).toBe(true);
+    expect(condensation.map((finding) => finding.paths[1]).sort()).toEqual(
+      [DEMO.pausedProject, DEMO.projectWithStep, DEMO.projectWithoutStep].sort(),
+    );
   });
 
   it('bleibt ohne Modell deterministisch und behauptet keine Deutung', async () => {
@@ -165,6 +174,63 @@ describe('condensation-due über einen echten Bestand (039, D4)', () => {
 
   it('schreibt nichts in den Vault, obwohl eine Verdichtung fällig ist', async () => {
     const fixture = await gardenerFixture(condensationDueFiles());
+    const writeMethods = ['write', 'create', 'writeText', 'append', 'move', 'delete'] as const;
+    const spies = writeMethods.map((method) => vi.spyOn(fixture.store, method));
+
+    const report = await runGardener(fixture.deps(), { settings: SETTINGS });
+
+    expect(of(report.findings, 'condensation-due')).toHaveLength(1);
+    for (const spy of spies) expect(spy).not.toHaveBeenCalled();
+  });
+});
+
+/* 046, D2: derselbe echte-Bestand-Nachweis wie oben, hier fuer den Projekt-Arm
+ * — ein laufendes Projekt mit Material und ganz ohne `condensed.md`. */
+const CONDENSATION_PROJECT_SLUG = 'nyota';
+const CONDENSATION_PROJECT_PATH = `projects/work/${CONDENSATION_PROJECT_SLUG}/project.md`;
+
+function condensationDueProjectFiles(): Record<string, string> {
+  return {
+    [CONDENSATION_PROJECT_PATH]: serialize(
+      {
+        type: 'project',
+        title: 'Nyota',
+        slug: CONDENSATION_PROJECT_SLUG,
+        scope: 'work',
+        status: 'active',
+        priority: 2,
+        started: day(-40),
+        tags: [],
+        modules: [],
+        repos: [],
+        created: day(-40),
+        updated: day(-2),
+        lang: 'de',
+      },
+      '## Stand\n\nWieder aufgenommen, Kamera laeuft.\n',
+    ),
+  };
+}
+
+describe('condensation-due (Projekt-Arm) über einen echten Bestand (046, D2)', () => {
+  it('bleibt ohne Gateway und mit einem nicht verfügbaren Gateway identisch — der Check hängt an keinem Modell', async () => {
+    const fixture = await gardenerFixture(condensationDueProjectFiles());
+
+    const withoutGateway = await runGardener(fixture.deps(), { settings: SETTINGS });
+    const withUnavailableGateway = await runGardener(fixture.deps(emptyGateway()), {
+      settings: SETTINGS,
+      useLlm: true,
+    });
+
+    expect(of(withoutGateway.findings, 'condensation-due')).toHaveLength(1);
+    expect(withUnavailableGateway.findings.map((finding) => finding.id)).toEqual(
+      withoutGateway.findings.map((finding) => finding.id),
+    );
+    expect(withUnavailableGateway.usedLlm).toBe(false);
+  });
+
+  it('schreibt nichts in den Vault, obwohl eine Verdichtung fällig ist', async () => {
+    const fixture = await gardenerFixture(condensationDueProjectFiles());
     const writeMethods = ['write', 'create', 'writeText', 'append', 'move', 'delete'] as const;
     const spies = writeMethods.map((method) => vi.spyOn(fixture.store, method));
 

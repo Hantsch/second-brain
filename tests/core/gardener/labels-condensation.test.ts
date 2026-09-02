@@ -53,3 +53,66 @@ describe('condensationDue / condensationMissing labels (story 039, D3)', () => {
     expect(combined).not.toContain('„');
   });
 });
+
+/* Story 046, D1: dasselbe Satzpaar traegt jetzt auch den Projekt-Arm. Ein
+ * Einheitenwort statt eines zweiten Satzpaars — gepruefte Folge davon ist, dass
+ * ein Projektsatz vom Projekt spricht und nicht von einer Area.
+ */
+describe('condensationDue / condensationMissing fuer Projekte (story 046, D1)', () => {
+  const PROJECT = 'Nyota';
+
+  it('nennt auf Deutsch das Projekt, condensed_at und die Zahl geaenderter Eingaenge', () => {
+    const text = GERMAN_GARDENER_LABELS.condensationDue(PROJECT, CONDENSED_AT, 3, 'project');
+    const combined = `${text.title} ${text.detail}`;
+
+    expect(text.title).toContain(PROJECT);
+    expect(text.title).toContain('Projekt');
+    expect(combined).toContain(CONDENSED_AT);
+    expect(text.detail).toContain('3');
+    // Deutsche Konvention: „…“ statt eines geraden Schlusszeichens.
+    expect(combined).toContain('„');
+    expect(combined).toContain('“');
+    expect(combined).not.toMatch(/["”]/);
+  });
+
+  it('spricht auf Deutsch bei fehlender Verdichtung vom Projekt, nicht von einer Area', () => {
+    const text = GERMAN_GARDENER_LABELS.condensationMissing(PROJECT, 'project');
+    const combined = `${text.title} ${text.detail}`;
+
+    expect(text.title).toContain(PROJECT);
+    expect(combined).toContain('Projekt');
+    expect(combined).not.toContain('Area');
+    expect(combined).not.toContain(CONDENSED_AT);
+    expect(combined).not.toMatch(/["”]/);
+  });
+
+  it('nennt auf Englisch dieselben drei Dinge, ohne U+201E', () => {
+    const text = ENGLISH_GARDENER_LABELS.condensationDue(PROJECT, CONDENSED_AT, 3, 'project');
+    const combined = `${text.title} ${text.detail}`;
+
+    expect(text.title).toContain(PROJECT);
+    expect(text.title).toContain('project');
+    expect(combined).toContain(CONDENSED_AT);
+    expect(text.detail).toContain('3');
+    expect(combined).not.toContain('„');
+  });
+
+  it('spricht auf Englisch bei fehlender Verdichtung vom Projekt, ohne U+201E', () => {
+    const text = ENGLISH_GARDENER_LABELS.condensationMissing(PROJECT, 'project');
+    const combined = `${text.title} ${text.detail}`;
+
+    expect(text.title).toContain(PROJECT);
+    expect(combined).toContain('project');
+    expect(combined).not.toContain('area');
+    expect(combined).not.toContain('„');
+  });
+
+  it('bleibt ohne Einheit bei der Area — der Vorgabe aus story 039', () => {
+    expect(GERMAN_GARDENER_LABELS.condensationMissing(AREA)).toEqual(
+      GERMAN_GARDENER_LABELS.condensationMissing(AREA, 'area'),
+    );
+    expect(ENGLISH_GARDENER_LABELS.condensationDue(AREA, CONDENSED_AT, 2)).toEqual(
+      ENGLISH_GARDENER_LABELS.condensationDue(AREA, CONDENSED_AT, 2, 'area'),
+    );
+  });
+});

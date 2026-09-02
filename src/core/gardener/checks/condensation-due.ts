@@ -1,7 +1,11 @@
 /**
- * Verdichtung faellig: das Eingangsmaterial einer Area ist seit dem letzten
- * Verdichtungslauf gewachsen oder hat sich geaendert, oder es gibt Material
- * und noch gar kein Artefakt (story 039).
+ * Verdichtung faellig: das Eingangsmaterial einer Area (story 039) oder eines
+ * Projekts (story 046) ist seit dem letzten Verdichtungslauf gewachsen oder hat
+ * sich geaendert, oder es gibt Material und noch gar kein Artefakt.
+ *
+ * One kind, two arms — not two kinds. Both answer the same question about the
+ * same mechanism (`source_hashes:`), and a user who dismisses "condensation
+ * due" dismisses one thing, not two.
  *
  * „Neuer" entscheidet ausschliesslich der Inhaltshash (`IndexedDoc.hash`),
  * nie die mtime und nie `condensed_at` — dieselbe Wahl wie beim
@@ -28,10 +32,11 @@
  * GardenerFix").
  */
 
-import type { GardenerFinding } from '@shared/types';
+import type { GardenerFinding, ProjectStatus } from '@shared/types';
 import { areaInputs } from '@core/condense/inputs';
 import type { CondenseInput } from '@core/condense/inputs';
-import { condensedAreaPath } from '@core/condense/paths';
+import { projectInputs } from '@core/condense/inputs-project';
+import { condensedAreaPath, condensedProjectPath } from '@core/condense/paths';
 import { recordedSources } from '@core/condense/sources';
 import type { RecordedSource } from '@core/condense/sources';
 import type { IndexedDoc } from '@core/index/types';
@@ -60,65 +65,164 @@ function condensedAtOf(frontmatter: IndexedDoc['frontmatter']): string {
   return typeof value === 'string' ? value : '';
 }
 
-/** Teile der stabilen Kennung: Slug plus die aktuelle Eingangsliste selbst. */
-function findingKey(slug: string, current: readonly CondenseInput[]): string[] {
-  return [slug, ...current.map((input) => `${input.path}:${input.hash}`)];
+/**
+ * Teile der stabilen Kennung: der Bezeichner der Sache plus die aktuelle
+ * Eingangsliste selbst.
+ *
+ * `head` is what the finding is *about*: `[slug]` for an area — unchanged from
+ * story 039, so every "fits as is" a user has already recorded on an area
+ * finding keeps matching — and `['project', slug]` for a project, so a project
+ * and an area that happen to share a slug can never produce the same id.
+ */
+function findingKey(head: readonly string[], current: readonly CondenseInput[]): string[] {
+  return [...head, ...current.map((input) => `${input.path}:${input.hash}`)];
 }
 
-export const condensationDueCheck: Check = {
-  kind: 'condensation-due',
+/** Die Befunde ueber die Areas (story 039). */
+function areaFindings(ctx: GardenerContext): GardenerFinding[] {
+  const findings: GardenerFinding[] = [];
+  const { docs, byPath } = ctx.index.index();
 
-  run(ctx: GardenerContext): GardenerFinding[] {
-    const findings: GardenerFinding[] = [];
-    const { docs, byPath } = ctx.index.index();
+  for (const area of ctx.index.areas()) {
+    const current = areaInputs(docs, area.slug, { now: ctx.today });
+    if (current.length === 0) continue; // Leere Area: nichts zu vergleichen.
 
-    for (const area of ctx.index.areas()) {
-      const current = areaInputs(docs, area.slug, { now: ctx.today });
-      if (current.length === 0) continue; // Leere Area: nichts zu vergleichen.
+    const artifactPath = condensedAreaPath(area.slug);
+    const artifact = byPath.get(artifactPath);
 
-      const artifactPath = condensedAreaPath(area.slug);
-      const artifact = byPath.get(artifactPath);
-
-      if (artifact === undefined) {
-        const text = ctx.labels.condensationMissing(area.title);
-        findings.push(
-          buildFinding(ctx, {
-            kind: 'condensation-due',
-            severity: 'info',
-            title: text.title,
-            detail: text.detail,
-            paths: [area.path],
-            module: null,
-            key: findingKey(area.slug, current),
-            fix: null,
-          }),
-        );
-        continue;
-      }
-
-      const recorded = recordedSources(artifact.frontmatter);
-      const changed = changedInputs(current, recorded);
-      if (changed.length === 0) continue;
-
-      const text = ctx.labels.condensationDue(
-        area.title,
-        condensedAtOf(artifact.frontmatter),
-        changed.length,
-      );
+    if (artifact === undefined) {
+      const text = ctx.labels.condensationMissing(area.title);
       findings.push(
         buildFinding(ctx, {
           kind: 'condensation-due',
           severity: 'info',
           title: text.title,
           detail: text.detail,
-          paths: [area.path, artifactPath],
+          paths: [area.path],
           module: null,
-          key: findingKey(area.slug, current),
+          key: findingKey([area.slug], current),
           fix: null,
         }),
       );
+      continue;
     }
 
-    return findings;
+    const recorded = recordedSources(artifact.frontmatter);
+    const changed = changedInputs(current, recorded);
+    if (changed.length === 0) continue;
+
+    const text = ctx.labels.condensationDue(
+      area.title,
+      condensedAtOf(artifact.frontmatter),
+      changed.length,
+    );
+    findings.push(
+      buildFinding(ctx, {
+        kind: 'condensation-due',
+        severity: 'info',
+        title: text.title,
+        detail: text.detail,
+        paths: [area.path, artifactPath],
+        module: null,
+        key: findingKey([area.slug], current),
+        fix: null,
+      }),
+    );
+  }
+
+  return findings;
+}
+
+/**
+ * Statuses a condensation is no longer due for.
+ *
+ * `done` and `dropped` are over — a re-entry briefing for a project nobody
+ * re-enters is work for its own sake. `paused` explicitly stays in: a paused
+ * project is precisely the one whose re-entry, weeks later, needs the artifact.
+ * Same shape as `project-without-next-step.ts`'s filter, with its own list —
+ * that check asks whether work can continue *now*, this one whether the state
+ * is written down, and an idea or a paused project can be out of date all the
+ * same.
+ */
+const CLOSED_STATUSES: readonly ProjectStatus[] = ['done', 'dropped'];
+
+/**
+ * Die Befunde ueber die Projekte (story 046).
+ *
+ * Same comparison as for an area, over story 044's project input selector
+ * (`projectInputs()`) and the `source_hashes:` its run recorded — never a
+ * second selector, so check and run keep one answer to "what is an input".
+ *
+ * Both variants name the condensed artifact **first**, because the finding's
+ * `open` exit resolves `paths[0]`: for a project the interesting file is the
+ * briefing, not `project.md`. In the missing variant that path is the one the
+ * artifact *would* get — the only honest way to point at a file that a run has
+ * yet to write.
+ */
+function projectFindings(ctx: GardenerContext): GardenerFinding[] {
+  const findings: GardenerFinding[] = [];
+  const { docs, byPath } = ctx.index.index();
+  const todos = ctx.index.todos();
+
+  for (const project of ctx.index.projects()) {
+    if (CLOSED_STATUSES.includes(project.status)) continue;
+
+    const current = projectInputs({ project, docs, todos }, { now: ctx.today });
+    // Empty only when the index holds no document of this project at all —
+    // `project.md` itself is always an input. Nothing to compare, no finding.
+    if (current.length === 0) continue;
+
+    const artifactPath = condensedProjectPath(project.scope, project.slug);
+    const artifact = byPath.get(artifactPath);
+    const key = findingKey(['project', project.slug], current);
+
+    if (artifact === undefined) {
+      const text = ctx.labels.condensationMissing(project.title, 'project');
+      findings.push(
+        buildFinding(ctx, {
+          kind: 'condensation-due',
+          severity: 'info',
+          title: text.title,
+          detail: text.detail,
+          paths: [artifactPath, project.path],
+          module: null,
+          key,
+          fix: null,
+        }),
+      );
+      continue;
+    }
+
+    const changed = changedInputs(current, recordedSources(artifact.frontmatter));
+    if (changed.length === 0) continue;
+
+    const text = ctx.labels.condensationDue(
+      project.title,
+      condensedAtOf(artifact.frontmatter),
+      changed.length,
+      'project',
+    );
+    findings.push(
+      buildFinding(ctx, {
+        kind: 'condensation-due',
+        severity: 'info',
+        title: text.title,
+        detail: text.detail,
+        paths: [artifactPath, project.path],
+        module: null,
+        key,
+        fix: null,
+      }),
+    );
+  }
+
+  return findings;
+}
+
+export const condensationDueCheck: Check = {
+  kind: 'condensation-due',
+
+  run(ctx: GardenerContext): GardenerFinding[] {
+    return [...areaFindings(ctx), ...projectFindings(ctx)];
   },
 };

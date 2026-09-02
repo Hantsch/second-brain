@@ -22,7 +22,7 @@ areas got in M12.
 
 - [x] 044 — A project can be condensed into one file
 - [x] 045 — I see what a project's condensation changes before it's written
-- [ ] 046 — Maintenance says a project's condensation is due
+- [x] 046 — Maintenance says a project's condensation is due
 
 ## Notes
 

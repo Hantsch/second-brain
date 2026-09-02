@@ -1,7 +1,7 @@
 ---
 id: 046
 title: Maintenance says a project's condensation is due
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-09-02
 ---
 
@@ -20,16 +20,16 @@ finding takes me to the project's knowledge tab; nothing is written by the check
 
 ## Acceptance Criteria
 
-- [ ] A new deterministic check reports "condensation due" for a project whose newest input is
+- [x] A new deterministic check reports "condensation due" for a project whose newest input is
       newer than its artifact's `condensed_at`, and "condensation missing" for a project that has
       inputs but no artifact at all.
-- [ ] The check runs without a model, and its severity is informational — an un-condensed
+- [x] The check runs without a model, and its severity is informational — an un-condensed
       project is not reported as an error.
-- [ ] Its fix action writes nothing; it opens the project's knowledge tab.
-- [ ] The maintenance screen names a due or missing project condensation distinctly from other
+- [x] Its fix action writes nothing; it opens the project's knowledge tab.
+- [x] The maintenance screen names a due or missing project condensation distinctly from other
       finding kinds.
-- [ ] The project's condensed artifact is exempt from the orphan and near-duplicate checks.
-- [ ] The artifact is a normal indexed document: searchable and type-filterable.
+- [x] The project's condensed artifact is exempt from the orphan and near-duplicate checks.
+- [x] The artifact is a normal indexed document: searchable and type-filterable.
 
 ## Open Questions
 
@@ -183,4 +183,53 @@ artifact, and the maintenance screenshot shows both as informational findings.
 
 ## Done
 
-<Leave empty. Filled by `/build 046`.>
+The existing `condensation-due` gardener check (story 039, area-only) gained a project arm:
+`projectFindings()` in `src/core/gardener/checks/condensation-due.ts` loops non-`done`/`dropped`
+projects, compares story 044's `projectInputs()` against `condensed.md`'s recorded
+`source_hashes:` via the shared `changedInputs()` helper, and reports "condensation due" (stale
+hash) or "condensation missing" (no artifact) — `severity: 'info'`, `fix: null`, `module: null`,
+key prefixed `['project', slug, …]` so it never collides with a same-slug area. `labels.ts` /
+`gardener-labels.ts` generalised with a `CondensationUnit` unit word instead of a second sentence
+pair. The maintenance screen's `targets.ts` gained a condensed-project path case routing to
+`/projects?p=<slug>&tab=knowledge` (045's tab), leaving the plain `project.md` route untouched.
+Exemption from orphan/near-duplicate and normal indexed/searchable/type-filterable behaviour for
+the project artifact needed no source change — `docTypeFromPath()` already had a project-specific
+regex, and both link/similarity checks already only look at wiki pages — so D3 added pinning
+tests only. The demo vault already carried both fixture states via story 045's seed work, so D5
+added no seed changes either; a live `npm run seed && npm run shot` run confirmed one "condensation
+due" and eight "condensation missing" project findings render distinctly, in `.screenshots/06-garden.png`.
+
+### Decisions (implementation-level, not in the sprint's binding list)
+
+- Two tests outside D1's declared file list needed adjustment because D1 changes what the check
+  reports vault-wide: `tests/core/gardener/report.test.ts`'s finding-count assertion now accounts
+  for the demo vault's running projects (all lacking `condensed.md`), and
+  `tests/main/condense-ipc.test.ts` scopes its post-delete assertion to the area finding by path
+  instead of counting all `condensation-due` findings. Both are tightened, not weakened — verified
+  in review.
+- `src/core/index/build.ts` and `src/core/condense/paths.ts` needed no changes for D3:
+  `docTypeFromPath()` already classified `projects/<scope>/<slug>/condensed.md` as `docType:
+  'condensed'` separately from the area regex, so no shared `isCondensedPath()` predicate was
+  introduced (per the story's "tests first; a predicate only if a test proves one is needed").
+- D4's route reuses `projectRefFromCondensedPath()` from `@core/condense/paths` (a pure function,
+  no Electron/filesystem access) rather than a hand-rolled regex in `targets.ts`.
+
+### Commit message
+
+046: maintenance flags a project's due or missing condensation
+
+### Verification
+
+- `npm run build` — green.
+- `npm test` — 251 files / 3554 tests pass.
+- `npm run lint` — clean.
+- `npm run typecheck` — clean.
+- `npm run format:check` — clean on all files touched by this story; 4 pre-existing warnings
+  remain on files this story did not touch (`docs/ROADMAP.md`,
+  `docs/sprints/done/S11/review.md`, `docs/requirements/done/044-*.md`,
+  `docs/requirements/done/045-*.md`), unrelated to this work.
+- Clean-agent review: **PASS**, all 6 acceptance criteria PASS with file:line evidence, no
+  weakened tests, no scope creep, no guardrail violations. No findings, no fix cycle needed.
+- Live smoke (P2): `npm run seed && npm run shot` confirmed the maintenance screenshot
+  (`.screenshots/06-garden.png`) shows both finding variants as distinct, informational
+  ("condensation due" / "condensation missing" per project), with correct German/English wording.

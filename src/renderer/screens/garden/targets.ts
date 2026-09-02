@@ -10,6 +10,8 @@
    them; the log has its own tab, the catalog has no view at all — so it's a
    file. */
 
+import { projectRefFromCondensedPath } from '@core/condense/paths';
+
 export interface RouteTarget {
   kind: 'route';
   /** Address in the HashRouter, including the query part. */
@@ -50,6 +52,17 @@ export function targetFor(path: string): PathTarget {
   const project = PROJECT.exec(path);
   if (project !== null) {
     return { kind: 'route', to: `/projects?p=${encodeURIComponent(project[1] ?? '')}` };
+  }
+  /* Mirrors `projectRefFromCondensedPath` (`@core/condense/paths.ts`): the condensed
+     artifact lives at `projects/<scope>/<slug>/condensed.md`, next to `project.md`,
+     but the finding card should land on the project's knowledge tab (story 045),
+     not the overview the plain route above resolves to. */
+  const condensedProject = projectRefFromCondensedPath(path);
+  if (condensedProject !== undefined) {
+    return {
+      kind: 'route',
+      to: `/projects?p=${encodeURIComponent(condensedProject.slug)}&tab=knowledge`,
+    };
   }
   const area = AREA.exec(path);
   if (area !== null) {

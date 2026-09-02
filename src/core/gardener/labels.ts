@@ -35,6 +35,16 @@ export type IndexDriftKind =
   /** The entry points to a page that no longer exists. */
   | 'stale-entry';
 
+/**
+ * What a condensation covers. The sentence names it, so a finding cannot be
+ * read as being about the wrong thing when an area and a project share a name.
+ *
+ * One sentence pair with a unit word, not two pairs: the finding is one kind
+ * (`condensation-due`), and a second pair of sentences would have to be kept in
+ * step with the first in two languages forever.
+ */
+export type CondensationUnit = 'area' | 'project';
+
 export interface GardenerLabels {
   orphan(page: string): FindingText;
   brokenLink(page: string, target: string, line: number | null): FindingText;
@@ -52,10 +62,18 @@ export interface GardenerLabels {
    * das `condensed_at` des Artefakts, `changedCount` die Zahl der aktuellen
    * Eingaenge, die neu sind oder sich geaendert haben (dieselbe Zaehlung, die
    * die Pruefung selbst ueber `isDue()`/`changedInputs()` trifft).
+   *
+   * `unit` defaults to `'area'` — the one unit story 039 shipped, so a call
+   * that names no unit says exactly what it said before.
    */
-  condensationDue(area: string, condensedAt: string, changedCount: number): FindingText;
+  condensationDue(
+    name: string,
+    condensedAt: string,
+    changedCount: number,
+    unit?: CondensationUnit,
+  ): FindingText;
   /** Verdichtung faellig, noch kein Artefakt — kein `condensed_at`, kein Vergleich moeglich. */
-  condensationMissing(area: string): FindingText;
+  condensationMissing(name: string, unit?: CondensationUnit): FindingText;
   /**
    * Label of the button. It says what **happens** — the three actions that
    * write nothing are therefore called "open" rather than "file".
@@ -81,6 +99,15 @@ function daysAgo(count: number): string {
 function changedInputsCount(count: number): string {
   return count === 1 ? '1 Eingang hat sich geändert' : `${count} Eingänge haben sich geändert`;
 }
+
+/**
+ * The German word for each unit, plus the demonstrative that goes with it. The
+ * genus differs, so a bare word would not carry the second sentence.
+ */
+const GERMAN_UNIT: Record<CondensationUnit, { word: string; demonstrative: string }> = {
+  area: { word: 'Area', demonstrative: 'diese Area' },
+  project: { word: 'Projekt', demonstrative: 'dieses Projekt' },
+};
 
 const GERMAN_FIX_LABELS: Record<GardenerFix['action'], string> = {
   'add-to-index': 'In den Katalog eintragen',
@@ -203,18 +230,22 @@ export const GERMAN_GARDENER_LABELS: GardenerLabels = {
     };
   },
 
-  condensationDue(area: string, condensedAt: string, changedCount: number): FindingText {
+  condensationDue(
+    name: string,
+    condensedAt: string,
+    changedCount: number,
+    unit: CondensationUnit = 'area',
+  ): FindingText {
     return {
-      title: `Verdichtung fällig: ${area}`,
+      title: `Verdichtung fällig: ${GERMAN_UNIT[unit].word} „${name}“`,
       detail: `Zuletzt verdichtet am ${condensedAt}. ${changedInputsCount(changedCount)} seitdem.`,
     };
   },
 
-  condensationMissing(area: string): FindingText {
+  condensationMissing(name: string, unit: CondensationUnit = 'area'): FindingText {
     return {
-      title: `Noch keine Verdichtung: ${area}`,
-      detail:
-        'Es gibt Eingangsmaterial für diese Area, aber noch kein Verdichtungs-Artefakt. Verdichten stößt nur ein Mensch an.',
+      title: `Noch keine Verdichtung: ${GERMAN_UNIT[unit].word} „${name}“`,
+      detail: `Es gibt Eingangsmaterial für ${GERMAN_UNIT[unit].demonstrative}, aber noch kein Verdichtungs-Artefakt. Verdichten stößt nur ein Mensch an.`,
     };
   },
 

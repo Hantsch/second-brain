@@ -140,6 +140,31 @@ describe('SearchEngine: Filter', () => {
     expect(wrongType).toEqual([]);
   });
 
+  it('findet ein Projekt-Verdichtungs-Artefakt ebenso und filtert es ueber `types` (046, D3)', () => {
+    // Dieselbe Abwesenheit einer Sonderbehandlung wie beim Area-Artefakt oben,
+    // nur mit dem Projekt-Pfad `projects/<scope>/<slug>/condensed.md`.
+    const artifact = makeDoc({
+      path: 'projects/work/nyota/condensed.md',
+      docType: 'condensed',
+      title: 'Nyota — verdichtet',
+      body: 'Kartoffelsuppe und Bahnhofsuhr stehen als Beispiele nebeneinander im Testtext.',
+    });
+    const docs = [...index.docs, artifact];
+    const combined = SearchEngine.from(docs);
+    const byPath = new Map(docs.map((doc) => [doc.path, doc]));
+    const search = (query: SearchQuery): SearchHit[] => combined.search(query, byPath);
+
+    const plain = search({ text: 'Kartoffelsuppe Bahnhofsuhr' });
+    expect(plain.some((hit) => hit.path === artifact.path)).toBe(true);
+
+    const scoped = search({ text: 'Kartoffelsuppe Bahnhofsuhr', types: ['condensed'] });
+    expect(scoped.map((hit) => hit.path)).toEqual([artifact.path]);
+    expect(scoped[0]?.docType).toBe('condensed');
+
+    const wrongType = search({ text: 'Kartoffelsuppe Bahnhofsuhr', types: ['project'] });
+    expect(wrongType).toEqual([]);
+  });
+
   it('nach Modul', () => {
     const hits = find({ text: 'Rollen', module: 'identity-management' });
     expect(hits.length).toBeGreaterThan(0);

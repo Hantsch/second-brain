@@ -32,3 +32,14 @@
 - 2026-09-02 22:43 · 045 · D5 acceptance surface: seed, screenshot, navigation doc · started
 - 2026-09-02 22:43 · 045 · D5 acceptance surface: seed, screenshot, navigation doc · done
 - 2026-09-02 23:15 · 045 · story complete: verify + review pass + docs filed · done
+- 2026-09-02 23:10 · 046 · D1 project arm of condensation-due check · started
+- 2026-09-02 23:24 · 046 · D1 project arm of condensation-due check · done
+- 2026-09-02 23:25 · 046 · D2 conformance tests · started
+- 2026-09-02 23:28 · 046 · D2 conformance tests · done
+- 2026-09-02 23:28 · 046 · D3 exemptions and normal-document behaviour · started
+- 2026-09-02 23:32 · 046 · D3 exemptions and normal-document behaviour · done
+- 2026-09-02 23:32 · 046 · D4 maintenance surface (renderer) · started
+- 2026-09-02 23:34 · 046 · D4 maintenance surface (renderer) · done
+- 2026-09-02 23:34 · 046 · D5 seed and live smoke · started
+- 2026-09-02 23:47 · 046 · D5 seed and live smoke · done
+- 2026-09-02 23:54 · 046 · story complete: verify + review pass + docs filed · done

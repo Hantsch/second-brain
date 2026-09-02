@@ -5,7 +5,8 @@
 
 import { describe, expect, it } from 'vitest';
 import { applyFix, brokenLinkCheck, orphanCheck, orphanTargets } from '@core/gardener';
-import { condensedAreaPath } from '@core/condense/paths';
+import { condensedAreaPath, condensedProjectPath } from '@core/condense/paths';
+import { projectPath } from '@core/vault/paths';
 import { serialize } from '@core/vault/frontmatter';
 import { NOW_MS, day } from '../../helpers/time';
 import { DEMO } from './demo-vault';
@@ -244,6 +245,62 @@ describe('orphanCheck', () => {
     // Artefakts ist keine stille Unterdrueckung aller Befunde.
     expect(findings.some((finding) => finding.paths[0] === artifactPath)).toBe(false);
     expect(findings.some((finding) => finding.paths[0] === `areas/${areaSlug}.md`)).toBe(false);
+    expect(
+      findings.some((finding) => finding.paths[0] === 'modules/wissen/wiki/concepts/verwaist.md'),
+    ).toBe(true);
+  });
+
+  it('meldet ein Projekt-Verdichtungs-Artefakt ebenfalls nicht als Waise (046, D3)', async () => {
+    // Dieselbe Begruendung wie beim Area-Artefakt oben: `orphanCheck` laeuft
+    // ausschliesslich ueber `ctx.modules[].pages`, und `isWikiPage()` (`pages.ts`)
+    // verlangt `modules/*/wiki/**` — ein Projektpfad passt da nie hinein.
+    const scope = 'work';
+    const slug = 'nyota';
+    const projPath = projectPath(scope, slug);
+    const artifactPath = condensedProjectPath(scope, slug);
+    const files = {
+      ...moduleFiles('wissen', [
+        {
+          type: 'concept',
+          slug: 'verwaist',
+          title: 'Andere Waise',
+          summary: 'Zeigt, dass echte Waisen weiter erkannt werden',
+          body: 'Diese Seite steht für sich allein.',
+        },
+      ]),
+      [projPath]: serialize(
+        {
+          type: 'project',
+          title: 'Nyota',
+          slug,
+          scope,
+          status: 'active',
+          created: day(-30),
+          updated: day(0),
+          tags: [],
+        },
+        'Wieder aufgenommen, Kamera laeuft.\n',
+      ),
+      [artifactPath]: serialize(
+        {
+          type: 'condensed',
+          title: 'Nyota — verdichtet',
+          condensed_at: '2026-08-01T09:00:00+02:00',
+          sources: [projPath],
+          source_hashes: {},
+          created: day(-1),
+          updated: day(0),
+          tags: [],
+        },
+        'Das Rollenkonzept liegt bei Stefan.\n',
+      ),
+    };
+    const fixture = await gardenerFixture(files);
+
+    const findings = orphanCheck.run(fixture.ctx({ settings: SETTINGS }));
+
+    expect(findings.some((finding) => finding.paths[0] === artifactPath)).toBe(false);
+    expect(findings.some((finding) => finding.paths[0] === projPath)).toBe(false);
     expect(
       findings.some((finding) => finding.paths[0] === 'modules/wissen/wiki/concepts/verwaist.md'),
     ).toBe(true);

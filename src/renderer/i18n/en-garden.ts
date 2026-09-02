@@ -98,7 +98,8 @@ export const enGarden = {
   'garden.advice.near-duplicate': 'Compare near duplicates and merge where it is the same thing.',
   'garden.advice.missing-page': 'Give frequently named terms their own pages.',
   'garden.advice.loose-end': 'Follow up on announced sentences — answer or mark them done.',
-  'garden.advice.condensation-due': 'Open areas with a condensation due and condense them again.',
+  'garden.advice.condensation-due':
+    'Open areas and projects with a condensation due and condense them again.',
 
   // ── Findings ──────────────────────────────────────────────────────────────
   'garden.findings.label': 'Results',

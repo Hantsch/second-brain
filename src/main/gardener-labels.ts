@@ -16,7 +16,7 @@
    Aktionen, die nichts schreiben, heißen „open" und nicht „file". */
 
 import { GERMAN_GARDENER_LABELS } from '@core/gardener';
-import type { FindingText, GardenerLabels, IndexDriftKind } from '@core/gardener';
+import type { CondensationUnit, FindingText, GardenerLabels, IndexDriftKind } from '@core/gardener';
 import type { GardenerFindingKind, GardenerFix, UiLanguage } from '@shared/types';
 
 function percent(value: number): string {
@@ -151,18 +151,24 @@ export const ENGLISH_GARDENER_LABELS: GardenerLabels = {
     };
   },
 
-  condensationDue(area: string, condensedAt: string, changedCount: number): FindingText {
+  /* The unit word is the union member itself — English needs no genus, so the
+     German side's word/demonstrative table has no counterpart here. */
+  condensationDue(
+    name: string,
+    condensedAt: string,
+    changedCount: number,
+    unit: CondensationUnit = 'area',
+  ): FindingText {
     return {
-      title: `Condensation due: ${area}`,
+      title: `Condensation due: ${unit} "${name}"`,
       detail: `Last condensed on ${condensedAt}. ${changedInputsCount(changedCount)} since.`,
     };
   },
 
-  condensationMissing(area: string): FindingText {
+  condensationMissing(name: string, unit: CondensationUnit = 'area'): FindingText {
     return {
-      title: `No condensation yet: ${area}`,
-      detail:
-        'The area has input material but no condensation artifact yet. Only a person starts a condensation.',
+      title: `No condensation yet: ${unit} "${name}"`,
+      detail: `The ${unit} has input material but no condensation artifact yet. Only a person starts a condensation.`,
     };
   },
 

@@ -215,6 +215,15 @@ describe('docTypeFromPath', () => {
     expect(docTypeFromPath('modules/m/wiki/overview.md')).toBe('overview');
     expect(docTypeFromPath('raw/youtube/abc/transcript.md')).toBe('note');
   });
+
+  it('erkennt beide Verdichtungs-Artefakte am Pfad, auch ohne Frontmatter (046, D3)', () => {
+    // Der Fallback greift nur, wenn kein `type:` deklariert ist — genau der Fall,
+    // den 037/044 als Ausnahme neben `area`/`project` dokumentieren.
+    expect(docTypeFromPath('areas/gesundheit.condensed.md')).toBe('condensed');
+    expect(docTypeFromPath('projects/work/nyota/condensed.md')).toBe('condensed');
+    // Eine gewoehnliche Projektdatei bleibt `project`, keine falsche Uebernahme.
+    expect(docTypeFromPath('projects/work/nyota/project.md')).toBe('project');
+  });
 });
 
 describe('deriveIndex', () => {

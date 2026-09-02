@@ -111,6 +111,31 @@ describe('derivePages: Graph', () => {
     expect(counts.has('areas')).toBe(false);
   });
 
+  it('nimmt ein Projekt-Verdichtungs-Artefakt ebenfalls nicht in den Seitengraphen auf (046, D3)', () => {
+    // Dieselbe strukturelle Ausnahme wie beim Area-Artefakt oben: `isWikiPage()`
+    // verlangt `modules/*/wiki/**`, und `projects/<scope>/<slug>/condensed.md`
+    // passt da nie hinein — kein Sonderfall, keine neue Regel.
+    const docs = [
+      makeDoc({
+        path: 'modules/m/wiki/concepts/a.md',
+        docType: 'concept',
+        frontmatter: { type: 'concept', title: 'A' },
+        body: 'Ein Begriff.',
+      }),
+      makeDoc({
+        path: 'projects/work/nyota/condensed.md',
+        docType: 'condensed',
+        frontmatter: { type: 'condensed', title: 'Nyota — verdichtet' },
+        body: 'Rollenkonzept liegt bei Stefan.',
+      }),
+    ];
+    const { pages, counts } = derivePages(docs);
+    expect(pages.some((page) => page.path === 'projects/work/nyota/condensed.md')).toBe(false);
+    expect(pages.map((page) => page.slug)).toEqual(['a']);
+    expect(counts.get('m')).toEqual({ sources: 0, entities: 0, concepts: 1 });
+    expect(counts.has('projects')).toBe(false);
+  });
+
   it('nimmt einen Selbstverweis nicht in den Graphen', () => {
     const docs = [
       makeDoc({

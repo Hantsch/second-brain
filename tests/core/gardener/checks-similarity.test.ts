@@ -12,7 +12,8 @@ import {
   nearDuplicateCheck,
   shingles,
 } from '@core/gardener';
-import { condensedAreaPath } from '@core/condense/paths';
+import { condensedAreaPath, condensedProjectPath } from '@core/condense/paths';
+import { projectPath } from '@core/vault/paths';
 import { serialize } from '@core/vault/frontmatter';
 import { day } from '../../helpers/time';
 import { SETTINGS, gardenerFixture, moduleFiles, moduleFixture } from './fixtures';
@@ -192,6 +193,53 @@ describe('nearDuplicateCheck', () => {
 
     expect(findings.some((finding) => finding.paths.includes(artifactPath))).toBe(false);
     expect(findings.some((finding) => finding.paths.includes(`areas/${areaSlug}.md`))).toBe(false);
+  });
+
+  it('meldet ein Projekt-Verdichtungs-Artefakt ebenfalls nicht als Beinahe-Dublette (046, D3)', async () => {
+    // Dieselbe Begruendung wie beim Area-Artefakt oben, nur fuer
+    // `projects/<scope>/<slug>/condensed.md`: `isWikiPage()` verlangt
+    // `modules/*/wiki/**`, ein Projektpfad passt da nie hinein.
+    const scope = 'work';
+    const slug = 'nyota';
+    const projPath = projectPath(scope, slug);
+    const artifactPath = condensedProjectPath(scope, slug);
+    const files = {
+      ...moduleFiles('wissen', [
+        { type: 'concept', slug: 'ladezeiten', title: 'Ladezeiten', summary: 'Erste', body: LIST },
+      ]),
+      [projPath]: serialize(
+        {
+          type: 'project',
+          title: 'Nyota',
+          slug,
+          scope,
+          status: 'active',
+          created: day(-30),
+          updated: day(0),
+          tags: [],
+        },
+        LIST,
+      ),
+      [artifactPath]: serialize(
+        {
+          type: 'condensed',
+          title: 'Nyota — verdichtet',
+          condensed_at: '2026-08-01T09:00:00+02:00',
+          sources: [projPath],
+          source_hashes: {},
+          created: day(-1),
+          updated: day(0),
+          tags: [],
+        },
+        LIST_AGAIN,
+      ),
+    };
+    const fixture = await gardenerFixture(files);
+
+    const findings = nearDuplicateCheck.run(fixture.ctx({ settings: SETTINGS }));
+
+    expect(findings.some((finding) => finding.paths.includes(artifactPath))).toBe(false);
+    expect(findings.some((finding) => finding.paths.includes(projPath))).toBe(false);
   });
 
   it('liegt bei umformuliertem Text über, bei fremdem Text weit unter der Schwelle', () => {

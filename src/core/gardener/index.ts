@@ -107,6 +107,7 @@ export {
 } from './progress';
 export {
   GERMAN_GARDENER_LABELS,
+  type CondensationUnit,
   type FindingText,
   type GardenerLabels,
   type IndexDriftKind,

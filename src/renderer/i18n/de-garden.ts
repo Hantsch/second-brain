@@ -115,7 +115,8 @@ export const deGarden = {
   'garden.advice.missing-page': 'Für häufig genannte Begriffe eigene Seiten anlegen.',
   'garden.advice.loose-end':
     'Angekündigte Sätze aufgreifen — beantworten oder als erledigt weglegen.',
-  'garden.advice.condensation-due': 'Areas mit fälliger Verdichtung öffnen und neu verdichten.',
+  'garden.advice.condensation-due':
+    'Areas und Projekte mit fälliger Verdichtung öffnen und neu verdichten.',
 
   // ── Befunde ───────────────────────────────────────────────────────────────
   'garden.findings.label': 'Befunde',

@@ -24,6 +24,29 @@ describe('targetFor — areas', () => {
   });
 });
 
+describe('targetFor — projects', () => {
+  it('routes the plain project file to the overview', () => {
+    expect(targetFor('projects/work/example/project.md')).toEqual({
+      kind: 'route',
+      to: '/projects?p=example',
+    });
+  });
+
+  it('routes a condensed project artifact to the project knowledge tab', () => {
+    expect(targetFor('projects/work/example/condensed.md')).toEqual({
+      kind: 'route',
+      to: '/projects?p=example&tab=knowledge',
+    });
+  });
+
+  it('routes a private-scope condensed project artifact the same way', () => {
+    expect(targetFor('projects/private/example/condensed.md')).toEqual({
+      kind: 'route',
+      to: '/projects?p=example&tab=knowledge',
+    });
+  });
+});
+
 describe('targetFor — regression guard', () => {
   it('still falls back to opening unrelated paths as a file', () => {
     expect(targetFor('notes/2026-01-01.md')).toEqual({

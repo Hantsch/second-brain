@@ -446,7 +446,11 @@ describe('condense channels in main', () => {
 
     await harness.call('condense:delete', { unit: 'area', slug: 'gesundheit', expectedHash: hash });
 
-    const findings = condensationDueFindings(harness.services);
+    // Only the area arm is the question here; since 046 the same check also
+    // reports this vault's projects, which this delete does not touch.
+    const findings = condensationDueFindings(harness.services).filter((finding) =>
+      finding.paths.includes(AREA_PATH),
+    );
     expect(findings).toHaveLength(1);
     expect(findings[0]?.kind).toBe('condensation-due');
     // The "missing artifact" variant names only the area file — the "existing but
