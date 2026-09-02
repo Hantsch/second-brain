@@ -23,7 +23,7 @@ path under it, and the gate that has been red since S07 is information again.
 
 <!-- Order = the order the build phase works through. Dependent stories go last. -->
 
-- [ ] 040 — An answer cites the source, never the condensation
+- [x] 040 — An answer cites the source, never the condensation
 - [x] 042 — A maintenance run stays visible wherever I am (built, live acceptance pending — see review.md)
 - [x] 043 — I can delete a condensed artifact (built, live acceptance pending — see review.md)
 - [x] 041 — The format gate is green on Windows

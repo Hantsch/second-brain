@@ -605,10 +605,10 @@ the line-ending decision (041) last, because it rewrites up to 1077 files in one
 
 Sprints:
 
-- [sprints/S11/sprint.md](sprints/S11/sprint.md) — evidence stays primary, and the gate turns
-  green (040, 042, 043, 041), `done`. 040 and 041 done outright; 042 and 043 built and reviewed,
-  held at built/acceptance-pending per the P2 live-smoke policy (see
-  [review.md](sprints/S11/review.md)).
+- [sprints/done/S11/sprint.md](sprints/done/S11/sprint.md) — evidence stays primary, and the gate
+  turns green (040, 042, 043, 041), `done`. 040 and 041 done outright; 042 and 043 built and
+  reviewed, held at built/acceptance-pending per the P2 live-smoke policy (see
+  [review.md](sprints/done/S11/review.md)).
 
 Decisions taken at the cut (2026-09-02, user):
 
@@ -633,14 +633,14 @@ Gaps/notes:
 - The live acceptance backlog is the standing open item: M4, M6, M9, M10, M11 and M12 are all
   built with acceptance pending. M13 was cut so it cannot be invalidated by what those
   walkthroughs find, but the backlog does not shrink on its own — and this sprint adds 042 and 043
-  to that same pending set (see [S11/review.md](sprints/S11/review.md)).
+  to that same pending set (see [S11/review.md](sprints/done/S11/review.md)).
 - **042's live smoke could not be fully driven**: the demo vault's model-less run finishes in
   under a second, too fast to race navigation-persistence, stop-from-elsewhere or the
   close-during-a-run dialog reliably. Automated tests cover those paths instead; a model needs to
   be configured for the manual test plan to observe them in real time.
 - **043's live smoke covered the delete dialog's screenshot but not the full manual flow**
   (confirm+undo, index drop, conflict, no-model, German strings) — see
-  [S11/testplan.md](sprints/S11/testplan.md).
+  [S11/testplan.md](sprints/done/S11/testplan.md).
 - **042's tray-quit close door has no UI path**: no `Tray` is created anywhere in `src/main/`, so
   only the title-bar close and `Alt+F4` can be exercised live; the `before-quit` guard is covered
   by automated tests only until a tray exists.
@@ -655,11 +655,48 @@ Gaps/notes:
 
 ---
 
+### M14 — A project gathers itself — planned
+
+Concept: [concepts/condensed-layer.md](concepts/condensed-layer.md) — the second slice, cut on
+2026-09-02. The area level (M12) is built; the module and project levels were both still open. The
+project level is chosen over the module level: the module level replaces the existing
+`wiki/overview.md` ingest mechanism (CND-2, CND-35, CND-36), a behaviour change on every existing
+vault, while the project level is purely additive into a tab
+([systems/navigation.md](systems/navigation.md)) already reserved for it.
+
+Three stories: the artifact and the run that writes it (044, reading state, notes, todos/
+waiting-on, agent sessions and journal mentions — the project's four inputs per the concept), the
+diff that has to be read before anything is written (045), and the deterministic check that says a
+project's condensation has gone stale or was never done (046). No fourth "link" story is needed —
+unlike the area level, the project level needs no new day→project frontmatter link; `mentions()`
+already finds journal entries naming a project.
+
+Sprints:
+
+- [sprints/S12/sprint.md](sprints/S12/sprint.md) — a project gathers itself (044, 045, 046),
+  `planned`
+
+Decisions taken at the cut (2026-09-02, user):
+
+- **Cut ahead of any live acceptance walkthrough.** M4, M6, M9, M10, M11 and M12 are all still
+  "built, acceptance pending"; the roadmap had stated the project/module level should wait for
+  M12's acceptance. The user chose to proceed anyway — no time for the walkthroughs now, more
+  features preferred over pausing, corrections to be filed as new stories once a walkthrough finds
+  something wrong. Named risk, accepted knowingly: M4/M6/M9/M10/M11 add write paths into the real
+  vault exercised so far only by fake-provider tests and short demo-vault smoke runs, not a full
+  walkthrough against real data — this sprint adds more surface on top without reducing that risk.
+- **The module level stays open**, gated on the same live-acceptance question plus its own added
+  cost (retiring `updateOverview()`). Revisit after M14.
+- Six open questions carried into refine, none resolved at the cut — see
+  [sprints/S12/sprint.md](sprints/S12/sprint.md)'s Notes and each story's `## Open Questions`.
+
+---
+
 ## Open / unprioritised
 
 | Topic                                                         | State                                                                                                                                                                                                                                                                                                              | Next step                                                                                                                                                                                                                            |
 | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Condensed layer (module / project levels)                     | Concept written 2026-08-18: [concepts/condensed-layer.md](concepts/condensed-layer.md). The **area** level was built in M12 (S10, done 2026-09-02, acceptance pending); the module and project levels, CND-2, CND-17 (agent-session citation) and CND-35/36 (retiring the ingest's overview append) are still open | Next `/roadmap plan` after M12 is accepted — M13 was cut ahead of it for exactly that reason. The concept's §7 reversal trigger is evaluated at the second level, so the module or project level should follow soon rather than late |
+| Condensed layer (module level)                                | Concept written 2026-08-18: [concepts/condensed-layer.md](concepts/condensed-layer.md). The **area** level was built in M12 (S10, done 2026-09-02, acceptance pending); the **project** level was cut as M14 (S12, planned) on 2026-09-02, ahead of any live acceptance, by direct user decision. The **module** level — CND-2, CND-17 (agent-session citation), CND-35/36 (retiring the ingest's overview append) — is still open | Own `/roadmap plan` once M14 is built. The concept's §7 reversal trigger (per-level vs. one shared shape) is evaluated once the project level exists, i.e. after M14 |
 | MCP interface for projects, knowledge and the condensed layer | Named as an outlook in [concepts/condensed-layer.md](concepts/condensed-layer.md) §14, deliberately without requirements                                                                                                                                                                                           | Own `/ai-scrum:concept` once the condensed artifacts exist                                                                                                                                                                           |
 | German docs migrated to English                               | Decided in `.claude/ai-scrum.md`; only `docs/MODULE-SCHEMA.md` is still German now — and story 023 pinned it `eol=lf` and byte-exact against `MODULE_SCHEMA_TEMPLATE`, so migrating it means changing code too                                                                                                     | Own story once it stops being cosmetic                                                                                                                                                                                               |
 | Phase 2                                                       | Not defined                                                                                                                                                                                                                                                                                                        | Cut after phase 1 has been used                                                                                                                                                                                                      |
