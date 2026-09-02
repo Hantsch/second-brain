@@ -26,6 +26,12 @@ describe('sectionNameFor', () => {
     expect(sectionNameFor('open', 'en')).toBe('Open');
     expect(sectionNameFor('directives', 'de')).toBe('Direktiven');
     expect(sectionNameFor('directives', 'en')).toBe('Directives');
+    expect(sectionNameFor('next-step', 'de')).toBe('Nächster Schritt');
+    expect(sectionNameFor('next-step', 'en')).toBe('Next step');
+    expect(sectionNameFor('waiting-on', 'de')).toBe('Wartet auf');
+    expect(sectionNameFor('waiting-on', 'en')).toBe('Waiting on');
+    expect(sectionNameFor('learned', 'de')).toBe('Gelernt');
+    expect(sectionNameFor('learned', 'en')).toBe('Learned');
   });
 
   it('falls back to German for an unrecognized document language', () => {
@@ -52,6 +58,12 @@ describe('sectionKindOf', () => {
     expect(sectionKindOf('Open')).toBe('open');
     expect(sectionKindOf('Direktiven')).toBe('directives');
     expect(sectionKindOf('Directives')).toBe('directives');
+    expect(sectionKindOf('Nächster Schritt')).toBe('next-step');
+    expect(sectionKindOf('Next step')).toBe('next-step');
+    expect(sectionKindOf('Wartet auf')).toBe('waiting-on');
+    expect(sectionKindOf('Waiting on')).toBe('waiting-on');
+    expect(sectionKindOf('Gelernt')).toBe('learned');
+    expect(sectionKindOf('Learned')).toBe('learned');
   });
 
   /* „State" ist keine der beiden Dokumentsprachen, wurde von der Leseseite aber
@@ -63,6 +75,7 @@ describe('sectionKindOf', () => {
   it('compares folded — case, whitespace and umlauts do not matter', () => {
     expect(sectionKindOf(' NOTIZEN ')).toBe('notes');
     expect(sectionKindOf('gespraech')).toBe('dialogue');
+    expect(sectionKindOf('naechster schritt')).toBe('next-step');
   });
 
   it('is null for a heading that names no section', () => {

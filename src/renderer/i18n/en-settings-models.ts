@@ -153,6 +153,7 @@ const own = {
   'settings.fallback.project-status': 'status and next step stay handwork',
   'settings.fallback.gardener-audit': 'the deterministic checks keep running',
   'settings.fallback.condense-area': 'the area page stays as it is',
+  'settings.fallback.condense-project': 'the project pages stay as they are',
 
   'settings.machine.title': 'This machine',
   'settings.machine.scan': 'Scan this machine',

@@ -19,11 +19,22 @@
 import type { ChatTurn, DocLanguage } from '@shared/types';
 import type { CondensedArtifact } from '@core/condense/artifact';
 import { sectionNameFor } from '@core/vault/section-names';
-import { clamp, documentLanguageRule, turns } from './shared';
+import {
+  CONDENSE_ITEM_CHARS,
+  CONDENSE_SOFT_CAP_CHARS,
+  CONDENSE_SOFT_CAP_WORDS,
+  clamp,
+  documentLanguageRule,
+  turns,
+} from './shared';
 
-/** Der weiche Zielwert für den ganzen Artefakttext, nicht pro Abschnitt (Decision Q3). */
-export const CONDENSE_AREA_TARGET_WORDS = 2000;
-export const CONDENSE_AREA_TARGET_CHARS = 12000;
+/**
+ * Der weiche Zielwert für den ganzen Artefakttext, nicht pro Abschnitt (Decision Q3).
+ * Die Zahlen selbst leben seit Story 044 (D21) in `shared.ts` — hier nur ein
+ * Re-Export unter dem bisherigen Namen, damit kein Aufrufer dieses Moduls bricht.
+ */
+export const CONDENSE_AREA_TARGET_WORDS = CONDENSE_SOFT_CAP_WORDS;
+export const CONDENSE_AREA_TARGET_CHARS = CONDENSE_SOFT_CAP_CHARS;
 
 /** Eine Eingabe, aus der verdichtet wird — Notiz, Todo oder Tageseintrag. */
 export interface CondenseAreaSourceItem {
@@ -80,7 +91,9 @@ export const CONDENSE_AREA_SCHEMA: Record<string, unknown> = {
 
 function itemLines(label: string, items: readonly CondenseAreaSourceItem[]): string {
   if (items.length === 0) return `${label}: keine.`;
-  const lines = items.map((item) => `--- ${item.path} ---\n${clamp(item.text, 1500)}`);
+  const lines = items.map(
+    (item) => `--- ${item.path} ---\n${clamp(item.text, CONDENSE_ITEM_CHARS)}`,
+  );
   return [`${label}:`, ...lines].join('\n\n');
 }
 

@@ -230,6 +230,36 @@ describe('deriveIndex', () => {
     expect(index.todos.find((todo) => todo.due === '2026-08-15')?.dueInDays).toBe(1);
     expect(index.projects[0]?.ageDays).toBe(4);
   });
+
+  it('liest keine Todos aus einem kondensierten Artefakt (story 044, review fix)', () => {
+    // A project's condensed.md sits inside projects/<scope>/<slug>/, so
+    // projectOfPath() resolves it to that project — a checkbox-looking line the
+    // model writes as prose (e.g. quoting an existing todo as evidence) must not
+    // become a second, phantom open todo of that project.
+    const stat: VaultStat = {
+      path: 'projects/work/nyota/condensed.md',
+      size: 0,
+      modified: '2026-08-10T09:00:00.000Z',
+      dir: false,
+    };
+    const content = [
+      '---',
+      'type: condensed',
+      'title: Nyota',
+      'condensed_at: 2026-08-10T09:00:00+02:00',
+      'sources: []',
+      '---',
+      '## State',
+      '',
+      '- [ ] Sieht aus wie ein Todo, ist aber zitierte Prosa.',
+      '',
+      'Aus: projects/work/nyota/project.md',
+    ].join('\n');
+    const doc = toIndexedDoc(stat.path, content, stat);
+    expect(doc.docType).toBe('condensed');
+    const index = deriveIndex([doc], { now: '2026-08-14' });
+    expect(index.todos).toEqual([]);
+  });
 });
 
 describe('buildIndex: Tempo', () => {

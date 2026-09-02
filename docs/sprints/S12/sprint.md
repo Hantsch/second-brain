@@ -1,7 +1,7 @@
 ---
 sprint: S12
-status: planned # planned | in-progress | done
-branch: # set by /sprint
+status: in-progress # planned | in-progress | done
+branch: sprint/S12
 milestone: M14 — A project gathers itself
 ---
 
@@ -20,7 +20,7 @@ areas got in M12.
 
 <!-- Order = the order the build phase works through. Dependent stories go last. -->
 
-- [ ] 044 — A project can be condensed into one file
+- [x] 044 — A project can be condensed into one file
 - [ ] 045 — I see what a project's condensation changes before it's written
 - [ ] 046 — Maintenance says a project's condensation is due
 

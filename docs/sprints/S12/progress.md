@@ -1,0 +1,23 @@
+- 2026-09-02 20:17 · 044 · D1 project artifact is a known vault file kind · started
+- 2026-09-02 20:19 · 044 · D1 project artifact is a known vault file kind · done
+- 2026-09-02 20:19 · 044 · D2 four project section headings in both languages · started
+- 2026-09-02 20:22 · 044 · D2 four project section headings in both languages · done
+- 2026-09-02 20:22 · 044 · D3 one artifact parser serves both levels · started
+- 2026-09-02 20:33 · 044 · D3 one artifact parser serves both levels · done
+- 2026-09-02 20:33 · 044 · D4 task kind condense-project routable and sensitive · started
+- 2026-09-02 20:37 · 044 · D4 task kind condense-project routable and sensitive · done
+- 2026-09-02 20:37 · 044 · D5 agent session citation form · started
+- 2026-09-02 20:41 · 044 · D5 agent session citation form · done
+- 2026-09-02 20:41 · 044 · D6 project input selection · started
+- 2026-09-02 20:52 · 044 · D6 project input selection · done
+- 2026-09-02 20:52 · 044 · D7 four-section prompt · started
+- 2026-09-02 20:56 · 044 · D7 four-section prompt · done
+- 2026-09-02 20:56 · 044 · D8 condenseProject run and write · started
+- 2026-09-02 21:14 · 044 · D8 condenseProject run and write · done
+- 2026-09-02 21:14 · 044 · story-level verify (build/test/lint/typecheck/format) · done
+- 2026-09-02 21:31 · 044 · story-review-hard (FAIL, 6 findings) · done
+- 2026-09-02 21:31 · 044 · review-fix cycle 1 (F1,F2,F5,F6 fixed; F3,F4 documented) · started
+- 2026-09-02 21:55 · 044 · review-fix cycle 2 (touchesByDir, session scope, clamp-counter, notice guard) · done
+- 2026-09-02 21:55 · 044 · final verify green (build/test/lint/typecheck; format clean on story files) · done
+- 2026-09-02 21:58 · 044 · live smoke (seed+shot) verified condense-project settings row · done
+- 2026-09-02 21:58 · 044 · Done section filled, ACs ticked, status: done, moved to done/, INDEX.md updated · done

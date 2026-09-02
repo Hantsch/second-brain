@@ -47,7 +47,12 @@ const ollama: ProviderConfig = {
 
 /** Tasks whose minimum this machine cannot reach — the `strong` tier's 13B
  *  floor against a ceiling of ~7.3B. */
-const BEYOND_THIS_MACHINE: readonly TaskKind[] = ['wiki-ingest', 'gardener-audit', 'condense-area'];
+const BEYOND_THIS_MACHINE: readonly TaskKind[] = [
+  'wiki-ingest',
+  'gardener-audit',
+  'condense-area',
+  'condense-project',
+];
 
 describe('a weak machine, from scan facts to recommendation', () => {
   const verdict = judgeCapacity(WEAK_MACHINE);

@@ -77,7 +77,17 @@ export {
   type CondenseAreaSourceItem,
 } from './condense-area';
 export {
+  condenseProjectPrompt,
+  CONDENSE_PROJECT_ITEM_CHARS,
+  CONDENSE_PROJECT_SCHEMA,
+  promptItemsClampedChars,
+  type CondenseProjectInput,
+  type CondenseProjectSourceItem,
+} from './condense-project';
+export {
   clamp,
+  CONDENSE_SOFT_CAP_CHARS,
+  CONDENSE_SOFT_CAP_WORDS,
   documentLanguageRule,
   formatExcerpts,
   replyLanguageRule,

@@ -83,7 +83,9 @@ export type TaskKind =
   /** Maintenance run: find contradictions, stale claims, gaps. */
   | 'gardener-audit'
   /** Condense an area's notes, todos and day entries into a shorter overview. */
-  | 'condense-area';
+  | 'condense-area'
+  /** Condense an entire project into one artifact file. */
+  | 'condense-project';
 
 export interface TaskDefinition {
   kind: TaskKind;

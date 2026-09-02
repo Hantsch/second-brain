@@ -1,9 +1,18 @@
 /**
- * Die verdichtete Area als Datenstruktur: `areas/<slug>.condensed.md` lesen und
- * wieder schreiben (docs/VAULT-FORMAT.md, Abschnitt „Condensed area").
+ * Ein verdichtetes Dokument als Datenstruktur: lesen und wieder schreiben
+ * (docs/VAULT-FORMAT.md, Abschnitte „Condensed area" und „Condensed project").
+ *
+ * The set of machine-owned sections is an **argument**, not a constant of this
+ * module: `parseArtifact`/`composeArtifact` are handed `CONDENSED_SECTIONS` for
+ * an area (`areas/<slug>.condensed.md`) and `PROJECT_SECTIONS` for a project
+ * (`projects/<scope>/<slug>/condensed.md`). One round trip, two levels — a
+ * second copy of it would be a second place the losslessness below can quietly
+ * stop being true. The area-level `…CondensedArtifact` functions are thin
+ * wrappers that pass `CONDENSED_SECTIONS`, so the area's callers keep one
+ * unchanged entry point.
  *
  * Reine Textarbeit — kein Dateisystem, kein Gateway. Ein Kondensationslauf baut
- * die drei maschinellen Abschnitte neu und schreibt die Datei **ganz** neu. Genau
+ * die maschinellen Abschnitte neu und schreibt die Datei **ganz** neu. Genau
  * da entsteht stiller Verlust, deshalb ist der Leitsatz dieses Moduls:
  * `compose(parse(x))` verliert nichts aus `x`. Was das Modul nicht kennt, traegt
  * es wortwoertlich weiter:
@@ -14,7 +23,7 @@
  *   Lauf liest ihn, schreibt ihn aber nie. Er wird als undurchsichtiger Text
  *   durchgereicht, samt seiner vorhandenen Ueberschrift: welche Schreibweise in
  *   der Datei steht, bleibt in der Datei (dieselbe Regel wie `sectionHeadingIn`
- *   fuer die Notizen einer Area). Die drei maschinellen Ueberschriften folgen
+ *   fuer die Notizen einer Area). Die maschinellen Ueberschriften folgen
  *   dagegen der Dokumentsprache — sie werden ohnehin bei jedem Lauf neu gesetzt.
  * - **Text ueber der ersten Ueberschrift** (`preamble`) und **fremde
  *   `##`-Abschnitte** (`extraSections`) — von Hand hinzugefuegt und sonst beim
@@ -37,7 +46,7 @@ import { SOURCE_HASHES_FIELD, sourceHashesIn, sourcePaths } from './sources';
 /** Der Dokumenttyp dieser Datei — zugleich der Schluessel der Feldreihenfolge. */
 export const CONDENSED_TYPE = 'condensed';
 
-/** Ueberschriftenebene der vier Abschnitte, wie in docs/VAULT-FORMAT.md gezeigt. */
+/** Ueberschriftenebene der Abschnitte, wie in docs/VAULT-FORMAT.md gezeigt. */
 const SECTION_LEVEL = 2;
 
 /** Frontmatter-Felder, die dieses Modul selbst setzt. Alles andere wird durchgereicht. */
@@ -49,11 +58,25 @@ const OWNED_FIELDS: readonly string[] = [
   SOURCE_HASHES_FIELD,
 ];
 
-/** Die drei Abschnitte, die ein Lauf schreibt — `directives` gehoert dem Menschen. */
+/** Die drei Abschnitte, die ein Lauf einer Area schreibt — `directives` gehoert dem Menschen. */
 export type CondensedSectionKind = Extract<SectionKind, 'state' | 'patterns' | 'open'>;
 
 /** Ihre Reihenfolge in der Datei. Stabil, damit Diffs zwischen Laeufen klein bleiben. */
 export const CONDENSED_SECTIONS: readonly CondensedSectionKind[] = ['state', 'patterns', 'open'];
+
+/** The four sections a run of a project writes (docs/VAULT-FORMAT.md, story 044). */
+export type CondensedProjectSectionKind = Extract<
+  SectionKind,
+  'state' | 'next-step' | 'waiting-on' | 'learned'
+>;
+
+/** Their order in the file — document order, and the same stability argument as above. */
+export const PROJECT_SECTIONS: readonly CondensedProjectSectionKind[] = [
+  'state',
+  'next-step',
+  'waiting-on',
+  'learned',
+];
 
 /** Ein maschineller Abschnitt: Prosa plus die Pfade, aus denen sie stammt. */
 export interface CondensedSectionContent {
@@ -78,8 +101,12 @@ export interface CondensedExtraSection {
   content: string;
 }
 
-/** Eine verdichtete Area, aufgetrennt in das, was ein Lauf ersetzt, und den Rest. */
-export interface CondensedArtifact {
+/**
+ * Ein verdichtetes Dokument, aufgetrennt in das, was ein Lauf ersetzt, und den
+ * Rest. `K` is the machine-owned section set of its level, so the type of an
+ * area artifact and of a project artifact differ in exactly that one place.
+ */
+export interface CondensedArtifact<K extends SectionKind = CondensedSectionKind> {
   title: string;
   /** ISO-8601 mit Zeitzone, gesetzt bei jedem Schreiben. */
   condensedAt: string;
@@ -91,7 +118,7 @@ export interface CondensedArtifact {
    * sondern heisst „dazu weiss die Datei nichts" (siehe `./sources`).
    */
   sourceHashes: Record<string, string>;
-  sections: Record<CondensedSectionKind, CondensedSectionContent>;
+  sections: Record<K, CondensedSectionContent>;
   directives: CondensedDirectives;
   /** Jedes Frontmatter-Feld, das dieses Modul nicht besitzt, in Dateireihenfolge. */
   extraFrontmatter: Frontmatter;
@@ -101,23 +128,31 @@ export interface CondensedArtifact {
   extraSections: CondensedExtraSection[];
 }
 
-/** Ein leeres Artefakt — Ausgangspunkt fuer die erste Verdichtung einer Area. */
-export function emptyCondensedArtifact(): CondensedArtifact {
+/** Ein verdichtetes Projekt (`projects/<scope>/<slug>/condensed.md`). */
+export type CondensedProjectArtifact = CondensedArtifact<CondensedProjectSectionKind>;
+
+/** An empty artifact for this section set — the starting point of a first run. */
+export function emptyArtifact<K extends SectionKind>(sections: readonly K[]): CondensedArtifact<K> {
+  const empty = {} as Record<K, CondensedSectionContent>;
+  /* Ein eigenes Objekt je Abschnitt: ein geteiltes `sources`-Array wuerde die
+     Belege eines Abschnitts in allen anderen mit auftauchen lassen. */
+  for (const kind of sections) empty[kind] = { text: '', sources: [] };
   return {
     title: '',
     condensedAt: '',
     sources: [],
     sourceHashes: {},
-    sections: {
-      state: { text: '', sources: [] },
-      patterns: { text: '', sources: [] },
-      open: { text: '', sources: [] },
-    },
+    sections: empty,
     directives: { heading: null, content: '' },
     extraFrontmatter: {},
     preamble: '',
     extraSections: [],
   };
+}
+
+/** Ein leeres Artefakt — Ausgangspunkt fuer die erste Verdichtung einer Area. */
+export function emptyCondensedArtifact(): CondensedArtifact {
+  return emptyArtifact(CONDENSED_SECTIONS);
 }
 
 /**
@@ -136,25 +171,47 @@ export function sourceLineFor(sources: readonly string[], docLanguage: DocLangua
  */
 const SOURCE_LINE = /^(?:from|aus|sources|quellen)\s*:\s*(.*)$/i;
 
-/** Eine bestehende Datei aufbrechen. Wirft nie — kaputtes YAML kommt leer zurueck. */
-export function parseCondensedArtifact(content: string): CondensedArtifact {
+/**
+ * Eine bestehende Datei aufbrechen; `sections` sagt, welche Abschnitte dieses
+ * Dokument maschinell fuehrt. Alles andere — auch ein zweites Vorkommen eines
+ * dieser Abschnitte — bleibt Fremdtext. Wirft nie: kaputtes YAML kommt leer
+ * zurueck.
+ */
+export function parseArtifact<K extends SectionKind>(
+  content: string,
+  sections: readonly K[],
+): CondensedArtifact<K> {
   const parsed = parse(content ?? '');
-  const artifact = emptyCondensedArtifact();
+  const artifact = emptyArtifact(sections);
   artifact.title = textOf(parsed.frontmatter['title']);
   artifact.condensedAt = textOf(parsed.frontmatter['condensed_at']);
   artifact.sources = sourcePaths(parsed.frontmatter);
   artifact.sourceHashes = sourceHashesIn(parsed.frontmatter);
   artifact.extraFrontmatter = unownedFields(parsed.frontmatter);
-  readBody(parsed.body, artifact);
+  readBody(parsed.body, artifact, sections);
   return artifact;
 }
 
 /** Aus der Struktur wieder eine ganze Datei machen. */
+export function composeArtifact<K extends SectionKind>(
+  artifact: CondensedArtifact<K>,
+  sections: readonly K[],
+  docLanguage: DocLanguage = 'de',
+): string {
+  return serialize(frontmatterOf(artifact), bodyOf(artifact, sections, docLanguage));
+}
+
+/** Eine bestehende verdichtete Area aufbrechen. */
+export function parseCondensedArtifact(content: string): CondensedArtifact {
+  return parseArtifact(content, CONDENSED_SECTIONS);
+}
+
+/** Aus einer verdichteten Area wieder eine ganze Datei machen. */
 export function composeCondensedArtifact(
   artifact: CondensedArtifact,
   docLanguage: DocLanguage = 'de',
 ): string {
-  return serialize(frontmatterOf(artifact), bodyOf(artifact, docLanguage));
+  return composeArtifact(artifact, CONDENSED_SECTIONS, docLanguage);
 }
 
 /**
@@ -162,7 +219,11 @@ export function composeCondensedArtifact(
  * Handarbeit des Nutzers und wandert unveraendert nach `extraSections`, statt
  * beim Schreiben zu verschwinden.
  */
-function readBody(body: string, artifact: CondensedArtifact): void {
+function readBody<K extends SectionKind>(
+  body: string,
+  artifact: CondensedArtifact<K>,
+  sections: readonly K[],
+): void {
   const lines = body.split('\n');
   const ranges = findSections(body, SECTION_LEVEL);
   const firstHeading = ranges[0]?.headingLine ?? lines.length;
@@ -178,7 +239,7 @@ function readBody(body: string, artifact: CondensedArtifact): void {
         seen.add(kind);
         continue;
       }
-      if (isCondensedSection(kind)) {
+      if (isMachineSection(kind, sections)) {
         artifact.sections[kind] = splitSourceLine(content);
         seen.add(kind);
         continue;
@@ -200,7 +261,7 @@ function splitSourceLine(content: string): CondensedSectionContent {
   return { text: joinTrimmed(lines.slice(0, -1)), sources: cleanPaths(splitPaths(match[1] ?? '')) };
 }
 
-function frontmatterOf(artifact: CondensedArtifact): Frontmatter {
+function frontmatterOf<K extends SectionKind>(artifact: CondensedArtifact<K>): Frontmatter {
   const hashes = artifact.sourceHashes;
   return orderFields({
     type: CONDENSED_TYPE,
@@ -230,10 +291,14 @@ function orderFields(fields: Frontmatter): Frontmatter {
   return result;
 }
 
-function bodyOf(artifact: CondensedArtifact, docLanguage: DocLanguage): string {
+function bodyOf<K extends SectionKind>(
+  artifact: CondensedArtifact<K>,
+  sections: readonly K[],
+  docLanguage: DocLanguage,
+): string {
   const blocks: string[] = [];
   if (artifact.preamble.length > 0) blocks.push(artifact.preamble);
-  for (const kind of CONDENSED_SECTIONS) {
+  for (const kind of sections) {
     const heading = `## ${sectionNameFor(kind, docLanguage)}`;
     blocks.push(block(heading, sectionBody(artifact.sections[kind], docLanguage)));
   }
@@ -256,8 +321,11 @@ function block(heading: string, content: string): string {
   return content.length === 0 ? heading : `${heading}\n\n${content}`;
 }
 
-function isCondensedSection(kind: SectionKind): kind is CondensedSectionKind {
-  return (CONDENSED_SECTIONS as readonly SectionKind[]).includes(kind);
+function isMachineSection<K extends SectionKind>(
+  kind: SectionKind,
+  sections: readonly K[],
+): kind is K {
+  return (sections as readonly SectionKind[]).includes(kind);
 }
 
 /** Zeilen zusammenfuegen, Leerzeilen nur an den Raendern weg — innen bleibt alles. */

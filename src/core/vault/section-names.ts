@@ -21,7 +21,18 @@ import { headingFor } from './sections';
 
 /** Every section kind used anywhere in the vault. Not every module uses all of them. */
 export type SectionKind =
-  'notes' | 'todos' | 'state' | 'day' | 'facts' | 'dialogue' | 'patterns' | 'open' | 'directives';
+  | 'notes'
+  | 'todos'
+  | 'state'
+  | 'day'
+  | 'facts'
+  | 'dialogue'
+  | 'patterns'
+  | 'open'
+  | 'directives'
+  | 'next-step'
+  | 'waiting-on'
+  | 'learned';
 
 /** The headings of one document language. */
 export type SectionNames = Record<SectionKind, string>;
@@ -41,6 +52,9 @@ const NAMES: Record<DocLanguage, SectionNames> = {
     patterns: 'Muster',
     open: 'Offen',
     directives: 'Direktiven',
+    'next-step': 'Nächster Schritt',
+    'waiting-on': 'Wartet auf',
+    learned: 'Gelernt',
   },
   en: {
     notes: 'Notes',
@@ -52,6 +66,9 @@ const NAMES: Record<DocLanguage, SectionNames> = {
     patterns: 'Patterns',
     open: 'Open',
     directives: 'Directives',
+    'next-step': 'Next step',
+    'waiting-on': 'Waiting on',
+    learned: 'Learned',
   },
 };
 
@@ -73,6 +90,9 @@ const ALIASES: Record<SectionKind, readonly string[]> = {
   patterns: ['muster', 'patterns'],
   open: ['offen', 'open'],
   directives: ['direktiven', 'directives'],
+  'next-step': ['naechster schritt', 'next step'],
+  'waiting-on': ['wartet auf', 'waiting on'],
+  learned: ['gelernt', 'learned'],
 };
 
 /** The heading of this kind, in this document language. */

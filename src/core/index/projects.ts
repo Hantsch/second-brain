@@ -107,10 +107,18 @@ function projectDirOf(path: string): string | null {
   return `${parts[0]}/${parts[1]}/${parts[2]}`;
 }
 
-/** Juengste Dateiaenderung je Projektordner — die Spur, die in `lastTouch` landet. */
+/**
+ * Juengste Dateiaenderung je Projektordner — die Spur, die in `lastTouch` landet.
+ *
+ * A condensed artifact (story 044) is excluded: it lives inside the project's
+ * own folder, but writing it is the *run's* work, not the human's — counting it
+ * would make a condensation make the project look freshly worked on, exactly
+ * the fabricated-progress bug `stale`/`nextStepStale` exist to catch.
+ */
 function touchesByDir(docs: readonly IndexedDoc[]): Map<string, string> {
   const result = new Map<string, string>();
   for (const doc of docs) {
+    if (doc.docType === 'condensed') continue;
     const dir = projectDirOf(doc.path);
     if (dir === null) continue;
     const known = result.get(dir);

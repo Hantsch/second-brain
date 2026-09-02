@@ -16,6 +16,7 @@ document is the contract: what isn't written here doesn't get written.
   projects/
     work/<slug>/project.md    project file
     work/<slug>/notes/        optional long-form notes for the project
+    work/<slug>/condensed.md  condensed state for that project, sibling file
     private/<slug>/project.md
   areas/<slug>.md             ongoing responsibilities with no end
   areas/<slug>.condensed.md   condensed state for that area, sibling file
@@ -39,6 +40,13 @@ document is the contract: what isn't written here doesn't get written.
 folder, distinguished from `areas/<slug>.md` by the `.condensed.md` suffix. It
 belongs to a different document type (`condensed`, not `area`) even though it
 lives in the same folder next to the area it condenses.
+
+`projects/<scope>/<slug>/condensed.md` needs no such dotted-name trick: a
+project already has its own folder, so the condensed artifact is simply
+`condensed.md` next to `project.md` inside it, told apart by its plain
+filename rather than by a suffix. It is document type `condensed`, same as
+the area's, resolved before the generic `projects/<scope>/<slug>/*` branch
+so it never falls back to `project`.
 
 ```
   .secondbrain/               derived, safe to delete
@@ -181,6 +189,59 @@ document-language switch never orphans a section already filed under the other
 spelling, and a file carrying both appends new content under whichever heading
 comes first in the file. The notes section accepts either heading, "Notes" or
 "Notizen" — the same tolerance areas have (below).
+
+## Condensed project (projects/<scope>/<slug>/condensed.md)
+
+```markdown
+---
+type: condensed
+title: Nyota Auth0 Migration — verdichtet
+condensed_at: 2026-08-10T09:15:00+02:00
+sources: [projects/work/nyota-auth0-migration/project.md]
+source_hashes:
+  projects/work/nyota-auth0-migration/project.md: 9f2c1b…
+---
+
+## Stand
+
+Die knappste, aktuelle Zusammenfassung: wo das Projekt gerade steht.
+
+## Nächster Schritt
+
+Was als Nächstes ansteht.
+
+## Wartet auf
+
+Wer noch etwas liefern muss, und worauf.
+
+## Gelernt
+
+Was sich aus dem Projektverlauf als Erkenntnis festhalten lässt.
+```
+
+A condensed project is a derived, periodically refreshed digest of a project —
+the short version to read instead of the full history in
+`projects/<scope>/<slug>/project.md`. It follows the same frontmatter contract
+as a condensed area: `condensed_at` is an ISO-8601 timestamp with time zone,
+`sources` lists what the run read, and `source_hashes` records the sha256 of
+every **vault** document among those sources at digest time, so a maintenance
+run can tell whether a condensation is due without opening a file or calling a
+model.
+
+A source is either a vault-relative path or an agent-session citation of the
+form `agent:<kind>/<pathKey>` (`<kind>` is `claude` today; `<pathKey>` is the
+normalised session-project key from `src/core/claude/paths.ts`) — one entry
+per distinct linked agent project whose transcripts the run read, not one per
+session. An agent session lives outside the vault, so it appears in `sources`
+but never in `source_hashes`; the app resolves such a citation back to the
+referenced agent session view.
+
+Input selection is deterministic and covers four groups: `project.md`'s own
+state section plus every note under `notes/` verbatim, todos and `waiting_on`
+entries (open and closed, with their dates), journal entries mentioning the
+project within a 90-day window, and the tail of the most recently active
+linked agent sessions. Where a bound left material out, the run states so in
+the artifact body, prefixed with `<!-- condense:truncation -->`.
 
 ## Area (`areas/<slug>.md`)
 

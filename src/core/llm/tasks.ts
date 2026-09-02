@@ -22,6 +22,7 @@ export const TASK_KINDS: readonly TaskKind[] = [
   'project-status',
   'gardener-audit',
   'condense-area',
+  'condense-project',
 ];
 
 function definition(
@@ -124,6 +125,15 @@ export const TASK_DEFINITIONS: readonly TaskDefinition[] = [
   // like `journal-chat`.
   definition(
     'condense-area',
+    'strong',
+    { in: 8000, out: 1200 },
+    { sensitive: true, structured: true },
+  ),
+  // Reads a project's own notes, todos and day entries carrying its slug —
+  // personal knowledge in, a condensed artifact file out. Sensitive like
+  // `condense-area`.
+  definition(
+    'condense-project',
     'strong',
     { in: 8000, out: 1200 },
     { sensitive: true, structured: true },

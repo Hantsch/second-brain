@@ -21,8 +21,14 @@
  * - `failed`     — the gateway threw or the reply did not parse. The artifact on
  *   disk is untouched, because nothing here ever touches it (AC 7).
  *
- * The truncation notice (AC 5) is written here from the deterministic selector's
- * own report, never asked of the model (Decision D8).
+ * The truncation notice (AC 5) is written from the deterministic selector's own
+ * report, never asked of the model (Decision D8).
+ *
+ * Two pieces of this run are no longer *in* this file: the source-subset check
+ * (`./attribution`) and the truncation notice (`./notice`). Story 044 (D11)
+ * moved them out so the project run (`./run-project`) enforces and words the
+ * same rules instead of a second copy of them. Behaviour here is unchanged —
+ * only the address is.
  */
 
 import type { DocLanguage, TaskKind } from '@shared/types';
@@ -35,7 +41,6 @@ import type { IndexedDoc } from '@core/index/types';
    D6), so it is reused rather than rebuilt. */
 import { isoStamp } from '@core/ingest/raw';
 import { sha256 } from '@core/vault/hash';
-import { toVaultPath } from '@core/vault/paths';
 import type { DateLike } from '@core/vault/paths';
 import {
   CONDENSED_SECTIONS,
@@ -43,22 +48,17 @@ import {
   emptyCondensedArtifact,
   parseCondensedArtifact,
 } from './artifact';
-import type { CondensedArtifact, CondensedSectionContent, CondensedSectionKind } from './artifact';
-import { areaInputs, CONDENSE_DAY_WINDOW_DAYS, selectCondenseInputs } from './inputs';
+import type { CondensedArtifact, CondensedSectionKind } from './artifact';
+import { attributionProblems, readReplySections } from './attribution';
+import type { AttributionProblem } from './attribution';
+import { areaInputs, selectCondenseInputs } from './inputs';
 import type { CondenseInputSelection, CondenseTruncationReport } from './inputs';
+import { areaTruncationNotice, preambleWithoutNotice } from './notice';
 import { condensedAreaPath } from './paths';
 import { sourceHashesOf } from './sources';
 
 /** The one task kind this run needs. Named in the `no-model` result, per AC 10. */
 export const CONDENSE_AREA_TASK: TaskKind = 'condense-area';
-
-/**
- * Marks the run's own truncation sentence in the artifact preamble. An HTML
- * comment because it must be invisible when the file is rendered, yet
- * recognisable to the next run: without it, each truncated run would stack
- * another notice onto the preamble the artifact module carries through verbatim.
- */
-const TRUNCATION_MARKER = '<!-- condense:truncation -->';
 
 export interface CondenseAreaDeps {
   /** The indexed docs — the same `readonly IndexedDoc[]` the selector takes. */
@@ -77,17 +77,12 @@ export interface CondenseAreaDeps {
   signal?: AbortSignal;
 }
 
-/** A section whose citations did not survive the subset check. */
-export interface CondenseAttributionProblem {
-  section: CondensedSectionKind;
-  /**
-   * `unknown-source`: cited a path that was not among the inputs read.
-   * `no-source`: wrote prose and cited nothing — a claim without evidence.
-   */
-  reason: 'unknown-source' | 'no-source';
-  /** The offending paths; empty for `no-source`. */
-  sources: readonly string[];
-}
+/**
+ * A section whose citations did not survive the subset check. The check itself
+ * lives in `./attribution` and is shared with the project run (D11) — this is
+ * only its area-level instance.
+ */
+export type CondenseAttributionProblem = AttributionProblem<CondensedSectionKind>;
 
 export interface CondenseAreaProposal {
   kind: 'proposal';
@@ -199,65 +194,6 @@ function mapInputs(
   return { notes, todos, days, paths };
 }
 
-/** One section of the model reply, or `null` when it does not match the schema. */
-function readSection(raw: unknown): CondensedSectionContent | null {
-  if (raw === null || typeof raw !== 'object') return null;
-  const record = raw as Record<string, unknown>;
-  const text = record['text'];
-  const sources = record['sources'];
-  if (typeof text !== 'string' || !Array.isArray(sources)) return null;
-  return {
-    text: text.trim(),
-    sources: sources
-      .filter((entry): entry is string => typeof entry === 'string')
-      .map((entry) => toVaultPath(entry))
-      .filter((entry) => entry.length > 0),
-  };
-}
-
-/**
- * Guardrail 3, in code. Every cited path must be a member of the set actually
- * read — "some input" is not enough — and prose without any citation is a claim
- * nobody can check. Both make the run fail as a whole.
- */
-function attributionProblems(
-  sections: Record<CondensedSectionKind, CondensedSectionContent>,
-  read: readonly string[],
-): CondenseAttributionProblem[] {
-  const allowed = new Set(read);
-  const problems: CondenseAttributionProblem[] = [];
-  for (const kind of CONDENSED_SECTIONS) {
-    const section = sections[kind];
-    const unknown = section.sources.filter((path) => !allowed.has(path));
-    if (unknown.length > 0) {
-      problems.push({ section: kind, reason: 'unknown-source', sources: unknown });
-      continue;
-    }
-    if (section.text.length > 0 && section.sources.length === 0) {
-      problems.push({ section: kind, reason: 'no-source', sources: [] });
-    }
-  }
-  return problems;
-}
-
-/** The truncation sentence (AC 5), written from the selector's report, not by the model. */
-function truncationNotice(report: CondenseTruncationReport, docLanguage: DocLanguage): string {
-  const sentence =
-    docLanguage === 'en'
-      ? `This condensation did not read every available input: ${report.count} day ${report.count === 1 ? 'entry' : 'entries'} older than ${CONDENSE_DAY_WINDOW_DAYS} days were left out.`
-      : `Diese Verdichtung hat nicht alle verfügbaren Eingaben gelesen: ${report.count} ${report.count === 1 ? 'Tageseintrag' : 'Tageseinträge'} älter als ${CONDENSE_DAY_WINDOW_DAYS} Tage blieben außen vor.`;
-  return `${TRUNCATION_MARKER} ${sentence}`;
-}
-
-/** Preamble without the previous run's notice, so notices do not stack up. */
-function preambleWithoutNotice(preamble: string): string {
-  return preamble
-    .split('\n')
-    .filter((line) => !line.trimStart().startsWith(TRUNCATION_MARKER))
-    .join('\n')
-    .trim();
-}
-
 /**
  * Condenses one area into a proposed `areas/<slug>.condensed.md`, or says why it
  * cannot. Writes nothing, ever.
@@ -309,21 +245,17 @@ export async function condenseArea(
     return { kind: 'failed', slug, reason: reasonOf(error) };
   }
 
-  const sections = {} as Record<CondensedSectionKind, CondensedSectionContent>;
-  for (const kind of CONDENSED_SECTIONS) {
-    const section = readSection(reply[kind]);
-    if (section === null) {
-      return { kind: 'failed', slug, reason: `The reply has no usable "${kind}" section.` };
-    }
-    sections[kind] = section;
+  const read = readReplySections(reply, CONDENSED_SECTIONS);
+  if ('missing' in read) {
+    return { kind: 'failed', slug, reason: `The reply has no usable "${read.missing}" section.` };
   }
 
-  const problems = attributionProblems(sections, inputs.paths);
+  const problems = attributionProblems(read.sections, CONDENSED_SECTIONS, inputs.paths);
   if (problems.length > 0) return { kind: 'attribution-failure', slug, problems };
 
   const condensedAt = isoStamp(now);
   const notice =
-    selection.truncated === null ? '' : truncationNotice(selection.truncated, docLanguage);
+    selection.truncated === null ? '' : areaTruncationNotice(selection.truncated, docLanguage);
   const kept = preambleWithoutNotice(current.preamble);
   /* What gets recorded is the document inventory, not `inputs.paths`: the latter
      is the *prompt's* view (one item per note, todo and day), and it omits the
@@ -340,7 +272,7 @@ export async function condenseArea(
     condensedAt,
     sources: recorded,
     sourceHashes: sourceHashesOf(inventory),
-    sections,
+    sections: read.sections,
     preamble: [notice, kept].filter((part) => part.length > 0).join('\n\n'),
   };
 

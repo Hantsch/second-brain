@@ -73,6 +73,7 @@ export interface BuildOptions extends DerivationOptions {
 export function docTypeFromPath(path: string): DocType {
   if (isInside('inbox', path)) return 'dump';
   if (isInside('journal', path)) return 'journal';
+  if (/^projects\/[^/]+\/[^/]+\/condensed\.md$/.test(path)) return 'condensed';
   if (/^projects\/[^/]+\/[^/]+\/project\.md$/.test(path)) return 'project';
   if (/^areas\/[^/]+\.condensed\.md$/.test(path)) return 'condensed';
   if (isInside('areas', path)) return 'area';
@@ -132,14 +133,22 @@ export function toIndexedDoc(path: string, content: string, stat: VaultStat): In
  */
 export function deriveIndex(docs: IndexedDoc[], options: DerivationOptions = {}): VaultIndex {
   const now = options.now ?? new Date();
-  const todos = docs.flatMap((doc) =>
-    parseTodos(doc.body, {
-      path: doc.path,
-      frontmatter: doc.frontmatter,
-      lineOffset: doc.bodyLine,
-      today: now,
-    }),
-  );
+  /* A condensed artifact (story 044/037) is machine-owned prose, not a place a
+     human writes todos — and, since a project's `condensed.md` sits inside
+     `projects/<scope>/<slug>/`, `projectOfPath()` would otherwise attach any
+     "- [ ]"-looking line the model writes (e.g. quoting an existing todo as
+     evidence) to that project's own open-todo count, a duplicate the run's own
+     input selector already refuses to read back (`inputs-project.ts`). */
+  const todos = docs
+    .filter((doc) => doc.docType !== 'condensed')
+    .flatMap((doc) =>
+      parseTodos(doc.body, {
+        path: doc.path,
+        frontmatter: doc.frontmatter,
+        lineOffset: doc.bodyLine,
+        today: now,
+      }),
+    );
   const projects = deriveProjects(docs, todos, {
     now,
     staleAfterDays: options.staleAfterDays,

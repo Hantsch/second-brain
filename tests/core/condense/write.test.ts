@@ -1,13 +1,24 @@
-/* Writing a `CondenseAreaProposal` (story 037, D8). The proposal already carries
-   the whole file and the hash it was built from; this is the one place that
-   turns that into a vault write, hash-guarded — the same guard as
-   `src/main/ipc/areas.ts` uses, no bespoke conflict logic. */
+/* Writing a condensation proposal (story 037 D8, generalised by story 044 D9).
+   The proposal already carries the whole file and the hash it was built from;
+   this is the one place that turns that into a vault write, hash-guarded — the
+   same guard as `src/main/ipc/areas.ts` uses, no bespoke conflict logic.
+
+   One writer for both levels: an area artifact and a project artifact differ
+   only in the path derived from the proposal's identity, so the guard, the
+   "must not exist" case and the lossless second write are asserted for both. */
 
 import { describe, expect, it } from 'vitest';
-import { writeCondensedArea } from '@core/condense/write';
+import { writeCondensedArea, writeCondensedProject } from '@core/condense/write';
 import type { CondenseAreaProposal } from '@core/condense/run';
-import { composeCondensedArtifact, parseCondensedArtifact } from '@core/condense/artifact';
-import { condensedAreaPath } from '@core/condense/paths';
+import type { CondenseProjectProposal } from '@core/condense/run-project';
+import {
+  composeArtifact,
+  composeCondensedArtifact,
+  parseArtifact,
+  parseCondensedArtifact,
+  PROJECT_SECTIONS,
+} from '@core/condense/artifact';
+import { condensedAreaPath, condensedProjectPath } from '@core/condense/paths';
 import { MemoryVaultStore, VaultConflictError } from '@core/vault';
 import { sha256 } from '@core/vault/hash';
 
@@ -157,5 +168,171 @@ describe('writeCondensedArea', () => {
     // Still exactly one condensed artifact for this slug.
     const files = await store.list({ dir: 'areas', ext: '.md' });
     expect(files).toEqual([PATH]);
+  });
+});
+
+/* The project half of the same writer (story 044, D9): a different path, the
+   identical guard. What must survive a second write is what the human owns —
+   the directives section — plus every frontmatter key the app does not know. */
+
+const PROJECT_SLUG = 'nyota';
+const PROJECT_PATH = condensedProjectPath('work', PROJECT_SLUG);
+
+const PROJECT_CONTENT = `---
+type: condensed
+title: Nyota Auth0 Migration
+condensed_at: 2026-08-10T09:15:00+02:00
+sources:
+  - projects/work/nyota/project.md
+  - agent:claude/c:/dev/hantsch/nyota
+source_hashes:
+  projects/work/nyota/project.md: abc123
+obsidian_pin: true
+---
+
+## Stand
+
+Das Rollenkonzept liegt bei Stefan.
+
+Aus: projects/work/nyota/project.md
+
+## Nächster Schritt
+
+Rollen-Mapping dokumentieren.
+
+Aus: projects/work/nyota/project.md
+
+## Wartet auf
+
+Stefan, seit dem 4. August.
+
+Aus: projects/work/nyota/project.md
+
+## Gelernt
+
+Die Migration lief über Terraform.
+
+Aus: agent:claude/c:/dev/hantsch/nyota
+
+## Direktiven
+
+- Nie den Kunden namentlich nennen.
+`;
+
+function projectProposal(
+  overrides: Partial<CondenseProjectProposal> = {},
+): CondenseProjectProposal {
+  return {
+    kind: 'proposal',
+    scope: 'work',
+    slug: PROJECT_SLUG,
+    path: PROJECT_PATH,
+    content: PROJECT_CONTENT,
+    condensedAt: '2026-08-10T09:15:00+02:00',
+    baseHash: null,
+    sources: ['projects/work/nyota/project.md', 'agent:claude/c:/dev/hantsch/nyota'],
+    sourceHashes: { 'projects/work/nyota/project.md': 'abc123' },
+    truncated: null,
+    ...overrides,
+  };
+}
+
+describe('writeCondensedProject', () => {
+  it('writes exactly one projects/<scope>/<slug>/condensed.md when none exists yet', async () => {
+    const store = new MemoryVaultStore();
+
+    const result = await writeCondensedProject(store, projectProposal());
+
+    expect(result.path).toBe(PROJECT_PATH);
+    expect(result.created).toBe(true);
+    const files = await store.list({ dir: 'projects', ext: '.md' });
+    expect(files).toEqual([PROJECT_PATH]);
+    expect(await store.readText(PROJECT_PATH)).toBe(PROJECT_CONTENT);
+  });
+
+  it('refuses a second write with baseHash: null once the file exists (must-not-exist)', async () => {
+    const store = new MemoryVaultStore();
+    await writeCondensedProject(store, projectProposal());
+
+    await expect(writeCondensedProject(store, projectProposal())).rejects.toThrow(
+      VaultConflictError,
+    );
+    expect(await store.readText(PROJECT_PATH)).toBe(PROJECT_CONTENT);
+  });
+
+  it('throws VaultConflictError (code: conflict) on a stale expectedHash and leaves the file untouched', async () => {
+    const store = new MemoryVaultStore();
+    await writeCondensedProject(store, projectProposal());
+
+    let caught: unknown;
+    try {
+      await writeCondensedProject(store, projectProposal({ baseHash: 'not-the-real-hash' }));
+    } catch (error) {
+      caught = error;
+    }
+
+    expect(caught).toBeInstanceOf(VaultConflictError);
+    expect((caught as VaultConflictError).code).toBe('conflict');
+    expect(await store.readText(PROJECT_PATH)).toBe(PROJECT_CONTENT);
+  });
+
+  it('a second, accepted write preserves the directives section and unknown frontmatter keys on disk', async () => {
+    const store = new MemoryVaultStore();
+    const first = await writeCondensedProject(store, projectProposal());
+
+    // Simulate a second condenseProject() run: read the file on disk, parse it
+    // with the project section set (D3), compose a new version — the same
+    // machinery `run-project.ts` uses.
+    const onDisk = await store.readText(PROJECT_PATH);
+    expect(onDisk).toBe(PROJECT_CONTENT);
+    const parsed = parseArtifact(onDisk ?? '', PROJECT_SECTIONS);
+    expect(parsed.directives.content).toContain('Nie den Kunden namentlich nennen.');
+    expect(parsed.extraFrontmatter['obsidian_pin']).toBe(true);
+    expect(parsed.sections.learned.sources).toEqual(['agent:claude/c:/dev/hantsch/nyota']);
+
+    const updated = {
+      ...parsed,
+      condensedAt: '2026-08-17T09:00:00+02:00',
+      sections: {
+        ...parsed.sections,
+        'next-step': {
+          text: 'Testmandanten anlegen.',
+          sources: ['projects/work/nyota/project.md'],
+        },
+      },
+    };
+    const secondContent = composeArtifact(updated, PROJECT_SECTIONS, 'de');
+
+    const second = await writeCondensedProject(
+      store,
+      projectProposal({
+        content: secondContent,
+        baseHash: sha256(PROJECT_CONTENT),
+        condensedAt: updated.condensedAt,
+      }),
+    );
+
+    expect(second.created).toBe(false);
+    expect(second.hash).not.toBe(first.hash);
+
+    const finalParsed = parseArtifact((await store.readText(PROJECT_PATH)) ?? '', PROJECT_SECTIONS);
+    expect(finalParsed.directives.content).toContain('Nie den Kunden namentlich nennen.');
+    expect(finalParsed.extraFrontmatter['obsidian_pin']).toBe(true);
+    expect(finalParsed.sections['next-step'].text).toBe('Testmandanten anlegen.');
+    // The agent citation survives a round trip as a source, unmangled.
+    expect(finalParsed.sources).toContain('agent:claude/c:/dev/hantsch/nyota');
+
+    // Still exactly one condensed artifact for this project.
+    expect(await store.list({ dir: 'projects', ext: '.md' })).toEqual([PROJECT_PATH]);
+  });
+
+  it('keeps the two levels apart: an area write does not touch a project artifact', async () => {
+    const store = new MemoryVaultStore();
+    await writeCondensedProject(store, projectProposal());
+
+    await writeCondensedArea(store, proposal());
+
+    expect(await store.readText(PROJECT_PATH)).toBe(PROJECT_CONTENT);
+    expect(await store.readText(PATH)).toBe(FIRST_CONTENT);
   });
 });

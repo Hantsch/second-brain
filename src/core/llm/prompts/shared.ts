@@ -56,3 +56,23 @@ export function clamp(text: string, max = 8000): string {
   const trimmed = text.trim();
   return trimmed.length > max ? `${trimmed.slice(0, max)}\n[…gekürzt]` : trimmed;
 }
+
+/**
+ * Der weiche Zielwert fuer den gesamten Artefakttext eines Kondensationslaufs —
+ * nicht pro Abschnitt (Decision Q3 der Story 037, bestaetigt fuer die Story 044
+ * unter D21). Beide Ebenen — Area und Projekt — teilen sich diese eine Zahl, statt
+ * je eine eigene zu pflegen, die auseinanderdriften koennte.
+ */
+export const CONDENSE_SOFT_CAP_WORDS = 2000;
+export const CONDENSE_SOFT_CAP_CHARS = 12000;
+
+/**
+ * Per-item cap when one input (a note, a todo, a session tail, …) is folded
+ * into a condense prompt — independent of the soft cap above, which bounds the
+ * *whole* artifact, not what the model gets to see of any one input. Hoisted
+ * here (story 044 review fix) so the area and the project prompt use the exact
+ * same number instead of two literals that could drift apart; a caller that
+ * needs to know how much this cap dropped should compute it against this same
+ * constant (see `promptItemsClampedChars` in `condense-project.ts`).
+ */
+export const CONDENSE_ITEM_CHARS = 1500;

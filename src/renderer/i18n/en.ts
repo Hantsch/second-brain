@@ -186,6 +186,9 @@ export const en: Record<TranslationKey, string> = {
   'task.condense-area.label': 'Condense area',
   'task.condense-area.hint':
     "Reads an area's notes, todos and day entries and writes a shorter overview. Personal content — a local model is explicitly recommended.",
+  'task.condense-project.label': 'Condense project',
+  'task.condense-project.hint':
+    "Reads a project's notes, todos and day entries and writes a condensed file. Personal content — a local model is explicitly recommended.",
 
   /* Notes from ingesting. The core knows no language and sends a code
      (`IngestNoteCode`); the sentence lives here. Every refusal states something about

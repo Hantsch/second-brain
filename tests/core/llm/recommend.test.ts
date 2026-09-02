@@ -149,7 +149,7 @@ describe('recommendModels', () => {
       verdict(),
     );
 
-    expect(result.tasks).toHaveLength(12);
+    expect(result.tasks).toHaveLength(13);
     expect(result.tasks.map((t) => t.task)).toEqual(TASK_KINDS);
     for (const task of result.tasks) {
       expect(task.pick).toEqual({ providerId: 'ollama', model: 'ollama/qwen2.5-coder:7b' });
@@ -181,7 +181,7 @@ describe('recommendModels', () => {
       blockLocal,
     );
 
-    expect(result.tasks).toHaveLength(12);
+    expect(result.tasks).toHaveLength(13);
 
     const sensitiveTasks = result.tasks.filter((t) =>
       ['classify-dump', 'extract-tasks', 'journal-chat'].includes(t.task),
@@ -241,7 +241,7 @@ describe('recommendModels', () => {
       verdict(),
     );
 
-    expect(result.tasks).toHaveLength(12);
+    expect(result.tasks).toHaveLength(13);
 
     const titleTags = result.tasks.find((t) => t.task === 'title-tags');
     // Both the local model and gpt-4o-mini are cheap-tier exact matches, but
@@ -270,7 +270,7 @@ describe('recommendModels', () => {
 
     const result = recommendModels(catalogue(FULL_CATALOGUE), [], [], blockLocal);
 
-    expect(result.tasks).toHaveLength(12);
+    expect(result.tasks).toHaveLength(13);
     for (const task of result.tasks) {
       expect(task.pick).toBeNull();
       expect(task.costPerRun).toBeNull();
@@ -296,7 +296,7 @@ describe('recommendModels', () => {
 
     expect(result.catalogueGeneratedAt).toBe('2026-01-01');
     expect(result.catalogueStale).toBe(true);
-    expect(result.tasks).toHaveLength(12);
+    expect(result.tasks).toHaveLength(13);
   });
 
   it('sensitive-rule regression: only a trains-on-input cloud model reachable, no local at all', () => {

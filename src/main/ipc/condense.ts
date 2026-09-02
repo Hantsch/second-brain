@@ -29,10 +29,11 @@ import {
   condenseArea,
   condensedAreaPath,
   parseCondensedArtifact,
+  partialInputsNote,
 } from '@core/condense';
 import type { CondenseAreaDeps } from '@core/condense';
 import type { IndexedDoc } from '@core/index/types';
-import type { CondenseProposal, DocLanguage } from '@shared/types';
+import type { CondenseProposal } from '@shared/types';
 import type { HandlerMap } from './registry';
 import { defineHandlers, fail } from './registry';
 import { docLanguage, settle } from './wiki-bridge';
@@ -63,15 +64,6 @@ function condenseDocs(services: Services): readonly IndexedDoc[] {
     needs `snapshot()`/`writeText()` with hash guards, same as `wikiStore()`. */
 function condenseStore(services: Services): VaultStore {
   return new FsVaultStore(services.requireVaultRoot());
-}
-
-/** A short, honest sentence for `CondenseProposal.partialInputs` — the count
-    comes from the selector's own report (`CondenseTruncationReport`), never
-    from the model. Mirrors `run.ts`'s private `truncationNotice()` wording. */
-function partialInputsNote(count: number, language: DocLanguage): string {
-  return language === 'en'
-    ? `This proposal did not read every available input: ${count} day ${count === 1 ? 'entry' : 'entries'} were left out.`
-    : `Dieser Vorschlag hat nicht alle verfügbaren Eingaben gelesen: ${count} ${count === 1 ? 'Tageseintrag' : 'Tageseinträge'} blieben außen vor.`;
 }
 
 export function condenseHandlers(services: Services): HandlerMap {
