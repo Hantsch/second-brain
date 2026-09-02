@@ -32,6 +32,72 @@ export const SOURCE_PATH = `${WIKI_DIR}/sources/s-2026-08-04-token-lifetimes-blo
 export const RAW_PATH = 'raw/web/2026-08-06-digital-gardening-ueberblick.md';
 export const PROTOCOL_PATH = 'raw/web/2026-08-06-digital-gardening-ueberblick.ingest.json';
 
+/* ── Verdichtungs-Artefakt (additiv) ───────────────────────────────────────
+ *
+ * Das Artefakt zum Bereich `Gesundheit`: eine vom Modell geschriebene
+ * Zusammenfassung von `areas/gesundheit.md`. Es liegt bewusst **nicht** in
+ * `tests/fixtures/vault/` — der Bestand dort ist auf Zaehlungen und
+ * Pflege-Befunde festgelegt. Wer den Beleg-Ausschluss prueft, legt es ueber
+ * `wikiFixture(condensedAreaFiles())` obendrauf.
+ *
+ * Sein Wortlaut ist absichtlich der bessere Volltexttreffer zu
+ * `CONDENSED_QUESTION`: die Frage steht darin fast woertlich, in
+ * `AREA_PATH` nur verteilt. Ohne Ausschluss stuende es also vorn.
+ */
+
+/** Die Primaerdatei, aus der das Artefakt verdichtet wurde. */
+export const AREA_PATH = 'areas/gesundheit.md';
+export const CONDENSED_PATH = 'areas/gesundheit.condensed.md';
+
+/** Frage, deren bester Treffer das Artefakt ist — `AREA_PATH` trifft auch. */
+export const CONDENSED_QUESTION = 'Was hilft dem Rücken bei langen Sitzungen?';
+
+/**
+ * Frage, die **nur** im Artefakt einen Treffer hat: das Wort ist die Synthese
+ * des Modells und steht in keiner Datei des Nutzers.
+ */
+export const CONDENSED_ONLY_QUESTION = 'Regenerationsfenster';
+
+/** Das Artefakt als „vault-relativer Pfad → Inhalt". */
+export function condensedAreaFiles(): Record<string, string> {
+  return {
+    [CONDENSED_PATH]: [
+      '---',
+      'type: condensed',
+      'title: Gesundheit — verdichtet',
+      'condensed_at: 2026-08-10T09:15:00+02:00',
+      'sources:',
+      `  - ${AREA_PATH}`,
+      'source_hashes:',
+      `  ${AREA_PATH}: 9f2c1b`,
+      'created: 2026-08-10',
+      'updated: 2026-08-10',
+      'scope: private',
+      'lang: de',
+      '---',
+      '',
+      '## Stand',
+      '',
+      'Dem Rücken hilft bei langen Sitzungen eine kurze Pause: Pausen bei langen',
+      'Sitzungen helfen dem Rücken mehr als jede neue Übung.',
+      '',
+      '## Muster',
+      '',
+      'Das Regenerationsfenster vor Mitternacht wirkt stärker als eine Stunde',
+      'länger liegen zu bleiben.',
+      '',
+      '## Offen',
+      '',
+      'Der Termin beim Physiotherapeuten steht weiter aus.',
+      '',
+      '## Direktiven',
+      '',
+      '- Keine Trainingspläne vorschlagen.',
+      '',
+    ].join('\n'),
+  };
+}
+
 export interface WikiFixture {
   store: MemoryVaultStore;
   /** Erfuellt `WikiIndexView` strukturell. */

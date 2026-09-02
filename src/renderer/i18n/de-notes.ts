@@ -71,6 +71,8 @@ export const deNotes = {
   'notes.condensed.running': 'Verdichtung läuft',
   'notes.condensed.meta.condensedAt': 'Verdichtet am {date}',
   'notes.condensed.meta.sources': '{count} Quellen',
+  'notes.condensed.notEvidence':
+    'Diese Verdichtung wird nicht als Beleg zitiert — Antworten verweisen stattdessen auf ihre Quellen.',
 
   // ── Diff und Übernahme (Story 038, D7) ───────────────────────────────────
   'notes.condensed.diff.summary': '{removed} entfernt, {added} hinzugefügt',

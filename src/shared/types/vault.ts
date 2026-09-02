@@ -36,6 +36,33 @@ export type DocType =
   | 'concept'
   | 'overview';
 
+/**
+ * Alle Mitglieder von `DocType`, zur Laufzeit erreichbar. Einzige Wahrheit —
+ * spaetere Ableitungen (z.B. eine Ausschlussliste) bauen darauf auf, statt die
+ * Literale erneut aufzuzaehlen.
+ */
+export const ALL_DOC_TYPES: readonly DocType[] = [
+  'dump',
+  'note',
+  'project',
+  'area',
+  'condensed',
+  'journal',
+  'source',
+  'entity',
+  'concept',
+  'overview',
+];
+
+/**
+ * Exhaustiveness-Check auf Typ-Ebene: Wird `DocType` um ein Mitglied erweitert, ohne
+ * `ALL_DOC_TYPES` zu pflegen, wird `_MissingDocTypes` zu einem Typ ungleich `never` und
+ * die Zuweisung unten schlaegt beim Typechecken fehl (statt erst zur Laufzeit).
+ */
+type _MissingDocTypes = Exclude<DocType, (typeof ALL_DOC_TYPES)[number]>;
+const _allDocTypesIsExhaustive: _MissingDocTypes extends never ? true : never = true;
+void _allDocTypesIsExhaustive;
+
 /** Arbeit oder Privat — die Trennung, die im Dashboard überall auftaucht. */
 export type Scope = 'work' | 'private';
 

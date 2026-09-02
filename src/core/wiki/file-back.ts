@@ -14,12 +14,13 @@
 import type { Citation, WriteResult } from '@shared/types';
 import { excerpt } from '@core/vault/doc';
 import { isoDay, moduleDir, slugify, wikiIndexPath } from '@core/vault/paths';
+import { isEvidenceExcluded } from './evidence';
 import { upsertEntries } from './index-md';
 import { appendLog } from './log-md';
 import { createPage, pageRefOf } from './pages';
 import { phrases } from './text';
 import { WikiError } from './types';
-import type { PageRef, WikiDeps } from './types';
+import type { PageRef, WikiDeps, WikiIndexView } from './types';
 
 /** Laenge des Katalog-Einzeilers. */
 const SUMMARY_CHARS = 120;
@@ -98,6 +99,23 @@ function answeredFrom(citations: readonly Citation[], module: string): string[] 
 }
 
 /**
+ * Zitate ohne verdichtete Dokumente. Die Retrieval-Seite (`ask.ts`) schliesst
+ * `condensed`-Dokumente schon aus, aber `citations` kommt hier ueber IPC herein und
+ * koennte veraltet oder von Hand gebaut sein — Guardrail 3 gilt trotzdem, deshalb
+ * prueft `fileBack` selbst noch einmal gegen den Index.
+ */
+function withoutExcludedEvidence(
+  citations: readonly Citation[],
+  index: WikiIndexView,
+): Citation[] {
+  const byPath = index.index().byPath;
+  return citations.filter((citation) => {
+    const doc = byPath.get(citation.path);
+    return doc === undefined || !isEvidenceExcluded(doc.docType);
+  });
+}
+
+/**
  * Antwort als Concept-Seite ablegen. Wirft, wenn das Modul fehlt oder die Antwort
  * leer ist — eine Seite ohne Inhalt waere kein Wissen, sondern Ballast.
  */
@@ -117,7 +135,8 @@ export async function fileBack(deps: WikiDeps, input: FileBackInput): Promise<Fi
   const language = deps.docLanguage ?? 'de';
   const text = phrases(language);
   const now = deps.now ?? new Date();
-  const body = `${linkifyAnswer(answer, module)}${evidenceSection(input.citations, module, text.evidence)}`;
+  const citations = withoutExcludedEvidence(input.citations, deps.index);
+  const body = `${linkifyAnswer(answer, module)}${evidenceSection(citations, module, text.evidence)}`;
 
   const created = await createPage(deps.store, {
     module,
@@ -125,7 +144,7 @@ export async function fileBack(deps: WikiDeps, input: FileBackInput): Promise<Fi
     title,
     body,
     tags: input.tags ?? [],
-    sources: sourcesOf(input.citations, module),
+    sources: sourcesOf(citations, module),
     now,
     language,
   });
@@ -153,7 +172,7 @@ export async function fileBack(deps: WikiDeps, input: FileBackInput): Promise<Fi
       kind: 'query',
       title: (input.question ?? title).trim(),
       day: isoDay(now),
-      answeredFrom: answeredFrom(input.citations, module),
+      answeredFrom: answeredFrom(citations, module),
       filedBack: created.ref.path,
     },
     { now, language },

@@ -59,6 +59,8 @@ export const enNotes = {
   'notes.condensed.running': 'Condensation running',
   'notes.condensed.meta.condensedAt': 'Condensed {date}',
   'notes.condensed.meta.sources': '{count} sources',
+  'notes.condensed.notEvidence':
+    'This condensation is not cited as evidence — answers point to its sources instead.',
 
   // ── Diff and accept (story 038, D7) ──────────────────────────────────────
   'notes.condensed.diff.summary': '{removed} removed, {added} added',

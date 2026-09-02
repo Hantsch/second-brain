@@ -13,6 +13,8 @@
 
 import { describe, expect, it } from 'vitest';
 import { askQuestion, retrieve } from '@core/wiki';
+import type { RetrieveOptions, WikiIndexView } from '@core/wiki';
+import type { SearchQuery } from '@shared/types';
 import { emptyGateway, gatewayWithReplies } from '../../helpers/llm';
 import {
   PRIVATE_NOTE_PATH,
@@ -21,7 +23,17 @@ import {
   WORK_PROJECT,
   projectNoteFiles,
 } from '../../fixtures';
-import { MODULE, OAUTH_PATH, TOKEN_PATH, wikiFixture } from './fixtures';
+import {
+  AREA_PATH,
+  CONDENSED_ONLY_QUESTION,
+  CONDENSED_PATH,
+  CONDENSED_QUESTION,
+  MODULE,
+  OAUTH_PATH,
+  TOKEN_PATH,
+  condensedAreaFiles,
+  wikiFixture,
+} from './fixtures';
 import type { WikiFixture } from './fixtures';
 
 const QUESTION = 'Wie lange leben Access-Token?';
@@ -290,5 +302,143 @@ describe('askQuestion ohne Modell', () => {
     });
 
     expect(answer.excerpts.map((entry) => entry.path)).toContain(OAUTH_PATH);
+  });
+});
+
+/* ── Verdichtungen sind kein Beleg (040) ─────────────────────────────────────
+ *
+ * Ein Verdichtungs-Artefakt ist vom Modell geschrieben. Wuerde es zitiert,
+ * gaebe die App eine Maschinen-Zusammenfassung als eigene Notiz des Nutzers aus
+ * — Guardrail 3. Der Ausschluss haengt in `retrieve`, damit jeder Weg dahinter
+ * ihn erbt: mit Modell, ohne Modell, mit und ohne Einschraenkung.
+ */
+
+/** Eine Antwort, die das Artefakt als Fundstelle behauptet — sie darf nicht stehen. */
+const CITES_CONDENSED = [
+  `Pausen helfen dem Rücken [[${CONDENSED_PATH}]].`,
+  `Kurze Pausen alle 45 Minuten [[${AREA_PATH}]].`,
+].join('\n');
+
+/** Ein Index, der mitschreibt, wonach gesucht wurde. */
+function watchIndex(inner: WikiIndexView): { view: WikiIndexView; queries: SearchQuery[] } {
+  const queries: SearchQuery[] = [];
+  const view: WikiIndexView = {
+    index: () => inner.index(),
+    search: (query) => {
+      queries.push(query);
+      return inner.search(query);
+    },
+    pages: () => inner.pages(),
+    modules: () => inner.modules(),
+  };
+  return { view, queries };
+}
+
+/* Jede Einschraenkung, die `retrieve` kennt. `scope: 'private'` ist der scharfe
+   Fall: das Artefakt traegt genau diesen Scope, der Filter liesse es also durch.
+   Modul- und Projektfilter treffen eine Bereichsdatei ohnehin nie — sie stehen
+   hier, damit kein Weg ungeprueft bleibt. */
+const VARIANTS: { label: string; options: RetrieveOptions }[] = [
+  { label: 'ohne Einschraenkung', options: {} },
+  { label: 'ohne Filter (null)', options: { module: null, scope: null, project: null } },
+  { label: 'mit Scope', options: { scope: 'private' } },
+  { label: 'mit Modul', options: { module: MODULE } },
+  { label: 'mit Projekt', options: { project: WORK_PROJECT } },
+];
+
+describe('Beleg-Ausschluss: Verdichtungs-Artefakte', () => {
+  it.each(VARIANTS)(
+    '$label: kein Ausschnitt, kein Zitat, kein Eintrag ohne Modell',
+    async ({ options }) => {
+      const fixture = await wikiFixture(condensedAreaFiles());
+      const { gateway } = gatewayWithReplies({ 'query-answer': CITES_CONDENSED }, ['query-answer']);
+
+      expect(
+        retrieve(fixture.index, CONDENSED_QUESTION, { ...options, limit: 10 }).map(
+          (entry) => entry.path,
+        ),
+      ).not.toContain(CONDENSED_PATH);
+
+      const withModel = await askQuestion(fixture.deps(gateway), {
+        ...options,
+        question: CONDENSED_QUESTION,
+        limit: 10,
+      });
+      expect(withModel.excerpts.map((entry) => entry.path)).not.toContain(CONDENSED_PATH);
+      expect(withModel.citations.map((citation) => citation.path)).not.toContain(CONDENSED_PATH);
+
+      const withoutModel = await askQuestion(fixture.deps(emptyGateway()), {
+        ...options,
+        question: CONDENSED_QUESTION,
+        limit: 10,
+      });
+      expect(withoutModel.excerpts.map((entry) => entry.path)).not.toContain(CONDENSED_PATH);
+      expect(withoutModel.citations.map((citation) => citation.path)).not.toContain(CONDENSED_PATH);
+      // Ohne Modell sind die Stellen die Antwort — dann auch dort nicht.
+      expect(withoutModel.answer).not.toContain(CONDENSED_PATH);
+    },
+  );
+
+  it('verliert dabei keinen echten Beleg', async () => {
+    const fixture = await wikiFixture(condensedAreaFiles());
+    const { gateway } = gatewayWithReplies({ 'query-answer': GOOD_ANSWER }, ['query-answer']);
+
+    /* Die Bereichsdatei trifft dieselbe Frage schwaecher als das Artefakt — sie
+       bleibt Beleg, statt mit ihm zu verschwinden. */
+    expect(
+      retrieve(fixture.index, CONDENSED_QUESTION, { limit: 10 }).map((entry) => entry.path),
+    ).toContain(AREA_PATH);
+
+    const answer = await askQuestion(fixture.deps(gateway), { question: QUESTION, module: MODULE });
+    expect(answer.citations.map((citation) => citation.path)).toEqual([TOKEN_PATH]);
+    expect(answer.unsupported).toBe(false);
+  });
+
+  it('sagt ab, wenn nur das Artefakt passt — ohne einen Modellaufruf', async () => {
+    const fixture = await wikiFixture(condensedAreaFiles());
+    const { gateway, provider } = gatewayWithReplies({ 'query-answer': CITES_CONDENSED }, [
+      'query-answer',
+    ]);
+
+    const answer = await askQuestion(fixture.deps(gateway), {
+      question: CONDENSED_ONLY_QUESTION,
+      limit: 10,
+    });
+
+    expect(provider.callCount).toBe(0);
+    expect(answer.answer).toBe('Dazu steht nichts im Vault.');
+    expect(answer.unsupported).toBe(true);
+    expect(answer.usedLlm).toBe(false);
+    expect(answer.citations).toEqual([]);
+    expect(answer.excerpts).toEqual([]);
+  });
+
+  it('sucht gar nicht, wenn nach dem Ausschluss kein Typ uebrig bleibt', async () => {
+    const fixture = await wikiFixture(condensedAreaFiles());
+    const { view, queries } = watchIndex(fixture.index);
+
+    /* Nur `condensed` angefragt: die leere Restliste darf nicht in die Suche
+       gehen — dort heisst ein leeres `types` „kein Filter", der Ausschluss waere
+       damit in eine unbeschraenkte Suche verkehrt. */
+    expect(retrieve(view, CONDENSED_QUESTION, { types: ['condensed'], limit: 10 })).toEqual([]);
+    expect(queries).toEqual([]);
+
+    // Gegenprobe: mit einem Belegtyp laeuft die Suche, und `condensed` ist raus.
+    const areas = retrieve(view, CONDENSED_QUESTION, { types: ['area', 'condensed'], limit: 10 });
+    expect(areas.map((entry) => entry.path)).toEqual([AREA_PATH]);
+    expect(queries).toHaveLength(1);
+    expect(queries[0]?.types).toEqual(['area']);
+  });
+
+  it('bleibt in der allgemeinen Suche auffindbar — der Ausschluss gilt nur der Antwort', async () => {
+    const fixture = await wikiFixture(condensedAreaFiles());
+
+    // Bester Volltexttreffer der Frage: ohne den Ausschluss stuende es vorn.
+    const hits = fixture.index.search({ text: CONDENSED_QUESTION, limit: 10 });
+    expect(hits[0]?.path).toBe(CONDENSED_PATH);
+    expect(hits[0]?.docType).toBe('condensed');
+    expect(
+      fixture.index.search({ text: CONDENSED_ONLY_QUESTION, limit: 10 }).map((hit) => hit.path),
+    ).toEqual([CONDENSED_PATH]);
   });
 });

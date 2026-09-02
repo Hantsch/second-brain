@@ -12,6 +12,7 @@
  * zum uebergebenen „heute", auch fuer Dokumente, die nicht neu gelesen wurden.
  */
 
+import { ALL_DOC_TYPES } from '@shared/types';
 import type { DocType, RawSource } from '@shared/types';
 import { parse } from '@core/vault/frontmatter';
 import { sha256 } from '@core/vault/hash';
@@ -33,18 +34,7 @@ import type {
   VaultIndex,
 } from './types';
 
-const DOC_TYPES = new Set<string>([
-  'dump',
-  'note',
-  'project',
-  'area',
-  'condensed',
-  'journal',
-  'source',
-  'entity',
-  'concept',
-  'overview',
-]);
+const DOC_TYPES = new Set<string>(ALL_DOC_TYPES);
 
 /**
  * Protokoll einer Rohquelle. Zwei Varianten stehen in docs/VAULT-FORMAT.md:

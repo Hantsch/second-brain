@@ -134,6 +134,7 @@ export function AreaCondensedTab({ area }: AreaCondensedTabProps) {
           : ''}
       </p>
       <div className="sb-md">{renderMarkdown(data.content, { wikilink: plainWikilink })}</div>
+      <span className="gs-hint">{t('notes.condensed.notEvidence')}</span>
     </div>
   );
 

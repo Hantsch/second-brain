@@ -18,6 +18,7 @@ import { LlmUnavailableError, isAbortError, parseJsonLoose } from '@core/llm';
 import { queryAnswerPrompt } from '@core/llm';
 import type { IndexedDoc } from '@core/index/types';
 import { citationsFromExcerpts, validateCitations, type CitationSource } from './citations';
+import { evidenceTypesFor } from './evidence';
 import { buildExcerpt, questionTerms } from './excerpts';
 import { QUERY_RERANK_SCHEMA, applyOrder, rerankPrompt } from './rerank';
 import { phrases } from './text';
@@ -47,6 +48,10 @@ export interface RetrieveOptions {
  * Kandidaten zu einer Frage: Volltextsuche, dann je Treffer ein wortwoertlicher
  * Ausschnitt mit Zeilennummer. Leere Frage und leerer Vault liefern eine leere
  * Liste — das ist ein Ergebnis, kein Fehler.
+ *
+ * Gesucht wird immer nur in den Typen, die als Beleg taugen (`evidenceTypesFor`):
+ * hier haengt der Ausschluss maschinengeschriebener Zusammenfassungen, damit er
+ * fuer jeden Weg dahinter gilt — mit Modell, ohne Modell, mit und ohne Filter.
  */
 export function retrieve(
   index: WikiIndexView,
@@ -55,12 +60,17 @@ export function retrieve(
 ): WikiExcerpt[] {
   const text = (question ?? '').trim();
   if (text.length === 0) return [];
+  const types = evidenceTypesFor(options.types);
+  /* Bleibt nach dem Ausschluss kein Typ uebrig, ist die Antwort leer — und die
+     Suche darf gar nicht laufen: ein leeres `types` heisst dort „kein Filter"
+     (`matchesTypes`), das Durchreichen wuerde die Einschraenkung umdrehen. */
+  if (types.length === 0) return [];
   const limit = Math.max(1, options.limit ?? DEFAULT_RETRIEVE_LIMIT);
   const hits = index.search({
     text,
     limit: Math.min(MAX_CANDIDATES, limit),
     ...(options.module === undefined || options.module === null ? {} : { module: options.module }),
-    ...(options.types === undefined ? {} : { types: [...options.types] }),
+    types,
   });
   const byPath = index.index().byPath;
   const terms = questionTerms(text);

@@ -1,0 +1,11 @@
+- 2026-09-02 11:58 · 040 · D1 one runtime list of all document types · started
+- 2026-09-02 12:00 · 040 · D1 one runtime list of all document types · done
+- 2026-09-02 12:00 · 040 · D2 EVIDENCE_EXCLUDED_TYPES list · started
+- 2026-09-02 12:02 · 040 · D2 EVIDENCE_EXCLUDED_TYPES list · done
+- 2026-09-02 12:02 · 040 · D3 answer path never retrieves condensed · started
+- 2026-09-02 12:39 · 040 · D3 answer path never retrieves condensed · done
+- 2026-09-02 12:39 · 040 · D4 file-back guard against condensed citations · started
+- 2026-09-02 12:42 · 040 · D4 file-back guard against condensed citations · done
+- 2026-09-02 12:42 · 040 · D5 condensed tab not-evidence hint · started
+- 2026-09-02 12:44 · 040 · D5 condensed tab not-evidence hint · done
+- 2026-09-02 13:08 · 040 · story closed (verify green, review PASS after 1 fix cycle, live smoke confirmed) · done

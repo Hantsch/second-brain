@@ -1,7 +1,7 @@
 ---
 sprint: S11
-status: planned # planned | in-progress | done
-branch: # set by /sprint
+status: in-progress # planned | in-progress | done
+branch: sprint/S11
 milestone: M13 — Evidence stays primary, and the gate turns green
 ---
 

@@ -3,6 +3,7 @@ import { buildIndex, deriveIndex, docTypeFromPath, toIndexedDoc } from '@core/in
 import { SearchEngine } from '@core/index/search';
 import { MemoryVaultStore } from '@core/vault/memory-store';
 import type { VaultStat } from '@core/vault/types';
+import { ALL_DOC_TYPES } from '@shared/types';
 import { CountingStore, NYOTA_PROJECT, TODAY, vaultFiles, vaultStore } from './fixtures';
 
 const NOTE = (title: string, body: string): string =>
@@ -161,6 +162,45 @@ describe('toIndexedDoc', () => {
     expect(doc.frontmatter).toEqual({});
     expect(doc.body.trim()).toBe('Rumpf.');
     expect(doc.bodyLine).toBe(4);
+  });
+
+  it('uebernimmt type: condensed aus dem Frontmatter unverändert', () => {
+    const content = ['---', 'type: condensed', 'title: Verdichtet', '---', '', 'Rumpf.'].join(
+      '\n',
+    );
+    const doc = toIndexedDoc(stat.path, content, stat);
+    expect(doc.docType).toBe('condensed');
+  });
+
+  it('faellt bei unbekanntem type auf docTypeFromPath zurueck', () => {
+    const content = ['---', 'type: unbekannt', 'title: X', '---', '', 'Rumpf.'].join('\n');
+    const doc = toIndexedDoc(stat.path, content, stat);
+    expect(doc.docType).toBe(docTypeFromPath(stat.path));
+    expect(doc.docType).toBe('note');
+  });
+});
+
+describe('ALL_DOC_TYPES', () => {
+  it('enthaelt genau die Mitglieder von DocType', () => {
+    // Hardcodiert statt aus dem Typ abgeleitet: TS-Unions sind zur Laufzeit nicht
+    // einsehbar. Dieser Laufzeit-Test ist nur eine zusaetzliche Regressionspruefung —
+    // die eigentliche Exhaustivitaet wird durch den Typ-Level-Check direkt neben
+    // `ALL_DOC_TYPES` in vault.ts erzwungen: wird `DocType` erweitert, ohne
+    // `ALL_DOC_TYPES` zu pflegen, schlaegt dort schon `tsc` fehl, bevor dieser Test
+    // ueberhaupt laeuft.
+    const expected = [
+      'dump',
+      'note',
+      'project',
+      'area',
+      'condensed',
+      'journal',
+      'source',
+      'entity',
+      'concept',
+      'overview',
+    ];
+    expect([...ALL_DOC_TYPES].sort()).toEqual([...expected].sort());
   });
 });
 
