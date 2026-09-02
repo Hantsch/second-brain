@@ -1328,9 +1328,7 @@ async function shootCondenseDelete(session, shooter, log, skipped) {
   );
   await settle(session.page);
   if (open) {
-    log(
-      `  Löschbestätigung → ${await shooter.shotAs('notes-condensed-delete.png', session.page)}`,
-    );
+    log(`  Löschbestätigung → ${await shooter.shotAs('notes-condensed-delete.png', session.page)}`);
   } else {
     skipped.push('Verdichtung löschen: der Knopf öffnete keinen Dialog');
   }

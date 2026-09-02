@@ -165,9 +165,7 @@ describe('toIndexedDoc', () => {
   });
 
   it('uebernimmt type: condensed aus dem Frontmatter unverändert', () => {
-    const content = ['---', 'type: condensed', 'title: Verdichtet', '---', '', 'Rumpf.'].join(
-      '\n',
-    );
+    const content = ['---', 'type: condensed', 'title: Verdichtet', '---', '', 'Rumpf.'].join('\n');
     const doc = toIndexedDoc(stat.path, content, stat);
     expect(doc.docType).toBe('condensed');
   });

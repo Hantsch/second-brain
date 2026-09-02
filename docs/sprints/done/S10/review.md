@@ -7,12 +7,12 @@ areas it touched, an area can be condensed into one machine-written file with _s
 and _open_, that file is only ever written after the diff has been read (including what it
 deleted), and maintenance says when it has gone stale.
 
-| Story                                                     | Status | Commit                                                         |
-| ---------------------------------------------------------- | ------ | --------------------------------------------------------------- |
-| 036 — A day says which areas it belongs to                | done   | `036: a day says which areas it belongs to`                      |
-| 037 — An area can be condensed into one file               | done   | `037: an area can be condensed into one file`                    |
-| 038 — I see what a condensation changes before it is written | done   | `038: I see what a condensation changes before it is written`    |
-| 039 — Maintenance says a condensation is due               | done   | `039: maintenance says a condensation is due`                    |
+| Story                                                        | Status | Commit                                                        |
+| ------------------------------------------------------------ | ------ | ------------------------------------------------------------- |
+| 036 — A day says which areas it belongs to                   | done   | `036: a day says which areas it belongs to`                   |
+| 037 — An area can be condensed into one file                 | done   | `037: an area can be condensed into one file`                 |
+| 038 — I see what a condensation changes before it is written | done   | `038: I see what a condensation changes before it is written` |
+| 039 — Maintenance says a condensation is due                 | done   | `039: maintenance says a condensation is due`                 |
 
 All four stories are `done`, built in order on `sprint/10` (branched from `dev`), one commit per
 story, `npm run verify` green after every story.

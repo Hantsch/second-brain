@@ -261,7 +261,7 @@ the actual built app found one more real bug (missing i18n key) and it was fixed
   says so") the story guards against. Day entries were already passed through verbatim; notes now
   match.
 - `areaSlugOf` in `src/core/condense/inputs.ts` was a duplicate of `areaSlug` (`src/core/index/
-  areas.ts`, previously unexported) — replaced with an import instead of carrying two
+areas.ts`, previously unexported) — replaced with an import instead of carrying two
   implementations of the same rule (CLAUDE.md "reuse instead of copying").
 - `writeCondensedArea()` does not create a trash copy on overwrite — confirmed this codebase's
   `VaultStore.write`/`writeText` never does (only explicit `delete()`/undo populates the trash),
@@ -272,7 +272,7 @@ the actual built app found one more real bug (missing i18n key) and it was fixed
   Accepted as-is; a second write replaces the prior artifact with no recoverable copy beyond the
   hash guard against stale writes.
 - D7 added one attribution rule beyond the story's literal wording: a section with non-empty text
-  but an *empty* `sources` array also fails the run (`reason: 'no-source'`). An uncited section
+  but an _empty_ `sources` array also fails the run (`reason: 'no-source'`). An uncited section
   cannot satisfy AC 3's "each section ends with the source paths it came from" and the
   requirement's "a sentence it cannot attribute... does not get written" — kept as in-scope, not
   creep, per the review's own read.

@@ -87,7 +87,7 @@ Not the third candidate, and not `useVaultReady()`. Two defects that only bite t
    (`src/renderer/components/GardenerIndicator.tsx:15`) sits in the rail foot
    (`src/renderer/components/Rail.tsx:69`) and therefore holds a **permanent observer** of that
    same query key. So `gcTime: 0` never fires — the entry is never evicted — and `staleTime:
-   Infinity` means the second observer that `GardenScreen` mounts on remount gets the **cached**
+Infinity` means the second observer that `GardenScreen` mounts on remount gets the **cached**
    value and triggers **no refetch**. That cached value is the one fetched once at boot, when no
    run was going: `null`. The 021a D4 seed is effectively dead for every consumer except the
    first one at startup.
@@ -162,7 +162,7 @@ Order matters: the store first, then the surface, then main.
    `api.gardener.runStatus()` with a generation guard).
 2. **`src/renderer/lib/events.ts`**: feed the store from the existing
    `event:gardener-progress` subscription (extend the block at `:71-78`; keep its `phase ===
-   'done'` invalidations). Nothing new is subscribed and nothing polls.
+'done'` invalidations). Nothing new is subscribed and nothing polls.
 3. **`src/renderer/lib/queries/gardener.ts`**: delete the `useQuery` seed, the `useState` and
    the `useRef` from `useGardenerProgress`; re-export the store hook so call sites keep their
    import. Rewrite the header comment — the "subscription lives only as long as the screen"
@@ -306,21 +306,21 @@ is where the gap used to be).
 
 ## Coverage gate
 
-| AC                                             | Deliverable    |
-| ---------------------------------------------- | -------------- |
-| 1 strip visible from every screen               | D3             |
-| 2 navigation keeps it, nothing unmounts         | D1, D2, D3     |
-| 3 stop and continue on the strip                | D4             |
-| 4 finishes while away, then goes away           | D1 (store + existing `phase === 'done'` invalidation in `events.ts`), D3 |
-| 5 no run, no strip                              | D3, D4         |
-| 6 no second teal accent                         | D3             |
-| 7 close during a run warns, stops via 021b      | D6, D7         |
-| 8 cancelling leaves run and window alone        | D7             |
-| 9 covers ×, `Alt+F4`, a tray quit               | D6             |
-| 10 no polling introduced                        | D2             |
-| 11 regression tests unmount/remount and close   | D8             |
-| 12 the cause is named in Done                   | D8             |
-| 13 all strings in `de` and `en`                 | D4, D5, D7     |
+| AC                                            | Deliverable                                                              |
+| --------------------------------------------- | ------------------------------------------------------------------------ |
+| 1 strip visible from every screen             | D3                                                                       |
+| 2 navigation keeps it, nothing unmounts       | D1, D2, D3                                                               |
+| 3 stop and continue on the strip              | D4                                                                       |
+| 4 finishes while away, then goes away         | D1 (store + existing `phase === 'done'` invalidation in `events.ts`), D3 |
+| 5 no run, no strip                            | D3, D4                                                                   |
+| 6 no second teal accent                       | D3                                                                       |
+| 7 close during a run warns, stops via 021b    | D6, D7                                                                   |
+| 8 cancelling leaves run and window alone      | D7                                                                       |
+| 9 covers ×, `Alt+F4`, a tray quit             | D6                                                                       |
+| 10 no polling introduced                      | D2                                                                       |
+| 11 regression tests unmount/remount and close | D8                                                                       |
+| 12 the cause is named in Done                 | D8                                                                       |
+| 13 all strings in `de` and `en`               | D4, D5, D7                                                               |
 
 ## Done
 

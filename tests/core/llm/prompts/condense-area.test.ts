@@ -29,7 +29,10 @@ function textOf(turns: ReturnType<typeof condenseAreaPrompt>): string {
 describe('CONDENSE_AREA_SCHEMA', () => {
   it('demands state, patterns, open, each with text and sources', () => {
     expect(CONDENSE_AREA_SCHEMA['required']).toEqual(['state', 'patterns', 'open']);
-    const properties = CONDENSE_AREA_SCHEMA['properties'] as Record<string, Record<string, unknown>>;
+    const properties = CONDENSE_AREA_SCHEMA['properties'] as Record<
+      string,
+      Record<string, unknown>
+    >;
     for (const key of ['state', 'patterns', 'open']) {
       const section = properties[key];
       expect(section?.['required']).toEqual(['text', 'sources']);

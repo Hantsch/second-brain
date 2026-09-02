@@ -140,7 +140,7 @@ already shows without a routed model.
 | Confirmation names what goes, incl. the directives section    | D2     |
 | Undoable through `.secondbrain/trash/`                        | D1     |
 | Hash-guarded; stale hash → conflict, file untouched           | D1, D2 |
-| Tab back in its "never condensed" state; 039 reports missing   | D1, D2 |
+| Tab back in its "never condensed" state; 039 reports missing  | D1, D2 |
 | Index drops the document (search, maintenance counts)         | D1     |
 | A later run does not resurrect the deleted directives         | D1, D2 |
 | Never touches the LLM gateway; works with no model            | D1, D2 |

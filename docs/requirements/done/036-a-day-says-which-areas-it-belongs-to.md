@@ -55,7 +55,7 @@ confirmed key in the day's frontmatter, not a guess re-made on every read.
   confirm or drop what it proposed.
 - Q2 — no area-screen UI in 036: the story delivers "an area can name its days" as a core query
   only (`daysOfArea(slug)`), because 038 owns every area-screen surface (its own tab on the area
-  in Notes) and AC 6 only asks that the app *can* list the days, not that it shows them — the
+  in Notes) and AC 6 only asks that the app _can_ list the days, not that it shows them — the
   first real consumer is 037's area run (CND-34).
 - No new IPC channel for `daysOfArea`: the consumer is the core-side area run in 037, and an
   unused channel would be dead contract surface.
@@ -68,7 +68,7 @@ confirmed key in the day's frontmatter, not a guess re-made on every read.
   requires adding an area the model missed, and per-chip remove is what "changed or emptied" (AC 2)
   needs; the other fields' controls stay untouched.
 - `areas` is written through the same `union()` merge as `people`/`projects`/`tags`: removing a
-  chip removes it from *this* write, it never deletes an area already in the frontmatter — the
+  chip removes it from _this_ write, it never deletes an area already in the frontmatter — the
   close path must not delete what the user wrote by hand.
 - `JournalIndexView` gains `areas(): readonly Area[]`; the index service already exposes it, so no
   second area derivation is built for the journal.
@@ -100,35 +100,35 @@ Order: 1 → 2 → 4 can run before 3; 3 needs the contract from 2.
 ## Deliverables
 
 - [x] **D1 — the close proposes areas (core).**
-  `src/core/journal/types.ts` (`JournalIndexView.areas()`, `FactsInput`, `DayFacts`,
-  `JournalFrontmatterSuggestion`), `src/core/journal/facts.ts`, `src/core/journal/close.ts`,
-  `src/core/llm/prompts/journal-close.ts`, tests in `tests/core/journal/close.test.ts` (+ facts).
-  Mirror the `projects` handling in each of those files, one to one.
-  _Accepted when:_ with the fake gateway, `closeDay` returns `frontmatter.areas` containing only
-  slugs that exist in the vault; a made-up slug from the model is dropped; with
-  `createEmptyGateway()` the field is present and `[]`.
+      `src/core/journal/types.ts` (`JournalIndexView.areas()`, `FactsInput`, `DayFacts`,
+      `JournalFrontmatterSuggestion`), `src/core/journal/facts.ts`, `src/core/journal/close.ts`,
+      `src/core/llm/prompts/journal-close.ts`, tests in `tests/core/journal/close.test.ts` (+ facts).
+      Mirror the `projects` handling in each of those files, one to one.
+      _Accepted when:_ with the fake gateway, `closeDay` returns `frontmatter.areas` containing only
+      slugs that exist in the vault; a made-up slug from the model is dropped; with
+      `createEmptyGateway()` the field is present and `[]`.
 - [x] **D2 — accepting writes `areas` (contract + write path).**
-  `src/shared/ipc.ts` (`JournalFrontmatterFields`), `src/main/ipc/journal-day.ts` (`fieldPatch`),
-  the day-entry key list in `docs/VAULT-FORMAT.md` (optional key `areas`), tests in
-  `tests/main/journal-ipc.test.ts`.
-  _Accepted when:_ `journal:applyClose` with `areas: ['health']` writes `areas: [health]` into the
-  day's frontmatter and changes no other key and not the body; an empty list writes no `areas` key;
-  a stale `expectedHash` fails as `conflict`; an existing `areas` value survives the merge; a day
-  file without an `areas` key stays readable before and after.
+      `src/shared/ipc.ts` (`JournalFrontmatterFields`), `src/main/ipc/journal-day.ts` (`fieldPatch`),
+      the day-entry key list in `docs/VAULT-FORMAT.md` (optional key `areas`), tests in
+      `tests/main/journal-ipc.test.ts`.
+      _Accepted when:_ `journal:applyClose` with `areas: ['health']` writes `areas: [health]` into the
+      day's frontmatter and changes no other key and not the body; an empty list writes no `areas` key;
+      a stale `expectedHash` fails as `conflict`; an existing `areas` value survives the merge; a day
+      file without an `areas` key stays readable before and after.
 - [x] **D3 — the areas row in the close panel (renderer + i18n).**
-  `src/renderer/screens/journal/CloseProposal.tsx`, `src/renderer/lib/close-proposal.ts`,
-  `src/renderer/i18n/de-journal.ts`, `src/renderer/i18n/en-journal.ts`, styles in
-  `src/renderer/styles/gaston/components.css` only if an existing class does not fit; tests in
-  `tests/renderer/close-proposal.test.ts`. Atoms only (`gs-*`), tokens only, sentence case.
-  _Accepted when:_ the proposed areas show as removable chips, a picker over `api.areas.list()`
-  adds an area the model did not propose, all chips can be removed to empty, discarding the panel
-  writes nothing, and every new key exists in `de` and `en` (German with `„…“`).
+      `src/renderer/screens/journal/CloseProposal.tsx`, `src/renderer/lib/close-proposal.ts`,
+      `src/renderer/i18n/de-journal.ts`, `src/renderer/i18n/en-journal.ts`, styles in
+      `src/renderer/styles/gaston/components.css` only if an existing class does not fit; tests in
+      `tests/renderer/close-proposal.test.ts`. Atoms only (`gs-*`), tokens only, sentence case.
+      _Accepted when:_ the proposed areas show as removable chips, a picker over `api.areas.list()`
+      adds an area the model did not propose, all chips can be removed to empty, discarding the panel
+      writes nothing, and every new key exists in `de` and `en` (German with `„…“`).
 - [x] **D4 — an area can name its days (query).**
-  `src/shared/types/domain.ts` (`JournalDay.areas`), `src/core/index/journal.ts` (`toJournalDay`),
-  `src/core/index/areas.ts` (`daysOfArea`), tests in `tests/core/index/areas.test.ts`.
-  _Accepted when:_ `daysOfArea(docs, 'health')` returns the day entries whose frontmatter carries
-  the slug, in date order; days without an `areas` key are simply not in the result and cause no
-  error.
+      `src/shared/types/domain.ts` (`JournalDay.areas`), `src/core/index/journal.ts` (`toJournalDay`),
+      `src/core/index/areas.ts` (`daysOfArea`), tests in `tests/core/index/areas.test.ts`.
+      _Accepted when:_ `daysOfArea(docs, 'health')` returns the day entries whose frontmatter carries
+      the slug, in date order; days without an `areas` key are simply not in the result and cause no
+      error.
 
 ## Model Hints
 
@@ -165,6 +165,7 @@ chips-plus-picker row in the close panel (`CloseProposal.tsx`) → the hash-guar
 added for the query, per the sprint decision (037 consumes it core-side).
 
 Decisions (implementation-detail, made while building, no user input needed):
+
 - The picker in the close panel offers only areas from `api.areas.list()` not already chosen —
   read from the same source as everywhere else in the app, so there is nothing to invent here.
 - `heuristicFacts` hardcodes `areas: []` with an inline comment; only the model path
@@ -178,11 +179,13 @@ Decisions (implementation-detail, made while building, no user input needed):
   `people`/`projects`/`tags` fields — no logic changed, no assertions weakened.
 
 Commit message:
+
 ```
 036: a day says which areas it belongs to
 ```
 
 Verification:
+
 - `npm run build` — green.
 - `npm test` — 221 files / 3173 tests, all green.
 - `npm run lint` — clean.
@@ -200,4 +203,3 @@ Verification:
   not by a second manual run, since no model is configured in the demo vault to produce a
   proposed chip to interact with live.
 - No open points, no unfixed findings.
-

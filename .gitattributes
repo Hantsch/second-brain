@@ -1,12 +1,22 @@
-# These two directories are read by string logic that assumes bare `\n`
-# newlines (frontmatter splitting, section/heading regexes with `$` anchors).
-# Without this, `core.autocrlf=true` on Windows silently reintroduces CRLF the
-# next time git touches them and a batch of core/journal/wiki tests goes red
-# for a reason that has nothing to do with the code under test (story 005).
-tests/core/vault/** text eol=lf
-tests/fixtures/vault/** text eol=lf
+# LF is this repository's canonical line ending, everywhere. `* text=auto
+# eol=lf` normalizes every checkout to LF regardless of OS or the local
+# `core.autocrlf` setting, so a clone is byte-identical on every machine and
+# `prettier --check` (which expects LF) is never fooled by the CRLF that
+# Windows checkouts with `core.autocrlf=true` write into the working tree.
+#
+# LF specifically matters in two places that used to have their own narrow
+# rule; this one rule is strictly stronger than both, so they are removed
+# here as redundant, not forgotten:
+# - tests/core/vault/** and tests/fixtures/vault/** are read by string logic
+#   (frontmatter splitting, section/heading regexes with `$` anchors) that
+#   assumes bare `\n` newlines (story 005).
+# - docs/MODULE-SCHEMA.md is compared byte-exact in
+#   tests/core/wiki/module.test.ts against a `\n` TS template literal
+#   (story 005).
+* text=auto eol=lf
 
-# The comparison in tests/core/wiki/module.test.ts is byte exact against a `\n`
-# TS template literal; core.autocrlf on Windows would otherwise turn the gate red
-# for a reason unrelated to the text (same rationale as story 005).
-docs/MODULE-SCHEMA.md text eol=lf
+# The repo has tracked binaries (assets/**: .png/.ico; .screenshots/*.png)
+# that must never be touched by line-ending normalization, so pin them
+# explicitly rather than leaving them to git's content-sniffing heuristics.
+*.png -text
+*.ico -text

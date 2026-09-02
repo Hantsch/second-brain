@@ -33,3 +33,17 @@
 - 2026-09-02 15:44 · 043 · D3 acceptance surface: screenshot and test plan · started
 - 2026-09-02 15:48 · 043 · D3 acceptance surface: screenshot and test plan · done
 - 2026-09-02 16:11 · 043 · story built, verify green, review PASS with 2 findings fixed (delete-conflict message, empty-state test coverage), live smoke partial (dialog screenshot only, full flow not driven live) — status left in-progress · done
+- 2026-09-02 16:13 · 041 · baseline (lint/typecheck/test/build) · started
+- 2026-09-02 16:16 · 041 · baseline (lint clean, typecheck clean, 244 files/3404 tests passed, build ok) · done
+- 2026-09-02 16:16 · 041 · D1 one rule, carve-outs resolved · started
+- 2026-09-02 16:17 · 041 · D1 one rule, carve-outs resolved · done
+- 2026-09-02 16:28 · 041 · D2 working tree becomes LF, format:check green · done
+- 2026-09-02 16:29 · 041 · D3 eol-normalization guard test · started
+- 2026-09-02 16:32 · 041 · D3 eol-normalization guard test · done
+- 2026-09-02 16:32 · 041 · D4 decision written in CLAUDE.md/README/ai-scrum.md · started
+- 2026-09-02 16:36 · 041 · D4 decision written in CLAUDE.md/README/ai-scrum.md · done
+- 2026-09-02 16:36 · 041 · D5 gate proven end to end (verify + handoff) · started
+- 2026-09-02 16:44 · 041 · D5 plan-gap fix: handoff.mjs shell-quoting bug (unrelated pre-existing, blocks AC3) · started
+- 2026-09-02 16:53 · 041 · D5 plan-gap fix (handoff.mjs shell quoting) · done
+- 2026-09-02 16:53 · 041 · D5 gate proven end to end (verify + handoff) · done
+- 2026-09-02 17:11 · 041 · story closed (verify green incl. format:check, handoff completed, review PASS, status done, moved to done/) · done

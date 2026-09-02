@@ -125,6 +125,9 @@ npm test               # vitest
 npm run build          # electron-vite build
 ```
 
+LF is this repository's canonical line ending, enforced by `.gitattributes`; `format:check`
+is therefore expected to be green on Windows too, not just Linux/macOS.
+
 Plus, for every UI change:
 
 ```

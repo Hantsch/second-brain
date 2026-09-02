@@ -94,7 +94,7 @@ the module overview already is not.
 - **Generic `FindingCard`, no per-kind card** — the finding carries title, detail and a path and
   has nothing extra to render; a new card would be markup without content.
 - **The finding id keys on the current input inventory** (area slug + digest of paths and hashes),
-  so "fits as is" acknowledges *this* state and new material raises it again — the deliberate
+  so "fits as is" acknowledges _this_ state and new material raises it again — the deliberate
   consequence of the user's no-debounce decision.
 
 ## Plan
@@ -104,7 +104,7 @@ no model, and offers no fix. Order follows the dependency chain (037 → contrac
 surface).
 
 1. **Contract with 037** — `src/core/condensed/`: one index-only selector `areaInputs(index, slug,
-   today)` returning `{ path, hash }[]` (area file + day entries with the slug, last 90 days), and
+today)` returning `{ path, hash }[]` (area file + day entries with the slug, last 90 days), and
    `recordedSources(doc)` reading the artifact's `sources:` entries as `{ path, hash | null }`.
    037's writer records the hash it read; `docs/VAULT-FORMAT.md` documents the entry shape.
 2. **The check** — `src/core/gardener/checks/condensation-due.ts`, kind `condensation-due`,
@@ -246,6 +246,7 @@ data, and two areas — `kunden-und-team`, `finanzen` — with material and no a
 && npm run build && npm run shot` confirmed all three render as informational on the garden screen.
 
 **Commit message:**
+
 ```
 039: maintenance says a condensation is due
 ```
@@ -262,12 +263,13 @@ with `file:line` evidence. Found and fixed one real defect from the review: `con
 Prettier formatting violation the review caught in `tests/core/gardener/checks-links.test.ts`.
 
 **Decisions / known limitations, not fixed (judged non-blocking, documented per the review):**
+
 - **An area with an existing but genuinely content-free file (no notes, no todos, no day entries)
   can get a "no condensation yet" finding whose exit leads to a condensation run that itself
   returns `no-inputs`.** This follows directly from D1's own explicit decision ("the area file is
   listed even when it holds nothing yet") combined with `condenseArea()`'s independent,
   stricter definition of "has inputs" (`mapInputs().paths`, which only counts non-empty notes/
-  todos/days). The two selectors were deliberately kept as one source for the *hash-freshness*
+  todos/days). The two selectors were deliberately kept as one source for the _hash-freshness_
   question (the story's stated highest risk), but this specific edge — an almost-empty area circa
   creation time — was not covered by the story's own decisions and is left as a known rough edge
   rather than a fix invented at review time. No test in the seed vault currently exercises it

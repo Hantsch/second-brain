@@ -64,14 +64,22 @@ function mib(path) {
  * `HandoffError` — a swallowed exit code here would ship an unchecked
  * artifact. Output goes straight to the terminal: the user should see the
  * verify run and the electron-builder run as they happen.
+ *
+ * `shell` defaults to the Windows-shell behaviour npm needs (see below) but
+ * must be passed as `false` for a real executable — see the call site.
  */
-function runStep(step, command, args) {
+function runStep(step, command, args, { shell = process.platform === 'win32' } = {}) {
   const shown = [command, ...args].join(' ');
   const result = spawnSync(command, args, {
     cwd: REPO_ROOT,
     stdio: 'inherit',
-    /* npm is a .cmd shim on Windows and cannot be spawned without a shell. */
-    shell: process.platform === 'win32',
+    /* npm is a .cmd shim on Windows and cannot be spawned without a shell.
+       A real .exe like the electron-builder invocation below must NOT go
+       through a shell: spawnSync with shell: true on Windows builds a single
+       command-line string for cmd.exe without quoting it, and a Node install
+       path containing a space (`C:\Program Files\nodejs\node.exe`, the
+       common default) then breaks unquoted shell command-line parsing. */
+    shell,
   });
   if (result.error) throw new HandoffError(step, `${shown} did not start: ${result.error.message}`);
   if (result.signal) throw new HandoffError(step, `${shown} was killed by signal ${result.signal}`);
@@ -266,7 +274,9 @@ async function main() {
 
   /* Not `npm run package`: that would compile a second time. The build from
      the verify run above is what gets packaged. */
-  runStep('package', process.execPath, [electronBuilderCli('package'), '--win', 'portable']);
+  runStep('package', process.execPath, [electronBuilderCli('package'), '--win', 'portable'], {
+    shell: false,
+  });
   if (!existsSync(exePath)) {
     throw new HandoffError('package', `electron-builder produced no ${exeName}`);
   }

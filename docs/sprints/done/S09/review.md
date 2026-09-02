@@ -8,11 +8,11 @@ fetches and sets up the way it already does Ollama, and starting it happens from
 screen with layer count, context size and thread count derived from the machine rather than
 invented.
 
-| Story | Status | Result |
-| --- | --- | --- |
-| 035 — The machine card remembers, and speaks plainly | `done` | Scan persists across restarts, VRAM in GB, resource budget as a slider, card split under 300 lines. |
-| 032 — A model that fits a weak machine | `done` | Catalogue gained two sub-7B local models; `cheap` tier gained a size signal and a per-task minimum; honest `beyond-this-machine` verdict when nothing in the catalogue fits. |
-| 033 — llama.cpp is a runtime the app can install | `done` | llama.cpp is a second managed `RuntimeInstaller` next to Ollama: fetch, model search/download (Hugging Face), status, cancel, all through the existing IPC shapes. |
+| Story                                                       | Status                                    | Result                                                                                                                                                                                 |
+| ----------------------------------------------------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 035 — The machine card remembers, and speaks plainly        | `done`                                    | Scan persists across restarts, VRAM in GB, resource budget as a slider, card split under 300 lines.                                                                                    |
+| 032 — A model that fits a weak machine                      | `done`                                    | Catalogue gained two sub-7B local models; `cheap` tier gained a size signal and a per-task minimum; honest `beyond-this-machine` verdict when nothing in the catalogue fits.           |
+| 033 — llama.cpp is a runtime the app can install            | `done`                                    | llama.cpp is a second managed `RuntimeInstaller` next to Ollama: fetch, model search/download (Hugging Face), status, cancel, all through the existing IPC shapes.                     |
 | 034 — The engine starts with settings that fit this machine | `in-progress` (built, acceptance pending) | Pure derivation, lifecycle, card and auto-start are implemented and reviewed; live acceptance needs a machine where the engine is genuinely absent, which the author's machine is not. |
 
 Branch: `sprint/09`, cut from `main` (no `dev` branch exists yet in this repo). Four commits, one

@@ -21,15 +21,7 @@ import { headingFor } from './sections';
 
 /** Every section kind used anywhere in the vault. Not every module uses all of them. */
 export type SectionKind =
-  | 'notes'
-  | 'todos'
-  | 'state'
-  | 'day'
-  | 'facts'
-  | 'dialogue'
-  | 'patterns'
-  | 'open'
-  | 'directives';
+  'notes' | 'todos' | 'state' | 'day' | 'facts' | 'dialogue' | 'patterns' | 'open' | 'directives';
 
 /** The headings of one document language. */
 export type SectionNames = Record<SectionKind, string>;

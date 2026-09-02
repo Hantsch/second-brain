@@ -104,10 +104,7 @@ function answeredFrom(citations: readonly Citation[], module: string): string[] 
  * koennte veraltet oder von Hand gebaut sein — Guardrail 3 gilt trotzdem, deshalb
  * prueft `fileBack` selbst noch einmal gegen den Index.
  */
-function withoutExcludedEvidence(
-  citations: readonly Citation[],
-  index: WikiIndexView,
-): Citation[] {
+function withoutExcludedEvidence(citations: readonly Citation[], index: WikiIndexView): Citation[] {
   const byPath = index.index().byPath;
   return citations.filter((citation) => {
     const doc = byPath.get(citation.path);

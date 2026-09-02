@@ -21,6 +21,7 @@ build: npm run build
 test: npm test
 lint: npm run lint
 typecheck: npm run typecheck
+format: npm run format:check
 
 ## Conventions
 

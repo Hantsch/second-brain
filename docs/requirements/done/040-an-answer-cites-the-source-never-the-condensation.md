@@ -172,7 +172,7 @@ Files: `src/core/wiki/file-back.ts`, `tests/core/wiki/file-back.test.ts`.
 Accept: given a `citations` array that contains a `condensed` path (as a stale or hand-built IPC
 payload could), the created concept page's `## Belege` section, its `sources:` frontmatter and the
 chronicle's `answered from:` all omit it while keeping the other citations; a call whose citations
-are *only* condensed writes the page with no evidence section rather than throwing.
+are _only_ condensed writes the page with no evidence section rather than throwing.
 
 **D5 — the condensed tab says it is not cited as evidence** [x]
 Files: `src/renderer/screens/notes/AreaCondensedTab.tsx`, `src/renderer/i18n/de-notes.ts`,
@@ -192,7 +192,7 @@ AC 6 → D1 + D2; AC 7 → D3(b)+(c); AC 8 → D4; AC 9 → D3(h); AC 10 → D5.
   answer in the app retrieves through: getting the emptied-list case (Q1c) wrong silently disables
   the module/type filtering for every scoped question, and the regression is invisible in a green run.
 - D1, D2, D4, D5 → default tier.
-- Review: → `story-review-hard` — this story *is* guardrail 3's enforcement point, and the two
+- Review: → `story-review-hard` — this story _is_ guardrail 3's enforcement point, and the two
   failure modes it must rule out (a condensation still reaching a citation slot, or the filter
   quietly switching itself off) are both diff-level subtleties rather than missing features.
 
@@ -205,14 +205,14 @@ The seeded demo vault already contains `areas/gesundheit.condensed.md`
 2. `Ctrl+K`, type `gesundheit`: the condensed artifact appears in the search results — it is still
    findable (AC 9). Open it to confirm the hit leads somewhere.
 3. `Ctrl+K`, `Tab` into ask mode, and ask a question in the wording of a sentence from the
-   artifact's *Stand* section. With no model configured the answer lists the found passages: none
+   artifact's _Stand_ section. With no model configured the answer lists the found passages: none
    of them is `areas/gesundheit.condensed.md`; the day entry or `areas/gesundheit.md` is what shows.
 4. Ask a question that only the artifact's own phrasing would match (a synthesis sentence that
    appears nowhere in the primary files): the answer is the honest "no evidence found", not a
    citation of the artifact.
 5. Configure a model for `query-answer` and repeat steps 3 and 4: the citation list under the
    answer still contains no `.condensed.md` path.
-6. Notes → area *Gesundheit* → tab *condensed*: one quiet line states that the artifact is not used
+6. Notes → area _Gesundheit_ → tab _condensed_: one quiet line states that the artifact is not used
    as evidence and that answers cite its sources. Switch the UI language to English and back — the
    line is translated in both.
 7. In a module chat, ask a question, file the answer back as a page, and open the created page: the

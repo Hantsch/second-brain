@@ -1,7 +1,7 @@
 ---
 id: 041
 title: The format gate is green on Windows
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-09-02
 ---
 
@@ -29,22 +29,24 @@ exemptions.
 
 ## Acceptance Criteria
 
-- [ ] `npm run format:check` passes on a fresh clone on Windows, with `core.autocrlf` as this
+- [x] `npm run format:check` passes on a fresh clone on Windows, with `core.autocrlf` as this
       machine has it configured.
-- [ ] `npm run verify` gets past step one and actually reaches lint, typecheck, test and build.
-- [ ] `npm run handoff` runs to completion.
-- [ ] The three existing `eol=lf` exemptions keep doing their job: the vault/frontmatter/section
+- [x] `npm run verify` gets past step one and actually reaches lint, typecheck, test and build.
+- [x] `npm run handoff` runs to completion.
+- [x] The three existing `eol=lf` exemptions keep doing their job: the vault/frontmatter/section
       string logic that assumes bare `\n`, and `tests/core/wiki/module.test.ts`'s byte-exact
       comparison, stay green.
-- [ ] The same checkout on a non-Windows machine produces the same `format:check` result.
-- [ ] No test is deleted, skipped or weakened to get there.
-- [ ] Behaviour is unchanged: lint, typecheck, test and build results are identical before and
+- [ ] The same checkout on a non-Windows machine produces the same `format:check` result. No
+      Linux/macOS/WSL machine was reachable from this build session — rests on D1's repo-wide
+      normalization plus D3's index guard rather than an observed clone; see Done.
+- [x] No test is deleted, skipped or weakened to get there.
+- [x] Behaviour is unchanged: lint, typecheck, test and build results are identical before and
       after the change.
-- [ ] The decision and its reason are written where the next person meets the problem, not only in
+- [x] The decision and its reason are written where the next person meets the problem, not only in
       this story.
-- [ ] `format:check` is added to the verify list in `.claude/ai-scrum.md`, so a story's done gate
+- [x] `format:check` is added to the verify list in `.claude/ai-scrum.md`, so a story's done gate
       includes it from the next sprint on.
-- [ ] The three existing `eol=lf` carve-outs are re-examined against the new repo-wide rule and
+- [x] The three existing `eol=lf` carve-outs are re-examined against the new repo-wide rule and
       either removed as redundant or kept with a reason recorded in `.gitattributes`.
 
 ## Open Questions
@@ -152,7 +154,7 @@ Affected files: `.gitattributes`, `CLAUDE.md`, `README.md`, `.claude/ai-scrum.md
 
 ## Deliverables
 
-**D1 — One rule, and the carve-outs resolved**
+**D1 — One rule, and the carve-outs resolved** (done)
 `.gitattributes` (only file). Mirror: the existing comment style in the same file — every rule
 carries its reason.
 _Accepted when:_ the file contains `* text=auto eol=lf` with a comment naming the decision and its
@@ -165,7 +167,7 @@ src/renderer/styles/gaston/styles.css` reports `text: auto` / `eol: lf` for all 
 `git check-attr text -- assets/app-icons/icon.ico` reports `text: unset`; nothing else in the repo
 changed yet.
 
-**D2 — The working tree is LF and `format:check` is green** _(risky, see Model Hints)_
+**D2 — The working tree is LF and `format:check` is green** _(risky, see Model Hints)_ (done)
 Working tree wide; expected index diff is only the ~13 files `npm run format` rewrites. Its own
 commit (Q2).
 _Accepted when:_ run on a **clean** working tree (nothing uncommitted anywhere — this step
@@ -176,7 +178,7 @@ every tracked text file and still 0 `i/crlf` / 0 `i/mixed`; `npm run format:chec
 formatting — no content edit, no deleted line of test code; the commit message names the
 renormalization as such.
 
-**D3 — The gate cannot silently go red again**
+**D3 — The gate cannot silently go red again** (done)
 New `tests/scripts/eol-normalization.test.ts`. Mirror:
 [`tests/scripts/build-config.test.ts`](../../tests/scripts/build-config.test.ts) for the shape (a
 repo-config assertion living under `tests/scripts/`).
@@ -186,7 +188,7 @@ the repo-wide `text=auto eol=lf` rule; it `skip`s (not fails) when git is not on
 directory is not a git checkout, with a comment saying why; it is green in `npm test` and adds to,
 never replaces, existing tests.
 
-**D4 — The decision is written where the next person meets it**
+**D4 — The decision is written where the next person meets it** (done)
 `CLAUDE.md` (the `## Quality gates` block), `README.md` (the `## npm scripts` table row for
 `format:check`), `.claude/ai-scrum.md` (the `## Verify` block). Mirror: the surrounding table rows
 and the existing `build:`/`test:` lines.
@@ -197,7 +199,7 @@ the table points at `.gitattributes` for line endings; `.claude/ai-scrum.md`'s `
 carries `format: npm run format:check` alongside `build/test/lint/typecheck` (AC 9); English,
 sentence case, no emoji; `npm run format:check` still green after the edits.
 
-**D5 — The gate proven end to end**
+**D5 — The gate proven end to end** (done)
 No source file — a verification deliverable; results land in `## Done`.
 _Accepted when:_ `npm run verify` runs past `format:check` and completes through lint, typecheck,
 test and build (AC 2); `npm run handoff` runs to completion and writes
@@ -257,3 +259,89 @@ npm ci && npm run format:check`. With `core.autocrlf=true` still set globally, t
 | The three carve-outs re-examined, removed or kept   | D1 (removed, reason recorded)    |
 
 ## Done
+
+**Summary.** `.gitattributes` now carries one repo-wide `* text=auto eol=lf` rule (with `-text`
+pins for `*.png`/`*.ico`) instead of three narrow carve-outs; their reasons survive as a comment on
+the new rule. The working tree was renormalized to LF without a destructive `git reset --hard`
+(which would have discarded this story's own uncommitted D1 change) — instead: stage everything,
+`git add --renormalize .` (staged nothing further, confirming the index was already LF),
+`git checkout-index -f -a` to force every tracked file's on-disk bytes to match, then
+`npm run format` for the ~13–19 genuinely misformatted files. A new guard test
+(`tests/scripts/eol-normalization.test.ts`) fails the suite if any tracked file ever regresses to
+`i/crlf`/`i/mixed`. The decision is written in `CLAUDE.md`, `README.md`, and
+`.claude/ai-scrum.md` (`format: npm run format:check` added to `## Verify`, AC 9). A second,
+unrelated pre-existing bug in `scripts/handoff.mjs` was found and fixed during end-to-end
+verification (see Decisions) because it silently blocked AC 3.
+
+**Baseline vs after** (Plan step 0 / D5): lint clean → clean; typecheck clean → clean; tests
+244 files / 3404 passed → **245 files / 3406 passed** (the +1 file / +2 tests are exactly
+`tests/scripts/eol-normalization.test.ts` from D3, nothing else moved); build succeeded → succeeded.
+`npm run verify` now runs `format:check` (0 files, was 1077+) through lint/typecheck/test/build
+without stopping. `npm run handoff` completed, producing exactly one
+`dist/gaston-0.1.0-windows.zip`. The three former carve-out areas (`tests/core/vault/**`,
+`tests/fixtures/vault/**`, `tests/core/wiki/module.test.ts`) are green, and
+`git check-attr text eol` on files in all three still reports `text: auto` / `eol: lf` under the
+new repo-wide rule.
+
+**Commit message:**
+
+```
+041: the format gate is green on Windows
+```
+
+**Decisions (build-time, in addition to the ones settled at refine):**
+
+- **D2 used a non-destructive recipe instead of the Plan's literal
+  `git rm --cached -r . && git reset --hard`.** This build session is not permitted to commit
+  (sprint-level rule: the orchestrator commits after the story returns), and `git reset --hard`
+  resets `.gitattributes` itself to HEAD — which would have silently discarded D1's own uncommitted
+  rewrite of that exact file. Used instead: `git add -A` (stage everything currently modified, so
+  nothing is at risk), `git add --renormalize .` (confirmed it stages nothing further), then
+  `git checkout-index -f -a` to force every tracked file's on-disk bytes to match the index under
+  the new attributes. Same end state (`git ls-files --eol`: 1146 `w/lf`, 0 `w/crlf`, 0 `w/mixed`,
+  0 `i/crlf`, 0 `i/mixed`), zero risk to uncommitted work, no commit required. One gotcha found and
+  handled: `git checkout-index -f -a` alone was a silent no-op because git's stat cache still held
+  each file's CRLF size/mtime — fixed by touching the affected files' mtimes before re-running it.
+- **Q2's "own commit" for D2 is deferred to the orchestrator.** The story's Plan wanted the
+  renormalization as a standalone commit for diff readability; this build session cannot commit at
+  all. Recommendation for whoever makes the commit: either (a) one combined commit for the whole
+  story using the message above — reasonable here because the actual reviewable diff is small
+  (`.gitattributes`, 19 formatting-only files, one new test, three doc edits, one small unrelated
+  bugfix), or (b) two commits — renormalization sweep first (`.gitattributes` + the ~19
+  prettier-touched files), the rest of the story second — if Q2's separation is wanted literally.
+- **`scripts/handoff.mjs` bugfix (outside the Plan's file list), justified.** AC 3 ("`npm run
+handoff` runs to completion") is unconditional. Once `format:check` no longer blocked `verify`,
+  `handoff` failed at a _different_, unrelated step: `runStep`'s `shell: process.platform ===
+'win32'` was applied to every spawned command including the `electron-builder` call via
+  `process.execPath` — a real `.exe`, not an npm shim — and Windows `spawnSync` with `shell: true`
+  does not quote the command line, so a Node install under `C:\Program Files\nodejs\node.exe` (a
+  space in the path, the common default) broke that step with `'C:\Program' is not recognized...`.
+  Confirmed via `git diff --stat scripts/handoff.mjs` (empty before the fix) that this predates the
+  story entirely and has nothing to do with line endings. Fixed by making `shell` an explicit,
+  per-call option on `runStep` (default unchanged, so the `npm` call keeps its shell), and passing
+  `shell: false` for the `process.execPath` call. Verified end to end: `npm run handoff` completes,
+  `dist/gaston-0.1.0-windows.zip` written with `README.txt` + `gaston-0.1.0-portable.exe`.
+- **AC 1 (fresh-clone check) ticked on mechanism, not a literal clone.** Nothing is committed yet
+  from this build session, so a real `git clone` would only fetch the prior HEAD. The mechanism is
+  fully verified instead: `git ls-files --eol` shows 0 `i/crlf`/`i/mixed` across all 1172 tracked
+  files, `core.autocrlf=true` matches "this machine", and `format:check` exits 0 — once committed,
+  a clone is byte-identical by construction, not by observation. The reviewer independently
+  confirmed this reasoning (see review outcome below).
+- **AC 5 (non-Windows equivalence) left unticked**, per the story's own test-plan instruction: no
+  Linux/macOS/WSL machine was reachable from this build session. It rests on D1's repo-wide
+  normalization plus D3's index guard, both in place and verified on this machine, but not observed
+  on a second OS.
+- **`npm install` was run once**, unrelated to this story's scope: 40 packages (including
+  `archiver`, needed by `scripts/handoff.mjs`) were missing from `node_modules` on this machine
+  before this build started. This is an environment gap, not a code change — no `package.json` or
+  lockfile edit was needed or made.
+
+**Verification:** `npm run format:check` / `lint` / `typecheck` / `test` (245 files, 3406 tests) /
+`build` all green via `npm run verify`; `npm run handoff` completed, one ZIP written. Code review:
+**PASS**, no confirmed findings requiring a fix (one process note — that `## Done` was still empty
+at review time — addressed by this section). The reviewer's own retry of `npm run handoff` hit one
+transient `EPERM` on a `dist/win-unpacked` rename (Windows file-lock/AV scanning a freshly-extracted
+Electron binary, after the shell-quoting step had already completed) — not a code defect, resolved
+by deleting `dist/` and retrying, consistent with how a real second attempt would behave.
+No `changelog-path` is configured in `.claude/ai-scrum.md`; this is also a pure tooling/repo-config
+story with no user-facing behaviour, so no changelog entry applies regardless.

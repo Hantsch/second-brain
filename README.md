@@ -40,21 +40,21 @@ The binding file format is documented in [docs/VAULT-FORMAT.md](docs/VAULT-FORMA
 
 ## npm scripts
 
-| Script                 | What it does                                                   |
-| ---------------------- | -------------------------------------------------------------- |
-| `npm run dev`          | Start Electron with hot reload                                 |
-| `npm run build`        | Type-check and `electron-vite build` into `out/`               |
-| `npm run package`      | Portable Windows EXE into `dist/gaston-<version>-portable.exe` |
-| `npm run handoff`      | Verify, package, and zip a handoff build for someone else      |
-| `npm test`             | Vitest (core, main, renderer)                                  |
-| `npm run typecheck`    | `tsc` for the Node side and the renderer                       |
-| `npm run lint`         | ESLint over the whole repo                                     |
-| `npm run format:check` | Check Prettier (`npm run format` writes)                       |
-| `npm run verify`       | format:check → lint → typecheck → test → build. Must be green. |
-| `npm run seed`         | Build `.demo-vault/` with realistic sample content             |
-| `npm run shot`         | Start the app via Playwright, PNGs into `.screenshots/`        |
-| `npm run a11y`         | Run axe-core over every screen                                 |
-| `npm run verify:ui`    | seed → build → shot → a11y, for any UI work                    |
+| Script                 | What it does                                                                                                                 |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `npm run dev`          | Start Electron with hot reload                                                                                               |
+| `npm run build`        | Type-check and `electron-vite build` into `out/`                                                                             |
+| `npm run package`      | Portable Windows EXE into `dist/gaston-<version>-portable.exe`                                                               |
+| `npm run handoff`      | Verify, package, and zip a handoff build for someone else                                                                    |
+| `npm test`             | Vitest (core, main, renderer)                                                                                                |
+| `npm run typecheck`    | `tsc` for the Node side and the renderer                                                                                     |
+| `npm run lint`         | ESLint over the whole repo                                                                                                   |
+| `npm run format:check` | Check Prettier (`npm run format` writes; line endings are normalized to LF via `.gitattributes`, so this is green on any OS) |
+| `npm run verify`       | format:check → lint → typecheck → test → build. Must be green.                                                               |
+| `npm run seed`         | Build `.demo-vault/` with realistic sample content                                                                           |
+| `npm run shot`         | Start the app via Playwright, PNGs into `.screenshots/`                                                                      |
+| `npm run a11y`         | Run axe-core over every screen                                                                                               |
+| `npm run verify:ui`    | seed → build → shot → a11y, for any UI work                                                                                  |
 
 `npm run shot` and `npm run a11y` start the built app against the demo vault. They
 need `npm run build` first, and they never touch the real installation: the vault

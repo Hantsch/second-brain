@@ -260,6 +260,7 @@ clean review confirmed PASS with two low-severity, non-blocking notes (documente
 **Commit message.** `034: the engine starts with settings that fit this machine`
 
 **Verification.**
+
 - `npm run typecheck`, `npm run lint`, `npm run format:check` — clean.
 - `npm test` — 220 test files, 3160 tests, all passing (includes new tests added by the review-fix
   cycle for the single-flight guard, route-gated auto-start, dead-child short-circuit,

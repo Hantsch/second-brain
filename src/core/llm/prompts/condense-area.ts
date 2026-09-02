@@ -119,7 +119,10 @@ export function condenseAreaPrompt(input: CondenseAreaInput, docLanguage: DocLan
       clamp(currentSectionText(input.current), 4000),
       '',
       `Abschnitt „${directivesName}“ (unverändert übernehmen, nicht bearbeiten):`,
-      clamp(input.current.directives.content.length > 0 ? input.current.directives.content : '(leer)', 2000),
+      clamp(
+        input.current.directives.content.length > 0 ? input.current.directives.content : '(leer)',
+        2000,
+      ),
       '',
       itemLines('Notizen der Area', input.notes),
       '',

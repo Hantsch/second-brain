@@ -138,7 +138,11 @@ describe('writeCondensedArea', () => {
 
     const second = await writeCondensedArea(
       store,
-      proposal({ content: secondContent, baseHash: sha256(FIRST_CONTENT), condensedAt: updated.condensedAt }),
+      proposal({
+        content: secondContent,
+        baseHash: sha256(FIRST_CONTENT),
+        condensedAt: updated.condensedAt,
+      }),
     );
 
     expect(second.created).toBe(false);

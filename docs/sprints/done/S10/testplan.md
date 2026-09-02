@@ -81,12 +81,14 @@ the row works honestly with and without a model.
 - The model's proposed area appears as a chip; it can be removed, and a different
   existing area can be added via the picker. Only real vault areas are ever offered
   (no invented slug).
+
 9. Keep one area, then press **Übernehmen** / **Apply**.
 
 **Expected result**
 
 - The day's frontmatter now carries `areas: [<slug>]`; every other frontmatter key and
   the day's body text are unchanged (open the day file in an editor to confirm).
+
 10. Switch the UI language (**Settings → Languages**) and repeat step 3: the row's
     label, empty state and picker placeholder are translated, German text uses
     the low-high quote pair `„…“` (visible in the remove-chip's label, e.g.
@@ -117,6 +119,7 @@ artifact, but offers no trigger at all (not merely a disabled one).
 - Below or next to that card, the existing artifact is still shown: its
   "Verdichtet am …" / "Condensed …" date, its source count, and its rendered
   state/patterns/open sections — reading an existing artifact never needs a model.
+
 3. Open the **Kunden und Team** or **Finanzen** area's condensed tab (no artifact
    exists yet for either).
 
@@ -128,6 +131,7 @@ artifact, but offers no trigger at all (not merely a disabled one).
 ---
 
 ## Use case 3 — Producing a condensation with a model, and reading the diff before
+
 accepting (stories 037/038, golden path)
 
 **Steps**
@@ -142,6 +146,7 @@ accepting (stories 037/038, golden path)
 
 - A running state appears immediately: the trigger becomes disabled and a spinner with
   "Verdichtung läuft" / "Condensation running" is shown next to it.
+
 3. Wait for the run to finish.
 
 **Expected result**
@@ -157,6 +162,7 @@ accepting (stories 037/038, golden path)
 - **Nothing has been written yet.** Before doing anything else, open
   `areas/gesundheit.condensed.md` in a text editor: it still shows the old content, not
   the proposal.
+
 4. Back in the app, press **Übernehmen** / **Accept**.
 
 **Expected result**
@@ -170,6 +176,7 @@ accepting (stories 037/038, golden path)
 ---
 
 ## Use case 4 — Rejecting a condensation with a reason, and seeing it land in the
+
 artifact's directives on the next run (story 038)
 
 Uses **Kunden und Team**, which starts this sprint with no condensed artifact at all —
@@ -188,6 +195,7 @@ so this also exercises "reject before any artifact exists."
   empty or contains only whitespace — there is no way to dismiss the proposal without
   entering a sentence, and no other close affordance (×, Escape, backdrop) discards the
   proposal itself, only the dialog.
+
 3. Type a reason, e.g. "Keine Kundennamen wörtlich übernehmen." / "Do not quote client
    names verbatim.", and confirm.
 
@@ -198,6 +206,7 @@ so this also exercises "reject before any artifact exists."
   carries only frontmatter plus a **Direktiven** / **Directives** section with your
   sentence — no `state`/`patterns`/`open` body sections and no `condensed_at`, since no
   condensation was actually accepted yet.
+
 4. Back in the app, press the trigger again ("Diesen Bereich verdichten" — still the
    first real condensation, since the previous run was rejected).
 
@@ -209,6 +218,7 @@ so this also exercises "reject before any artifact exists."
   client names quoted in a state/patterns/open sentence) — read the diff's added rows
   to confirm, since this depends on the actual model's behaviour rather than a
   guaranteed mechanical rule.
+
 5. Accept this run. Reopen the artifact file: the directive sentence from step 3 is
    still there, now alongside the newly written body sections.
 
@@ -238,12 +248,14 @@ or merged.
   with the proposal's content.
 - No new `.secondbrain/trash/` entry was created for this attempt (a conflicting accept
   writes nothing, so there is nothing to snapshot).
+
 4. Press the trigger again to get a fresh proposal based on the file's current content,
    and confirm accepting it now succeeds.
 
 ---
 
 ## Use case 6 — Maintenance reports a condensation is due or missing, and its "open"
+
 link (story 039)
 
 Checks the deterministic, model-free check and its exit into the area — the check
@@ -267,6 +279,7 @@ itself needs no model configured at any point.
   warning — visually distinct from, e.g., a broken-wikilink finding.
 - None of them offers a "fix" action (no button that would write anything) — only the
   file path(s) and, if applicable, an "open in editor" affordance.
+
 4. Click the area's path shown in the finding (under "Dateien" / "Files"), e.g.
    `areas/gesundheit.md`.
 
@@ -277,6 +290,7 @@ itself needs no model configured at any point.
 - Nothing was written to the vault by clicking this — the tab shows the existing
   artifact (or the empty state) exactly as before, with no diff pre-confirmed and no
   accept having happened.
+
 5. Go back to Maintenance. Use the findings filter at the top of the list to narrow to
    this one kind (a "kind" dropdown), then press the "check only this" button that
    appears once the filter narrows the view.
@@ -285,12 +299,14 @@ itself needs no model configured at any point.
 
 - The rerun still reports the same condensation findings; other kinds are absent from
   the result (the run genuinely narrowed, it did not just hide rows).
+
 6. Change the filter to scope by module instead (pick any module).
 
 **Expected result**
 
 - No condensation-due finding appears under a module scope — an area belongs to no
   module, so a module-scoped run correctly excludes it.
+
 7. Start a full run again and stop it partway through (the interface's stop/cancel
    control).
 
@@ -298,12 +314,14 @@ itself needs no model configured at any point.
 
 - The condensation findings from the already-completed check stage are still shown,
   and the run is marked incomplete/stopped, not failed.
+
 8. With no model configured anywhere in the app, run maintenance once more.
 
 **Expected result**
 
 - The identical condensation findings appear — this check does not depend on a model,
   unlike, say, a contradiction finding.
+
 9. Switch the UI language (**Settings → Languages**) and repeat step 3.
 
 **Expected result**

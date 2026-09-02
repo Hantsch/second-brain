@@ -83,7 +83,7 @@ kept, because a log nobody reads is ballast.
   discard-with-message. No merge path is written, because the only correct merge is a re-run.
 - Reject with no artifact on disk yet: the reason creates the artifact carrying frontmatter plus
   the directives section only — no body sections, no `condensed_at`. The AC says "writes nothing
-  to the artifact *body*", and dropping a first rejection would lose exactly the sentence the
+  to the artifact _body_", and dropping a first rejection would lose exactly the sentence the
   learning loop is built on.
 - Reject UI: a Dialog with a required reason field; the accept/reject bar offers no bare dismiss,
   so a rejection cannot be clicked away without a sentence (CND-21).
@@ -139,18 +139,18 @@ Affected existing files: `src/shared/ipc.ts`, `src/shared/types/vault.ts` (Write
 
 **Coverage gate — every acceptance criterion has a deliverable:**
 
-| Criterion                                            | D          |
-| ---------------------------------------------------- | ---------- |
-| Trigger inside the area + running state              | D5, D6     |
-| Diff old vs new, removals visible, source lines in it | D1, D7     |
-| Hash-guarded accept, conflict, never merges          | D4, D7     |
-| Undo copy in `.secondbrain/trash/`                   | D2, D4     |
-| Reject requires a reason, no bare dismiss            | D3, D8     |
-| Reason appended to directives, never rewritten       | D3, D4     |
-| No model → honest state, task kind, link             | D6         |
-| Existing artifact readable without a model           | D4, D6     |
-| Every path drivable through the real UI              | D5–D9      |
-| `de` + `en`, `„…“`, Gaston atoms/tokens only         | D5–D8      |
+| Criterion                                             | D      |
+| ----------------------------------------------------- | ------ |
+| Trigger inside the area + running state               | D5, D6 |
+| Diff old vs new, removals visible, source lines in it | D1, D7 |
+| Hash-guarded accept, conflict, never merges           | D4, D7 |
+| Undo copy in `.secondbrain/trash/`                    | D2, D4 |
+| Reject requires a reason, no bare dismiss             | D3, D8 |
+| Reason appended to directives, never rewritten        | D3, D4 |
+| No model → honest state, task kind, link              | D6     |
+| Existing artifact readable without a model            | D4, D6 |
+| Every path drivable through the real UI               | D5–D9  |
+| `de` + `en`, `„…“`, Gaston atoms/tokens only          | D5–D8  |
 
 ## Deliverables
 
@@ -318,6 +318,7 @@ written. `npm run seed && npm run shot` was run against the real built app and p
 (with an existing directive) rendered in the condensed tab.
 
 **Decisions.**
+
 - 037's real `CondenseAreaProposal` (`content`, no separate `before`) differs from the plan's
   hoped-for `CondenseProposal` shape; the adaptation happens entirely in `condense:run`'s IPC
   handler (`src/main/ipc/condense.ts`), which reads the existing file itself and builds the wire
@@ -335,7 +336,7 @@ written. `npm run seed && npm run shot` was run against the real built app and p
   into whatever document language happened to be configured at reject time, which would have been
   a body rewrite the acceptance criteria explicitly forbid on a reject.
 - `condense:accept` pre-checks the file's current hash/existence against `proposal.baseHash` and
-  throws the conflict itself *before* calling `snapshot()` — a stale-hash accept must create no
+  throws the conflict itself _before_ calling `snapshot()` — a stale-hash accept must create no
   trash entry, and snapshotting unconditionally would have left an orphaned undo copy on every
   conflict.
 - Reason validation for reject (`reason.trim().length === 0` → `invalid`) is enforced in the IPC
@@ -345,6 +346,7 @@ written. `npm run seed && npm run shot` was run against the real built app and p
   sprint review's findings / the roadmap's "Open / unprioritised" table as follow-ups, not built here.
 
 **Verification.**
+
 - `npm run typecheck`, `npm run lint`, `npm test` (235 files / 3288 tests), `npm run build` — all
   green, run once after the review-fix cycle.
 - `npm run seed && npm run shot` — run for real against the built app; produced
