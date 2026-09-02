@@ -591,7 +591,7 @@ outstanding.
 
 ---
 
-### M13 — Evidence stays primary, and the gate turns green — planned
+### M13 — Evidence stays primary, and the gate turns green — built, acceptance pending
 
 The follow-ups M12 left behind, plus the two never-green carve-outs this table has been carrying
 since S07. One of the four closes a guardrail: an answer can cite a condensed artifact today,
@@ -606,7 +606,9 @@ the line-ending decision (041) last, because it rewrites up to 1077 files in one
 Sprints:
 
 - [sprints/S11/sprint.md](sprints/S11/sprint.md) — evidence stays primary, and the gate turns
-  green (040, 042, 043, 041), `planned`
+  green (040, 042, 043, 041), `done`. 040 and 041 done outright; 042 and 043 built and reviewed,
+  held at built/acceptance-pending per the P2 live-smoke policy (see
+  [review.md](sprints/S11/review.md)).
 
 Decisions taken at the cut (2026-09-02, user):
 
@@ -630,7 +632,18 @@ Gaps/notes:
 
 - The live acceptance backlog is the standing open item: M4, M6, M9, M10, M11 and M12 are all
   built with acceptance pending. M13 was cut so it cannot be invalidated by what those
-  walkthroughs find, but the backlog does not shrink on its own.
+  walkthroughs find, but the backlog does not shrink on its own — and this sprint adds 042 and 043
+  to that same pending set (see [S11/review.md](sprints/S11/review.md)).
+- **042's live smoke could not be fully driven**: the demo vault's model-less run finishes in
+  under a second, too fast to race navigation-persistence, stop-from-elsewhere or the
+  close-during-a-run dialog reliably. Automated tests cover those paths instead; a model needs to
+  be configured for the manual test plan to observe them in real time.
+- **043's live smoke covered the delete dialog's screenshot but not the full manual flow**
+  (confirm+undo, index drop, conflict, no-model, German strings) — see
+  [S11/testplan.md](sprints/S11/testplan.md).
+- **042's tray-quit close door has no UI path**: no `Tray` is created anywhere in `src/main/`, so
+  only the title-bar close and `Alt+F4` can be exercised live; the `before-quit` guard is covered
+  by automated tests only until a tray exists.
 - Three questions stay open on purpose, and all three are refine's to answer rather than the
   user's: the vendored Gaston stylesheet under the new line-ending rule (041-Q4), the actual cause
   of the navigation bug — which must be established and named before the strip is hoisted, or it
