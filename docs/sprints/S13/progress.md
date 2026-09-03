@@ -43,3 +43,4 @@
 - 2026-09-03 20:15 · 049 · clean-agent review (story-review-hard) · PASS, 2 findings fixed (F1, F3), 1 documented (F2)
 - 2026-09-03 20:33 · 049 · review-fix verification (typecheck/lint/test/build re-run) · done, all green
 - 2026-09-03 20:33 · 049 · Done section filled, status: done, moved to done/ · done
+- 2026-09-03 20:37 · S13 · sprint review + testplan + roadmap · done

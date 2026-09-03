@@ -1,6 +1,6 @@
 ---
 sprint: S13
-status: in-progress # planned | in-progress | done
+status: done # planned | in-progress | done
 branch: sprint/S13
 milestone: M15 — The day is one text field
 ---

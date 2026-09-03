@@ -711,7 +711,7 @@ Gaps/notes:
 
 ---
 
-### M15 — The day is one text field — planned
+### M15 — The day is one text field — in progress
 
 No concept behind it: the milestone comes from the user's own feedback after really using the
 journal (2026-09-03). The journal's capability is complete — day text, mood/energy, interview,
@@ -734,7 +734,8 @@ Ten feedback points, cut into three groups:
 Sprints:
 
 - [sprints/S13/sprint.md](sprints/S13/sprint.md) — the day is one text field (047, 048, 049),
-  `planned`
+  `done` — built, acceptance pending
+  ([review](sprints/S13/review.md) · [testplan](sprints/S13/testplan.md))
 
 Decisions taken at the cut (2026-09-03, user):
 
@@ -758,7 +759,20 @@ Gaps/notes:
   pending set for the other screens.
 - Three stories in a row edit the same handful of files under
   `src/renderer/screens/journal/`. Sequential build only, and the S08 git-safety rule for build
-  agents (no unscoped `git restore`/`git clean`) matters more here than usual.
+  agents (no unscoped `git restore`/`git clean`) matters more here than usual. S13 built all three
+  in strict order (047 → 048 → 049) with no file collisions.
+- **S13's build was interrupted once by an infrastructure rate limit** mid-review-fix on 047, not a
+  code problem — a resumed build agent picked up the existing uncommitted diff, re-verified it, and
+  closed the story clean. Left here because a future sprint hitting the same limit should know
+  resuming (not restarting) is the right move.
+- **047 kept a pre-existing quirk**, not introduced by this story: the day's save button disables
+  itself when the draft is empty after trimming — now the sole write path for the day's text since
+  the edit-mode gate is gone. Not a regression; changing save-when-empty semantics was out of scope.
+- **049 left one dead i18n key** on purpose: `journal.finish.markFinished` has no consumer after the
+  "als abgeschlossen markieren" button was removed. Left in place to keep the diff scoped to the
+  acceptance criteria; candidate cleanup for the second part of M15 or a future gardener pass.
+- The second part of M15 (re-indexing a day after close, correcting the close summary, the date
+  picker's year/month drill-down) is not cut yet — own `/roadmap plan` once S13 is accepted.
 
 ---
 
