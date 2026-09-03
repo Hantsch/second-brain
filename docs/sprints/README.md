@@ -54,9 +54,11 @@ first open spot based on `sprint.md` + story status.
 ## Watching a running sprint
 
 A sprint runs for hours and mostly says nothing, so `progress.md` is what you watch: the build
-agent appends a line there after every finished deliverable. If it keeps growing, the sprint is
-working — a slow deliverable and a dead one look identical in the working tree otherwise. Ticked
-`- [x] D…` boxes in the story file are the second signal.
+agent appends a `started` line before and a `done`/`blocked` line after every deliverable, the
+timestamp produced by the shell in the same command. If it keeps growing, the sprint is working —
+a slow deliverable and a dead one look identical in the working tree otherwise. Ticked `- [x] D…`
+boxes in the story file are the second signal. Timestamps that run backwards or lie in the future
+mean the agent typed them instead of running the command — that is a finding, not a clock issue.
 
 ## Numbering
 

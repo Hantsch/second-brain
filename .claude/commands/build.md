@@ -5,7 +5,7 @@ model: sonnet
 effort: medium
 ---
 
-<!-- ai-scrum:managed 2.1.1 - plugin-owned, written by /ai-scrum:setup. Do not edit:
+<!-- ai-scrum:managed 2.1.2 - plugin-owned, written by /ai-scrum:setup. Do not edit:
      setup diffs this file on update and asks before replacing it. Project facts go in .claude/ai-scrum.md. -->
 
 Implement the story with ID **$1**.
@@ -21,7 +21,6 @@ stop and say: run `/ai-scrum:setup` (ai-scrum plugin) first. Below, `<requiremen
 ## Precondition
 
 Open `<requirements>/$1-*.md`. Status must be **`ready`**.
-
 - `draft` → stop, say "run `/refine $1` first".
 - `done` → stop, say "already done".
 - Not found → look in `<requirements>/done/$1-*.md`; if it is there, also "already done".
@@ -34,17 +33,17 @@ implementation agents together. Back to `/refine $1`.
 
 ## Delegation rules
 
-You delegate every line of code in this command, so these four decide whether the build
+You delegate every line of code in this command, so these five decide whether the build
 finishes or quietly stops with nothing in the working tree to show for it.
 
 - **Never start a background child.** Put `run_in_background: false` on every `Agent` call you
   make. Completion notifications are delivered to the **top-level session only** — you are a
   subagent, so a background child you start will never wake you again, however long you wait.
-- **Never end a turn with "waiting".** A turn without a tool call _ends you_. "Waiting for D2
+- **Never end a turn with "waiting".** A turn without a tool call *ends you*. "Waiting for D2
   and D3 to come back" is not a pause, it is your final answer, and the build stops there. If
   you have nothing left to do, you are not waiting — you are done, so return your report.
 - **Parallelism is several foreground calls in ONE message**, never background plus polling.
-  Multiple `Agent` calls in a single message run concurrently _and_ block until all of them
+  Multiple `Agent` calls in a single message run concurrently *and* block until all of them
   have returned. That is the only safe way to overlap deliverables, and it applies only to Ds
   that touch disjoint files — anything sharing a file (an i18n bundle, a barrel export, a
   central test file) stays strictly sequential, or the two agents overwrite each other.
@@ -53,6 +52,25 @@ finishes or quietly stops with nothing in the working tree to show for it.
   was delivered. Look at the working tree first — a terminated agent often leaves partial
   edits behind — then re-dispatch that one deliverable once with the same prompt. Only if it
   fails twice is it a blocker.
+- **Progress trail — the timestamp is never typed, only produced.** When the caller (`/sprint`)
+  names a progress file, every delegation event gets ONE shell command that reads the clock and
+  appends the line in the same step. You fill in only story id, deliverable and status:
+
+  ```powershell
+  Add-Content -Encoding utf8 <progress-file> ("- " + (Get-Date -Format "yyyy-MM-dd HH:mm") + " · <id> · D<n> <short title> · started")
+  ```
+  ```bash
+  echo "- $(date '+%Y-%m-%d %H:%M') · <id> · D<n> <short title> · started" >> <progress-file>
+  ```
+
+  Run it **immediately before** each `Agent` call (`started`) and **immediately after** it
+  returns (`done` or `blocked`) — one command per event, at the moment it happens. Never write
+  the line with `Edit`/`Write`, never batch several events into one command, never fill the
+  timestamp in yourself, not even when you "know" it. Every previous wording of this rule
+  ("read the clock, then write the line") produced trails with invented times: hours off, in
+  the future, running backwards. A trail like that is worse than none — the user reads it to
+  decide whether the build is alive, and a plausible-looking lie tells them nothing. Standalone
+  `/build` (no progress file named) skips this rule.
 
 ## Flow (scrum-like: small deliverables, acceptance at the end)
 
@@ -62,7 +80,7 @@ finishes or quietly stops with nothing in the working tree to show for it.
    `D` you are the orchestrator — the actual implementation is delegated to a fresh `Agent`:
    - **Pick the tier:** default is `model: "sonnet"`, written out on the `Agent` call.
      **Never leave `model` unset.** An unset `model` does not inherit this command's
-     frontmatter — it inherits the _session_ model, and hands that down to the children of
+     frontmatter — it inherits the *session* model, and hands that down to the children of
      your children. A session switched to Opus therefore re-tiers the whole agent tree
      silently, and that is the single largest cost item in this workflow: measured across
      real sprints, the same sprint shape came out at ~$255 per story on an inherited Opus
@@ -80,9 +98,10 @@ finishes or quietly stops with nothing in the working tree to show for it.
      complicated. No marking means default tier. If an unmarked D turns out to feel risky
      enough for the hard tier while implementing, that is a plan-gap signal → stop briefly
      and ask the user instead of silently escalating.
-
-   - **Delegate:** ONE `Agent` call with **`run_in_background: false`** spelled out, and a
-     self-contained prompt. Spelling it out is the point: `false` is _not_ the default, and a
+   - **Delegate:** if a progress file was named, run the `started` trail command first (see
+     the delegation rules — one command, timestamp produced by the shell). Then ONE `Agent`
+     call with **`run_in_background: false`** spelled out, and a
+     self-contained prompt. Spelling it out is the point: `false` is *not* the default, and a
      background child never wakes you again — see the delegation rules above. The agent
      cannot see this conversation, so give it:
      - the full text of exactly this one deliverable (not the other Ds),
@@ -101,9 +120,10 @@ finishes or quietly stops with nothing in the working tree to show for it.
        result, and anything genuinely notable — no diffs, no pasted file contents, no
        restatement of the deliverable. Every line it returns lands in your context and is
        paid for again on each of your remaining turns.
-   - **Check and continue:** review the agent's result briefly (file diff, build relevance),
-     tick `- [ ] D…` to `- [x]` in the file and start the next D immediately — no stop at the
-     user. Tick it **right away, not at the end of the story**: that tick is the only liveness
+   - **Check and continue:** if a progress file was named, run the `done` (or `blocked`) trail
+     command now, before anything else. Review the agent's result briefly (file diff, build
+     relevance), tick `- [ ] D…` to `- [x]` in the file and start the next D immediately — no
+     stop at the user. Tick it **right away, not at the end of the story**: that tick is the only liveness
      signal the user has — they watch the working tree, where a healthy build and a dead one
      look identical except that the ticks keep moving.
      **Keep a note of which files each D actually changed** — the code review in step 6
@@ -143,13 +163,13 @@ finishes or quietly stops with nothing in the working tree to show for it.
        straight to the relevant code instead of rediscovering which D produced what,
      - the review assignment:
        (a) each acceptance criterion individually: PASS / FAIL / UNCLEAR with evidence
-       (`file:line`),
+           (`file:line`),
        (b) weakened or deleted tests, disabled assertions, suppressed warnings, silenced
-       null checks or commented-out validations without a justifying comment on the
-       same line,
+           null checks or commented-out validations without a justifying comment on the
+           same line,
        (c) scope creep: changes with no visible relation to plan/deliverables,
        (d) correctness bugs, removed validation or error handling, violations of the
-       guardrails in `CLAUDE.md`,
+           guardrails in `CLAUDE.md`,
      - the agent proposes no fixes and changes no files — it returns a verdict
        (PASS/FAIL/UNCLEAR) + a findings list (`file:line` + one line of reasoning).
    - **Handle findings:** fix confirmed ones, then repeat the verification from step 5;
@@ -163,13 +183,13 @@ finishes or quietly stops with nothing in the working tree to show for it.
      first, e.g. `042: finish team-based combat`).
    - Verification: build/test/lint status + review outcome; open points and blockers.
 9. Check all `## Acceptance Criteria` and tick the ones that are met.
-   9b. **If `changelog-path` is set in the profile:** every user-facing feature or fix in this
-   story gets an entry there, under `# Features` or `# Fixes` of the **current** version
-   section — appended, never restructuring an earlier one. Short, punchy, a little funny, in
-   `doc-language`; what the user can now do, not how it was built. Tests, refactors and
-   internal changes get no entry, because they change nothing for the user. A story with no
-   user-facing change adds nothing at all — an empty entry is worse than none. When
-   `changelog-path` is `none`, skip this step entirely.
+9b. **If `changelog-path` is set in the profile:** every user-facing feature or fix in this
+    story gets an entry there, under `# Features` or `# Fixes` of the **current** version
+    section — appended, never restructuring an earlier one. Short, punchy, a little funny, in
+    `doc-language`; what the user can now do, not how it was built. Tests, refactors and
+    internal changes get no entry, because they change nothing for the user. A story with no
+    user-facing change adds nothing at all — an empty entry is worse than none. When
+    `changelog-path` is `none`, skip this step entirely.
 10. Set `status: done` — for user-facing stories **only** after a passed live smoke or a
     confirmed user acceptance (P2, if enabled); otherwise leave `in-progress` and hand over.
     Then `git mv` the file to `<requirements>/done/` and append a line to
@@ -181,7 +201,7 @@ finishes or quietly stops with nothing in the working tree to show for it.
 
 - **You orchestrate, you do not read.** Resist opening source files yourself: your context is
   re-read in full on every turn, so a file you pull in during D2 is still being paid for at
-  the review in step 6. Read the story file, and whatever you need in order to _decide_
+  the review in step 6. Read the story file, and whatever you need in order to *decide*
   something — the code itself belongs to the agents you delegate to. Catching yourself reading
   a file a second time is the signal that you are doing an agent's job.
 - **Do not commit, do not push**, unless the user explicitly asks. `/build` writes

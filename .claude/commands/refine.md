@@ -5,7 +5,7 @@ model: opus
 effort: high
 ---
 
-<!-- ai-scrum:managed 2.1.1 - plugin-owned, written by /ai-scrum:setup. Do not edit:
+<!-- ai-scrum:managed 2.1.2 - plugin-owned, written by /ai-scrum:setup. Do not edit:
      setup diffs this file on update and asks before replacing it. Project facts go in .claude/ai-scrum.md. -->
 
 Refine the story with ID **$1**.
@@ -70,7 +70,6 @@ into memory. Everything has to be reviewable in the repository.
      one layer (core + IPC + renderer), is cut too coarsely — split it. Agent cost grows with
      turn count and turn count grows with the size of the D: two agents at 30 turns cost less
      than one at 65, and each returns a separately reviewable result.
-
    - **`## Model Hints`** — here you fix the **agent tier** per deliverable that
      `/build` will use. There are exactly two tiers:
      - **Default (leave unmarked):** the session/Sonnet tier with `/build`'s effort (`medium`).
@@ -91,11 +90,10 @@ into memory. Everything has to be reviewable in the repository.
        `/build` delegates the code review to a fresh agent that sees only spec +
        diff; this line decides its tier. Default is the cheap tier;
        `story-review-hard` (Opus + effort `high`) only for real risk.
-
    - **`## Test Plan (manual acceptance)`** — fill only if a human check is needed: exact
      steps to reproduce that the user can follow.
      **If `ui-acceptance-required: true` in the profile (P1):** steps that verify a
-     _user-facing action_ run through the actual UI — never through a console command or a
+     *user-facing action* run through the actual UI — never through a console command or a
      direct internal call as a substitute for the real path. If that path does not exist
      yet, that is a story gap → plan it as a deliverable (the UI trigger) instead of
      papering over it with a console workaround. Pure engine/backend stories without a
@@ -123,12 +121,12 @@ into memory. Everything has to be reviewable in the repository.
 - **No `status: ready` while an acceptance criterion has no deliverable covering it** (step 5).
   `/build` re-checks this and sends the story back here.
 - **Acceptance = UI (P1)**, if enabled in the profile: every user-facing capability needs a
-  real path through the actual UI. An acceptance or test-plan step for a _user action_ that
+  real path through the actual UI. An acceptance or test-plan step for a *user action* that
   requires a console command or a direct internal call is a story gap, not a valid test. If
   a requirement contains such an action without a path, plan the trigger as a deliverable.
 - Keep the plan skimmable — the user wants to iterate, not read every detail.
 - Do not commit, do not push. Refine only writes the story file.
 - **Older story files** may use the previous German headings (`## Anforderung`,
   `## Akzeptanzkriterien`, `## Offene Fragen`, `## Modell-Hinweise`, `## Testplan
-(manuelle Abnahme)`). Treat them as equivalent to the English ones and keep the file's
+  (manuelle Abnahme)`). Treat them as equivalent to the English ones and keep the file's
   existing language and headings — do not rename sections of a story in flight.
