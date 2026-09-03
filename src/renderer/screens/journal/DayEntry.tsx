@@ -1,5 +1,7 @@
-/* The day: a header with the spelled-out date, mood and energy, people and
- * projects — below that the file's sections, all in one column.
+/* The day: a header with the spelled-out date, people and projects, mood and
+ * energy — below that the file's sections, all in one column, in the order
+ * the day is actually lived (047): head, chips, mood, energy, interview,
+ * day text, close, facts, legacy fold, history, coach composer.
  *
  * The date is spelled out because it's the heading of a day, not a sort key.
  * The path next to it in mono: the file is the source of truth, and it's
@@ -18,7 +20,7 @@
  * narrow window scrolls the whole column like the wide one already did.
  */
 
-import type { ReactNode } from 'react';
+import type { ReactNode, RefObject } from 'react';
 import type { JournalDayView } from '@shared/ipc';
 import type { Project } from '@shared/types';
 import { Badge } from '../../atoms/Badge';
@@ -28,7 +30,7 @@ import { MoodPicker } from '../../components/MoodPicker';
 import { useLanguage, useT } from '../../i18n';
 import { api } from '../../lib/api';
 import { formatDate, locale } from '../../lib/format';
-import { DayText } from './DayText';
+import { DayText, type DayVersion } from './DayText';
 import { LegacyConversation } from './LegacyConversation';
 
 export interface DayEntryProps {
@@ -43,10 +45,19 @@ export interface DayEntryProps {
     error: unknown;
     attemptedAt: number;
     saved: boolean;
+    /** What the last save wrote, for as long as the day query still reports
+        the version it was written on top of — passed straight through to
+        `DayText`'s own `written`, which documents why the field must not fall
+        back to `view` in that window, and why the window has to end. */
+    written: DayVersion | null;
     onSave: (value: string, expectedHash: string | undefined) => void;
     onReload: () => void;
     onReset: () => void;
   };
+  /** Lets the screen put the cursor in the day's own field (047/D4) — a fresh
+      day autofocuses it, and closing the interview dialog returns focus to
+      it. Passed straight through to `DayText`'s own `fieldRef`. */
+  fieldRef?: RefObject<HTMLTextAreaElement | null>;
   onOpenProject: (slug: string) => void;
   /** The manual "mark as finished" / "reopen" switch (009, D3/D6) — a plain
       on/off field on the day, separate from the day close-out below
@@ -59,42 +70,44 @@ export interface DayEntryProps {
     onMarkFinished: () => void;
     onReopen: () => void;
   };
-  /** "Start interview" (012, D6) — built by the screen, which alone knows
-      whether the day already has prose and therefore which variant
-      (primary/secondary) applies. Placed right after the header/mood/chips
-      block and before the "Day" section itself: the story's own acceptance
-      criterion is that it reads as most prominent while the day is still
-      empty, which means it must be the first thing seen on a blank day, not
-      something found only after scrolling past the composer. */
+  /** "Start interview" (012, D6) — built by the screen, unconditionally as a
+      small secondary action: 047/D4 dropped the `dayEmpty` variant switch,
+      since the one teal accent now belongs to the day field's own save.
+      Placed right after the header/chips/mood/energy block and before the
+      "Day" section itself — it is the offer for someone who does not know
+      where to start, so it is read before the field, not found after
+      scrolling past it. Rendered in `.sb-dayentry-interview`, which keeps it
+      at its own width in the stretching column (047, Q4). */
   interviewAction: ReactNode;
   /** The stream section — built by the screen so `EntryStream` lives there. */
   dialogue: ReactNode;
   /** "Move the conversation into the entry" (011, D9) — the hash it writes
       with is already closed over at the call site in `JournalScreen.tsx`,
-      mirroring `text.onSave`. Rendered below `dialogue` only when the open
-      day still has a legacy `## Conversation` (`view.turns.length > 0`). */
+      mirroring `text.onSave`. Rendered above `dialogue`, as the fold action
+      for the legacy `## Conversation` the stream replaces, only when the
+      open day still has one (`view.turns.length > 0`). */
   legacy: { busy: boolean; error: unknown; onFold: () => void };
   facts: ReactNode;
   /** The open day-close proposal (018), or `undefined` while there is none.
-      Sits between the facts and the stream — directly below the day's own
-      text, so a finding and the sentence it was computed from are on screen
-      at the same time, which is the whole point of the story: the proposal
-      is checkable, not a modal that hides its own evidence. Built by the
+      Sits directly below the day's own text and above the facts, so a
+      finding and the sentence it was computed from are on screen at the
+      same time, which is the whole point of the story: the proposal is
+      checkable, not a modal that hides its own evidence. Built by the
       screen (`JournalScreen.tsx`), which owns the store lookup and the
       apply/discard/run-again wiring. */
   proposal?: ReactNode;
-  /** Field and stance — a direct child of `.sb-dayentry`, so its sticky
-      frame (`position: sticky`, only in the wide window) covers the whole
-      detail column and not just the rest of the stream section
-      (see `CoachComposer.tsx`). */
+  /** Field and stance — a direct child of `.sb-dayentry`, so its frame spans
+      the whole detail column instead of just the tail of the stream section
+      (see `CoachComposer.tsx`). Rendered last, as the coach's own field, in
+      normal flow: 047/D3 removed the `position: sticky` this used to carry,
+      so nothing is pinned to the window edge any more. */
   composer: ReactNode;
-  /** "Close the day", right below the facts — only in the narrow window:
-      there it sits in the screen (see `JournalScreen.tsx`), because it
-      belongs with the day's own facts, not in the composer. In the wide
-      window it stays `undefined` — there the button remains unchanged in
-      the composer (`footerAction`), so nothing changes about the
-      already-approved wide view. */
-  closeAction?: ReactNode;
+  /** "Close the day", right below the day's own text and above the facts —
+      in every window width (047, D3). Built by the screen (see
+      `JournalScreen.tsx`), which owns the click handler and the mutual
+      exclusion with `proposal` below; `undefined` only while a proposal for
+      the shown day is open, never because of window width. */
+  closeAction: ReactNode;
 }
 
 export function DayEntry({
@@ -103,6 +116,7 @@ export function DayEntry({
   projects,
   mood,
   text,
+  fieldRef,
   onOpenProject,
   finish,
   interviewAction,
@@ -171,23 +185,6 @@ export function DayEntry({
         )}
       </div>
 
-      <div className="sb-dayentry-levels">
-        <MoodPicker
-          kind="mood"
-          value={day?.mood ?? null}
-          busy={mood.busy}
-          saved={mood.saved}
-          onPick={(level) => mood.onPick('mood', level)}
-        />
-        <MoodPicker
-          kind="energy"
-          value={day?.energy ?? null}
-          busy={mood.busy}
-          saved={mood.saved}
-          onPick={(level) => mood.onPick('energy', level)}
-        />
-      </div>
-
       {(day?.people.length ?? 0) + (day?.projects.length ?? 0) === 0 ? null : (
         <div className="sb-dayentry-chips">
           {(day?.people ?? []).length === 0 ? null : (
@@ -223,14 +220,34 @@ export function DayEntry({
         </div>
       )}
 
-      {interviewAction}
+      <div className="sb-dayentry-levels">
+        <MoodPicker
+          kind="mood"
+          value={day?.mood ?? null}
+          busy={mood.busy}
+          saved={mood.saved}
+          onPick={(level) => mood.onPick('mood', level)}
+        />
+        <MoodPicker
+          kind="energy"
+          value={day?.energy ?? null}
+          busy={mood.busy}
+          saved={mood.saved}
+          onPick={(level) => mood.onPick('energy', level)}
+        />
+      </div>
+
+      {/* Wrapped, not bare: `.sb-dayentry` is a stretching flex column, in
+          which a `size="sm"` button would still span the full 74ch — a
+          secondary action has to read as one (047, Q4). */}
+      <div className="sb-dayentry-interview">{interviewAction}</div>
 
       <section className="sb-daysection" aria-label={t('journal.day.title')}>
         <h3 className="sb-section-title">{t('journal.day.title')}</h3>
         <DayText
           text={view?.text ?? ''}
           hash={view?.doc.hash ?? ''}
-          fresh={view === null}
+          written={text.written}
           busy={text.busy}
           error={text.error}
           attemptedAt={text.attemptedAt}
@@ -238,10 +255,10 @@ export function DayEntry({
           onSave={text.onSave}
           onReload={text.onReload}
           onReset={text.onReset}
+          fieldRef={fieldRef}
         />
       </section>
 
-      {facts}
       {/* Proposal and trigger are mutually exclusive by construction: the
           screen stops rendering `closeAction` as soon as a proposal exists
           for this day, so there is never a "close the day" button below an
@@ -251,7 +268,8 @@ export function DayEntry({
         <div className="sb-dayentry-closewrap">{closeAction}</div>
       )}
 
-      {dialogue}
+      {facts}
+
       {(view?.turns.length ?? 0) === 0 ? null : (
         <LegacyConversation
           turns={view?.turns ?? []}
@@ -260,6 +278,7 @@ export function DayEntry({
           error={legacy.error}
         />
       )}
+      {dialogue}
       {composer}
     </div>
   );

@@ -51,7 +51,11 @@ import { setLanguage } from '@renderer/i18n';
 /* Die IPC-Attrappe steht hier und nicht in `tests/setup.ts`: die Renderer-Tests
    liegen in einer eigenen tsconfig, die den gemeinsamen Aufbau nicht kennt. */
 type Handlers = Partial<{
-  [K in IpcChannel]: (payload: IpcRequest<K>) => IpcResponse<K>;
+  /* Auch eine Zusage: ein Schreibvorgang, der absichtlich in der Luft
+     gehalten wird, ist die einzige Art, das Fenster zwischen Abschicken und
+     Antwort zu prüfen (wie in `condense-area.test.tsx`). `invoke` ist selbst
+     async und löst sie deshalb auf. */
+  [K in IpcChannel]: (payload: IpcRequest<K>) => IpcResponse<K> | Promise<IpcResponse<K>>;
 }>;
 
 interface Mock {
@@ -443,12 +447,23 @@ function open(extra: Handlers = {}): Rendered {
  * Tipps/Analysieren (011, D8) — der Helfer sucht beide, statt die Haltung zu
  * kennen, damit er in jedem Modus funktioniert. */
 async function say(text: string): Promise<void> {
-  const field = await screen.findByLabelText('Was beschäftigt dich?');
+  const field = await screen.findByLabelText('Mit dem Coach sprechen');
   await userEvent.type(field, text);
   const button =
     screen.queryByRole('button', { name: 'Sagen' }) ??
     screen.getByRole('button', { name: 'Speichern und fragen' });
   await userEvent.click(button);
+}
+
+/** The coach composer's own box — scoping queries to it, since `DayText`'s
+ * cancel button (047, D2: always rendered now, not gated behind an edit
+ * mode any more) carries the identical accessible name "Abbrechen" and would
+ * otherwise make an unscoped `getByRole('button', { name: 'Abbrechen' })`
+ * ambiguous. */
+function composer(): HTMLElement {
+  const element = document.querySelector<HTMLElement>('.sb-composer');
+  if (element === null) throw new Error('kein Composer im DOM');
+  return element;
 }
 
 describe('Tagebuch: Tage und Tag', () => {
@@ -465,12 +480,13 @@ describe('Tagebuch: Tage und Tag', () => {
     expect(screen.getAllByText('42 Wörter').length).toBeGreaterThan(0);
 
     expect(screen.getByRole('heading', { name: 'Montag, 10. August 2026' })).toBeTruthy();
-    /* Der Tagestext steht links als erste Worte der Zeile (Tagesliste) und im
-       Strom (`EntryStream`), weil der Strom denselben Absatz als `entry`-Block
-       enthält — D8 hat die zusätzliche, komplette Prosa-Ansicht in `DayText`
-       aufgelöst (siehe deren Kommentar): dort steht jetzt nur noch der kleine
-       Bearbeiten-Knopf, kein dritter Abdruck des Texts mehr. */
-    expect(screen.getAllByText(DAY_TEXT).length).toBe(2);
+    /* Der Tagestext steht dreifach: als erste Worte der Zeile (Tagesliste), im
+       Strom (`EntryStream`, derselbe Absatz als `entry`-Block) und im eigenen
+       `<textarea>`-Feld selbst — das jsdom als Textknoten rendert und
+       `getByText` deshalb mitzählt. 047/D2 macht dieses dritte Vorkommen erst
+       möglich: das Feld ist jetzt immer da, mit dem Tagestext direkt drin,
+       ohne eigenen Bearbeiten-Knopf davor. */
+    expect(screen.getAllByText(DAY_TEXT).length).toBe(3);
     expect(screen.getByRole('button', { name: 'Geht so eintragen' })).toBeTruthy();
     expect(screen.getByText('Miriam')).toBeTruthy();
     expect(
@@ -486,28 +502,30 @@ describe('Tagebuch: Tage und Tag', () => {
     expect(await screen.findByText('Noch kein Tageseintrag im Vault')).toBeTruthy();
     /* Und darunter kein weggeklicktes Angebot, sondern das Feld selbst — seit
        D8 der eine Composer, nicht mehr die alte Einladung von `DayText`. */
-    expect(screen.getByLabelText('Was beschäftigt dich?')).toBeTruthy();
+    expect(screen.getByLabelText('Mit dem Coach sprechen')).toBeTruthy();
   });
 
-  it('fragt bei einem Tag ohne Eintrag sofort im Feld, statt eine Karte zu zeigen', async () => {
-    /* Der alte Eintrittspunkt war `DayText`s Einlade-Feld mit `journal:setDay`
-       (vor 011/D8) — der neue, echte Eintrittspunkt für den ersten Satz eines
-       frischen Tages ist der eine Composer, über `journal:append`, exakt wie
-       jeder andere Zuhören-Absatz auch. */
+  it('fragt bei einem Tag ohne Eintrag sofort im eigenen Feld, statt eine Karte zu zeigen', async () => {
+    /* 047/D4: bei einem frischen Tag springt der Cursor jetzt in den eigenen
+       Tagestext (`fieldRef`), nicht mehr in den Coach-Composer — der alte
+       „sofort schreibbereit"-Anspruch von `DayText`s Einlade-Feld (vor
+       011/D8) lebt wieder in genau diesem Feld, nur ohne den Bearbeiten-Knopf
+       davor, den D2 entfernt hat. Geschrieben wird entsprechend über
+       `journal:setDay`, nicht über den Coach-Weg `journal:append`. */
     const { sb } = open({ 'journal:get': () => null });
 
-    const field = await screen.findByLabelText('Was beschäftigt dich?');
+    const field = await screen.findByLabelText('Tagestext');
     await waitFor(() => expect(field).toBe(document.activeElement));
     await userEvent.type(field, 'Ein ruhiger Abend in der Werkstatt.');
-    await userEvent.click(screen.getByRole('button', { name: 'Sagen' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
 
     await waitFor(() =>
-      expect(sb.payloadOf('journal:append')).toEqual({
+      expect(sb.payloadOf('journal:setDay')).toEqual({
         date: TODAY,
         text: 'Ein ruhiger Abend in der Werkstatt.',
       }),
     );
-    expect(sb.payloadsOf('journal:setDay')).toEqual([]);
+    expect(sb.payloadsOf('journal:append')).toEqual([]);
   });
 
   it('speichert eine Stimmung mit einem Klick', async () => {
@@ -529,12 +547,108 @@ describe('Tagebuch: Tage und Tag', () => {
   });
 });
 
+describe('Tagebuch: Reihenfolge und der eine Abschluss-Knopf (047, D1-D4)', () => {
+  /* The story pinned one chronological order for the whole detail column:
+     head → chips → mood/energy → interview → day text → close/proposal →
+     facts → legacy fold/history → coach composer, in every window width —
+     there is no narrow-layout variant left to branch on. `compareDocumentPosition`
+     checks the DOM order directly rather than trusting visual layout. */
+  function follows(earlier: Element, later: Element): boolean {
+    return Boolean(earlier.compareDocumentPosition(later) & Node.DOCUMENT_POSITION_FOLLOWING);
+  }
+
+  it('rendert Kopf, Chips, Stimmung/Energie, Interview, Tagestext, Abschluss, Fakten und Verlauf in dieser Reihenfolge', async () => {
+    const { container } = open();
+    await screen.findByRole('heading', { name: 'Montag, 10. August 2026' });
+
+    const head = container.querySelector('.sb-dayentry-head');
+    const chips = container.querySelector('.sb-dayentry-chips');
+    const levels = container.querySelector('.sb-dayentry-levels');
+    const interview = screen.getByRole('button', { name: 'Interview starten' });
+    const dayText = screen.getByRole('region', { name: 'Tag' });
+    const close = screen.getByRole('button', { name: 'Tag abschließen' });
+    const facts = screen.getByRole('region', { name: 'Fakten' });
+    const legacy = screen.getByRole('region', { name: 'Altes Gespräch' });
+    const composer = screen.getByLabelText('Mit dem Coach sprechen');
+
+    /* All present with this fixture (people/projects, no proposal open, an
+       old conversation still on the day) — nothing to skip in the chain. */
+    expect(head).toBeTruthy();
+    expect(chips).toBeTruthy();
+    expect(levels).toBeTruthy();
+
+    const order = [
+      head as Element,
+      chips as Element,
+      levels as Element,
+      interview,
+      dayText,
+      close,
+      facts,
+      legacy,
+      composer,
+    ];
+    for (let index = 1; index < order.length; index += 1) {
+      const earlier = order[index - 1];
+      const later = order[index];
+      expect(earlier === undefined || later === undefined ? false : follows(earlier, later)).toBe(
+        true,
+      );
+    }
+  });
+
+  it('macht den Tagestext ohne vorherigen Klick sofort bearbeitbar — es gibt keinen eigenen Bearbeiten-Knopf mehr', async () => {
+    /* 047, D2 dropped the pencil `IconButton` edit-mode gate: the textarea is
+       the day's field on every day, and needs no click first. */
+    const { sb } = open();
+
+    expect(screen.queryByRole('button', { name: 'Tagestext bearbeiten' })).toBeNull();
+    const field = await screen.findByLabelText('Tagestext');
+    await userEvent.clear(field);
+    await userEvent.type(field, 'Ohne Klick geschrieben.');
+    await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+
+    await waitFor(() =>
+      expect(sb.payloadOf('journal:setDay')).toEqual({
+        date: TODAY,
+        text: 'Ohne Klick geschrieben.',
+        expectedHash: 'hash-1',
+      }),
+    );
+  });
+
+  it('rendert genau einen „Tag abschließen"-Knopf — kein zweiter, gleich welche Fensterbreite', async () => {
+    /* `useNarrow` and the narrow-window duplicate close button in
+       `CoachComposer.tsx` are both gone (047, D3): the trigger sits exactly
+       once next to the facts, in every window width, so there is no layout
+       prop left to vary here — the single render already is the whole
+       coverage. */
+    open();
+    await screen.findByRole('heading', { name: 'Montag, 10. August 2026' });
+
+    expect(screen.getAllByRole('button', { name: 'Tag abschließen' })).toHaveLength(1);
+  });
+
+  it('zeigt einen offenen Abschlussvorschlag oberhalb der Fakten, nie darunter, und lässt den Auslöser dabei verschwinden', async () => {
+    open();
+    await userEvent.click(await screen.findByRole('button', { name: 'Tag abschließen' }));
+    const panel = (await screen.findByText(suggestion.proposal.reason)).closest(
+      '.sb-close-proposal',
+    ) as HTMLElement;
+    const facts = screen.getByRole('region', { name: 'Fakten' });
+
+    expect(follows(panel, facts)).toBe(true);
+    /* Mutually exclusive by construction (018, decision 3; 047, D3): no
+       "close the day" trigger below an open proposal. */
+    expect(screen.queryByRole('button', { name: 'Tag abschließen' })).toBeNull();
+  });
+});
+
 describe('Tagebuch: der Tagestext', () => {
   it('friert Wert und Hash beim Öffnen ein und schickt genau diesen Hash mit', async () => {
     const { sb } = open();
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Tagestext bearbeiten' }));
-    const field = screen.getByLabelText('Tagestext');
+    const field = await screen.findByLabelText('Tagestext');
     await userEvent.clear(field);
     await userEvent.type(field, 'Neu geschrieben.');
     await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
@@ -552,8 +666,7 @@ describe('Tagebuch: der Tagestext', () => {
     const state = { view: view() };
     const { sb } = open({ 'journal:get': () => state.view });
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Tagestext bearbeiten' }));
-    await userEvent.type(screen.getByLabelText('Tagestext'), ' Und noch ein Satz.');
+    await userEvent.type(await screen.findByLabelText('Tagestext'), ' Und noch ein Satz.');
 
     /* Jemand editiert die Datei von außen — der Watcher meldet es. */
     state.view = view({
@@ -578,6 +691,178 @@ describe('Tagebuch: der Tagestext', () => {
     );
   });
 
+  it('schreibt nach dem Speichern auf dem gerade Geschriebenen weiter, nicht auf dem alten Stand der Abfrage', async () => {
+    /* Der Refetch nach einem Speichern ist eine asynchrone IPC-Runde: für einen
+       Moment meldet die Tagesabfrage noch die Datei von *vor* dem Schreiben.
+       Wer in diesem Moment weitertippt (seit 047/D2 möglich — das Feld ist
+       immer bearbeitbar), darf nicht auf diesen alten Text zurückfallen: der
+       nächste Schreibvorgang ginge sonst mit einem Hash raus, den die Datei
+       nicht mehr hat, und der angebotene Ausweg („Trotzdem speichern") würde
+       genau das eben Gespeicherte wegwerfen. Die Attrappe hält den alten Stand
+       hier absichtlich fest. */
+    const state = { view: view() };
+    const { sb } = open({
+      'journal:get': () => state.view,
+      'journal:setDay': () => ({ path: DAY_PATH, hash: 'hash-2', created: false }),
+    });
+
+    const field = (await screen.findByLabelText('Tagestext')) as HTMLTextAreaElement;
+    await userEvent.clear(field);
+    await userEvent.type(field, 'Erster Satz.{Control>}{Enter}{/Control}');
+    await waitFor(() =>
+      expect(sb.payloadOf('journal:setDay')).toMatchObject({ expectedHash: 'hash-1' }),
+    );
+
+    /* Weitertippen, während die Abfrage noch „hash-1" und den alten Text
+       meldet: der eigene Stand bleibt stehen. */
+    await userEvent.type(field, ' Und weiter.');
+    expect(field.value).toBe('Erster Satz. Und weiter.');
+
+    /* Jetzt kommt der eigene Schreibvorgang in der Abfrage an. Das ist keine
+       fremde Änderung — es ist die eigene, und die Leiste bleibt weg. */
+    state.view = view({
+      text: 'Erster Satz.',
+      doc: doc({ hash: 'hash-2', body: '## Tag\n\nErster Satz.\n' }),
+      stream: [{ kind: 'entry', text: 'Aus der Datei angekommen.', at: null }],
+    });
+    sb.emit('event:vault-changed', { paths: [DAY_PATH], external: true });
+    /* Am neuen Strom-Absatz ist zu erkennen, dass der Refetch angekommen ist. */
+    await screen.findByText('Aus der Datei angekommen.');
+    expect(field.value).toBe('Erster Satz. Und weiter.');
+    expect(screen.queryByRole('alert')).toBeNull();
+
+    /* Und das nächste Speichern geht mit dem Hash aus der eigenen Antwort raus,
+       nicht mit dem eingefrorenen alten — kein Konflikt gegen sich selbst. */
+    await userEvent.type(field, '{Control>}{Enter}{/Control}');
+    await waitFor(() =>
+      expect(sb.payloadsOf('journal:setDay').at(-1)).toEqual({
+        date: TODAY,
+        text: 'Erster Satz. Und weiter.',
+        expectedHash: 'hash-2',
+      }),
+    );
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('behält einen Tastendruck, der während des laufenden Schreibvorgangs landet', async () => {
+    /* Ein Schreibvorgang ist keine Millisekunde: `journal:setDay` wartet im
+       Hauptprozess auf den aufgefrischten Index, bevor es antwortet. Was in
+       diesem Fenster getippt wird, gehört dem Menschen — es darf nicht
+       verschwinden, sobald das Speichern zurückkommt. Genau deshalb hängt das
+       Fallenlassen des Entwurfs am *Wert* („die Datei meldet genau das, was
+       rausging"), nicht an einem Merker „es wurde gespeichert". */
+    let land: (value: { path: string; hash: string; created: boolean }) => void = () => undefined;
+    const inFlight = new Promise<{ path: string; hash: string; created: boolean }>((resolve) => {
+      land = resolve;
+    });
+    const state = { view: view() };
+    const { sb } = open({ 'journal:get': () => state.view, 'journal:setDay': () => inFlight });
+
+    const field = (await screen.findByLabelText('Tagestext')) as HTMLTextAreaElement;
+    await userEvent.clear(field);
+    await userEvent.type(field, 'Erster Satz.{Control>}{Enter}{/Control}');
+    await waitFor(() =>
+      expect(sb.payloadOf('journal:setDay')).toMatchObject({ text: 'Erster Satz.' }),
+    );
+
+    /* Getippt, während der Schreibvorgang noch läuft. */
+    await userEvent.type(field, ' Und im Flug.');
+    expect(field.value).toBe('Erster Satz. Und im Flug.');
+
+    /* Der Schreibvorgang kommt zurück — mit dem Text von *vorher*. */
+    await act(async () => {
+      land({ path: DAY_PATH, hash: 'hash-2', created: false });
+    });
+
+    expect(field.value).toBe('Erster Satz. Und im Flug.');
+    /* Und es behauptet nicht, das im Feld Stehende sei gespeichert. */
+    expect(screen.queryByText('Gespeichert.')).toBeNull();
+    /* Der eigene Schreibvorgang ist keine fremde Änderung. */
+    expect(screen.queryByRole('alert')).toBeNull();
+
+    /* Das nächste Speichern geht mit dem Hash aus der eigenen Antwort raus:
+       der Entwurf sitzt jetzt auf dem gerade Geschriebenen auf. */
+    await userEvent.type(field, '{Control>}{Enter}{/Control}');
+    await waitFor(() =>
+      expect(sb.payloadsOf('journal:setDay').at(-1)).toEqual({
+        date: TODAY,
+        text: 'Erster Satz. Und im Flug.',
+        expectedHash: 'hash-2',
+      }),
+    );
+  });
+
+  it('gibt den eigenen Stand frei, sobald die Abfrage einen anderen Hash meldet, statt ihn festzunageln', async () => {
+    /* Zwischen einem Speichern und dem nächsten Lesen kann die Datei ein
+       zweites Mal beschrieben worden sein — eine Coach-Runde, ein Klick auf
+       die Stimmung, ein Editor von außen. Dann meldet die Abfrage nie den
+       Hash, den die eigene Antwort zurückgegeben hat. Der eingefrorene eigene
+       Stand darf sich daran nicht festhalten: sonst käme an diesem Tag keine
+       fremde Fassung mehr am Feld an, und jedes weitere Speichern ginge mit
+       einem Hash raus, den die Datei nicht mehr hat. */
+    const state = { view: view() };
+    const { sb } = open({ 'journal:get': () => state.view });
+
+    const field = (await screen.findByLabelText('Tagestext')) as HTMLTextAreaElement;
+    await userEvent.clear(field);
+    await userEvent.type(field, 'Eigener Satz.{Control>}{Enter}{/Control}');
+    await waitFor(() => expect(screen.getByText('Gespeichert.')).toBeTruthy());
+    /* Die Abfrage meldet noch den alten Stand, das Feld den eigenen. */
+    expect(field.value).toBe('Eigener Satz.');
+
+    /* Jetzt kommt ein Lesevorgang mit einem dritten Hash: weder der alte noch
+       der aus der eigenen Antwort. */
+    state.view = view({
+      text: 'Von außen umgeschrieben.',
+      doc: doc({ hash: 'hash-extern', body: '## Tag\n\nVon außen umgeschrieben.\n' }),
+    });
+    sb.emit('event:vault-changed', { paths: [DAY_PATH], external: true });
+
+    /* Freigegeben: die fremde Fassung kommt am Feld an, statt hinter dem
+       eigenen Stand für immer unsichtbar zu bleiben. */
+    await waitFor(() => expect(field.value).toBe('Von außen umgeschrieben.'));
+
+    /* Und der nächste Schreibvorgang geht mit dem Hash der Datei raus, nicht
+       mit dem eingefrorenen eigenen — kein Konflikt gegen ein Gespenst. */
+    await userEvent.type(field, ' Dazu.{Control>}{Enter}{/Control}');
+    await waitFor(() =>
+      expect(sb.payloadsOf('journal:setDay').at(-1)).toMatchObject({
+        expectedHash: 'hash-extern',
+      }),
+    );
+  });
+
+  it('meldet eine fremde Änderung auch dann noch, wenn an diesem Tag schon einmal gespeichert wurde', async () => {
+    /* Die Kehrseite: steht beim Eintreffen der fremden Fassung ein eigener
+       Entwurf im Feld, muss die Leiste kommen — und der eingefrorene Hash ist
+       der des eigenen Schreibvorgangs, auf dem der Entwurf aufsitzt. */
+    const state = { view: view() };
+    const { sb } = open({ 'journal:get': () => state.view });
+
+    const field = (await screen.findByLabelText('Tagestext')) as HTMLTextAreaElement;
+    await userEvent.clear(field);
+    await userEvent.type(field, 'Eigener Satz.{Control>}{Enter}{/Control}');
+    await waitFor(() => expect(screen.getByText('Gespeichert.')).toBeTruthy());
+    /* Weiterschreiben auf dem eben Gespeicherten. */
+    await userEvent.type(field, ' Weiter.');
+
+    state.view = view({
+      text: 'Von außen umgeschrieben.',
+      doc: doc({ hash: 'hash-extern', body: '## Tag\n\nVon außen umgeschrieben.\n' }),
+    });
+    sb.emit('event:vault-changed', { paths: [DAY_PATH], external: true });
+
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toContain('Dieser Abschnitt hat sich außerhalb geändert');
+    expect(field.value).toBe('Eigener Satz. Weiter.');
+
+    await userEvent.click(within(alert).getByRole('button', { name: 'Meinen Text behalten' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    await waitFor(() =>
+      expect(sb.payloadsOf('journal:setDay').at(-1)).toMatchObject({ expectedHash: 'hash-2' }),
+    );
+  });
+
   it('bietet nach einem Konflikt den ausdrücklichen Weg zum Überschreiben', async () => {
     const { sb } = open({
       'journal:setDay': () => {
@@ -585,8 +870,7 @@ describe('Tagebuch: der Tagestext', () => {
       },
     });
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Tagestext bearbeiten' }));
-    await userEvent.type(screen.getByLabelText('Tagestext'), ' Zusatz.');
+    await userEvent.type(await screen.findByLabelText('Tagestext'), ' Zusatz.');
     await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
 
     const alert = await screen.findByRole('alert');
@@ -608,7 +892,7 @@ describe('Tagebuch: das Gespräch', () => {
      jeder Absatzwechsel den halben Satz abgeschickt. */
   it('macht mit Enter einen Umbruch und schickt mit Shift+Enter', async () => {
     const { sb } = open();
-    const field = (await screen.findByLabelText('Was beschäftigt dich?')) as HTMLTextAreaElement;
+    const field = (await screen.findByLabelText('Mit dem Coach sprechen')) as HTMLTextAreaElement;
 
     await userEvent.type(field, 'Erste Zeile{Enter}zweite Zeile');
     expect(field.value).toBe('Erste Zeile\nzweite Zeile');
@@ -627,7 +911,7 @@ describe('Tagebuch: das Gespräch', () => {
      — ein Hinweis, der „Enter sagt es" behauptet, ist schlimmer als keiner. */
   it('nennt im Hinweis Shift+Enter zum Sagen und Enter für den Umbruch', async () => {
     open();
-    await screen.findByLabelText('Was beschäftigt dich?');
+    await screen.findByLabelText('Mit dem Coach sprechen');
 
     const hint = document
       .querySelector('#sb-journal-field')
@@ -665,7 +949,7 @@ describe('Tagebuch: das Gespräch', () => {
     expect(await screen.findByText('Heute war zu viel.')).toBeTruthy();
     expect(screen.queryByText('Denkt nach')).toBeNull();
     /* Das Feld ist geleert — der Absatz ist unterwegs zur Datei. */
-    const field = (await screen.findByLabelText('Was beschäftigt dich?')) as HTMLTextAreaElement;
+    const field = (await screen.findByLabelText('Mit dem Coach sprechen')) as HTMLTextAreaElement;
     expect(field.value).toBe('');
   });
 
@@ -769,7 +1053,7 @@ describe('Tagebuch: das Gespräch', () => {
   it('wechselt die Haltung auch aus dem Schreibfeld heraus — mit Ctrl und Ziffer', async () => {
     open();
 
-    const field = await screen.findByLabelText('Was beschäftigt dich?');
+    const field = await screen.findByLabelText('Mit dem Coach sprechen');
     await userEvent.click(field);
     await userEvent.keyboard('{Control>}2{/Control}');
 
@@ -880,7 +1164,7 @@ describe('Tagebuch: das Gespräch', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Haltung Tipps wählen' }));
 
     await say('Ich rede lieber nicht weiter.');
-    const cancel = await screen.findByRole('button', { name: 'Abbrechen' });
+    const cancel = await within(composer()).findByRole('button', { name: 'Abbrechen' });
     await userEvent.click(cancel);
 
     await waitFor(() => expect(sb.payloadOf('journal:abort')).toEqual({ messageId: 'm-1' }));
@@ -891,11 +1175,11 @@ describe('Tagebuch: das Gespräch', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Haltung Tipps wählen' }));
 
     await say('Erste Runde.');
-    await screen.findByRole('button', { name: 'Abbrechen' });
+    await within(composer()).findByRole('button', { name: 'Abbrechen' });
     /* Enter im Feld: zwei Runden gleichzeitig würden sich beim Schreiben in
        dieselbe Datei überholen. */
     await userEvent.type(
-      await screen.findByLabelText('Was beschäftigt dich?'),
+      await screen.findByLabelText('Mit dem Coach sprechen'),
       'Zweite Runde{Enter}',
     );
 
@@ -924,9 +1208,12 @@ describe('Tagebuch: altes Gespräch (011, D9)', () => {
     const stream = screen.getByRole('region', { name: 'Verlauf' });
     expect(within(stream).getByText('Der Sprint fühlt sich unmöglich an.')).toBeTruthy();
 
-    /* Editing-in-place is untouched by the legacy block — it operates on
-       `view.text`/`view.doc.hash` alone (D8), regardless of `view.turns`. */
-    expect(screen.getByRole('button', { name: 'Tagestext bearbeiten' })).toBeTruthy();
+    /* The field is untouched by the legacy block — it operates on
+       `view.text`/`view.doc.hash` alone (D8), regardless of `view.turns`.
+       There is no separate view mode any more (047, D2): the day's own text
+       is already in the textarea, ready to keep typing into. */
+    const field = screen.getByLabelText('Tagestext') as HTMLTextAreaElement;
+    expect(field.value).toBe(DAY_TEXT);
   });
 
   it('zeigt keinen Legacy-Block mehr, sobald ein Tag keine Konversation mehr hat', async () => {
@@ -1221,30 +1508,44 @@ describe('Tagebuch: Interview-Einstieg (012, D6)', () => {
     expect(withProse.tagName).toBe('BUTTON');
   });
 
-  it('ist primary, solange der Tag weder Text noch einen Entwurf hat — das ist der Moment, in dem es gebraucht wird', async () => {
+  it('bleibt secondary und klein — an einem leeren wie an einem beschriebenen Tag, mit oder ohne eigenen Entwurf (047, D4)', async () => {
+    /* 047/D4 dropped the primary/secondary switch this button used to make
+       depending on whether the day already had prose or a draft: the
+       screen's one teal accent belongs to the day field's own save action
+       now (`DayText.tsx`), not to this button — so it renders
+       `variant="secondary" size="sm"` unconditionally, on every day. */
     open({ 'journal:get': () => null });
 
     const button = await screen.findByRole('button', { name: 'Interview starten' });
-    expect(button.className).toContain('gs-btn--primary');
+    expect(button.className).toContain('gs-btn--secondary');
+    expect(button.className).not.toContain('gs-btn--primary');
+    /* „Klein" ist eine Klasse, nicht nur ein Wort im Titel: `size="sm"`
+       (`atoms/Button.tsx`) — die mittlere Größe wäre hier die Voreinstellung
+       und damit still. */
+    expect(button.className).toContain('gs-btn--sm');
+    expect(button.className).not.toContain('gs-btn--md');
+    /* Und die Umhüllung, die ihn in der streckenden Spalte auf seiner eigenen
+       Breite hält (047, Q4). jsdom wendet das Stylesheet nicht an, eine
+       gemessene Breite gäbe es hier also nicht — prüfbar ist, dass der Knopf
+       nicht nackt in `.sb-dayentry` hängt, wo er die vollen 74ch spannen
+       würde. */
+    expect(button.parentElement?.className).toContain('sb-dayentry-interview');
+    expect(button.parentElement?.parentElement?.className).toContain('sb-dayentry');
+
+    const field = await screen.findByLabelText('Tagestext');
+    await userEvent.type(field, 'Ein erster eigener Satz.');
+
+    expect(button.className).toContain('gs-btn--secondary');
+    expect(button.className).not.toContain('gs-btn--primary');
+    expect(button.className).toContain('gs-btn--sm');
+    expect(button.parentElement?.className).toContain('sb-dayentry-interview');
   });
 
-  it('ist secondary, sobald der Tag schon Text hat', async () => {
+  it('ist auch an einem beschriebenen Tag secondary', async () => {
     open();
 
     const button = await screen.findByRole('button', { name: 'Interview starten' });
     expect(button.className).toContain('gs-btn--secondary');
-  });
-
-  it('weicht auch bei einem leeren Tag auf secondary aus, sobald selbst schon ein Entwurf im Feld steht — sonst stünden zwei Teal-Knöpfe gleichzeitig da', async () => {
-    open({ 'journal:get': () => null });
-
-    const button = await screen.findByRole('button', { name: 'Interview starten' });
-    expect(button.className).toContain('gs-btn--primary');
-
-    const field = await screen.findByLabelText('Was beschäftigt dich?');
-    await userEvent.type(field, 'Ein erster eigener Satz.');
-
-    await waitFor(() => expect(button.className).toContain('gs-btn--secondary'));
   });
 
   it('öffnet beim Klick das Interview-Overlay', async () => {
@@ -1255,7 +1556,10 @@ describe('Tagebuch: Interview-Einstieg (012, D6)', () => {
     expect(await screen.findByRole('dialog', { name: 'Interview' })).toBeTruthy();
   });
 
-  it('lässt beim Schließen das eigene Schreibfeld bearbeitbar zurück', async () => {
+  it('lässt beim Schließen den Tagestext bearbeitbar zurück und setzt den Cursor genau dorthin', async () => {
+    /* 047/D4: das Schließen des Interviews gibt den Fokus nicht mehr an den
+       Coach-Composer zurück, sondern an den Tag selbst — dieselbe `fieldRef`,
+       die auch der Autofokus auf einem frischen Tag benutzt. */
     open();
 
     await userEvent.click(await screen.findByRole('button', { name: 'Interview starten' }));
@@ -1265,7 +1569,7 @@ describe('Tagebuch: Interview-Einstieg (012, D6)', () => {
     );
 
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-    const field = screen.getByLabelText('Was beschäftigt dich?') as HTMLTextAreaElement;
+    const field = screen.getByLabelText('Tagestext') as HTMLTextAreaElement;
     expect(field.disabled).toBe(false);
     await waitFor(() => expect(document.activeElement).toBe(field));
   });

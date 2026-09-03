@@ -56,6 +56,7 @@ import {
 import { CloseProposal } from './CloseProposal';
 import { CoachComposer } from './CoachComposer';
 import { DayEntry } from './DayEntry';
+import type { DayVersion } from './DayText';
 import { EntryStream } from './EntryStream';
 import { FactsSection } from './FactsSection';
 import type { AppliedClose } from './FactsSection';
@@ -93,25 +94,6 @@ function writeCalendarCollapsed(collapsed: boolean): void {
   }
 }
 
-/** Same threshold as `journal.css` (`@media (max-width: 1200px)`) — the only
-    place where this screen itself needs to know which of the two designs
-    currently applies: "close the day" sits in the narrow window next to the
-    facts (`DayEntry.tsx`), in the wide window next to the send button, never
-    in both places at once (see `closeAction` below). Same pattern as
-    `useGridColumns` in the dashboard (`screens/dashboard/TileGrid.tsx`). */
-function useNarrow(): boolean {
-  const [narrow, setNarrow] = useState(() =>
-    typeof window === 'undefined' ? false : window.innerWidth <= 1200,
-  );
-  useEffect(() => {
-    const update = (): void => setNarrow(window.innerWidth <= 1200);
-    update();
-    window.addEventListener('resize', update);
-    return () => window.removeEventListener('resize', update);
-  }, []);
-  return narrow;
-}
-
 export function JournalScreen() {
   const t = useT();
   const navigate = useNavigate();
@@ -138,7 +120,6 @@ export function JournalScreen() {
      `journal:answerLooseEnd` `InterviewDialog.tsx` already calls, reused
      here rather than a second write path for the same fact (022, D6). */
   const interview = useInterviewMutations(date);
-  const narrow = useNarrow();
 
   /* The stance: defaults from settings, switchable per conversation. */
   const [mode, setMode] = useState<CoachMode | null>(null);
@@ -147,6 +128,15 @@ export function JournalScreen() {
   const [draft, setDraft] = useState('');
   const [pending, setPending] = useState<Pending | null>(null);
   const [textSaved, setTextSaved] = useState(false);
+  /* What the last day-text save wrote, the day it was written for, and the
+     file version it was written on top of. It lives here rather than in
+     `DayText`, because only the mutation result carries the hash the write
+     produced — and the field needs exactly that pair as long as the refetch it
+     triggered hasn't landed (see `written` in `DayText.tsx`). `before` is what
+     bounds that window: see the release below. */
+  const [written, setWritten] = useState<
+    (DayVersion & { date: string; before: string | undefined }) | null
+  >(null);
   const [moodSaved, setMoodSaved] = useState(false);
   const [applied, setApplied] = useState<AppliedClose | null>(null);
   const [interviewOpen, setInterviewOpen] = useState(false);
@@ -213,6 +203,25 @@ export function JournalScreen() {
   useEffect(() => {
     if (view.data === null) field.current?.focus();
   }, [date, view.data]);
+
+  /* The written version stands in for the day query only while that query
+     still reports the version the save was written on top of. Any newer result
+     is authoritative — our own write, but just as much a coach turn, a mood
+     click or an editor outside — even when its hash isn't the one the save
+     returned: a different hash at that point is real, externally caused
+     information, and the field's conflict machinery is exactly what has to see
+     it. Waiting for the save's own hash instead would pin `written` for good
+     on any day whose file changed again in between, and every later save would
+     go out with a hash the file no longer has. A day switch ends it just as
+     plainly.
+
+     Adjusted during render like `month` above (React's own pattern for state
+     that follows a changed input), not in an effect: an effect would leave one
+     committed render in which the field is based on a version the file has
+     already moved past. */
+  if (written !== null && (written.date !== date || view.data?.doc.hash !== written.before)) {
+    setWritten(null);
+  }
 
   /* While an answer is running, no second turn gets sent: two writes to the
      same file would race each other, and one turn would be lost. The
@@ -354,19 +363,13 @@ export function JournalScreen() {
     days.error ??
     null;
 
-  /* One button, two possible spots — never both at once. In the wide
-     window it sits next to the composer, anchored at the bottom edge of
-     the detail column (`footerAction`), so neither of the two actions
-     concerning the day slides below the visible edge. In the narrow window
-     it instead sits right next to the facts (`DayEntry.tsx`) — there is no
-     tab to place it in any more (011, D7 removed it). `narrow` decides
-     which of the two paths actually gets the button; the other stays
-     `undefined`. The action remains secondary either way — this screen's
-     one teal point is the stream.
+  /* One button, one spot, in every window width (047, D3): right next to
+     the facts (`DayEntry.tsx`), below the day's own text. The action stays
+     secondary either way — this screen's one teal point is the stream.
 
-     018, decision 3: while a proposal for the shown day is open, neither
-     spot gets it. Two triggers for the same run is one too many, and the
-     panel's "run again" is the one with the context. */
+     018, decision 3: while a proposal for the shown day is open, the spot
+     goes to the proposal instead. Two triggers for the same run is one too
+     many, and the panel's "run again" is the one with the context. */
   const closeAction =
     proposal !== undefined ? undefined : (
       <Button
@@ -381,30 +384,13 @@ export function JournalScreen() {
       </Button>
     );
 
-  /* 012, D6: the entry point on the day itself. `dayEmpty` reuses exactly the
-     check `DayText.tsx` already treats as authoritative for "has this day
-     got prose yet" (`fresh || text.trim().length === 0`, with `fresh` being
-     `view === null`) — no second, independently invented empty-check.
-
-     One wrinkle worth naming: this screen already reserves its one teal
-     accent for the composer's send button (see the comment on `closeAction`
-     above, kept secondary for exactly that reason — Gaston allows only one
-     accent per surface). Making the interview button primary risks a second
-     teal accent the moment someone is mid-draft. The `draft` guard below
-     closes that gap: the composer's send button only lights up once there is
-     something to send, so on a truly empty day — no prose, no draft yet —
-     it stays disabled/muted and the interview button is the only live teal
-     control. The instant someone starts drafting their own entry, the send
-     button turns live too, and this guard demotes the interview button back
-     to secondary in the same render — the two never compete as live accents
-     at once. */
-  const dayEmpty =
-    (view.data === null || view.data === undefined || view.data.text.trim().length === 0) &&
-    draft.trim().length === 0;
-
+  /* 012, D6: the entry point on the day itself. 047/D4: always a small
+     secondary action — the screen's one teal accent belongs to the day
+     field's own save action now (`DayText.tsx`), not to this button. */
   const interviewAction = (
     <Button
-      variant={dayEmpty ? 'primary' : 'secondary'}
+      variant="secondary"
+      size="sm"
       icon="message-square"
       onClick={() => setInterviewOpen(true)}
     >
@@ -520,14 +506,32 @@ export function JournalScreen() {
                 error: mutations.setDay.error,
                 attemptedAt: mutations.setDay.submittedAt,
                 saved: textSaved,
+                /* Only for the day it was written for: `written` outlives a
+                   day switch by a render, and another day's version must
+                   never stand in for this one's file. */
+                written: written?.date === date ? written : null,
                 onSave: (value, expectedHash) => {
+                  /* The version the query reports right now, read at click
+                     time: it is what tells "the refetch hasn't landed yet"
+                     from "the file has moved on" once the write returns. */
+                  const before = view.data?.doc.hash;
                   mutations.setDay.mutate(
                     { date, text: value, ...(expectedHash === undefined ? {} : { expectedHash }) },
-                    { onSuccess: () => setTextSaved(true) },
+                    {
+                      onSuccess: (result) => {
+                        setTextSaved(true);
+                        /* The text that went out, with the hash it produced —
+                           the field's basis until the refetch lands. */
+                        setWritten({ date, text: value, hash: result.hash, before });
+                      },
+                    },
                   );
                 },
                 onReload: () => {
                   mutations.setDay.reset();
+                  /* Asking for the file's version explicitly gives up our own:
+                     what comes back is what the field has to show. */
+                  setWritten(null);
                   void view.refetch();
                 },
                 onReset: () => {
@@ -535,6 +539,7 @@ export function JournalScreen() {
                   setTextSaved(false);
                 },
               }}
+              fieldRef={field}
               onOpenProject={(slug) => void navigate(`/projects?p=${encodeURIComponent(slug)}`)}
               finish={{
                 busy: mutations.setClosed.isPending,
@@ -542,7 +547,7 @@ export function JournalScreen() {
                 onReopen: () => setClosed(false),
               }}
               interviewAction={interviewAction}
-              closeAction={narrow ? closeAction : undefined}
+              closeAction={closeAction}
               legacy={{
                 busy: mutations.foldDay.isPending,
                 error: mutations.foldDay.error,
@@ -636,8 +641,6 @@ export function JournalScreen() {
                   mode={stance}
                   onMode={setMode}
                   route={route}
-                  fieldRef={field}
-                  footerAction={narrow ? undefined : closeAction}
                 />
               }
             />

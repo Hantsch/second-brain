@@ -1,8 +1,8 @@
-/* The "day" section: the raw text kept for reference — a small edit trigger
- * opens it for hash-guarded, in-place changes.
+/* The "day" section: the field the day is written in. Always editable — there
+ * is no edit mode to enter first (047/D2).
  *
  * Conflict protection is the core of this file, and it hinges on one detail:
- * **the value and hash are frozen when the editor opens, not read at the moment
+ * **the value and hash are frozen when a draft begins, not read at the moment
  * Save is clicked.** The watcher refreshes the day query as soon as someone
  * writes from outside; if the current hash were taken only at save time, the old
  * text would go out with the new hash — and the main process would accept it.
@@ -21,29 +21,63 @@
  * message offers the explicit path to overwrite. Nothing is lost without someone
  * deciding it.
  *
- * 011/D8: the whole-text "click anywhere to edit" surface and the "How was
- * your day?" inviting field are both gone. `EntryStream` (rendered by
- * `DayEntry.tsx`) now shows every paragraph of prose as part of the one
- * chronological column, and the composer below it is the entry point for a
- * fresh day. What's left here is only the raw section's edit-in-place
- * affordance — a day with nothing written yet has nothing for this
- * component to show at all.
+ * 011/D8 removed the whole-text "click anywhere to edit" surface: `EntryStream`
+ * (rendered by `DayEntry.tsx`) shows every paragraph of prose as part of the one
+ * chronological column, so this component never renders the prose again — only
+ * the field it is written in. 047/D2 then dropped the pencil trigger and the
+ * "nothing written yet → render nothing" branch as well: the textarea is the
+ * day's field on every day, fresh, empty or written, and needs no click first.
+ *
+ * With no editor to open, **the first keystroke of a draft is what freezes the
+ * base version** — before that there is no draft, nothing to save, and the
+ * file's own hash is the only one in play. Everything downstream of the freeze
+ * (`expected`, the conflict card, the external-change bar) is unchanged by that
+ * move.
+ *
+ * That is also why `written` exists: the refetch after a save is an
+ * asynchronous IPC round-trip, so for a moment `text`/`hash` still describe the
+ * file as it was *before* the save. A keystroke landing in that window would
+ * freeze that stale pair — and the next save would go out with a hash the file
+ * no longer has. `current` closes that window: while the refetch is still on
+ * its way, the version the save itself wrote stands in for the props.
+ *
+ * The same window is open in the other direction, and that decides how the
+ * draft ends: a write plus its index refresh takes real time, and every
+ * keystroke that lands while it runs belongs to the user. So the draft is
+ * **not** dropped because a save happened — it is dropped when the file
+ * reports back exactly the text that went out (`sent`), which is the one case
+ * where dropping it changes nothing on screen. Typed past that, the draft
+ * stays and is rebased onto the version the save wrote.
  */
 
 import { useEffect, useRef, useState } from 'react';
-import type { KeyboardEvent, ReactNode } from 'react';
+import type { KeyboardEvent, ReactNode, RefObject } from 'react';
 import { Button } from '../../atoms/Button';
 import { Card } from '../../atoms/Card';
-import { IconButton } from '../../atoms/IconButton';
 import { Kbd } from '../../atoms/Kbd';
 import { ErrorState } from '../../components/ErrorState';
 import { useT } from '../../i18n';
 import { decodeIpcError } from '../../lib/ipc-error';
 
-/** The version a draft is based on: text and hash belong together. */
-interface Base {
+/** One version of the section: text and hash belong together. */
+export interface DayVersion {
   text: string;
   hash: string;
+}
+
+/**
+ * A draft, the version it is based on, and the text a save has handed over —
+ * one state, so there is never a render in which they disagree.
+ */
+interface Editing {
+  draft: string;
+  base: DayVersion;
+  /**
+   * Text of the last save handed to the main process, until the file reports
+   * it back. It is what tells an arrived draft from one that has been typed
+   * past while the write was still running.
+   */
+  sent: string | null;
 }
 
 export interface DayTextProps {
@@ -51,8 +85,23 @@ export interface DayTextProps {
   text: string;
   /** Hash of the file it's in. */
   hash: string;
-  /** The day has no file yet. */
-  fresh: boolean;
+  /**
+   * What this field's last successful save wrote — the text that went out,
+   * together with the hash the write returned — or `null` as soon as the day
+   * query reports anything other than the version that save was written on
+   * top of. The screen owns that lifetime, because the hash arrives with the
+   * mutation result and only the screen sees the query behind it (see
+   * `JournalScreen.tsx`). It is a window, never a pin: a version that arrives
+   * from outside always wins over what we once wrote.
+   *
+   * Without it, a keystroke in the window between a save and its refetch would
+   * base its draft on the pre-save `text`/`hash`: the field would visibly fall
+   * back to the old text, the external-change bar could trip on the user's own
+   * save, and the next save would go out with a hash the file no longer has —
+   * a conflict whose only offered way out ("overwrite") would drop exactly what
+   * was just saved.
+   */
+  written: DayVersion | null;
   busy: boolean;
   /** The main process rejected the last attempt. */
   error: unknown;
@@ -64,12 +113,18 @@ export interface DayTextProps {
   /** The user wants to see the outside version. */
   onReload: () => void;
   onReset: () => void;
+  /**
+   * Lets the screen put the cursor in this field (047/D4). Passing it hands
+   * over the same ref the component uses itself after the external-change bar
+   * is answered — one element, one ref, no merging.
+   */
+  fieldRef?: RefObject<HTMLTextAreaElement | null>;
 }
 
 export function DayText({
   text,
   hash,
-  fresh,
+  written,
   busy,
   error,
   attemptedAt,
@@ -77,52 +132,71 @@ export function DayText({
   onSave,
   onReload,
   onReset,
+  fieldRef,
 }: DayTextProps) {
   const t = useT();
   /**
    * The draft **and** the version it's based on — one state, not two. It's
-   * created when the editor opens; derived, not chased in an effect
+   * created by the first keystroke; derived, not chased in an effect
    * (`useProposalEdit` does the same). That way there's no state where text
    * and hash don't match.
    */
-  const [stored, setStored] = useState<{ draft: string; base: Base } | null>(null);
+  const [stored, setStored] = useState<Editing | null>(null);
   /** Outside version whose notice the user has dismissed. */
   const [accepted, setAccepted] = useState<string | null>(null);
-  const field = useRef<HTMLTextAreaElement>(null);
+  const own = useRef<HTMLTextAreaElement>(null);
+  const field = fieldRef ?? own;
 
-  /* Once saved, the draft has arrived — then the file takes over again. */
-  const draft = saved ? null : (stored?.draft ?? null);
-  const base = saved ? null : (stored?.base ?? null);
-  const editing = draft !== null;
-  /* Nothing written yet: the composer below is the entry point now, not this
-     section — a click-to-edit affordance on empty content doesn't make sense. */
-  const empty = fresh || text.trim().length === 0;
+  /**
+   * What the file holds, as far as this component can know it: the props — or,
+   * while the refetch after a save is still on its way, the version that save
+   * wrote. Everything below reads this instead of `text`/`hash`, so the moment
+   * right after a save is not a moment with stale data.
+   */
+  const current: DayVersion = written ?? { text, hash };
+
+  /* The file has reported back the text a save handed over. Two outcomes,
+     and neither may be derived from `written`: that window closes as soon as
+     the day query moves on, so anything read out of it would flip back a
+     render later.
+     - The draft is still that text → it has arrived. Dropping it changes
+       nothing on screen (the field then shows the same text from the file)
+       and hands the section back to the file, outside changes included.
+     - It is not → keystrokes landed while the write was in flight, and they
+       are the user's. The draft stays and its base moves to the version the
+       save wrote: a base still frozen on the pre-save version would read as
+       an outside change to the user's own save and send a hash the file has
+       moved past.
+     Adjusted during render, not in an effect (React's own pattern for state
+     that follows a changed input): an effect would leave one committed render
+     whose `expected` hash is the stale one. `sent: null` afterwards makes
+     this fire once. */
+  if (stored !== null && stored.sent !== null && current.text === stored.sent) {
+    setStored(
+      stored.draft === stored.sent ? null : { draft: stored.draft, base: current, sent: null },
+    );
+  }
+
+  const draft = stored?.draft ?? null;
+  const base = stored?.base ?? null;
   const conflict =
     error !== null && error !== undefined && decodeIpcError(error).code === 'conflict';
-  const changedOutside = base !== null && text !== base.text && accepted !== text;
+  const changedOutside = base !== null && current.text !== base.text && accepted !== current.text;
 
   /**
    * The hash used for saving.
    *
-   * If the file still holds the same section as when it was opened, the current
+   * If the file still holds the same section as when the draft began, the current
    * hash counts: a coaching round or a day close changed the file, but not this
    * text — a conflict there would be pure friction. If the section itself has
    * changed, the frozen hash stays put: then the write **must** fail rather than
    * overwrite someone else's text.
    */
-  const expected = base === null || base.text === text ? hash : base.hash;
+  const expected = base === null || base.text === current.text ? current.hash : base.hash;
   const frozen = expected.length > 0 ? expected : undefined;
 
-  useEffect(() => {
-    if (editing) field.current?.focus();
-  }, [editing]);
-
-  const start = (): void => {
-    onReset();
-    setAccepted(null);
-    setStored({ draft: text, base: { text, hash } });
-  };
-
+  /* Cancel: drop the draft, and the field falls back to the file's text on the
+     next render — there is no editor left to close. */
   const stop = (): void => {
     setStored(null);
     setAccepted(null);
@@ -130,11 +204,22 @@ export function DayText({
   };
 
   const type = (value: string): void => {
-    setStored({ draft: value, base: stored?.base ?? { text, hash } });
+    /* A draft with no base yet freezes the file as it stands right now —
+       `current`, which right after a save is what that save wrote, not the
+       pre-save props the refetch has yet to replace. An existing draft keeps
+       its base and, with it, whatever save is still on its way: that is what
+       lets this keystroke survive the write landing. */
+    setStored({ draft: value, base: base ?? current, sent: stored?.sent ?? null });
+    /* Still flagged as saved: "Saved." no longer describes what is in the
+       field. */
+    if (saved) onReset();
   };
 
   const save = (expectedHash: string | undefined): void => {
     if (draft === null) return;
+    /* Noted before the write goes out, not after it returns: the round-trip
+       is where the keystrokes this has to be told apart from happen. */
+    setStored({ draft, base: base ?? current, sent: draft });
     onSave(draft, expectedHash);
   };
 
@@ -151,39 +236,21 @@ export function DayText({
     }
   };
 
-  if (!editing) {
-    /* Nothing written and nothing just saved: no card, no button — the
-       composer field is where a fresh day starts now (see the module
-       comment above). */
-    if (empty && !saved) return null;
-    return (
-      <div className="sb-daytext">
-        {saved ? <p className="sb-note-line">{t('journal.day.saved')}</p> : null}
-        {empty ? null : (
-          <IconButton
-            icon="pencil"
-            variant="ghost"
-            size="sm"
-            label={t('journal.day.edit')}
-            onClick={start}
-          />
-        )}
-      </div>
-    );
-  }
-
   return (
-    <div className="sb-daytext sb-daytext--editing">
+    <div className="sb-daytext">
       <label className="gs-label" htmlFor="sb-day-field">
         {t('journal.day.editLabel')}
       </label>
+      {/* Draft first, the file second: with no draft the field simply shows
+          what is in the file — including a version that arrived from outside
+          while nobody was typing. */}
       <textarea
         id="sb-day-field"
         ref={field}
         className="gs-input sb-daytext-field"
-        rows={8}
+        rows={12}
         placeholder={t('journal.day.placeholder')}
-        value={draft ?? ''}
+        value={draft ?? current.text}
         onChange={(event) => type(event.target.value)}
         onKeyDown={onKeyDown}
       />
@@ -217,13 +284,15 @@ export function DayText({
         <AlertCard
           title={t('journal.day.external.title')}
           body={t('journal.day.external.body')}
-          nonce={hash}
+          nonce={current.hash}
         >
           <Button
             size="sm"
             icon="refresh-cw"
             onClick={() => {
-              setStored({ draft: text, base: { text, hash } });
+              /* A fresh draft on the outside version — and no save of ours
+                 still pending against it. */
+              setStored({ draft: current.text, base: current, sent: null });
               setAccepted(null);
               field.current?.focus();
             }}
@@ -235,7 +304,7 @@ export function DayText({
             size="sm"
             icon="pencil"
             onClick={() => {
-              setAccepted(text);
+              setAccepted(current.text);
               field.current?.focus();
             }}
           >
@@ -245,6 +314,9 @@ export function DayText({
       ) : null}
 
       <div className="sb-daytext-foot">
+        {/* No draft, nothing to write: `draft ?? ''` keeps Save disabled until
+            the field actually differs from the file, which is also the only
+            state `save()` acts on. */}
         <Button
           icon="check"
           loading={busy}
@@ -258,6 +330,11 @@ export function DayText({
         </Button>
         {conflict ? (
           <span className="sb-pageedit-warn">{t('journal.day.unsaved')}</span>
+        ) : /* Only while the field really does hold what the file holds. A
+               draft typed past the save is unsaved text, and "Saved." would
+               claim otherwise. */
+        saved && draft === null ? (
+          <span className="sb-note-line">{t('journal.day.saved')}</span>
         ) : (
           <span className="sb-capture-hint">
             <Kbd keys={['Ctrl', 'Enter']} />

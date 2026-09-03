@@ -64,7 +64,8 @@ export const deJournal = {
   'journal.day.title': 'Tag',
   'journal.day.placeholder': 'Was ist passiert?',
   'journal.day.write': 'Tagestext schreiben',
-  'journal.day.edit': 'Tagestext bearbeiten',
+  /* Dauerhaftes Label des Feldes — es ist immer editierbar, es gibt keinen
+     eigenen „Tagestext bearbeiten“-Auslöser mehr (047/D2). */
   'journal.day.editLabel': 'Tagestext',
   'journal.day.save': 'Speichern',
   'journal.day.hint': 'Ctrl+Enter speichert, Esc verwirft',
@@ -90,7 +91,7 @@ export const deJournal = {
   'journal.turn.user': 'Ich',
   'journal.turn.assistant': 'Gaston',
   'journal.thinking': 'Denkt nach',
-  'journal.field.label': 'Was beschäftigt dich?',
+  'journal.field.label': 'Mit dem Coach sprechen',
   'journal.field.placeholder': 'Schreib es hin, wie es dir kommt.',
   'journal.field.hintSend': 'sagt es',
   'journal.send': 'Sagen',

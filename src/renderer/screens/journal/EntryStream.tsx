@@ -1,11 +1,13 @@
 /* The day as one chronological column: my prose and the app's answers, in
  * document order, exactly as `parseStream` read them from the file (011) —
  * replaces the old "Conversation" tab (`CoachPanel.tsx`, now gone). The
- * composer and day close-out live separately in `CoachComposer`, anchored to
- * the bottom edge of the detail column, not here (see the comment in
- * `styles/app/journal.css`, section "Composer, stance and day close-out").
+ * composer is not part of this component: it lives in `CoachComposer` as the
+ * day's last section, in plain flow — nothing is anchored to the window edge
+ * any more (047/D3 dropped the sticky footer; see `styles/app/journal.css`,
+ * section "Composer and stance"). The day close-out is in neither place: it
+ * sits next to the facts in `DayEntry.tsx`, exactly once.
  *
- * Three states, all explicit:
+ * Four states, all explicit:
  *
  * - **Running.** The user's own paragraph appears immediately (it is written
  *   before any model is asked), and the answer grows below it.

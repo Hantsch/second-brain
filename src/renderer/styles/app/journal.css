@@ -257,6 +257,14 @@
   padding: 2px var(--space-2);
 }
 
+/* The interview offer is a smaller secondary action (047, Q4), and has to read
+   as one: `.sb-dayentry` stretches its children, so a bare button would span
+   the whole column however small its `size` is. */
+.sb-dayentry-interview {
+  display: flex;
+  justify-content: flex-start;
+}
+
 .sb-dayentry-closewrap {
   display: flex;
   justify-content: flex-end;
@@ -523,42 +531,17 @@
   -webkit-box-orient: vertical;
 }
 
-/* Composer, stance, and day close-out: the two actions concerning the day
-   stay fixed at the bottom edge of the detail column — they must never
-   slide below the visible edge, no matter how long the history or facts
-   get. `bottom: 0` anchors relative to the nearest scrolling ancestor:
-   in the wide window that's `.sb-journal-main` itself, in the narrow one
-   (where the column no longer scrolls independently) `.sb-content`, the
-   frame of the entire screen. Same pattern as `.sb-proposal-actions` in
-   inbox.css.
-
-   What matters is the second boundary that `position: sticky` sets just as
-   much: the frame WITHIN which sticking is allowed is the nearest
-   block-forming ancestor — not the whole scroll area. That's why this
-   element is a direct descendant of `.sb-dayentry` (`CoachComposer.tsx`,
-   rendered through `DayEntry`'s `composer` slot) and not part of the
-   "Talk" section (`.sb-coach`): as a descendant of `.sb-coach`, the sticky
-   frame would only have covered its narrow, deeply nested box — with no
-   room to be pulled up to the bottom window edge. */
+/* Composer and stance: the day's last section, in normal flow. "Close the
+   day" no longer renders a copy here (047, D3) — it sits once, next to the
+   facts (`DayEntry.tsx`), so this frame only ever holds the privacy line and
+   the field. */
 .sb-journal-footer {
-  position: sticky;
-  bottom: 0;
-  z-index: 1;
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
   padding-top: var(--space-3);
   padding-bottom: var(--space-2);
-  background: var(--surface-page);
   border-top: 1px solid var(--border-subtle);
-  /* Covers a few pixels above its own edge: when the bar sticks right at
-     the line that ends before it (facts, a line of dialogue), the frame
-     alone isn't enough to fully cover it. */
-  box-shadow: 0 -8px 0 0 var(--surface-page);
-}
-.sb-journal-footer-close {
-  display: flex;
-  justify-content: flex-end;
 }
 
 /* The line above the field: a fact, not a warning. */
@@ -765,25 +748,5 @@
      composer no longer has now that it also explains Esc. */
   .sb-privacy {
     max-width: none;
-  }
-  /* 011/D11: the sticky-at-bottom rule above is a wide-window decision — it
-     anchors the composer to the edge of the detail column so it never slides
-     out of view while the rest of the day scrolls past it. In the narrow
-     window the whole day, composer included, is already one plain scrolling
-     column (011, D7); `position: sticky` here has no scroll space left to
-     hide from, so it instead pins the composer over whatever sits right
-     above it — the mood/energy pickers and the chips, when the day is short.
-     `static` puts it back in normal flow as the column's last section, the
-     same conclusion the old tabbed design already reached for this window
-     width. The box-shadow existed only to paper over the sticky element's own
-     top edge; with nothing stuck there, it would just draw a band across the
-     section above for no reason. */
-  .sb-journal-footer {
-    position: static;
-    box-shadow: none;
-    /* A notch tighter than the wide window's `--space-3`, matching the
-       general narrow-window tightening in this block (`.sb-daylist`,
-       `.sb-dayentry` above). */
-    gap: var(--space-2);
   }
 }

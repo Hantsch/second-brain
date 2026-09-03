@@ -1,7 +1,7 @@
 ---
 sprint: S13
-status: planned # planned | in-progress | done
-branch: # set by /sprint
+status: in-progress # planned | in-progress | done
+branch: sprint/S13
 milestone: M15 — The day is one text field
 ---
 
@@ -18,7 +18,7 @@ to work out which of two buttons ends it or which keypress just sent something.
 
 <!-- Order = the order the build phase works through. Dependent stories go last. -->
 
-- [ ] 047 — The day view reads in the order I write in
+- [x] 047 — The day view reads in the order I write in
 - [ ] 048 — The field I write in is visible, and sends when I say so
 - [ ] 049 — One button closes the day
 

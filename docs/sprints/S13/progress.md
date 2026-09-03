@@ -1,0 +1,21 @@
+- 2026-09-03 15:24 · 047 · D1 the eight sections in the user's order · started
+- 2026-09-03 15:26 · 047 · D1 the eight sections in the user's order · done
+- 2026-09-03 15:26 · 047 · D2 the day's field is always the field · started
+- 2026-09-03 15:47 · 047 · D2 the day's field is always the field · done
+- 2026-09-03 15:47 · 047 · D3 one close action, both layouts · started
+- 2026-09-03 15:52 · 047 · D3 one close action, both layouts · done
+- 2026-09-03 15:52 · 047 · D4 interview, focus and the coach's label · started
+- 2026-09-03 15:56 · 047 · D4 interview, focus and the coach's label · done
+- 2026-09-03 15:56 · 047 · D5 the order and the single button are pinned by tests · started
+- 2026-09-03 16:07 · 047 · D5 the order and the single button are pinned by tests · done
+- 2026-09-03 16:02 · 047 · D6 screenshots · started
+- 2026-09-03 16:12 · 047 · D6 screenshots · done
+- 2026-09-03 16:35 · 047 · review-fix cycle 1 · started
+- 2026-09-03 16:50 · 047 · review-fix cycle 1 · done
+- 2026-09-03 17:05 · 047 · review-fix cycle 1 verification · blocked (opus 529 overload, 8 consecutive dispatch failures)
+- 2026-09-03 17:29 · 047 · review-fix cycle 2 · started
+- 2026-09-03 19:21 · 047 · review-fix cycle 2 verification (resume) · started
+- 2026-09-03 19:21 · 047 · full verify (format/lint/typecheck/test/build) · done, all green
+- 2026-09-03 19:27 · 047 · live smoke (seed+shot) · done, screenshots confirm order
+- 2026-09-03 19:27 · 047 · clean-agent review (story-review-hard) · PASS, no fixes needed
+- 2026-09-03 19:27 · 047 · Done section filled, status: done, moved to done/ · done

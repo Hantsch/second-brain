@@ -53,7 +53,8 @@ export const enJournal = {
   'journal.day.title': 'Day',
   'journal.day.placeholder': 'What happened?',
   'journal.day.write': 'Write the day',
-  'journal.day.edit': 'Edit the day',
+  /* The field's permanent label — it is always editable, so there is no
+     separate "edit the day" trigger any more (047/D2). */
   'journal.day.editLabel': 'Text of the day',
   'journal.day.save': 'Save',
   'journal.day.hint': 'Ctrl+Enter saves, Esc discards',
@@ -80,7 +81,7 @@ export const enJournal = {
   'journal.turn.user': 'Me',
   'journal.turn.assistant': 'Gaston',
   'journal.thinking': 'Thinking',
-  'journal.field.label': 'What is on your mind?',
+  'journal.field.label': 'Talk to the coach',
   'journal.field.placeholder': 'Write it down as it comes.',
   'journal.field.hintSend': 'says it',
   'journal.send': 'Say it',

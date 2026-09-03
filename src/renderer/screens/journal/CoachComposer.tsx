@@ -1,29 +1,19 @@
 /* The field where the day takes shape: privacy line, composer with stance —
- * in the wide window anchored as one block at the bottom edge of the detail
- * column (`position: sticky`, `styles/app/journal.css`), with "close the
- * day" (`footerAction`) right next to it.
+ * the day's last section, in normal flow at the end of the detail column
+ * (`styles/app/journal.css`).
  *
- * A separate component instead of part of `CoachPanel`, for exactly one
- * reason: `position: sticky` only sticks within the box surrounding this
- * element (its nearest block-forming ancestor) — not the whole scroll area.
- * As a descendant of `.sb-coach`, this frame would only have been the
- * narrow remainder of the talk section, deep at the bottom of the page,
- * with no room to move upward. As a direct descendant of `.sb-dayentry`
- * (see `DayEntry.tsx`), the frame is the whole detail column — the field
- * thus reaches the bottom window edge without anyone having to scroll.
+ * A separate component instead of part of `CoachPanel`, and a direct child of
+ * `.sb-dayentry` (see `DayEntry.tsx`): that way the frame spans the whole
+ * detail column and reads as the day's own footer, rather than as the narrow
+ * remainder of the talk section. It used to be `position: sticky` as well,
+ * which is where that placement originally came from; 047/D3 removed the
+ * sticky, since its only job was keeping "close the day" above the window
+ * edge and that button has left this frame. Nothing is pinned any more.
  *
- * In the narrow window (≤ 1200 px) there is no separate tab any more (011,
- * D7 removed it): the whole day, including this composer, flows as one
- * scrolling column, so `footerAction` still stays `undefined` there —
- * "close the day" sits instead next to the facts in `DayEntry.tsx`
- * (`JournalScreen.tsx` decides based on window width where the one button
- * goes; it's never duplicated). The composer doesn't need the sticky frame
- * there either: as the column's last, non-growing element it's always
- * within the window regardless of how long the day gets.
+ * "Close the day" no longer has a copy here (047, D3): it renders exactly
+ * once, next to the facts in `DayEntry.tsx`, regardless of window width.
  */
 
-import type { RefObject } from 'react';
-import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { CoachMode } from '@shared/types';
 import { Icon } from '../../atoms/Icon';
@@ -44,15 +34,6 @@ export interface CoachComposerProps {
   mode: CoachMode;
   onMode: (mode: CoachMode) => void;
   route: CoachRoute;
-  fieldRef?: RefObject<HTMLTextAreaElement | null>;
-  /** "Close the day" — only in the wide window (`JournalScreen.tsx` passes
-      it through there and only there): it sits next to the send button, so
-      both actions concerning the day stand together at the bottom edge of
-      the detail column and never slide below the visible edge (same anchor
-      pattern as the inbox's action bar). In the narrow window the same
-      button instead sits next to the facts in the "Day" tab
-      (`DayEntry.tsx`) — here the spot then stays empty. */
-  footerAction?: ReactNode;
 }
 
 export function CoachComposer({
@@ -64,8 +45,6 @@ export function CoachComposer({
   mode,
   onMode,
   route,
-  fieldRef,
-  footerAction,
 }: CoachComposerProps) {
   const t = useT();
   const navigate = useNavigate();
@@ -116,7 +95,9 @@ export function CoachComposer({
         /* A journal entry is written text, not a one-line question: Enter
            breaks the line like in any editor, Shift+Enter files it. */
         submitKey="shift-enter"
-        fieldRef={fieldRef}
+        /* No `fieldRef` here: 047/D4 moved the screen's one focus target to
+           the day's own field (`DayText`), which is where a fresh day and a
+           closed interview dialog put the cursor now. */
         texts={{
           label: t('journal.field.label'),
           placeholder: t('journal.field.placeholder'),
@@ -131,10 +112,6 @@ export function CoachComposer({
            you're talking to while you type. */
         extra={<CoachModeSwitch value={mode} onChange={onMode} disabled={busy} />}
       />
-
-      {footerAction === undefined ? null : (
-        <div className="sb-journal-footer-close">{footerAction}</div>
-      )}
     </div>
   );
 }

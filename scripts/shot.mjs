@@ -897,17 +897,17 @@ async function shootDayClose(session, shooter, log, skipped) {
   );
   await settle(session.page);
 
-  /* The composer/close-out bar is sticky at the bottom of `.sb-journal-main`
-     (`.sb-journal-footer`, journal.css) — it stays glued to the bottom of
-     whatever window height is given, no matter the scroll position. At the
-     window's normal 900 px it eats so much of the column that the day's own
-     text (the "Verlauf" section built from `EntryStream`, below the facts
-     and the proposal in `DayEntry.tsx`) ends up entirely below the fold —
-     no scroll position shows facts, proposal AND the day's prose together,
-     because the sticky bar always covers the last ~300 px. Taking this one
-     screenshot in a taller window sidesteps that: nothing about the layout
-     changes, there's just enough room above the sticky bar to fit the whole
-     column at once. Restored to the normal height right after. */
+  /* The day's own text, the close proposal and the facts now all sit in one
+     normal-flow column (`.sb-dayentry`, `DayEntry.tsx`) — the composer
+     (`.sb-journal-footer`) lost its `position: sticky` in 047/D3 and is just
+     the column's last section now, not a bar glued to the window's bottom
+     edge. What still doesn't fit at the window's normal 900 px is the column
+     itself: day text, proposal and facts together are taller than that, and
+     a screenshot only captures the viewport, not the full scrollable page
+     (see the `fullPage` note above). Taking this one screenshot in a taller
+     window sidesteps that: nothing about the layout changes, there's just
+     enough room to fit the whole column at once. Restored to the normal
+     height right after. */
   if (open) {
     const needed = await session.page.evaluate(() => {
       const main = document.querySelector('.sb-journal-main');
