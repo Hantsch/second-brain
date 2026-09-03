@@ -59,15 +59,15 @@ export interface DayEntryProps {
       it. Passed straight through to `DayText`'s own `fieldRef`. */
   fieldRef?: RefObject<HTMLTextAreaElement | null>;
   onOpenProject: (slug: string) => void;
-  /** The manual "mark as finished" / "reopen" switch (009, D3/D6) — a plain
-      on/off field on the day, separate from the day close-out below
-      (`closeAction`, which extracts facts and todos via a model or
-      heuristic). Only rendered once the day has a file (`view !== null`):
-      `journal:setClosed` itself refuses to create one, so there is nothing
-      to mark finished on a day that doesn't exist yet. */
+  /** "Reopen" (009, D3/D6; 049, D1) — the one remaining action on the
+      `closed` field, once the manual "mark as finished" switch was folded
+      into the day close-out below (`closeAction`, which extracts facts and
+      todos via a model or heuristic and sets `closed` itself on accept).
+      Only rendered once the day has a file (`view !== null`) and is closed:
+      `journal:setClosed` itself refuses to create a file, so there is
+      nothing to reopen on a day that doesn't exist yet. */
   finish: {
     busy: boolean;
-    onMarkFinished: () => void;
     onReopen: () => void;
   };
   /** "Start interview" (012, D6) — built by the screen, unconditionally as a
@@ -152,17 +152,7 @@ export function DayEntry({
         </div>
         {view === null ? null : (
           <div className="sb-dayentry-actions">
-            {day?.closed === null || day?.closed === undefined ? (
-              <Button
-                variant="secondary"
-                size="sm"
-                icon="circle-check-big"
-                loading={finish.busy}
-                onClick={finish.onMarkFinished}
-              >
-                {t('journal.finish.markFinished')}
-              </Button>
-            ) : (
+            {day?.closed === null || day?.closed === undefined ? null : (
               <Button
                 variant="ghost"
                 size="sm"

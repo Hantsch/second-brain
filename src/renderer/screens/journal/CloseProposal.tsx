@@ -305,7 +305,6 @@ export function CloseProposal({
           variant="secondary"
           icon="check"
           loading={busy}
-          disabled={!writes}
           onClick={() => onApply({ todos: chosen, frontmatter })}
         >
           {t('journal.close.apply')}

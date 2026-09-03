@@ -29,3 +29,17 @@
 - 2026-09-03 19:44 · 048 · D4 both fields visibly fields (tokens only) · done
 - 2026-09-03 19:44 · 048 · D5 pinned keyboard reachability, ask untouched, a11y clean · started
 - 2026-09-03 19:50 · 048 · D5 pinned keyboard reachability, ask untouched, a11y clean · done
+- 2026-09-03 19:56 · 049 · D1 the header offers one action · started
+- 2026-09-03 19:59 · 049 · D1 the header offers one action · done
+- 2026-09-03 19:59 · 049 · D2 the close trigger appears only on an open day · started
+- 2026-09-03 20:01 · 049 · D2 the close trigger appears only on an open day · done
+- 2026-09-03 20:01 · 049 · D3 accepting the proposal closes the day · started
+- 2026-09-03 20:06 · 049 · D3 accepting the proposal closes the day · done
+- 2026-09-03 20:06 · 049 · D4 a day with no text is not a dead end · started
+- 2026-09-03 20:12 · 049 · D4 a day with no text is not a dead end · done
+- 2026-09-03 20:12 · 049 · D5 screenshots · started
+- 2026-09-03 20:14 · 049 · D5 screenshots · done
+- 2026-09-03 20:14 · 049 · full verify (format/lint/typecheck/test/build) · done, all green
+- 2026-09-03 20:15 · 049 · clean-agent review (story-review-hard) · PASS, 2 findings fixed (F1, F3), 1 documented (F2)
+- 2026-09-03 20:33 · 049 · review-fix verification (typecheck/lint/test/build re-run) · done, all green
+- 2026-09-03 20:33 · 049 · Done section filled, status: done, moved to done/ · done

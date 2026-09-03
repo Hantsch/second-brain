@@ -148,7 +148,8 @@ export const deJournal = {
     'Gefunden im Tagestext. Geschrieben ist nichts — du entscheidest, was übernommen wird.',
   'journal.close.empty': 'Im Tagestext steht noch nichts, was sich herausziehen ließe.',
   'journal.close.heuristic': 'Ohne Modell gefunden — Regeln statt Verstehen.',
-  'journal.close.nothing': 'Im Tagestext war nichts zu holen. Der Eintrag bleibt, wie er ist.',
+  'journal.close.nothing':
+    'Im Tagestext war nichts zu holen. „Übernehmen und abschließen“ schließt den Tag trotzdem ab.',
   'journal.close.todos': 'Erkannte Todos',
   'journal.close.waiting': 'Warte-auf',
   'journal.close.waitingInto': 'als Todo mit @wait im Tageseintrag',
@@ -166,13 +167,13 @@ export const deJournal = {
   'journal.close.tags': 'Tags',
   'journal.close.mood': 'Stimmung {label}',
   'journal.close.energy': 'Energie {label}',
-  'journal.close.apply': 'Übernehmen',
+  'journal.close.apply': 'Übernehmen und abschließen',
   'journal.close.discard': 'Verwerfen',
   'journal.close.runAgain': 'Erneut ausführen',
   'journal.close.dueOf': 'Frist für „{text}“',
   'journal.close.done': 'Übernommen in',
   'journal.close.doneMore': 'und {count} weitere',
-  'journal.close.doneNothing': 'Nichts ausgewählt — nichts geschrieben.',
+  'journal.close.doneNothing': 'Nichts Neues geschrieben — der Tag war bereits abgeschlossen.',
 
   // ── Interview (012) ───────────────────────────────────────────────────────
   /* Der Einstieg direkt am Tag (D6) — ein Schlüssel für den Knopf, unabhängig

@@ -138,7 +138,8 @@ export const enJournal = {
     'Found in the text of the day. Nothing is written — you decide what is kept.',
   'journal.close.empty': 'There is nothing in the text of the day to pull out yet.',
   'journal.close.heuristic': 'Found without a model — rules instead of understanding.',
-  'journal.close.nothing': 'Nothing to pull out of the text. The entry stays as it is.',
+  'journal.close.nothing':
+    'Nothing to pull out of the text. "Apply and close" still closes the day.',
   'journal.close.todos': 'Todos found',
   'journal.close.waiting': 'Waiting on',
   'journal.close.waitingInto': 'as a todo with @wait in the day entry',
@@ -156,13 +157,13 @@ export const enJournal = {
   'journal.close.tags': 'Tags',
   'journal.close.mood': 'Mood {label}',
   'journal.close.energy': 'Energy {label}',
-  'journal.close.apply': 'Apply',
+  'journal.close.apply': 'Apply and close',
   'journal.close.discard': 'Discard',
   'journal.close.runAgain': 'Run again',
   'journal.close.dueOf': 'Due date for “{text}”',
   'journal.close.done': 'Applied to',
   'journal.close.doneMore': 'and {count} more',
-  'journal.close.doneNothing': 'Nothing selected — nothing written.',
+  'journal.close.doneNothing': 'Nothing new written — the day was already closed.',
 
   // ── Interview (012) ───────────────────────────────────────────────────────
   /* The entry point on the day itself (D6) — one key, reused for the button

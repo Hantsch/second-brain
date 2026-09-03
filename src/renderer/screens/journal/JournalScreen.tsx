@@ -37,6 +37,7 @@ import { Skeleton } from '../../components/Skeleton';
 import { useT } from '../../i18n';
 import {
   clear as clearProposal,
+  emptySuggestion,
   set as setProposal,
   useCloseProposal,
 } from '../../lib/close-proposal';
@@ -265,9 +266,11 @@ export function JournalScreen() {
     });
   };
 
-  /* The manual "mark as finished" / "reopen" switch (009, D3/D6) — the same
-     hash guard as `foldDay`/`applyClose`: without a loaded day there is
-     nothing to patch, so `expectedHash` is only added once one exists. */
+  /* `journal:setClosed` itself (009, D3/D6) — the same hash guard as
+     `foldDay`/`applyClose`: without a loaded day there is nothing to patch,
+     so `expectedHash` is only added once one exists. 049/D1 removed the
+     manual "mark as finished" switch, so this is only ever called with
+     `false`, from the reopen action. */
   const setClosed = (closed: boolean): void => {
     mutations.setClosed.mutate({
       date,
@@ -285,17 +288,28 @@ export function JournalScreen() {
      same value the request was made for — a day switch mid-run therefore
      files the result under the day it was actually computed for, not under
      whatever day is on screen when it lands.
-     A `null` result means the run found nothing worth proposing; then nothing
-     goes into the store and no panel appears (the old dialog rendered nothing
-     in that case either). A stale error from an earlier apply is reset, so
-     the fresh proposal doesn't inherit it. */
+     A `null` result means the day's file exists but carries no (or blank)
+     text — there was nothing to run extraction on. With the manual header
+     switch gone (049, D1/D2) this trigger is the only way to close such a
+     day, so a silent no-op here would be a dead end: the panel still opens,
+     with `emptySuggestion` standing in for the real find, honestly saying
+     nothing could be pulled out while still letting "apply" close the day
+     (049, D4). A stale error from an earlier apply is reset, so the fresh
+     proposal doesn't inherit it. */
   const closeDay = (): void => {
     setApplied(null);
     mutations.applyClose.reset();
     mutations.close.mutate(date, {
       onSuccess: (result) => {
-        if (result === null) return;
-        setProposal(date, result);
+        if (result !== null) {
+          setProposal(date, result);
+          return;
+        }
+        const path = view.data?.doc.path;
+        /* The trigger is disabled without a loaded day (see `closeAction`
+           below), so this only guards a render that hasn't caught up yet. */
+        if (path === undefined) return;
+        setProposal(date, emptySuggestion(date, path, t('journal.close.empty')));
       },
     });
   };
@@ -369,9 +383,15 @@ export function JournalScreen() {
 
      018, decision 3: while a proposal for the shown day is open, the spot
      goes to the proposal instead. Two triggers for the same run is one too
-     many, and the panel's "run again" is the one with the context. */
+     many, and the panel's "run again" is the one with the context.
+
+     049, D2: the manual header switch that used to be the second way to
+     close a day is gone (D1); this trigger must not become a second one on
+     a day that's already closed. A closed day shows the badge + reopen
+     ghost in the header (`DayEntry.tsx`) instead. */
   const closeAction =
-    proposal !== undefined ? undefined : (
+    proposal !== undefined ||
+    (view.data !== null && view.data !== undefined && view.data.day.closed !== null) ? undefined : (
       <Button
         variant="secondary"
         size="sm"
@@ -543,7 +563,6 @@ export function JournalScreen() {
               onOpenProject={(slug) => void navigate(`/projects?p=${encodeURIComponent(slug)}`)}
               finish={{
                 busy: mutations.setClosed.isPending,
-                onMarkFinished: () => setClosed(true),
                 onReopen: () => setClosed(false),
               }}
               interviewAction={interviewAction}

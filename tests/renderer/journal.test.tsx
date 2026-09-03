@@ -1476,7 +1476,9 @@ describe('Tagebuch: Tagesabschluss', () => {
 
     await userEvent.click(within(panel).getByLabelText('Belege 2025 sortieren'));
     await userEvent.click(within(panel).getByLabelText('Personen'));
-    await userEvent.click(within(panel).getByRole('button', { name: 'Übernehmen' }));
+    await userEvent.click(
+      within(panel).getByRole('button', { name: 'Übernehmen und abschließen' }),
+    );
 
     await waitFor(() => {
       const payload = sb.payloadOf('journal:applyClose') as IpcRequest<'journal:applyClose'>;
@@ -1505,6 +1507,33 @@ describe('Tagebuch: Tagesabschluss', () => {
       }),
     );
     await waitFor(() => expect(screen.queryByText('Übernommen in')).toBeNull());
+  });
+
+  it('setzt nach dem Übernehmen die Marke im Kopf, ohne dass neu geladen werden muss (AC2)', async () => {
+    /* Same pattern as the reopen test: `journal:get` reflects the write the
+       mock just made, so the assertion pins the real invalidate-and-refetch
+       path (mutations.applyClose's onSuccess → qk.journal.day) instead of
+       just trusting it happened. */
+    const state = { view: view() };
+    const { sb, panel } = await openClose({
+      'journal:get': () => state.view,
+      'journal:applyClose': () => {
+        state.view = view({ day: day({ closed: NOW.toISOString() }) });
+        return {
+          written: [DAY_PATH, project.path],
+          undo: [{ path: DAY_PATH, body: doc().body, expectedHash: 'hash-3' }],
+        };
+      },
+    });
+
+    expect(screen.queryByText(/Abgeschlossen am/)).toBeNull();
+    await userEvent.click(
+      within(panel).getByRole('button', { name: 'Übernehmen und abschließen' }),
+    );
+
+    await waitFor(() => expect(sb.payloadOf('journal:applyClose')).toBeTruthy());
+    expect(await screen.findByText(/Abgeschlossen am/)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Tag abschließen' })).toBeNull();
   });
 
   it('Verwerfen nimmt den Vorschlag weg und schreibt nichts', async () => {
@@ -1555,8 +1584,8 @@ describe('Tagebuch: Tagesabschluss', () => {
     expect(sb.payloadsOf('journal:close')).toEqual([{ date: TODAY }, { date: TODAY }]);
   });
 
-  it('sagt vorher, wenn nichts übernommen würde, statt einen Schreibvorgang zu behaupten', async () => {
-    const { panel } = await openClose({
+  it('sagt vorher, wenn nichts zu holen ist — aber der Knopf bleibt aktiv, weil Übernehmen den Tag trotzdem abschließt (049, D3)', async () => {
+    const { sb, panel } = await openClose({
       'journal:close': () => ({
         ...suggestion,
         proposal: { ...suggestion.proposal, todos: [], waitingOn: [] },
@@ -1565,9 +1594,27 @@ describe('Tagebuch: Tagesabschluss', () => {
     });
 
     expect(panel.textContent).toContain('Im Tagestext war nichts zu holen');
-    expect(within(panel).getByRole('button', { name: 'Übernehmen' }).hasAttribute('disabled')).toBe(
-      true,
-    );
+    /* Das war der Sackgassen-Fall: ein leerer Fund durfte den Knopf früher
+       tot schalten, und der Tag konnte nie geschlossen werden. Jetzt bleibt
+       der Knopf aktiv — nur `busy` (laufender Request) deaktiviert ihn. */
+    const applyButton = within(panel).getByRole('button', { name: 'Übernehmen und abschließen' });
+    expect(applyButton.hasAttribute('disabled')).toBe(false);
+
+    await userEvent.click(applyButton);
+
+    await waitFor(() => {
+      const payload = sb.payloadOf('journal:applyClose') as IpcRequest<'journal:applyClose'>;
+      expect(payload.todos).toEqual([]);
+      expect(payload.frontmatter).toEqual({
+        people: [],
+        projects: [],
+        areas: [],
+        mood: null,
+        energy: null,
+        tags: [],
+      });
+      expect(payload.expectedHash).toBe('hash-1');
+    });
   });
 
   it('zeigt den Heuristik-Hinweis, wenn ohne Modell (heuristisch) gefunden wurde', async () => {
@@ -1587,12 +1634,20 @@ describe('Tagebuch: Tagesabschluss', () => {
         routing: { tasks: {}, defaults: {} },
       },
     };
-    const { panel } = await openClose({
+    const { sb, panel } = await openClose({
       'settings:get': () => noModelSettings,
     });
 
     expect(within(panel).getByText('Ohne Modell gefunden — Regeln statt Verstehen.')).toBeTruthy();
     expect(within(panel).getByLabelText('Ladezeiten der Angebotsliste messen')).toBeTruthy();
+
+    /* Der Abschluss selbst braucht kein Modell: der Übernehmen-Weg ist
+       derselbe wie mit einem konfigurierten Provider. */
+    await userEvent.click(
+      within(panel).getByRole('button', { name: 'Übernehmen und abschließen' }),
+    );
+    await waitFor(() => expect(sb.payloadOf('journal:applyClose')).toBeTruthy());
+    expect(await screen.findByText('Übernommen in')).toBeTruthy();
   });
 
   it('ist im Vorschlag frei von A11y-Verstößen', async () => {
@@ -1600,6 +1655,80 @@ describe('Tagebuch: Tagesabschluss', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Tag abschließen' }));
     await screen.findByText(suggestion.proposal.reason);
     await expectNoViolations(container);
+  });
+});
+
+describe('Tagebuch: Tagesabschluss an einem Tag ohne Text (049, D4)', () => {
+  /* `journal:close` returns `null` when the day's file exists but carries no
+     (or blank) text — there is nothing to run extraction on. With the manual
+     header switch gone (049, D1/D2), the "Tag abschließen" trigger is the
+     only way left to close such a day: a silent no-op on `null` would be a
+     dead end. */
+  beforeEach(() => {
+    clearProposal(TODAY);
+    clearProposal(EARLIER);
+  });
+  afterEach(() => {
+    clearProposal(TODAY);
+    clearProposal(EARLIER);
+  });
+
+  it('öffnet den Vorschlag leer statt gar nichts zu tun, und Übernehmen schließt den Tag trotzdem ab', async () => {
+    const { sb } = open({ 'journal:close': () => null });
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Tag abschließen' }));
+
+    const reason = await screen.findByText(
+      'Im Tagestext steht noch nichts, was sich herausziehen ließe.',
+    );
+    const panel = reason.closest('.sb-close-proposal') as HTMLElement;
+    expect(panel).toBeTruthy();
+    /* The "nothing found" line the real, non-null path also shows once the
+       find is empty — honest either way. */
+    expect(
+      within(panel).getByText(
+        'Im Tagestext war nichts zu holen. „Übernehmen und abschließen“ schließt den Tag trotzdem ab.',
+      ),
+    ).toBeTruthy();
+    expect(sb.payloadsOf('journal:applyClose')).toEqual([]);
+
+    const applyButton = within(panel).getByRole('button', { name: 'Übernehmen und abschließen' });
+    expect(applyButton.hasAttribute('disabled')).toBe(false);
+    await userEvent.click(applyButton);
+
+    await waitFor(() => {
+      const payload = sb.payloadOf('journal:applyClose') as IpcRequest<'journal:applyClose'>;
+      expect(payload.todos).toEqual([]);
+      expect(payload.frontmatter).toEqual({
+        people: [],
+        projects: [],
+        areas: [],
+        mood: null,
+        energy: null,
+        tags: [],
+      });
+      expect(payload.expectedHash).toBe('hash-1');
+    });
+  });
+
+  it('bleibt unter dem angeklickten Datum — ein Tageswechsel nimmt den leeren Vorschlag nicht mit', async () => {
+    open({ 'journal:close': () => null, 'journal:list': () => [day(), earlierDay] });
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Tag abschließen' }));
+    await screen.findByText('Im Tagestext steht noch nichts, was sich herausziehen ließe.');
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: `Eintrag vom ${EARLIER} öffnen` }),
+    );
+
+    /* The empty panel that opened for TODAY must not follow onto the other
+       day — the store is keyed by date, and this screen only ever renders
+       the entry for the day currently shown. */
+    expect(
+      screen.queryByText('Im Tagestext steht noch nichts, was sich herausziehen ließe.'),
+    ).toBeNull();
+    /* Nothing was ever proposed for `EARLIER`, so its own trigger is back. */
+    expect(await screen.findByRole('button', { name: 'Tag abschließen' })).toBeTruthy();
   });
 });
 
@@ -2002,21 +2131,23 @@ describe('Tagebuch: Kalender und Liste teilen die Tasten (010, D3)', () => {
   });
 });
 
-describe('Tagebuch: Fertig markieren / wieder öffnen (009, D6)', () => {
+describe('Tagebuch: wieder öffnen (009, D6; 049, D1)', () => {
   /* Same timestamp `journal:setClosed`'s default handler above writes when
      `closed: true` — used here to build the "already closed" view directly,
-     without going through a click first. */
+     without going through a click first. The manual "mark as finished"
+     switch is gone (049, D1): the header offers exactly one action, and it
+     only ever runs the other direction, `closed: false`. */
   const CLOSED_AT = NOW.toISOString();
 
-  it('bietet an einem offenen Tag „Als abgeschlossen markieren" und keine Marke', async () => {
+  it('zeigt an einem offenen Tag weder die Marke noch „Wieder öffnen" und keinen „Als abgeschlossen markieren"-Knopf', async () => {
     open();
 
-    expect(await screen.findByRole('button', { name: 'Als abgeschlossen markieren' })).toBeTruthy();
     expect(screen.queryByText(/Abgeschlossen am/)).toBeNull();
     expect(screen.queryByRole('button', { name: 'Wieder öffnen' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Als abgeschlossen markieren' })).toBeNull();
   });
 
-  it('zeigt an einem abgeschlossenen Tag die Marke mit Datum und „Wieder öffnen" statt des Markieren-Knopfs', async () => {
+  it('zeigt an einem abgeschlossenen Tag die Marke mit Datum und „Wieder öffnen"', async () => {
     open({ 'journal:get': () => view({ day: day({ closed: CLOSED_AT }) }) });
 
     expect(await screen.findByText('Abgeschlossen am 10. Aug. 2026')).toBeTruthy();
@@ -2024,34 +2155,7 @@ describe('Tagebuch: Fertig markieren / wieder öffnen (009, D6)', () => {
     expect(screen.queryByRole('button', { name: 'Als abgeschlossen markieren' })).toBeNull();
   });
 
-  it('markiert per Klick als abgeschlossen, mit dem eingefrorenen Hash, und zeigt danach die Marke', async () => {
-    const state = { view: view() };
-    const { sb } = open({
-      'journal:get': () => state.view,
-      'journal:setClosed': ({ closed }) => {
-        const patched = day({ closed: closed ? CLOSED_AT : null });
-        state.view = view({ day: patched });
-        return patched;
-      },
-    });
-
-    await userEvent.click(
-      await screen.findByRole('button', { name: 'Als abgeschlossen markieren' }),
-    );
-
-    await waitFor(() =>
-      expect(sb.payloadOf('journal:setClosed')).toEqual({
-        date: TODAY,
-        closed: true,
-        expectedHash: 'hash-1',
-      }),
-    );
-    expect(await screen.findByText('Abgeschlossen am 10. Aug. 2026')).toBeTruthy();
-    /* Ohne vollständigen Reload: die Liste links zieht dieselbe Abfrage nach. */
-    expect(await screen.findByRole('button', { name: 'Wieder öffnen' })).toBeTruthy();
-  });
-
-  it('öffnet per Klick wieder, und die Marke verschwindet', async () => {
+  it('öffnet per Klick wieder, mit dem eingefrorenen Hash, und die Marke verschwindet ohne vollständigen Reload', async () => {
     const state = { view: view({ day: day({ closed: CLOSED_AT }) }) };
     const { sb } = open({
       'journal:get': () => state.view,
@@ -2072,21 +2176,27 @@ describe('Tagebuch: Fertig markieren / wieder öffnen (009, D6)', () => {
       }),
     );
     await waitFor(() => expect(screen.queryByText(/Abgeschlossen am/)).toBeNull());
-    expect(await screen.findByRole('button', { name: 'Als abgeschlossen markieren' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Wieder öffnen' })).toBeNull();
   });
 
-  it('meldet einen Konflikt sichtbar, statt still zu scheitern', async () => {
+  it('meldet einen Konflikt beim Wiederöffnen sichtbar, statt still zu scheitern', async () => {
     open({
+      'journal:get': () => view({ day: day({ closed: CLOSED_AT }) }),
       'journal:setClosed': () => {
         throw Object.assign(new Error('Konflikt'), { code: 'conflict' });
       },
     });
 
-    await userEvent.click(
-      await screen.findByRole('button', { name: 'Als abgeschlossen markieren' }),
-    );
+    await userEvent.click(await screen.findByRole('button', { name: 'Wieder öffnen' }));
 
     const alert = await screen.findByRole('alert');
     expect(alert.textContent).toContain('wurde zwischenzeitlich geändert');
+  });
+
+  it('zeigt an einem abgeschlossenen Tag keinen „Tag abschließen"-Auslöser (049, D2)', async () => {
+    open({ 'journal:get': () => view({ day: day({ closed: CLOSED_AT }) }) });
+
+    await screen.findByRole('button', { name: 'Wieder öffnen' });
+    expect(screen.queryByRole('button', { name: 'Tag abschließen' })).toBeNull();
   });
 });

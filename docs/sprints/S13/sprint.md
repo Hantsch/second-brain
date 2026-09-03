@@ -20,7 +20,7 @@ to work out which of two buttons ends it or which keypress just sent something.
 
 - [x] 047 — The day view reads in the order I write in
 - [x] 048 — The field I write in is visible, and sends when I say so
-- [ ] 049 — One button closes the day
+- [x] 049 — One button closes the day
 
 ## Notes
 

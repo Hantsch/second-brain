@@ -927,6 +927,40 @@ async function shootDayClose(session, shooter, log, skipped) {
     skipped.push('Tagesabschluss: der Knopf öffnete keine Karte');
     process.exitCode = 1;
   }
+
+  /* 049, D5: die andere Hälfte desselben Flusses — ein bereits geschlossener
+     Tag zeigt die Abschluss-Auszeichnung und den „Wieder öffnen"-Geist-Knopf
+     statt „Tag abschließen" (049, D1/D2). Gesucht wird jeder Tag mit der
+     Abschluss-Marke `.sb-dayrow-closed` in der Liste, nicht ein fester Offset:
+     welche Tage `scripts/seed/journal.mjs` als `closed: true` seedet (aktuell
+     -7 und -13), ist Sache des Seeds, nicht dieses Skripts — so bleibt die
+     Aufnahme auch stehen, wenn sich die geschlossenen Tage dort verschieben. */
+  const closedRow = session.page
+    .locator('.sb-dayrow', { has: session.page.locator('.sb-dayrow-closed') })
+    .first();
+  const hasClosedDay = await closedRow.waitFor({ state: 'visible', timeout: 4000 }).then(
+    () => true,
+    () => false,
+  );
+  if (!hasClosedDay) {
+    skipped.push('Geschlossener Tag: kein Tag mit Abschluss-Marke stand in der Tagesliste');
+    return;
+  }
+  await closedRow.click();
+  /* Das Erscheinen des „Wieder öffnen"-Knopfs ist zugleich die Wartemarke für
+     die Navigation: er steht erst, wenn der Eintrag des geklickten Tages
+     geladen ist — kein geratenes Timeout. */
+  const reopenButton = session.page.getByRole('button', { name: 'Wieder öffnen' });
+  const reopenShown = await reopenButton.waitFor({ state: 'visible', timeout: 4000 }).then(
+    () => true,
+    () => false,
+  );
+  await settle(session.page);
+  if (reopenShown) {
+    log(`  Geschlossener Tag → ${await shooter.shot('journal-day-closed', session.page)}`);
+  } else {
+    skipped.push('Geschlossener Tag: die Auswahl zeigte keinen „Wieder öffnen"-Knopf');
+  }
 }
 
 /**

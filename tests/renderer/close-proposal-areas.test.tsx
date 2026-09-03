@@ -143,11 +143,11 @@ describe('day close-out: areas row', () => {
     expect(await screen.findByText('Garten')).toBeTruthy();
     expect(screen.queryByText('Kein Bereich ausgewählt.')).toBeNull();
     /* Applying now carries the picked area, and only that one. */
-    await userEvent.click(screen.getByRole('button', { name: 'Übernehmen' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Übernehmen und abschließen' }));
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Übernehmen' }).getAttribute('disabled')).toBe(
-        null,
-      ),
+      expect(
+        screen.getByRole('button', { name: 'Übernehmen und abschließen' }).getAttribute('disabled'),
+      ).toBe(null),
     );
   });
 

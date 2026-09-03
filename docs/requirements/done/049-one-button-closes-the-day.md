@@ -1,7 +1,7 @@
 ---
 id: 049
 title: One button closes the day
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-09-03
 ---
 
@@ -30,22 +30,22 @@ not a main path.
 
 ## Acceptance Criteria
 
-- [ ] The day header no longer offers a second "mark as finished" button as a primary action.
-- [ ] "Tag abschließen" runs the close-out; accepting the proposal marks the day closed in the
+- [x] The day header no longer offers a second "mark as finished" button as a primary action.
+- [x] "Tag abschließen" runs the close-out; accepting the proposal marks the day closed in the
       same write, and the day's badge shows it afterwards without a reload.
-- [ ] Nothing is written before the user accepts (guardrail 2): running the close-out alone does
+- [x] Nothing is written before the user accepts (guardrail 2): running the close-out alone does
       not set `closed`, and discarding the proposal leaves the day exactly as it was — including
       still open.
-- [ ] With no model configured, closing the day still works from the UI, states plainly that no
+- [x] With no model configured, closing the day still works from the UI, states plainly that no
       facts or todos could be extracted, and sets `closed` once the user confirms — no dead end,
       no silent failure.
-- [ ] A closed day can be reopened through the UI, and the story records where that action lives
+- [x] A closed day can be reopened through the UI, and the story records where that action lives
       and why it is not a primary button.
-- [ ] A day that is already closed does not offer a plain second close; the header states it is
+- [x] A day that is already closed does not offer a plain second close; the header states it is
       closed and on what date.
-- [ ] The `journal:setClosed` channel keeps working (it is what reopen uses) and stays covered by
+- [x] The `journal:setClosed` channel keeps working (it is what reopen uses) and stays covered by
       a test; if the manual set-true path becomes unreachable from the UI, that is stated.
-- [ ] `npm run seed && npm run shot` shows the single close action, a proposal, and a closed day's
+- [x] `npm run seed && npm run shot` shows the single close action, a proposal, and a closed day's
       header.
 
 ## Open Questions
@@ -145,7 +145,7 @@ the same story.
 
 ## Deliverables
 
-**D1 — The header offers one action** (AC1, AC5, AC6-badge, AC7)
+**D1 — The header offers one action** (AC1, AC5, AC6-badge, AC7) — done
 Files: `src/renderer/screens/journal/DayEntry.tsx`, `src/renderer/screens/journal/JournalScreen.tsx`,
 `tests/renderer/journal.test.tsx` (rewrite the 009/D6 block, L1596-1680).
 Remove the mark-finished button and the `finish.onMarkFinished` prop; keep the closed badge with its
@@ -155,13 +155,13 @@ is gone. Acceptance: an open day's header has no "Als abgeschlossen markieren"; 
 `journal:setClosed { closed: false, expectedHash }` and the badge disappears without a reload; a
 conflict on reopen is still reported visibly. `tests/main/journal-ipc.test.ts` stays green untouched.
 
-**D2 — The close trigger appears only on an open day** (AC6)
+**D2 — The close trigger appears only on an open day** (AC6) — done
 Files: `src/renderer/screens/journal/JournalScreen.tsx`, `tests/renderer/journal.test.tsx`.
 Mirror the existing `proposal !== undefined` guard at L370. Acceptance: a closed day shows no
 "Tag abschließen" anywhere on the screen; an open day with a file shows it exactly once; a day
 without a file still shows it disabled.
 
-**D3 — Accepting the proposal closes the day** (AC2, AC3, AC4)
+**D3 — Accepting the proposal closes the day** (AC2, AC3, AC4) — done
 Files: `src/renderer/screens/journal/CloseProposal.tsx`, `src/renderer/i18n/de-journal.ts`,
 `src/renderer/i18n/en-journal.ts`, `tests/renderer/journal.test.tsx`.
 Apply is enabled whenever a proposal is open; `writes` keeps driving only the "nothing to pull out"
@@ -172,7 +172,7 @@ Acceptance: running the close-out alone sends no `journal:applyClose` and the da
 frozen `expectedHash` and the badge appears afterwards without a reload; with a heuristic-only
 suggestion (no model) the same path works and the heuristic note is visible.
 
-**D4 — A day with no text is not a dead end** (AC4)
+**D4 — A day with no text is not a dead end** (AC4) — done
 Files: `src/renderer/lib/close-proposal.ts`, `src/renderer/screens/journal/JournalScreen.tsx`,
 `tests/renderer/close-proposal.test.ts`, `tests/renderer/journal.test.tsx`.
 Add `emptySuggestion(date, path, reason)` — empty `todos`, `waitingOn`, `entities` and frontmatter,
@@ -182,7 +182,7 @@ the panel states that nothing could be pulled out, and apply then sends `journal
 `todos: []` and empty frontmatter; the store entry is still keyed by the clicked date, so switching
 days does not carry the empty panel along.
 
-**D5 — Screenshots** (AC8)
+**D5 — Screenshots** (AC8) — done
 Files: `scripts/shot.mjs`.
 Extend `shootDayClose` (L881): keep `journal-close-proposal`, then select a seeded closed day from
 the day list and shoot `journal-day-closed`. Acceptance: `npm run seed && npm run shot` produces
@@ -224,3 +224,47 @@ Run `npm run seed`, then start the app (`npm run dev`, or the `npm run shot` har
    states it is closed and on what date, and offers reopen — not a second close.
 
 ## Done
+
+**Summary.** The header's manual "Als abgeschlossen markieren" switch is gone; "Tag abschließen"
+is now the only way to end a day. The close-out trigger hides once a day is already closed
+(badge + "Wieder öffnen" ghost carry the state instead), the apply button in the proposal is
+never disabled for lack of writes (it always writes `closed` in the same write as before), and a
+text-less day gets an honest empty proposal via `lib/close-proposal.ts`'s new `emptySuggestion`
+instead of the click doing nothing. Screenshots `journal-close-proposal` and `journal-day-closed`
+were extended/added in `scripts/shot.mjs`.
+
+**Decisions (build-time, beyond what refinement already decided):**
+- Fixed a review finding (F3): `journal.close.nothing`'s copy named the button by its old label
+  ("Übernehmen"); corrected to name the actual current label ("Übernehmen und abschließen" /
+  "Apply and close") in both `de-journal.ts` and `en-journal.ts`, with matching test updates.
+- Fixed a review finding (F1, test-coverage gap): added a test in `journal.test.tsx`
+  ("setzt nach dem Übernehmen die Marke im Kopf …") that pins AC2's second half specifically —
+  the badge appearing after *accepting* a proposal, without a reload — since the only existing
+  coverage for that assertion pattern was on the *reopen* path.
+- Left unfixed (review finding F2, low severity): the i18n key `journal.finish.markFinished` in
+  `de-journal.ts`/`en-journal.ts` has no consumer left after D1 removed the button. Consistent
+  with the story's own refinement decision to treat a prop nobody calls as dead code without
+  deleting it outright; the i18n parity test does not care about usage, so it is a harmless
+  leftover, not a functional risk. Not removed here to keep this story's diff scoped to what the
+  acceptance criteria ask for.
+- Also fixed, incidental to D3's copy change: `tests/renderer/close-proposal-areas.test.tsx` (a
+  pre-existing test unrelated to any of D1-D5's file lists) asserted on the old "Übernehmen"
+  button label and went red once D3 relabeled it; updated to the new label. This is the one
+  cross-file ripple the plan did not anticipate — the button's accessible name is shared by every
+  consumer of `CloseProposal.tsx`, including the "areas" picker test.
+
+**Verification:** `npm run format:check` — clean on all files this story touched (the project-wide
+red is 238 pre-existing files, none of them touched here). `npm run typecheck`, `npm run lint`,
+`npm run build` — all green. `npm test` — 3568/3568 passing (251 files). Live smoke
+(`npm run seed && npm run shot`) run during D5 and re-verified structurally after the
+review-fix cycle: `.screenshots/15-journal-close-proposal.png` and
+`.screenshots/16-journal-day-closed.png` produced, no console errors.
+
+**Review:** `story-review-hard` — verdict PASS. All 8 acceptance criteria PASS with file:line
+evidence; both named failure modes (a day becoming unclosable, guardrail 2 breaking silently)
+were checked explicitly and found intact. Two findings were fixed (F1, F3, see Decisions above);
+one (F2) deliberately left as documented; one (F4, `shot.mjs`'s comment quoting) was informational
+only — the reviewer noted it does not violate the guardrail as tested, only as worded, and it
+matches the file's own pre-existing convention.
+
+**Commit message:** `049: one button closes the day`

@@ -8,7 +8,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { JournalCloseSuggestion } from '@shared/ipc';
-import { clear, patch, set, useCloseProposal } from '@renderer/lib/close-proposal';
+import { clear, emptySuggestion, patch, set, useCloseProposal } from '@renderer/lib/close-proposal';
 
 function suggestion(date: string, reason = 'reason'): JournalCloseSuggestion {
   return {
@@ -30,6 +30,29 @@ function suggestion(date: string, reason = 'reason'): JournalCloseSuggestion {
     heuristic: false,
   } as unknown as JournalCloseSuggestion;
 }
+
+describe('close-proposal: emptySuggestion (049, D4)', () => {
+  it('builds a suggestion with every list empty, no frontmatter change and the given reason', () => {
+    const result = emptySuggestion('2026-08-20', 'journal/2026/08/2026-08-20.md', 'nothing found');
+
+    expect(result.date).toBe('2026-08-20');
+    expect(result.path).toBe('journal/2026/08/2026-08-20.md');
+    expect(result.heuristic).toBe(false);
+    expect(result.proposal.heuristic).toBe(false);
+    expect(result.proposal.reason).toBe('nothing found');
+    expect(result.proposal.todos).toEqual([]);
+    expect(result.proposal.waitingOn).toEqual([]);
+    expect(result.proposal.entities).toEqual([]);
+    expect(result.frontmatter).toEqual({
+      people: [],
+      projects: [],
+      areas: [],
+      mood: null,
+      energy: null,
+      tags: [],
+    });
+  });
+});
 
 describe('close-proposal: set / patch / clear / useCloseProposal', () => {
   beforeEach(() => {

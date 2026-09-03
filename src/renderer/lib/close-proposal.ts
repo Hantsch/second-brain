@@ -11,6 +11,7 @@
 
 import { useSyncExternalStore } from 'react';
 import type { JournalCloseSuggestion } from '@shared/ipc';
+import type { FilingAction } from '@shared/types';
 
 /** Edit state, keyed by the todo's index in `suggestion.proposal.todos` plus
  * the waiting-on entries appended after them — the same order `CloseDialog`
@@ -45,6 +46,46 @@ function emit(): void {
 function subscribe(notify: () => void): () => void {
   subscribers.add(notify);
   return () => subscribers.delete(notify);
+}
+
+/**
+ * A suggestion for a day whose file exists but has no (or blank) text —
+ * `journal:close` returns `null` for exactly that case, since there is
+ * nothing to run extraction on. Without this, the "close the day" trigger
+ * would silently do nothing once the manual header switch is gone (049,
+ * D1/D2), a dead end. `emptySuggestion` fills the same panel `set` would
+ * with a real find: every list empty, no frontmatter change, `heuristic:
+ * false` (nothing was even attempted), and `reason` stating that honestly —
+ * `CloseProposal.tsx` renders it exactly like a real result, "apply" still
+ * closes the day via `journal:applyClose` with an empty payload. */
+export function emptySuggestion(
+  date: string,
+  path: string,
+  reason: string,
+): JournalCloseSuggestion {
+  const primary: FilingAction = { target: 'journal', path, section: null, content: '' };
+  return {
+    date,
+    path,
+    proposal: {
+      dumpPath: path,
+      title: date,
+      scope: 'private',
+      tags: [],
+      primary,
+      extras: [],
+      alternatives: [],
+      confidence: 0,
+      reason,
+      todos: [],
+      waitingOn: [],
+      entities: [],
+      heuristic: false,
+      createdAt: new Date().toISOString(),
+    },
+    frontmatter: { people: [], projects: [], areas: [], mood: null, energy: null, tags: [] },
+    heuristic: false,
+  };
 }
 
 /** Replaces the entry for `date` with a fresh suggestion and empty edits. */
