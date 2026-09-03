@@ -134,6 +134,7 @@ export const enScreens = {
   'ask.field.hintSend': 'asks',
   'ask.field.hintBreak': 'adds a line break',
   'ask.field.hintEscape': 'leaves the field',
+  'ask.field.hintNoSubmit': 'only the button files it',
   'ask.action.send': 'Ask',
   'ask.action.cancel': 'Cancel',
   'ask.action.new': 'New question',

@@ -671,12 +671,29 @@ describe('Fragen: Gespräche und Ablegen', () => {
 });
 
 describe('Fragen: Bedienbarkeit', () => {
-  it('schickt mit Enter und macht mit Shift+Enter einen Umbruch', async () => {
+  /* 048 changed `ChatComposer`'s `submitKey` default surface by adding a
+     third mode, `'none'` (used by the journal's coach field, D2/D3 of that
+     story) — the field one writes prose into rather than asks a question in.
+     Ask's own usage never passes `submitKey`, so it still gets the default
+     `'enter'`: this test pins that the new mode is opt-in only, and that
+     Ask's Enter-submits / Shift+Enter-breaks behavior, and its hint naming
+     `Enter` as the key that asks, are both completely unaffected. */
+  it('schickt mit Enter und macht mit Shift+Enter einen Umbruch (048: Fragen bleibt von submitKey="none" unberührt)', async () => {
     const { sb } = open({
       'chat:ask': () => ({ threadId: 'c-2026-08-10-1900-ffff', messageId: 'm-keys' }),
       'chat:thread': () => thread([userMessage('m-keys-q')], 'c-2026-08-10-1900-ffff'),
     });
     const field = await screen.findByLabelText('Deine Frage');
+
+    /* The hint above the field still names `Enter` as the key that asks —
+       exactly what a `submitKey="none"` field (the journal's coach field)
+       must *not* say, since no key submits there any more. */
+    const hint = document
+      .querySelector('#sb-ask-field')
+      ?.closest('.sb-composer')
+      ?.querySelector('.sb-composer-hint');
+    expect(hint?.textContent).toContain('Enter');
+    expect(hint?.textContent).toContain('fragt');
 
     await userEvent.type(field, 'Erste Zeile{Shift>}{Enter}{/Shift}zweite Zeile');
     expect((field as HTMLTextAreaElement).value).toBe('Erste Zeile\nzweite Zeile');

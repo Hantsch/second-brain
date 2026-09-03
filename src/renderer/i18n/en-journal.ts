@@ -57,7 +57,7 @@ export const enJournal = {
      separate "edit the day" trigger any more (047/D2). */
   'journal.day.editLabel': 'Text of the day',
   'journal.day.save': 'Save',
-  'journal.day.hint': 'Ctrl+Enter saves, Esc discards',
+  'journal.day.hint': 'Only "Save" commits the text. Esc leaves the field without discarding.',
   'journal.day.saved': 'Saved.',
   'journal.day.unsaved': 'Not saved.',
   'journal.day.external.title': 'This section changed outside the app',
@@ -83,7 +83,10 @@ export const enJournal = {
   'journal.thinking': 'Thinking',
   'journal.field.label': 'Talk to the coach',
   'journal.field.placeholder': 'Write it down as it comes.',
-  'journal.field.hintSend': 'says it',
+  /* 048/D2: Enter/Shift+Enter/Ctrl+Enter no longer file anything in the coach
+     field — only the button does, and the hint names it instead of claiming
+     a key that no longer fires. */
+  'journal.field.hintNoSubmit': 'Only the "{button}" button files it.',
   'journal.send': 'Say it',
   /* Only for tips/analyse (011, D8): the stance decides whether a model is
      asked at all, and the button says so plainly. */

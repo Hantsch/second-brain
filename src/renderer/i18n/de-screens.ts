@@ -146,6 +146,7 @@ export const deScreens = {
   'ask.field.hintSend': 'fragt',
   'ask.field.hintBreak': 'macht einen Umbruch',
   'ask.field.hintEscape': 'verlässt das Feld',
+  'ask.field.hintNoSubmit': 'Abgelegt wird nur über den Knopf',
   'ask.action.send': 'Frage stellen',
   'ask.action.cancel': 'Abbrechen',
   'ask.action.new': 'Neue Frage',

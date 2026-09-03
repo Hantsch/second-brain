@@ -6,8 +6,10 @@
 
    `submitKey` swaps the two: where the field is a writing field rather than
    a question field (the journal), Enter has to break the line like it does in
-   every editor, and Shift+Enter submits. The hint follows the setting, so
-   what is shown is what happens.
+   every editor, and Shift+Enter submits. `'none'` goes one step further —
+   no Enter combination submits at all, because the field is a text one writes
+   in and only the button files it. The hint follows the setting, so what is
+   shown is what happens.
 
    The two filters (module, scope) are subtle chips, not form fields: they
    are an offer, not a requirement. This screen's one teal focus point is
@@ -62,6 +64,8 @@ export interface ComposerTexts {
   placeholder?: string;
   /** What `Enter` does — shown in the keyboard hint. */
   hintSend?: string;
+  /** Why no key submits — shown in the hint instead of `hintSend` for `'none'`. */
+  hintNoSubmit?: string;
   send?: string;
   cancel?: string;
 }
@@ -89,8 +93,9 @@ export interface ChatComposerProps {
   /** If the callback is missing, the project chip doesn't exist. */
   onProject?: (project: string | null) => void;
   texts?: ComposerTexts;
-  /** Which key submits. `'shift-enter'` frees plain Enter for a line break. */
-  submitKey?: 'enter' | 'shift-enter';
+  /** Which key submits. `'shift-enter'` frees plain Enter for a line break,
+      `'none'` frees every Enter and leaves submitting to the button. */
+  submitKey?: 'enter' | 'shift-enter' | 'none';
   /** Additional controls in this footer, before the button. */
   extra?: ReactNode;
   /** What `Esc` in the field does. Without it the field is only left (see below);
@@ -128,13 +133,15 @@ export function ChatComposer({
   const projectName = projects.find((entry) => entry.slug === project)?.title ?? project;
 
   const onShift = submitKey === 'shift-enter';
+  const noKeySubmit = submitKey === 'none';
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>): void => {
     if (event.key === 'Enter' && !event.altKey) {
       /* Ctrl/Cmd+Enter submits regardless of the setting; otherwise it is
          whichever of Enter / Shift+Enter `submitKey` named. Any other Enter
-         falls through to the textarea and breaks the line. */
-      if (event.ctrlKey || event.metaKey || event.shiftKey === onShift) {
+         falls through to the textarea and breaks the line — and with
+         `'none'`, every Enter does, Ctrl and Cmd included. */
+      if (!noKeySubmit && (event.ctrlKey || event.metaKey || event.shiftKey === onShift)) {
         event.preventDefault();
         onSubmit();
       }
@@ -169,12 +176,19 @@ export function ChatComposer({
           {texts.label ?? t('ask.field.label')}
         </label>
         <p className="sb-composer-hint">
-          <Kbd>{onShift ? 'Shift+Enter' : 'Enter'}</Kbd>
-          <span>{texts.hintSend ?? t('ask.field.hintSend')}</span>
-          <Kbd>{onShift ? 'Enter' : 'Shift+Enter'}</Kbd>
+          {noKeySubmit ? null : (
+            <>
+              <Kbd>{onShift ? 'Shift+Enter' : 'Enter'}</Kbd>
+              <span>{texts.hintSend ?? t('ask.field.hintSend')}</span>
+            </>
+          )}
+          {/* Only `'enter'` spends plain Enter on submitting; in the other two
+              modes Enter is the break, so that is the key named here. */}
+          <Kbd>{submitKey === 'enter' ? 'Shift+Enter' : 'Enter'}</Kbd>
           <span>{t('ask.field.hintBreak')}</span>
           <Kbd>Esc</Kbd>
           <span>{t('ask.field.hintEscape')}</span>
+          {noKeySubmit ? <span>{texts.hintNoSubmit ?? t('ask.field.hintNoSubmit')}</span> : null}
         </p>
       </div>
       <textarea

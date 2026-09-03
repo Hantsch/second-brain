@@ -68,7 +68,7 @@ export const deJournal = {
      eigenen „Tagestext bearbeiten“-Auslöser mehr (047/D2). */
   'journal.day.editLabel': 'Tagestext',
   'journal.day.save': 'Speichern',
-  'journal.day.hint': 'Ctrl+Enter speichert, Esc verwirft',
+  'journal.day.hint': 'Nur „Speichern“ legt ab. Esc verlässt das Feld, ohne zu verwerfen.',
   'journal.day.saved': 'Gespeichert.',
   'journal.day.unsaved': 'Nicht gespeichert.',
   'journal.day.external.title': 'Dieser Abschnitt hat sich außerhalb geändert',
@@ -93,7 +93,10 @@ export const deJournal = {
   'journal.thinking': 'Denkt nach',
   'journal.field.label': 'Mit dem Coach sprechen',
   'journal.field.placeholder': 'Schreib es hin, wie es dir kommt.',
-  'journal.field.hintSend': 'sagt es',
+  /* 048/D2: Enter/Shift+Enter/Ctrl+Enter legen im Coach-Feld nichts mehr ab —
+     nur der Knopf tut es, und der Hinweis nennt ihn beim Namen statt eine
+     Taste zu behaupten, die nichts mehr auslöst. */
+  'journal.field.hintNoSubmit': 'Nur der Knopf „{button}“ legt ab.',
   'journal.send': 'Sagen',
   /* Nur für Tipps/Analysieren (011, D8): die Haltung entscheidet, ob überhaupt
      ein Modell gefragt wird, und der Knopf sagt es geradeheraus. */

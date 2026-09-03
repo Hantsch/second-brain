@@ -662,6 +662,66 @@ describe('Tagebuch: der Tagestext', () => {
     );
   });
 
+  /* 048/D3: das Tagesfeld legt auf keine Enter-Kombination mehr ab — Enter,
+     Shift+Enter und Ctrl+Enter brechen nur die Zeile um, wie in jedem
+     Editor. Nur „Speichern" schreibt, und Esc verlässt das Feld, ohne den
+     Entwurf zu verwerfen (AC7: ein Tastendruck im Tagesfeld speichert
+     nichts). */
+  it('legt im Tagesfeld auf keine Enter-Kombination ab, und Esc verwirft den Entwurf nicht', async () => {
+    const { sb } = open();
+
+    const field = (await screen.findByLabelText('Tagestext')) as HTMLTextAreaElement;
+    await userEvent.clear(field);
+
+    await userEvent.type(field, 'Erste Zeile{Enter}zweite Zeile');
+    expect(field.value).toBe('Erste Zeile\nzweite Zeile');
+    expect(sb.payloadsOf('journal:setDay')).toEqual([]);
+
+    await userEvent.type(field, '{Shift>}{Enter}{/Shift}dritte Zeile');
+    expect(field.value).toBe('Erste Zeile\nzweite Zeile\ndritte Zeile');
+    expect(sb.payloadsOf('journal:setDay')).toEqual([]);
+
+    /* Ctrl+Enter fällt in jsdom nicht auf einen Zeilenumbruch zurück (kein
+       echtes `contenteditable`-Verhalten) — entscheidend ist hier nur, dass
+       kein Speichern ausgelöst wird. */
+    await userEvent.type(field, '{Control>}{Enter}{/Control}vierte Zeile');
+    expect(sb.payloadsOf('journal:setDay')).toEqual([]);
+    const draft = field.value;
+
+    /* Esc lässt das Feld — der Entwurf bleibt stehen, keine Attrappe zum
+       Verwerfen wird angerufen. */
+    field.focus();
+    await userEvent.keyboard('{Escape}');
+    expect(field.value).toBe(draft);
+    expect(field).not.toBe(document.activeElement);
+
+    /* Erst der Knopf legt tatsächlich ab. */
+    await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    await waitFor(() =>
+      expect(sb.payloadOf('journal:setDay')).toMatchObject({ date: TODAY, text: draft }),
+    );
+  });
+
+  /* 048, D5: same reachability requirement as the coach field, for the day's
+     own field — with no Enter combination saving any more (D3), `Tab` from
+     the textarea has to reach "Speichern" without a mouse. With no conflict
+     and no external change open (the default fixture), the button is the
+     very next stop in DOM order — see `DayText.tsx`'s `sb-daytext-foot`. */
+  it('erreicht mit Tab vom Tagesfeld den Speichern-Knopf (048, D5)', async () => {
+    open();
+    const field = await screen.findByLabelText('Tagestext');
+    const save = screen.getByRole('button', { name: 'Speichern' });
+
+    /* Save stays disabled — and out of the tab order — until a draft exists
+       (see `DayText.tsx`'s `disabled={(draft ?? '').trim().length === 0}`). */
+    await userEvent.type(field, ' Noch ein Satz.');
+    field.focus();
+    expect(document.activeElement).toBe(field);
+
+    await userEvent.tab();
+    expect(document.activeElement).toBe(save);
+  });
+
   it('meldet eine fremde Änderung sichtbar, statt sie stillschweigend zu überschreiben', async () => {
     const state = { view: view() };
     const { sb } = open({ 'journal:get': () => state.view });
@@ -708,7 +768,8 @@ describe('Tagebuch: der Tagestext', () => {
 
     const field = (await screen.findByLabelText('Tagestext')) as HTMLTextAreaElement;
     await userEvent.clear(field);
-    await userEvent.type(field, 'Erster Satz.{Control>}{Enter}{/Control}');
+    await userEvent.type(field, 'Erster Satz.');
+    await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
     await waitFor(() =>
       expect(sb.payloadOf('journal:setDay')).toMatchObject({ expectedHash: 'hash-1' }),
     );
@@ -733,7 +794,7 @@ describe('Tagebuch: der Tagestext', () => {
 
     /* Und das nächste Speichern geht mit dem Hash aus der eigenen Antwort raus,
        nicht mit dem eingefrorenen alten — kein Konflikt gegen sich selbst. */
-    await userEvent.type(field, '{Control>}{Enter}{/Control}');
+    await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
     await waitFor(() =>
       expect(sb.payloadsOf('journal:setDay').at(-1)).toEqual({
         date: TODAY,
@@ -760,7 +821,8 @@ describe('Tagebuch: der Tagestext', () => {
 
     const field = (await screen.findByLabelText('Tagestext')) as HTMLTextAreaElement;
     await userEvent.clear(field);
-    await userEvent.type(field, 'Erster Satz.{Control>}{Enter}{/Control}');
+    await userEvent.type(field, 'Erster Satz.');
+    await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
     await waitFor(() =>
       expect(sb.payloadOf('journal:setDay')).toMatchObject({ text: 'Erster Satz.' }),
     );
@@ -782,7 +844,7 @@ describe('Tagebuch: der Tagestext', () => {
 
     /* Das nächste Speichern geht mit dem Hash aus der eigenen Antwort raus:
        der Entwurf sitzt jetzt auf dem gerade Geschriebenen auf. */
-    await userEvent.type(field, '{Control>}{Enter}{/Control}');
+    await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
     await waitFor(() =>
       expect(sb.payloadsOf('journal:setDay').at(-1)).toEqual({
         date: TODAY,
@@ -805,7 +867,8 @@ describe('Tagebuch: der Tagestext', () => {
 
     const field = (await screen.findByLabelText('Tagestext')) as HTMLTextAreaElement;
     await userEvent.clear(field);
-    await userEvent.type(field, 'Eigener Satz.{Control>}{Enter}{/Control}');
+    await userEvent.type(field, 'Eigener Satz.');
+    await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
     await waitFor(() => expect(screen.getByText('Gespeichert.')).toBeTruthy());
     /* Die Abfrage meldet noch den alten Stand, das Feld den eigenen. */
     expect(field.value).toBe('Eigener Satz.');
@@ -824,7 +887,8 @@ describe('Tagebuch: der Tagestext', () => {
 
     /* Und der nächste Schreibvorgang geht mit dem Hash der Datei raus, nicht
        mit dem eingefrorenen eigenen — kein Konflikt gegen ein Gespenst. */
-    await userEvent.type(field, ' Dazu.{Control>}{Enter}{/Control}');
+    await userEvent.type(field, ' Dazu.');
+    await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
     await waitFor(() =>
       expect(sb.payloadsOf('journal:setDay').at(-1)).toMatchObject({
         expectedHash: 'hash-extern',
@@ -841,7 +905,8 @@ describe('Tagebuch: der Tagestext', () => {
 
     const field = (await screen.findByLabelText('Tagestext')) as HTMLTextAreaElement;
     await userEvent.clear(field);
-    await userEvent.type(field, 'Eigener Satz.{Control>}{Enter}{/Control}');
+    await userEvent.type(field, 'Eigener Satz.');
+    await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
     await waitFor(() => expect(screen.getByText('Gespeichert.')).toBeTruthy());
     /* Weiterschreiben auf dem eben Gespeicherten. */
     await userEvent.type(field, ' Weiter.');
@@ -888,9 +953,9 @@ describe('Tagebuch: der Tagestext', () => {
 
 describe('Tagebuch: das Gespräch', () => {
   /* Das Feld ist ein Schreibfeld, kein Fragefeld: Enter bricht die Zeile um wie
-     in jedem Editor, Shift+Enter legt ab. Umgekehrt (wie im Fragen-Screen) hat
-     jeder Absatzwechsel den halben Satz abgeschickt. */
-  it('macht mit Enter einen Umbruch und schickt mit Shift+Enter', async () => {
+     in jedem Editor — und seit 048/D2 legt auch keine Enter-Kombination mehr
+     ab, weder Shift+Enter noch Ctrl+Enter. Nur der Knopf legt ab. */
+  it('bricht mit Enter, Shift+Enter und Ctrl+Enter nur die Zeile um — keine Kombination legt ab', async () => {
     const { sb } = open();
     const field = (await screen.findByLabelText('Mit dem Coach sprechen')) as HTMLTextAreaElement;
 
@@ -898,18 +963,29 @@ describe('Tagebuch: das Gespräch', () => {
     expect(field.value).toBe('Erste Zeile\nzweite Zeile');
     expect(sb.payloadsOf('journal:append')).toEqual([]);
 
-    await userEvent.type(field, '{Shift>}{Enter}{/Shift}');
+    await userEvent.type(field, '{Shift>}{Enter}{/Shift}dritte Zeile');
+    expect(field.value).toBe('Erste Zeile\nzweite Zeile\ndritte Zeile');
+    expect(sb.payloadsOf('journal:append')).toEqual([]);
+
+    /* Ctrl+Enter fällt in jsdom nicht auf einen Zeilenumbruch zurück (kein
+       echtes `contenteditable`-Verhalten) — entscheidend ist hier nur, dass
+       kein Ablegen ausgelöst wird, nicht die genaue Umbruchstelle. */
+    await userEvent.type(field, '{Control>}{Enter}{/Control}vierte Zeile');
+    expect(sb.payloadsOf('journal:append')).toEqual([]);
+    const finalValue = field.value;
+
+    await userEvent.click(screen.getByRole('button', { name: 'Sagen' }));
     await waitFor(() =>
       expect(sb.payloadOf('journal:append')).toEqual({
         date: TODAY,
-        text: 'Erste Zeile\nzweite Zeile',
+        text: finalValue,
       }),
     );
   });
 
-  /* Der Hinweis über dem Feld muss dieselbe Belegung nennen wie die Tasten tun
-     — ein Hinweis, der „Enter sagt es" behauptet, ist schlimmer als keiner. */
-  it('nennt im Hinweis Shift+Enter zum Sagen und Enter für den Umbruch', async () => {
+  /* Der Hinweis über dem Feld darf keine Taste mehr nennen, die ablegt — er
+     nennt stattdessen den Knopf, der es tatsächlich tut (048, D2). */
+  it('nennt im Hinweis den Knopf statt einer Taste, und Enter nur für den Umbruch', async () => {
     open();
     await screen.findByLabelText('Mit dem Coach sprechen');
 
@@ -917,8 +993,36 @@ describe('Tagebuch: das Gespräch', () => {
       .querySelector('#sb-journal-field')
       ?.closest('.sb-composer')
       ?.querySelector('.sb-composer-hint');
-    expect(hint?.textContent).toContain('Shift+Entersagt es');
     expect(hint?.textContent).toContain('Entermacht einen Umbruch');
+    expect(hint?.textContent).toContain('Nur der Knopf „Sagen“ legt ab.');
+    expect(hint?.textContent).not.toContain('Shift+Enter');
+  });
+
+  /* 048, D5: with no key filing any more (D2), the send button must be
+     reachable without a mouse. `submitKey="none"` doesn't reorder the DOM —
+     it only stops the field from swallowing Enter — so plain `Tab` from the
+     field has to land on the stance switch first (the one control between
+     field and button in `CoachComposer.tsx`'s footer) and then on the send
+     button itself, in that DOM order. */
+  it('erreicht mit Tab vom Gesprächsfeld über die Haltungsauswahl den Sagen-Knopf (048, D5)', async () => {
+    open();
+    const field = await screen.findByLabelText('Mit dem Coach sprechen');
+    const send = screen.getByRole('button', { name: 'Sagen' });
+    const stanceButtons = screen.getAllByRole('button', { name: /^Haltung .+ wählen$/ });
+    expect(stanceButtons.length).toBeGreaterThan(0);
+
+    /* The button is disabled — and so out of the tab order — while the field
+       is empty (see `ChatComposer.tsx`); some text makes it a real stop. */
+    await userEvent.type(field, 'Kurzer Satz.');
+    field.focus();
+    expect(document.activeElement).toBe(field);
+
+    for (const stance of stanceButtons) {
+      await userEvent.tab();
+      expect(document.activeElement).toBe(stance);
+    }
+    await userEvent.tab();
+    expect(document.activeElement).toBe(send);
   });
 
   it('schreibt in der Haltung Zuhören nur auf und ruft nie journal:coach', async () => {

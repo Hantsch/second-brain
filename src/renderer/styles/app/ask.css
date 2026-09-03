@@ -383,15 +383,19 @@
 .sb-composer-field {
   width: 100%;
   resize: vertical;
-  padding: 0;
-  border: none;
-  background: transparent;
+  padding: 0 var(--space-3);
+  background: var(--surface-sunken);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
   color: var(--text-heading);
   font-family: var(--font-sans);
   font-size: var(--text-md);
   line-height: var(--leading-relaxed);
   caret-color: var(--accent);
   user-select: text;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
 }
 .sb-composer-field::placeholder {
   color: var(--text-faint);
@@ -399,7 +403,8 @@
 .sb-composer-field:focus,
 .sb-composer-field:focus-visible {
   outline: none;
-  box-shadow: none;
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 .sb-composer-foot {
   display: flex;

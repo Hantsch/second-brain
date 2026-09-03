@@ -54,7 +54,6 @@ import { useEffect, useRef, useState } from 'react';
 import type { KeyboardEvent, ReactNode, RefObject } from 'react';
 import { Button } from '../../atoms/Button';
 import { Card } from '../../atoms/Card';
-import { Kbd } from '../../atoms/Kbd';
 import { ErrorState } from '../../components/ErrorState';
 import { useT } from '../../i18n';
 import { decodeIpcError } from '../../lib/ipc-error';
@@ -224,15 +223,17 @@ export function DayText({
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>): void => {
-    if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
-      event.preventDefault();
-      save(frozen);
-      return;
-    }
+    /* No Enter combination saves any more (048/D3) — Enter, Shift+Enter and
+       Ctrl/Cmd+Enter all fall through to the textarea's own line-break
+       behaviour. Only the "Speichern" button writes the text; discarding a
+       draft is likewise only "Abbrechen", never a keystroke here. */
     if (event.key === 'Escape') {
       event.preventDefault();
       event.stopPropagation();
-      stop();
+      /* Esc leaves the field without discarding — it mirrors ChatComposer's
+         blur pattern (see there): the draft stays exactly as typed, only
+         focus moves off the textarea. */
+      event.currentTarget.blur();
     }
   };
 
@@ -337,7 +338,6 @@ export function DayText({
           <span className="sb-note-line">{t('journal.day.saved')}</span>
         ) : (
           <span className="sb-capture-hint">
-            <Kbd keys={['Ctrl', 'Enter']} />
             <span>{t('journal.day.hint')}</span>
           </span>
         )}

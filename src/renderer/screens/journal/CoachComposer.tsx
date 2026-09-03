@@ -12,6 +12,12 @@
  *
  * "Close the day" no longer has a copy here (047, D3): it renders exactly
  * once, next to the facts in `DayEntry.tsx`, regardless of window width.
+ *
+ * The field only files on the button (048, D2): Enter breaks the line like
+ * in any editor, and Shift+Enter no longer files it either — no keypress
+ * does. That used to be Shift+Enter's job; the hint now names the button
+ * instead of a key, since a hint promising a key that submits nothing would
+ * be worse than none.
  */
 
 import { useNavigate } from 'react-router-dom';
@@ -93,18 +99,23 @@ export function CoachComposer({
         busy={busy}
         fieldId="sb-journal-field"
         /* A journal entry is written text, not a one-line question: Enter
-           breaks the line like in any editor, Shift+Enter files it. */
-        submitKey="shift-enter"
+           breaks the line like in any editor, and no Enter combination files
+           it either (048, D2) — only the button does. */
+        submitKey="none"
         /* No `fieldRef` here: 047/D4 moved the screen's one focus target to
            the day's own field (`DayText`), which is where a fresh day and a
            closed interview dialog put the cursor now. */
         texts={{
           label: t('journal.field.label'),
           placeholder: t('journal.field.placeholder'),
-          hintSend: t('journal.field.hintSend'),
           /* The stance choice *is* the request (011, D8): listen only ever
              files what's written, so its label stays the plain "say it" it
-             always was; tips/analyse ask a model, and the button says so. */
+             always was; tips/analyse ask a model, and the button says so.
+             The hint names the same button, so it states what actually
+             happens rather than promising a key. */
+          hintNoSubmit: t('journal.field.hintNoSubmit', {
+            button: mode === 'listen' ? t('journal.send') : t('journal.sendAsk'),
+          }),
           send: mode === 'listen' ? t('journal.send') : t('journal.sendAsk'),
           cancel: t('common.cancel'),
         }}

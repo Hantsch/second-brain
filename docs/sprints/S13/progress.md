@@ -19,3 +19,13 @@
 - 2026-09-03 19:27 · 047 · live smoke (seed+shot) · done, screenshots confirm order
 - 2026-09-03 19:27 · 047 · clean-agent review (story-review-hard) · PASS, no fixes needed
 - 2026-09-03 19:27 · 047 · Done section filled, status: done, moved to done/ · done
+- 2026-09-03 19:28 · 048 · D1 ChatComposer learns nothing submits · started
+- 2026-09-03 19:31 · 048 · D1 ChatComposer learns nothing submits · done
+- 2026-09-03 19:31 · 048 · D2 coach field files only on button · started
+- 2026-09-03 19:37 · 048 · D2 coach field files only on button · done
+- 2026-09-03 19:37 · 048 · D3 day text field only saves on button · started
+- 2026-09-03 19:42 · 048 · D3 day text field only saves on button · done
+- 2026-09-03 19:42 · 048 · D4 both fields visibly fields (tokens only) · started
+- 2026-09-03 19:44 · 048 · D4 both fields visibly fields (tokens only) · done
+- 2026-09-03 19:44 · 048 · D5 pinned keyboard reachability, ask untouched, a11y clean · started
+- 2026-09-03 19:50 · 048 · D5 pinned keyboard reachability, ask untouched, a11y clean · done

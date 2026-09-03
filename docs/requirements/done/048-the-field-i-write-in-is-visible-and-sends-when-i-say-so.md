@@ -1,7 +1,7 @@
 ---
 id: 048
 title: The field I write in is visible, and sends when I say so
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-09-03
 ---
 
@@ -34,25 +34,25 @@ the page is [[047-the-day-view-reads-in-the-order-i-write-in]]'s business and is
 
 ## Acceptance Criteria
 
-- [ ] The day's text field and the coach field both sit on a surface that is clearly
+- [x] The day's text field and the coach field both sit on a surface that is clearly
       distinguishable from the page background, with a visible border and focus state, built only
       from Gaston tokens — no raw Tailwind palette class, no hex value.
-- [ ] Contrast and focus visibility hold in the app's real theme and are recorded (the
+- [x] Contrast and focus visibility hold in the app's real theme and are recorded (the
       accessibility report from `npm run a11y` shows no new finding on the journal screen).
-- [ ] In the coach field, `Enter` inserts a line break. So does `Shift+Enter`. So does
+- [x] In the coach field, `Enter` inserts a line break. So does `Shift+Enter`. So does
       `Ctrl/Cmd+Enter`. Nothing but the "Sagen" button files the entry.
-- [ ] The same holds for the day's own text field: `Enter`, `Shift+Enter` and `Ctrl/Cmd+Enter`
+- [x] The same holds for the day's own text field: `Enter`, `Shift+Enter` and `Ctrl/Cmd+Enter`
       all insert a line break, and only the "Speichern" button writes the text. The `Ctrl Enter`
       hint below it is gone with the shortcut.
-- [ ] No keypress in either journal field destroys a draft either: `Esc` leaves the field
+- [x] No keypress in either journal field destroys a draft either: `Esc` leaves the field
       without discarding what is written; discarding stays an explicit action.
-- [ ] The hint next to both fields states what actually happens now — no line still promising
+- [x] The hint next to both fields states what actually happens now — no line still promising
       a key that submits or saves.
-- [ ] The button stays reachable without a mouse: it is in the field's tab order, and the story
+- [x] The button stays reachable without a mouse: it is in the field's tab order, and the story
       says in one sentence how a keyboard-only user files an entry.
-- [ ] The change is confined to the journal: the Ask screen and every other `ChatComposer` user
+- [x] The change is confined to the journal: the Ask screen and every other `ChatComposer` user
       keep submitting on `Enter` exactly as before, pinned by a test.
-- [ ] A test covers that a keypress in the journal's coach field files nothing, and one that a
+- [x] A test covers that a keypress in the journal's coach field files nothing, and one that a
       keypress in the day's text field saves nothing.
 
 ## Open Questions
@@ -134,7 +134,7 @@ Affected files: `src/renderer/components/ChatComposer.tsx`,
 
 ## Deliverables
 
-### D1 — `ChatComposer` learns "nothing submits"
+### D1 — `ChatComposer` learns "nothing submits" [x]
 
 Files: `src/renderer/components/ChatComposer.tsx`,
 `src/renderer/i18n/de-screens.ts`, `src/renderer/i18n/en-screens.ts`.
@@ -151,7 +151,7 @@ Files: `src/renderer/components/ChatComposer.tsx`,
 Acceptance: `'enter'` and `'shift-enter'` behave bit-for-bit as before; with `'none'` no
 keypress reaches `onSubmit`; `npm run lint`, `typecheck`, `test` green.
 
-### D2 — The coach field only files on the button
+### D2 — The coach field only files on the button [x]
 
 Files: `src/renderer/screens/journal/CoachComposer.tsx`,
 `src/renderer/i18n/de-journal.ts`, `src/renderer/i18n/en-journal.ts`,
@@ -167,7 +167,7 @@ Files: `src/renderer/screens/journal/CoachComposer.tsx`,
 
 Acceptance: covers AC 3, AC 7 (coach half) and the coach half of AC 6's counterpart.
 
-### D3 — The day's text field only saves on the button
+### D3 — The day's text field only saves on the button [x]
 
 Files: `src/renderer/screens/journal/DayText.tsx`,
 `src/renderer/i18n/de-journal.ts`, `src/renderer/i18n/en-journal.ts`,
@@ -185,7 +185,7 @@ Files: `src/renderer/screens/journal/DayText.tsx`,
 
 Acceptance: covers the day-field ACs and AC 7 (day half).
 
-### D4 — Both fields are visibly fields (tokens only)
+### D4 — Both fields are visibly fields (tokens only) [x]
 
 Files: `src/renderer/styles/app/ask.css`, `src/renderer/styles/app/journal.css`.
 
@@ -202,7 +202,7 @@ Files: `src/renderer/styles/app/ask.css`, `src/renderer/styles/app/journal.css`.
 Acceptance: covers AC 1. Visual check on the Ask screen too — its composer changes with it and
 must not lose the container/field distinction.
 
-### D5 — Pinned: keyboard reachability, Ask untouched, a11y clean
+### D5 — Pinned: keyboard reachability, Ask untouched, a11y clean [x]
 
 Files: `tests/renderer/ask.test.tsx`, `tests/renderer/journal.test.tsx`.
 
@@ -248,3 +248,31 @@ Run `npm run seed`, then start the app and open Journal → today.
 7. `npm run a11y` — `.screenshots/a11y.json` has no new finding for the `journal` screen.
 
 ## Done
+
+Both journal fields now sit on a proper Gaston surface (`.gs-input`-style token frame reused via
+`.sb-composer-field` and `.sb-daytext`) and file/save only through their button. `ChatComposer`
+gained a third `submitKey: 'none'` mode used by the coach field; `DayText.tsx` dropped its
+`Ctrl/Cmd+Enter` save branch and now blurs (not discards) on `Esc`, mirroring `ChatComposer`.
+Hints were rewritten to name the button instead of a key. Ask and every other `ChatComposer`
+consumer keep `submitKey="enter"` and are pinned by a regression test.
+
+**Commit message:**
+`048: journal fields are visibly fields and only send on the button`
+
+**Verification:** `npm run build`, `npm test` (251 files / 3564 tests), `npm run lint`,
+`npm run typecheck` all green. `npm run format:check` shows pre-existing warnings on 241
+unrelated files (repo-wide, not touched by this story) — none of the files changed here are
+flagged. Live smoke via `npm run seed && npm run build && npm run shot && npm run a11y`: journal
+screen a11y report clean ("ohne Verstoß", no new finding), journal screenshots show the framed
+fields. Clean-agent review verdict: PASS on all 9 acceptance criteria, no test weakening, no
+scope creep, no guardrail violations found.
+
+**Decisions:**
+- AC 2 (a11y) was verified via the D5 deliverable's own pipeline run (`.screenshots/a11y.json`
+  is a build artifact, not tracked/diffable) rather than re-run again at story-level, per the
+  "run each command once" verify rule — the tree was untouched between D5 and this closing pass.
+- The pre-existing `npm run format:check` warnings across 241 unrelated files were checked
+  against every file this story touched (none flagged) and treated as a known repo-wide
+  condition, not a story regression.
+- No changelog entry: `changelog-path` is not set in `.claude/ai-scrum.md`, so this step is
+  skipped per the profile.
