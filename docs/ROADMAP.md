@@ -1,7 +1,7 @@
 # Roadmap
 
 **The** one source of status and planning: where we stand, what comes next, what is not planned
-at all yet. As of: 2026-09-02.
+at all yet. As of: 2026-09-03.
 
 Rules (so this document does not drift):
 
@@ -673,9 +673,9 @@ already finds journal entries naming a project.
 
 Sprints:
 
-- [sprints/S12/sprint.md](sprints/S12/sprint.md) — a project gathers itself (044, 045, 046),
-  `done` (built 2026-09-02; [review](sprints/S12/review.md),
-  [testplan](sprints/S12/testplan.md); live acceptance pending)
+- [sprints/done/S12/sprint.md](sprints/done/S12/sprint.md) — a project gathers itself (044, 045, 046),
+  `done` (built 2026-09-02; [review](sprints/done/S12/review.md),
+  [testplan](sprints/done/S12/testplan.md); live acceptance pending)
 
 Decisions taken at the cut (2026-09-02, user):
 
@@ -711,11 +711,64 @@ Gaps/notes:
 
 ---
 
+### M15 — The day is one text field — planned
+
+No concept behind it: the milestone comes from the user's own feedback after really using the
+journal (2026-09-03). The journal's capability is complete — day text, mood/energy, interview,
+close-out, facts, coaching stream — but the day view does not read in the order a day is written,
+two buttons both claim to end the day, a keypress can file an entry mid-thought, and the field
+that should carry the writing does not look like a field. Nothing here adds capability; all of it
+makes the capability that exists usable.
+
+Ten feedback points, cut into three groups:
+
+- **S13 (first part, cut 2026-09-03):** the section order the user named (047), the fields'
+  visibility plus click-only filing (048), and one close action instead of two (049).
+- **Second part (stories cut after S13's review):** re-indexing a day that was added to after it
+  was closed ("Tag nochmal indizieren"), correcting the close summary instead of only deselecting
+  items, and a date picker that zooms out to years and then months
+  ([MonthCalendar.tsx](../src/renderer/components/MonthCalendar.tsx) pages months only today).
+- **Off the plan** (see Open / unprioritised): the medication tracker and the data-import merge
+  rule.
+
+Sprints:
+
+- [sprints/S13/sprint.md](sprints/S13/sprint.md) — the day is one text field (047, 048, 049),
+  `planned`
+
+Decisions taken at the cut (2026-09-03, user):
+
+- **The day's own text field becomes the primary input; the coach composer stays.** It moves below
+  the history and is labelled as talking to the coach. The radical variant (drop the composer from
+  the day view) was offered and rejected — no capability is removed to simplify.
+- **One close action.** "Tag abschliessen" analyses, proposes, and marks the day closed on accept;
+  the separate manual "mark as finished" switch stops being a primary path. Reopening stays
+  possible as a correction.
+- **The medication tracker is postponed** until the idea is riper — no story, no concept yet.
+- **The data-import merge rule has no story yet:** the import it refers to does not exist in the
+  code at all, so the source (old journal files? another app's export?) has to be named before a
+  merge-not-overwrite rule can be cut. The rule itself is agreed: an existing day is added to,
+  never replaced.
+
+Gaps/notes:
+
+- **Cut while eight milestones are still "built, acceptance pending"** (M4, M6, M9, M10, M11, M12,
+  M13, M14). Unlike the M14 cut, this milestone is itself a correction round from real use — the
+  feedback it comes from _is_ a partial live acceptance of the journal. It does not reduce the
+  pending set for the other screens.
+- Three stories in a row edit the same handful of files under
+  `src/renderer/screens/journal/`. Sequential build only, and the S08 git-safety rule for build
+  agents (no unscoped `git restore`/`git clean`) matters more here than usual.
+
+---
+
 ## Open / unprioritised
 
-| Topic                                                         | State                                                                                                                                                                                                                                                                                                              | Next step                                                                                                                                                                                                                            |
-| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Topic                                                         | State                                                                                                                                                                                                                                                                                                                                                                                       | Next step                                                                                                                                         |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Condensed layer (module level)                                | Concept written 2026-08-18: [concepts/condensed-layer.md](concepts/condensed-layer.md). The **area** level was built in M12 (S10, done 2026-09-02, acceptance pending); the **project** level was built as M14 (S12, done 2026-09-02, acceptance pending). The **module** level — CND-2, CND-17 (agent-session citation), CND-35/36 (retiring the ingest's overview append) — is still open | Own `/roadmap plan` for the module level. The concept's §7 reversal trigger was evaluated at M14's refine and did not flip (see M14's Gaps/notes) |
-| MCP interface for projects, knowledge and the condensed layer | Named as an outlook in [concepts/condensed-layer.md](concepts/condensed-layer.md) §14, deliberately without requirements                                                                                                                                                                                           | Own `/ai-scrum:concept` once the condensed artifacts exist                                                                                                                                                                           |
-| German docs migrated to English                               | Decided in `.claude/ai-scrum.md`; only `docs/MODULE-SCHEMA.md` is still German now — and story 023 pinned it `eol=lf` and byte-exact against `MODULE_SCHEMA_TEMPLATE`, so migrating it means changing code too                                                                                                     | Own story once it stops being cosmetic                                                                                                                                                                                               |
-| Phase 2                                                       | Not defined                                                                                                                                                                                                                                                                                                        | Cut after phase 1 has been used                                                                                                                                                                                                      |
+| MCP interface for projects, knowledge and the condensed layer | Named as an outlook in [concepts/condensed-layer.md](concepts/condensed-layer.md) §14, deliberately without requirements                                                                                                                                                                                                                                                                    | Own `/ai-scrum:concept` once the condensed artifacts exist                                                                                        |
+| German docs migrated to English                               | Decided in `.claude/ai-scrum.md`; only `docs/MODULE-SCHEMA.md` is still German now — and story 023 pinned it `eol=lf` and byte-exact against `MODULE_SCHEMA_TEMPLATE`, so migrating it means changing code too                                                                                                                                                                              | Own story once it stops being cosmetic                                                                                                            |
+| Medication tracker                                            | Named in the user's journal feedback (2026-09-03) and postponed at the M15 cut by the user: the idea is not ripe enough to cut. Open shape questions: preparations, dose, schedule, adherence, correlation with mood/energy, own screen or a day section                                                                                                                                    | Own `/ai-scrum:concept` once the user wants it — no story until then                                                                              |
+| Data import merges into an existing day                       | Rule agreed at the M15 cut (2026-09-03): an import must add to a day that already has content, never replace it. But no import path exists in the code, so the story has no subject yet                                                                                                                                                                                                     | Name the source (old journal files, another app's export, a folder of Markdown), then cut one story with the merge rule as its acceptance         |
+| Phase 2                                                       | Not defined                                                                                                                                                                                                                                                                                                                                                                                 | Cut after phase 1 has been used                                                                                                                   |
