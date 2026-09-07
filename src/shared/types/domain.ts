@@ -251,7 +251,21 @@ export interface LooseEnd {
   quote: string;
   /** What was announced, in the sentence's own words. Empty when the sentence names nothing. */
   subject: string;
-  /** The calendar day the sentence pointed at — before today, or it is no loose end. */
+  /**
+   * The calendar day the sentence pointed at. Before today for a `LooseEnd` —
+   * the day has come and gone; today or later for an `UpcomingMention`, which is
+   * the same record before that day arrives.
+   */
   refDate: string;
   origin: LooseEndOrigin;
 }
+
+/**
+ * A mention of a coming day, before it arrives (070) — the same shape as a
+ * `LooseEnd`, distinguished only by `refDate` lying today or later.
+ *
+ * An alias, not a type of its own: on the day after the one it points at the
+ * very same record continues as a loose end, with the same id. A second
+ * interface would suggest two things where there is one.
+ */
+export type UpcomingMention = LooseEnd;

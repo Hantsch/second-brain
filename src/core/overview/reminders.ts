@@ -2,13 +2,14 @@
  * „Was muss ich noch tun, bis wann, und auf wen warte ich?" — Teil zwei der drei
  * Fragen, als Liste von Erinnerungen.
  *
- * Fuenf Quellen, jede mit einem eigenen `source`, damit die Oberflaeche sagen kann,
+ * Sechs Quellen, jede mit einem eigenen `source`, damit die Oberflaeche sagen kann,
  * **warum** etwas mahnt:
  *   `todo-due`          eine Checkbox mit Frist (`@due:`, ersatzweise `@needed:`)
  *   `project-deadline`  die harte Frist eines Projekts
  *   `waiting-overdue`   eine Antwort, die ueberfaellig ist
  *   `stale-project`     ein Projekt ohne Spur, das noch laeuft
  *   `loose-end`         eine Ankuendigung im Tagebuch, deren Tag vorbei ist (020 D1)
+ *   `upcoming-mention`  dieselbe Ankuendigung, bevor ihr Tag kommt (070 D2)
  *
  * Zwei Grundsaetze:
  * - **Nichts erfinden.** Ohne Datum keine Frist. `waiting-overdue` erscheint nur,
@@ -24,7 +25,7 @@ import { daysBetween } from '@core/index/dates';
 import { deriveJournalDays } from '@core/index/journal';
 import { scopeFromPath } from '@core/index/todos';
 import type { IndexedDoc } from '@core/index/types';
-import { findLooseEnds } from '@core/journal';
+import { findLooseEnds, findUpcomingMentions } from '@core/journal';
 import type { LooseEndDay, LooseEndTodo } from '@core/journal';
 import { sha256 } from '@core/vault/hash';
 import { isoDay } from '@core/vault/paths';
@@ -264,6 +265,44 @@ function fromLooseEnds(
   }));
 }
 
+/**
+ * Erinnerungen aus kommenden Erwaehnungen (070, D2): eine Ankuendigung im
+ * Tagebuch, deren Tag noch bevorsteht. Die andere Haelfte derselben Regel wie
+ * `fromLooseEnds`, im selben Fenster gespiegelt — `findUpcomingMentions` traegt
+ * die Erkennung, hier wird nur abgebildet.
+ *
+ * Die Kennung ist bewusst dieselbe Formel wie bei `fromLooseEnds` —
+ * `idFor('loose-end', mention.id)`, nicht `idFor('upcoming-mention', ...)` —
+ * weil `mention.id` bereits `looseEndId(day, quote)` ist (D1) und auf beiden
+ * Seiten des Uebergangs identisch bleibt: dieselbe Ankuendigung traegt eine
+ * Erinnerung frueher als kommende Erwaehnung und einen Tag spaeter als loses
+ * Ende, ohne die Kennung zu wechseln — sonst wuerde ein Ruhen den Uebergang
+ * nicht ueberleben.
+ *
+ * `urgency` ist immer `'upcoming'`, nie `'today'`/`'overdue'` — die Sache ist
+ * noch nicht faellig, nur schon sichtbar. `DaySummary`s „heute faellig" und
+ * `DeadlinesTile`s Quellenfilter fragen ohnehin nicht nach `upcoming-mention`.
+ */
+function fromUpcomingMentions(
+  days: readonly LooseEndDay[],
+  todos: readonly LooseEndTodo[],
+  today: string,
+  horizon: number,
+): Reminder[] {
+  return findUpcomingMentions(days, todos, today, horizon).map((mention) => ({
+    id: idFor('loose-end', mention.id),
+    source: 'upcoming-mention',
+    urgency: 'upcoming',
+    title: mention.subject.length > 0 ? mention.subject : mention.quote,
+    date: mention.refDate,
+    daysOut: daysBetween(today, mention.refDate) ?? 0,
+    scope: scopeFromPath(mention.path) ?? 'private',
+    path: mention.path,
+    project: null,
+    who: null,
+  }));
+}
+
 /** Ruht diese Erinnerung noch? `until` ist der Tag, ab dem sie wieder mahnt. */
 function snoozed(
   id: string,
@@ -303,6 +342,12 @@ export function reminders(
       looseEndDaysOf(index.index().docs),
       todos.map((todo) => ({ text: todo.text, due: todo.due })),
       day,
+    ),
+    ...fromUpcomingMentions(
+      looseEndDaysOf(index.index().docs),
+      todos.map((todo) => ({ text: todo.text, due: todo.due })),
+      day,
+      deadlineHorizonDays,
     ),
   ].filter((reminder) => !snoozed(reminder.id, day, snoozes));
 

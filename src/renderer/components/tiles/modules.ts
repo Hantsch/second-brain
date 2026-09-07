@@ -78,4 +78,9 @@ export const MODULE_META: Record<DashboardModuleId, ModuleMeta> = {
     purposeKey: 'module.loose-ends.purpose',
     icon: 'link',
   },
+  'upcoming-mentions': {
+    nameKey: 'module.upcoming-mentions.name',
+    purposeKey: 'module.upcoming-mentions.purpose',
+    icon: 'eye',
+  },
 };

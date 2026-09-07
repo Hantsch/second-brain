@@ -24,4 +24,8 @@ export const deJournalCalendar = {
   /* 010/D4: der Tag ist vorbei, hat eine Datei, aber `closed` ist noch
      `null` — nie für heute (siehe `isDayOpen`). */
   'journal.calendar.unfinished': 'Tag noch nicht abgeschlossen',
+  /* 070/D4: eine zukünftige Erwähnung verweist auf diesen Tag — wird an den
+     barrierefreien Namen der Zelle angehängt (`journal.calendar.open`/
+     `journal.calendar.future`), nicht als Ersatz dafür. */
+  'journal.calendar.upcomingMention': 'Eine zukünftige Erwähnung verweist hierher',
 } as const;

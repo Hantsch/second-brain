@@ -1,7 +1,7 @@
 ---
 id: 070
 title: A future mention becomes visible before its day arrives
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-09-07
 ---
 
@@ -25,14 +25,14 @@ the retrospective case; this adds the missing forward-looking half.
 
 ## Acceptance Criteria
 
-- [ ] **AC1** — After writing a sentence that names a concrete future day or event, an "upcoming"
+- [x] **AC1** — After writing a sentence that names a concrete future day or event, an "upcoming"
       item becomes visible on both surfaces decided in refine — a dedicated dashboard tile and a
       badge on the calendar day the mention points to — naming the mention and the day it points to,
       before that day arrives.
-- [ ] **AC2** — Once the target day is reached, the same item continues into the existing loose-end
+- [x] **AC2** — Once the target day is reached, the same item continues into the existing loose-end
       lifecycle (open if unaddressed, resolved once a later entry addresses it) rather than existing
       as a second, disconnected mechanism.
-- [ ] **AC3** — The baseline detection works with no model configured, reusing the existing
+- [x] **AC3** — The baseline detection works with no model configured, reusing the existing
       heuristic date/forward-reference machinery (`findDates`/`isForward`); a model-augmented pass
       may extend it the same way it already does for the retrospective case, but is not required for
       the feature to work.
@@ -131,43 +131,43 @@ Order: 1 → 2 → 3, then 4 and 5 independently, 6 last (needs both surfaces).
 
 ## Deliverables
 
-- **D1 — The forward scan, two windows.** Parameterize the window of the candidate enumeration in
-  `src/core/journal/loose-ends.ts`, add `src/core/journal/upcoming-mentions.ts` and its export in
-  `src/core/journal/index.ts`, plus the `UpcomingMention` alias in `src/shared/types/domain.ts`.
-  Mirror: `findLooseEnds` in the same file. Acceptance: `tests/core/journal/loose-ends.test.ts` and
-  `loose-ends-llm.test.ts` pass untouched; new `tests/core/journal/upcoming-mentions.test.ts` covers
-  a dated announcement found without a model, the target-day-inclusive boundary against
-  `findLooseEnds`, the horizon cut-off, the `settledCheck` subtraction, and id equality with the
-  loose end the same sentence becomes a day later. Fixtures: `tests/core/journal/fixtures.ts`.
-- **D2 — Upcoming mentions become reminders.** `fromUpcomingMentions()` in
-  `src/core/overview/reminders.ts`, `'upcoming-mention'` in `ReminderSource`
-  (`src/shared/types/overview.ts`). Mirror: `fromLooseEnds` in the same file. Acceptance: new cases
-  in `tests/core/overview/reminders.test.ts` — a mention for a coming day appears as
-  `source: 'upcoming-mention'` with `urgency: 'upcoming'` and its target day as `date`; the same
-  mention one day later appears as `source: 'loose-end'` **with the same id**; the two never appear
-  at once; a mention beyond `deadlineHorizonDays` does not appear at all.
-- **D3 — The dashboard tile.** `src/renderer/components/tiles/UpcomingMentionsTile.tsx`, the module
-  id in `src/shared/types/overview.ts` (three lists), registration in
-  `src/renderer/screens/dashboard/tiles.tsx`, strings in `src/renderer/i18n/en-dashboard.ts` and
-  `de-dashboard.ts`, the module count in `tests/main/dashboard-ipc.test.ts`. Mirror:
-  `LooseEndsTile.tsx`. Acceptance: new cases in `tests/renderer/dashboard.test.tsx` (with
-  `dashboard-fixtures.ts`) — the tile lists a mention with its target day and links to the
-  announcing day, and shows its empty state when there is none; `tests/renderer/i18n.test.ts`
-  (de/en key parity) stays green.
-- **D4 — The calendar badge.** `src/renderer/lib/month-calendar.ts`,
-  `src/renderer/components/MonthCalendar.tsx`, `src/renderer/styles/app/journal-calendar.css`,
-  `src/renderer/i18n/en-journal-calendar.ts` + `de-journal-calendar.ts`,
-  `src/renderer/screens/journal/JournalScreen.tsx`. Mirror: the `unfinished` flag end to end, from
-  `monthCells` to `.sb-monthcal-unfinished`. Acceptance: new cases in
-  `tests/renderer/journal-calendar.test.tsx` — the day a mention points to carries the marker and
-  names it in the cell's accessible name, a future day without a file carries it too, a padding cell
-  never does.
-- **D5 — The flow, through the real app.** `tests/e2e/upcoming-mention.spec.ts` (mirror:
-  `tests/e2e/journal-close.spec.ts`, fixtures `tests/e2e/fixtures/vault.ts`). Acceptance: on the
-  no-model demo vault, typing a sentence with an explicit future date into `#sb-day-field` and
-  saving it makes (a) the badge appear on that calendar day and (b) the row appear in the
-  upcoming-mentions tile on the dashboard — with no model configured and no network call
-  (`withoutKeyEnv`, `noNetworkCalls`).
+- [x] **D1 — The forward scan, two windows.** Parameterize the window of the candidate enumeration in
+      `src/core/journal/loose-ends.ts`, add `src/core/journal/upcoming-mentions.ts` and its export in
+      `src/core/journal/index.ts`, plus the `UpcomingMention` alias in `src/shared/types/domain.ts`.
+      Mirror: `findLooseEnds` in the same file. Acceptance: `tests/core/journal/loose-ends.test.ts` and
+      `loose-ends-llm.test.ts` pass untouched; new `tests/core/journal/upcoming-mentions.test.ts` covers
+      a dated announcement found without a model, the target-day-inclusive boundary against
+      `findLooseEnds`, the horizon cut-off, the `settledCheck` subtraction, and id equality with the
+      loose end the same sentence becomes a day later. Fixtures: `tests/core/journal/fixtures.ts`.
+- [x] **D2 — Upcoming mentions become reminders.** `fromUpcomingMentions()` in
+      `src/core/overview/reminders.ts`, `'upcoming-mention'` in `ReminderSource`
+      (`src/shared/types/overview.ts`). Mirror: `fromLooseEnds` in the same file. Acceptance: new cases
+      in `tests/core/overview/reminders.test.ts` — a mention for a coming day appears as
+      `source: 'upcoming-mention'` with `urgency: 'upcoming'` and its target day as `date`; the same
+      mention one day later appears as `source: 'loose-end'` **with the same id**; the two never appear
+      at once; a mention beyond `deadlineHorizonDays` does not appear at all.
+- [x] **D3 — The dashboard tile.** `src/renderer/components/tiles/UpcomingMentionsTile.tsx`, the module
+      id in `src/shared/types/overview.ts` (three lists), registration in
+      `src/renderer/screens/dashboard/tiles.tsx`, strings in `src/renderer/i18n/en-dashboard.ts` and
+      `de-dashboard.ts`, the module count in `tests/main/dashboard-ipc.test.ts`. Mirror:
+      `LooseEndsTile.tsx`. Acceptance: new cases in `tests/renderer/dashboard.test.tsx` (with
+      `dashboard-fixtures.ts`) — the tile lists a mention with its target day and links to the
+      announcing day, and shows its empty state when there is none; `tests/renderer/i18n.test.ts`
+      (de/en key parity) stays green.
+- [x] **D4 — The calendar badge.** `src/renderer/lib/month-calendar.ts`,
+      `src/renderer/components/MonthCalendar.tsx`, `src/renderer/styles/app/journal-calendar.css`,
+      `src/renderer/i18n/en-journal-calendar.ts` + `de-journal-calendar.ts`,
+      `src/renderer/screens/journal/JournalScreen.tsx`. Mirror: the `unfinished` flag end to end, from
+      `monthCells` to `.sb-monthcal-unfinished`. Acceptance: new cases in
+      `tests/renderer/journal-calendar.test.tsx` — the day a mention points to carries the marker and
+      names it in the cell's accessible name, a future day without a file carries it too, a padding cell
+      never does.
+- [x] **D5 — The flow, through the real app.** `tests/e2e/upcoming-mention.spec.ts` (mirror:
+      `tests/e2e/journal-close.spec.ts`, fixtures `tests/e2e/fixtures/vault.ts`). Acceptance: on the
+      no-model demo vault, typing a sentence with an explicit future date into `#sb-day-field` and
+      saving it makes (a) the badge appear on that calendar day and (b) the row appear in the
+      upcoming-mentions tile on the dashboard — with no model configured and no network call
+      (`withoutKeyEnv`, `noNetworkCalls`).
 
 ## Model Hints
 
@@ -192,4 +192,72 @@ Order: 1 → 2 → 3, then 4 and 5 independently, 6 last (needs both surfaces).
   configured model, so the no-model case is proven on the real surface as well
 
 Coverage gate: AC1 → D5 (e2e, real surface), AC2 → D2 + D1, AC3 → D1 (plus D5's no-model run).
+No manual residue.
+
+## Done
+
+Built the forward-looking half of loose-end detection: a day's own text naming a concrete future
+day or event now becomes an "upcoming mention" reminder immediately, visible as a dashboard tile
+and a calendar badge, and hands over into the existing loose-end lifecycle once its day arrives —
+same id across the boundary, so a broken hand-off would be caught by the id-equality tests, not
+just by the tile/badge disappearing silently.
+
+Commit message: `070: a future mention becomes visible before its day arrives`
+
+### Decisions
+
+- D1's window split uses two predicates (`AnnouncementWindow.scans`/`.accepts`) rather than one
+  `inWindow(day, candidate, today)` function as originally sketched in the Plan: a future-dated day
+  file would still yield candidates that satisfy a single forward-window predicate, so the "future
+  day files are not scanned" rule needs its own day-level guard, separate from the candidate-level
+  date window. This keeps `findLooseEnds`'s existing fast path byte-identical rather than relying on
+  the candidate window happening to be unsatisfiable for future-dated days.
+- Ordering for `findUpcomingMentions` results (unspecified in the plan): sorted by `refDate`
+  (nearest target day first), then `day`, then `line` — covered by a dedicated test.
+  `findLooseEnds`'s own `day`/`line` ordering is untouched.
+- The reminder id for an `'upcoming-mention'` reminder reuses `idFor('loose-end', mention.id)`
+  (not a new `'upcoming-mention'` id namespace), because `mention.id` from D1 is already
+  `looseEndId(day, quote)` — identical to what the same sentence produces as a loose end one day
+  later. This is what makes AC2's "same item continues" literal and lets a snooze (once it becomes
+  a loose end) survive the handover.
+- D3 needed one file beyond the plan's list: `src/renderer/components/tiles/modules.ts`, to add a
+  `MODULE_META` entry for the new `'upcoming-mentions'` module id — required for
+  `Record<DashboardModuleId, …>` exhaustiveness, not a scope addition.
+- D5 needed one file beyond the plan's list: `scripts/seed/internal.mjs`. Its hardcoded
+  `DASHBOARD_TILES` list (a deliberate duplicate of `DEFAULT_DASHBOARD_TILES`, per the seed script's
+  own comment) had drifted out of sync in two ways: missing `'upcoming-mentions'` (this story's
+  addition) and, pre-existingly, missing `'loose-ends'` (added by story 020, never back-ported to
+  the seed list). Without the fix, no demo/e2e vault would ever show the new tile, making the e2e
+  acceptance test unreachable. Both entries now mirror `DEFAULT_DASHBOARD_TILES` again.
+
+### Verification
+
+- `npm run build` — green.
+- `npm test` — 256 files / 3637 tests passed, including all pre-existing `loose-ends.test.ts` and
+  `loose-ends-llm.test.ts` cases unchanged.
+- `npm run lint` — clean.
+- `npm run typecheck` — clean.
+- `npm run format:check` — clean for every file this story touched (initially red on the story file
+  itself after manual checkbox edits; fixed with `prettier --write`). 238 files remain red
+  repo-wide, all pre-existing and unrelated to this story (none touched by any of D1-D5).
+- `npx playwright test tests/e2e/upcoming-mention.spec.ts` — 1 passed.
+- Clean-agent review (default tier): **PASS**, no correctness bugs, no weakened/deleted tests, no
+  guardrail violations. One scope-note (the seed-script fix above also repaired a second,
+  pre-existing drift) — judged harmless and left as-is, not a blocker.
+
+**AC → test mapping, as verified:**
+
+- AC1 → e2e `tests/e2e/upcoming-mention.spec.ts` › "a sentence about a coming day shows up as
+  upcoming on the dashboard and on the calendar day it points to" — passed; reviewer confirmed the
+  badge, its accessible-name suffix, and the dashboard tile row all assert against the real
+  production wiring (`JournalScreen.tsx` → `useReminders()` → `MonthCalendar`/`UpcomingMentionsTile`).
+- AC2 → unit `tests/core/overview/reminders.test.ts` (same-id case) + unit
+  `tests/core/journal/upcoming-mentions.test.ts` (target-day-inclusive boundary) — both passed;
+  reviewer verified the id formula is literally identical across the boundary
+  (`idFor('loose-end', mention.id)` / `idFor('loose-end', looseEnd.id)`, same `looseEndId` source),
+  not just similar.
+- AC3 → unit `tests/core/journal/upcoming-mentions.test.ts` › no-model detection — passed; reviewer
+  confirmed `upcoming-mentions.ts` imports nothing LLM-related. Plus the e2e spec runs the same path
+  on the harness's no-model, no-network vault.
+
 No manual residue.

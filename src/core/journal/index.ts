@@ -16,6 +16,9 @@
  *   `loose-ends-llm` die optionale Modellstufe darauf (`modelLooseEnds`): findet,
  *               was die Regel nicht sieht, und verwirft jedes Zitat, das nicht
  *               wortwoertlich in der genannten Tagesdatei steht
+ *   `upcoming-mentions` the forward-looking half of the same rule
+ *               (`findUpcomingMentions`, 070): the same scan with the opposite
+ *               date window — a coming day that has been named, before it arrives
  *   `interview` Fragebogen als Starthilfe (012): `planInterview` bestimmt, was
  *               von den fuenf festen Themen an einem Tag noch offen ist,
  *               `recordAnswer` schreibt eine beantwortete Frage als Paar
@@ -72,15 +75,13 @@ export {
   sentencesOf,
   subjectTerms,
   type Announcement,
+  type AnnouncementWindow,
   type LooseEndDay,
   type LooseEndResolution,
   type LooseEndTodo,
 } from './loose-ends';
-export {
-  dayLooseEnds,
-  type DayLooseEnd,
-  type DayLooseEndResolution,
-} from './loose-end-resolution';
+export { findUpcomingMentions } from './upcoming-mentions';
+export { dayLooseEnds, type DayLooseEnd, type DayLooseEndResolution } from './loose-end-resolution';
 export {
   MAX_LOOSE_END_DAYS,
   MAX_LOOSE_END_QUOTE_CHARS,

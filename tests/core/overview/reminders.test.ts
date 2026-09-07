@@ -282,6 +282,59 @@ describe('reminders — lose Enden (020, D7)', () => {
   });
 });
 
+describe('reminders — kommende Erwähnungen (070, D2)', () => {
+  /* Angekündigt am day(-1) für day(0) — „morgen" von gestern aus gesehen ist
+     heute, die Konstellation, die `findUpcomingMentions` als Übergabe testet. */
+  const announced = () =>
+    journalDoc(-1, { body: ['## Tag', '', 'Morgen bin ich beim Notar.', ''].join('\n') });
+
+  it('zeigt eine kommende Erwähnung als `upcoming-mention`, mit dem Zieltag als Datum', () => {
+    const index = indexFrom([announced()]);
+    const list = reminders(index, LIMITS, TODAY).filter(
+      (entry) => entry.source === 'upcoming-mention',
+    );
+    expect(list).toHaveLength(1);
+    expect(list[0]).toMatchObject({
+      source: 'upcoming-mention',
+      urgency: 'upcoming',
+      date: day(0),
+    });
+  });
+
+  it('wird einen Tag nach dem Zieltag zum losen Ende, mit derselben Kennung', () => {
+    const index = indexFrom([announced()]);
+    const before = reminders(index, LIMITS, TODAY).find(
+      (entry) => entry.source === 'upcoming-mention',
+    )!;
+
+    const after = reminders(index, LIMITS, day(1)).find((entry) => entry.source === 'loose-end')!;
+
+    expect(after).toBeDefined();
+    expect(after.id).toBe(before.id);
+  });
+
+  it('erscheint nie an beiden Quellen gleichzeitig', () => {
+    const index = indexFrom([announced()]);
+
+    const heute = reminders(index, LIMITS, TODAY);
+    expect(heute.some((entry) => entry.source === 'upcoming-mention')).toBe(true);
+    expect(heute.some((entry) => entry.source === 'loose-end')).toBe(false);
+
+    const morgen = reminders(index, LIMITS, day(1));
+    expect(morgen.some((entry) => entry.source === 'loose-end')).toBe(true);
+    expect(morgen.some((entry) => entry.source === 'upcoming-mention')).toBe(false);
+  });
+
+  it('bleibt jenseits von `deadlineHorizonDays` ganz aus', () => {
+    const farAway = indexFrom([
+      journalDoc(0, { body: ['## Tag', '', `Am ${day(20)} ist der Notartermin.`, ''].join('\n') }),
+    ]);
+    expect(
+      reminders(farAway, LIMITS, TODAY).filter((entry) => entry.source === 'upcoming-mention'),
+    ).toEqual([]);
+  });
+});
+
 describe('reminders — Reihenfolge, IDs und Ruhen', () => {
   const index = indexFrom([
     projectDoc({

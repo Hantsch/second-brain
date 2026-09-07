@@ -11,7 +11,7 @@
 
 import { IndexService } from '@core/index/service';
 import { formatAnswer, journalTitle } from '@core/journal';
-import type { CloseDayDeps, CoachDeps } from '@core/journal';
+import type { CloseDayDeps, CoachDeps, LooseEndDay } from '@core/journal';
 import type { LlmGateway } from '@core/llm';
 import { MemoryVaultStore } from '@core/vault/memory-store';
 import { fixtureVaultFiles } from '../../fixtures';
@@ -74,6 +74,24 @@ export function journalFile(date: string, tag: string, entry: JournalEntryInput 
     lines.push('## Gespräch', '', entry.dialogue.trim(), '');
   }
   return `${lines.join('\n')}`;
+}
+
+/**
+ * 1-based file line of the first body line, as `IndexedDoc.bodyLine` reports it
+ * for a day file `journalFile()` writes.
+ */
+export const LOOSE_END_BODY_LINE = 8;
+
+/**
+ * A day as the announcement rules read it (`findLooseEnds`,
+ * `findUpcomingMentions`): date, path, body. Only the two fields those rules
+ * touch, so a test does not have to fake a whole `JournalDay`.
+ */
+export function looseEndDay(date: string, ...lines: string[]): LooseEndDay {
+  return {
+    day: { date, path: journalPathOf(date) },
+    doc: { body: ['## Tag', '', ...lines, ''].join('\n'), bodyLine: LOOSE_END_BODY_LINE },
+  };
 }
 
 export interface JournalFixture {

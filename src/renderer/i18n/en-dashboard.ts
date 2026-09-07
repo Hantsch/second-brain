@@ -81,6 +81,8 @@ export const enDashboard = {
   'module.loose-ends.name': 'Loose ends',
   'module.loose-ends.purpose':
     'Announcements from the journal whose day has passed with no follow-up.',
+  'module.upcoming-mentions.name': 'Upcoming mentions',
+  'module.upcoming-mentions.purpose': 'Announcements from the journal whose day is still ahead.',
 
   // ── Tiles ────────────────────────────────────────────────────────────────
   'tile.more': '{count} more',
@@ -189,4 +191,11 @@ export const enDashboard = {
   'tile.looseEnds.for': 'for {date}',
   'tile.looseEnds.snooze': 'Snooze “{title}”',
   'tile.looseEnds.open': 'Open the journal entry of {date}',
+
+  /* 070 D3: the other half of the same window as loose ends — visible before
+     the day arrives, read-only (no snooze: nothing to quiet down yet). */
+  'tile.upcomingMentions.empty': 'No upcoming mention. Nothing has been announced yet.',
+  'tile.upcomingMentions.announced': 'Announced on {date}',
+  'tile.upcomingMentions.for': 'for {date}',
+  'tile.upcomingMentions.open': 'Open the journal entry of {date}',
 } as const;

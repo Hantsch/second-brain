@@ -12,3 +12,14 @@
 - 2026-09-07 13:48 · 069 · D3 wire it up: contract plus main · done
 - 2026-09-07 13:48 · 069 · D4 renderer: resolved row plus acceptance flow · started
 - 2026-09-07 14:04 · 069 · D4 renderer: resolved row plus acceptance flow · done
+- 2026-09-07 14:17 · 070 · D1 forward scan, two windows · started
+- 2026-09-07 14:26 · 070 · D1 forward scan, two windows · done
+- 2026-09-07 14:26 · 070 · D2 upcoming mentions become reminders · started
+- 2026-09-07 14:28 · 070 · D2 upcoming mentions become reminders · done
+- 2026-09-07 14:28 · 070 · D3 dashboard tile · started
+- 2026-09-07 14:28 · 070 · D4 calendar badge · started
+- 2026-09-07 14:33 · 070 · D3 dashboard tile · done
+- 2026-09-07 14:33 · 070 · D4 calendar badge · done
+- 2026-09-07 14:33 · 070 · D5 e2e flow test · started
+- 2026-09-07 14:48 · 070 · D5 e2e flow test · done
+- 2026-09-07 14:55 · 070 · story done, moved to done/ · done

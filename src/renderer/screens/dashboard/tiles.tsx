@@ -24,6 +24,7 @@ import { QuickCaptureTile } from '../../components/tiles/QuickCaptureTile';
 import { RecentWorkTile } from '../../components/tiles/RecentWorkTile';
 import { StaleProjectsTile } from '../../components/tiles/StaleProjectsTile';
 import { TodosTile } from '../../components/tiles/TodosTile';
+import { UpcomingMentionsTile } from '../../components/tiles/UpcomingMentionsTile';
 import { WaitingOnTile } from '../../components/tiles/WaitingOnTile';
 
 const TodosWork = memo(() => <TodosTile scope="work" />);
@@ -46,6 +47,7 @@ const TILES: Record<DashboardModuleId, ComponentType> = {
   'claude-sessions': memo(ClaudeSessionsTile),
   gardener: memo(GardenerTile),
   'loose-ends': memo(LooseEndsTile),
+  'upcoming-mentions': memo(UpcomingMentionsTile),
 };
 
 export function renderTile(id: DashboardModuleId): React.JSX.Element {

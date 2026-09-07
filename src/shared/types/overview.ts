@@ -18,7 +18,8 @@ export type DashboardModuleId =
   | 'gardener'
   | 'claude-sessions'
   | 'active-projects'
-  | 'loose-ends';
+  | 'loose-ends'
+  | 'upcoming-mentions';
 
 /**
  * The same set at runtime. Both main and renderer need it: main uses it to
@@ -40,6 +41,7 @@ export const DASHBOARD_MODULES: readonly DashboardModuleId[] = [
   'claude-sessions',
   'gardener',
   'loose-ends',
+  'upcoming-mentions',
 ];
 
 export type ModuleSize = 'sm' | 'md' | 'lg' | 'xl';
@@ -63,12 +65,13 @@ export interface DashboardLayout {
 }
 
 /**
- * The starting layout: **signal first.** Five modules are visible: the three
+ * The starting layout: **signal first.** Six modules are visible: the three
  * questions from CLAUDE.md (what's due, what's being waited on, what was last
- * worked on, the open todos of the work sphere) — and the maintenance health
- * score. It lives here and not in `main/settings-defaults` because the
- * renderer needs it too: "reset layout" must produce the same order as a
- * fresh vault.
+ * worked on, the open todos of the work sphere), the maintenance health
+ * score, and upcoming mentions (070 D3) — a future announcement is a signal
+ * on the same footing as a deadline, not a thing to dig for. It lives here
+ * and not in `main/settings-defaults` because the renderer needs it too:
+ * "reset layout" must produce the same order as a fresh vault.
  *
  * Nine modules start hidden, and for a reason: **space is the scarce
  * resource.** The default grid must stay within 1152×720 across two screens
@@ -90,7 +93,7 @@ export interface DashboardLayout {
  * anyway (reminders cover both spheres), and the full list is one checkbox in
  * the picker or one click in the projects screen away.
  *
- * Hidden doesn't mean gone: all fourteen appear in the picker ("modules"),
+ * Hidden doesn't mean gone: all fifteen appear in the picker ("modules"),
  * with a checkbox and immediate effect. Each module appears exactly once.
  */
 export const DEFAULT_DASHBOARD_TILES: readonly DashboardTile[] = [
@@ -99,6 +102,7 @@ export const DEFAULT_DASHBOARD_TILES: readonly DashboardTile[] = [
   { id: 'recent-work', size: 'xl' },
   { id: 'todos-work', size: 'md' },
   { id: 'gardener', size: 'sm' },
+  { id: 'upcoming-mentions', size: 'sm' },
   { id: 'todos-private', size: 'md', hidden: true },
   { id: 'active-projects', size: 'xl', hidden: true },
   { id: 'inbox', size: 'sm', hidden: true },
@@ -112,7 +116,12 @@ export const DEFAULT_DASHBOARD_TILES: readonly DashboardTile[] = [
 
 /** What triggers a reminder. */
 export type ReminderSource =
-  'todo-due' | 'project-deadline' | 'waiting-overdue' | 'stale-project' | 'loose-end';
+  | 'todo-due'
+  | 'project-deadline'
+  | 'waiting-overdue'
+  | 'stale-project'
+  | 'loose-end'
+  | 'upcoming-mention';
 
 /**
  * `open` is distinct from `overdue`: a loose end is an announcement whose day

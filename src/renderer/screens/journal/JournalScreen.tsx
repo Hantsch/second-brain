@@ -46,6 +46,7 @@ import { setOpenOnly, useOpenOnly } from '../../lib/journal-filter';
 import { countOpenDays } from '../../lib/journal-open';
 import { clearStream, useLlmStream } from '../../lib/llm-stream';
 import { monthOf } from '../../lib/month-calendar';
+import { useReminders } from '../../lib/queries/dashboard';
 import { useJournalDays, useProjects } from '../../lib/queries/data';
 import {
   useCoachRoute,
@@ -178,6 +179,20 @@ export function JournalScreen() {
   );
   const dates = useMemo(() => selectableDates(rows), [rows]);
   const openCount = useMemo(() => countOpenDays(days.data ?? [], today), [days.data, today]);
+  /* 070, D4: the calendar badge. `Reminder.date` for an `upcoming-mention`
+     reminder is already the day the mention points AT (`refDate`), set by
+     `fromUpcomingMentions()` — this screen only has to filter and collect the
+     dates, `MonthCalendar`/`monthCells` do the rest. */
+  const reminders = useReminders();
+  const upcomingMentions = useMemo(
+    () =>
+      new Set(
+        (reminders.data ?? [])
+          .filter((reminder) => reminder.source === 'upcoming-mention')
+          .map((reminder) => reminder.date),
+      ),
+    [reminders.data],
+  );
   const stream = useLlmStream(pending?.messageId ?? null);
   const listRows = useRef(new Map<string, HTMLButtonElement>());
   const field = useRef<HTMLTextAreaElement>(null);
@@ -452,6 +467,7 @@ export function JournalScreen() {
             onSelect={(next) => select(next)}
             month={month}
             onMonth={setMonth}
+            upcoming={upcomingMentions}
             collapsed={calendarCollapsed}
             onToggleCollapse={() => {
               setCalendarCollapsed((previous) => {

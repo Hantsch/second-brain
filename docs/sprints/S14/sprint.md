@@ -21,7 +21,7 @@ itself and points at the way out, instead of going silent.
 
 - [x] 068 — Adding to a closed day reopens it
 - [x] 069 — A day shows how its own loose ends were answered
-- [ ] 070 — A future mention becomes visible before its day arrives
+- [x] 070 — A future mention becomes visible before its day arrives
 - [ ] 067 — A sensitive task's recommendation explains a dead end
 
 ## Notes

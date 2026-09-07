@@ -56,8 +56,10 @@ import { RecentWorkTile } from '@renderer/components/tiles/RecentWorkTile';
 import { StaleProjectsTile } from '@renderer/components/tiles/StaleProjectsTile';
 import { TodosTile } from '@renderer/components/tiles/TodosTile';
 import { ToastHost } from '@renderer/components/ToastHost';
+import { UpcomingMentionsTile } from '@renderer/components/tiles/UpcomingMentionsTile';
 import { WaitingOnTile } from '@renderer/components/tiles/WaitingOnTile';
 import { setLanguage } from '@renderer/i18n';
+import { formatDate } from '@renderer/lib/format';
 import { clearToasts } from '@renderer/lib/toast';
 import type { SbBridge } from '@renderer/lib/bridge';
 import {
@@ -292,7 +294,7 @@ describe('Anordnung als Rechnung', () => {
   it('deckt mit der Startanordnung jedes Modul genau einmal ab', () => {
     const ids = DEFAULT_DASHBOARD_TILES.map((tile) => tile.id);
     expect(new Set(ids).size).toBe(ids.length);
-    expect(ids).toHaveLength(14);
+    expect(ids).toHaveLength(15);
   });
 
   it('zählt die Zielposition zeilenweise: über dem Zeiger kommt vorher', () => {
@@ -1233,6 +1235,49 @@ describe('Lose Enden — Link nur, wenn der Tag feststeht', () => {
     /* Ein Klick auf den Text tut nichts — kein `?d=` mit leerem Wert. */
     await userEvent.click(label);
     expect(screen.getByTestId('location').textContent).toBe('/');
+  });
+});
+
+// ── Kommende Erwähnungen: sichtbar, bevor der Tag kommt (Story 070, D3) ─────
+
+describe('Kommende Erwähnungen', () => {
+  const mention: Reminder = {
+    id: 'loose-end:kommend',
+    source: 'upcoming-mention',
+    urgency: 'upcoming',
+    title: 'Zahnarzttermin',
+    date: day(4),
+    daysOut: 4,
+    scope: 'private',
+    path: `journal/${day(-1).slice(0, 4)}/${day(-1).slice(5, 7)}/${day(-1)}.md`,
+    project: null,
+    who: null,
+  };
+
+  it('nennt Zieltag und springt zum Tageseintrag der Ankündigung', async () => {
+    mount({ extra: { 'reminders:list': () => [mention] } });
+    wrap(
+      <>
+        <UpcomingMentionsTile />
+        <Location />
+      </>,
+    );
+
+    expect(await screen.findByText(`für ${formatDate(day(4), 'de')}`)).toBeTruthy();
+
+    const opener = screen.getByText('Zahnarzttermin');
+    expect(opener.tagName).toBe('BUTTON');
+
+    await userEvent.click(opener);
+    expect(screen.getByTestId('location').textContent).toBe(`/journal?d=${day(-1)}`);
+  });
+
+  it('zeigt den Leerzustand, solange nichts angekündigt ist', async () => {
+    mount({ extra: { 'reminders:list': () => [] } });
+    wrap(<UpcomingMentionsTile />);
+    expect(
+      await screen.findByText('Keine kommende Erwähnung. Noch nichts angekündigt.'),
+    ).toBeTruthy();
   });
 });
 

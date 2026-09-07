@@ -18,7 +18,9 @@
  * 3. One of those dates has to be **forward-looking** (`isForward`) and lie
  *    strictly between the day itself and today. Strictly: an announcement for
  *    today or later has not come due yet, and one for the day itself or earlier
- *    is a report, not an announcement.
+ *    is a report, not an announcement. Which side of today counts is the one
+ *    thing a caller may change (`AnnouncementWindow`) — the forward-looking half
+ *    of the same rule reads the opposite window (`upcoming-mentions.ts`, 070).
  * 4. What is already answered drops out: a later day that links this day and
  *    picks its subject back up, or a todo carrying the subject and a deadline.
  *
@@ -418,9 +420,41 @@ export interface Announcement extends Omit<LooseEnd, 'origin'> {
 }
 
 /**
- * Steps 1 to 3 for one day: every announcement in its own prose whose day lies
- * strictly between that day and `today`, in reading order — **before** the
- * subtraction of step 4.
+ * Where a resolved date reference has to lie — the only thing the retrospective
+ * and the forward-looking read of this rule disagree about. Two predicates
+ * because both ends of the scan depend on it: which day is worth reading at all,
+ * and which of its references counts.
+ *
+ * Deliberately a parameter and not a second scanner: steps 1 to 3 (own prose,
+ * sentences, `findDates`, `isForward`, the subject anchored at the reference)
+ * are identical for both windows, and two copies of them would be two truths
+ * that drift apart — the same argument 020 makes about the model pass.
+ */
+export interface AnnouncementWindow {
+  /** Is a day of this date read at all? `today` as the caller passed it. */
+  scans(day: string, today: string): boolean;
+  /**
+   * Does a reference resolved to `refDate` count? `refDate > day` — later than
+   * the day the sentence stands in — is already established when this is asked.
+   */
+  accepts(refDate: string, today: string): boolean;
+}
+
+/**
+ * The retrospective window of 020: the announced day has come and gone. Strict
+ * on both sides — an announcement for today or later has not come due yet, and
+ * a day dated today or later cannot hold one that has (its references all lie
+ * behind `today` or beyond it, never before).
+ */
+export const PAST_WINDOW: AnnouncementWindow = {
+  scans: (day, today) => day < today,
+  accepts: (refDate, today) => refDate < today,
+};
+
+/**
+ * Steps 1 to 3 for one day: every announcement in its own prose whose day falls
+ * in `window` — by default the passed days of 020 — in reading order, **before**
+ * the subtraction of step 4.
  *
  * Exported, and used by `findLooseEnds` itself, so the rule for "what is a
  * candidate at all" exists once: a caller that wants to show a day's settled
@@ -431,9 +465,13 @@ export interface Announcement extends Omit<LooseEnd, 'origin'> {
  * `today` comes from the caller — nothing here asks the clock, or the rule would
  * not be testable (same reasoning as `@core/capture/dates.ts`).
  */
-export function announcementsOf(source: LooseEndDay, today: string): Announcement[] {
+export function announcementsOf(
+  source: LooseEndDay,
+  today: string,
+  window: AnnouncementWindow = PAST_WINDOW,
+): Announcement[] {
   const { date, path } = source.day;
-  if (date >= today) return [];
+  if (!window.scans(date, today)) return [];
 
   const found: Announcement[] = [];
   for (const block of parseStream(source.doc.body)) {
@@ -442,7 +480,7 @@ export function announcementsOf(source: LooseEndDay, today: string): Announcemen
       const hit = findDates(sentence.text, date).find(
         (candidate) =>
           candidate.iso > date &&
-          candidate.iso < today &&
+          window.accepts(candidate.iso, today) &&
           isForward(candidate.label, sentence.text),
       );
       if (hit === undefined) continue;

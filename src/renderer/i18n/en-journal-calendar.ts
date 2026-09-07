@@ -24,4 +24,8 @@ export const enJournalCalendar = {
   /* 010/D4: the day is over, has a file, but `closed` is still `null` — never
      for today itself (see `isDayOpen`). */
   'journal.calendar.unfinished': 'Day not closed out yet',
+  /* 070/D4: a future mention names this day — appended to the cell's own
+     accessible name (`journal.calendar.open`/`journal.calendar.future`), not
+     a replacement for it. */
+  'journal.calendar.upcomingMention': 'A future mention points here',
 } as const;

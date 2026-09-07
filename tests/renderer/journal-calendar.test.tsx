@@ -341,6 +341,77 @@ describe('MonthCalendar unfinished marker (010, D4)', () => {
   });
 });
 
+/* 070, D4 — the calendar badge for a future mention. Mirrors the D4 (010)
+ * `unfinished` marker above: its own shape (`.sb-monthcal-upcoming`, not the
+ * `unfinished` square), rendered as a sibling inside `.sb-monthcal-markers`,
+ * and named in the cell's accessible name rather than color-only. Unlike
+ * `unfinished` it must reach a day with no file at all — that's the whole
+ * point of the story — and it must never leak onto a padding cell, which
+ * belongs to a neighbouring month and isn't really "this day" at all. */
+describe('MonthCalendar upcoming-mention marker (070, D4)', () => {
+  const TODAY = '2026-08-19';
+
+  beforeEach(() => {
+    setLanguage('en');
+    document.documentElement.lang = 'en';
+  });
+
+  it('marks the day a mention points to and names it in the accessible name', () => {
+    const days = [day({ date: '2026-08-10' })];
+    render(
+      <MonthCalendar
+        days={days}
+        today={TODAY}
+        selected={TODAY}
+        onSelect={vi.fn()}
+        month="2026-08"
+        onMonth={vi.fn()}
+        collapsed={false}
+        onToggleCollapse={vi.fn()}
+        upcoming={new Set(['2026-08-10'])}
+      />,
+    );
+
+    const cell = screen.getByRole('button', {
+      name: 'Open the calendar day 2026-08-10, A future mention points here',
+    });
+    expect(cell.querySelector('.sb-monthcal-upcoming')).not.toBeNull();
+  });
+
+  it('marks a future day with no file yet — the case the story is about', () => {
+    render(
+      <MonthCalendar
+        days={[]}
+        today={TODAY}
+        selected={TODAY}
+        onSelect={vi.fn()}
+        month="2026-08"
+        onMonth={vi.fn()}
+        collapsed={false}
+        onToggleCollapse={vi.fn()}
+        upcoming={new Set(['2026-08-25'])}
+      />,
+    );
+
+    const cell = document.querySelector<HTMLElement>('.sb-monthcal-day[data-date="2026-08-25"]');
+    expect(cell).not.toBeNull();
+    // Still the disabled future day (no file) — the badge doesn't change that.
+    expect(cell?.getAttribute('aria-disabled')).toBe('true');
+    expect(cell?.getAttribute('aria-label')).toBe(
+      '2026-08-25 — In the future, no entry yet, A future mention points here',
+    );
+    expect(cell?.querySelector('.sb-monthcal-upcoming')).not.toBeNull();
+  });
+
+  it('never marks a padding cell, even when its date is in the upcoming set', () => {
+    // 1 Aug 2026 is a Saturday: the grid pads with the last days of July.
+    const cells = monthCells('2026-08', [], TODAY, TODAY, new Set(['2026-07-31']));
+    const padding = cells.find((cell) => cell.date === '2026-07-31');
+    expect(padding?.padding).toBe(true);
+    expect(padding?.upcoming).toBe(false);
+  });
+});
+
 /* 010, D3 — the grid's own keyboard surface.
  *
  * Controlled on purpose: month and selection live in the parent on the real
@@ -847,6 +918,10 @@ describe('MonthCalendar wired into JournalScreen (010, D2)', () => {
       'journal:foldDay': () => ({ path: DAY_PATH, hash: 'hash-5', created: false }),
       'vault:write': () => ({ path: DAY_PATH, hash: 'hash-4', created: false }),
       'shell:openPath': () => undefined,
+      /* 070, D4: `JournalScreen` now also queries the reminders list to build
+         the calendar's `upcoming` set — empty by default, so screens that
+         don't care about it stay unaffected. */
+      'reminders:list': () => [],
       ...extra,
     });
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });

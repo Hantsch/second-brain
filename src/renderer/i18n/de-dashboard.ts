@@ -90,6 +90,8 @@ export const deDashboard = {
   'module.loose-ends.name': 'Lose Enden',
   'module.loose-ends.purpose':
     'Ankündigungen aus dem Tagebuch, deren Tag vorbei ist und die niemand aufgegriffen hat.',
+  'module.upcoming-mentions.name': 'Kommende Erwähnungen',
+  'module.upcoming-mentions.purpose': 'Ankündigungen aus dem Tagebuch, deren Tag noch bevorsteht.',
 
   // ── Tiles ──────────────────────────────────────────────────────────────
   'tile.more': '{count} weitere',
@@ -202,4 +204,12 @@ export const deDashboard = {
   'tile.looseEnds.for': 'für {date}',
   'tile.looseEnds.snooze': '„{title}“ ruhig stellen',
   'tile.looseEnds.open': 'Tageseintrag vom {date} öffnen',
+
+  /* 070 D3: die andere Haelfte desselben Fensters wie lose Enden — sichtbar,
+     bevor der Tag kommt, rein lesend (kein Ruhigstellen: es gibt noch nichts
+     zu beruhigen). */
+  'tile.upcomingMentions.empty': 'Keine kommende Erwähnung. Noch nichts angekündigt.',
+  'tile.upcomingMentions.announced': 'Angekündigt am {date}',
+  'tile.upcomingMentions.for': 'für {date}',
+  'tile.upcomingMentions.open': 'Tageseintrag vom {date} öffnen',
 } as const;

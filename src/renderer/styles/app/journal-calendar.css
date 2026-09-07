@@ -151,6 +151,25 @@
   background: var(--warning);
 }
 
+/* 070/D4 — a future mention names this day (`cell.upcoming`), whether or not
+   it has a file yet. A triangle, not the unfinished marker's square: the two
+   answer different questions (a day left open vs. a day something elsewhere
+   points at) and must stay tellable apart by shape alone, not just by color —
+   same "no color-only status" rule `.sb-monthcal-unfinished` above follows.
+   Deliberately not `--accent`: the grid already spends its one teal point on
+   "today" (`.sb-monthcal-day--today`), and a second accent-colored mark on
+   the same grid would compete with it instead of reading as a distinct,
+   quieter signal — the same register `.sb-monthcal-entrymark` uses. Built
+   from a border triangle rather than an image so it stays a flat token color
+   with no extra asset. */
+.sb-monthcal-upcoming {
+  width: 0;
+  height: 0;
+  border-left: 3px solid transparent;
+  border-right: 3px solid transparent;
+  border-bottom: 4px solid var(--text-muted);
+}
+
 /* The grid's key hint (010/D3), in the same quiet register as
    `.sb-journal-keys` under the day list (`journal.css`) — never an accent:
    this screen's one teal point is the stream, not a hint. */

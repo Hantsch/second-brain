@@ -26,7 +26,7 @@ const STRUCTURE_DIRS = [
 ];
 
 /** Startanordnung des Dashboards, gleiche Reihenfolge wie die App-Defaults
-    (`DEFAULT_DASHBOARD_TILES` in src/shared/types/overview.ts) — samt der acht
+    (`DEFAULT_DASHBOARD_TILES` in src/shared/types/overview.ts) — samt der neun
     Module, die ausgeblendet starten. */
 const DASHBOARD_TILES = [
   { id: 'deadlines', size: 'md' },
@@ -34,6 +34,7 @@ const DASHBOARD_TILES = [
   { id: 'recent-work', size: 'xl' },
   { id: 'todos-work', size: 'md' },
   { id: 'gardener', size: 'sm' },
+  { id: 'upcoming-mentions', size: 'sm' },
   { id: 'todos-private', size: 'md', hidden: true },
   { id: 'active-projects', size: 'xl', hidden: true },
   { id: 'inbox', size: 'sm', hidden: true },
@@ -42,6 +43,7 @@ const DASHBOARD_TILES = [
   { id: 'claude-sessions', size: 'md', hidden: true },
   { id: 'quick-capture', size: 'md', hidden: true },
   { id: 'ask', size: 'md', hidden: true },
+  { id: 'loose-ends', size: 'sm', hidden: true },
 ];
 
 export const VAULT_NAME = 'Demo-Vault';

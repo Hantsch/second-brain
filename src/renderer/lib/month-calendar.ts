@@ -19,6 +19,13 @@
  * nothing to do with `disabled` (a future day without a file): one is about
  * days that are over and left open, the other about days that haven't
  * happened yet.
+ *
+ * 070, D4 adds a fourth, equally independent flag: `upcoming` — a day a
+ * future mention names (`findUpcomingMentions`, surfaced as a
+ * `source: 'upcoming-mention'` reminder). Unlike `unfinished` it can land on
+ * a day with no file at all: that is exactly the case the story is about, a
+ * day nothing has been written on yet already carrying a badge because
+ * something elsewhere points at it.
  */
 
 import type { JournalDay } from '@shared/types';
@@ -47,6 +54,9 @@ export interface Cell {
       Never true for today (it isn't open by definition) or for a day
       without a file. */
   unfinished: boolean;
+  /** A future mention names this day (070, D4) — true whether or not the day
+      has a file yet, and independent of `disabled`/`unfinished`. */
+  upcoming: boolean;
 }
 
 /** The year-month key of a date, e.g. `'2026-08'` — the unit `shiftMonth`
@@ -112,12 +122,18 @@ export function nextOpenable(
  * neighbouring months). `days` only needs to contain days that could plausibly
  * fall in this month and its padding — passing the whole vault is fine, the
  * lookup is by exact date.
+ *
+ * `upcoming` is the set of ISO dates a future mention names (070, D4) — the
+ * caller builds it from `useReminders()`, filtered on
+ * `source === 'upcoming-mention'`; this function only looks each cell's date
+ * up in it.
  */
 export function monthCells(
   month: string,
   days: readonly JournalDay[],
   today: string,
   selected: string,
+  upcoming: ReadonlySet<string> = new Set(),
 ): Cell[] {
   const first = dateOf(`${month}-01`);
   const firstWeekday = (first.getDay() + 6) % 7; // Monday-first offset
@@ -140,6 +156,7 @@ export function monthCells(
       isSelected: iso === selected,
       disabled,
       unfinished: !padding && isDayOpen(day, today),
+      upcoming: !padding && upcoming.has(iso),
     });
   }
   return cells;

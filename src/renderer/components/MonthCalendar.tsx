@@ -20,6 +20,12 @@
  * file whose `closed` is still `null`. Unrelated to `disabled`, which is
  * about future days without a file.
  *
+ * D4 (070) adds a fourth, independent marker, `.sb-monthcal-upcoming`, from
+ * `cell.upcoming` — a day a future mention names. Its own shape (not the
+ * `unfinished` square), and its own accessible-name suffix appended after the
+ * existing open/future label rather than replacing it, per the "no
+ * color-only status" rule this file already follows for `unfinished`.
+ *
  * D3 (010) added the grid's keyboard surface — a roving tabindex plus a
  * `keydown` handler on the `<table>` itself. That it sits on the table and not
  * on `window` is the whole point: `use-journal-keys.ts` owns `j`/`k` and the
@@ -86,6 +92,11 @@ export interface MonthCalendarProps {
       component only renders the state it's given. */
   collapsed: boolean;
   onToggleCollapse: () => void;
+  /** ISO dates a future mention names (070, D4) — the screen builds this from
+      `useReminders()`, filtered on `source === 'upcoming-mention'`. Optional
+      so every caller that predates this story (and every existing test)
+      keeps working with no badge shown at all. */
+  upcoming?: ReadonlySet<string>;
 }
 
 export function MonthCalendar({
@@ -97,6 +108,7 @@ export function MonthCalendar({
   onMonth,
   collapsed,
   onToggleCollapse,
+  upcoming,
 }: MonthCalendarProps) {
   const t = useT();
   const language = useLanguage();
@@ -105,7 +117,7 @@ export function MonthCalendar({
     dateOf(`${month}-01`),
   );
   const weekdays = weekdayLabels(language);
-  const cells = monthCells(month, days, today, selected);
+  const cells = monthCells(month, days, today, selected, upcoming);
 
   const jumpToday = (): void => {
     onMonth(monthOf(today));
@@ -252,9 +264,10 @@ export function MonthCalendar({
                         aria-current={cell.isSelected ? 'true' : undefined}
                         aria-disabled={cell.disabled ? 'true' : undefined}
                         aria-label={
-                          cell.disabled
+                          (cell.disabled
                             ? `${cell.date} — ${t('journal.calendar.future')}`
-                            : t('journal.calendar.open', { date: cell.date })
+                            : t('journal.calendar.open', { date: cell.date })) +
+                          (cell.upcoming ? `, ${t('journal.calendar.upcomingMention')}` : '')
                         }
                         /* Also the Enter/Space path: a focused button opens on
                            both by itself, so keyboard and mouse share one
@@ -290,6 +303,19 @@ export function MonthCalendar({
                             <span
                               className="sb-monthcal-unfinished"
                               title={t('journal.calendar.unfinished')}
+                              aria-hidden="true"
+                            />
+                          ) : null}
+                          {/* 070, D4 — a future mention names this day. Its own
+                              shape (a triangle, not the unfinished square) so
+                              the two never read as the same status even when
+                              both happen to sit on the same cell; the
+                              accessible name carries the actual claim, this is
+                              purely the visual echo. */}
+                          {cell.upcoming ? (
+                            <span
+                              className="sb-monthcal-upcoming"
+                              title={t('journal.calendar.upcomingMention')}
                               aria-hidden="true"
                             />
                           ) : null}
