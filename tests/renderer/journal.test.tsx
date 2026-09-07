@@ -1816,6 +1816,7 @@ describe('Tagebuch: loses Ende am Tag (022, D6)', () => {
     id: 'loose-end:1',
     day: EARLIER,
     quote: 'Morgen sehe ich mir das Angebot noch mal an.',
+    resolution: null,
   };
   /* Deliberately different from today's `hash-1` (via the default `view()`),
      so a test that asserted the wrong hash would fail loudly instead of

@@ -288,6 +288,27 @@
 .sb-looseend-row-quote {
   padding: 0 0 0 var(--space-3);
 }
+/* A resolved loose end (069, D4) renders inline in place of the answer field:
+   the quote stays, the answer input is replaced by a link to the day that
+   picked it back up. A button, not an anchor — navigation stays inside the
+   app router, same as `LooseEndsTile.tsx`'s day-open buttons. */
+.sb-looseend-resolved {
+  all: unset;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--sb-hit);
+  padding: 0 var(--space-3);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  color: var(--accent);
+}
+.sb-looseend-resolved:hover {
+  text-decoration: underline;
+}
+.sb-looseend-resolved:focus-visible {
+  box-shadow: var(--focus-ring);
+}
 
 /* ── Mood and energy ─────────────────────────────────────────────────────── */
 

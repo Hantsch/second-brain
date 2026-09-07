@@ -1097,7 +1097,7 @@ describe('Tagebuch-Kanäle im Main', () => {
     });
   });
 
-  describe('journal:get trägt die losen Enden des Tages (020, D5)', () => {
+  describe('journal:get trägt die losen Enden des Tages (020, D5; 069, D3)', () => {
     /* `openLooseEnds()` braucht eine feste Gegenwart, sonst hinge „ist das
        Datum schon fällig" vom Tag ab, an dem die Suite läuft. */
     const ANNOUNCING_DAY = day(-5);
@@ -1134,27 +1134,56 @@ describe('Tagebuch-Kanäle im Main', () => {
       const view = await harness.call('journal:get', { date: ANNOUNCING_DAY });
 
       expect(view?.looseEnds).toEqual([
-        { id: expect.stringMatching(/^loose-end:/), day: ANNOUNCING_DAY, quote: QUOTE },
+        {
+          id: expect.stringMatching(/^loose-end:/),
+          day: ANNOUNCING_DAY,
+          quote: QUOTE,
+          resolution: null,
+        },
       ]);
       /* Ein anderer Tag desselben Vaults trägt kein fremdes loses Ende. */
       const otherDay = await harness.call('journal:get', { date: DATE });
       expect(otherDay?.looseEnds).toEqual([]);
     });
 
-    it('lässt ein beantwortetes loses Ende aus der Ansicht des ankündigenden Tages verschwinden', async () => {
+    it('gibt eine beantwortete Ankündigung mit resolution.day des antwortenden Tages zurück, statt sie verschwinden zu lassen (069, AC)', async () => {
       await seedAnnouncingDay();
       const before = await harness.call('journal:get', { date: ANNOUNCING_DAY });
       const looseEnd = before?.looseEnds[0];
       expect(looseEnd, 'ein gefundenes loses Ende').toBeDefined();
+      const beforeRaw = (await vault.read(ANNOUNCING_PATH)) ?? '';
 
-      await harness.call('journal:answerLooseEnd', {
+      const answered = await harness.call('journal:answerLooseEnd', {
         id: looseEnd?.id as string,
         day: ANNOUNCING_DAY,
         text: 'War in zehn Minuten erledigt.',
       });
 
       const after = await harness.call('journal:get', { date: ANNOUNCING_DAY });
-      expect(after?.looseEnds).toEqual([]);
+      /* Die Antwort landet in der heutigen Datei (TODAY, hier eingefroren auf
+         DATE) — resolution.day nennt genau diesen antwortenden Tag, nicht den
+         ankündigenden. */
+      expect(after?.looseEnds).toEqual([
+        {
+          id: looseEnd?.id,
+          day: ANNOUNCING_DAY,
+          quote: QUOTE,
+          resolution: { day: DATE, path: answered.path },
+        },
+      ]);
+      /* Rein lesend: `journal:get` selbst darf die ankündigende Datei nicht
+         anfassen — ihr Inhalt und damit ihr Hash bleiben unverändert (069, AC2). */
+      expect((await vault.read(ANNOUNCING_PATH)) ?? '').toBe(beforeRaw);
+      expect(after?.day.date).toBe(ANNOUNCING_DAY);
+    });
+
+    it('lässt einen noch offenen Tag resolution: null tragen', async () => {
+      await seedAnnouncingDay();
+
+      const view = await harness.call('journal:get', { date: ANNOUNCING_DAY });
+
+      expect(view?.looseEnds).toHaveLength(1);
+      expect(view?.looseEnds[0]?.resolution).toBeNull();
     });
   });
 

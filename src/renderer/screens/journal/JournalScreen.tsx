@@ -574,13 +574,14 @@ export function JournalScreen() {
               }}
               dialogue={
                 <>
-                  {/* One row per open loose end announced on this day (022,
-                      D6) — above the stream, since it belongs to the day the
-                      announcement was made, not to the conversation that
-                      followed. `looseEnds` is already filtered to "open" by
-                      `openLooseEnds()` (020, D5), so a row simply vanishes
-                      once the day refetches after an answer; no second
-                      "is this open" check lives here. */}
+                  {/* One row per loose end announced on this day (022, D6;
+                      069, D4) — above the stream, since it belongs to the day
+                      the announcement was made, not to the conversation that
+                      followed. `looseEnds` carries both still-open items
+                      (`openLooseEnds()`, 020 D5) and resolved ones
+                      (`dayLooseEnds()`, 069 D2/D3); `LooseEndRow` branches on
+                      `resolution` to render the right shape, so no "is this
+                      open" check lives here. */}
                   {(view.data?.looseEnds ?? []).map((looseEnd) => (
                     <LooseEndRow
                       key={looseEnd.id}

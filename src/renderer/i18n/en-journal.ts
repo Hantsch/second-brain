@@ -194,4 +194,7 @@ export const enJournal = {
   'journal.looseEnd.answerLabel': 'Answer',
   'journal.looseEnd.answerPlaceholder': 'What came of it?',
   'journal.looseEnd.answerSubmit': 'Record',
+  // ── Resolved loose end (069, D4) ─────────────────────────────────────────
+  'journal.looseEnd.resolvedOn': 'Answered on {date}',
+  'journal.looseEnd.resolvedOpen': 'Open the journal entry of {date}',
 } as const;

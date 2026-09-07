@@ -20,7 +20,7 @@ itself and points at the way out, instead of going silent.
 <!-- Order = the order the build phase works through. Dependent stories go last. -->
 
 - [x] 068 — Adding to a closed day reopens it
-- [ ] 069 — A day shows how its own loose ends were answered
+- [x] 069 — A day shows how its own loose ends were answered
 - [ ] 070 — A future mention becomes visible before its day arrives
 - [ ] 067 — A sensitive task's recommendation explains a dead end
 

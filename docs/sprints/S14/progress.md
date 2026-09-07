@@ -4,3 +4,11 @@
 - 2026-09-07 13:13 · 068 · D2 wire reopen into every journal write path · done
 - 2026-09-07 13:13 · 068 · D3 i18n toast key + e2e spec · started
 - 2026-09-07 13:20 · 068 · D3 i18n toast key + e2e spec · done
+- 2026-09-07 13:34 · 069 · D1 verdict instead of boolean, scan extracted · started
+- 2026-09-07 13:40 · 069 · D1 verdict instead of boolean, scan extracted · done
+- 2026-09-07 13:40 · 069 · D2 day-scoped derivation · started
+- 2026-09-07 13:42 · 069 · D2 day-scoped derivation · done
+- 2026-09-07 13:42 · 069 · D3 wire it up: contract plus main · started
+- 2026-09-07 13:48 · 069 · D3 wire it up: contract plus main · done
+- 2026-09-07 13:48 · 069 · D4 renderer: resolved row plus acceptance flow · started
+- 2026-09-07 14:04 · 069 · D4 renderer: resolved row plus acceptance flow · done

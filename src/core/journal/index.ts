@@ -10,6 +10,9 @@
  *               mit `appendEntry`/`appendAnswer`
  *   `loose-ends` was ein Tag angekuendigt hat und niemand mehr erwaehnt hat
  *               (`findLooseEnds`) — reine Ableitung ueber Tage und Todos, ohne Uhr
+ *   `loose-end-resolution` ein Tag als Liste seiner Ankuendigungen samt Aufloesung
+ *               (`dayLooseEnds`) — Vault zuerst, `answered`-Map (state file) nur
+ *               dort, wo die Vault-Heuristik nichts findet
  *   `loose-ends-llm` die optionale Modellstufe darauf (`modelLooseEnds`): findet,
  *               was die Regel nicht sieht, und verwirft jedes Zitat, das nicht
  *               wortwoertlich in der genannten Tagesdatei steht
@@ -62,13 +65,22 @@ export {
   type AppendEntryOptions,
 } from './stream';
 export {
+  announcementsOf,
   findLooseEnds,
   looseEndId,
+  resolutionCheck,
   sentencesOf,
   subjectTerms,
+  type Announcement,
   type LooseEndDay,
+  type LooseEndResolution,
   type LooseEndTodo,
 } from './loose-ends';
+export {
+  dayLooseEnds,
+  type DayLooseEnd,
+  type DayLooseEndResolution,
+} from './loose-end-resolution';
 export {
   MAX_LOOSE_END_DAYS,
   MAX_LOOSE_END_QUOTE_CHARS,

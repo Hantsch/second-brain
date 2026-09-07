@@ -204,4 +204,7 @@ export const deJournal = {
   'journal.looseEnd.answerLabel': 'Antwort',
   'journal.looseEnd.answerPlaceholder': 'Was ist daraus geworden?',
   'journal.looseEnd.answerSubmit': 'Eintragen',
+  // ── Beantwortetes loses Ende (069, D4) ───────────────────────────────────
+  'journal.looseEnd.resolvedOn': 'Beantwortet am {date}',
+  'journal.looseEnd.resolvedOpen': 'Tageseintrag vom {date} öffnen',
 } as const;

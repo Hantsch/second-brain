@@ -275,6 +275,8 @@ function linkTargets(text: string): Set<string> {
 /** A day reduced to what the subtraction needs: its own words, folded once. */
 interface EntryText {
   date: string;
+  /** Carried so a verdict can name the file the answer stands in, not just its date. */
+  path: string;
   folded: string;
   links: Set<string>;
 }
@@ -284,7 +286,12 @@ function entryTextOf(source: LooseEndDay): EntryText {
     .filter((block) => block.kind === 'entry')
     .map((block) => block.text)
     .join('\n\n');
-  return { date: source.day.date, folded: fold(text), links: linkTargets(text) };
+  return {
+    date: source.day.date,
+    path: source.day.path,
+    folded: fold(text),
+    links: linkTargets(text),
+  };
 }
 
 /**
@@ -308,29 +315,58 @@ function entryTextOf(source: LooseEndDay): EntryText {
  * broader window it always used, so a later day answering in different words
  * still gets recognized.
  */
-function isAnswered(
+function resolutionOf(
   day: string,
   quote: string,
   at: number | undefined,
   entries: readonly EntryText[],
   dated: readonly string[],
-): boolean {
+): LooseEndResolution | null {
   const narrow = subjectTerms(quote, at);
   if (narrow.length > 0 && dated.some((text) => narrow.every((term) => text.includes(term)))) {
-    return true;
+    return { by: 'todo' };
   }
   const broad = subjectTerms(quote);
-  return entries.some(
-    (entry) =>
-      entry.date > day &&
-      entry.links.has(day) &&
-      (broad.length === 0 || broad.some((term) => entry.folded.includes(term))),
-  );
+  const answer = answeringDay(day, broad, entries);
+  return answer === null ? null : { by: 'day', date: answer.date, path: answer.path };
 }
 
 /**
+ * The later day that picked this day back up, or `null`. The **earliest** such
+ * day, not the first one the caller happens to have listed: whether it is
+ * settled does not depend on the order of `days`, so neither should the day the
+ * verdict names.
+ */
+function answeringDay(
+  day: string,
+  broad: readonly string[],
+  entries: readonly EntryText[],
+): EntryText | null {
+  let answer: EntryText | null = null;
+  for (const entry of entries) {
+    if (entry.date <= day || !entry.links.has(day)) continue;
+    if (broad.length > 0 && !broad.some((term) => entry.folded.includes(term))) continue;
+    if (answer === null || entry.date < answer.date) answer = entry;
+  }
+  return answer;
+}
+
+/**
+ * Why an announcement is not (or no longer) a loose end — the two ways of
+ * `resolutionOf`, each naming what settled it. Still open has no shape of its
+ * own: that is `null`.
+ */
+export type LooseEndResolution =
+  /** A later day links this day and picks its subject back up. */
+  | { by: 'day'; date: string; path: string }
+  /** A todo with a deadline carries the subject — it gets chased there. */
+  | { by: 'todo' };
+
+/**
  * The subtraction of step 4, prepared once for a whole stock: "is the
- * announcement in `quote`, made on `day`, already settled?"
+ * announcement in `quote`, made on `day`, already settled — and by what?"
+ * `null` means still open; anything else names what settled it, so a caller can
+ * show the answer instead of just swallowing the candidate.
  *
  * Exported because the model pass (`loose-ends-llm.ts`) has to apply exactly the
  * same subtraction to what a model proposes — AC 6 and AC 8 are properties of a
@@ -344,20 +380,94 @@ function isAnswered(
  * it (`findLooseEnds`); without it the subject is read from the head of the
  * quote, as before.
  */
+export function resolutionCheck(
+  days: readonly LooseEndDay[],
+  todos: readonly LooseEndTodo[],
+): (day: string, quote: string, at?: number) => LooseEndResolution | null {
+  const entries = days.map(entryTextOf);
+  const dated = todos.filter((todo) => todo.due !== null).map((todo) => fold(todo.text));
+  return (day, quote, at) => resolutionOf(day, quote, at, entries, dated);
+}
+
+/**
+ * The same subtraction, as the yes/no its callers ask for: `findLooseEnds` and
+ * the model pass only ever want to drop what is settled, not to say by what.
+ * A facade over `resolutionCheck`, never a second implementation — two of those
+ * would be two truths, and they would drift.
+ */
 export function settledCheck(
   days: readonly LooseEndDay[],
   todos: readonly LooseEndTodo[],
 ): (day: string, quote: string, at?: number) => boolean {
-  const entries = days.map(entryTextOf);
-  const dated = todos.filter((todo) => todo.due !== null).map((todo) => fold(todo.text));
-  return (day, quote, at) => isAnswered(day, quote, at, entries, dated);
+  const resolution = resolutionCheck(days, todos);
+  return (day, quote, at) => resolution(day, quote, at) !== null;
+}
+
+/**
+ * An announcement as steps 1 to 3 find it: everything a `LooseEnd` carries except
+ * `origin`, plus the offset of the date reference in the quote.
+ *
+ * `at` travels with the candidate because both things that come after the scan
+ * need it and neither can recompute it: `resolutionCheck` reads the subject
+ * anchored at it, and it is what made `subject` say "Mondsee" instead of the head
+ * of the paragraph.
+ */
+export interface Announcement extends Omit<LooseEnd, 'origin'> {
+  /** Offset of the date reference inside `quote`. */
+  at: number;
+}
+
+/**
+ * Steps 1 to 3 for one day: every announcement in its own prose whose day lies
+ * strictly between that day and `today`, in reading order — **before** the
+ * subtraction of step 4.
+ *
+ * Exported, and used by `findLooseEnds` itself, so the rule for "what is a
+ * candidate at all" exists once: a caller that wants to show a day's settled
+ * announcements too (they are not loose ends, but they are what the day said)
+ * asks the same scan and then `resolutionCheck`, instead of a second scan that
+ * would answer slightly differently.
+ *
+ * `today` comes from the caller — nothing here asks the clock, or the rule would
+ * not be testable (same reasoning as `@core/capture/dates.ts`).
+ */
+export function announcementsOf(source: LooseEndDay, today: string): Announcement[] {
+  const { date, path } = source.day;
+  if (date >= today) return [];
+
+  const found: Announcement[] = [];
+  for (const block of parseStream(source.doc.body)) {
+    if (block.kind !== 'entry') continue;
+    for (const sentence of sentencesOf(block.text)) {
+      const hit = findDates(sentence.text, date).find(
+        (candidate) =>
+          candidate.iso > date &&
+          candidate.iso < today &&
+          isForward(candidate.label, sentence.text),
+      );
+      if (hit === undefined) continue;
+
+      found.push({
+        id: looseEndId(date, sentence.text),
+        day: date,
+        path,
+        line: source.doc.bodyLine + block.line + sentence.line,
+        quote: sentence.text,
+        subject: subjectWords(sentence.text, hit.at).join(' '),
+        refDate: hit.iso,
+        at: hit.at,
+      });
+    }
+  }
+  return found;
 }
 
 /**
  * Every announcement whose day has passed unanswered, oldest first.
  *
- * `today` comes from the caller — nothing here asks the clock, or the rule would
- * not be testable (same reasoning as `@core/capture/dates.ts`).
+ * The deduplication stays here rather than in `announcementsOf`: an id is day
+ * plus sentence, so it can only collide inside one day — but the same day may
+ * reach this function twice, and then the first one listed is the one kept.
  */
 export function findLooseEnds(
   days: readonly LooseEndDay[],
@@ -368,36 +478,10 @@ export function findLooseEnds(
   const found = new Map<string, LooseEnd>();
 
   for (const source of days) {
-    const { date, path } = source.day;
-    if (date >= today) continue;
-
-    for (const block of parseStream(source.doc.body)) {
-      if (block.kind !== 'entry') continue;
-      for (const sentence of sentencesOf(block.text)) {
-        const hit = findDates(sentence.text, date).find(
-          (candidate) =>
-            candidate.iso > date &&
-            candidate.iso < today &&
-            isForward(candidate.label, sentence.text),
-        );
-        if (hit === undefined) continue;
-
-        if (settled(date, sentence.text, hit.at)) continue;
-        const words = subjectWords(sentence.text, hit.at);
-
-        const id = looseEndId(date, sentence.text);
-        if (found.has(id)) continue;
-        found.set(id, {
-          id,
-          day: date,
-          path,
-          line: source.doc.bodyLine + block.line + sentence.line,
-          quote: sentence.text,
-          subject: words.join(' '),
-          refDate: hit.iso,
-          origin: 'heuristic',
-        });
-      }
+    for (const { at, ...announcement } of announcementsOf(source, today)) {
+      if (settled(announcement.day, announcement.quote, at)) continue;
+      if (found.has(announcement.id)) continue;
+      found.set(announcement.id, { ...announcement, origin: 'heuristic' });
     }
   }
 

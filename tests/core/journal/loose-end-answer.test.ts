@@ -86,8 +86,9 @@ describe('answerLooseEnd', () => {
       if (target === undefined) throw new Error('kein loses Ende im Fixture-Bestand');
 
       /* Die Antwort erwähnt "Notar" absichtlich nicht — die Heuristik aus
-         `isAnswered` (`loose-ends.ts`) würde diesen Fund also NICHT von selbst
-         wieder verlieren; nur die ausdrückliche Ablage darf ihn ausblenden. */
+         `resolutionCheck` (`loose-ends.ts`) würde diesen Fund also NICHT von
+         selbst wieder verlieren; nur die ausdrückliche Ablage darf ihn
+         ausblenden. */
       const written = await answerLooseEnd(
         fixture.store,
         TODAY,

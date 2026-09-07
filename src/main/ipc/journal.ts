@@ -24,7 +24,6 @@
  */
 
 import { newMessageId } from '@core/chat';
-import { findingId, looseEndInput } from '@core/gardener';
 import {
   answerLooseEnd,
   appendEntry,
@@ -32,7 +31,6 @@ import {
   coach,
   dayOf,
   ensureDay,
-  findLooseEnds,
   interviewFollowup,
   journalTitle,
   newDayBody,
@@ -48,7 +46,6 @@ import {
 } from '@core/journal';
 import type {
   CoachDeps,
-  InterviewLooseEnd,
   InterviewMode,
   JournalDayDoc,
   JournalIndexView,
@@ -61,8 +58,8 @@ import type { Citation, DocLanguage, JournalDay, JournalFrontmatter } from '@sha
 import type { IpcRequest } from '@shared/ipc';
 import type { HandlerMap } from './registry';
 import { defineHandlers, fail } from './registry';
-import { gardenerIndex, gardenerStateFor, gardenerToday } from './gardener-deps';
 import { applyClose, foldDay, journalStore, toView, withDayText } from './journal-day';
+import { journalDayLooseEnds, openLooseEnds } from './journal-loose-ends';
 import { llmStreams } from './llm-stream';
 import type { StreamRun } from './llm-stream';
 import { requireLists } from './lists';
@@ -182,43 +179,6 @@ function emptyDayDoc(date: string, language: DocLanguage): JournalDayDoc {
 }
 
 /**
- * The loose ends the interview's one extra question (020, D8) may draw from:
- * `findLooseEnds` re-derived over the index, oldest first (its own sort),
- * minus whatever's already dealt with on another surface — answered (D5,
- * `main/loose-end-state.ts`), or "looks fine"/snoozed on the maintenance
- * screen (017, `main/gardener-state.ts`). Mirrors `reminders.ts`'s
- * `excludeAnsweredLooseEnds` and `gardener-deps.ts`'s `rejected` composition:
- * both filter the very same two states for the very same reason, so this is
- * the third and last copy of that particular check, not a fourth invention.
- *
- * `id` is rewritten to `findingId('loose-end', looseEnd.id)` before it ever
- * reaches `planInterview` — the id under which the maintenance screen and the
- * reminders list already track this same loose end, and the one
- * `journal:answerLooseEnd` must record it under so answering here makes it
- * disappear from those surfaces too, not just from this one dialog.
- */
-async function openLooseEnds(services: Services): Promise<InterviewLooseEnd[]> {
-  const { days, todos } = looseEndInput({ index: gardenerIndex(services) });
-  const today = gardenerToday();
-  const found = findLooseEnds(days, todos, today);
-  if (found.length === 0) return [];
-
-  const answered = (await looseEndState(services.requireVaultRoot())).answeredIds();
-  const gardener = await gardenerStateFor(services);
-  const dismissed = gardener.dismissed();
-
-  const open: InterviewLooseEnd[] = [];
-  for (const looseEnd of found) {
-    const id = findingId('loose-end', looseEnd.id);
-    if (answered.has(id) || dismissed.has(id)) continue;
-    const snoozedUntil = gardener.snoozedUntil(id);
-    if (snoozedUntil !== null && snoozedUntil > today) continue;
-    open.push({ id, day: looseEnd.day, quote: looseEnd.quote });
-  }
-  return open;
-}
-
-/**
  * Work out the turn and report it as it goes. Ends the stream itself,
  * because only here is it known what hangs off the completion: the reason
  * for a failure and, in "analyze" mode, the earlier days found as evidence.
@@ -256,10 +216,12 @@ export function journalHandlers(services: Services): HandlerMap {
     'journal:get': async ({ date }) => {
       const found = await readDay(journalStore(services), date);
       if (found === null) return null;
-      /* Same source as the interview's follow-up and the maintenance report
-         (`openLooseEnds`, above) — filtered to this day's announcements, so
-         the day view never invents a second "is it open" check. */
-      const looseEnds = (await openLooseEnds(services)).filter((looseEnd) => looseEnd.day === date);
+      /* The union of open (`openLooseEnds`, same source the interview's
+         follow-up and the maintenance report already read) and resolved
+         (`dayLooseEnds`, 069/D2) loose ends of this day — composed in
+         `journal-loose-ends.ts`, read-only, so this call never touches the
+         announcing day's hash. */
+      const looseEnds = await journalDayLooseEnds(services, date);
       return { ...toView(found), looseEnds };
     },
 

@@ -6,7 +6,7 @@
  *
  * The answer is prefixed with a back-reference wikilink to the day that made
  * the announcement — `[[<announcing day>]]`, the same bare-ISO-date link
- * `findLooseEnds`' own `isAnswered` already recognizes as "a later day picks
+ * `findLooseEnds`' own `resolutionCheck` already recognizes as "a later day picks
  * this day's subject back up" (`loose-ends.ts`). That heuristic only fires
  * when the answer happens to repeat one of the announcement's subject words;
  * an answer that doesn't (`"Erledigt."` for `"Morgen bin ich beim Notar."`)

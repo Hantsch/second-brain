@@ -202,14 +202,31 @@ export interface JournalDayView {
   /** The "Facts" section, verbatim as it is in the file. */
   facts: string;
   /**
-   * Loose ends announced on this day that are still open (020, D5) — the
-   * same `openLooseEnds()` the interview's follow-up and the maintenance
-   * report already read, filtered to `day.date`. Reusing
-   * `JournalInterviewLooseEnd` rather than a second shape keeps the id
-   * (`loose-end:<id>`) identical to the one the dashboard and maintenance
-   * screen already track this loose end under.
+   * This day's own loose ends (020, D5; 069, D3): the union of what's still
+   * open (`openLooseEnds()`, unchanged) and what's since been resolved
+   * (`dayLooseEnds()`, 069/D2), filtered to `day.date`. A candidate is either
+   * open (`resolution: null`) or resolved, never both.
    */
-  looseEnds: JournalInterviewLooseEnd[];
+  looseEnds: JournalDayLooseEnd[];
+}
+
+/**
+ * One of a day's loose ends as `journal:get` shows them (069, D3): the
+ * announcement plus what settled it, or `null` while it's still open.
+ * A sibling of `JournalInterviewLooseEnd` — that one stays the interview's own
+ * shape (no `resolution`, since the interview only ever asks about an open
+ * one) — rather than a variant of it, so a resolved loose end's shape doesn't
+ * have to lie about a field the interview never fills in.
+ */
+export interface JournalDayLooseEnd {
+  /** Same id scheme as `JournalInterviewLooseEnd.id` (`loose-end:<hash>`) —
+      what `journal:answerLooseEnd` and the maintenance screen track it under. */
+  id: string;
+  day: string;
+  /** The announcing sentence, verbatim — never a claim, always a quote. */
+  quote: string;
+  /** `null` while still open; otherwise the day that picked it back up. */
+  resolution: { day: string; path: string } | null;
 }
 
 /**

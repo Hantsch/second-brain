@@ -15,7 +15,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { findLooseEnds, formatAnswer } from '@core/journal';
+import { announcementsOf, findLooseEnds, formatAnswer, resolutionCheck } from '@core/journal';
 import type { LooseEndDay, LooseEndTodo } from '@core/journal';
 
 /** 1-based file line of the first body line, as `IndexedDoc.bodyLine` reports it. */
@@ -187,5 +187,71 @@ describe('findLooseEnds', () => {
 
     const mondsee = findLooseEnds([MONDSEE], [], TODAY)[0];
     expect([mondsee?.quote, mondsee?.id]).toEqual([MONDSEE_QUOTE, 'c7861f4a5889610c']);
+  });
+});
+
+/* 069, D1: dieselbe Subtraktion, aber sie sagt jetzt auch *wodurch* etwas
+   erledigt ist. `settledCheck` ist nur noch die Ja/Nein-Fassade davor — die
+   Tests oben prüfen über `findLooseEnds` weiterhin genau dieses Ja/Nein. */
+describe('resolutionCheck', () => {
+  it('benennt den späteren Tag, der die Ankündigung aufgegriffen hat', () => {
+    const answered = day(
+      '2026-08-20',
+      'Beim Notar war alles in zehn Minuten erledigt, siehe [[2026-08-18]].',
+    );
+    const resolution = resolutionCheck([NOTARY, answered], []);
+
+    /* Nicht nur „erledigt", sondern: von diesem Tag, in dieser Datei. */
+    expect(resolution('2026-08-18', 'Morgen bin ich beim Notar.')).toEqual({
+      by: 'day',
+      date: '2026-08-20',
+      path: 'journal/2026/08/2026-08-20.md',
+    });
+  });
+
+  it('meldet das Todo, wenn eine Frist die Ankündigung trägt', () => {
+    const dated: LooseEndTodo = { text: 'Notartermin nachfassen', due: '2026-08-25' };
+    const trip: LooseEndTodo = { text: 'Nach Mondsee fahren', due: '2026-08-13' };
+    const resolution = resolutionCheck([NOTARY, MONDSEE], [dated, trip]);
+
+    expect(resolution('2026-08-18', 'Morgen bin ich beim Notar.')).toEqual({ by: 'todo' });
+    /* Auch über das eng verankerte Thema — `at` zeigt auf „morgen", das Thema
+       ist damit „Mondsee" und nicht der Kopf des Absatzes. */
+    expect(resolution('2026-08-12', MONDSEE_QUOTE, MONDSEE_QUOTE.indexOf('morgen'))).toEqual({
+      by: 'todo',
+    });
+  });
+
+  it('sagt „offen" (null), solange nichts im Vault antwortet', () => {
+    const unlinked = day('2026-08-20', 'Beim Notar war alles in zehn Minuten erledigt.');
+    const undated: LooseEndTodo = { text: 'Notartermin nachfassen', due: null };
+
+    expect(
+      resolutionCheck([NOTARY, unlinked], [undated])('2026-08-18', 'Morgen bin ich beim Notar.'),
+    ).toBeNull();
+  });
+});
+
+describe('announcementsOf', () => {
+  it('zeigt einen Tag auch die Ankündigungen, die `findLooseEnds` schon abzieht', () => {
+    const answered = day(
+      '2026-08-20',
+      'Beim Notar war alles in zehn Minuten erledigt, siehe [[2026-08-18]].',
+    );
+    const found = announcementsOf(NOTARY, TODAY);
+
+    /* Der Kandidat ist derselbe, den `findLooseEnds` baut — plus `at`, dem
+       Offset der Datumsangabe im Zitat. */
+    expect(found).toHaveLength(1);
+    expect(found[0]).toMatchObject({
+      id: '2c1aec1a55776340',
+      day: '2026-08-18',
+      quote: 'Morgen bin ich beim Notar.',
+      subject: 'Notar',
+      refDate: '2026-08-19',
+      at: 0,
+    });
+    /* Und er bleibt sichtbar, wo die Liste der losen Enden ihn längst fallen lässt. */
+    expect(findLooseEnds([NOTARY, answered], [], TODAY)).toEqual([]);
   });
 });
