@@ -40,6 +40,8 @@ import {
   planInterview,
   readDay,
   recordAnswer,
+  reopenIfClosed,
+  requireDay,
   setClosed,
   setMood,
   INTERVIEW_TOPICS,
@@ -50,6 +52,7 @@ import type {
   InterviewMode,
   JournalDayDoc,
   JournalIndexView,
+  JournalStore,
 } from '@core/journal';
 import { toVaultDoc } from '@core/vault';
 import { isoDay } from '@core/vault/paths';
@@ -82,6 +85,52 @@ function journalIndex(services: Services): JournalIndexView {
   const index = services.requireIndex();
   if (!knowsJournal(index)) throw fail('io', 'der Index liefert keine Tagebuch-Ableitungen');
   return index;
+}
+
+// ── Reopening a closed day (068, D2) ────────────────────────────────────────
+
+/**
+ * Reopen the day a write just landed in, and say so.
+ *
+ * A day marked finished must not silently swallow new content: the content is
+ * in the file by the time this runs, so a `closed` field left standing would
+ * be a claim the file itself contradicts. The decision is in the core
+ * (`reopenIfClosed`); what belongs here is the toast — the app doesn't change
+ * a state the user set without telling them (guardrail 2).
+ *
+ * Two things every call site depends on:
+ *
+ * - **The hash it returns is the one to answer with.** The reopen is a
+ *   *second* write on the same file, so the hash of the content write is one
+ *   generation behind the moment this reopens. Handing that stale one to the
+ *   renderer would turn its next save into a false `conflict` — on the
+ *   journal, of all files.
+ * - **Called after the write, before `settle()`**, so the index follow-up
+ *   already sees the cleared field instead of refreshing a stale one.
+ *
+ * Returns the whole result, not just the hash: `journal:setMood` answers with
+ * the day itself and has to re-read it when this wrote.
+ *
+ * Without `hash` (the coaching path, which has none), the core guards the
+ * reopen with the hash it reads itself — same contract as `setClosed`.
+ */
+async function reopenAfterWrite(
+  services: Services,
+  store: JournalStore,
+  date: string,
+  hash?: string,
+): Promise<{ reopened: boolean; hash: string }> {
+  const result = await reopenIfClosed(
+    store,
+    date,
+    hash === undefined ? {} : { expectedHash: hash },
+  );
+  /* Only when it actually happened, and then exactly once: a toast for an
+     already open day would announce a write that never took place. */
+  if (result.reopened) {
+    services.sendEvent('event:toast', { kind: 'info', message: 'toast.journalReopened' });
+  }
+  return result;
 }
 
 // ── Coaching ─────────────────────────────────────────────────────────────────
@@ -181,6 +230,9 @@ async function runCoach(
   request: IpcRequest<'journal:coach'>,
 ): Promise<void> {
   const result = await coach(deps, request);
+  /* The user's own turn was written before the model was asked, so this day
+     carries new content in every outcome — including "no model configured". */
+  await reopenAfterWrite(services, deps.store, request.date);
   /* File first, then the completion event: the renderer reloads the day as
      soon as it arrives — the turn has to already be there by then. */
   await settle(services, [result.path], 'journal');
@@ -220,8 +272,9 @@ export function journalHandlers(services: Services): HandlerMap {
       const written = await appendEntry(store, date, text, {
         docLanguage: docLanguage(services),
       });
+      const { hash } = await reopenAfterWrite(services, store, date, written.hash);
       await settle(services, [written.path], 'journal');
-      return { path: written.path, hash: written.hash, created };
+      return { path: written.path, hash, created };
     },
 
     'journal:setDay': async ({ date, text, expectedHash }) => {
@@ -230,19 +283,26 @@ export function journalHandlers(services: Services): HandlerMap {
       /* Even the first sentence of a day can be created here — then there's
          no frozen hash, because there was nothing yet to overwrite. */
       const day = await ensureDay(store, date, language);
+      const body = withDayText(day.doc.body, text, language);
       const result = await store.write({
         path: day.path,
-        body: withDayText(day.doc.body, text, language),
+        body,
         expectedHash: expectedHash ?? day.doc.hash,
       });
+      /* A save that changes no byte is not new content: the day view saves on
+         its own, so reopening here would undo a close-out just because
+         someone looked at the day. The write itself still runs — it's what
+         checks the hash. */
+      const reopened =
+        body === day.doc.body ? result : await reopenAfterWrite(services, store, date, result.hash);
       await settle(services, [result.path], 'journal');
-      return result;
+      return { ...result, hash: reopened.hash };
     },
 
     'journal:setMood': async ({ date, mood, energy, expectedHash }) => {
       const store = journalStore(services);
       /* A mood without a file would be a click that does nothing: the day gets created. */
-      await ensureDay(store, date, docLanguage(services));
+      const before = await ensureDay(store, date, docLanguage(services));
       const day = await setMood(
         store,
         date,
@@ -252,8 +312,20 @@ export function journalHandlers(services: Services): HandlerMap {
         },
         expectedHash === undefined ? {} : { expectedHash },
       );
+      /* Compared against the file's own values, not the request: `setMood`
+         normalizes the level, so only the day before and after can answer
+         whether anything actually changed. Setting the mood a day already
+         carries is no new content and must not reopen a closed day. */
+      const changed = day.mood !== before.day.mood || day.energy !== before.day.energy;
+      let answer = day;
+      if (changed) {
+        /* Re-read when the reopen wrote: `day` was read before it and would
+           report the day as still closed. */
+        const reopened = await reopenAfterWrite(services, store, date);
+        if (reopened.reopened) answer = (await requireDay(store, date)).day;
+      }
       await settle(services, [pathFor(date)], 'journal');
-      return day;
+      return answer;
     },
 
     'journal:setClosed': async ({ date, closed, expectedHash }) => {
@@ -306,8 +378,19 @@ export function journalHandlers(services: Services): HandlerMap {
           label: 'journal',
           /* The user's own turn is already in the file (the core writes it
              before calling the model). The renderer has to see it even on
-             failure. */
-          onFailure: () => settle(services, [pathFor(date)], 'journal'),
+             failure — and the day it went into counts as reopened either
+             way, so the same reopen as on the success path runs here.
+             Guarded: `llm-stream` has already left its catch by now, so a
+             throw out of `onFailure` would leave the stream unended and the
+             renderer waiting forever. */
+          onFailure: async () => {
+            try {
+              await reopenAfterWrite(services, deps.store, date);
+            } catch (error) {
+              console.warn('[journal] Wiederoeffnen nach Fehler fehlgeschlagen:', error);
+            }
+            await settle(services, [pathFor(date)], 'journal');
+          },
         },
       );
       return { threadId: run.threadId, messageId };
@@ -367,8 +450,11 @@ export function journalHandlers(services: Services): HandlerMap {
         path: written.path,
         answeredAt: new Date().toISOString(),
       });
+      /* `today`, not `day`: the answer is written into today's stream, so
+         today is the day that gets reopened — not the one that announced it. */
+      const { hash } = await reopenAfterWrite(services, store, today, written.hash);
       await settle(services, [written.path], 'journal');
-      return written;
+      return { ...written, hash };
     },
 
     'journal:interviewPlan': async ({ date }) => {
@@ -395,11 +481,13 @@ export function journalHandlers(services: Services): HandlerMap {
       if (!(INTERVIEW_TOPICS as readonly string[]).includes(step.topic)) {
         throw fail('invalid', 'dieses Interview-Thema gibt es nicht');
       }
-      const written = await recordAnswer(journalStore(services), day, step, answer, {
+      const store = journalStore(services);
+      const written = await recordAnswer(store, day, step, answer, {
         docLanguage: docLanguage(services),
       });
+      const { hash } = await reopenAfterWrite(services, store, day, written.hash);
       await settle(services, [written.path], 'journal');
-      return written;
+      return { ...written, hash };
     },
 
     'journal:interviewFollowUp': async ({ date, step, answer }) => {

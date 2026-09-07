@@ -140,6 +140,7 @@ export const en: Record<TranslationKey, string> = {
   'toast.hotkeyBusy': 'The quick capture shortcut is taken. Change it in the settings.',
   'toast.keyNotPersisted':
     'This machine cannot store keys encrypted. The key lasts until you quit.',
+  'toast.journalReopened': 'The day is reopened — new content was added after it was closed.',
 
   /* Keys come from `src/core/llm/presets.ts`. */
   'llm.preset.ollama.hint':

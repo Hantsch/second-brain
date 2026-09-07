@@ -1,7 +1,7 @@
 ---
 sprint: S14
-status: planned # planned | in-progress | done
-branch: # set by /sprint
+status: in-progress # planned | in-progress | done
+branch: sprint/S14
 milestone: M15 — The day is one text field
 ---
 
@@ -19,7 +19,7 @@ itself and points at the way out, instead of going silent.
 
 <!-- Order = the order the build phase works through. Dependent stories go last. -->
 
-- [ ] 068 — Adding to a closed day reopens it
+- [x] 068 — Adding to a closed day reopens it
 - [ ] 069 — A day shows how its own loose ends were answered
 - [ ] 070 — A future mention becomes visible before its day arrives
 - [ ] 067 — A sensitive task's recommendation explains a dead end

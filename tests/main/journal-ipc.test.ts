@@ -60,9 +60,11 @@ async function createHarness(userDataDir: string) {
   const handlers: Handlers = journalHandlers(services);
   const streams: IpcEvents['event:llm-stream'][] = [];
   const changed: IpcEvents['event:vault-changed'][] = [];
+  const toasts: IpcEvents['event:toast'][] = [];
   const events = vi.spyOn(services, 'sendEvent').mockImplementation((name, payload) => {
     if (name === 'event:llm-stream') streams.push(payload as IpcEvents['event:llm-stream']);
     if (name === 'event:vault-changed') changed.push(payload as IpcEvents['event:vault-changed']);
+    if (name === 'event:toast') toasts.push(payload as IpcEvents['event:toast']);
   });
 
   const call = async <K extends IpcChannel>(
@@ -74,7 +76,7 @@ async function createHarness(userDataDir: string) {
     return (handler as (payload: IpcRequest<K>) => Promise<IpcResponse<K>>)(request);
   };
 
-  return { services, settings, call, events, streams, changed };
+  return { services, settings, call, events, streams, changed, toasts };
 }
 
 type Harness = Awaited<ReturnType<typeof createHarness>>;
@@ -1153,6 +1155,198 @@ describe('Tagebuch-Kanäle im Main', () => {
 
       const after = await harness.call('journal:get', { date: ANNOUNCING_DAY });
       expect(after?.looseEnds).toEqual([]);
+    });
+  });
+
+  // ── Wieder öffnen beim Schreiben (068, D2) ─────────────────────────────────
+
+  describe('Schreibwege öffnen einen abgeschlossenen Tag wieder', () => {
+    /* Nur die Meldung dieses Vorgangs — andere Toasts der App zählen nicht mit. */
+    const reopenToasts = () =>
+      harness.toasts.filter((toast) => toast.message === 'toast.journalReopened');
+
+    /** Von Hand abschließen — der Weg, den der Nutzer nimmt. Gibt den Hash danach. */
+    async function markClosed(date: string): Promise<string> {
+      const day = await harness.call('journal:setClosed', { date, closed: true });
+      expect(day.closed).not.toBeNull();
+      /* Der manuelle Schalter selbst meldet nichts — sonst wären die Zählungen
+         unten nicht die des Wiederöffnens. */
+      expect(reopenToasts()).toEqual([]);
+      return (await harness.call('journal:get', { date }))?.doc.hash ?? '';
+    }
+
+    async function closedOf(date: string): Promise<string | null> {
+      return (await harness.call('journal:get', { date }))?.day.closed ?? null;
+    }
+
+    it('hängt an einen abgeschlossenen Tag an und öffnet ihn dabei wieder', async () => {
+      await markClosed(DATE);
+
+      await harness.call('journal:append', { date: DATE, text: 'Nachtrag am Abend.' });
+
+      expect(await closedOf(DATE)).toBeNull();
+      expect((await vault.read(DAY_PATH)) ?? '').toContain('Nachtrag am Abend.');
+      expect(reopenToasts()).toEqual([{ kind: 'info', message: 'toast.journalReopened' }]);
+    });
+
+    it('öffnet den Tag beim Speichern eines geänderten Tagestextes wieder', async () => {
+      const hash = await markClosed(DATE);
+
+      await harness.call('journal:setDay', {
+        date: DATE,
+        text: 'Doch noch etwas dazu.',
+        expectedHash: hash,
+      });
+
+      expect(await closedOf(DATE)).toBeNull();
+      expect(reopenToasts()).toHaveLength(1);
+    });
+
+    it('öffnet den Tag bei einer anderen Stimmung wieder und behauptet nichts anderes', async () => {
+      const hash = await markClosed(DATE);
+
+      const day = await harness.call('journal:setMood', {
+        date: DATE,
+        mood: 5,
+        expectedHash: hash,
+      });
+
+      /* Die Antwort selbst darf den Tag nicht mehr als abgeschlossen melden —
+         der zweite Schreibvorgang ist zu diesem Zeitpunkt schon passiert. */
+      expect(day).toMatchObject({ mood: 5, closed: null });
+      expect(await closedOf(DATE)).toBeNull();
+      expect(reopenToasts()).toHaveLength(1);
+    });
+
+    it('öffnet den Tag wieder, wenn eine Gesprächsrunde hineingeschrieben wird', async () => {
+      await routeTo(streamed(REPLY));
+      await markClosed(DATE);
+
+      const done = await waitForDone((await coach({ message: 'Doch nicht fertig.' })).messageId);
+
+      expect(done.error).toBeUndefined();
+      expect(await closedOf(DATE)).toBeNull();
+      expect(reopenToasts()).toHaveLength(1);
+    });
+
+    it('öffnet den Tag auch dann wieder, wenn der Stream scheitert — die eigene Runde steht ja', async () => {
+      /* Der Abbruch ist der Weg über `onFailure`: die eigene Runde ist vor dem
+         Modell geschrieben, also hat dieser Tag neuen Inhalt, egal wie der
+         Lauf endet. */
+      await routeTo(
+        (call) =>
+          new Promise((_resolve, reject) => {
+            call.signal?.addEventListener('abort', () => {
+              const error = new Error('Abgebrochen.');
+              error.name = 'AbortError';
+              reject(error);
+            });
+          }),
+      );
+      await markClosed(DATE);
+
+      const { messageId } = await coach({ message: 'Ich mag heute nicht mehr.' });
+      await harness.call('journal:abort', { messageId });
+      const done = await waitForDone(messageId);
+
+      expect(done.error).toBe('cancelled');
+      expect((await vault.read(DAY_PATH)) ?? '').toContain('Ich mag heute nicht mehr.');
+      expect(await closedOf(DATE)).toBeNull();
+      expect(reopenToasts()).toHaveLength(1);
+    });
+
+    it('öffnet den heutigen Tag wieder, wenn ein loses Ende beantwortet wird', async () => {
+      const today = isoDay(new Date());
+      await harness.call('journal:append', { date: today, text: 'Kurz notiert.' });
+      await markClosed(today);
+
+      const written = await harness.call('journal:answerLooseEnd', {
+        id: 'loose-end:abc123',
+        day: '2026-08-05',
+        text: 'War in zehn Minuten erledigt.',
+      });
+
+      /* Wieder geöffnet wird der Tag, in den geschrieben wurde — heute, nicht
+         der ankündigende Tag. */
+      expect(written.path).toBe(journalPath(today));
+      expect(await closedOf(today)).toBeNull();
+      expect(reopenToasts()).toHaveLength(1);
+    });
+
+    it('öffnet den Tag wieder, wenn eine Interview-Antwort hineingeschrieben wird', async () => {
+      await markClosed(DATE);
+
+      const written = await harness.call('journal:interviewAnswer', {
+        date: DATE,
+        step: { topic: 'events', question: 'Was ist heute passiert?' },
+        answer: 'Der Interceptor-Bug ist wieder aufgetaucht.',
+      });
+
+      expect(written.path).toBe(DAY_PATH);
+      expect(await closedOf(DATE)).toBeNull();
+      expect(reopenToasts()).toHaveLength(1);
+    });
+
+    it('lässt einen Speichervorgang ohne Textänderung den Abschluss stehen', async () => {
+      const hash = await markClosed(DATE);
+      const marked = await closedOf(DATE);
+      const opened = await harness.call('journal:get', { date: DATE });
+      const before = (await vault.read(DAY_PATH)) ?? '';
+
+      await harness.call('journal:setDay', {
+        date: DATE,
+        text: opened?.text ?? '',
+        expectedHash: hash,
+      });
+
+      /* Kein neuer Inhalt heißt kein Wiederöffnen: der Editor speichert von
+         sich aus, und das bloße Ansehen eines Tages darf den Abschluss des
+         Nutzers nicht zurücknehmen. */
+      expect(await closedOf(DATE)).toBe(marked);
+      expect(await vault.read(DAY_PATH)).toBe(before);
+      expect(reopenToasts()).toEqual([]);
+    });
+
+    it('lässt eine unveränderte Stimmung den Abschluss stehen', async () => {
+      const hash = await markClosed(DATE);
+      const marked = await closedOf(DATE);
+      const before = (await vault.read(DAY_PATH)) ?? '';
+
+      /* Genau die Werte, die der Beispieltag schon trägt. */
+      const day = await harness.call('journal:setMood', {
+        date: DATE,
+        mood: 3,
+        energy: 2,
+        expectedHash: hash,
+      });
+
+      expect(day.mood).toBe(3);
+      expect(day.closed).toBe(marked);
+      expect(await vault.read(DAY_PATH)).toBe(before);
+      expect(reopenToasts()).toEqual([]);
+    });
+
+    it('gibt den Hash nach dem Wiederöffnen zurück, sodass der nächste Speichervorgang trägt', async () => {
+      const hash = await markClosed(DATE);
+
+      const first = await harness.call('journal:setDay', {
+        date: DATE,
+        text: 'Erster Nachtrag.',
+        expectedHash: hash,
+      });
+
+      /* Der Hash aus der Antwort muss den Stand *nach* dem zweiten
+         Schreibvorgang treffen — sonst bekäme der nächste Speichervorgang des
+         Renderers ein falsches `conflict` auf der empfindlichsten Datei. */
+      expect(first.hash).toBe((await harness.call('journal:get', { date: DATE }))?.doc.hash);
+      await expect(
+        harness.call('journal:setDay', {
+          date: DATE,
+          text: 'Zweiter Nachtrag.',
+          expectedHash: first.hash,
+        }),
+      ).resolves.toMatchObject({ path: DAY_PATH });
+      expect((await vault.read(DAY_PATH)) ?? '').toContain('Zweiter Nachtrag.');
     });
   });
 

@@ -145,6 +145,8 @@ export const de = {
     'Die Tastenkombination für das Schnell-Erfassen ist belegt. In den Einstellungen ändern.',
   'toast.keyNotPersisted':
     'Dieser Rechner kann Schlüssel nicht verschlüsselt ablegen. Der Schlüssel gilt nur bis zum Beenden.',
+  'toast.journalReopened':
+    'Der Tag ist wieder offen — nach dem Abschluss ist neuer Inhalt dazugekommen.',
 
   /* Die Keys stammen aus `src/core/llm/presets.ts`. */
   'llm.preset.ollama.hint':

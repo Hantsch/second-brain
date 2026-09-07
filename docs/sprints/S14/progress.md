@@ -1,0 +1,6 @@
+- 2026-09-07 13:03 · 068 · D1 reopenIfClosed core helper · started
+- 2026-09-07 13:04 · 068 · D1 reopenIfClosed core helper · done
+- 2026-09-07 13:05 · 068 · D2 wire reopen into every journal write path · started
+- 2026-09-07 13:13 · 068 · D2 wire reopen into every journal write path · done
+- 2026-09-07 13:13 · 068 · D3 i18n toast key + e2e spec · started
+- 2026-09-07 13:20 · 068 · D3 i18n toast key + e2e spec · done

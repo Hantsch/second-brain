@@ -44,6 +44,7 @@ export {
   setMood,
 } from './day';
 export { setClosed } from './closed';
+export { reopenIfClosed } from './reopen';
 export {
   appendTurn,
   dialogHistory,
