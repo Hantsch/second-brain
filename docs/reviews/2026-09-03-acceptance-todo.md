@@ -68,7 +68,7 @@ a milestone is yours to mark in the roadmap.
 
 ## S13 — the day is one text field (M15 part 1)
 
-Testplan: [sprints/S13/testplan.md](../sprints/S13/testplan.md)
+Testplan: [sprints/done/S13/testplan.md](../sprints/done/S13/testplan.md)
 
 - [x] **047 — day view order** ([story](../requirements/done/047-the-day-view-reads-in-the-order-i-write-in.md)).
       Test: open a journal day (wide and narrow window) and read top to bottom. Expected: head →

@@ -756,10 +756,10 @@ Ten feedback points, cut into three groups:
 
 Sprints:
 
-- [sprints/S13/sprint.md](sprints/S13/sprint.md) — the day is one text field (047, 048, 049),
-  `done` ([review](sprints/S13/review.md) · [testplan](sprints/S13/testplan.md))
-- [sprints/S14/sprint.md](sprints/S14/sprint.md) — a closed day and a loose end both tell the
-  truth (068, 069, 070, 067), `done` ([review](sprints/S14/review.md), no testplan — no criterion
+- [sprints/done/S13/sprint.md](sprints/done/S13/sprint.md) — the day is one text field (047, 048, 049),
+  `done` ([review](sprints/done/S13/review.md) · [testplan](sprints/done/S13/testplan.md))
+- [sprints/done/S14/sprint.md](sprints/done/S14/sprint.md) — a closed day and a loose end both tell the
+  truth (068, 069, 070, 067), `done` ([review](sprints/done/S14/review.md), no testplan — no criterion
   was marked manual residue) — cut 2026-09-07 from three fresh user bug reports, each investigated
   before cutting. 068 is the milestone's own named second-part item (reopen on new content);
   069/070 are a split of one confusing moment the user described into read-time visibility vs.
@@ -811,7 +811,7 @@ Gaps/notes:
   only ever surfaced after its day has already passed, never at write time (070). A third,
   unrelated Settings papercut (067, a sensitive task's recommendation dead-ending with no
   explanation) rode along in the same sprint rather than waiting for its own cut. All four stories
-  done; acceptance proven by tests, see [S14's review](sprints/S14/review.md).
+  done; acceptance proven by tests, see [S14's review](sprints/done/S14/review.md).
 - **S14 e2e harness gap:** story 067's guided-recommendation dead end (AC1, and AC2's e2e half)
   could not be reproduced through the real Electron surface — the no-model e2e vault's local
   models always satisfy `condense-area`'s capacity + sensitivity policy, so `pick === null` never
