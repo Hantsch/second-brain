@@ -805,7 +805,10 @@ Gaps/notes:
 - The second part of M15 (re-indexing a day after close, correcting the close summary, the date
   picker's year/month drill-down) is not cut yet — own `/roadmap plan` once S13 is accepted.
   **Update 2026-09-07:** the first of the three (reopen-on-new-content) is now cut as story 068 in
-  S14. The close-summary correction and the date picker's drill-down are still open.
+  S14, and the close-summary correction is cut as story 075 in S15 — under M16, because the user's
+  report that a proposal can only be discarded belongs to that milestone's theme, not to "the day
+  is one text field". The date picker's year/month drill-down is the one item of M15's second part
+  still not cut.
 - **S14 (cut and built 2026-09-07):** two more fresh bug reports from real journal use — a loose
   end's answer is invisible from the day it was raised on (069), and a forward-looking mention is
   only ever surfaced after its day has already passed, never at write time (070). A third,
@@ -821,14 +824,74 @@ Gaps/notes:
 
 ---
 
+### M16 — Work in flight is visible, and what it proposes is correctable — in progress
+
+No concept behind it either: like M15, this milestone comes from the user's own feedback after
+really using the app (2026-09-07). Two reports, one theme — the app does work on the user's
+behalf and the user loses sight of, and control over, that work.
+
+- **Background work is assumed, not seen.** Condensing an area or a project and closing a day
+  are awaited mutations inside the renderer component that started them
+  ([queries/condense.ts:43](../src/renderer/lib/queries/condense.ts#L43), `journal:close`).
+  Navigate away mid-run and the run is invisible and its proposal lands nowhere — on a local
+  model, minutes of work thrown away. Maintenance already does it right
+  ([gardener-run-state.ts](../src/main/gardener-run-state.ts) plus
+  [RunStrip.tsx](../src/renderer/components/RunStrip.tsx)); imports already have a job shape
+  (`IngestJob`). The milestone generalises those two instead of adding a third mechanism.
+- **A close proposal can only be pruned, never corrected.** Todos are kept or dropped, fields
+  are kept or dropped whole, mood and energy cannot be set to the right value, and a todo's
+  text, target project, scope or a waiting-on's person cannot be touched at all. So a wrong
+  proposal costs either a wrong entry or the whole close. This is M15's own deferred
+  second-part item, now cut here.
+
+Decisions taken at the cut (2026-09-07, user):
+
+- **All long runs, one list.** Condensations, the day's close, the interview plan, imports and
+  the maintenance run — not just the two that are invisible today. Two mechanisms for one
+  problem was explicitly rejected.
+- **A real queue, not just a monitor.** One model-bound task at a time; further requests wait
+  visibly with their position. That protects a local model from computing two condensations at
+  once and makes "still running" an honest statement.
+- **The result stays with the task.** A finished task holds its proposal and offers a way back
+  to it; the proposal survives navigation. Toast-plus-badge, with the result only retrievable
+  where it started, was offered and rejected.
+- **Every line and every field of a close proposal becomes editable** — todo text, target,
+  scope, a waiting-on's person, plus adding a line by hand, per-item people/projects/tags, and
+  mood/energy set to another value. Re-running the model with a correction hint was offered as
+  the cheap alternative and rejected: it is worthless without a model and the result stays
+  guessed.
+- **The rail entry sits directly above maintenance**, as the user asked.
+
+Sprints:
+
+- [sprints/S15/sprint.md](sprints/S15/sprint.md) — work in flight has a place, and a proposal can
+  be corrected (071, 072, 073, 074, 075), `planned`
+
+Gaps/notes:
+
+- **074 is the risky story.** It migrates the maintenance run and the ingest progress path onto
+  the new registry and touches `gardener-run-state.ts`, `gardener-autorun.ts`,
+  `close-guard.ts` and every consumer of `event:ingest-progress` — all covered by existing
+  tests (including story 042's e2e cross-screen check) that have to stay green without being
+  weakened.
+- **075 is independent** of the four queue stories and could be built first if they run long.
+- **Persistence is deliberately an open question,** not a decision: the recommendation in 071
+  is a session-only queue (derived, like the index), so a run interrupted by a quit is
+  restarted by the user rather than resurrected half-done.
+- The date picker's year/month drill-down — M15's third deferred second-part item — is still
+  not cut. It is unrelated to this milestone's theme and waits for its own cut.
+
+---
+
 ## Open / unprioritised
 
-| Topic                                                         | State                                                                                                                                                                                                                                                                                                                                               | Next step                                                                                                                                                                           |
-| ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Condensed layer (module level)                                | Concept written 2026-08-18: [concepts/condensed-layer.md](concepts/condensed-layer.md). The **area** level was built in M12 (S10, done 2026-09-02); the **project** level was built as M14 (S12, done 2026-09-02). The **module** level — CND-2, CND-17 (agent-session citation), CND-35/36 (retiring the ingest's overview append) — is still open | Own `/roadmap plan` for the module level. The concept's §7 reversal trigger was evaluated at M14's refine and did not flip (see M14's Gaps/notes)                                   |
-| MCP interface for projects, knowledge and the condensed layer | Named as an outlook in [concepts/condensed-layer.md](concepts/condensed-layer.md) §14, deliberately without requirements                                                                                                                                                                                                                            | Own `/ai-scrum:concept` once the condensed artifacts exist                                                                                                                          |
-| German docs migrated to English                               | Decided in `.claude/ai-scrum.md`; only `docs/MODULE-SCHEMA.md` is still German now — and story 023 pinned it `eol=lf` and byte-exact against `MODULE_SCHEMA_TEMPLATE`, so migrating it means changing code too                                                                                                                                      | Own story once it stops being cosmetic                                                                                                                                              |
-| Medication tracker                                            | Named in the user's journal feedback (2026-09-03) and postponed at the M15 cut by the user: the idea is not ripe enough to cut. Open shape questions: preparations, dose, schedule, adherence, correlation with mood/energy, own screen or a day section                                                                                            | Own `/ai-scrum:concept` once the user wants it — no story until then                                                                                                                |
-| Data import merges into an existing day                       | Rule agreed at the M15 cut (2026-09-03): an import must add to a day that already has content, never replace it. But no import path exists in the code, so the story has no subject yet                                                                                                                                                             | Name the source (old journal files, another app's export, a folder of Markdown), then cut one story with the merge rule as its acceptance                                           |
-| Functional e2e harness (acceptance's missing level)           | Story [066](requirements/066-a-flow-can-be-tested-through-the-real-app.md) cut 2026-09-07 as the one thing the retired acceptance backlog turned into: nothing drives a flow through the built app and asserts an outcome, so `e2e: none` in `.claude/ai-scrum.md` and every user-facing criterion is covered a level below the real surface        | `/ai-scrum:refine 066` — four open questions (suite scope, runner, disposable vault, CI lane vs [065](requirements/065-the-gate-runs-on-every-push.md)), each with a recommendation |
-| Phase 2                                                       | Not defined                                                                                                                                                                                                                                                                                                                                         | Cut after phase 1 has been used                                                                                                                                                     |
+| Topic                                                         | State                                                                                                                                                                                                                                                                                                                                                                                                                                          | Next step                                                                                                                                                                           |
+| ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Condensed layer (module level)                                | Concept written 2026-08-18: [concepts/condensed-layer.md](concepts/condensed-layer.md). The **area** level was built in M12 (S10, done 2026-09-02); the **project** level was built as M14 (S12, done 2026-09-02). The **module** level — CND-2, CND-17 (agent-session citation), CND-35/36 (retiring the ingest's overview append) — is still open                                                                                            | Own `/roadmap plan` for the module level. The concept's §7 reversal trigger was evaluated at M14's refine and did not flip (see M14's Gaps/notes)                                   |
+| MCP interface for projects, knowledge and the condensed layer | Named as an outlook in [concepts/condensed-layer.md](concepts/condensed-layer.md) §14, deliberately without requirements                                                                                                                                                                                                                                                                                                                       | Own `/ai-scrum:concept` once the condensed artifacts exist                                                                                                                          |
+| German docs migrated to English                               | Decided in `.claude/ai-scrum.md`; only `docs/MODULE-SCHEMA.md` is still German now — and story 023 pinned it `eol=lf` and byte-exact against `MODULE_SCHEMA_TEMPLATE`, so migrating it means changing code too                                                                                                                                                                                                                                 | Own story once it stops being cosmetic                                                                                                                                              |
+| Medication tracker                                            | Named in the user's journal feedback (2026-09-03) and postponed at the M15 cut by the user: the idea is not ripe enough to cut. Open shape questions: preparations, dose, schedule, adherence, correlation with mood/energy, own screen or a day section                                                                                                                                                                                       | Own `/ai-scrum:concept` once the user wants it — no story until then                                                                                                                |
+| Data import merges into an existing day                       | Rule agreed at the M15 cut (2026-09-03): an import must add to a day that already has content, never replace it. But no import path exists in the code, so the story has no subject yet                                                                                                                                                                                                                                                        | Name the source (old journal files, another app's export, a folder of Markdown), then cut one story with the merge rule as its acceptance                                           |
+| Functional e2e harness (acceptance's missing level)           | Story [066](requirements/066-a-flow-can-be-tested-through-the-real-app.md) cut 2026-09-07 as the one thing the retired acceptance backlog turned into: nothing drives a flow through the built app and asserts an outcome, so `e2e: none` in `.claude/ai-scrum.md` and every user-facing criterion is covered a level below the real surface                                                                                                   | `/ai-scrum:refine 066` — four open questions (suite scope, runner, disposable vault, CI lane vs [065](requirements/065-the-gate-runs-on-every-push.md)), each with a recommendation |
+| Architecture-review backlog (050-064)                         | 15 draft stories from the [2026-09-03 architecture review](reviews/2026-09-03-architecture-review.md) sit in `requirements/` with no milestone line — invisible to this file since they were cut. Themes: incremental indexing (054, 055, 056), IPC re-validation (057), ingest robustness (050, 051, 060, 064), scoped/passage retrieval (052, 053), and smaller papercuts (058, 059, 061, 062, 063). 065 (CI gate) is tracked with 066 above | Own `/roadmap plan` — cut into one or two hardening milestones by theme, not as one 15-story sprint. Until then they are backlog, not plan                                          |
+| Phase 2                                                       | Not defined                                                                                                                                                                                                                                                                                                                                                                                                                                    | Cut after phase 1 has been used                                                                                                                                                     |
