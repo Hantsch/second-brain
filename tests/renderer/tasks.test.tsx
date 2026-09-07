@@ -68,7 +68,9 @@ function task(patch: Partial<WorkTask> & { id: string; state: WorkTask['state'] 
     queuedAt: NOW,
     startedAt: null,
     finishedAt: null,
+    retryable: true,
     ...patch,
+    detail: patch.detail ?? null,
   };
 }
 
@@ -198,6 +200,92 @@ describe('Aufgaben', () => {
     expect(screen.getByText('1m')).toBeTruthy();
     expect(screen.getByText('<1m')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Erneut versuchen' })).toBeTruthy();
+  });
+
+  it('zeigt den Wiederholen-Knopf nur, wenn die Aufgabe selbst retryable ist — unabhaengig von ihrer Art (Review F2)', async () => {
+    freezeTime();
+    // A mirrored maintenance run (`startExternal`, 074 D2): never retryable.
+    const failedGardener = task({
+      id: 'fin-fail-gardener',
+      kind: 'gardener',
+      state: 'failed',
+      retryable: false,
+      startedAt: NOW,
+      finishedAt: NOW,
+      subject: { label: 'Pflegelauf', ref: null },
+    });
+    // A mirrored import (`startExternal`, 074 D4): never retryable either.
+    const failedIngestExternal = task({
+      id: 'fin-fail-ingest-external',
+      kind: 'ingest',
+      state: 'failed',
+      retryable: false,
+      startedAt: NOW,
+      finishedAt: NOW,
+      subject: { label: 'Video ueber Migration', ref: null },
+    });
+    /* The same `kind` as the row above, but normally enqueued — exactly what
+       `tasks-e2e-fixture.ts`'s "Synthetic task D" is, and exactly the case
+       the prior fix-cycle broke by keying off `kind` instead of `retryable`.
+       If this row's button hid along with the external ingest row above,
+       `kind` would still be doing the deciding, not `retryable`. */
+    const failedIngestNormal = task({
+      id: 'fin-fail-ingest-normal',
+      kind: 'ingest',
+      state: 'failed',
+      retryable: true,
+      startedAt: NOW,
+      finishedAt: NOW,
+      subject: { label: 'Synthetischer Auftrag D', ref: null },
+    });
+    const failedCondense = task({
+      id: 'fin-fail-condense',
+      kind: 'condense',
+      state: 'failed',
+      retryable: true,
+      startedAt: NOW,
+      finishedAt: NOW,
+      subject: { label: 'Bereich Wachstum', ref: null },
+    });
+
+    installSbMock({
+      'work:list': () => [failedGardener, failedIngestExternal, failedIngestNormal, failedCondense],
+      'tasks:retry': () => null,
+    });
+
+    wrap(<TasksScreen />);
+
+    await screen.findByText('Pflegelauf');
+    /* Retrying a non-retryable task would silently re-enqueue the registry's
+       no-op stub and report a fresh 'done' without redoing anything real —
+       the registry refuses it (`WorkRegistry.retry`), so the button that
+       could only ever do nothing must not render either. */
+    const gardenerRow = screen.getByText('Pflegelauf').closest('.sb-trow');
+    const ingestExternalRow = screen.getByText('Video ueber Migration').closest('.sb-trow');
+    expect(
+      gardenerRow ? within(gardenerRow as HTMLElement).queryByRole('button') : 'missing',
+    ).toBeNull();
+    expect(
+      ingestExternalRow
+        ? within(ingestExternalRow as HTMLElement).queryByRole('button')
+        : 'missing',
+    ).toBeNull();
+
+    // Same kind ('ingest') as the row above, but retryable — the button shows.
+    const ingestNormalRow = screen.getByText('Synthetischer Auftrag D').closest('.sb-trow');
+    expect(
+      ingestNormalRow
+        ? within(ingestNormalRow as HTMLElement).queryByRole('button', { name: 'Erneut versuchen' })
+        : null,
+    ).toBeTruthy();
+
+    // A failed, retryable task of a kind unrelated to external tasks too.
+    const condenseRow = screen.getByText('Bereich Wachstum').closest('.sb-trow');
+    expect(
+      condenseRow
+        ? within(condenseRow as HTMLElement).queryByRole('button', { name: 'Erneut versuchen' })
+        : null,
+    ).toBeTruthy();
   });
 
   it('zeigt bei einem erledigten Lauf mit Ergebnis „Ergebnis ansehen“ und navigiert dorthin (073, D7)', async () => {

@@ -171,6 +171,8 @@ const DEMO_CONDENSE_TASK: WorkTask = {
   startedAt: fx.NOW,
   finishedAt: fx.NOW,
   hasResult: true,
+  detail: null,
+  retryable: true,
 };
 let condenseQueued = false;
 
@@ -191,6 +193,8 @@ const DEMO_CLOSE_TASK: WorkTask = {
   startedAt: fx.NOW,
   finishedAt: fx.NOW,
   hasResult: true,
+  detail: null,
+  retryable: true,
 };
 let closeQueued = false;
 

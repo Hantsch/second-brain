@@ -74,6 +74,8 @@ const BASE_TASK: WorkTask = {
   startedAt: '2026-08-10T09:00:01.000Z',
   finishedAt: null,
   hasResult: false,
+  detail: null,
+  retryable: true,
 };
 
 const PROPOSAL: CondenseProposal = {

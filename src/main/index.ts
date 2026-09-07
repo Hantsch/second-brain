@@ -16,7 +16,6 @@ import { createMainWindow } from './window';
 import { syncQuickCaptureHotkey, unregisterHotkeys, watchQuickCaptureHotkey } from './hotkey';
 import { destroyQuickCapture } from './quick-capture';
 import { startGardenerAutorun } from './gardener-autorun';
-import { cancelGardenerRun } from './gardener-run-state';
 import { startReminderNotifier } from './reminder-notify';
 import { runTasksFixture } from './ipc/tasks-e2e-fixture';
 import { isVault } from './vault-layout';
@@ -88,8 +87,8 @@ async function start(): Promise<void> {
   const window = createMainWindow(services);
   services.setMainWindow(window);
   /* Ask before closing kills a running maintenance pass (042, D6). A layer in
-     front of `will-quit`'s `cancelGardenerRun('shutdown')` below, which stays
-     the last-resort net for every close this one lets through. */
+     front of `will-quit`'s `cancelAll('shutdown')` below, which stays the
+     last-resort net for every close this one lets through. */
   attachCloseGuard(services, window);
 
   /* The hidden quick-capture window must not keep the app alive. */
@@ -147,13 +146,14 @@ app.on('will-quit', () => {
     reminderNotifier = null;
     gardenerAutorun?.stop();
     gardenerAutorun = null;
-    /* On the way out nothing of a running pass is kept (021b, D2): the atomic
-       write could not be awaited here anyway, and a vault being left behind must
-       not carry half a report. A stop the user asked for goes through
-       `gardener:cancel` and says `'user'` instead. */
-    cancelGardenerRun('shutdown');
-    /* Same shutdown net for the work queue (071, D4): a task in flight against
-       the vault must not be left running once the process is on its way out. */
+    /* The shutdown net for everything in flight (071, D4) — a task running
+       against the vault must not be left going once the process is on its way
+       out, and since 074 D2 that reaches the maintenance run too: it is
+       mirrored onto this queue and stops its own real run via the registry's
+       `onCancel` hook. On the way out nothing of a running pass is kept
+       (021b, D2): the atomic write could not be awaited here anyway, and a
+       vault left behind must not carry half a report. A stop the user asked
+       for goes through `gardener:cancel` and says `'user'` instead. */
     if (runningServices) {
       getWorkQueue(runningServices).cancelAll('shutdown');
       getWorkQueue(runningServices).clear();

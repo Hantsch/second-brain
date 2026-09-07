@@ -5,7 +5,9 @@
  * - Der Eingang **erkennt selbst**, was hereinkommt, sagt es sichtbar, und
  *   schickt genau diese Art an den Hauptprozess. Ein YouTube-Link, der als „url"
  *   losgeschickt wird, verliert das Transcript — das darf nicht passieren.
- * - Fortschritt kommt aus `event:ingest-progress` und steht in der Liste.
+ * - Fortschritt kommt über `event:work-tasks` herein (074, D6) — ein
+ *   `WorkTask` vom Kind `ingest` trägt den Auftrag als `detail` — und steht
+ *   in der Liste.
  * - `awaiting-llm` ist ein eigener, ehrlicher Zustand mit zwei Wegen, kein
  *   Fehler und kein halber Erfolg.
  */
@@ -17,7 +19,7 @@ import userEvent from '@testing-library/user-event';
 import axe from 'axe-core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { IpcChannel, IpcEventName, IpcEvents, IpcRequest, IpcResponse } from '@shared/ipc';
-import type { IngestJob, KnowledgeModule, RawSource, SourceDetail } from '@shared/types';
+import type { IngestJob, KnowledgeModule, RawSource, SourceDetail, WorkTask } from '@shared/types';
 import { SourcesTab } from '@renderer/screens/sources/SourcesTab';
 import { detectKind } from '@renderer/screens/sources/detect';
 import { setLanguage } from '@renderer/i18n';
@@ -125,6 +127,34 @@ function job(patch: Partial<IngestJob> = {}): IngestJob {
     rawPath: null,
     touchedPages: [],
     ...patch,
+  };
+}
+
+/**
+ * A `WorkTask` shaped exactly like `ipc/ingest.ts`'s `mirror()` produces for a
+ * given job (074, D4/D6): `kind: 'ingest'`, `lane: 'import'`, `detail` set to
+ * the job itself. What the sources screen actually reads out of a `WorkTask`
+ * is `detail` — the rest of the fields exist only so this is a real `WorkTask`.
+ */
+function workTask(ingestJob: IngestJob, patch: Partial<WorkTask> = {}): WorkTask {
+  return {
+    id: ingestJob.id,
+    kind: 'ingest',
+    lane: 'import',
+    subject: { label: ingestJob.label, ref: ingestJob.rawPath },
+    state: ingestJob.stage === 'queued' ? 'queued' : 'running',
+    progress: ingestJob.progress,
+    message: ingestJob.message,
+    error: ingestJob.error,
+    hasResult: false,
+    queuePosition: null,
+    queuedAt: ingestJob.startedAt ?? NOW,
+    startedAt: ingestJob.startedAt,
+    finishedAt: ingestJob.finishedAt,
+    // Mirrors the real registry task (`WorkRegistry.startExternal`, 074 D4).
+    retryable: false,
+    ...patch,
+    detail: patch.detail ?? ingestJob,
   };
 }
 
@@ -244,12 +274,13 @@ describe('Quellen: Eingang', () => {
 });
 
 describe('Quellen: Aufträge', () => {
-  it('zeigt den Fortschritt aus event:ingest-progress', async () => {
+  it('zeigt den Fortschritt aus event:work-tasks', async () => {
     const { sb } = renderScreen({ 'ingest:jobs': () => [job()] });
     await screen.findByText('Wird geholt');
     expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe('40');
 
-    sb.emit('event:ingest-progress', job({ stage: 'summarizing', progress: 0.85 }));
+    const updated = job({ stage: 'summarizing', progress: 0.85 });
+    sb.emit('event:work-tasks', [workTask(updated)]);
 
     expect(await screen.findByText('Wird verdichtet')).toBeTruthy();
     await waitFor(() =>
@@ -261,13 +292,51 @@ describe('Quellen: Aufträge', () => {
     const { sb } = renderScreen();
     await screen.findByLabelText('URL, YouTube-Link oder Text');
 
-    sb.emit(
-      'event:ingest-progress',
-      job({ id: 'job-2', kind: 'url', label: 'example.org', stage: 'writing-raw', progress: 0.8 }),
-    );
+    const arrived = job({
+      id: 'job-2',
+      kind: 'url',
+      label: 'example.org',
+      stage: 'writing-raw',
+      progress: 0.8,
+    });
+    sb.emit('event:work-tasks', [workTask(arrived)]);
 
     expect(await screen.findByText('example.org')).toBeTruthy();
     expect(screen.getByText('Rohquelle geschrieben')).toBeTruthy();
+  });
+
+  /* 074, D6: the mirrored list carries every kind of task, not only ingest —
+     the filter on `kind === 'ingest'` must not lose a real job update just
+     because an unrelated task (e.g. a condensation) rides along in the same
+     emission. */
+  it('übernimmt einen Fortschritt, auch wenn andere Auftragsarten in derselben Sendung mitkommen', async () => {
+    const { sb } = renderScreen({ 'ingest:jobs': () => [job()] });
+    await screen.findByText('Wird geholt');
+
+    const unrelated: WorkTask = {
+      id: 'condense-1',
+      kind: 'condense',
+      lane: 'model',
+      subject: { label: 'Bereich Wachstum', ref: null },
+      state: 'done',
+      progress: 1,
+      message: null,
+      error: null,
+      hasResult: false,
+      queuePosition: null,
+      queuedAt: NOW,
+      startedAt: NOW,
+      finishedAt: NOW,
+      detail: null,
+      retryable: true,
+    };
+    const updated = job({ stage: 'summarizing', progress: 0.85 });
+    sb.emit('event:work-tasks', [unrelated, workTask(updated)]);
+
+    expect(await screen.findByText('Wird verdichtet')).toBeTruthy();
+    await waitFor(() =>
+      expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe('85'),
+    );
   });
 
   it('behandelt „kein Modell" als eigenen Zustand mit zwei Wegen', async () => {

@@ -21,8 +21,10 @@
    Errors stay quiet: a failed maintenance run must not cost the app anything. */
 
 import { gardenerStateFor, runWithProgress, saveRun } from './ipc/gardener-deps';
-import { beginGardenerRun, gardenerRunning } from './gardener-run-state';
+import { beginGardenerRun } from './gardener-run-state';
+import { getWorkQueue } from './work-queue';
 import { GARDENER_STATE_FILE } from './gardener-state';
+import { TERMINAL_STATES } from '@core/work/task';
 import type { Services } from './services';
 
 /**
@@ -99,7 +101,12 @@ export class GardenerAutorun {
 
   /** One attempt. Reports what it did. */
   async run(): Promise<AutorunResult> {
-    if (gardenerRunning()) return 'busy';
+    /* The registry itself, not a local flag kept in sync with it (074, D3):
+       "is a run going" has exactly one source, queried directly. */
+    const busy = getWorkQueue(this.services)
+      .list()
+      .some((task) => task.kind === 'gardener' && !TERMINAL_STATES.has(task.state));
+    if (busy) return 'busy';
     const settings = this.services.settings.vault();
     if (settings === null || !settings.gardener.runOnOpen) return 'off';
     const status = this.services.status();
@@ -109,10 +116,19 @@ export class GardenerAutorun {
        the top so a run nobody wants is never announced. Losing the race against
        a click is still `'busy'`. */
     const handle = beginGardenerRun({
+      /* Mirrored onto the one work queue, exactly like the run the user asks
+         for (074, D2) — the run on opening the vault is the one a user is
+         least likely to expect, so it is the one that most needs to be
+         listed and stoppable. */
+      workQueue: getWorkQueue(this.services),
       trigger: 'auto',
-      emit: (progress) => this.services.sendEvent('event:gardener-progress', progress),
+      /* Nothing sends the (now-deleted) `event:gardener-progress` from here
+         anymore — the registry mirror inside `gardener-run-state.ts`'s own
+         `publish()` is the only consumer of a published step now. */
+      emit: () => {},
     });
     if (handle === null) return 'busy';
+    let caughtError: unknown;
     try {
       const state = await gardenerStateFor(this.services);
       /* Reported like every other run (021a, D3): without `onProgress` the run
@@ -143,10 +159,13 @@ export class GardenerAutorun {
       return result.complete && stored ? 'ran' : 'cancelled';
     } catch (error) {
       if (handle.signal.aborted) return 'cancelled';
+      caughtError = error;
       console.warn('[gardener] Maintenance run on open failed:', error);
       return 'no-index';
     } finally {
-      handle.finish();
+      /* The real outcome, once: a cancelled run was already settled by the
+         cancel itself, a failed one is reported as failed here. */
+      handle.finish(caughtError);
     }
   }
 }

@@ -206,7 +206,9 @@ function baseTask(overrides: Partial<WorkTask> = {}): WorkTask {
     startedAt: '2026-08-10T09:00:01.000Z',
     finishedAt: null,
     hasResult: false,
+    retryable: true,
     ...overrides,
+    detail: overrides.detail ?? null,
   };
 }
 

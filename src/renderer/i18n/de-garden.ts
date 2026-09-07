@@ -288,12 +288,14 @@ export const deGarden = {
   'garden.llm.body':
     'Widersprüche zwischen zwei Seiten, Beinahe-Dubletten und häufig genannte Begriffe ohne eigene Seite. Alles darüber steht oben vollständig.',
 
-  // ── Schließen während eines Laufs (042, D7) ──────────────────────────────
+  // ── Schließen während eines Laufs (042/074, D7) ──────────────────────────
   /* Nur der Stopp wird angeboten, kein „trotzdem schließen“ — ein Schreib-
-     vorgang könnte noch laufen (Decisions der Story). */
-  'garden.quit.title': 'Ein Pflegelauf läuft noch.',
+     vorgang könnte noch laufen (Decisions der Story). Seit 074 nicht mehr nur
+     die Pflege: `{kinds}` nennt jede laufende Aufgabe, die den Schluss
+     verhindert hat (Verdichten, Quelle aufnehmen, …), kommagetrennt. */
+  'garden.quit.title': 'Läuft noch: {kinds}.',
   'garden.quit.body':
-    'Ihn jetzt zu stoppen beendet ihn sauber — genau wie der Stopp-Knopf im Laufstreifen. Schließen ohne zu stoppen wird nicht angeboten: Ein Schreibvorgang könnte noch laufen.',
-  'garden.quit.stopAndClose': 'Lauf stoppen und schließen',
+    'Jetzt zu stoppen beendet sauber. Schließen ohne zu stoppen wird nicht angeboten: Ein Schreibvorgang könnte noch laufen.',
+  'garden.quit.stopAndClose': 'Stoppen und schließen',
   'garden.quit.cancel': 'Abbrechen',
 } as const;

@@ -2,8 +2,9 @@
 
    The truth about running jobs lives in a core `IngestQueue`; this module
    attaches it to the open vault, gives it its environment (fetch, process
-   invocation, file system, yt-dlp), and sends every change as
-   `event:ingest-progress` to the renderer.
+   invocation, file system, yt-dlp), and mirrors every change onto the one work
+   queue (074, D4) — where it is listed and cancellable next to every other
+   long-running task, instead of on a channel only the sources screen knew.
 
    Three decisions that otherwise aren't visible in the code:
    - **The condensation step is passed in.** The ingest core doesn't know
@@ -19,6 +20,7 @@
 import { join } from 'node:path';
 import { dialog } from 'electron';
 import {
+  IngestError,
   IngestQueue,
   TERMINAL_STAGES,
   analyzeYoutubeResources,
@@ -56,6 +58,8 @@ import {
 } from './source-detail';
 import { docLanguage, settle, wikiDeps, wikiStore } from './wiki-bridge';
 import { createGateway } from '../llm-bridge';
+import { getWorkQueue } from '../work-queue';
+import type { ExternalTaskHandle } from '@core/work/registry';
 import type { Services } from '../services';
 
 /** This many jobs run concurrently. */
@@ -117,6 +121,31 @@ function environment(
   };
 }
 
+/** The codes an `IngestError` may carry — the runtime half of its own type. */
+const INGEST_ERROR_CODES: readonly IngestError['code'][] = [
+  'invalid',
+  'not-found',
+  'io',
+  'cancelled',
+  'unknown',
+];
+
+/**
+ * A failed job as an error again, for `ExternalTaskHandle.fail`.
+ *
+ * Reconstructed rather than re-worded: `describeFailure` reads code and text
+ * straight off an `IngestError`, so the mirrored task ends up carrying the very
+ * failure the job reported. `IngestJob.error` is a plain string on the wire
+ * (`IpcError.code`), so a code that is not one of the ingest codes falls back to
+ * a plain `Error` — which `describeFailure` files as `unknown`, the honest
+ * answer, instead of a code nothing defines.
+ */
+function jobFailure(job: IngestJob): Error {
+  const message = job.message ?? job.error ?? 'Aufnahme gescheitert.';
+  const code = INGEST_ERROR_CODES.find((candidate) => candidate === job.error);
+  return code === undefined ? new Error(message) : new IngestError(code, message);
+}
+
 /**
  * The queue of the open vault. When the vault changes, the old queue is
  * cancelled: a job writing into a closed vault would be a write with nowhere
@@ -125,6 +154,16 @@ function environment(
 class QueueHolder {
   private root: string | null = null;
   private queue: IngestQueue | null = null;
+  /**
+   * The mirrored work task per running ingest job, keyed by `IngestJob.id`.
+   *
+   * Scoped exactly like `queue` above, and rebuilt with it: `IngestQueue` hands
+   * out ids from its own counter, so the next vault's first job is `ingest-1`
+   * again — a handle left behind by the closed vault would then be found for a
+   * completely different job. An entry lives only while its job is in flight;
+   * see `mirror()` for why it goes as soon as the job settles.
+   */
+  private readonly mirrors = new Map<string, ExternalTaskHandle>();
 
   constructor(private readonly services: Services) {}
 
@@ -139,15 +178,24 @@ class QueueHolder {
 
   private build(): IngestQueue {
     const services = this.services;
-    return new IngestQueue({
+    /* The previous vault's bookkeeping goes with its queue — see `mirrors`. */
+    this.mirrors.clear();
+    /* `queue` is read inside `onUpdate` only, which nothing calls before the
+       constructor has returned. Capturing it there rather than reaching for
+       `this.queue` matters for `mirror()`'s cancel hook: that hook has to reach
+       the queue this job actually belongs to, even if the vault has switched
+       since — never `requireVaultRoot()`, which throws once the vault is gone
+       and would take `WorkRegistry.cancelAll('shutdown')` down with it. */
+    const queue: IngestQueue = new IngestQueue({
       store: wikiStore(services),
       ingestors: allIngestors(),
       environment: () => environment(services),
       llmAvailable: () => createGateway(services).isAvailable('summarize-source'),
       concurrency: () => CONCURRENCY,
       condense: ({ job, outcome, signal }) => this.condense(job, outcome, signal),
-      onUpdate: (job) => this.publish(job),
+      onUpdate: (job) => this.publish(queue, job),
     });
+    return queue;
   }
 
   /** Raw source → source page, entities, concepts, catalog, chronicle. */
@@ -186,9 +234,81 @@ class QueueHolder {
     };
   }
 
-  /** Every change goes to the renderer; the index catches up at the end. */
-  private publish(job: IngestJob): void {
-    this.services.sendEvent('event:ingest-progress', job);
+  /**
+   * Reflect one ingest job onto the shared work queue (074, D4).
+   *
+   * A mirror, not a move: `IngestQueue` keeps its own pump, its own
+   * concurrency and its own `AbortController` per job — the registry never
+   * drives an import, it only shows one and offers to stop it. Hence
+   * `startExternal` (never `enqueue`), and hence the `import` lane, which is
+   * classification for the Tasks screen and nothing else: the real limit
+   * stays `CONCURRENCY` above.
+   *
+   * Cancelling works from both ends, the same way the maintenance run's mirror
+   * does it. Registry → job: `onCancel` reaches the real `IngestQueue.cancel`,
+   * so "stop" on the Tasks screen and `cancelAll('shutdown')` on vault close
+   * both land on the running import. Job → registry: a job that ends as
+   * `error`/`cancelled` settles its task through the registry's own
+   * `cancel()` rather than `fail()` — a stop the user asked for must read
+   * `cancelled`, not `failed`. Neither direction loops: the registry marks an
+   * entry settled before it calls `onCancel`, and both `cancel()` and the
+   * handle's own settle methods refuse a second transition.
+   */
+  private mirror(queue: IngestQueue, job: IngestJob): void {
+    const workQueue = getWorkQueue(this.services);
+    const known = this.mirrors.get(job.id);
+    const handle =
+      known ??
+      workQueue.startExternal(
+        {
+          kind: 'ingest',
+          lane: 'import',
+          subject: { label: job.label, ref: job.rawPath },
+          /* The whole job travels as `detail`, so the Tasks screen reads
+             ingest's own stages from the task record instead of a second
+             channel — see `WorkTask.detail`. */
+          detail: job,
+        },
+        {
+          state: job.stage === 'queued' ? 'queued' : 'running',
+          /* The reason is deliberately ignored: `IngestQueue.cancel` takes
+             none, and a stop is unconditional either way — story 050's
+             all-or-nothing rollback is what decides what survives it. */
+          onCancel: () => {
+            queue.cancel(job.id);
+          },
+        },
+      );
+    if (known === undefined) this.mirrors.set(job.id, handle);
+
+    if (!TERMINAL_STAGES.has(job.stage)) {
+      /* A no-op once the task is running; the first stage off `queued` is what
+         actually starts it. */
+      if (job.stage !== 'queued') handle.start();
+      handle.update({ progress: job.progress, message: job.message, detail: job });
+      return;
+    }
+
+    if (job.stage === 'error' && job.error === 'cancelled') {
+      workQueue.cancel(handle.id, 'user');
+    } else if (job.stage === 'error') {
+      handle.fail(jobFailure(job));
+    } else {
+      /* `done`, `awaiting-llm` and `duplicate` are all honest ends, not
+         crashes: there is nothing left to do and nothing broke. */
+      handle.update({ progress: job.progress, message: job.message, detail: job });
+      handle.finish({ hasResult: false });
+    }
+    /* The id outlives the task: `IngestQueue.retry` puts the *same* job id back
+       to `queued`, and a settled handle cannot be un-settled. Dropping it here
+       makes the next publish mint a fresh task — the same choice
+       `WorkRegistry.retry` makes for its own records. */
+    this.mirrors.delete(job.id);
+  }
+
+  /** Every change is mirrored onto the work queue; the index catches up at the end. */
+  private publish(queue: IngestQueue, job: IngestJob): void {
+    this.mirror(queue, job);
     /* Even a cancelled run may have left behind a raw source — the index
        should know about it, instead of missing it until the next start. */
     if (!TERMINAL_STAGES.has(job.stage)) return;

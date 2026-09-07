@@ -23,7 +23,6 @@ import type {
 } from './contracts';
 import type { KeyStore } from './secrets';
 import type { SettingsService } from './settings';
-import { cancelGardenerRun } from './gardener-run-state';
 import { fail, noVault } from './ipc/errors';
 import { ensureStructure, isVault } from './vault-layout';
 import { getWorkQueue } from './work-queue';
@@ -153,17 +152,16 @@ export class Services {
   }
 
   async closeVault(): Promise<VaultStatus> {
-    /* A maintenance run must not keep writing into a vault that is on its way
-       out — and `openVault` closes the old one before opening the next, so
-       without this a run would finish into the vault it is being replaced by.
+    /* Work enqueued against the vault that is closing must not keep going
+       against the one that opens next (071, D4) — and that now includes a
+       maintenance run, which is mirrored onto this queue and cancels its own
+       real run through the registry's `onCancel` hook (074, D2). So there is
+       one mechanism here, not a direct `cancelGardenerRun` next to it.
        `'shutdown'` is the reason that keeps nothing (021b): the run's own
-       caller sees it and persists no partial report. */
-    cancelGardenerRun('shutdown');
-    /* Same reasoning as the gardener run above: work enqueued against the
-       vault that is closing must not keep going against the one that opens
-       next (071, D4). `cancelAll` forces every queued/running task terminal;
-       `clear()` then drops those (and any earlier finished history) so the
-       list a caller sees right after is genuinely empty. */
+       caller sees it and persists no partial report. `cancelAll` forces every
+       queued/running task terminal; `clear()` then drops those (and any
+       earlier finished history) so the list a caller sees right after is
+       genuinely empty. */
     getWorkQueue(this).cancelAll('shutdown');
     getWorkQueue(this).clear();
     /* The proposals those tasks produced go with them (073, D3): a result is

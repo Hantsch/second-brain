@@ -5,6 +5,11 @@
  * `raw/`, der Index kennt sie, und die Verdichtung passiert genau dann, wenn ein
  * Modell dafür eingerichtet ist — sonst sagt der Auftrag ehrlich `awaiting-llm`.
  *
+ * Und was davon nach außen dringt, geht seit 074 D4 über die eine Warteschlange:
+ * jeder Auftrag wird als `WorkTask` (`kind: 'ingest'`, Spur `import`) gespiegelt
+ * und mit `event:work-tasks` verschickt. `IngestQueue` selbst bleibt unberührt —
+ * ihr Pump, ihre Parallelität, ihr Abbruch je Auftrag sind dieselben.
+ *
  * Die Modul-Kanäle stehen hier mit im Haus, weil sie am selben Kern hängen
  * (`@core/wiki`) und dieselbe Verdrahtung brauchen: Store, Index, Nachlauf.
  */
@@ -14,7 +19,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { IpcChannel, IpcRequest, IpcResponse } from '@shared/ipc';
-import type { IngestJob } from '@shared/types';
+import type { IngestJob, WorkTask } from '@shared/types';
 import { createFetchFake, jsonResponse } from '../fakes/llm';
 import { createTempVault } from '../helpers/vault';
 import type { TempVault } from '../helpers/vault';
@@ -41,10 +46,15 @@ async function createHarness(userDataDir: string) {
   const { SettingsService } = await import('../../src/main/settings');
   const { ingestHandlers } = await import('../../src/main/ipc/ingest');
   const { moduleHandlers } = await import('../../src/main/ipc/modules');
+  const { getWorkQueue, resetWorkQueue } = await import('../../src/main/work-queue');
 
   const settings = await SettingsService.load(userDataDir);
   const keys = await createKeyStore(userDataDir);
   const services = createServices(settings, keys, userDataDir);
+  /* Die Warteschlange ist prozessweit; ohne diesen Schnitt trüge der nächste
+     Test die Aufgaben des vorigen mit sich. */
+  resetWorkQueue();
+  const workQueue = getWorkQueue(services);
   services.attachVaultStore((root) => new FsVaultStore(root));
   /* Kein Watcher: der Index zieht über `settle()` im Handler nach — genau das
      soll geprüft werden. */
@@ -61,7 +71,7 @@ async function createHarness(userDataDir: string) {
     return (handler as (payload: IpcRequest<K>) => Promise<IpcResponse<K>>)(request);
   };
 
-  return { services, settings, call, events };
+  return { services, settings, call, events, workQueue };
 }
 
 type Harness = Awaited<ReturnType<typeof createHarness>>;
@@ -107,6 +117,35 @@ describe('Quellen- und Modul-Kanäle im Main', () => {
     return job;
   }
 
+  /**
+   * Der Auftrag, der in einer Aufgabe steckt — oder `null`, wenn es kein
+   * Aufnahme-Auftrag ist. `id` ist der Unterscheider: nur ein `IngestJob` hat
+   * eine, ein `GardenerRunProgress` nicht.
+   */
+  function jobDetail(task: WorkTask): IngestJob | null {
+    const detail = task.detail;
+    return detail !== null && 'id' in detail ? detail : null;
+  }
+
+  /**
+   * Jede Spiegelung dieses Auftrags, in der Reihenfolge, in der sie hinausging.
+   * `event:work-tasks` trägt immer die ganze Liste, deshalb wird sie flach
+   * gezogen und auf den einen Auftrag gefiltert.
+   */
+  function mirrored(jobId: string): WorkTask[] {
+    return harness.events.mock.calls
+      .filter((entry) => entry[0] === 'event:work-tasks')
+      .flatMap((entry) => entry[1] as WorkTask[])
+      .filter((task) => task.kind === 'ingest' && jobDetail(task)?.id === jobId);
+  }
+
+  /** Der jüngste Stand der gespiegelten Aufgabe zu diesem Auftrag. */
+  function lastMirrored(jobId: string): WorkTask {
+    const last = mirrored(jobId).at(-1);
+    if (last === undefined) throw new Error(`keine gespiegelte Aufgabe zu ${jobId}`);
+    return last;
+  }
+
   // ── Ohne Modell ────────────────────────────────────────────────────────────
 
   it('legt einen eingefügten Text als Rohquelle ab und bleibt ehrlich ohne Modell', async () => {
@@ -138,11 +177,24 @@ describe('Quellen- und Modul-Kanäle im Main', () => {
     });
     const job = await settled(started.id);
 
-    const stages = harness.events.mock.calls
-      .filter((entry) => entry[0] === 'event:ingest-progress')
-      .map((entry) => (entry[1] as IngestJob).stage);
+    /* Der Fortschritt geht über die Warteschlange hinaus, nicht mehr über einen
+       eigenen Kanal: jede Stufe steht im `detail` der gespiegelten Aufgabe. */
+    const snapshots = mirrored(started.id);
+    const stages = snapshots.map((task) => jobDetail(task)?.stage);
     expect(stages).toContain('fetching');
     expect(stages).toContain('awaiting-llm');
+
+    /* Und die Aufgabe selbst ist eine Aufnahme auf der Spur `import` — sie
+       taucht damit neben jeder anderen langlaufenden Arbeit auf. */
+    const task = lastMirrored(started.id);
+    expect(task.kind).toBe('ingest');
+    expect(task.lane).toBe('import');
+    expect(task.subject.label).toBe(job.label);
+    /* `awaiting-llm` ist ein ehrliches Ende, kein Absturz: die Rohquelle liegt. */
+    expect(task.state).toBe('done');
+    expect(task.error).toBeNull();
+    expect(task.progress).toBe(1);
+    expect(jobDetail(task)?.stage).toBe('awaiting-llm');
 
     /* Der Index kennt die Quelle danach, ohne dass ein Watcher lief. Der Nachlauf
        hängt nicht am Auftrag — er darf ihn nicht aufhalten. */
@@ -172,6 +224,68 @@ describe('Quellen- und Modul-Kanäle im Main', () => {
     const job = await settled(started.id);
     expect(job.stage).toBe('error');
     expect(job.error).toBe('cancelled');
+
+    /* Dasselbe in der Warteschlange: ein Abbruch ist `cancelled`, nicht
+       `failed` — sonst läse die Aufgabenliste ein Stoppen als Absturz und böte
+       ein Wiederholen für etwas an, das niemand scheitern sah. */
+    const task = lastMirrored(started.id);
+    expect(task.state).toBe('cancelled');
+    expect(task.error).toBeNull();
+  });
+
+  it('meldet ein echtes Scheitern als gescheiterte Aufgabe, mit Grund im Klartext', async () => {
+    const started = await harness.call('ingest:start', {
+      kind: 'file',
+      input: join(userDataDir, 'gibt-es-nicht.md'),
+      module: null,
+    });
+
+    const job = await settled(started.id);
+    expect(job.stage).toBe('error');
+    expect(job.error).toBe('not-found');
+
+    /* Der Code des Auftrags überlebt den Weg in die Warteschlange — die Aufgabe
+       trägt denselben Grund, nicht ein anonymes „unknown". */
+    const task = lastMirrored(started.id);
+    expect(task.state).toBe('failed');
+    expect(task.error).toBe('not-found');
+    expect(task.message).toBe(job.message);
+    expect(task.message).toBeTruthy();
+  });
+
+  it('spiegelt einen wiederholten Auftrag als neue Aufgabe, nicht als auferstandene', async () => {
+    const started = await harness.call('ingest:start', {
+      kind: 'file',
+      input: join(userDataDir, 'auch-nicht-da.md'),
+      module: null,
+    });
+    await settled(started.id);
+    const failed = lastMirrored(started.id);
+    expect(failed.state).toBe('failed');
+
+    /* Die Datei gibt es inzwischen — dasselbe Auftrags-Id, ein zweiter Anlauf. */
+    await writeFile(join(userDataDir, 'auch-nicht-da.md'), '# Jetzt da\n\nEin Absatz.\n', 'utf8');
+    await harness.call('ingest:retry', { id: started.id });
+    const second = await settled(started.id);
+    expect(second.stage).toBe('awaiting-llm');
+
+    /* Eine abgeschlossene Aufgabe lässt sich nicht zurückdrehen: der zweite
+       Anlauf ist eine eigene Aufgabe, und die gescheiterte bleibt lesbar. */
+    const fresh = lastMirrored(started.id);
+    expect(fresh.id).not.toBe(failed.id);
+    expect(fresh.state).toBe('done');
+    expect(new Set(mirrored(started.id).map((task) => task.id)).size).toBe(2);
+    expect(harness.workQueue.list().filter((task) => task.state === 'failed')).toHaveLength(1);
+  });
+
+  it('kennt die abgelösten Fortschrittskanäle nicht mehr', async () => {
+    const { IPC_EVENTS } = await import('@shared/ipc');
+    const names: readonly string[] = IPC_EVENTS;
+    /* 074, D4: beide Kanäle sind ersatzlos weg — was sie trugen, steht in
+       `event:work-tasks`. Ein Zuhörer darauf käme im Preload nicht mehr durch. */
+    expect(names).not.toContain('event:ingest-progress');
+    expect(names).not.toContain('event:gardener-progress');
+    expect(names).toContain('event:work-tasks');
   });
 
   it('verlangt einen offenen Vault', async () => {

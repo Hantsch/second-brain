@@ -28,9 +28,11 @@ import { assertActionable, findingOf, linkOrphan, orphanPick } from './gardener-
 import { gardenerReport, gardenerStateFor, gardenerToday } from './gardener-deps';
 import { runGardener } from './gardener-run';
 import { docLanguage, settle, wikiIndex, wikiStore } from './wiki-bridge';
-import { cancelGardenerRun, gardenerRunSnapshot } from '../gardener-run-state';
+import { cancelGardenerRun } from '../gardener-run-state';
 import { GARDENER_STATE_FILE } from '../gardener-state';
+import { getWorkQueue } from '../work-queue';
 import type { Services } from '../services';
+import type { GardenerRunProgress } from '@shared/types';
 
 /** Snoozing for longer than a year means: forgetting. That's not snoozing.
     Mirrors `MAX_SNOOZE_DAYS` in `ipc/reminders.ts` — the same bound, for the
@@ -49,10 +51,19 @@ export function gardenerHandlers(services: Services): HandlerMap {
   return defineHandlers({
     'gardener:report': async () => gardenerReport(services),
 
-    /* A thin read of the one place that knows whether a run is going (021a,
-       D4) — no new business logic, `gardener-run-state.ts` already is the
-       single source of truth `event:gardener-progress` publishes from. */
-    'gardener:runStatus': () => gardenerRunSnapshot(),
+    /* A thin read of the one place that knows whether a run is going — now
+       the work queue every long-running task is listed in (074, D2), so the
+       maintenance screen and the Tasks screen cannot disagree about it. */
+    'gardener:runStatus': () => {
+      const task = getWorkQueue(services)
+        .list()
+        .find((entry) => entry.kind === 'gardener' && entry.state === 'running');
+      /* `detail` on a running `'gardener'` task is always the
+         `GardenerRunProgress` that `gardener-run-state.ts`'s `publish()` wrote
+         onto it — the narrowing is safe because only the gardener producer
+         ever sets `detail` on a task of this kind. */
+      return (task?.detail as GardenerRunProgress | undefined) ?? null;
+    },
 
     /* The run flow itself (slot claim, resume/scope inheritance, cancel
        reason, save, report) lives in `gardener-run.ts` (027, D5) — this

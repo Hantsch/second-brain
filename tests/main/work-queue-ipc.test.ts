@@ -225,6 +225,13 @@ describe('work queue IPC (071, D3)', () => {
         /* 073: a boolean saying a result exists elsewhere — never the result
            itself, which is exactly what keeps this list leak-free. */
         'hasResult',
+        /* 074 D1: a kind-specific snapshot (e.g. an `IngestJob` for an
+           import task) — null here since this task was enqueued without one,
+           and the queue never invents one on its own. */
+        'detail',
+        /* 074 fix-cycle 2: whether the generic retry action can do anything
+           useful for this task — true here, this task was enqueued normally. */
+        'retryable',
       ].sort(),
     );
     expect(Object.keys(task.subject).sort()).toEqual(['label', 'ref'].sort());

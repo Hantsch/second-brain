@@ -67,6 +67,38 @@ export type GardenerStageId = 'checks' | 'audit' | 'loose-ends';
 /** Who asked for this run — the user via the screen, or the autorun (021 D3). */
 export type GardenerRunTrigger = 'user' | 'auto';
 
+/**
+ * What a maintenance run last reported (074, D2).
+ *
+ * The one home of a shape that used to be written out twice — once as the
+ * `event:gardener-progress` payload in `src/shared/ipc.ts`, once as
+ * `GardenerProgressEvent` in `src/main/ipc/gardener-deps.ts`. Two copies of a
+ * wire shape drift; this is the type both of those now point at, and the one
+ * a mirrored `WorkTask` carries in its `detail` so the Tasks screen and
+ * `gardener:runStatus` read the same numbers the run itself published.
+ *
+ * `phase`, `check`, `done`, `total` are the original flat counts; `stage`,
+ * `percent`, `remaining`, `startedAt`, `trigger` are the weighted view
+ * (021a, D1) — see `@core/gardener/progress` for the weight math.
+ */
+export interface GardenerRunProgress {
+  phase: 'checks' | 'audit' | 'loose-ends' | 'done';
+  check: GardenerFindingKind | null;
+  done: number;
+  total: number;
+  running: boolean;
+  /** The stage this step belongs to, per the weighted stage plan. */
+  stage: GardenerStageId | 'done';
+  /** 0..100, the cumulative weighted progress. */
+  percent: number;
+  /** Stages not yet started, in plan order. */
+  remaining: GardenerStageId[];
+  /** When this run started — ISO timestamp, same convention as `ranAt`. */
+  startedAt: string;
+  /** Who asked for this run. */
+  trigger: GardenerRunTrigger;
+}
+
 export interface GardenerFinding {
   id: string;
   kind: GardenerFindingKind;

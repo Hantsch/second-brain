@@ -89,6 +89,8 @@ const RUN_TASK: WorkTask = {
   startedAt: '2026-08-10T09:00:00.000Z',
   finishedAt: '2026-08-10T09:00:01.000Z',
   hasResult: true,
+  detail: null,
+  retryable: true,
 };
 
 /** Feeds the live queue store the way `main.tsx` does for a real

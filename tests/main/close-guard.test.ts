@@ -15,10 +15,20 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BrowserWindow } from 'electron';
-import type * as GardenerRunState from '../../src/main/gardener-run-state';
+import type { WorkTaskKind, WorkTaskState } from '@shared/types';
 import type { Services } from '../../src/main/services';
 
-const vault = vi.hoisted(() => ({ running: true }));
+/** The guard only ever reads `state` (see `close-guard.ts#guard`); `kind` is
+    carried purely so a test case can say which real task kind it stands in
+    for, without the guard needing to care. */
+interface FakeTask {
+  state: WorkTaskState;
+  kind?: WorkTaskKind;
+}
+
+/** Stands in for the real registry (`getWorkQueue(services).list()`); a test
+    only ever needs to control what `list()` answers. */
+const queue = vi.hoisted(() => ({ tasks: [{ state: 'running' }] as FakeTask[] }));
 
 const electron = vi.hoisted(() => {
   const appHandlers = new Map<string, (event: { preventDefault: () => void }) => void>();
@@ -35,11 +45,11 @@ const electron = vi.hoisted(() => {
 
 vi.mock('electron', () => ({ app: electron.app, BrowserWindow: class {} }));
 
-/* Spread the real module so every other export stays itself; only the one
-   question the guard asks it is under this test's control. */
-vi.mock('../../src/main/gardener-run-state', async (importOriginal) => ({
-  ...(await importOriginal<typeof GardenerRunState>()),
-  gardenerRunning: () => vault.running,
+/* The guard's whole question — "is anything running right now" — now goes
+   through the work queue instead of the gardener's own flag (074, D7); this
+   mock is the one place a test controls the answer. */
+vi.mock('../../src/main/work-queue', () => ({
+  getWorkQueue: () => ({ list: () => queue.tasks }),
 }));
 
 const { CONFIRM_TIMEOUT_MS, attachCloseGuard, cancelClose, confirmClose } =
@@ -119,7 +129,7 @@ function attachHarness(): Harness {
 
 beforeEach(() => {
   vi.useFakeTimers();
-  vault.running = true;
+  queue.tasks = [{ state: 'running' }];
   electron.app.quit.mockClear();
 });
 
@@ -138,7 +148,31 @@ describe('close guard', () => {
   });
 
   it('does not veto when no run is going', () => {
-    vault.running = false;
+    queue.tasks = [];
+    const app = attachHarness();
+    app.requestClose();
+    expect(app.prevented()).toBe(0);
+    expect(app.events()).toEqual([]);
+  });
+
+  it('vetoes on a running condense task the same way it does on a running gardener task', () => {
+    queue.tasks = [{ state: 'running', kind: 'condense' }];
+    const app = attachHarness();
+    app.requestClose();
+    expect(app.prevented()).toBe(1);
+    expect(app.events()).toEqual(['event:close-requested']);
+  });
+
+  it('vetoes on a running ingest task', () => {
+    queue.tasks = [{ state: 'running', kind: 'ingest' }];
+    const app = attachHarness();
+    app.requestClose();
+    expect(app.prevented()).toBe(1);
+    expect(app.events()).toEqual(['event:close-requested']);
+  });
+
+  it('does not veto on a queued task alone — nothing has been computed for it yet', () => {
+    queue.tasks = [{ state: 'queued', kind: 'ingest' }];
     const app = attachHarness();
     app.requestClose();
     expect(app.prevented()).toBe(0);

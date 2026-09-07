@@ -269,12 +269,14 @@ export const enGarden = {
   'garden.llm.body':
     'Contradictions between two pages, near duplicates and frequently named terms without their own page. Everything beyond that is listed above in full.',
 
-  // ── Closing during a run (042, D7) ───────────────────────────────────────
+  // ── Closing during a run (042/074, D7) ───────────────────────────────────
   /* Only the stop is offered, never a plain "close anyway" — a write could
-     still be in progress (the story's Decisions). */
-  'garden.quit.title': 'A maintenance run is still going.',
+     still be in progress (the story's Decisions). Not just maintenance since
+     074: `{kinds}` names every currently-running task that vetoed the close
+     (condense, take in source, …), comma-separated. */
+  'garden.quit.title': 'Still running: {kinds}.',
   'garden.quit.body':
-    'Stopping it now ends it cleanly, the same way the strip’s own stop button would. Closing without stopping is not offered — a write could still be in progress.',
-  'garden.quit.stopAndClose': 'Stop run and close',
+    'Stopping it now ends it cleanly. Closing without stopping is not offered — a write could still be in progress.',
+  'garden.quit.stopAndClose': 'Stop and close',
   'garden.quit.cancel': 'Cancel',
 } as const;

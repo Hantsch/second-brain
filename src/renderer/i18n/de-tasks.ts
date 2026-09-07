@@ -22,6 +22,7 @@ export const deTasks = {
   'tasks.kind.close-day': 'Tag abschließen',
   'tasks.kind.gardener': 'Pflege',
   'tasks.kind.ingest': 'Quelle aufnehmen',
+  'tasks.kind.interview-plan': 'Interviewplan',
 
   'tasks.outcome.done': 'Erledigt',
   'tasks.outcome.failed': 'Fehlgeschlagen',

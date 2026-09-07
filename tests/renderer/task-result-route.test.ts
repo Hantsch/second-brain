@@ -23,7 +23,9 @@ function task(patch: Partial<WorkTask> & { kind: WorkTask['kind'] }): WorkTask {
     startedAt: '2026-08-10T14:32:00+02:00',
     finishedAt: '2026-08-10T14:33:00+02:00',
     hasResult: true,
+    retryable: true,
     ...patch,
+    detail: patch.detail ?? null,
   };
 }
 

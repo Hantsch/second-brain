@@ -48,6 +48,7 @@ import {
 import type {
   CoachDeps,
   InterviewMode,
+  InterviewPlan,
   JournalDayDoc,
   JournalIndexView,
   JournalStore,
@@ -490,6 +491,22 @@ export function journalHandlers(services: Services): HandlerMap {
       return { ...written, hash };
     },
 
+    /*
+     * 074, D8: also shows up in the shared queue, on the `'free'` lane — so the
+     * work overview lists it alongside condense/close-day/gardener/ingest
+     * instead of staying invisible. The response contract does not change: the
+     * caller showing the interview dialog still gets the `InterviewPlan` value
+     * directly, exactly as before `journal:close` started returning a
+     * `WorkTask`. `'free'` has infinite capacity and never waits behind the
+     * single `'model'` lane, so a running `journal-chat` coaching turn never
+     * delays this plan.
+     *
+     * The pre-checks stay exactly where they were — `readDay`, the `mode`
+     * decision, `openLooseEnds` — same "decide before enqueuing" pattern as
+     * `journal:close`. Only the actual `planInterview` call moves into the
+     * enqueued task; a small deferred promise carries its result back out to
+     * this handler's own return value.
+     */
     'journal:interviewPlan': async ({ date }) => {
       /* Throws on a date that isn't a calendar day — before anything runs,
          same as `journal:coach`. */
@@ -503,7 +520,30 @@ export function journalHandlers(services: Services): HandlerMap {
         ? 'model'
         : 'fixed';
       const looseEnds = await openLooseEnds(services);
-      return planInterview(found ?? emptyDayDoc(day, language), language, mode, looseEnds);
+      let resolvePlan!: (plan: InterviewPlan) => void;
+      let rejectPlan!: (error: unknown) => void;
+      const planPromise = new Promise<InterviewPlan>((resolve, reject) => {
+        resolvePlan = resolve;
+        rejectPlan = reject;
+      });
+      getWorkQueue(services).enqueue(
+        { kind: 'interview-plan', lane: 'free', subject: { label: day, ref: day } },
+        async () => {
+          try {
+            resolvePlan(
+              planInterview(found ?? emptyDayDoc(day, language), language, mode, looseEnds),
+            );
+          } catch (error) {
+            /* Rejects the caller's promise so the IPC call fails instead of
+               hanging forever, and still rethrows so the task itself settles
+               `'failed'` rather than silently `'done'` (review finding F3). */
+            rejectPlan(error);
+            throw error;
+          }
+          return {};
+        },
+      );
+      return planPromise;
     },
 
     'journal:interviewAnswer': async ({ date, step, answer }) => {

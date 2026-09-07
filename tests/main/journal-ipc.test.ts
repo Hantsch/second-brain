@@ -18,6 +18,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { parseStream } from '@core/journal';
+import type * as CoreJournal from '@core/journal';
 import { isoDay, journalPath } from '@core/vault/paths';
 import type { IpcChannel, IpcEvents, IpcRequest, IpcResponse } from '@shared/ipc';
 import type { JournalCloseSuggestion } from '@shared/types';
@@ -33,6 +34,23 @@ vi.mock('electron', () => ({
   safeStorage: { isEncryptionAvailable: () => false },
   app: { getVersion: () => '0.0.0-test', getPath: () => '' },
 }));
+
+/* A toggle, not a blanket replacement: every other test in this file relies
+   on the real `planInterview` (that's what most of the interview tests
+   below actually exercise). Only the one F3 regression test below flips this
+   to prove `journal:interviewPlan` rejects instead of hanging when
+   `planInterview` throws inside the enqueued task's runner. */
+let planInterviewShouldThrow = false;
+vi.mock('@core/journal', async (importOriginal) => {
+  const actual = await importOriginal<typeof CoreJournal>();
+  return {
+    ...actual,
+    planInterview: (...args: Parameters<typeof actual.planInterview>) => {
+      if (planInterviewShouldThrow) throw new Error('planInterview kaputt (Test)');
+      return actual.planInterview(...args);
+    },
+  };
+});
 
 type Handlers = Partial<{
   [K in IpcChannel]: (request: IpcRequest<K>) => IpcResponse<K> | Promise<IpcResponse<K>>;
@@ -959,6 +977,123 @@ describe('Tagebuch-Kanäle im Main', () => {
     expect(before?.doc.hash).not.toBe(
       (await harness.call('journal:get', { date: DATE }))?.doc.hash,
     );
+  });
+
+  // ── Interview-Plan als Warteschlangen-Task (074, D8) ────────────────────────
+
+  describe('journal:interviewPlan zeigt sich auch in der Warteschlange', () => {
+    /* Der Kanal antwortet weiterhin mit dem Plan selbst — nichts außerhalb
+       dieses Kanals erwartet einen `WorkTask` zurück, anders als bei
+       `journal:close`. Das Enqueuen ist ein zusätzlicher Nebeneffekt, keine
+       Änderung der Antwort. */
+    it('liefert unverändert denselben Plan wie vor dem Enqueuen', async () => {
+      const date = '2026-08-14';
+
+      const plan = await harness.call('journal:interviewPlan', { date });
+
+      expect(plan.mode).toBe('fixed');
+      expect(plan.finished).toBe(false);
+      expect(plan.steps.map((step) => step.topic)).toEqual([
+        'work',
+        'events',
+        'people',
+        'open',
+        'feeling',
+      ]);
+      expect(plan.steps[0]?.question.length).toBeGreaterThan(0);
+    });
+
+    it('legt beim Aufruf einen Task auf der freien Spur an, der fertig wird', async () => {
+      const before = harness.queue.list().length;
+
+      await harness.call('journal:interviewPlan', { date: '2026-08-14' });
+      /* Der Task selbst wird erst einen Mikrotask nach dem Auflösen des
+         Plan-Promises als „done" markiert (`WorkRegistry.start` löst die
+         `await entry.run(...)`-Fortsetzung erst danach aus) — deshalb hier
+         kurz nachfassen statt sofort zu behaupten. */
+      await vi.waitFor(() => {
+        const tasks = harness.queue.list();
+        expect(tasks.length).toBe(before + 1);
+        const task = tasks[tasks.length - 1];
+        expect(task?.kind).toBe('interview-plan');
+        expect(task?.lane).toBe('free');
+        expect(task?.state).toBe('done');
+      });
+    });
+
+    it('lehnt den Aufruf ab, statt für immer zu hängen, wenn planInterview wirft (Review F3)', async () => {
+      const before = harness.queue.list().length;
+      planInterviewShouldThrow = true;
+      try {
+        await expect(harness.call('journal:interviewPlan', { date: '2026-08-14' })).rejects.toThrow(
+          'planInterview kaputt (Test)',
+        );
+
+        /* Nicht nur die IPC-Antwort: der Task selbst muss `'failed'` werden,
+           nicht still `'done'` bleiben — sonst würde die Warteschlange einen
+           Erfolg zeigen, den es nie gab. */
+        await vi.waitFor(() => {
+          const tasks = harness.queue.list();
+          expect(tasks.length).toBe(before + 1);
+          const task = tasks[tasks.length - 1];
+          expect(task?.kind).toBe('interview-plan');
+          expect(task?.state).toBe('failed');
+        });
+      } finally {
+        planInterviewShouldThrow = false;
+      }
+    });
+
+    it('lässt einen laufenden Modell-Task unangetastet und wird selbst trotzdem rasch fertig', async () => {
+      let releaseModelTask: () => void = () => {};
+      const modelTaskDone = new Promise<void>((resolve) => {
+        releaseModelTask = resolve;
+      });
+      /* Ein synthetischer Task auf der `'model'`-Spur, der so lange läuft, bis
+         der Test ihn freigibt — steht damit für einen echten Coach-/Condense-
+         Lauf, der die einzige Modell-Spur belegt. */
+      const modelTask = harness.queue.enqueue(
+        { kind: 'condense', lane: 'model', subject: { label: 'blockiert', ref: null } },
+        async () => {
+          await modelTaskDone;
+          return {};
+        },
+      );
+      expect(harness.queue.list().find((task) => task.id === modelTask.id)?.state).toBe('running');
+
+      const plan = await harness.call('journal:interviewPlan', { date: '2026-08-14' });
+      expect(plan.steps.length).toBeGreaterThan(0);
+
+      /* Der Modell-Task läuft unverändert weiter — nicht requeued, nicht
+         verzögert, keine Warteposition. */
+      const modelAfter = harness.queue.list().find((task) => task.id === modelTask.id);
+      expect(modelAfter?.state).toBe('running');
+      expect(modelAfter?.queuePosition).toBeNull();
+
+      /* Der Interview-Plan-Task auf der freien Spur wird trotzdem prompt
+         fertig — er wartet nie auf die Modell-Spur. */
+      await vi.waitFor(() => {
+        const interviewTask = harness.queue.list().find((task) => task.kind === 'interview-plan');
+        expect(interviewTask?.state).toBe('done');
+      });
+
+      releaseModelTask();
+      await vi.waitFor(() => {
+        expect(harness.queue.list().find((task) => task.id === modelTask.id)?.state).toBe('done');
+      });
+    });
+
+    it('legt für journal:interviewFollowUp keinen Task an', async () => {
+      const before = harness.queue.list().length;
+
+      await harness.call('journal:interviewFollowUp', {
+        date: DATE,
+        step: { topic: 'work', question: 'Woran hast du heute gearbeitet?' },
+        answer: 'Am Kundenportal-Relaunch.',
+      });
+
+      expect(harness.queue.list().length).toBe(before);
+    });
   });
 
   it('schreibt die beantwortete Interview-Frage in den Tagesstrom und stößt den Index an', async () => {

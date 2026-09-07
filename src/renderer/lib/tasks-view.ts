@@ -1,11 +1,15 @@
 /* Pure view model over the work queue (072, D3) — no React, no IO. Everything
    the tasks screen and the rail badge need, derived from two raw inputs:
    `tasks-store.ts`'s `WorkTask[]` and `gardener-progress.ts`'s snapshot. Both
-   are read, neither is duplicated — the maintenance run is not a `WorkTask`
-   in the registry (it has its own store, wired long before this story), so a
-   synthetic row is built from its snapshot here instead of teaching the
-   registry about the gardener or teaching this module a second way to poll
-   maintenance progress.
+   are read, neither is duplicated — a synthetic row is built from the snapshot
+   here rather than teaching this module a second way to poll maintenance
+   progress.
+
+   Since 074 those two inputs are no longer independent: the maintenance run
+   *is* a `WorkTask` in the registry now, and `gardener-progress.ts` derives
+   its snapshot from exactly that task. The one run therefore arrives twice,
+   and `buildTasksView`/`tasksBadgeCount` drop the registry's copy of it while
+   the synthetic row stands for it — see the comment on `buildTasksView`.
 
    One store, one view: `RunStrip` already reads `gardener-progress.ts`
    directly for its own bar, and this module reads the very same snapshot for
@@ -15,7 +19,7 @@
    `RunStrip` calls it too, rather than each side keeping its own copy of the
    same translation branch (072 review, finding 1). */
 
-import type { WorkTask, WorkTaskState } from '@shared/types';
+import type { WorkTask, WorkTaskKind, WorkTaskState } from '@shared/types';
 import type { GardenerProgress } from './gardener-progress';
 
 /** The shape of `useT()`'s return value, kept local rather than imported from
@@ -26,6 +30,22 @@ export type Translate = (key: string, vars?: Record<string, string | number>) =>
 /** Stable id for the one synthetic row a running maintenance pass produces —
     there is only ever one gardener run at a time, so a fixed id is enough. */
 const MAINTENANCE_TASK_ID = 'gardener-run';
+
+/** i18n key for a task kind's label — the one mapping `TaskRow.tsx` and
+    `QuitDuringRunDialog.tsx` both read off (074, D7), so a kind is never
+    named two different ways in two places. */
+export const TASK_KIND_LABEL_KEY: Record<WorkTaskKind, string> = {
+  condense: 'tasks.kind.condense',
+  'close-day': 'tasks.kind.close-day',
+  gardener: 'tasks.kind.gardener',
+  ingest: 'tasks.kind.ingest',
+  'interview-plan': 'tasks.kind.interview-plan',
+};
+
+/** A task kind's label, in words — see `TASK_KIND_LABEL_KEY` above. */
+export function taskKindLabel(kind: WorkTaskKind, t: Translate): string {
+  return t(TASK_KIND_LABEL_KEY[kind]);
+}
 
 export type TaskGroupKind = 'running' | 'waiting' | 'finished';
 
@@ -123,6 +143,16 @@ export function maintenanceTaskRow(
     queuedAt: progress.startedAt,
     startedAt: progress.startedAt,
     finishedAt: null,
+    /* No `GardenerRunProgress` detail on this synthetic row: 074 D2 landed
+       that type on the real registry task instead, which is exactly the one
+       this row stands in for (see `isRunShownAsMaintenanceRow` below) — this
+       row itself still carries none. */
+    detail: null,
+    /* This row stands in for the real registry task, which is created via
+       `startExternal` and therefore never retryable (`WorkTask.retryable`) —
+       moot here anyway, since this synthetic row is only ever shown while
+       `running`, never `failed`. */
+    retryable: false,
   };
 }
 
@@ -140,17 +170,37 @@ export function isMaintenanceTaskRow(task: WorkTask): boolean {
 }
 
 /**
+ * Whether this registry task is the running maintenance pass the synthetic row
+ * already stands for (074, D5) — the two representations of one run, which
+ * must never both be counted or both be shown. Narrow on purpose: only a
+ * `running` gardener task, and only while a snapshot actually produces the
+ * synthetic row. A *finished* gardener task is 074's own new record of a run
+ * that ended and belongs on the screen; and if the registry and the snapshot
+ * ever disagreed for a tick (a task still `running` whose `detail` already
+ * says `running: false`), the real row is shown rather than nothing.
+ */
+function isRunShownAsMaintenanceRow(task: WorkTask, progress: GardenerProgress | null): boolean {
+  return progress !== null && task.kind === 'gardener' && task.state === 'running';
+}
+
+/**
  * Badge count: running + waiting tasks from the registry, plus the
  * maintenance row whenever a gardener run is in flight (072's explicit
  * decision — a badge reading zero while the screen shows a running
  * maintenance task would be exactly the "two answers" problem this story
- * exists to end).
+ * exists to end). The registry's own record of that same run is left out of
+ * the count for the reason `buildTasksView` explains below: since 074 it is
+ * there, and counting it as well would make the badge read one too many.
  */
 export function tasksBadgeCount(
   tasks: readonly WorkTask[],
   progress: GardenerProgress | null,
 ): number {
-  const active = tasks.filter((task) => task.state === 'running' || task.state === 'queued').length;
+  const active = tasks.filter(
+    (task) =>
+      (task.state === 'running' || task.state === 'queued') &&
+      !isRunShownAsMaintenanceRow(task, progress),
+  ).length;
   return active + (progress === null ? 0 : 1);
 }
 
@@ -159,13 +209,31 @@ export function tasksBadgeCount(
  * row (when present), grouped in the one fixed order. The single entry point
  * D4's screen needs — it never has to know the maintenance row exists as a
  * separate concept.
+ *
+ * The running maintenance run is now in `tasks` too: story 074 made it a real
+ * `WorkTask` in the registry, which is precisely where `gardener-progress.ts`
+ * derives the snapshot behind the synthetic row from — so without the filter
+ * below the one run would appear twice on the screen and twice in the badge.
+ * The synthetic row is kept as the visible one, deliberately: it carries the
+ * run's own stage label and weighted percent, and the screen's read-only
+ * treatment of it (no stop action, see `isMaintenanceTaskRow`) then stays
+ * exactly as 072 built it, with no migration of `TaskRow` in this story. A
+ * stop-from-the-tasks-screen affordance for maintenance is a follow-up
+ * feature — this migration does not promise one, it only promises the run
+ * shows up once.
  */
 export function buildTasksView(
   tasks: readonly WorkTask[],
   progress: GardenerProgress | null,
   t: Translate,
 ): TaskGroup[] {
+  const withoutRunningGardenerTask = tasks.filter(
+    (task) => !isRunShownAsMaintenanceRow(task, progress),
+  );
   const maintenance = maintenanceTaskRow(progress, t);
-  const merged = maintenance === null ? tasks : [maintenance, ...tasks];
+  const merged =
+    maintenance === null
+      ? withoutRunningGardenerTask
+      : [maintenance, ...withoutRunningGardenerTask];
   return groupTasks(merged);
 }

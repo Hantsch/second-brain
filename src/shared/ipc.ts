@@ -34,11 +34,9 @@ import type {
   GardenerDiscardPlan,
   GardenerDiscardResult,
   GardenerFinding,
-  GardenerFindingKind,
   GardenerReport,
+  GardenerRunProgress,
   GardenerRunScope,
-  GardenerRunTrigger,
-  GardenerStageId,
   GardenerSupersedeResult,
   HfModelSearchRequest,
   HfModelSearchResponse,
@@ -1036,7 +1034,7 @@ export interface IpcRoutes {
    * what lets a screen mounted mid-run show the bar immediately instead of
    * waiting for the next progress event.
    */
-  'gardener:runStatus': { req: void; res: IpcEvents['event:gardener-progress'] | null };
+  'gardener:runStatus': { req: void; res: GardenerRunProgress | null };
   /**
    * `resume: true` continues the last stored run instead of starting fresh
    * (021b, D3): stages it already finished are not run a second time — a
@@ -1414,7 +1412,6 @@ export interface IpcEvents {
   /** A file in the vault has changed (including from outside the app). */
   'event:vault-changed': { paths: string[]; external: boolean };
   'event:index-progress': { done: number; total: number; indexing: boolean };
-  'event:ingest-progress': IngestJob;
   /** A chunk of a streaming LLM response. */
   'event:llm-stream': {
     messageId: string;
@@ -1423,36 +1420,6 @@ export interface IpcEvents {
     done: boolean;
     citations?: Citation[];
     error?: string;
-  };
-  /**
-   * Progress of a maintenance run. `check` is the check currently running;
-   * `null` means either a model stage (`phase: 'audit'` or `'loose-ends'`) or
-   * the end. The run can be cancelled via `gardener:cancel` — so progress here
-   * isn't decoration, it's the basis for deciding whether to cancel.
-   *
-   * `phase`, `check`, `done`, `total` are the original, flat-count fields —
-   * kept unchanged so nothing downstream breaks mid-story. `stage`, `percent`,
-   * `remaining`, `startedAt`, `trigger` are the weighted view (021a, D1): the
-   * ten mechanical checks together count as little as one model stage's
-   * fraction, so the bar doesn't jump to ~83% before the slow part even
-   * starts. See `@core/gardener/progress` for the weight math.
-   */
-  'event:gardener-progress': {
-    phase: 'checks' | 'audit' | 'loose-ends' | 'done';
-    check: GardenerFindingKind | null;
-    done: number;
-    total: number;
-    running: boolean;
-    /** The stage this event belongs to, per the weighted stage plan. */
-    stage: GardenerStageId | 'done';
-    /** 0..100, the cumulative weighted progress. */
-    percent: number;
-    /** Stages not yet started, in plan order. */
-    remaining: GardenerStageId[];
-    /** When this run started — ISO timestamp, same convention as `ranAt`. */
-    startedAt: string;
-    /** Who asked for this run. */
-    trigger: GardenerRunTrigger;
   };
   /**
    * Progress of an installer download started via `llm:downloadRuntime`
@@ -1504,8 +1471,9 @@ export interface IpcEvents {
    * the app unclosable).
    *
    * Payload-free on purpose: what the prompt shows about the run is already in
-   * the renderer's progress store, fed by `event:gardener-progress`. A second
-   * copy of it here could only ever disagree with that one.
+   * the renderer's own live work-queue state (`event:work-tasks`, mirrored by
+   * `core/work/registry.ts` since 074). A second copy of it here could only
+   * ever disagree with that one.
    */
   'event:close-requested': void;
   /**
@@ -1522,9 +1490,7 @@ export type IpcEventName = keyof IpcEvents;
 export const IPC_EVENTS: readonly IpcEventName[] = [
   'event:vault-changed',
   'event:index-progress',
-  'event:ingest-progress',
   'event:llm-stream',
-  'event:gardener-progress',
   'event:install-progress',
   'event:pull-progress',
   'event:reminder',

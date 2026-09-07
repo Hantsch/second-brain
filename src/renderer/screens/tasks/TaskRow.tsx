@@ -17,7 +17,7 @@
 
 import type { UseMutationResult } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import type { WorkTask, WorkTaskKind, WorkTaskState } from '@shared/types';
+import type { WorkTask, WorkTaskState } from '@shared/types';
 import { Badge } from '../../atoms/Badge';
 import { Button } from '../../atoms/Button';
 import { Icon } from '../../atoms/Icon';
@@ -26,14 +26,12 @@ import { useT } from '../../i18n';
 import { formatDuration } from '../../lib/format';
 import { taskResultRoute } from '../../lib/task-result-route';
 import { formatElapsed } from '../../lib/useElapsed';
-import { isMaintenanceTaskRow, taskDuration, taskQueuePosition } from '../../lib/tasks-view';
-
-const KIND_LABEL_KEY: Record<WorkTaskKind, string> = {
-  condense: 'tasks.kind.condense',
-  'close-day': 'tasks.kind.close-day',
-  gardener: 'tasks.kind.gardener',
-  ingest: 'tasks.kind.ingest',
-};
+import {
+  isMaintenanceTaskRow,
+  taskDuration,
+  taskKindLabel,
+  taskQueuePosition,
+} from '../../lib/tasks-view';
 
 /** The three finished states — the subset of `WorkTaskState` this row's
     "outcome" branch handles (queued/running have their own branches above). */
@@ -80,7 +78,7 @@ function elapsedOf(task: WorkTask): string {
 export function TaskRow({ task, cancel, remove, retry }: TaskRowProps) {
   const t = useT();
   const navigate = useNavigate();
-  const kindLabel = t(KIND_LABEL_KEY[task.kind]);
+  const kindLabel = taskKindLabel(task.kind, t);
 
   if (task.state === 'running') {
     const readOnly = isMaintenanceTaskRow(task);
@@ -165,6 +163,16 @@ export function TaskRow({ task, cancel, remove, retry }: TaskRowProps) {
      `condense`/`close-day` currently resolve to a route — gardener/ingest are
      074's concern (see `task-result-route.ts`). */
   const resultRoute = outcome === 'done' ? taskResultRoute(task) : null;
+  /* `task.retryable` is the honest signal, not `task.kind`: a task created
+     via `startExternal` (`core/work/registry.ts` — the mirrored gardener run,
+     a mirrored ingest job) carries a no-op stub as its runner, so the
+     registry refuses to retry it — offering this button for one would
+     silently do nothing on click. Each has its own real retry path instead:
+     the garden screen's own resume for a maintenance run, and `ingest:retry`
+     from the sources screen for an import. A normally enqueued task of the
+     same `kind` (e.g. the tasks e2e fixture's synthetic ingest task) is
+     genuinely retryable, which `kind` alone could not tell apart. */
+  const canRetry = outcome === 'failed' && task.retryable;
   return (
     <div className="sb-trow">
       <div className="sb-trow-head">
@@ -178,9 +186,9 @@ export function TaskRow({ task, cancel, remove, retry }: TaskRowProps) {
           <span className="sb-mono sb-trow-duration">{formatDuration(duration)}</span>
         ) : null}
       </div>
-      {outcome === 'failed' || resultRoute !== null ? (
+      {canRetry || resultRoute !== null ? (
         <div className="sb-trow-actions">
-          {outcome === 'failed' ? (
+          {canRetry ? (
             <Button
               variant="ghost"
               size="sm"

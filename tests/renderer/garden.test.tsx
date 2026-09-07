@@ -27,11 +27,12 @@ import userEvent from '@testing-library/user-event';
 import axe from 'axe-core';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { IpcChannel, IpcEvents, IpcRequest, IpcResponse, JournalDayView } from '@shared/ipc';
+import type { IpcChannel, IpcRequest, IpcResponse, JournalDayView } from '@shared/ipc';
 import type {
   GardenerFinding,
   GardenerHiddenFinding,
   GardenerReport,
+  GardenerRunProgress,
   Reminder,
   VaultDoc,
   WikiPage,
@@ -55,6 +56,7 @@ import { contradictionPassage } from '@renderer/screens/garden/sections';
 import { targetFor } from '@renderer/screens/garden/targets';
 import { setLanguage } from '@renderer/i18n';
 import { setGardenerProgress } from '@renderer/lib/gardener-progress';
+import { publishGardenerRun, publishedWorkQueue } from './gardener-transport';
 import { formatDate } from '@renderer/lib/format';
 import { clearToasts } from '@renderer/lib/toast';
 import type { SbBridge } from '@renderer/lib/bridge';
@@ -484,6 +486,10 @@ function handlers(report: GardenerReport | null, extra: SbHandlers = {}): SbHand
     'gardener:report': () => report,
     'gardener:run': () => report ?? REPORT,
     'gardener:runStatus': () => null,
+    /* Seit 074, D5 leitet der Fortschritts-Speicher sich aus der
+       Warteschlange ab und lässt sie beim ersten Zuhörer einmal abfragen —
+       die Antwort ist genau das, was der Test veröffentlicht hat. */
+    'work:list': () => publishedWorkQueue(),
     'gardener:cancel': () => undefined,
     'gardener:dismiss': () => undefined,
     'gardener:undismiss': () => undefined,
@@ -568,8 +574,11 @@ beforeEach(() => {
   /* Der Fortschritts-Speicher lebt außerhalb von React (042, D2/D3) und damit
      außerhalb jeder Testisolation, die `render` sonst mitbrächte — ohne
      Rücksetzen würde ein Test, der einen laufenden Lauf setzt, den nächsten
-     mit demselben Zustand starten lassen. `running: false` normalisiert
-     intern zu `null` (`apply` in `gardener-progress.ts`). */
+     mit demselben Zustand starten lassen. Beides zurücksetzen: die
+     Warteschlange über den echten Weg, den abgeleiteten Stand direkt — an ihr
+     hängt zwischen zwei Tests niemand (074, D5). `running: false`
+     normalisiert intern zu `null` (`apply` in `gardener-progress.ts`). */
+  publishGardenerRun(null);
   setGardenerProgress({
     phase: 'done',
     check: null,
@@ -718,12 +727,12 @@ describe('Pflege ohne Lauf', () => {
 describe('Kein Zweitlauf ohne Vorwarnung', () => {
   /* Ein Lauf, der schon geht — egal wodurch ausgelöst. Seit 042 D3 lebt der
      Fortschritt in einem eigenen Modul-Speicher außerhalb von React
-     (`gardener-progress.ts`), gefüttert von `wireEvents`, das dieser Test
-     nicht verdrahtet — deshalb wird der Speicher direkt gesetzt, statt über
+     (`gardener-progress.ts`); seit 074, D5 leitet der sich aus der
+     Warteschlange ab, in der der Lauf als eigene Aufgabe steht. Der Lauf wird
+     deshalb dort veröffentlicht — genau wie im echten Betrieb — statt über
      eine Attrappe für `gardener:runStatus` zu hoffen, dass irgendetwas ihn
-     beim Mount abfragt (das tut inzwischen nur noch `AppShell`, nicht mehr
-     dieser Screen). */
-  function runningSnapshot(): IpcEvents['event:gardener-progress'] {
+     beim Mount abfragt (das tut nur `AppShell`, nicht dieser Screen). */
+  function runningSnapshot(): GardenerRunProgress {
     return {
       phase: 'checks',
       check: 'broken-link',
@@ -740,7 +749,7 @@ describe('Kein Zweitlauf ohne Vorwarnung', () => {
 
   it('sperrt „jetzt prüfen" mit sichtbarem Grund, statt die Fehlermeldung abzuwarten', async () => {
     installMock(handlers(REPORT));
-    setGardenerProgress(runningSnapshot());
+    publishGardenerRun(runningSnapshot());
     wrap(<GardenScreen />);
     await screen.findByText('72');
 
@@ -917,7 +926,7 @@ describe('Nur dies prüfen', () => {
        `gardener:runStatus`-Attrappe, die nur `AppShell` abfragt — siehe die
        Erklärung bei `Kein Zweitlauf ohne Vorwarnung` oben. */
     installMock(handlers(REPORT));
-    setGardenerProgress({
+    publishGardenerRun({
       phase: 'checks',
       check: 'broken-link',
       done: 2,

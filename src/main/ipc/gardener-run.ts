@@ -7,6 +7,7 @@ import type { GardenerReport } from '@shared/types';
 import { fail } from './registry';
 import { gardenerReport, gardenerStateFor, runWithProgress, saveRun } from './gardener-deps';
 import { beginGardenerRun } from '../gardener-run-state';
+import { getWorkQueue } from '../work-queue';
 import type { Services } from '../services';
 
 /**
@@ -52,10 +53,18 @@ export async function runGardener(
      calls from the same keypress — or a click during the run on open —
      would both go through and write the same report twice. */
   const handle = beginGardenerRun({
+    /* The run mirrors onto the one work queue (074, D2): it is listed, and
+       cancellable, next to every other long-running task instead of behind an
+       indicator only the maintenance screen knows about. */
+    workQueue: getWorkQueue(services),
     trigger: 'user',
-    emit: (progress) => services.sendEvent('event:gardener-progress', progress),
+    /* Nothing sends the (now-deleted) `event:gardener-progress` from here
+       anymore — the registry mirror inside `gardener-run-state.ts`'s own
+       `publish()` is the only consumer of a published step now. */
+    emit: () => {},
   });
   if (handle === null) throw fail('invalid', 'es läuft schon ein Pflegelauf');
+  let caughtError: unknown;
   try {
     const state = await gardenerStateFor(services);
     /* `resume` continues the run on file instead of starting from nothing
@@ -106,10 +115,17 @@ export async function runGardener(
         : fail('cancelled', 'der Pflegelauf wurde abgebrochen, bevor etwas gefunden war');
     }
     return report;
+  } catch (error) {
+    caughtError = error;
+    throw error;
   } finally {
     /* Even a cancelled or failed run ends visibly, and frees the slot:
        otherwise the indicator keeps spinning even though nothing is
-       computing anymore, and no further run would be allowed. */
-    handle.finish();
+       computing anymore, and no further run would be allowed.
+
+       An aborted signal means this run was *cancelled*, and the cancel already
+       settled the mirrored task — reporting the abort as a failure on top of
+       that would turn one stop into two different endings. */
+    handle.finish(handle.signal.aborted ? undefined : caughtError);
   }
 }

@@ -8,16 +8,15 @@
      "not checked yet" — and no number.
    - **The run is a mutation, not a `refetch`.** It writes (the report) and
      costs time; as a query, every mount would restart it.
-   - **Progress hangs off neither the event nor the cache — it has its own
-     store.** `event:gardener-progress` fires several times per second, so the
-     query cache is the wrong place for it, and a subscription that lives as
-     long as the screen was the wrong place too: that was 042's bug, because a
-     remount then had nothing to read. It lives in
-     [gardener-progress.ts](../gardener-progress.ts) instead, fed by
-     `wireEvents`; `useGardenerProgress` is re-exported below so call sites
-     import it from here as before. */
+   - **Progress hangs off neither an event nor the cache — it has its own
+     store.** A run reports several times per second, so the query cache is the
+     wrong place for it, and a subscription that lives as long as the screen was
+     the wrong place too: that was 042's bug, because a remount then had nothing
+     to read. It lives in [gardener-progress.ts](../gardener-progress.ts)
+     instead, derived from the work queue since 074, D5; `useGardenerProgress`
+     is re-exported below so call sites import it from here as before. */
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { QueryClient, UseMutationResult, UseQueryResult } from '@tanstack/react-query';
 import type { IpcRequest, IpcResponse } from '@shared/ipc';
@@ -25,25 +24,48 @@ import type { GardenerFinding, GardenerReport } from '@shared/types';
 import { api } from '../api';
 import { qk } from './keys';
 import { useVaultReady } from './data';
-import { seedGardenerProgressOnReady } from '../gardener-progress';
+import type { GardenerProgress } from '../gardener-progress';
+import { seedGardenerProgressOnReady, useGardenerProgress } from '../gardener-progress';
 
 export type { GardenerProgress } from '../gardener-progress';
-export { useGardenerProgress } from '../gardener-progress';
+export { useGardenerProgress };
 
 /**
  * Seeds the progress store once per vault-ready transition (042, D2) — a
  * round-trip to `gardener:runStatus` for the case that a run was already
- * going before anything was there to hear its events. Safe to call from
- * several places at once: the actual request is de-duplicated by the module
- * flag in `gardener-progress.ts`, not by how many components mounted this
- * hook. No polling — this fires on the `ready` transition only, never on an
- * interval or on every mount.
+ * going before anything was there to hear about it. Safe to call from several
+ * places at once: the actual request is de-duplicated by the module flag in
+ * `gardener-progress.ts`, not by how many components mounted this hook. No
+ * polling — this fires on the `ready` transition only, never on an interval or
+ * on every mount.
+ *
+ * It also does the second half of what the deleted `event:gardener-progress`
+ * listener in `events.ts` used to do (074, D5): a run that ends leaves a fresh
+ * report, changed module findings and a changed dashboard behind, and nothing
+ * else asks for them — the run finishing on its own is not a mutation anybody
+ * called. The finish shows up here as the progress going from a snapshot to
+ * `null` (`gardener-progress.ts` normalizes a `running: false` snapshot to
+ * `null`), so the invalidation hangs off exactly that edge, tracked in a ref —
+ * not off "progress is null", which is true on almost every render.
+ *
+ * Mounted once, in `AppShell`, which is also what keeps the progress store's
+ * lazy subscription to the work queue alive for the app's whole life: reading
+ * `useGardenerProgress` here means there is always at least one subscriber,
+ * quite apart from whichever screen happens to be showing.
  */
 export function useSeedGardenerProgress(): void {
   const ready = useVaultReady();
+  const client = useQueryClient();
+  const progress = useGardenerProgress();
+  const previous = useRef<GardenerProgress | null>(null);
   useEffect(() => {
     seedGardenerProgressOnReady(ready);
   }, [ready]);
+  useEffect(() => {
+    const wasRunning = previous.current !== null;
+    previous.current = progress;
+    if (wasRunning && progress === null) refresh(client);
+  }, [progress, client]);
 }
 export type FixResult = IpcResponse<'gardener:applyFix'>;
 export type UndoFixResult = IpcResponse<'gardener:undoFix'>;

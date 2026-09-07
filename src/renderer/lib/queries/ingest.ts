@@ -1,11 +1,15 @@
 /* The hooks for ingesting: job list, yt-dlp status, and the four actions
    (start, cancel, retry, fetch the binary).
 
-   Progress arrives as `event:ingest-progress` and is **written straight into
-   the query cache**, not refetched: a job reports in dozens of times, and
-   sending every report on a round trip through the main process would be
-   wasteful. The source of truth stays there regardless — `events.ts` also
-   refreshes the list, and both say the same thing. */
+   Progress used to arrive as `event:ingest-progress` and was written straight
+   into the query cache. That channel is gone (074, D4): a job is mirrored onto
+   the one work queue and travels with `event:work-tasks` instead — the whole
+   current list, every time, with every other kind of task riding along in the
+   same emission. `useIngestJobs` filters that list down to `'ingest'`-kind
+   tasks and merges each one's `detail` (the job it concerns) into the cache,
+   the same "write straight in, never refetch" shape the old subscription used:
+   a job reports in dozens of times, and a round trip through the main process
+   for every tick would be wasteful. */
 
 import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -37,8 +41,16 @@ export function useIngestJobs(): UseQueryResult<IngestJob[]> {
   const result = useQuery({ queryKey: qk.ingest.jobs(), queryFn: api.ingest.jobs, retry: false });
 
   useEffect(() => {
-    return bridge().on('event:ingest-progress', (job) => {
-      client.setQueryData<IngestJob[]>(qk.ingest.jobs(), (jobs) => mergeJob(jobs, job));
+    return bridge().on('event:work-tasks', (tasks) => {
+      const ingestJobs = tasks
+        .filter((task) => task.kind === 'ingest' && task.detail !== null)
+        /* Only the ingest producer (`src/main/ipc/ingest.ts`'s `mirror()`) ever
+           sets `detail` on a task of kind `'ingest'`, so this cast is safe. */
+        .map((task) => task.detail as IngestJob);
+      if (ingestJobs.length === 0) return;
+      client.setQueryData<IngestJob[]>(qk.ingest.jobs(), (jobs) =>
+        ingestJobs.reduce(mergeJob, jobs ?? []),
+      );
     });
   }, [client]);
 

@@ -22,11 +22,11 @@
  * report twice, at double the cost if a model is involved.
  */
 
-import type { GardenerRunTrigger } from '@shared/types';
-import type { GardenerProgressEvent } from './ipc/gardener-deps';
+import type { GardenerRunProgress, GardenerRunTrigger } from '@shared/types';
+import type { ExternalTaskHandle, WorkRegistry } from '@core/work/registry';
 
-/** What a run last reported — the widened `event:gardener-progress` payload. */
-export type GardenerRunSnapshot = GardenerProgressEvent;
+/** What a run last reported — the one shared progress shape (074, D2). */
+export type GardenerRunSnapshot = GardenerRunProgress;
 
 /**
  * Why a run was stopped — and with it, what may be kept (021b, D2).
@@ -55,8 +55,13 @@ export interface GardenerRunHandle {
    * one, otherwise the indicator keeps spinning over nothing. Calling it twice,
    * or after a `cancelGardenerRun`, only emits; it never takes a slot away from
    * a run that started in the meantime.
+   *
+   * `error` is what actually ended the run, if anything did: passing one
+   * settles the mirrored work task as `'failed'` (via `describeFailure`)
+   * instead of `'done'`. Omitting it — what every caller that simply ends did
+   * before — means "it ended", which is why the parameter is optional.
    */
-  finish: () => void;
+  finish: (error?: unknown) => void;
   /**
    * Why **this** run was stopped, or `null` if nobody stopped it (021b, D2).
    * Asked after `runWithProgress` returns, so the caller can tell a stop it may
@@ -71,6 +76,14 @@ export interface BeginGardenerRunOptions {
   trigger: GardenerRunTrigger;
   /** Where a published step goes — `services.sendEvent`, in both callers. */
   emit: (progress: GardenerRunSnapshot) => void;
+  /**
+   * When given, this run is ALSO mirrored onto the shared work registry as a
+   * `'gardener'`-kind task on the `model` lane — for display and for the app's
+   * quit/close guard. Omitted entirely by the existing unit test, which is
+   * intentional: this file's own local slot/publish/finish semantics below
+   * must not depend on it in any way.
+   */
+  workQueue?: WorkRegistry;
 }
 
 interface ActiveRun {
@@ -78,6 +91,10 @@ interface ActiveRun {
   snapshot: GardenerRunSnapshot;
   /** Set once, by `cancelGardenerRun`. Stays readable after the slot is freed. */
   cancelled: GardenerCancelReason | null;
+  /** The registry this run is mirrored on, or `null` when nobody asked for one. */
+  workQueue: WorkRegistry | null;
+  /** The mirrored task, once started. `null` without a `workQueue`. */
+  taskHandle: ExternalTaskHandle | null;
 }
 
 let active: ActiveRun | null = null;
@@ -114,8 +131,36 @@ export function beginGardenerRun(options: BeginGardenerRunOptions): GardenerRunH
     controller: new AbortController(),
     snapshot: snapshotOf(options.trigger, startedAt, true),
     cancelled: null,
+    workQueue: options.workQueue ?? null,
+    taskHandle: null,
   };
   active = run;
+
+  /* The mirror, if the caller wanted one. `startExternal` defaults to
+     `'running'`, which is right here: a maintenance run starts the moment the
+     slot is claimed, it is never queued behind anything.
+
+     `onCancel` calling back into this module's own `cancelGardenerRun` is not
+     a loop: by the time the registry fires the hook it has already marked the
+     entry `settled` (`WorkRegistry.terminate()` calls `markCancelled` before
+     `onCancel`), so the reach-back in `cancelGardenerRun` below hits
+     `WorkRegistry.cancel()`'s own settled guard and is a no-op. */
+  const taskHandle =
+    options.workQueue?.startExternal(
+      {
+        kind: 'gardener',
+        lane: 'model',
+        subject: { label: 'Maintenance run', ref: null },
+        /* The mirror is seeded with the same snapshot the slot was claimed
+           with, so the task answers "what is it doing" from the first moment
+           too — the invariant the local snapshot keeps (see the header). Set
+           at creation rather than by a follow-up `update`, so claiming the
+           slot stays one state change, not two. */
+        detail: run.snapshot,
+      },
+      { onCancel: (reason) => cancelGardenerRun(reason) },
+    ) ?? null;
+  run.taskHandle = taskHandle;
 
   const publish = (progress: GardenerRunSnapshot): void => {
     /* A step from a run that has already lost the slot (cancelled, or ended)
@@ -126,6 +171,14 @@ export function beginGardenerRun(options: BeginGardenerRunOptions): GardenerRunH
        owns the slot, or when nobody has taken it since (active === null). */
     if (active === run) run.snapshot = progress;
     if (active === run || active === null) options.emit(progress);
+    /* Same guard, same reason: a step from a run that has lost the slot must
+       not overwrite what a newer run is showing on the Tasks screen either.
+       `WorkTask.progress` is 0..1, `percent` is 0..100 — hence the division;
+       `detail` carries the whole snapshot, so `gardener:runStatus` and the
+       renderer read back exactly the numbers this run published. */
+    if (active === run) {
+      run.taskHandle?.update({ progress: progress.percent / 100, message: null, detail: progress });
+    }
   };
 
   return {
@@ -134,9 +187,14 @@ export function beginGardenerRun(options: BeginGardenerRunOptions): GardenerRunH
     signal: run.controller.signal,
     publish,
     cancelledBy: () => run.cancelled,
-    finish: () => {
+    finish: (error?: unknown) => {
       try {
         publish(snapshotOf(options.trigger, startedAt, false));
+        /* Settle the mirror as whatever actually happened. Both are no-ops on
+           an already-settled task, so a run that was cancelled first keeps the
+           `'cancelled'` the registry recorded. */
+        if (error !== undefined) run.taskHandle?.fail(error);
+        else run.taskHandle?.finish({ hasResult: false });
       } finally {
         if (active === run) active = null;
       }
@@ -170,7 +228,14 @@ export function gardenerRunning(): boolean {
  */
 export function cancelGardenerRun(reason: GardenerCancelReason = 'shutdown'): void {
   if (active === null) return;
-  active.cancelled = reason;
-  active.controller.abort();
+  const run = active;
+  run.cancelled = reason;
+  run.controller.abort();
   active = null;
+  /* And the mirror with it, so the Tasks screen does not keep a running entry
+     nobody is computing. A no-op when the cancel came *from* the registry
+     (Tasks screen "stop" -> `WorkRegistry.cancel()` -> `onCancel` -> here):
+     that entry is already settled by the time the hook runs, and
+     `WorkRegistry.cancel()` refuses to act on a settled entry. */
+  if (run.workQueue && run.taskHandle) run.workQueue.cancel(run.taskHandle.id, reason);
 }

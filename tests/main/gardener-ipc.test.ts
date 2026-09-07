@@ -27,7 +27,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { IpcChannel, IpcEventName, IpcEvents, IpcRequest, IpcResponse } from '@shared/ipc';
-import type { GardenerFinding } from '@shared/types';
+import type { GardenerFinding, GardenerRunProgress, WorkTask } from '@shared/types';
 import { FsVaultStore, sha256 } from '@core/vault';
 import { createFetchFake, jsonResponse } from '../fakes/llm';
 import { toIpcError } from '../../src/main/ipc/errors';
@@ -36,6 +36,7 @@ import {
   cancelGardenerRun,
   gardenerRunSnapshot,
 } from '../../src/main/gardener-run-state';
+import { getWorkQueue, resetWorkQueue } from '../../src/main/work-queue';
 import { IPC_ERROR_PREFIX, encodeIpcError } from '../../src/preload/ipc-error-wire';
 import { createTempVault } from '../helpers/vault';
 import type { TempVault } from '../helpers/vault';
@@ -79,6 +80,9 @@ async function createHarness(userDataDir: string) {
   forgetOverviewState();
   forgetGardenerState();
   cancelGardenerRun();
+  /* Die Warteschlange ist ein Singleton: ohne Rücksetzen meldete sie noch an
+     die `services` des vorigen Tests (074, D2). */
+  resetWorkQueue();
 
   const settings = await SettingsService.load(userDataDir);
   const keys = await createKeyStore(userDataDir);
@@ -115,11 +119,52 @@ async function createHarness(userDataDir: string) {
 
 type Harness = Awaited<ReturnType<typeof createHarness>>;
 
+/**
+ * Der Schritt, den die gespiegelte Pflege-Aufgabe in dieser Meldung trägt.
+ *
+ * Seit 074 D2 fährt jeder veröffentlichte Schritt als `detail` der Aufgabe über
+ * `event:work-tasks` mit, statt über einen eigenen Fortschrittskanal — die
+ * Prüfungen unten sind dieselben, nur die Quelle ist der Spiegel.
+ */
+function gardenerStep(payload: unknown): GardenerRunProgress | null {
+  const task = (payload as WorkTask[]).filter((entry) => entry.kind === 'gardener').at(-1);
+  return (task?.detail as GardenerRunProgress | undefined) ?? null;
+}
+
+/**
+ * Der Anfangszustand, mit dem der Lauf den Platz belegt: `running`, aber noch
+ * über keinem Stufenplan (`total === 0`). Das ist keine Meldung des Laufs,
+ * sondern sein Anfang — die Prüfungen hier meinen die veröffentlichten
+ * Schritte. Der schließende Schnappschuss trägt dieselbe 0, aber
+ * `running: false`, und bleibt darum drin.
+ */
+function isClaimSeed(step: GardenerRunProgress): boolean {
+  return step.running && step.total === 0;
+}
+
 /** Die Fortschrittsmeldungen des letzten Laufs. */
-function progress(harness: Harness): IpcEvents['event:gardener-progress'][] {
-  return harness.sent
-    .filter((entry) => entry.name === 'event:gardener-progress')
-    .map((entry) => entry.payload as IpcEvents['event:gardener-progress']);
+function progress(harness: Harness): GardenerRunProgress[] {
+  const steps: GardenerRunProgress[] = [];
+  for (const entry of harness.sent) {
+    if (entry.name !== 'event:work-tasks') continue;
+    const step = gardenerStep(entry.payload);
+    /* Jede Zustandsänderung der Warteschlange meldet die ganze Liste; ein
+       Schritt zählt einmal, nicht so oft wie er mitgereicht wird. */
+    if (step === null || step === steps.at(-1) || isClaimSeed(step)) continue;
+    steps.push(step);
+  }
+  return steps;
+}
+
+/** Der Zustand, in dem die gespiegelte Pflege-Aufgabe zuletzt gemeldet wurde. */
+function lastGardenerTask(harness: Harness): WorkTask | null {
+  for (let index = harness.sent.length - 1; index >= 0; index -= 1) {
+    const entry = harness.sent[index];
+    if (entry?.name !== 'event:work-tasks') continue;
+    const task = (entry.payload as WorkTask[]).filter((one) => one.kind === 'gardener').at(-1);
+    if (task !== undefined) return task;
+  }
+  return null;
 }
 
 function findingOfKind(findings: readonly GardenerFinding[], kind: string): GardenerFinding {
@@ -396,16 +441,14 @@ describe('Pflege-Kanäle im Main', () => {
    * (`gardener:cancel`) oder der beim Schließen und Beenden (`main/index.ts`).
    * Der Rückgabewert stellt den Versand wieder her.
    */
-  function cancelOn(
-    phase: IpcEvents['event:gardener-progress']['phase'],
-    stop: () => void,
-  ): () => void {
+  function cancelOn(phase: GardenerRunProgress['phase'], stop: () => void): () => void {
     const send = harness.services.sendEvent;
     let fired = false;
     harness.services.sendEvent = ((name, payload) => {
       send(name, payload);
-      if (fired || name !== 'event:gardener-progress') return;
-      if ((payload as IpcEvents['event:gardener-progress']).phase !== phase) return;
+      if (fired || name !== 'event:work-tasks') return;
+      const step = gardenerStep(payload);
+      if (step === null || isClaimSeed(step) || step.phase !== phase) return;
       fired = true;
       stop();
     }) as typeof harness.services.sendEvent;
@@ -482,8 +525,9 @@ describe('Pflege-Kanäle im Main', () => {
     expect(stored.run.completed).toEqual(['checks']);
     expect(stored.run.healthAsOf?.ranAt).toBe(first.ranAt);
 
-    /* Der abgebrochene Lauf endet sichtbar und gibt den Platz frei. */
-    expect(progress(harness).at(-1)).toMatchObject({ running: false });
+    /* Der abgebrochene Lauf endet sichtbar und gibt den Platz frei — in der
+       Warteschlange als abgebrochene Aufgabe, nicht als fertige (074, D2). */
+    expect(lastGardenerTask(harness)).toMatchObject({ state: 'cancelled' });
     expect(gardenerRunSnapshot()).toBeNull();
     expect(await harness.call('gardener:runStatus', undefined)).toBeNull();
   });
@@ -511,7 +555,7 @@ describe('Pflege-Kanäle im Main', () => {
     expect(kept?.ranAt).toBe(first.ranAt);
     expect(kept?.complete).not.toBe(false);
     /* Auch der abgebrochene Lauf endet sichtbar. */
-    expect(progress(harness).at(-1)).toMatchObject({ running: false });
+    expect(lastGardenerTask(harness)).toMatchObject({ state: 'cancelled' });
     /* Und er hinterlässt keinen Zustand, der weiter „es läuft" behauptet. */
     expect(gardenerRunSnapshot()).toBeNull();
   });
@@ -532,7 +576,7 @@ describe('Pflege-Kanäle im Main', () => {
     expect(answer.ranAt).toBe(first.ranAt);
     expect(answer.complete).not.toBe(false);
     expect(answer.healthAsOf).toBeUndefined();
-    expect(progress(harness).at(-1)).toMatchObject({ running: false });
+    expect(lastGardenerTask(harness)).toMatchObject({ state: 'cancelled' });
     expect(gardenerRunSnapshot()).toBeNull();
   });
 
@@ -541,7 +585,14 @@ describe('Pflege-Kanäle im Main', () => {
        zuerst. Bliebe der Lauf laufen, schriebe er in einen Vault, den der
        Nutzer gerade zugemacht hat — oder in den, der ihn ablöst. */
     const emitted: unknown[] = [];
-    const handle = beginGardenerRun({ trigger: 'user', emit: (step) => emitted.push(step) });
+    /* Mit Warteschlange, wie jeder echte Lauf: `closeVault` bricht seit 074 D2
+       über `cancelAll` ab, und der Spiegel ist es, der den echten Lauf
+       erreicht. */
+    const handle = beginGardenerRun({
+      trigger: 'user',
+      emit: (step) => emitted.push(step),
+      workQueue: getWorkQueue(harness.services),
+    });
     expect(handle).not.toBeNull();
 
     await harness.services.closeVault();
@@ -1579,7 +1630,8 @@ describe('Pflege-Kanäle im Main', () => {
     const send = harness.services.sendEvent;
     harness.services.sendEvent = ((name, payload) => {
       send(name, payload);
-      if (name === 'event:gardener-progress' && !cancelled) {
+      const step = name === 'event:work-tasks' ? gardenerStep(payload) : null;
+      if (step !== null && !isClaimSeed(step) && !cancelled) {
         cancelled = true;
         /* Genau der Aufruf vom Schließen des Vaults und vom Beenden — mit dem
            Grund, der nichts zurücklässt (021b, D2). */
@@ -1594,8 +1646,48 @@ describe('Pflege-Kanäle im Main', () => {
        Index durchgehen, sonst versucht `runWhenReady` genau ihn erneut. */
     expect(result).toBe('cancelled');
     expect(await vault.exists('.secondbrain/gardener.json')).toBe(false);
-    expect(progress(harness).at(-1)).toMatchObject({ running: false, trigger: 'auto' });
+    expect(progress(harness).at(-1)).toMatchObject({ trigger: 'auto' });
+    expect(lastGardenerTask(harness)).toMatchObject({ state: 'cancelled' });
     expect(gardenerRunSnapshot()).toBeNull();
+  });
+
+  /* 074, D3: „ein Lauf geht" hat jetzt genau eine Quelle — die Warteschlange
+     selbst, nicht mehr ein lokales Feld, das mit ihr übereinstimmt. Die beiden
+     Prüfungen unten setzen eine `'gardener'`-Aufgabe direkt über die
+     Warteschlange, ohne `beginGardenerRun` — das ist der Beweis, dass
+     `GardenerAutorun.run()` wirklich dort nachsieht, statt an einem eigenen
+     Merker vorbeizuschauen. */
+  it('meldet „busy", wenn die Warteschlange schon eine laufende Pflege-Aufgabe führt', async () => {
+    const { GardenerAutorun } = await import('../../src/main/gardener-autorun');
+    const autorun = new GardenerAutorun(harness.services, { delayMs: 0 });
+    await harness.settings.patchVault({ gardener: { runOnOpen: true } });
+    getWorkQueue(harness.services).startExternal({
+      kind: 'gardener',
+      lane: 'model',
+      subject: { label: 'Maintenance run', ref: null },
+    });
+
+    expect(await autorun.run()).toBe('busy');
+  });
+
+  it('lässt wieder laufen, sobald diese Aufgabe direkt in der Warteschlange abgebrochen wird', async () => {
+    const { GardenerAutorun } = await import('../../src/main/gardener-autorun');
+    const autorun = new GardenerAutorun(harness.services, { delayMs: 0 });
+    await harness.settings.patchVault({ gardener: { runOnOpen: true } });
+    const workQueue = getWorkQueue(harness.services);
+    const handle = workQueue.startExternal({
+      kind: 'gardener',
+      lane: 'model',
+      subject: { label: 'Maintenance run', ref: null },
+    });
+    expect(await autorun.run()).toBe('busy');
+
+    /* Der Abbruch kommt hier direkt aus der Warteschlange (etwa der „Stop"
+       auf dem Aufgaben-Schirm), nicht über `cancelGardenerRun` — und ist
+       sofort sichtbar, weil `run()` dieselbe Warteschlange abfragt. */
+    workQueue.cancel(handle.id, 'user');
+
+    expect(await autorun.run()).toBe('ran');
   });
 
   // ── Erinnerungen ───────────────────────────────────────────────────────────

@@ -38,7 +38,9 @@ function task(overrides: Partial<WorkTask> = {}): WorkTask {
     queuedAt: '2026-09-07T10:00:00.000Z',
     startedAt: null,
     finishedAt: null,
+    retryable: true,
     ...overrides,
+    detail: overrides.detail ?? null,
   };
 }
 
@@ -79,6 +81,23 @@ describe('tasksBadgeCount (AC2)', () => {
 
   it('counts the maintenance row alone when the registry is empty', () => {
     expect(tasksBadgeCount([], progress())).toBe(1);
+  });
+
+  /* 074, D5: the same run in the registry and in the snapshot is one run.
+     Counting both would put the badge one above what the screen shows. */
+  it('counts a running maintenance pass once, though it now arrives twice', () => {
+    const tasks = [
+      task({ id: 'gardener-1', kind: 'gardener', state: 'running' }),
+      task({ id: 'a', state: 'running' }),
+    ];
+
+    expect(tasksBadgeCount(tasks, progress())).toBe(2);
+  });
+
+  it('still counts a finished maintenance task as what it is: not running, not waiting', () => {
+    const tasks = [task({ id: 'gardener-1', kind: 'gardener', state: 'done' })];
+
+    expect(tasksBadgeCount(tasks, null)).toBe(0);
   });
 
   it('reads zero when nothing is running or waiting and no maintenance run is going', () => {
@@ -212,5 +231,44 @@ describe('buildTasksView', () => {
     const groups = buildTasksView([task({ state: 'running' })], null, t);
 
     expect(groups.find((group) => group.kind === 'running')?.tasks).toHaveLength(1);
+  });
+
+  /* 074, D5: the run is a real registry task now — and the snapshot the
+     synthetic row is built from is derived from that very task. Both arrive
+     for the same run, so without the filter the tasks screen would list one
+     maintenance pass twice, under two different labels. */
+  it('shows a running maintenance pass once, not twice, now that it is in the registry too', () => {
+    const registryTask = task({ id: 'gardener-1', kind: 'gardener', state: 'running' });
+
+    const groups = buildTasksView(
+      [registryTask, task({ id: 'ingest-1', state: 'running' })],
+      progress(),
+      t,
+    );
+
+    const running = groups.find((group) => group.kind === 'running');
+    expect(running?.tasks.map((entry) => entry.id)).toEqual(['gardener-run', 'ingest-1']);
+  });
+
+  /* The filter is narrow on purpose: a run that ended leaves a settled task
+     behind (074's own point), and that record belongs on the screen — the
+     synthetic row only ever stands for a run that is still going. */
+  it('keeps a finished maintenance run, which is the registry record 074 added', () => {
+    const groups = buildTasksView(
+      [
+        task({
+          id: 'gardener-1',
+          kind: 'gardener',
+          state: 'done',
+          finishedAt: '2026-09-07T10:01:00.000Z',
+        }),
+      ],
+      null,
+      t,
+    );
+
+    expect(
+      groups.find((group) => group.kind === 'finished')?.tasks.map((entry) => entry.id),
+    ).toEqual(['gardener-1']);
   });
 });

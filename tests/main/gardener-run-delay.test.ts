@@ -27,7 +27,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CHECKS } from '@core/gardener';
-import type { IpcChannel, IpcEventName, IpcEvents, IpcRequest, IpcResponse } from '@shared/ipc';
+import type { IpcChannel, IpcEventName, IpcRequest, IpcResponse } from '@shared/ipc';
+import type { GardenerRunProgress, WorkTask } from '@shared/types';
 import { createTempVault } from '../helpers/vault';
 import type { TempVault } from '../helpers/vault';
 import { NOW_MS, freezeTime } from '../helpers/time';
@@ -47,7 +48,15 @@ type Handlers = Partial<{
   [K in IpcChannel]: (request: IpcRequest<K>) => IpcResponse<K> | Promise<IpcResponse<K>>;
 }>;
 
-type Progress = IpcEvents['event:gardener-progress'];
+/* Since 074 D2 a published step travels as the `detail` of the run's mirrored
+   work task, over `event:work-tasks` — the same numbers, one producer. */
+type Progress = GardenerRunProgress;
+
+/** The state the slot was claimed with: running, but not yet over a stage plan.
+    Not a step the run reported, so it is not counted as one. */
+function isClaimSeed(step: Progress): boolean {
+  return step.running && step.total === 0;
+}
 
 /**
  * A main process with the maintenance channels over a real temporary vault, on
@@ -80,11 +89,20 @@ async function createHarness(userDataDir: string, delay: string | undefined) {
   );
 
   const checks: Progress[] = [];
-  const last: { progress: Progress | null } = { progress: null };
+  const last: { progress: Progress | null; task: WorkTask | null } = {
+    progress: null,
+    task: null,
+  };
   let onChecks: (() => void) | null = null;
   services.sendEvent = ((name: IpcEventName, payload: unknown) => {
-    if (name !== 'event:gardener-progress') return;
-    const step = payload as Progress;
+    if (name !== 'event:work-tasks') return;
+    const task = (payload as WorkTask[]).filter((entry) => entry.kind === 'gardener').at(-1);
+    if (task === undefined) return;
+    last.task = task;
+    const step = task.detail as Progress | null;
+    /* Every state change reports the whole list, so the same step can arrive
+       more than once — it counts once. */
+    if (step === null || step === last.progress || isClaimSeed(step)) return;
     last.progress = step;
     if (step.phase !== 'checks') return;
     checks.push(step);
@@ -207,9 +225,10 @@ describe('the maintenance run duration seam', () => {
     await running.catch(() => null);
 
     expect(settled).toBe(true);
-    /* Nothing ran on after the stop, and nothing keeps claiming a run. */
+    /* Nothing ran on after the stop, and nothing keeps claiming a run — the
+       mirrored task ends as cancelled, not as a run that quietly completed. */
     expect(run.checks.length).toBe(1);
-    expect(run.last.progress).toMatchObject({ running: false });
+    expect(run.last.task).toMatchObject({ state: 'cancelled' });
     expect(run.gardenerRunSnapshot()).toBeNull();
   });
 });

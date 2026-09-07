@@ -1,12 +1,17 @@
 /**
  * Work in flight is one queue: the shape shared by every long-running task the
- * app runs on the vault — condensation, day close, the gardener, ingest. One
- * record type so one screen can list all of them side by side, instead of one
- * ad-hoc progress indicator per feature.
+ * app runs on the vault — condensation, day close, the gardener, ingest,
+ * the journal interview plan. One record type so one screen can list all of
+ * them side by side, instead of one ad-hoc progress indicator per feature.
+ * `detail` is the one field that isn't generic across kinds — see its own
+ * doc comment below.
  */
 
+import type { GardenerRunProgress } from './gardener';
+import type { IngestJob } from './knowledge';
+
 /** What kind of long-running work this task performs. */
-export type WorkTaskKind = 'condense' | 'close-day' | 'gardener' | 'ingest';
+export type WorkTaskKind = 'condense' | 'close-day' | 'gardener' | 'ingest' | 'interview-plan';
 
 /**
  * Where a task stands. Mirrors `IngestStage`'s terminal/non-terminal split, but
@@ -18,9 +23,11 @@ export type WorkTaskState = 'queued' | 'running' | 'done' | 'failed' | 'cancelle
 /**
  * A lane a task competes for. `model` holds work that needs an LLM and may only
  * run one at a time (a second model call would just queue behind the first
- * anyway); `free` holds work that needs no model and can run alongside it.
+ * anyway); `free` holds work that needs no model and can run alongside it;
+ * `import` holds ingest jobs, whose real concurrency is `IngestQueue`'s own
+ * (see `src/core/ingest/queue.ts`) — this lane's accounting is display-only.
  */
-export type WorkLane = 'model' | 'free';
+export type WorkLane = 'model' | 'free' | 'import';
 
 /** What a task is about, for display — a one-line label plus an optional link back. */
 export interface WorkTaskSubject {
@@ -55,4 +62,32 @@ export interface WorkTask {
    * listing the queue stays cheap (see `src/core/tasks/results.ts`).
    */
   hasResult: boolean;
+  /**
+   * A kind-specific snapshot a task's own display logic needs beyond the
+   * generic fields above — an `IngestJob` for an `'import'` task, so the
+   * renderer can keep rendering ingest's existing stage/message detail
+   * unchanged, and a `GardenerRunProgress` for a `'gardener'` task, so the
+   * run's own weighted numbers travel with the task record instead of over a
+   * second channel (074 D2). Additive per kind: each producer only ever sets
+   * the variant its own kind carries.
+   */
+  detail: WorkTaskDetail | null;
+  /**
+   * Whether the generic Tasks-screen retry action (`tasks:retry`) can do
+   * anything useful for this task. `true` for a task created the normal way
+   * (`WorkRegistry.enqueue`, including a retry's own re-enqueue) — its stored
+   * runner is the real work, so retrying it re-runs that work. `false` for a
+   * task whose lifecycle is paced from outside the registry's own pump
+   * (`WorkRegistry.startExternal` — the mirrored gardener run and a mirrored
+   * ingest job, 074 D2/D4): its stored runner is a no-op stub, so retrying it
+   * would silently resolve `done` without redoing anything real — see
+   * `WorkRegistry.retry()`'s own doc comment. Deliberately not `kind`: a
+   * `kind` alone conflates "this kind is usually external" with "this
+   * particular task is", which is not the same fact (`tasks-e2e-fixture.ts`
+   * enqueues an `ingest`-kind task the normal way on purpose, precisely to
+   * exercise this generic retry path in e2e).
+   */
+  retryable: boolean;
 }
+
+export type WorkTaskDetail = IngestJob | GardenerRunProgress;

@@ -17,6 +17,7 @@ export const enTasks = {
   'tasks.kind.close-day': 'Close day',
   'tasks.kind.gardener': 'Maintenance',
   'tasks.kind.ingest': 'Take in source',
+  'tasks.kind.interview-plan': 'Interview plan',
 
   'tasks.outcome.done': 'Done',
   'tasks.outcome.failed': 'Failed',

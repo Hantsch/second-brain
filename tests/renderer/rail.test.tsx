@@ -144,6 +144,8 @@ describe('Rail', () => {
           startedAt: '2026-08-10T09:00:00.000Z',
           finishedAt: null,
           hasResult: false,
+          detail: null,
+          retryable: true,
         },
         {
           id: 'b',
@@ -159,6 +161,8 @@ describe('Rail', () => {
           startedAt: null,
           finishedAt: null,
           hasResult: false,
+          detail: null,
+          retryable: true,
         },
       ],
     });

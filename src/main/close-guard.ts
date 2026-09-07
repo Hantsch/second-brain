@@ -24,7 +24,7 @@
 
 import { app } from 'electron';
 import type { BrowserWindow } from 'electron';
-import { gardenerRunning } from './gardener-run-state';
+import { getWorkQueue } from './work-queue';
 import type { Services } from './services';
 
 /**
@@ -108,7 +108,15 @@ function guard(services: Services, event: VetoableEvent, proceed: () => void): v
   /* Already authorised. Not preventing it a second time is the whole point of
      the flag — this early return is what keeps the app closable. */
   if (confirmed) return;
-  if (!gardenerRunning()) return;
+  /* A queued task is dropped silently on close: nothing has been computed for
+     it yet, and the registry's own shutdown handling clears the queue anyway
+     (see `work-queue.ts`), so only a `running` task needs a veto of its own. */
+  if (
+    !getWorkQueue(services)
+      .list()
+      .some((task) => task.state === 'running')
+  )
+    return;
   /* Nobody left to ask. Vetoing here would stall the shutdown for the length of
      the timer and then do it anyway, because the confirm can never arrive — the
      window that would show the prompt is gone. This is also the normal path of

@@ -36,11 +36,13 @@ import {
   markGardenerStopped,
   setGardenerProgress,
 } from '@renderer/lib/gardener-progress';
+import { publishGardenerRun, publishedWorkQueue } from './gardener-transport';
 import { setLanguage } from '@renderer/i18n';
-import type { IpcChannel, IpcEvents, IpcRequest, IpcResponse } from '@shared/ipc';
+import type { IpcChannel, IpcRequest, IpcResponse } from '@shared/ipc';
+import type { GardenerRunProgress } from '@shared/types';
 import type { SbBridge } from '@renderer/lib/bridge';
 
-type ProgressEvent = IpcEvents['event:gardener-progress'];
+type ProgressEvent = GardenerRunProgress;
 
 /** One step of a run that is going, distinguishable by its `percent`. */
 function running(percent: number): ProgressEvent {
@@ -87,12 +89,17 @@ function calls(channel: IpcChannel): unknown[] {
  * continue buttons) — those only touch the bridge on click, but the hooks
  * still need one to exist for `QueryClientProvider` to construct around them
  * without throwing. Tests that click one of those buttons pass a handler for
- * the channel it reaches; every other channel resolves to `null`. */
+ * the channel it reaches; every other channel resolves to `null`.
+ *
+ * `work:list` is the exception, and it is not optional: mounting the strip
+ * subscribes the progress store to the work queue, which seeds itself from
+ * that channel (074, D5). Answering it with the published scenario is what
+ * keeps the seed from contradicting the run a test just published. */
 function installMock(handlers: SbHandlers = {}): void {
   const invoke = vi.fn(async (channel: IpcChannel, payload?: unknown) => {
     sent.push({ channel, payload });
     const handler = handlers[channel] as ((request: unknown) => unknown) | undefined;
-    if (!handler) return null;
+    if (!handler) return channel === 'work:list' ? publishedWorkQueue() : null;
     return handler(payload);
   });
   window.sb = {
@@ -123,9 +130,13 @@ beforeEach(() => {
   setLanguage('en');
   installMock();
   sent = [];
-  /* The store lives outside React and outside test isolation — every test
-     puts it back to "no run going, nothing stopped" itself, exactly like
-     `queries.test.ts`. */
+  /* Both stores live outside React and outside test isolation — every test
+     puts them back to "no run going, nothing stopped" itself, exactly like
+     `queries.test.ts`. The queue is emptied through the real transport;
+     `setGardenerProgress` clears the derived snapshot as well, which the
+     transport alone cannot do here because nothing is subscribed to it
+     between tests (074, D5 — the subscription is lazy). */
+  publishGardenerRun(null);
   setGardenerProgress(finished());
   dismissGardenerStopped();
 });
@@ -143,16 +154,16 @@ describe('RunStrip', () => {
   });
 
   it('keeps the running values after the host unmounts and remounts mid-run', () => {
-    setGardenerProgress(running(37));
+    publishGardenerRun(running(37));
     const first = renderStrip();
     expect(screen.getByText('2 of 9')).toBeTruthy();
     expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe('37');
 
     /* This is the story's regression: navigate away (unmount) and back
-       (mount a fresh instance), with no new `event:gardener-progress` in
-       between. A `useState`-backed strip showed nothing at all here — the
-       whole point of the module store is that the fresh instance's very
-       first render already has the answer, synchronously, no event needed. */
+       (mount a fresh instance), with nothing new published in between. A
+       `useState`-backed strip showed nothing at all here — the whole point of
+       the module store is that the fresh instance's very first render already
+       has the answer, synchronously, no event needed. */
     first.unmount();
     const second = renderStrip();
 
@@ -162,30 +173,32 @@ describe('RunStrip', () => {
   });
 
   it('shows a later live event after a remount, not a stale one from before it', () => {
-    setGardenerProgress(running(10));
+    publishGardenerRun(running(10));
     const first = renderStrip();
     expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe('10');
     first.unmount();
 
-    /* An event can also land while nothing is mounted at all — the other half
-       of the same defect, already covered for the store itself in
+    /* The queue can also move on while nothing is mounted at all — the other
+       half of the same defect, already covered for the store itself in
        `queries.test.ts`; here it is checked through the component that
-       actually renders the number. */
-    setGardenerProgress(running(65));
+       actually renders the number. Since 074, D5 the progress store is not
+       even subscribed to the queue at this point: the strip's next mount
+       re-derives the current answer for its first render. */
+    publishGardenerRun(running(65));
     renderStrip();
 
     expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe('65');
   });
 
   it('names the running check by its stage label', () => {
-    setGardenerProgress(runningWith({ stage: 'audit', check: null }));
+    publishGardenerRun(runningWith({ stage: 'audit', check: null }));
     renderStrip();
 
     expect(screen.getByText('The model is interpreting the results')).toBeTruthy();
   });
 
   it('lists the stages still to come', () => {
-    setGardenerProgress(runningWith({ stage: 'checks', remaining: ['audit', 'loose-ends'] }));
+    publishGardenerRun(runningWith({ stage: 'checks', remaining: ['audit', 'loose-ends'] }));
     renderStrip();
 
     expect(screen.getByText('Still to come: contradictions, loose ends')).toBeTruthy();
@@ -194,7 +207,7 @@ describe('RunStrip', () => {
   it('ticks the elapsed clock upward while a run is going', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-08-22T10:00:00+02:00'));
-    setGardenerProgress(runningWith({ startedAt: '2026-08-22T10:00:00+02:00' }));
+    publishGardenerRun(runningWith({ startedAt: '2026-08-22T10:00:00+02:00' }));
     renderStrip();
 
     expect(screen.getByLabelText('Elapsed 0:00')).toBeTruthy();
@@ -207,7 +220,7 @@ describe('RunStrip', () => {
   });
 
   it('notes that no model stage exists for a run whose plan is checks only', () => {
-    setGardenerProgress(runningWith({ stage: 'checks', remaining: [] }));
+    publishGardenerRun(runningWith({ stage: 'checks', remaining: [] }));
     renderStrip();
 
     expect(
@@ -216,16 +229,17 @@ describe('RunStrip', () => {
   });
 
   it('cancels via gardener:cancel and offers "continue" once the run actually stops', async () => {
-    setGardenerProgress(running(37));
+    publishGardenerRun(running(37));
     renderStrip();
 
     await userEvent.click(screen.getByRole('button', { name: 'Cancel check' }));
     await waitFor(() => expect(calls('gardener:cancel')).toEqual([undefined]));
 
     /* The cancel mutation only marks the session flag; the run itself still
-       has to report `running: false` — the same live event a real stop
-       produces — before the strip's view changes to the offer. */
-    setGardenerProgress(finished());
+       has to leave the queue — the same thing a real stop produces, since the
+       registry settles the task — before the strip's view changes to the
+       offer. */
+    publishGardenerRun(finished());
 
     expect(await screen.findByText('Stopped partway.')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Continue check' })).toBeTruthy();
@@ -237,7 +251,7 @@ describe('RunStrip', () => {
         throw Object.assign(new Error('boom'), { code: 'io' });
       },
     });
-    setGardenerProgress(running(37));
+    publishGardenerRun(running(37));
     renderStrip();
 
     await userEvent.click(screen.getByRole('button', { name: 'Cancel check' }));
@@ -267,25 +281,25 @@ describe('RunStrip', () => {
   });
 
   it('clears a stale "stopped partway" flag once a run goes some other way, and disappears when that run finishes (AC5)', async () => {
-    setGardenerProgress(running(37));
+    publishGardenerRun(running(37));
     const { container } = renderStrip();
 
     await userEvent.click(screen.getByRole('button', { name: 'Cancel check' }));
     await waitFor(() => expect(calls('gardener:cancel')).toEqual([undefined]));
-    setGardenerProgress(finished());
+    publishGardenerRun(finished());
     expect(await screen.findByText('Stopped partway.')).toBeTruthy();
 
     /* A fresh, unrelated run starts some other way — a plain "check now" on
        the maintenance screen, or a resume from its own report banner. Either
-       way, this is a live progress snapshot that represents a run genuinely
-       going, which must clear the stale flag from before (finding 1). */
-    setGardenerProgress(running(5));
+       way, a run genuinely going shows up in the queue again, and that must
+       clear the stale flag from before (finding 1). */
+    publishGardenerRun(running(5));
     await waitFor(() => expect(screen.queryByText('Stopped partway.')).toBeNull());
 
     /* That run finishes cleanly — the strip must not fall back into "stopped
        partway" for want of a reset flag; it simply disappears, exactly as it
        would after any other run that completed without ever being stopped. */
-    setGardenerProgress(finished());
+    publishGardenerRun(finished());
 
     await waitFor(() => expect(container.innerHTML).toBe(''));
   });
@@ -306,7 +320,7 @@ describe('RunStrip', () => {
     });
 
     it('still renders live progress on /garden — only the static offer is suppressed there', () => {
-      setGardenerProgress(running(37));
+      publishGardenerRun(running(37));
       renderStrip('/garden');
 
       expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe('37');

@@ -53,6 +53,7 @@ import type {
   GardenerFinding,
   GardenerFindingKind,
   GardenerReport,
+  GardenerRunProgress,
   GardenerRunScope,
   GardenerRunTrigger,
   GardenerSettings,
@@ -152,19 +153,11 @@ function deps(services: Services, signal?: AbortSignal): GardenerDeps {
   };
 }
 
-/** The widened shape `event:gardener-progress` carries — see `src/shared/ipc.ts`. */
-export interface GardenerProgressEvent {
-  phase: 'checks' | 'audit' | 'loose-ends' | 'done';
-  check: (typeof CHECKS)[number]['kind'] | null;
-  done: number;
-  total: number;
-  running: boolean;
-  stage: GardenerStageId | 'done';
-  percent: number;
-  remaining: GardenerStageId[];
-  startedAt: string;
-  trigger: GardenerRunTrigger;
-}
+/** What a run reports, one step at a time. The shape itself lives in
+    `@shared/types` now (074, D2) — it used to be written out here *and* as the
+    `event:gardener-progress` payload in `src/shared/ipc.ts`, and two copies of
+    a wire shape drift. The alias stays so this file's callers keep their name. */
+export type GardenerProgressEvent = GardenerRunProgress;
 
 export interface RunOptions {
   /** Overrides `gardener.useLlm` for this run. */

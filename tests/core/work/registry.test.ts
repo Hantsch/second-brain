@@ -190,6 +190,8 @@ describe('WorkRegistry', () => {
         'startedAt',
         'finishedAt',
         'hasResult',
+        'detail',
+        'retryable',
       ].sort(),
     );
   });

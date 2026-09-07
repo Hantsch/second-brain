@@ -62,6 +62,11 @@ export type WorkLaneCapacity = Partial<Record<WorkLane, number>> | ((lane: WorkL
 const DEFAULT_CAPACITY: Record<WorkLane, number> = {
   model: 1,
   free: Number.POSITIVE_INFINITY,
+  /* Mirrors `IngestQueue.DEFAULT_CONCURRENCY` (`src/core/ingest/queue.ts`) —
+     imports keep their existing real-world concurrency. Only matters for a
+     caller that never overrides `laneCapacity`, since import tasks started
+     via `startExternal` never go through this registry's own pump anyway. */
+  import: 2,
 };
 
 /** Finished tasks kept for history; the oldest finished one is dropped past this. */
@@ -88,6 +93,40 @@ interface Entry {
   cancelReason: CancelReason | null;
   /** True from the moment this task reached a terminal state — see `markFinished`. */
   settled: boolean;
+  /**
+   * Reports a cancellation back to a producer that paces this task from
+   * outside the registry's own pump (`startExternal`) — unset for a normal
+   * `enqueue`d entry, which instead reacts to its own `AbortSignal`.
+   */
+  onCancel?: (reason: CancelReason) => void;
+  /**
+   * True for an entry created via `startExternal`. `pump()` must skip these:
+   * a `startExternal(..., { state: 'queued' })` entry sits with
+   * `controller: null` and `state: 'queued'` until its own handle calls
+   * `.start()` — indistinguishable from a normal queued entry on those two
+   * fields alone, so without this flag the next unrelated `pump()` call
+   * (triggered by any other task's `enqueue`/`cancel`) would wrongly hand it
+   * to the private `start()` method and run its no-op stub closure.
+   */
+  external: boolean;
+}
+
+/**
+ * A task whose lifecycle is paced from outside the registry's own pump — the
+ * gardener run and an ingest job (074 D2/D4), neither of which is "a promise
+ * the registry awaits end-to-end". The registry only mirrors what the caller
+ * reports through this handle, and reports cancellation back via `onCancel`.
+ */
+export interface ExternalTaskHandle {
+  readonly id: string;
+  /** Move a queued external task to running; a no-op if already running or settled. */
+  start(): void;
+  /** Patch progress/message/detail while running; a no-op once settled. */
+  update(patch: Partial<Pick<WorkTask, 'progress' | 'message' | 'detail'>>): void;
+  /** Settle successfully; a no-op if already settled (e.g. already cancelled). */
+  finish(outcome?: WorkRunOutcome): void;
+  /** Settle as failed, via `describeFailure` — same failure text every other producer uses. */
+  fail(error: unknown): void;
 }
 
 export class WorkRegistry {
@@ -106,7 +145,14 @@ export class WorkRegistry {
     this.sequence += 1;
     const id = this.deps.newId?.() ?? `work-${this.sequence}`;
     const task = createTask(id, input, this.stamp());
-    this.entries.push({ task, run, controller: null, cancelReason: null, settled: false });
+    this.entries.push({
+      task,
+      run,
+      controller: null,
+      cancelReason: null,
+      settled: false,
+      external: false,
+    });
     this.recomputeQueuePositions(task.lane);
     this.emit();
     this.pump();
@@ -126,11 +172,15 @@ export class WorkRegistry {
    * `null` means there is nothing to retry: no such task (finished ones are
    * only kept up to `RETENTION`), or one that did not fail — `done` and
    * `cancelled` work is not silently redone, and a queued or running task is
-   * already on its way.
+   * already on its way. Also `null` for an `external` entry (`startExternal`,
+   * 074 D2/D4): its stored `run` is the no-op stub `startExternal` creates,
+   * so re-enqueuing it would produce a task that resolves instantly as `done`
+   * while nothing was actually retried — the gardener run and an ingest job
+   * each have their own real retry path instead.
    */
   retry(id: string): WorkTask | null {
     const entry = this.find(id);
-    if (entry === null || entry.task.state !== 'failed') return null;
+    if (entry === null || entry.external || entry.task.state !== 'failed') return null;
     const { kind, lane, subject } = entry.task;
     return this.enqueue({ kind, lane, subject: { ...subject } }, entry.run);
   }
@@ -138,6 +188,95 @@ export class WorkRegistry {
   /** All tasks, insertion order — copies, nothing a caller could mutate live. */
   list(): WorkTask[] {
     return this.entries.map((entry) => copyTask(entry.task));
+  }
+
+  /**
+   * Push a progress tick from a producer whose own code paces the run, not the
+   * registry's `run` closure — used by `ExternalTaskHandle.update` and
+   * available directly for the same purpose. A no-op if there's no such task,
+   * or it has already settled.
+   */
+  updateProgress(
+    id: string,
+    patch: Partial<Pick<WorkTask, 'progress' | 'message' | 'detail'>>,
+  ): void {
+    const entry = this.find(id);
+    if (entry === null || entry.settled) return;
+    Object.assign(entry.task, patch);
+    this.emit();
+  }
+
+  /**
+   * Start a task whose lifecycle is paced from outside this registry's own
+   * pump (the gardener run, an ingest job — 074 D2/D4): created here exactly
+   * like `enqueue`, but never handed to `pump()`. Its lane is for display and
+   * classification only — it does not compete for that lane's capacity
+   * against tasks started via `enqueue`. True cross-producer serialisation
+   * between an externally-paced task and a normally enqueued one is out of
+   * scope for this primitive; a deliberate limitation, not an oversight.
+   */
+  startExternal(
+    input: EnqueueTaskInput,
+    options?: { onCancel?: (reason: CancelReason) => void; state?: 'queued' | 'running' },
+  ): ExternalTaskHandle {
+    this.sequence += 1;
+    const id = this.deps.newId?.() ?? `work-${this.sequence}`;
+    const task = createTask(id, input, this.stamp());
+    // Not `enqueue()`'s "run this closure" — this entry's `run` is a no-op
+    // stub (below), so the renderer must never offer the generic retry for
+    // it (see `WorkTask.retryable`'s own doc comment for why).
+    task.retryable = false;
+    const state = options?.state ?? 'running';
+    if (state === 'running') {
+      task.state = 'running';
+      task.startedAt = this.stamp();
+    }
+    const entry: Entry = {
+      task,
+      run: async () => {},
+      controller: null,
+      cancelReason: null,
+      settled: false,
+      onCancel: options?.onCancel,
+      external: true,
+    };
+    this.entries.push(entry);
+    this.recomputeQueuePositions(task.lane);
+    this.emit();
+    return this.externalHandle(entry);
+  }
+
+  private externalHandle(entry: Entry): ExternalTaskHandle {
+    return {
+      id: entry.task.id,
+      start: () => {
+        if (entry.settled || entry.task.state !== 'queued') return;
+        entry.task.state = 'running';
+        entry.task.startedAt = this.stamp();
+        // Recompute before emitting, same as the real `start()`: leaving the
+        // queue shifts the positions of everything still waiting in this lane.
+        this.recomputeQueuePositions(entry.task.lane);
+        this.emit();
+      },
+      update: (patch) => this.updateProgress(entry.task.id, patch),
+      finish: (outcome) => {
+        this.markFinished(entry, {
+          state: 'done',
+          progress: 1,
+          message: null,
+          error: null,
+          hasResult: outcome?.hasResult ?? false,
+        });
+      },
+      fail: (error) => {
+        const failure = describeFailure(error);
+        this.markFinished(entry, {
+          state: 'failed',
+          error: failure.code,
+          message: failure.message,
+        });
+      },
+    };
   }
 
   /**
@@ -208,6 +347,7 @@ export class WorkRegistry {
       for (const entry of this.entries) {
         if (entry.task.lane !== lane || running >= capacity) continue;
         if (entry.task.state !== 'queued' || entry.controller !== null) continue;
+        if (entry.external) continue;
         running += 1;
         void this.start(entry);
       }
@@ -260,6 +400,12 @@ export class WorkRegistry {
     entry.controller?.abort();
     entry.controller = null;
     this.markCancelled(entry, reason);
+    // Called after the entry is already settled (markCancelled is guarded by
+    // markFinished's settled check), so a hook that re-enters cancel()/
+    // terminate() for this same id hits that guard and is a safe no-op —
+    // this matters because a real hook (074 D2) calls back into code that
+    // may itself try to cancel the same task again.
+    entry.onCancel?.(reason);
   }
 
   /**

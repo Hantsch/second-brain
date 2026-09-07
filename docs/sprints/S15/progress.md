@@ -38,3 +38,20 @@
 - 2026-09-07 22:45 · 073 · review-fix cycle 1 (retry stale task id, mark-before-write ordering, journal discard/apply cache staleness) · started
 - 2026-09-07 23:03 · 073 · review-fix cycle 1 (retry stale task id, mark-before-write ordering, journal discard/apply cache staleness) · done
 - 2026-09-07 23:06 · 073 · done · moved to docs/requirements/done/
+- 2026-09-07 23:18 · 074 · D1 Task kinds and lanes for the three migrating kinds · started
+- 2026-09-07 23:31 · 074 · D1 Task kinds and lanes for the three migrating kinds · done
+- 2026-09-07 23:31 · 074 · D2 Maintenance becomes a task; gardener-run-state.ts becomes a facade · started
+- 2026-09-07 23:49 · 074 · D2 Maintenance becomes a task; gardener-run-state.ts becomes a facade · done
+- 2026-09-07 23:49 · 074 · D3 No path starts a run behind the registry · started
+- 2026-09-07 23:52 · 074 · D3 No path starts a run behind the registry · done
+- 2026-09-07 23:52 · 074 · D4 Imports publish into the registry; both old event channels deleted · started
+- 2026-09-08 00:06 · 074 · D4 Imports publish into the registry; both old event channels deleted · done
+- 2026-09-08 00:06 · 074 · D5 RunStrip store reads the registry · started
+- 2026-09-08 00:28 · 074 · D5 RunStrip store reads the registry · done
+- 2026-09-08 00:28 · 074 · D6 Ingest consumers read the registry · started
+- 2026-09-08 00:36 · 074 · D6 Ingest consumers read the registry · done
+- 2026-09-08 00:36 · 074 · D7 Close guard covers every running task · started
+- 2026-09-08 00:50 · 074 · D7 The close guard covers every running task · done
+- 2026-09-08 00:50 · 074 · D8 The interview plan is a fast-lane task · started
+- 2026-09-08 00:55 · 074 · D8 The interview plan is a fast-lane task · done
+- 2026-09-08 01:35 · 074 · done · moved to docs/requirements/done/

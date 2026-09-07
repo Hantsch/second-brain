@@ -23,7 +23,10 @@ import {
   useGardenerProgress,
   useGardenerStopped,
 } from '@renderer/lib/gardener-progress';
+import { useSeedGardenerProgress } from '@renderer/lib/queries/gardener';
+import { publishGardenerRun, publishedWorkQueue } from './gardener-transport';
 import type { IpcEventName, IpcEvents } from '@shared/ipc';
+import type { GardenerRunProgress } from '@shared/types';
 
 type KeyFactory = (...args: string[]) => readonly unknown[];
 
@@ -73,7 +76,7 @@ describe('Query-Keys', () => {
   });
 });
 
-type ProgressEvent = IpcEvents['event:gardener-progress'];
+type ProgressEvent = GardenerRunProgress;
 
 /** One step of a run that is going, distinguishable by its `percent`. */
 function running(percent: number): ProgressEvent {
@@ -103,9 +106,6 @@ function finished(): ProgressEvent {
   };
 }
 
-/* Ein Pflegelauf endet auch ohne offenen Pflege-Screen — beim Öffnen des Vaults
-   (`gardener.runOnOpen`). Daran hängen drei Ansichten, und wenn eine davon
-   stehenbleibt, sagen zwei Screens Verschiedenes über denselben Lauf. */
 describe('Ereignisse', () => {
   async function wire(): Promise<{
     client: QueryClient;
@@ -131,55 +131,6 @@ describe('Ereignisse', () => {
       },
     };
   }
-
-  it('zieht nach einem beendeten Pflegelauf Bericht, Dashboard und Module nach', async () => {
-    const { client, emit } = await wire();
-    const invalidate = vi.spyOn(client, 'invalidateQueries');
-
-    emit('event:gardener-progress', {
-      phase: 'checks',
-      check: 'orphan',
-      done: 1,
-      total: 9,
-      running: true,
-      stage: 'checks',
-      percent: 11,
-      remaining: [],
-      startedAt: new Date().toISOString(),
-      trigger: 'user',
-    });
-    /* Zwischenstand: nichts nachladen, sonst rendert jede Prüfung neu. */
-    expect(invalidate).not.toHaveBeenCalled();
-
-    emit('event:gardener-progress', {
-      phase: 'done',
-      check: null,
-      done: 9,
-      total: 9,
-      running: false,
-      stage: 'done',
-      percent: 100,
-      remaining: [],
-      startedAt: new Date().toISOString(),
-      trigger: 'user',
-    });
-
-    const keys = invalidate.mock.calls.map(([filter]) => JSON.stringify(filter?.queryKey));
-    expect(keys).toContain(JSON.stringify(qk.gardener.report()));
-    expect(keys).toContain(JSON.stringify(qk.dashboard.data()));
-    expect(keys).toContain(JSON.stringify(qk.modules.list()));
-  });
-
-  /* 042, D1: der Fortschritt geht in den Speicher außerhalb von React, und
-     zwar über genau diese Verdrahtung — sie hängt am Fenster, nicht an einem
-     Screen, und ist damit auch dann da, wenn niemand zusieht. */
-  it('schreibt jeden Fortschritt in den Speicher außerhalb von React', async () => {
-    const { emit } = await wire();
-
-    emit('event:gardener-progress', running(11));
-
-    expect(getGardenerProgress()).toMatchObject({ running: true, percent: 11 });
-  });
 
   /* 019c, F6: without this, a freshly pulled model never becomes visible as
      a routing target — nothing re-probes the provider/model list the
@@ -298,11 +249,20 @@ describe('034: Budget- und VRAM-Änderungen ziehen den Startplan nach', () => {
  * that store's contract: it seeds, it survives having no component at all, and
  * its slow seed can never overwrite a newer live event. */
 describe('useGardenerProgress seeds from gardener:runStatus', () => {
-  /** Installs a bridge whose `gardener:runStatus` answers with `runStatus()`. */
+  /**
+   * Installs a bridge whose `gardener:runStatus` answers with `runStatus()`.
+   * `work:list` is left hanging on purpose: the work queue is the *other* way
+   * this store learns about a run since 074, D5, and these tests are about the
+   * seed being the faster of the two for a screen that opens mid-run. A queue
+   * that has not answered yet says nothing at all (`tasks-store.ts`'s
+   * `loaded`), so what the bar shows here can only have come from the seed.
+   */
   function installBridge(runStatus: () => unknown): void {
     const sb = {
       invoke: vi.fn((channel: string) =>
-        Promise.resolve(channel === 'gardener:runStatus' ? runStatus() : null),
+        channel === 'work:list'
+          ? new Promise(() => undefined)
+          : Promise.resolve(channel === 'gardener:runStatus' ? runStatus() : null),
       ),
       on: () => () => undefined,
       off: vi.fn(),
@@ -311,8 +271,12 @@ describe('useGardenerProgress seeds from gardener:runStatus', () => {
   }
 
   beforeEach(() => {
-    /* The store outlives a test the way it outlives a screen — that is the
-       whole point of it. So each test puts it back to "no run going" itself. */
+    /* Both stores outlive a test the way they outlive a screen — that is the
+       whole point of them. So each test puts them back to "no run going"
+       itself: the queue through the real transport, and the derived snapshot
+       directly, since nothing is subscribed to the queue between tests
+       (074, D5 — the subscription is lazy). */
+    publishGardenerRun(null);
     setGardenerProgress(finished());
     dismissGardenerStopped();
   });
@@ -342,15 +306,19 @@ describe('useGardenerProgress seeds from gardener:runStatus', () => {
   });
 
   /* The original bug, in one test: `bridge().on` does not replay, so anything
-     that only a mounted component collected was lost for good. */
-  it('keeps an event that arrived while no component was mounted', () => {
-    setGardenerProgress(running(40));
+     that only a mounted component collected was lost for good. Since 074, D5
+     this store is not even subscribed to the queue while nothing reads it —
+     which is exactly why the queue moving on in the middle here has to be
+     re-derived on the next mount, synchronously, for its first render. */
+  it('keeps up with a queue that moved on while no component was mounted', () => {
+    installBridge(() => null);
+    publishGardenerRun(running(40));
 
     const first = renderHook(() => useGardenerProgress());
     expect(first.result.current).toMatchObject({ percent: 40 });
     first.unmount();
 
-    setGardenerProgress(running(60));
+    publishGardenerRun(running(60));
 
     expect(renderHook(() => useGardenerProgress()).result.current).toMatchObject({ percent: 60 });
   });
@@ -358,7 +326,7 @@ describe('useGardenerProgress seeds from gardener:runStatus', () => {
   /* The seed is a round-trip; a run finishing right as a screen opens produces
      exactly this order. Without the generation guard the bar would jump back to
      "checking" after the run was already over — and stay there. */
-  it('never lets a slow seed overwrite a newer live event', async () => {
+  it('never lets a slow seed overwrite a newer answer from the queue', async () => {
     let answer: (snapshot: ProgressEvent | null) => void = () => undefined;
     window.sb = {
       invoke: vi.fn(
@@ -370,21 +338,39 @@ describe('useGardenerProgress seeds from gardener:runStatus', () => {
       on: () => () => undefined,
       off: vi.fn(),
     } as unknown as typeof window.sb;
+    /* A mounted reader, because the queue only feeds this store while someone
+       is reading it — the `work:list` its subscription issues is the first
+       call this bridge parks, and it stays parked for the whole test. */
+    const reader = renderHook(() => useGardenerProgress());
 
     const seeding = seedGardenerProgress();
-    setGardenerProgress(running(80));
+    act(() => {
+      publishGardenerRun(running(80));
+    });
     answer(running(5));
     await seeding;
 
     expect(getGardenerProgress()).toMatchObject({ percent: 80 });
+    reader.unmount();
   });
 
-  it('clears the bar once the run reports it is no longer running', () => {
-    setGardenerProgress(running(50));
+  it('clears the bar once the run has left the queue', () => {
+    installBridge(() => null);
+    const reader = renderHook(() => useGardenerProgress());
+    act(() => {
+      publishGardenerRun(running(50));
+    });
+    expect(getGardenerProgress()).toMatchObject({ percent: 50 });
 
-    setGardenerProgress(finished());
+    /* A run that ended is a task the registry has settled — it is simply no
+       longer in the queue as a running one, which is what "no run is going"
+       reads as now (074, D5). */
+    act(() => {
+      publishGardenerRun(finished());
+    });
 
     expect(getGardenerProgress()).toBeNull();
+    reader.unmount();
   });
 
   /* 042 review, N2: `stoppedInSession` used to survive a vault switch — stop a
@@ -403,5 +389,69 @@ describe('useGardenerProgress seeds from gardener:runStatus', () => {
     });
 
     expect(result.current).toBe(false);
+  });
+});
+
+/* Ein Pflegelauf endet auch ohne offenen Pflege-Screen — beim Öffnen des Vaults
+   (`gardener.runOnOpen`). Daran hängen drei Ansichten, und wenn eine davon
+   stehenbleibt, sagen zwei Screens Verschiedenes über denselben Lauf.
+ *
+ * Bis 074, D5 hing das an `event:gardener-progress` in `events.ts`. Den Kanal
+ * gibt es nicht mehr: der Lauf ist eine Aufgabe in der Warteschlange, und das
+ * Nachziehen hängt jetzt an `useSeedGardenerProgress` — dem einen Haken, den
+ * `AppShell` genau einmal einhängt. Ein Lauf, der von selbst endet, ist keine
+ * Mutation, die jemand ausgelöst hat; ohne dieses Nachziehen fragt niemand
+ * nach dem frischen Bericht.
+ */
+describe('Ein beendeter Pflegelauf zieht Bericht, Dashboard und Module nach (074, D5)', () => {
+  beforeEach(() => {
+    publishGardenerRun(null);
+    setGardenerProgress(finished());
+    window.sb = {
+      invoke: vi.fn((channel: string) =>
+        Promise.resolve(channel === 'work:list' ? publishedWorkQueue() : null),
+      ),
+      on: () => () => undefined,
+      off: vi.fn(),
+    } as unknown as typeof window.sb;
+  });
+
+  afterEach(() => {
+    delete window.sb;
+  });
+
+  it('zieht genau am Übergang von „läuft“ zu „läuft nicht mehr“ nach, nicht mitten im Lauf', async () => {
+    const client = new QueryClient();
+    const invalidate = vi.spyOn(client, 'invalidateQueries');
+    const wrapper = ({ children }: { children: ReactNode }) =>
+      QueryClientProvider({ client, children });
+    const { unmount } = renderHook(() => useSeedGardenerProgress(), { wrapper });
+
+    act(() => {
+      publishGardenerRun(running(11));
+    });
+    /* Zwischenstand: nichts nachladen, sonst rendert jede Prüfung neu. */
+    expect(invalidate).not.toHaveBeenCalled();
+
+    act(() => {
+      publishGardenerRun(finished());
+    });
+
+    await waitFor(() => {
+      const keys = invalidate.mock.calls.map(([filter]) => JSON.stringify(filter?.queryKey));
+      expect(keys).toContain(JSON.stringify(qk.gardener.report()));
+      expect(keys).toContain(JSON.stringify(qk.dashboard.data()));
+      expect(keys).toContain(JSON.stringify(qk.modules.list()));
+    });
+
+    /* Und nur an dieser einen Kante: ein weiterer Ereignisdurchlauf ohne Lauf
+       zieht nichts mehr nach, sonst würde jede Warteschlangenänderung nach
+       einem Lauf drei Abfragen neu laden. */
+    const afterFinish = invalidate.mock.calls.length;
+    act(() => {
+      publishGardenerRun(null);
+    });
+    expect(invalidate.mock.calls.length).toBe(afterFinish);
+    unmount();
   });
 });
