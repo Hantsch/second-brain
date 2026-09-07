@@ -758,6 +758,12 @@ Sprints:
 
 - [sprints/S13/sprint.md](sprints/S13/sprint.md) — the day is one text field (047, 048, 049),
   `done` ([review](sprints/S13/review.md) · [testplan](sprints/S13/testplan.md))
+- [sprints/S14/sprint.md](sprints/S14/sprint.md) — a closed day and a loose end both tell the
+  truth (068, 069, 070, 067), `planned` — cut 2026-09-07 from three fresh user bug reports, each
+  investigated before cutting. 068 is the milestone's own named second-part item (reopen on new
+  content); 069/070 are a split of one confusing moment the user described into read-time
+  visibility vs. write-time detection; 067 rides along (Settings/LLM papercut, out of M15's own
+  scope). Not yet built.
 
 Decisions taken at the cut (2026-09-03, user):
 
@@ -797,6 +803,13 @@ Gaps/notes:
   acceptance criteria; candidate cleanup for the second part of M15 or a future gardener pass.
 - The second part of M15 (re-indexing a day after close, correcting the close summary, the date
   picker's year/month drill-down) is not cut yet — own `/roadmap plan` once S13 is accepted.
+  **Update 2026-09-07:** the first of the three (reopen-on-new-content) is now cut as story 068 in
+  S14. The close-summary correction and the date picker's drill-down are still open.
+- **S14 (cut 2026-09-07):** two more fresh bug reports from real journal use — a loose end's answer
+  is invisible from the day it was raised on (069), and a forward-looking mention is only ever
+  surfaced after its day has already passed, never at write time (070). A third, unrelated Settings
+  papercut (067, a sensitive task's recommendation dead-ending with no explanation) rides along in
+  the same sprint rather than waiting for its own cut.
 
 ---
 
