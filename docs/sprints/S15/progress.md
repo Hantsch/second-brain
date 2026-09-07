@@ -1,0 +1,9 @@
+- 2026-09-07 17:01 · 071 D1 the record and the state machine · started
+- 2026-09-07 17:06 · 071 D1 the record and the state machine · done
+- 2026-09-07 17:07 · 071 D2 cancellation, failure isolation, shutdown · started
+- 2026-09-07 17:15 · 071 D2 cancellation, failure isolation, shutdown · done
+- 2026-09-07 17:15 · 071 D3 one channel, plus the list on demand · started
+- 2026-09-07 17:19 · 071 D3 one channel, plus the list on demand · done
+- 2026-09-07 17:19 · 071 D4 closing the vault ends the work · started
+- 2026-09-07 17:22 · 071 D4 closing the vault ends the work · done
+- 2026-09-07 17:40 · 071 done · moved to docs/requirements/done/

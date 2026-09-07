@@ -78,6 +78,7 @@ import type {
   VaultSettings,
   VaultStatus,
   WikiPage,
+  WorkTask,
   WriteResult,
   SourceDetail,
 } from './types';
@@ -1140,6 +1141,11 @@ export interface IpcRoutes {
     req: { findingId: string; target: string };
     res: { written: string[]; undoToken?: string };
   };
+  /**
+   * The current work queue, insertion order — the same list the last
+   * `event:work-tasks` carried, for a screen that mounts mid-run (071, D3).
+   */
+  'work:list': { req: void; res: WorkTask[] };
 
   // ── Claude sessions ──────────────────────────────────────────────────────
   'claude:sessions': { req: { limit?: number }; res: ClaudeSession[] };
@@ -1351,6 +1357,7 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'gardener:supersede',
   'gardener:orphanTargets',
   'gardener:linkOrphan',
+  'work:list',
   'claude:sessions',
   'claude:link',
   'agents:projects',
@@ -1473,6 +1480,13 @@ export interface IpcEvents {
    * copy of it here could only ever disagree with that one.
    */
   'event:close-requested': void;
+  /**
+   * The whole work queue, full list not a delta, every time any task in it
+   * changes state (071, D3) — the same "no delta" contract `IngestJob`'s
+   * per-job event has, but one queue for every kind of long-running work
+   * instead of one channel per feature.
+   */
+  'event:work-tasks': WorkTask[];
 }
 
 export type IpcEventName = keyof IpcEvents;
@@ -1491,6 +1505,7 @@ export const IPC_EVENTS: readonly IpcEventName[] = [
   'event:vault-status',
   'event:settings',
   'event:close-requested',
+  'event:work-tasks',
 ];
 
 /** Errors that come back over IPC carry this shape. */

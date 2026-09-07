@@ -19,12 +19,17 @@ import { startGardenerAutorun } from './gardener-autorun';
 import { cancelGardenerRun } from './gardener-run-state';
 import { startReminderNotifier } from './reminder-notify';
 import { isVault } from './vault-layout';
+import { getWorkQueue } from './work-queue';
 import type { Services } from './services';
 import type { GardenerAutorun } from './gardener-autorun';
 import type { ReminderNotifier } from './reminder-notify';
 
 let reminderNotifier: ReminderNotifier | null = null;
 let gardenerAutorun: GardenerAutorun | null = null;
+/* `will-quit` runs at module scope, outside `start()`'s closure — this is the
+   one place that reference is kept so the handler below can reach it (071,
+   D4), the same pattern `reminderNotifier`/`gardenerAutorun` already use. */
+let runningServices: Services | null = null;
 
 /* Only one instance: the vault is a file-based source of truth, and two
    processes on it would mean two writers. */
@@ -78,6 +83,7 @@ async function restoreVault(services: Services): Promise<void> {
 
 async function start(): Promise<void> {
   const services = await bootstrap();
+  runningServices = services;
   const window = createMainWindow(services);
   services.setMainWindow(window);
   /* Ask before closing kills a running maintenance pass (042, D6). A layer in
@@ -140,6 +146,12 @@ app.on('will-quit', () => {
        not carry half a report. A stop the user asked for goes through
        `gardener:cancel` and says `'user'` instead. */
     cancelGardenerRun('shutdown');
+    /* Same shutdown net for the work queue (071, D4): a task in flight against
+       the vault must not be left running once the process is on its way out. */
+    if (runningServices) {
+      getWorkQueue(runningServices).cancelAll('shutdown');
+      getWorkQueue(runningServices).clear();
+    }
   } finally {
     /* What the app started, the app stops (034, AC 6): the llama.cpp engine is
        tracked and not detached, so nothing else would ever end it. An engine

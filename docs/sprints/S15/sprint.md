@@ -1,7 +1,7 @@
 ---
 sprint: S15
-status: planned # planned | in-progress | done
-branch: # set by /sprint
+status: in-progress # planned | in-progress | done
+branch: sprint/S15
 milestone: M16 — Work in flight is visible, and what it proposes is correctable
 ---
 
@@ -19,7 +19,7 @@ before it is accepted.
 
 <!-- Order = the order the build phase works through. Dependent stories go last. -->
 
-- [ ] 071 — Work in flight is one queue
+- [x] 071 — Work in flight is one queue
 - [ ] 072 — Tasks have a place above maintenance
 - [ ] 073 — A run I walk away from still has its result
 - [ ] 074 — Maintenance and imports join the same queue

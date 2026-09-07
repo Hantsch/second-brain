@@ -26,6 +26,7 @@ import type { SettingsService } from './settings';
 import { cancelGardenerRun } from './gardener-run-state';
 import { fail, noVault } from './ipc/errors';
 import { ensureStructure, isVault } from './vault-layout';
+import { getWorkQueue } from './work-queue';
 
 interface OpenVault {
   root: string;
@@ -157,6 +158,13 @@ export class Services {
        `'shutdown'` is the reason that keeps nothing (021b): the run's own
        caller sees it and persists no partial report. */
     cancelGardenerRun('shutdown');
+    /* Same reasoning as the gardener run above: work enqueued against the
+       vault that is closing must not keep going against the one that opens
+       next (071, D4). `cancelAll` forces every queued/running task terminal;
+       `clear()` then drops those (and any earlier finished history) so the
+       list a caller sees right after is genuinely empty. */
+    getWorkQueue(this).cancelAll('shutdown');
+    getWorkQueue(this).clear();
     const previous = this.open;
     this.open = null;
     this.indexState = { docCount: 0, indexedAt: null, indexing: false };

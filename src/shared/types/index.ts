@@ -8,3 +8,4 @@ export * from './gardener';
 export * from './overview';
 export * from './llm';
 export * from './settings';
+export * from './work';

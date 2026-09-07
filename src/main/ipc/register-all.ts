@@ -46,6 +46,7 @@ import { shellHandlers } from './shell';
 import { todoHandlers } from './todos';
 import { vaultHandlers } from './vault';
 import { windowHandlers } from './window';
+import { workHandlers } from './work';
 
 /**
  * llama.cpp as one `RuntimeInstaller` (033, D6/D7; 034, D3). Install (plan,
@@ -122,6 +123,7 @@ export function buildHandlers(services: Services): HandlerMap {
     ...agentHandlers(services),
     ...settingsHandlers(services),
     ...windowHandlers(services),
+    ...workHandlers(services),
     ...shellHandlers(services),
     ...appHandlers(services),
   };
