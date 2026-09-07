@@ -22,9 +22,16 @@ import { isAcceptable, RecommendationRow } from './RecommendationRow';
 export interface RecommendationSectionProps {
   tasks: readonly TaskDefinition[];
   providers: readonly ProviderConfig[];
+  /** Raises a `pick === null` row's task up to `ModelsTab` (067, D2), which
+      focuses that task's select in the routing table above. */
+  onAssignManually: (task: TaskKind) => void;
 }
 
-export function RecommendationSection({ tasks, providers }: RecommendationSectionProps) {
+export function RecommendationSection({
+  tasks,
+  providers,
+  onAssignManually,
+}: RecommendationSectionProps) {
   const t = useT();
   const language = useLanguage();
   const { setRoute } = useRoutingMutations();
@@ -145,6 +152,7 @@ export function RecommendationSection({ tasks, providers }: RecommendationSectio
                     accepted={accepted.has(row.task)}
                     busy={acceptingTask === row.task}
                     onAccept={() => void acceptRow(row.task)}
+                    onAssignManually={onAssignManually}
                   />
                 );
               })}

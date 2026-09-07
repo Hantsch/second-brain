@@ -18,7 +18,7 @@
    refusals are closed reason codes, the renderer turns them into sentences. */
 
 import type { CatalogueEntry } from './catalogue';
-import type { ProviderConfig, TaskKind } from '@shared/types';
+import type { ModelRef, ProviderConfig, TaskKind } from '@shared/types';
 import { taskDefinition } from './tasks';
 
 /** The provider facts this rule needs: only whether it runs on this machine. */
@@ -181,6 +181,43 @@ export function filterForSensitiveTask<T extends SensitiveCandidate>(
     }
   }
   return allowed;
+}
+
+/** Verdict on one *routed* target (a `Routing` entry): either it needs no
+ *  warning, or it does, with the reason the UI can explain (D1, 067). */
+export type SensitiveRouteVerdict =
+  { warn: false } | { warn: true; reason: SensitiveRefusalReason };
+
+/**
+ * Whether the model a task is currently routed to deserves a sensitive-task
+ * warning. Holds no rule of its own — every real decision is
+ * `judgeForSensitiveTask`'s — this only wires a `Routing` entry to that rule:
+ *
+ * 1. A non-sensitive task is never warned about, whatever it's routed to.
+ * 2. A provider proven to run on this machine (`local === true`) never
+ *    warns either, same as the underlying rule.
+ * 3. Otherwise the routed model is looked up in `entries` by id and handed
+ *    to `judgeForSensitiveTask` together with the matching provider (if
+ *    configured). A model absent from the catalogue fails closed with
+ *    `'policy-unknown'`: no entry read means no policy was read, which is
+ *    exactly what that reason code means.
+ */
+export function judgeRouteForSensitiveTask(
+  task: TaskKind,
+  ref: ModelRef,
+  providers: readonly ProviderConfig[],
+  entries: readonly CatalogueEntry[],
+): SensitiveRouteVerdict {
+  if (!isSensitiveTask(task)) return { warn: false };
+
+  const provider = providers.find((candidate) => candidate.id === ref.providerId);
+  if (runsOnThisMachine(provider)) return { warn: false };
+
+  const entry = entries.find((candidate) => candidate.id === ref.model);
+  if (!entry) return { warn: true, reason: 'policy-unknown' };
+
+  const judgement = judgeForSensitiveTask(entry, provider);
+  return judgement.allowed ? { warn: false } : { warn: true, reason: judgement.reason };
 }
 
 /** Why each refused candidate was refused, for the "nothing qualifies"

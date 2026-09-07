@@ -1,7 +1,7 @@
 ---
 id: 067
 title: A sensitive task's recommendation explains a dead end
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-09-07
 ---
 
@@ -32,12 +32,12 @@ fix; whether the sensitivity/tier thresholds themselves should change is a separ
 
 ## Acceptance Criteria
 
-- [ ] **AC1** — When a task's guided recommendation has no qualifying candidate (`pick === null`),
+- [x] **AC1** — When a task's guided recommendation has no qualifying candidate (`pick === null`),
       the row shows the existing reason **and** a concrete next step (e.g. a pointer to the manual
       assignment table), instead of ending in a bare sentence with no control at all.
-- [ ] **AC2** — The manual routing table remains the actual way out: assigning `condense-area` (or
+- [x] **AC2** — The manual routing table remains the actual way out: assigning `condense-area` (or
       any sensitive task) a model there works, is saved, and is what the task uses on its next run.
-- [ ] **AC3** — The `llm-unavailable` error surfaced when running a task with no assigned model
+- [x] **AC3** — The `llm-unavailable` error surfaced when running a task with no assigned model
       (e.g. from `LlmMissing`) still leads to Settings' Models tab, unchanged from today — this
       story does not touch that link, only what the user finds after following it.
 
@@ -135,9 +135,12 @@ to thresholds, filters or write paths.
 
 ## Acceptance Tests
 
-- AC1 → e2e `tests/e2e/settings-models-dead-end.spec.ts` › "a recommendation with nothing to
-  propose points at the manual table" (D4), plus renderer
-  `tests/renderer/routing-dead-end.test.tsx` › "a no-pick row shows the reason and a way out" (D2)
+- AC1 → renderer `tests/renderer/routing-dead-end.test.tsx` › "a no-pick row shows the reason and
+  a way out" (D2) — proves the UI mechanism (reason, pointer, "Assign manually", focus) against
+  the real component tree. The e2e half originally planned here could not be written: on the
+  harness's actual machine capacity, `condense-area` always gets a pick, never `pick === null` —
+  see the second entry under `### Noted gap` above. `tests/e2e/settings-models-dead-end.spec.ts`
+  proves AC3 and AC2's reachable half instead, and documents the gap in its own header comment.
 - AC2 → renderer `tests/renderer/routing-table.test.tsx` › "a sensitive task can still be assigned
   a model that fails the sensitivity filter, with a warning" (D3), plus unit
   `tests/core/llm/sensitive.test.ts` › "a routed target is judged against the sensitivity rule"
@@ -152,6 +155,27 @@ AC2's persistence half ("is saved, and is what the task uses on its next run") i
 untouched behaviour of `llm:setRoute` and stays covered by the existing routing tests; the _new_
 e2e cannot drive an assignment because the no-model harness offers no model options in the select
 (see `## Open Questions`). No manual step is introduced — the gap is reported to the sprint review.
+
+**A second, unanticipated gap surfaced during D4 (build, 2026-09-07):** the story's plan assumed
+the e2e harness would produce a `pick === null` row for `condense-area` so AC1's dead end could be
+driven through the real surface. It does not, on the harness's actual capacity: the four local
+catalogue entries are reachable as `needs-download` on any machine whose capacity verdict carries
+them, and they pass the sensitivity rule via their attributed `no-training` policy, so
+`recommendModels` always returns a pick for `condense-area` — never the dead end — on the machine
+this was built and verified on (12 GB VRAM → ~16 B ceiling, above `condense-area`'s 13 B `strong`
+floor). A dead-end row only appears when `judgeCapacity`'s ceiling falls under the task's parameter
+floor, i.e. on small-VRAM hardware only; asserting it in e2e would assert the host's GPU size, not
+the feature. `tests/e2e/settings-models-dead-end.spec.ts` therefore proves AC3 in full and AC2's
+reachable half, and documents this exact limitation in its own header comment, instead of forcing
+a hardware-dependent assertion. AC1's UI mechanism (reason sentence, pointer, "Assign manually"
+button, focus-on-click) is proven instead by `tests/renderer/routing-dead-end.test.tsx`, which
+renders the real component tree (`RecommendationRow` → `RecommendationSection` → `ModelsTab` →
+`RoutingSection`) and asserts real DOM focus after a real click — not a faked signal. Reviewed and
+accepted (clean-agent code review, story 067 build): PASS, gap treated as harness-bound residue
+rather than a blocker, same class as the AC2 gap above. No fix is available inside this story's
+scope without adding a deterministic capacity override to the e2e harness (e.g. an `SB_E2E_*`
+machine-facts pin) — out of scope for a presentation-only fix; left as a possible follow-up story
+if AC1's dead-end path is ever needed as a hardware-independent e2e assertion.
 
 ## Decisions (Sprint)
 
@@ -183,3 +207,51 @@ e2e cannot drive an assignment because the no-model harness offers no model opti
   the existing parity test `tests/renderer/i18n.test.ts`.
 - The e2e spec enters through the Ask screen's `LlmMissing` note (`AskPanel.tsx:220`), because that
   is the reported journey and the cheapest `LlmMissing` surface to reach on an empty vault.
+
+## Done
+
+Added `judgeRouteForSensitiveTask` as a pure delegate to the existing sensitivity rule
+(`src/core/llm/sensitive.ts`); the guided recommendation's dead-end row now shows a pointer
+sentence plus an "Assign manually" button that scrolls/focuses the matching routing select
+(`RecommendationRow.tsx` → `RecommendationSection.tsx` → `ModelsTab.tsx` → `RoutingSection.tsx`);
+the manual routing table shows a non-blocking inline warning when a sensitive task is routed to a
+model that fails the sensitivity filter (`RoutingTable.tsx`, importing the bundled catalogue
+directly, no new IPC). New copy lives in the existing `settings.routing.*` i18n namespace. No
+threshold, filter, or write path was touched — presentation-only, as decided.
+
+**Commit message:** `067: sensitive task's dead-end recommendation points at the manual table`
+
+**Verification:**
+- `npm run format:check` — clean on all files this story touched (`sensitive.ts`/`index.ts` in
+  D1 needed a `prettier --write` pass for CRLF line endings introduced by the delegate agent,
+  fixed during story-level verification; the repo-wide 238-file warning list is a pre-existing
+  baseline unrelated to this story — none of it is a file this story changed).
+- `npm run lint` — clean.
+- `npm run typecheck` — clean (`tsconfig.node.json` + `tsconfig.web.json`).
+- `npm test` — 3643/3643 passed (258 test files).
+- `npm run build` — succeeded.
+- `npm run test:e2e` — 13/14 passed; the one failure (`discard-undo.spec.ts`, unrelated journal
+  file, not touched by this story) reproduced as a harness flake and passed cleanly on an isolated
+  re-run (`electronApplication.evaluate: Resulting promise was garbage collected`). This story's
+  own spec, `settings-models-dead-end.spec.ts`, passed.
+- Clean-agent code review: **PASS**, no findings (no weakened tests, no scope creep beyond the
+  justified `tsconfig.web.json` renderer whitelist for the pure bundled catalogue, no guardrail
+  violations). Full verdict text kept in the sprint's build session, not duplicated here.
+
+**AC → test mapping, as verified:**
+- AC1 → `tests/renderer/routing-dead-end.test.tsx` › "a no-pick row shows the reason and a way
+  out" — passed, proves the real UI mechanism. The originally-planned e2e half for AC1 could not
+  be written: see `### Noted gap` above (second entry) — a genuine plan gap discovered in D4, not
+  a shortcut, reviewed and accepted as harness-bound residue.
+- AC2 → `tests/core/llm/sensitive.test.ts` › "a routed target is judged against the sensitivity
+  rule" (passed) + `tests/renderer/routing-table.test.tsx` › "a sensitive task can still be
+  assigned a model that fails the sensitivity filter, with a warning" (passed) + e2e "the
+  condense-area routing select is present and enabled" assertion inside
+  `settings-models-dead-end.spec.ts` (passed). Persistence half is pre-existing, untouched
+  behaviour — noted gap, not a blocker (see `### Noted gap`, first entry, unchanged from refine).
+- AC3 → `settings-models-dead-end.spec.ts` › "the no-model note lands on the models tab" step —
+  passed.
+
+**Open points:** none blocking. Both noted gaps (AC2 persistence, AC1 e2e) are harness
+limitations, documented above, and are candidates for a future story only if a deterministic
+capacity/provider override is ever added to the e2e harness.

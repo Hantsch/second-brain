@@ -21,6 +21,7 @@ import {
   describeRef,
   parseValue,
   refValue,
+  routingSelectId,
   INHERIT_VALUE,
 } from '../../components/RoutingTable';
 import { useT } from '../../i18n';
@@ -30,6 +31,17 @@ import { resolveRoute, useRoutingMutations, type TaskTestResult } from '../../li
 import { routingDiff, type RoutingChange } from './routing-diff';
 
 const TIERS: readonly ModelTier[] = ['cheap', 'balanced', 'strong'];
+
+/**
+ * Raised by the recommendation panel's "Assign manually" button (067, D2):
+ * `nonce` bumps on every click so the effect below fires even if the same
+ * task is picked twice in a row — mirroring `proposeSignal`'s counter, just
+ * carrying which task to focus along with it.
+ */
+export interface FocusRequest {
+  task: TaskKind;
+  nonce: number;
+}
 
 export interface RoutingSectionProps {
   tasks: readonly TaskDefinition[];
@@ -41,6 +53,8 @@ export interface RoutingSectionProps {
    * before/after preview — it's still confirmed by hand regardless.
    */
   proposeSignal?: number;
+  /** Scrolls the named task's select into view and focuses it. */
+  focusRequest?: FocusRequest | null;
 }
 
 export function RoutingSection({
@@ -48,6 +62,7 @@ export function RoutingSection({
   routing,
   providers,
   proposeSignal = 0,
+  focusRequest = null,
 }: RoutingSectionProps) {
   const t = useT();
   const { setRoute, setDefault, test } = useRoutingMutations();
@@ -98,6 +113,17 @@ export function RoutingSection({
     if (proposeSignal === seen.current) return;
     seen.current = proposeSignal;
     void propose();
+  });
+
+  /* Same marker pattern as `proposeSignal` above: only a new `nonce` should
+     move focus, not every render this component happens to do. */
+  const seenFocus = useRef(focusRequest?.nonce ?? 0);
+  useEffect(() => {
+    if (!focusRequest || focusRequest.nonce === seenFocus.current) return;
+    seenFocus.current = focusRequest.nonce;
+    const select = document.getElementById(routingSelectId(focusRequest.task));
+    select?.scrollIntoView?.({ block: 'center' });
+    (select as HTMLSelectElement | null)?.focus();
   });
 
   const changes = suggestion ? routingDiff(routing, suggestion, tasks) : [];

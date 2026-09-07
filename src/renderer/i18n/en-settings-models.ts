@@ -116,6 +116,22 @@ const own = {
   'settings.routing.reason.no-vault': 'No vault is open.',
   'settings.routing.reason.error': 'The call failed.',
 
+  /* The way out of a `pick === null` recommendation row (067, D2, AC1): a
+     dead end otherwise, no matter which reason key put the row there. */
+  'settings.routing.deadEnd.pointer': 'Assign a model directly in the task routing table above.',
+  'settings.routing.deadEnd.assign': 'Assign manually',
+  'settings.routing.deadEnd.assignAria': 'Assign a model for {task} by hand',
+
+  /* The manual table's own warning (067, D3, AC2): non-blocking, one
+     sentence naming why the currently routed model would not pass the
+     sensitive-task rule. One key per `SensitiveRefusalReason`. */
+  'settings.routing.sensitiveWarn.trains-on-input':
+    'This provider trains on submitted content — not fit for a task that reads personal content.',
+  'settings.routing.sensitiveWarn.policy-unknown':
+    'No data policy is known for this model — not fit for a task that reads personal content.',
+  'settings.routing.sensitiveWarn.policy-unattributed':
+    'The no-training policy for this model names no source or read date — not fit for a task that reads personal content.',
+
   'settings.routing.defaults': 'Default per performance class',
   'settings.routing.defaultsNote':
     'These three apply to every task without a choice of its own — the fallback chain.',

@@ -125,6 +125,23 @@ const own = {
   'settings.routing.reason.no-vault': 'Es ist kein Vault geöffnet.',
   'settings.routing.reason.error': 'Der Aufruf ist fehlgeschlagen.',
 
+  /* Der Ausweg aus einer Empfehlungszeile ohne Treffer (067, D2, AC1): sonst
+     eine Sackgasse, egal welcher Grund die Zeile dorthin gebracht hat. */
+  'settings.routing.deadEnd.pointer':
+    'Weise ein Modell direkt in der Aufgaben-Routing-Tabelle oben zu.',
+  'settings.routing.deadEnd.assign': 'Manuell zuordnen',
+  'settings.routing.deadEnd.assignAria': 'Modell für {task} manuell zuordnen',
+
+  /* Die Warnung der manuellen Tabelle selbst (067, D3, AC2): blockiert
+     nichts, ein Satz, der nennt, warum das gerade zugeordnete Modell die
+     Sensitiv-Regel nicht erfüllt. Ein Schlüssel je `SensitiveRefusalReason`. */
+  'settings.routing.sensitiveWarn.trains-on-input':
+    'Dieser Provider trainiert mit eingereichten Inhalten — für eine Aufgabe mit persönlichen Inhalten ungeeignet.',
+  'settings.routing.sensitiveWarn.policy-unknown':
+    'Für dieses Modell ist keine Datenrichtlinie bekannt — für eine Aufgabe mit persönlichen Inhalten ungeeignet.',
+  'settings.routing.sensitiveWarn.policy-unattributed':
+    'Die „ohne Training“-Richtlinie für dieses Modell nennt weder Quelle noch Lesedatum — für eine Aufgabe mit persönlichen Inhalten ungeeignet.',
+
   'settings.routing.defaults': 'Standard je Leistungsklasse',
   'settings.routing.defaultsNote':
     'Diese drei greifen für jede Aufgabe, die keine eigene Wahl hat — die Fallback-Kette.',

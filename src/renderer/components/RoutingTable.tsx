@@ -8,6 +8,8 @@
    (`Routing`); so what's shown here is always the actual consequence of the
    configuration. */
 
+import { loadCatalogue } from '@core/llm/catalogue';
+import { judgeRouteForSensitiveTask } from '@core/llm/sensitive';
 import type { ModelRef, ProviderConfig, Routing, TaskDefinition, TaskKind } from '@shared/types';
 import { Badge } from '../atoms/Badge';
 import { Button } from '../atoms/Button';
@@ -15,6 +17,13 @@ import { Select } from '../atoms/Select';
 import { useT } from '../i18n';
 import type { TaskTestResult } from '../lib/queries/llm';
 import { TierBadge } from './TierBadge';
+
+/* Bundled, pure and small (3.4 KB) — loaded once at module scope, same way
+   `MachineCard.tsx` pulls a pure `@core/llm` helper straight into the
+   renderer instead of a new IPC round trip (067, D3). Only used to judge
+   whether the model a row is *currently* routed to would pass the
+   sensitive-task rule; the table itself never filters on it. */
+const CATALOGUE_ENTRIES = loadCatalogue().entries;
 
 /** Reasons `llm:testTask` can report (from `LlmUnavailable.reason`). */
 const REASONS: readonly string[] = [
@@ -28,6 +37,16 @@ const REASONS: readonly string[] = [
 
 /** Value of the "default for this tier" entry in the dropdown. */
 export const INHERIT_VALUE = 'inherit';
+
+/**
+ * Stable DOM id for a task's routing select — the focus target the
+ * recommendation panel's "Assign manually" button points at (067, D2). A
+ * plain template rather than `useId()`: the id has to be predictable from a
+ * `TaskKind` alone, from outside this component's own render.
+ */
+export function routingSelectId(task: TaskKind): string {
+  return `routing-select-${task}`;
+}
 
 export interface RoutingTableProps {
   tasks: readonly TaskDefinition[];
@@ -96,6 +115,16 @@ export function RoutingTable({
              without a model. What still works then is stated in the task's
              own row — above the table, nobody ever read it. */
           const fallback = own === undefined && inherited === undefined;
+          /* What the row actually runs on right now: its own choice, or
+             failing that the tier default — the same resolution `fallback`
+             above uses. A sensitive task routed (directly or by default) to
+             a target that would not pass the rule gets a warning; the
+             table never blocks or filters on it (067, D3, AC2). */
+          const effectiveRef = own ?? inherited;
+          const sensitiveWarning =
+            task.sensitive && effectiveRef
+              ? judgeRouteForSensitiveTask(task.kind, effectiveRef, providers, CATALOGUE_ENTRIES)
+              : null;
           return (
             <tr key={task.kind}>
               <td>
@@ -122,6 +151,7 @@ export function RoutingTable({
               </td>
               <td>
                 <Select
+                  id={routingSelectId(task.kind)}
                   aria-label={t('settings.routing.selectAria', { task: label })}
                   value={own ? refValue(own) : INHERIT_VALUE}
                   onChange={(event) =>
@@ -151,6 +181,11 @@ export function RoutingTable({
                     </optgroup>
                   ))}
                 </Select>
+                {sensitiveWarning?.warn ? (
+                  <span className="sb-routing-fallback">
+                    {t(`settings.routing.sensitiveWarn.${sensitiveWarning.reason}`)}
+                  </span>
+                ) : null}
               </td>
               <td>
                 <Button

@@ -124,6 +124,7 @@ export {
   isAllowedForSensitiveTask,
   isSensitiveTask,
   judgeForSensitiveTask,
+  judgeRouteForSensitiveTask,
   refusalsForSensitiveTask,
   type AllowedSensitiveCandidate,
   type SensitiveCandidate,
@@ -131,6 +132,7 @@ export {
   type SensitivePolicyInfo,
   type SensitiveProviderFacts,
   type SensitiveRefusalReason,
+  type SensitiveRouteVerdict,
 } from './sensitive';
 export {
   recommendModels,

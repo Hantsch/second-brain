@@ -5,6 +5,7 @@ import {
   isAllowedForSensitiveTask,
   isSensitiveTask,
   judgeForSensitiveTask,
+  judgeRouteForSensitiveTask,
   reachableOnly,
   refusalsForSensitiveTask,
   sensitiveTasks,
@@ -12,7 +13,7 @@ import {
   type CatalogueEntry,
   type SensitiveCandidate,
 } from '@core/llm';
-import type { CapacityVerdict, ProviderConfig, TaskKind } from '@shared/types';
+import type { CapacityVerdict, ModelRef, ProviderConfig, TaskKind } from '@shared/types';
 
 /* Fixtures for the 019b D5 rule: local or an attributed `no-training` policy
    qualifies for a sensitive task, nothing else does. */
@@ -259,5 +260,116 @@ describe('the mandated rule: only a trains-on-input cloud model available', () =
     // The same candidate list, unfiltered, still holds the model — so a
     // non-sensitive task keeps a routable option.
     expect(candidates.map((c) => c.entry.id)).toEqual(['vendor/trainer-large']);
+  });
+});
+
+describe('judgeRouteForSensitiveTask', () => {
+  /* 067 D1: the core verdict helper behind a sensitive task's routing
+     warning. It holds no rule of its own — every case here proves it
+     delegates to `judgeForSensitiveTask` rather than reimplementing it. */
+
+  const trainerEntry = entry({
+    id: 'vendor/trainer-large',
+    dataPolicy: 'trains',
+    policySource: 'https://vendor.example/terms',
+    policyReadAt: '2026-08-01',
+  });
+  const unknownEntry = entry({
+    id: 'vendor/mystery',
+    dataPolicy: 'unknown',
+    policySource: 'https://vendor.example/terms',
+    policyReadAt: '2026-08-01',
+  });
+  const unattributedEntry = entry({
+    id: 'vendor/quiet',
+    dataPolicy: 'no-training',
+    policySource: '',
+    policyReadAt: '',
+  });
+  const noTrainingEntry = entry({
+    id: 'anthropic/claude',
+    dataPolicy: 'no-training',
+    policySource: 'https://www.anthropic.com/legal/commercial-terms',
+    policyReadAt: '2026-08-01',
+  });
+
+  const providers: ProviderConfig[] = [
+    cloudProvider,
+    provider({ id: 'ollama', local: true, hasKey: false }),
+  ];
+  const entries: CatalogueEntry[] = [
+    trainerEntry,
+    unknownEntry,
+    unattributedEntry,
+    noTrainingEntry,
+  ];
+
+  function ref(overrides: Partial<ModelRef> = {}): ModelRef {
+    return { providerId: cloudProvider.id, model: trainerEntry.id, ...overrides };
+  }
+
+  it('a routed target is judged against the sensitivity rule', () => {
+    // Non-sensitive task: no warning, regardless of what it's routed to.
+    expect(judgeRouteForSensitiveTask('summarize-source', ref(), providers, entries)).toEqual({
+      warn: false,
+    });
+
+    // Provider with local === true: no warning, whatever the catalogue says.
+    expect(
+      judgeRouteForSensitiveTask(
+        'classify-dump',
+        ref({ providerId: 'ollama', model: trainerEntry.id }),
+        providers,
+        entries,
+      ),
+    ).toEqual({ warn: false });
+
+    // Cloud provider, catalogue entry trains -> warn with 'trains-on-input'.
+    expect(judgeRouteForSensitiveTask('classify-dump', ref(), providers, entries)).toEqual({
+      warn: true,
+      reason: 'trains-on-input',
+    });
+
+    // Cloud provider, catalogue entry unknown -> warn with 'policy-unknown'.
+    expect(
+      judgeRouteForSensitiveTask(
+        'classify-dump',
+        ref({ model: unknownEntry.id }),
+        providers,
+        entries,
+      ),
+    ).toEqual({ warn: true, reason: 'policy-unknown' });
+
+    // Cloud provider, no-training claim with no attribution -> warn with
+    // 'policy-unattributed'.
+    expect(
+      judgeRouteForSensitiveTask(
+        'classify-dump',
+        ref({ model: unattributedEntry.id }),
+        providers,
+        entries,
+      ),
+    ).toEqual({ warn: true, reason: 'policy-unattributed' });
+
+    // Cloud provider, attributed no-training claim -> no warning.
+    expect(
+      judgeRouteForSensitiveTask(
+        'classify-dump',
+        ref({ model: noTrainingEntry.id }),
+        providers,
+        entries,
+      ),
+    ).toEqual({ warn: false });
+
+    // Model id absent from the catalogue: fails closed with 'policy-unknown',
+    // even though the entries array above is non-empty.
+    expect(
+      judgeRouteForSensitiveTask(
+        'classify-dump',
+        ref({ model: 'vendor/not-in-catalogue' }),
+        providers,
+        entries,
+      ),
+    ).toEqual({ warn: true, reason: 'policy-unknown' });
   });
 });

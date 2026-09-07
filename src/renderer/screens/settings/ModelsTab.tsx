@@ -14,7 +14,7 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { ProviderConfig, RuntimeId } from '@shared/types';
+import type { ProviderConfig, RuntimeId, TaskKind } from '@shared/types';
 import { Button } from '../../atoms/Button';
 import { ErrorState } from '../../components/ErrorState';
 import { Panel } from '../../components/Panel';
@@ -37,7 +37,7 @@ import { LocalRuntimeCard } from './LocalRuntimeCard';
 import { MachineCard } from './machine/MachineCard';
 import { ProviderDialog } from './ProviderDialog';
 import { RecommendationSection } from './RecommendationSection';
-import { RoutingSection } from './RoutingSection';
+import { RoutingSection, type FocusRequest } from './RoutingSection';
 import { StartCard } from './StartCard';
 
 /** The runtimes this tab shows a card for (033, D10) — Ollama and llama.cpp,
@@ -67,10 +67,16 @@ export function ModelsTab() {
   const [busyId, setBusyId] = useState<string | null>(null);
   /** Every counter bump means: a connection responded, fetch a routing proposal. */
   const [proposeSignal, setProposeSignal] = useState(0);
+  /** Set by the recommendation panel's "Assign manually" button (067, D2) —
+      tells `RoutingSection` which task's select to scroll to and focus. */
+  const [focusRequest, setFocusRequest] = useState<FocusRequest | null>(null);
 
   const askForRouting = (provider: ProviderConfig): void => {
     if (provider.models.length > 0) setProposeSignal((count) => count + 1);
   };
+
+  const focusRoutingSelect = (task: TaskKind): void =>
+    setFocusRequest((current) => ({ task, nonce: (current?.nonce ?? 0) + 1 }));
 
   /* How many tasks already have a model — same resolution chain as in the gateway. */
   const routedCount =
@@ -222,6 +228,7 @@ export function ModelsTab() {
           routing={routing.data}
           providers={providers.data ?? []}
           proposeSignal={proposeSignal}
+          focusRequest={focusRequest}
         />
       ) : (
         <Panel title={t('settings.routing.title')}>
@@ -230,7 +237,11 @@ export function ModelsTab() {
       )}
 
       {tasks.data ? (
-        <RecommendationSection tasks={tasks.data} providers={providers.data ?? []} />
+        <RecommendationSection
+          tasks={tasks.data}
+          providers={providers.data ?? []}
+          onAssignManually={focusRoutingSelect}
+        />
       ) : (
         <Panel title={t('settings.recommend.title')}>
           <Skeleton lines={4} height={40} />

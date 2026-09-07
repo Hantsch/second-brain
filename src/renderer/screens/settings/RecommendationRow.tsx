@@ -6,7 +6,13 @@
    `reasonKey`/`tradeoffKey` are a closed set of i18n keys (guardrail 7):
    this file never invents a sentence, it only looks one up. */
 
-import type { ProviderConfig, TaskDefinition, TaskRecommendation, UiLanguage } from '@shared/types';
+import type {
+  ProviderConfig,
+  TaskDefinition,
+  TaskKind,
+  TaskRecommendation,
+  UiLanguage,
+} from '@shared/types';
 import { Badge } from '../../atoms/Badge';
 import { Button } from '../../atoms/Button';
 import { describeRef } from '../../components/RoutingTable';
@@ -21,6 +27,14 @@ export interface RecommendationRowProps {
   accepted: boolean;
   busy: boolean;
   onAccept: () => void;
+  /**
+   * A `pick === null` row is a dead end otherwise (067, D2 — AC1): this
+   * raises the task up to `ModelsTab`, which scrolls the routing table's
+   * matching row into view and focuses its select. Every reason key ends
+   * here alike — the row looks identical for `no-reachable-model` and
+   * `beyond-this-machine`, so the way out can't be conditional on which one.
+   */
+  onAssignManually: (task: TaskKind) => void;
 }
 
 function targetText(
@@ -75,6 +89,7 @@ export function RecommendationRow({
   accepted,
   busy,
   onAccept,
+  onAssignManually,
 }: RecommendationRowProps) {
   const t = useT();
   const label = t(task.labelKey);
@@ -163,7 +178,21 @@ export function RecommendationRow({
              accept until that provider exists, so say so instead of
              offering a button that can only fail. */
           <p className="sb-routing-hint">{t('settings.recommend.notYetSetUp')}</p>
-        ) : null}
+        ) : (
+          /* No pick at all: the reason sentence above already says why —
+             this is the way out of that dead end, not a repeat of it. */
+          <>
+            <p className="sb-routing-hint">{t('settings.routing.deadEnd.pointer')}</p>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => onAssignManually(task.kind)}
+              aria-label={t('settings.routing.deadEnd.assignAria', { task: label })}
+            >
+              {t('settings.routing.deadEnd.assign')}
+            </Button>
+          </>
+        )}
       </div>
     </li>
   );
