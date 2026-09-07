@@ -1,0 +1,97 @@
+/* Tasks screen (story 072, D4): the three groups and their rows.
+
+   Colors, spacing, radii exclusively from the Gaston tokens. The one teal
+   accent on this screen belongs to the running group's progress fill
+   (`.sb-trow-fill`) — nowhere else here uses `--accent`/`--accent-soft`,
+   mirroring `RunStrip`'s own "one accent per screen" note in reverse: that
+   strip stays neutral because it is not this screen's focal point, this bar
+   *is*, so it is the one place the teal belongs. */
+
+.sb-tgroups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.sb-tlist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.sb-trow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+
+.sb-trow-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.sb-trow-kind {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+
+.sb-trow-subject {
+  font-size: var(--text-sm);
+  color: var(--text-body);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sb-trow-elapsed,
+.sb-trow-position,
+.sb-trow-duration {
+  margin-left: auto;
+  font-size: var(--text-xs);
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.sb-trow-progress {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.sb-trow-track {
+  display: block;
+  flex: 1;
+  min-width: 80px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  overflow: hidden;
+}
+
+.sb-trow-fill {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: var(--accent);
+}
+
+.sb-trow-percent {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.sb-trow-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}

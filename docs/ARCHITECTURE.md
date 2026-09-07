@@ -123,6 +123,7 @@ project's — reachable from the dashboard tile and the command palette.
 | `projects`  | List + detail: status, next step, todos, waiting-on, agent sessions      | `5`    |
 | `journal`   | Daily entry and coaching dialog                                          | `6`    |
 | `knowledge` | Knowledge modules (pages, graph) and the sources tab (ingest, progress)  | `7`    |
+| `tasks`     | The work queue: running, waiting and finished, plus the maintenance run  | —      |
 | `garden`    | Maintenance: findings, health, one-click fixes                           | `9`    |
 | `settings`  | Languages, provider/models, task routing, vault, behavior                | `0`    |
 

@@ -94,6 +94,28 @@ export class WorkRegistry {
     return copyTask(task);
   }
 
+  /**
+   * Run a failed task again — as a *new* task, with the failed one left as it is.
+   *
+   * Deliberately not a state change on the old record: its failure is what the
+   * user just read, and rewinding it to `queued` would erase both the error and
+   * the fact that an attempt happened at all. So the old entry is only read
+   * here — its `kind`, `lane`, `subject`, and the very `run` closure it was
+   * enqueued with, which is why the retry does the same work rather than an
+   * approximation of it. The new task then competes for its lane like any other.
+   *
+   * `null` means there is nothing to retry: no such task (finished ones are
+   * only kept up to `RETENTION`), or one that did not fail — `done` and
+   * `cancelled` work is not silently redone, and a queued or running task is
+   * already on its way.
+   */
+  retry(id: string): WorkTask | null {
+    const entry = this.find(id);
+    if (entry === null || entry.task.state !== 'failed') return null;
+    const { kind, lane, subject } = entry.task;
+    return this.enqueue({ kind, lane, subject: { ...subject } }, entry.run);
+  }
+
   /** All tasks, insertion order — copies, nothing a caller could mutate live. */
   list(): WorkTask[] {
     return this.entries.map((entry) => copyTask(entry.task));

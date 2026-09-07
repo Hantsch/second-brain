@@ -23,6 +23,7 @@ import { OnboardingScreen } from './screens/onboarding/OnboardingScreen';
 import { AllSessionsScreen } from './screens/projects/AllSessionsScreen';
 import { ProjectsScreen } from './screens/projects/ProjectsScreen';
 import { SettingsScreen } from './screens/settings/SettingsScreen';
+import { TasksScreen } from './screens/tasks/TasksScreen';
 
 /** Hält die Oberflächensprache an den Einstellungen. */
 function useSettings() {
@@ -174,6 +175,8 @@ export function App() {
         {/* Old routes, kept so existing deep links and bookmarks still land. */}
         <Route path="/modules" element={<KnowledgeRedirect />} />
         <Route path="/sources" element={<KnowledgeRedirect tab="sources" />} />
+        {/* Sits directly above maintenance in the rail's system group. */}
+        <Route path="/tasks" element={<TasksScreen />} />
         <Route path="/garden" element={<GardenScreen />} />
         <Route path="/agents" element={<AgentsRedirect />} />
         <Route path="/settings" element={<SettingsScreen />} />

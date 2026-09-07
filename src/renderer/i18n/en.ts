@@ -14,6 +14,7 @@ import { enNotes } from './en-notes';
 import { enProjects } from './en-projects';
 import { enScreens } from './en-screens';
 import { enSettings } from './en-settings';
+import { enTasks } from './en-tasks';
 import { enWiki } from './en-wiki';
 
 export const en: Record<TranslationKey, string> = {
@@ -46,9 +47,11 @@ export const en: Record<TranslationKey, string> = {
   'rail.journal': 'Journal',
   'rail.notes': 'Notes',
   'rail.knowledge': 'Knowledge',
+  'rail.tasks': 'Tasks',
   'rail.garden': 'Care',
   'rail.settings': 'Settings',
   'rail.journalOpenDays': 'Journal, {count} open days',
+  'rail.tasksRunningAndWaiting': 'Tasks, {count} running or waiting',
 
   'time.today': 'today',
   'time.yesterday': 'yesterday',
@@ -218,5 +221,6 @@ export const en: Record<TranslationKey, string> = {
   ...enNotes,
   ...enProjects,
   ...enSettings,
+  ...enTasks,
   ...enWiki,
 };

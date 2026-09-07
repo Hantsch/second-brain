@@ -26,6 +26,7 @@ import {
   markGardenerStopped,
   useGardenerStopped,
 } from '../lib/gardener-progress';
+import { maintenanceLabel } from '../lib/tasks-view';
 import { formatElapsed, useElapsedSeconds } from '../lib/useElapsed';
 import type { GardenerStageId } from '@shared/types';
 
@@ -95,12 +96,10 @@ export function RunStrip() {
      stage; naming the stage and ticking the elapsed timer is what tells the
      user the run is still alive while the number doesn't move. */
   const percent = progress.percent ?? 0;
-  const what =
-    progress.stage === 'audit'
-      ? t('garden.run.audit')
-      : progress.stage === 'loose-ends'
-        ? t('garden.run.looseEnds')
-        : t('garden.run.check', { check: t(`garden.kind.${progress.check ?? 'orphan'}`) });
+  /* 072 D3/D4 review: shared with the tasks screen's maintenance row
+     (`tasks-view.ts#maintenanceLabel`) so the two surfaces can never say
+     something different about the same snapshot (AC9). */
+  const what = maintenanceLabel(progress, t);
 
   const remaining = progress.remaining ?? [];
   const remainingLabel =

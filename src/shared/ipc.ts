@@ -1146,6 +1146,23 @@ export interface IpcRoutes {
    * `event:work-tasks` carried, for a screen that mounts mid-run (071, D3).
    */
   'work:list': { req: void; res: WorkTask[] };
+  /**
+   * Stop a running task. The record stays in the list as `cancelled` — a task
+   * the user stopped is history, not a gap (072, D2). `false` means there was
+   * nothing to stop: no such task, or one that had already finished.
+   */
+  'tasks:cancel': { req: { id: string }; res: boolean };
+  /**
+   * Take a task that has not started out of its lane, so it never runs. Same
+   * answer as `tasks:cancel`: `false` when there was nothing to take out.
+   */
+  'tasks:remove': { req: { id: string }; res: boolean };
+  /**
+   * Run a failed task again — as a *new* task; the failed record stays as it
+   * is. Answers with the newly queued task, or `null` when there was nothing
+   * to retry (unknown id, or a task that did not fail).
+   */
+  'tasks:retry': { req: { id: string }; res: WorkTask | null };
 
   // ── Claude sessions ──────────────────────────────────────────────────────
   'claude:sessions': { req: { limit?: number }; res: ClaudeSession[] };
@@ -1358,6 +1375,9 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'gardener:orphanTargets',
   'gardener:linkOrphan',
   'work:list',
+  'tasks:cancel',
+  'tasks:remove',
+  'tasks:retry',
   'claude:sessions',
   'claude:link',
   'agents:projects',

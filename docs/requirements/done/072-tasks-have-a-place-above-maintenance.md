@@ -1,7 +1,7 @@
 ---
 id: 072
 title: Tasks have a place above maintenance
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-09-07
 ---
 
@@ -20,24 +20,24 @@ never a strip saying one thing and a screen saying another.
 
 ## Acceptance Criteria
 
-- [ ] **AC1** — The rail shows a tasks entry directly above the maintenance entry
+- [x] **AC1** — The rail shows a tasks entry directly above the maintenance entry
       (`rail.garden`), reachable by mouse and by keyboard, in both UI languages.
-- [ ] **AC2** — While at least one task is running or waiting, the entry carries a count
+- [x] **AC2** — While at least one task is running or waiting, the entry carries a count
       badge; with nothing in flight it carries none.
-- [ ] **AC3** — The screen shows three groups, each labelled: running (kind, subject,
+- [x] **AC3** — The screen shows three groups, each labelled: running (kind, subject,
       progress, elapsed time), waiting (with position in the queue), finished this session
       (outcome and duration).
-- [ ] **AC4** — A running task can be stopped from the screen; it then appears as cancelled in
+- [x] **AC4** — A running task can be stopped from the screen; it then appears as cancelled in
       the finished group rather than disappearing.
-- [ ] **AC5** — A waiting task can be removed from the queue before it starts, and does not
+- [x] **AC5** — A waiting task can be removed from the queue before it starts, and does not
       start afterwards.
-- [ ] **AC6** — A failed task can be retried from the screen; the retry appears as a new task
+- [x] **AC6** — A failed task can be retried from the screen; the retry appears as a new task
       and the failed record stays.
-- [ ] **AC7** — With nothing ever started, the screen shows an honest empty state — no
+- [x] **AC7** — With nothing ever started, the screen shows an honest empty state — no
       spinner, no blank panel.
-- [ ] **AC8** — The screen carries exactly one accent colour, sentence case, no emoji, and no
+- [x] **AC8** — The screen carries exactly one accent colour, sentence case, no emoji, and no
       raw Tailwind palette class (CLAUDE.md design system).
-- [ ] **AC9** — A maintenance run started from the garden screen shows the same state in
+- [x] **AC9** — A maintenance run started from the garden screen shows the same state in
       `RunStrip` and on this screen at the same time — one source, proven by a test, not two
       that happen to agree.
 
@@ -185,6 +185,9 @@ Order: D1 → D2 → D3 → D4 → D5; D1 and D2 are independent of each other.
 
 ## Acceptance Tests
 
+As written during `/refine`, verbatim below; the "as verified" mapping with the real, final
+test names/locations is in `## Done`.
+
 - AC1 → e2e `tests/e2e/tasks-screen.spec.ts` › "the rail opens tasks directly above
   maintenance, by click and by key" + unit `tests/renderer/rail.test.tsx` › "the tasks entry
   sits directly above maintenance in both languages" (D1)
@@ -219,3 +222,145 @@ Order: D1 → D2 → D3 → D4 → D5; D1 and D2 are independent of each other.
 No manual residue.
 
 ## Done
+
+**Summary.** Gave story 071's work registry a place in the app: a `tasks` rail entry directly
+above maintenance (`/tasks`, system group, no digit hotkey), a screen with three labelled
+groups (running / waiting / finished this session), and the three action verbs
+(`tasks:cancel`, `tasks:remove`, `tasks:retry`) wired to the real `WorkRegistry`. The
+maintenance run stays on `event:gardener-progress` for this story, but its progress is now
+rendered from the very same derivation `RunStrip` uses (`tasks-view.ts#maintenanceLabel`), so
+the two surfaces cannot say different things about the same run. Env-gated synthetic tasks
+(`SB_E2E_TASKS_FIXTURE`) give AC5/AC6 — which have no real producer until stories 073/074 — a
+real IPC path to drive in e2e.
+
+**Commit message:**
+
+```
+072: tasks have a place above maintenance
+```
+
+**Verification.**
+
+- `npm run build` — green.
+- `npm test` — 267 files / 3707 tests, all green.
+- `npm run lint` — green.
+- `npm run typecheck` — green.
+- `npm run format:check` — green on every file this story touched (verified by diffing the
+  command's warning list against this story's changed-file list); the ~230-file repo-wide
+  backlog elsewhere predates this story.
+- `npm run test:e2e` — 23/23 green, including the 9 new tasks specs
+  (`tasks-screen.spec.ts` ×3, `tasks-queue.spec.ts` ×5, `tasks-runstrip.spec.ts` ×1).
+- Code review (clean agent, `story-review-hard` tier, per Model Hints): **first pass FAIL**,
+  two confirmed defects (maintenance row showed the raw untranslated finding-kind id instead of
+  the text `RunStrip` shows for the same snapshot; the rail badge's count was `aria-hidden` with
+  no accessible-name fallback) plus test-strength findings (an AC9 unit test proving two
+  identical stand-ins agree with each other rather than proving `RunStrip` shares a source; an
+  AC8 test that never scanned `tasks.css` or the i18n files; an AC7 test with an unreset
+  module-singleton dependency on running first in its file; a single e2e test covering five
+  ACs, so one early failure hid the other four). All fixed in one review-fix cycle: see
+  Decisions below. **Second pass PASS**, with five further non-blocking findings, of which two
+  (an accent-token regex missing a hyphenated variant, and `tasks.css` never scanned for a raw
+  hex colour) were fixed directly afterward and reverified; the remaining three (a test-naming
+  mismatch on which AC9 block is the real proof, a straight-quote-closer typo in a German test
+  assertion message, and a latent e2e timing risk against the gardener autorun timer) are
+  addressed or accepted below. 2 review-fix cycles total, under the 3-cycle cap.
+
+**AC → test mapping, as verified (real names/locations; supersedes the as-written section
+above where they differ):**
+
+- AC1 → `tests/renderer/rail.test.tsx` › "sits the tasks entry directly above maintenance in
+  both languages" + e2e `tests/e2e/tasks-screen.spec.ts` › "the rail opens tasks directly above
+  maintenance, by click and by key" — both passed.
+- AC2 → `tests/e2e/tasks-queue.spec.ts` › "the badge counts what runs and what waits (AC2)" +
+  `tests/e2e/tasks-screen.spec.ts` › "with nothing started the rail carries no badge" +
+  `tests/renderer/tasks-view.test.ts` › "counts running and waiting tasks, ignoring finished
+  ones" / "adds one for a running maintenance row on top of the registry count" — all passed.
+- AC3 → `tests/e2e/tasks-queue.spec.ts` › "running, waiting and finished each stand under their
+  own heading (AC3)" + `tests/renderer/tasks-view.test.ts` › "reports a waiting task its queue
+  position" / "measures a finished task from when it started running" — all passed.
+- AC4 → `tests/e2e/tasks-queue.spec.ts` › "a running task stopped from the screen appears as
+  cancelled (AC4)" + `tests/main/tasks-ipc.test.ts` › "cancel leaves a cancelled record, not a
+  gap (AC4)" — both passed.
+- AC5 → `tests/e2e/tasks-queue.spec.ts` › "a waiting task removed before it starts never runs
+  (AC5)" + `tests/main/tasks-ipc.test.ts` › "remove takes a queued task out of the lane (AC5)"
+  — both passed, the latter asserting every emitted snapshot, not just the end state.
+- AC6 → `tests/e2e/tasks-queue.spec.ts` › "a failed task can be retried and the failure stays
+  (AC6)" + `tests/main/tasks-ipc.test.ts` › "retry enqueues a new task and keeps the failed
+  record (AC6)" — both passed.
+- AC7 → `tests/renderer/tasks.test.tsx` › "zeigt bei einer leeren Warteschlange den Leerzustand
+  statt eines Spinners, aber nie vor der ersten Antwort (AC7)" + e2e `tests/e2e/tasks-screen.
+spec.ts` › "with nothing ever started the screen says so" — both passed; order-independence
+  reverified with `--sequence.shuffle` after the review-fix cycle added
+  `resetWorkTasksStoreForTests()`.
+- AC8 → `tests/renderer/tasks.test.tsx`'s "(AC8)" describe block: raw-Tailwind-class scan (now
+  also covering `tasks.css` for a raw hex colour), emoji scan (screen sources + both i18n
+  partials), one-accent scan (now matching hyphenated token variants), an English sentence-case
+  scan, and an axe run — all passed; `scripts/lib/screens.mjs` registers `tasks` so `shot`/`a11y`
+  pick the screen up.
+- AC9 → `tests/e2e/tasks-runstrip.spec.ts` › "a maintenance run shows the same progress in the
+  run strip and on the tasks screen" + `tests/renderer/tasks-maintenance-source.test.tsx` ›
+  "one store feeds both surfaces (AC9)" (renders the real `RunStrip` next to the `tasks-view.ts`
+  derivation, asserts identical translated labels across two snapshots, and that neither ever
+  shows the raw id) — both passed.
+
+No manual residue.
+
+**Decisions.**
+
+- 071's real API differs in names from 072's plan (written before 071 landed): `WorkTask`
+  (not `TaskRecord`), `progress` not `percent`, `queuePosition` not `position`, `work:list` /
+  `event:work-tasks` (not `tasks:list` / `event:tasks-changed`) — reused as-is, per the sprint's
+  adapt-names-not-shape rule. Only the new action verbs (`tasks:cancel`/`tasks:remove`/
+  `tasks:retry`) use the `tasks:` prefix, matching the story's own explicit Decisions entry.
+- The plan assumed a missing registry method would go in `src/core/tasks/`; that directory
+  never existed and 071's registry lives in `src/core/work/`, so `WorkRegistry.retry()` (D2)
+  was added there instead — the plan's intent (retry lives in core, Electron-free), not its
+  literal path, was honoured.
+- `retry()` re-enqueues using the original task's own stored `run` closure (so a retried task
+  does the identical work, not an approximation) and leaves the failed record untouched by
+  construction — it only ever reads the old entry.
+- `tasks:remove` and `tasks:cancel` both call the same `WorkRegistry.cancel(id, 'user')`:
+  `cancel()` already handles "queued → never starts" and "running → aborted" correctly and
+  synchronously (settles before any `pump()` runs), so a second removal mechanism would only
+  risk reintroducing the exact auto-start race Model Hints flagged as the risk for D2.
+- The badge counts registry tasks (running + waiting) plus the maintenance row whenever a
+  gardener run is going, per the story's Decisions — implemented as `tasksBadgeCount` in
+  `tasks-view.ts`, fed to `Rail.tsx`'s per-screen count lookup (which also generalises the
+  previously journal-only `aria-label` mechanism, fixed during review — see below).
+- Review-fix cycle 1 (confirmed defects): `tasks-view.ts`'s maintenance-row label now calls a
+  shared `maintenanceLabel(progress, t)` that `RunStrip.tsx` also calls (removing its inline
+  three-way branch), so the two surfaces cannot drift on the same snapshot; `Rail.tsx`'s
+  accessible-name mechanism (previously `journal`-only) now also covers `tasks`, so a
+  screen-reader user hears the running+waiting count, not just the label.
+- Review-fix cycle 1 (test strength): `tests/renderer/tasks-maintenance-source.test.tsx` gained
+  a block that renders the real `RunStrip` (not a second stand-in) next to the `tasks-view.ts`
+  derivation; `tests/renderer/tasks.test.tsx`'s AC8 block now reads `tasks.css` (via a
+  `vitest.config.ts` CSS-processing opt-in scoped to that one file) and both i18n partials, and
+  gained an English sentence-case check; `tasks-store.ts` gained
+  `resetWorkTasksStoreForTests()`, called in a `beforeEach`, removing the AC7 test's ordering
+  dependency; `tests/e2e/tasks-queue.spec.ts` was split into 5 independently-named tests (one
+  per AC2-AC6), each still asserting its own criterion — the shared fixture's task set carries
+  over between them by design (documented in the spec's header comment) since a fresh app
+  launch per test cannot fast-forward the "runs until stopped" task back to a clean start.
+- Review-fix cycle 2 (non-blocking, fixed): the "exactly one accent" regex only matched a single
+  hyphen segment, missing real two-segment Gaston tokens like `--accent-soft-border` — widened;
+  the raw-palette scan never covered `tasks.css` itself for a raw hex colour — added; the AC9
+  unit-test name in the story's mapping pointed at the two-stand-ins block rather than the
+  real-`RunStrip` one — the two `describe` blocks were renamed so "one store feeds both
+  surfaces (AC9)" is now the strong proof and the weaker one is honestly named as a
+  store-level check, not an AC9 claim; a straight `"` quote closer in a German test-assertion
+  message was corrected to `„…“` (guardrail 7).
+- Review-fix cycle 2 (accepted, not fixed): the second review noted — plausible but not
+  observed in any run — that the seeded e2e vault's `gardener.runOnOpen: true` fires the
+  maintenance autorun 2500 ms after vault open (`FIRST_RUN_DELAY_MS`,
+  `src/main/gardener-autorun.ts`), and a tasks e2e spec slow enough to still be running past
+  that mark could see the maintenance row appear mid-assertion. This is a pre-existing property
+  of the whole e2e harness (every spec's seeded vault has autorun on; nothing before this story
+  disabled it, and every existing spec already relies on finishing well inside that window), not
+  something 072 introduced — adding a harness-wide opt-out is out of this story's scope. All
+  tasks specs finish in well under 1 second per test in every run performed here (5/5 stable),
+  leaving a wide margin; flagged here for whichever story next touches the e2e harness broadly.
+  - Also accepted without a code change: `TaskRow.tsx`'s running-row elapsed time does not tick
+    live between `event:work-tasks` pushes (AC3 only requires it be shown, not that it ticks);
+    a 10-minute backstop `setTimeout` in the D5 fixture's "task A" is cleared by worker teardown
+    rather than explicitly, matching how other long-running e2e fixtures in this suite behave.

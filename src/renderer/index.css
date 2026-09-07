@@ -20,6 +20,7 @@
 @import './styles/app/modules.css';
 @import './styles/app/sources.css';
 @import './styles/app/garden.css';
+@import './styles/app/tasks.css';
 @import './styles/app/agents.css';
 @import './styles/app/settings.css';
 @import './styles/app/overlays.css';

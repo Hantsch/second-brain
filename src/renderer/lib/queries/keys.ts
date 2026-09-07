@@ -102,6 +102,10 @@ export const qk = {
   gardener: {
     report: () => ['gardener', 'report'] as const,
   },
+  /* The work queue itself has no query key: `useWorkTasks` (`tasks-store.ts`)
+     reads a module store fed live by `event:work-tasks`, the same "not the
+     query cache" choice `gardener-progress.ts` makes for progress, and for
+     the same reason (071/072). Nothing here needs invalidating. */
   claude: {
     sessions: () => ['claude', 'sessions'] as const,
   },

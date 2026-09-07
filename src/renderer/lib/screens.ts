@@ -2,7 +2,7 @@
    Befehlspalette. Reihenfolge und Tasten stehen in docs/ARCHITECTURE.md. */
 
 export type ScreenId =
-  'dashboard' | 'projects' | 'notes' | 'journal' | 'knowledge' | 'garden' | 'settings';
+  'dashboard' | 'projects' | 'notes' | 'journal' | 'knowledge' | 'tasks' | 'garden' | 'settings';
 
 export interface ScreenDef {
   id: ScreenId;
@@ -59,6 +59,17 @@ export const SCREENS: readonly ScreenDef[] = [
     labelKey: 'rail.notes',
     hotkey: '5',
     group: 'place',
+  },
+  {
+    /* 072, D1: the place for what needs doing — sits directly above
+       maintenance in the rail's system group. No digit hotkey: it is
+       reachable by click and by rail focus (Tab/Enter), the same as every
+       other system entry that doesn't carry one. */
+    id: 'tasks',
+    path: '/tasks',
+    icon: 'list-checks',
+    labelKey: 'rail.tasks',
+    group: 'system',
   },
   {
     id: 'garden',

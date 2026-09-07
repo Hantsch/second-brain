@@ -43,6 +43,7 @@ import { searchHandlers } from './search';
 import { sectionMigrationHandlers } from './section-migration';
 import { settingsHandlers } from './settings';
 import { shellHandlers } from './shell';
+import { tasksHandlers } from './tasks';
 import { todoHandlers } from './todos';
 import { vaultHandlers } from './vault';
 import { windowHandlers } from './window';
@@ -124,6 +125,7 @@ export function buildHandlers(services: Services): HandlerMap {
     ...settingsHandlers(services),
     ...windowHandlers(services),
     ...workHandlers(services),
+    ...tasksHandlers(services),
     ...shellHandlers(services),
     ...appHandlers(services),
   };

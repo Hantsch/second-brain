@@ -14,6 +14,7 @@ import { deNotes } from './de-notes';
 import { deProjects } from './de-projects';
 import { deScreens } from './de-screens';
 import { deSettings } from './de-settings';
+import { deTasks } from './de-tasks';
 import { deWiki } from './de-wiki';
 
 export const de = {
@@ -46,9 +47,11 @@ export const de = {
   'rail.journal': 'Tagebuch',
   'rail.notes': 'Notizen',
   'rail.knowledge': 'Wissen',
+  'rail.tasks': 'Aufgaben',
   'rail.garden': 'Pflege',
   'rail.settings': 'Einstellungen',
   'rail.journalOpenDays': 'Tagebuch, {count} offene Tage',
+  'rail.tasksRunningAndWaiting': 'Aufgaben, {count} laufen oder warten',
 
   'time.today': 'heute',
   'time.yesterday': 'gestern',
@@ -227,6 +230,7 @@ export const de = {
   ...deNotes,
   ...deProjects,
   ...deSettings,
+  ...deTasks,
   ...deWiki,
 } as const;
 

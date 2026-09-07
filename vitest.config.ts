@@ -30,5 +30,11 @@ export default defineConfig({
     environment: 'node',
     pool: 'forks',
     execArgv: needsUncloneableShim ? ['--import', shimUrl] : [],
+    /* Vitest stubs every `.css` import to an empty module by default, `?raw`
+       included — `tasks.test.tsx`'s AC8 check (072 review, finding 4) reads
+       `tasks.css` as text to count `var(--accent)` uses, which needs the real
+       file content. Scoped to that one file rather than turning CSS
+       processing on everywhere: no other test reads a stylesheet's content. */
+    css: { include: [/styles[\\/]app[\\/]tasks\.css/] },
   },
 });

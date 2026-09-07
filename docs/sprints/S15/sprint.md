@@ -20,7 +20,7 @@ before it is accepted.
 <!-- Order = the order the build phase works through. Dependent stories go last. -->
 
 - [x] 071 — Work in flight is one queue
-- [ ] 072 — Tasks have a place above maintenance
+- [x] 072 — Tasks have a place above maintenance
 - [ ] 073 — A run I walk away from still has its result
 - [ ] 074 — Maintenance and imports join the same queue
 - [ ] 075 — A close proposal can be corrected, not just pruned

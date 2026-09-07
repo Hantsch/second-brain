@@ -736,6 +736,12 @@ const RESPONSES: MockResponses = {
   /* No work in flight in the demo/screenshot vault (071, D3) — an empty queue
      is the honest state, the same as `gardener:report` returning `null`. */
   'work:list': () => [],
+  /* And with an empty queue there is never a task to act on (072, D2): every
+     verb honestly answers "there was nothing there", the same as the real
+     registry does for an id it does not know. */
+  'tasks:cancel': () => false,
+  'tasks:remove': () => false,
+  'tasks:retry': () => null,
 
   'claude:sessions': () => [fx.claudeSession],
   'claude:link': () => undefined,

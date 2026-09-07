@@ -67,6 +67,11 @@ export interface AppOptions {
    * default) sets no env var, i.e. every spec but the one that opts in keeps the
    * unmodified, instant-checks behaviour. */
   stageDelayMs: number;
+  /** Passed through as `SB_E2E_TASKS_FIXTURE=1` when true — opts into the synthetic
+   * running/waiting/failed task set `tasks-e2e-fixture.ts` enqueues onto the real
+   * work queue (072, D5). `false` (the default) sets no env var, i.e. every spec but
+   * the one that opts in sees the empty queue a real session starts with. */
+  tasksFixture: boolean;
 }
 
 export interface AppFixtures {
@@ -102,6 +107,8 @@ export const test = base.extend<
   specId: ['', { scope: 'worker', option: true }],
 
   stageDelayMs: [0, { scope: 'worker', option: true }],
+
+  tasksFixture: [false, { scope: 'worker', option: true }],
 
   specIdMatchesFile: [
     async ({ specId }, use, testInfo) => {
@@ -144,13 +151,15 @@ export const test = base.extend<
   ],
 
   app: [
-    async ({ tempRoot, vaultPath, stageDelayMs }, use) => {
+    async ({ tempRoot, vaultPath, stageDelayMs, tasksFixture }, use) => {
       const userDataDir = prepareUserData(join(tempRoot, 'userdata'), {
         vault: vaultPath,
         uiLanguage: 'en',
       });
-      const extraEnv: Record<string, string> =
-        stageDelayMs > 0 ? { SB_E2E_STAGE_DELAY_MS: String(stageDelayMs) } : {};
+      const extraEnv: Record<string, string> = {
+        ...(stageDelayMs > 0 ? { SB_E2E_STAGE_DELAY_MS: String(stageDelayMs) } : {}),
+        ...(tasksFixture ? { SB_E2E_TASKS_FIXTURE: '1' } : {}),
+      };
       const session = await launchApp({
         userDataDir,
         vault: vaultPath,

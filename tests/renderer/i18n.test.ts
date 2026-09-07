@@ -102,6 +102,19 @@ describe('i18n', () => {
     }
   });
 
+  /* 072, D1: Aufgaben ist der einzige Screen ohne `empty.action` — Arbeit
+     beginnt hier nie an einer leeren Warteschlange, immer an einem Projekt,
+     einem Tag oder einem Bereich (Entscheidung der Story). Ein eigener Block
+     statt der Erweiterung der Liste oben, damit die generelle Regel dort
+     ("jeder Screen hat einen Aktions-Key") nicht für diesen einen Screen
+     aufgeweicht werden muss. */
+  it('deckt Kopfpaar und Leerzustand von Aufgaben ab, aber ohne Aktion', () => {
+    for (const suffix of ['overline', 'title', 'empty.title', 'empty.body']) {
+      expect(deKeys).toContain(`screen.tasks.${suffix}`);
+    }
+    expect(deKeys).not.toContain('screen.tasks.empty.action');
+  });
+
   /* Die Inbox ist kein Screen mehr, sondern der Filter „nicht abgelegt" auf
      Notizen (Story 006): den einen `ScreenHeader` stellt `NotesScreen`, also
      gibt es kein eigenes Kopfpaar mehr — steht es wieder da, ist die Inbox als

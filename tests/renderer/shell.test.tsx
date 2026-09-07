@@ -174,34 +174,44 @@ describe('AppShell', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Dashboard' })).toBeTruthy();
   });
 
-  it('führt in sieben Screens, jeder mit aria-label', async () => {
+  it('führt in acht Screens, jeder mit aria-label', async () => {
     renderApp();
     const nav = await screen.findByRole('navigation', { name: 'Hauptnavigation' });
     const links = nav.querySelectorAll('a');
     expect(links.length).toBe(SCREENS.length);
-    /* Sieben Screens, durchgehend nummeriert von 1 bis 7, keine Lücke mehr:
+    /* Acht Screens: sieben durchgehend nummeriert von 1 bis 7, keine Lücke —
        Inbox ist kein Rail-Eintrag mehr (die Inbox wird ein Filter auf
        „Notizen"), „Quellen" ist ein Tab unter „Wissen", Erfassen und Fragen
-       sind Overlays. „Agents" ist seit story 008 kein Rail-Eintrag mehr: die
-       Sitzungen hängen unter „Projekte". */
-    expect(SCREENS.length).toBe(7);
+       sind Overlays, „Agents" ist seit story 008 kein Rail-Eintrag mehr: die
+       Sitzungen hängen unter „Projekte". Dazu „Aufgaben" (072, D1) ohne
+       eigene Ziffer — erreichbar per Klick und per Fokus, wie jeder Eintrag
+       ohne Taste. */
+    expect(SCREENS.length).toBe(8);
     for (const link of links) {
       expect(link.getAttribute('aria-label')?.length ?? 0).toBeGreaterThan(0);
     }
   });
 
   /* Solange jeder Eintrag eine Ziffer trägt, muss sie auch an ihm stehen —
-     sonst ist die Tastenbedienung da, aber unsichtbar. */
+     sonst ist die Tastenbedienung da, aber unsichtbar. „Aufgaben" trägt
+     bewusst keine Ziffer (072, D1) und wird hier eigens geprüft, statt die
+     Schleife über alle Einträge stillschweigend aufzuweichen. */
   it('zeigt an jedem Rail-Eintrag seine Ziffer, sichtbar und für Hilfsmittel', async () => {
     renderApp();
     const nav = await screen.findByRole('navigation', { name: 'Hauptnavigation' });
 
-    for (const definition of SCREENS) {
+    for (const definition of SCREENS.filter((screen) => screen.id !== 'tasks')) {
       const link = within(nav).getByRole('link', { name: t(definition.labelKey) });
       expect(definition.hotkey, `Rail-Eintrag ${definition.id}`).toBeDefined();
       expect(link.getAttribute('aria-keyshortcuts')).toBe(definition.hotkey);
       expect(link.querySelector('.sb-rail-key')?.textContent).toBe(definition.hotkey);
     }
+
+    const tasksDefinition = SCREENS.find((screen) => screen.id === 'tasks');
+    expect(tasksDefinition?.hotkey, 'Rail-Eintrag tasks').toBeUndefined();
+    const tasksLink = within(nav).getByRole('link', { name: t('rail.tasks') });
+    expect(tasksLink.getAttribute('aria-keyshortcuts')).toBeNull();
+    expect(tasksLink.querySelector('.sb-rail-key')).toBeNull();
   });
 
   /* 009, D7: die Zahl offener Tage kommt ausschließlich aus `journal:list` +

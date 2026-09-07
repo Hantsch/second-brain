@@ -18,6 +18,7 @@ import { destroyQuickCapture } from './quick-capture';
 import { startGardenerAutorun } from './gardener-autorun';
 import { cancelGardenerRun } from './gardener-run-state';
 import { startReminderNotifier } from './reminder-notify';
+import { runTasksFixture } from './ipc/tasks-e2e-fixture';
 import { isVault } from './vault-layout';
 import { getWorkQueue } from './work-queue';
 import type { Services } from './services';
@@ -112,6 +113,11 @@ async function start(): Promise<void> {
   });
 
   await restoreVault(services);
+  /* 072, D5: after the vault opens, never before — `openVault` clears the
+     work queue on its way in (`Services.closeVault`), so anything enqueued
+     earlier would not survive to be seen. Env-gated; off (no
+     `SB_E2E_TASKS_FIXTURE`) this call does nothing. */
+  runTasksFixture(services);
   syncQuickCaptureHotkey(services);
   watchQuickCaptureHotkey(services);
   /* Due reminders as notifications: on open and once per hour, at most

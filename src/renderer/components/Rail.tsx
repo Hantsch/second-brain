@@ -6,9 +6,12 @@ import { NavLink } from 'react-router-dom';
 import { Badge } from '../atoms/Badge';
 import { Icon } from '../atoms/Icon';
 import { useT } from '../i18n';
+import { useGardenerProgress } from '../lib/gardener-progress';
 import { countOpenDays } from '../lib/journal-open';
 import { useJournalDays } from '../lib/queries/data';
-import { SCREENS, type ScreenDef } from '../lib/screens';
+import { useWorkTasks } from '../lib/queries/tasks';
+import { SCREENS, type ScreenDef, type ScreenId } from '../lib/screens';
+import { tasksBadgeCount } from '../lib/tasks-view';
 import { todayIso } from './DayList';
 import { VaultIndicator } from './VaultIndicator';
 
@@ -27,15 +30,45 @@ export function Rail() {
   const journalDays = useJournalDays();
   const openDaysCount = countOpenDays(journalDays.data ?? [], todayIso());
 
+  /* 072, D3: running + waiting tasks from the registry, plus the maintenance
+     row whenever a gardener run is going — the same combined count the tasks
+     screen's own header will show, read off the one store (`tasks-store.ts`)
+     and the one gardener snapshot (`gardener-progress.ts`) both surfaces use. */
+  const workTasks = useWorkTasks();
+  const gardenerProgress = useGardenerProgress();
+  const tasksCount = tasksBadgeCount(workTasks, gardenerProgress);
+
+  /* Per-screen badge count — a lookup, not a hardcoded branch per screen.
+     Story 072, D1 generalises what used to be a single `isJournal` special
+     case: every screen id maps to a count here, and a screen with nothing to
+     report is simply absent from the map (`?? 0`). */
+  const badgeCounts: Partial<Record<ScreenId, number>> = {
+    journal: openDaysCount,
+    tasks: tasksCount,
+  };
+
+  /* 072 review, finding 2: one sentence per screen that carries a count, not
+     a single `journal`-only special case — `tasks` now has a live count too
+     (the same `tasksCount` the visible badge shows), and any future screen
+     that starts showing one gets its own entry here instead of a second
+     hardcoded branch. */
+  const ariaLabelWithCount: Partial<Record<ScreenId, (count: number) => string>> = {
+    journal: (count) => t('rail.journalOpenDays', { count }),
+    tasks: (count) => t('rail.tasksRunningAndWaiting', { count }),
+  };
+
   const renderItem = (screen: ScreenDef) => {
     const label = t(screen.labelKey);
-    const isJournal = screen.id === 'journal';
-    const showOpenCount = isJournal && openDaysCount > 0;
+    const count = badgeCounts[screen.id] ?? 0;
+    const showCount = count > 0;
     /* A pill that disappears at zero is a notification, not a permanent
        part of the item (see NotesScreen's unfiled filter for the same
        distinction) — so the aria-label carries the count only when the
-       pill itself is there to back it up. */
-    const ariaLabel = showOpenCount ? t('rail.journalOpenDays', { count: openDaysCount }) : label;
+       pill itself is there to back it up: a screen-reader user must hear
+       the same "N in flight" a sighted user sees, not silence (072 review,
+       finding 2 — the badge itself stays `aria-hidden`, this is how its
+       number reaches assistive tech instead). */
+    const ariaLabel = showCount ? (ariaLabelWithCount[screen.id]?.(count) ?? label) : label;
     return (
       <NavLink
         key={screen.id}
@@ -51,9 +84,9 @@ export function Rail() {
             {screen.hotkey}
           </span>
         )}
-        {showOpenCount ? (
+        {showCount ? (
           <Badge variant="accent" className="sb-rail-count" aria-hidden="true">
-            {openDaysCount}
+            {count}
           </Badge>
         ) : null}
       </NavLink>

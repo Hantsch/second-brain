@@ -250,6 +250,14 @@ export const api = {
     linkOrphan: (request: IpcRequest<'gardener:linkOrphan'>) =>
       call('gardener:linkOrphan', request),
   },
+  work: {
+    list: () => call('work:list'),
+  },
+  tasks: {
+    cancel: (id: string) => call('tasks:cancel', { id }),
+    remove: (id: string) => call('tasks:remove', { id }),
+    retry: (id: string) => call('tasks:retry', { id }),
+  },
   claude: {
     sessions: (limit?: number) => call('claude:sessions', limit === undefined ? {} : { limit }),
     link: (sessionId: string, project: string) => call('claude:link', { sessionId, project }),

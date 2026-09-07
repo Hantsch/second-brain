@@ -67,6 +67,9 @@ describe('Rail', () => {
     installMock({
       'vault:status': () => READY_STATUS,
       'journal:list': () => [],
+      /* 072, D3: the rail now reads the work queue for its tasks badge — an
+         empty queue is the honest "nothing running or waiting" state. */
+      'work:list': () => [],
     });
 
     renderRail('/journal');
@@ -76,5 +79,108 @@ describe('Rail', () => {
     ).toBeTruthy();
     /* No dedicated rail entry for a run — that's RunStrip's job now (D3). */
     expect(screen.queryByRole('button', { name: /Wartungslauf läuft/ })).toBeNull();
+  });
+
+  /* 072, D1: the tasks entry is new in the rail's system group, immediately
+     before maintenance (garden) — checked in both languages because the
+     order comes from `SCREENS` (language-independent) while the labels used
+     to find each item are translated. */
+  it('sits the tasks entry directly above maintenance in both languages', async () => {
+    for (const [language, tasksLabel, gardenLabel] of [
+      ['de', 'Aufgaben', 'Pflege'],
+      ['en', 'Tasks', 'Care'],
+    ] as const) {
+      setLanguage(language);
+      installMock({
+        'vault:status': () => READY_STATUS,
+        'journal:list': () => [],
+        'work:list': () => [],
+      });
+
+      const { container, unmount } = renderRail('/dashboard');
+      await screen.findByRole('button', { name: /./ }); // wait for the first render pass
+
+      const items = Array.from(container.querySelectorAll('.sb-rail-item'));
+      const labels = items.map((item) => item.querySelector('span')?.textContent ?? '');
+      const tasksIndex = labels.indexOf(tasksLabel);
+      const gardenIndex = labels.indexOf(gardenLabel);
+
+      expect(tasksIndex, `${language}: tasks entry not found`).toBeGreaterThanOrEqual(0);
+      expect(gardenIndex, `${language}: tasks must sit right before maintenance`).toBe(
+        tasksIndex + 1,
+      );
+
+      /* D1 has no task data source yet — the badge lookup must read 0, not
+         a second hardcoded branch that happens to always render nothing. */
+      expect(items[tasksIndex]?.querySelector('.sb-rail-count')).toBeNull();
+
+      unmount();
+    }
+  });
+
+  /* 072 review, finding 2: the visible `Badge` next to the tasks entry is
+     `aria-hidden` (it duplicates the accessible name below it), so a
+     screen-reader user only ever learns the running+waiting count from the
+     rail item's own `aria-label` — the same sentence mechanism the journal
+     entry already had, generalized to the one other screen that now carries
+     a live count instead of staying a `journal`-only special case. */
+  it("speaks the tasks entry's running+waiting count to assistive tech, and stays silent about it at zero", async () => {
+    setLanguage('en');
+    installMock({
+      'vault:status': () => READY_STATUS,
+      'journal:list': () => [],
+      'work:list': () => [
+        {
+          id: 'a',
+          kind: 'ingest',
+          lane: 'free',
+          subject: { label: 'A', ref: null },
+          state: 'running',
+          progress: 0.5,
+          message: null,
+          error: null,
+          queuePosition: null,
+          queuedAt: '2026-08-10T09:00:00.000Z',
+          startedAt: '2026-08-10T09:00:00.000Z',
+          finishedAt: null,
+        },
+        {
+          id: 'b',
+          kind: 'ingest',
+          lane: 'free',
+          subject: { label: 'B', ref: null },
+          state: 'queued',
+          progress: 0,
+          message: null,
+          error: null,
+          queuePosition: 1,
+          queuedAt: '2026-08-10T09:00:00.000Z',
+          startedAt: null,
+          finishedAt: null,
+        },
+      ],
+    });
+
+    renderRail('/dashboard');
+
+    const tasksLink = await screen.findByRole('link', { name: /Tasks, 2 running or waiting/ });
+    expect(tasksLink).toBeTruthy();
+    // The visible pill stays a decoration — the sentence above is the one
+    // and only place the count reaches assistive tech.
+    expect(tasksLink.querySelector('.sb-rail-count')?.getAttribute('aria-hidden')).toBe('true');
+  });
+
+  it('gives the tasks entry its plain label, not a false "0 running" claim, when nothing is in flight', async () => {
+    setLanguage('en');
+    installMock({
+      'vault:status': () => READY_STATUS,
+      'journal:list': () => [],
+      'work:list': () => [],
+    });
+
+    renderRail('/dashboard');
+
+    expect(await screen.findByRole('link', { name: 'Tasks' })).toBeTruthy();
+    expect(screen.queryByRole('link', { name: /running or waiting/ })).toBeNull();
   });
 });

@@ -7,3 +7,16 @@
 - 2026-09-07 17:19 · 071 D4 closing the vault ends the work · started
 - 2026-09-07 17:22 · 071 D4 closing the vault ends the work · done
 - 2026-09-07 17:40 · 071 done · moved to docs/requirements/done/
+- 2026-09-07 17:42 · 072 · D1 the place and an honest empty screen · started
+- 2026-09-07 17:42 · 072 · D2 the queue's verbs over IPC · started
+- 2026-09-07 17:52 · 072 · D1 the place and an honest empty screen · done
+- 2026-09-07 17:52 · 072 · D2 the queue's verbs over IPC · done
+- 2026-09-07 17:52 · 072 · D3 one source, read once · started
+- 2026-09-07 18:04 · 072 · D3 one source, read once · done
+- 2026-09-07 18:04 · 072 · D4 the three groups and their actions · started
+- 2026-09-07 18:24 · 072 · D4 the three groups and their actions · done
+- 2026-09-07 18:24 · 072 · D5 a real trigger for waiting and failed · started
+- 2026-09-07 18:37 · 072 · D5 a real trigger for waiting and failed · done
+- 2026-09-07 19:41 · 072 · review-fix cycle 1 (untranslated maintenance label, badge a11y, test-strength findings) · done
+- 2026-09-07 19:53 · 072 · review-fix cycle 2 (AC8 test gaps, AC9 test naming, quote style) · done
+- 2026-09-07 19:55 · 072 · done · moved to docs/requirements/done/

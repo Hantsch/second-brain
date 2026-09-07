@@ -22,6 +22,8 @@ export const SCREENS = [
   'notes',
   'journal',
   'knowledge',
+  /* 072, D1: sits directly above maintenance in the rail's system group. */
+  'tasks',
   'garden',
   'settings',
 ];
