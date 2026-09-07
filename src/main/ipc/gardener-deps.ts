@@ -198,6 +198,16 @@ export interface RunOptions {
    * normalization `gardener-state.ts` applies.
    */
   scope?: GardenerRunScope;
+  /**
+   * Pause between two checks, in milliseconds (066, D4). Set only from the
+   * `SB_E2E_STAGE_DELAY_MS` seam in `ipc/gardener-run.ts`, so a spec can watch
+   * a run that would otherwise be over before it could look; `undefined` — the
+   * default and every shipped run — creates no timer at all and leaves the
+   * checks stage exactly as it was. A pause is never waited out blindly: it
+   * ends the moment `signal` aborts, so a stop stays as prompt with the delay
+   * set as without it.
+   */
+  stageDelayMs?: number;
 }
 
 /** What a run produced, and whether it got all the way there (021b, D2). */
@@ -218,6 +228,31 @@ export interface GardenerRunResult {
 /** Give the event loop a turn, so progress and cancellation can get through. */
 function tick(): Promise<void> {
   return new Promise((resolve) => setImmediate(resolve));
+}
+
+/**
+ * Hold the checks stage for `ms` — `RunOptions.stageDelayMs`, and nothing else
+ * ever sets that (066, D4). `undefined` returns a resolved promise without
+ * touching a timer, so the run without the seam is the run it always was.
+ *
+ * The wait races the run's own `AbortSignal` instead of sleeping it out: a
+ * plain `setTimeout` would make a stop cost the full delay, which would turn
+ * the seam that makes a run observable into one that makes cancelling slow —
+ * and cancellation latency is precisely what the seam must not change.
+ */
+function pause(ms: number | undefined, signal?: AbortSignal): Promise<void> {
+  if (ms === undefined || signal?.aborted === true) return Promise.resolve();
+  return new Promise((resolve) => {
+    const done = (): void => {
+      clearTimeout(timer);
+      signal?.removeEventListener('abort', done);
+      resolve();
+    };
+    /* Read only from `done`, which nothing can call before the timer exists:
+       the abort listener is attached below it, and the signal was not aborted. */
+    const timer = setTimeout(done, ms);
+    signal?.addEventListener('abort', done, { once: true });
+  });
 }
 
 /**
@@ -406,6 +441,10 @@ export async function runWithProgress(
         }
         emit('checks', check.kind, done, true, done / CHECKS.length);
         await tick();
+        /* After the progress event, not before: what the pause holds open is
+           the state the screen was just told about (066, D4). Inert unless the
+           seam set a delay. */
+        await pause(options.stageDelayMs, options.signal);
         stopIfCancelled(options.signal);
         deterministic.push(...check.run(ctx));
         /* Counted only once the check has actually run: a stop lands before

@@ -1,7 +1,7 @@
 ---
 id: 042
 title: A maintenance run stays visible wherever I am
-status: in-progress # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-09-02
 ---
 
@@ -443,3 +443,19 @@ can take the state with it.
 ### Commit message
 
 042: strip lives in the shell; close guard warns during a run
+
+### Closed 2026-09-07 — covered by tests, e2e coverage is a named gap
+
+The acceptance process changed on 2026-09-07: acceptance criteria are proven by automated
+tests, and no story is held open waiting for a person to walk a test plan (the old
+`live-smoke-required` P2 gate is gone). All 13 criteria were verified PASS by the round-2 clean
+review, and the three properties the scripted live check could not race against
+(strip surviving navigation, stop/continue from another screen, the close-during-a-run dialog)
+are covered by `tests/renderer/run-strip.test.tsx`, `tests/main/close-guard.test.ts` and
+`tests/renderer/quit-during-run-dialog.test.tsx`.
+
+What is genuinely missing is not a manual walk but an **e2e level**: a functional Playwright
+`_electron` suite that can hold a run open long enough to drive these across screens. The
+project has no such harness yet (`e2e: none`), which is recorded as a gap under M13's
+"Gaps/notes" and is the subject of its own story. Not a manual residue — a fixture is work, not
+an impossibility. Status set to `done`.

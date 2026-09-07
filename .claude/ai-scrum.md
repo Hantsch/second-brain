@@ -9,7 +9,7 @@
   the commands read both.
 -->
 
-ai-scrum-version: 2.1.2
+ai-scrum-version: 3.0.0
 project: Gaston
 
 ## Verify
@@ -22,6 +22,14 @@ test: npm test
 lint: npm run lint
 typecheck: npm run typecheck
 format: npm run format:check
+e2e: npm run test:e2e
+<!--
+  `e2e` is the acceptance gate for user-facing stories: a criterion describing something the
+  user does is proven here, through the real surface — Playwright driving the built Electron
+  app against a disposable, no-model vault (tests/e2e/). `npm run shot` / `npm run a11y` still
+  prove that screens render and are a11y-clean, but only `e2e` drives a flow and asserts an
+  outcome. `test` covers everything without a user-facing surface (core logic, IPC, parsing).
+-->
 
 ## Conventions
 
@@ -43,23 +51,44 @@ protected-branches: main, dev <!-- never commit here, never push, never merge --
 
 ## Acceptance
 
+**Acceptance is the test suite, not a person with a click list** (decided 2026-09-07).
+Every acceptance criterion is proven by an automated test the workflow writes as part of the
+story. A story is done when those tests pass and the clean-agent review is through — no manual
+gate, no "built, acceptance pending", no user tick. What a walk-through finds afterwards becomes
+a new story. The old eight-milestone acceptance backlog was dropped for exactly this reason:
+`docs/reviews/2026-09-03-acceptance-todo.md`.
+
+ac-tests-required: true
+<!--
+  true  = every acceptance criterion needs a named automated test before `status: ready`
+          (`/refine` writes the AC -> test mapping into `## Acceptance Tests`) and a passing
+          one before `status: done`. A criterion that genuinely cannot be automated is
+          declared `manual residue` with a reason and blocks nothing.
+-->
+
 ui-acceptance-required: true
 <!--
-  true  = P1 applies: every user-facing capability needs a real path through the
-          actual UI. An acceptance or test-plan step for a user action that requires
-          a console command or a direct internal call is a story gap, not a valid
-          test. Pure engine/backend stories without a UI are exempt.
+  true  = a criterion describing something the USER does is proven through the real surface,
+          the `e2e` command from `## Verify`. A console command, a direct call into an internal
+          module, or a renderer test with a faked backend is not a substitute. Criteria without
+          a surface (core logic, IPC, parsing) are covered by `test`.
 -->
 
-live-smoke-required: true
+manual-residue-allowed: true
 <!--
-  true  = P2 applies: for a story with visible UI, a green build/test run is not
-          enough — the real flow must be driven through the running app before the
-          story may be set to done. If the session cannot do that, the story stays
-          in-progress and is handed over as "built, acceptance pending".
+  true  = a criterion that cannot be automated for a real reason (an OS signature dialog, a
+          specific machine, a paid external service) is marked `manual residue: <reason>`.
+          Listed in the sprint review and the roadmap's Gaps/notes; blocks nothing.
+          Known residues in this project: story 034's start/stop behaviour against a real
+          llama.cpp install, and story 031's SmartScreen warning on an unsigned build.
 -->
 
-live-smoke-how: npm run seed && npm run shot (Playwright `_electron` harness in scripts/shot.mjs, screenshots land in .screenshots/)
+testplan: optional
+<!--
+  optional = `/sprint` writes `testplan.md` only for criteria marked `manual residue`, and
+             skips the file entirely when there are none. `required` = the old full plan,
+             `off` = never. In no case is `testplan.md` an acceptance gate — the tests are.
+-->
 
 ## Context to read before coding
 

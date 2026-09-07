@@ -7,6 +7,8 @@ release/
 # Lokale Artefakte der Entwicklung
 .demo-vault/
 .screenshots/
+test-results/
+playwright-report/
 .vault/
 coverage/
 

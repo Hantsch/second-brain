@@ -1,7 +1,7 @@
 ---
 id: 034
 title: The engine starts with settings that fit this machine
-status: in-progress # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-08-23
 ---
 
@@ -282,3 +282,17 @@ behavior against a genuine process needs a machine with the engine actually inst
 therefore left `in-progress` ("built, acceptance pending") rather than `done`, and the story stays
 in `docs/requirements/` (not moved to `done/`) until a user with a real llama.cpp install runs
 Test Plan steps 2-7.
+
+### Closed 2026-09-07 — manual residue, not a blocker
+
+The acceptance process changed on 2026-09-07: acceptance criteria are proven by automated
+tests, and no story is held open waiting for a person to walk a test plan (ai-scrum's
+`ac-tests-required`; the old `live-smoke-required` P2 gate is gone). This story's criteria were
+all verified PASS against the code and are covered by unit/integration tests; the only thing
+left open above was the walk-through on a machine that actually has a llama.cpp binary and a
+GGUF model installed.
+
+That is a **manual residue** in the new sense — it needs specific software/hardware this
+machine does not have, so no test on this machine can cover it. It is recorded as such under
+M11's "Gaps/notes" in the roadmap and blocks nothing. Status set to `done`. If the start/stop/
+foreign-runtime behaviour turns out wrong on a machine with a real engine, that is a new story.

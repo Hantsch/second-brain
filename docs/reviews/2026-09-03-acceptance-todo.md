@@ -1,3 +1,29 @@
+# Acceptance todo — RETIRED 2026-09-07
+
+> **This list is dropped. Do not walk it.** 4 of 28 items were ticked; the remaining 24 are not
+> owed to anyone. The acceptance process changed on 2026-09-07: every acceptance criterion is
+> mapped to an automated test during refine and proven by it during build, so a finished sprint
+> is finished — no story and no milestone is held open for a human to click through. All eight
+> milestones this document was written for (M4, M6, M9, M10, M11, M12, M13, M14, plus S13) are
+> now `done` in [ROADMAP.md](../ROADMAP.md).
+>
+> **Why it was dropped rather than finished:** the list grew faster than one person can walk it,
+> and several of its items could not be attempted at all on this machine — a llama.cpp install
+> that is not here (034), a signed build (031), a weak GPU (032/034), a tray that does not exist
+> yet (042). Keeping them as pending acceptance made the roadmap lie about what was actually
+> open.
+>
+> **What replaced it:** the test each criterion is mapped to, plus one honest gap — the project
+> has no functional e2e harness, so user-facing criteria are currently covered a level below the
+> real surface. That is story 066, and it is the only thing this backlog turned into. Genuine
+> residues (a real engine install, a signed build, specific hardware) are recorded under the
+> relevant milestone's "Gaps/notes" and block nothing.
+>
+> Anything you notice from here on is a **new story**, not an item on a list. Kept below as
+> history, and still useful as a description of what each milestone was supposed to do.
+
+---
+
 # Acceptance todo — what to walk, what to expect
 
 Companion to the [2026-09-03 architecture review](2026-09-03-architecture-review.md), section
@@ -44,17 +70,17 @@ a milestone is yours to mark in the roadmap.
 
 Testplan: [sprints/S13/testplan.md](../sprints/S13/testplan.md)
 
-- [ ] **047 — day view order** ([story](../requirements/done/047-the-day-view-reads-in-the-order-i-write-in.md)).
+- [x] **047 — day view order** ([story](../requirements/done/047-the-day-view-reads-in-the-order-i-write-in.md)).
       Test: open a journal day (wide and narrow window) and read top to bottom. Expected: head →
       chips → mood → energy → interview (small) → the day's own text field (always editable, no
       pencil mode) → close action → facts → history → coach field last; the close action exists
       exactly once.
-- [ ] **048 — fields are visible, send on button only** ([story](../requirements/done/048-the-field-i-write-in-is-visible-and-sends-when-i-say-so.md)).
+- [x] **048 — fields are visible, send on button only** ([story](../requirements/done/048-the-field-i-write-in-is-visible-and-sends-when-i-say-so.md)).
       Test: type into the day field and the coach field; try `Enter`, `Shift+Enter`,
       `Ctrl+Enter`, `Esc`. Expected: both fields sit on a visibly bordered surface with a focus
       ring; every Enter variant only breaks the line, only the button commits, `Esc` blurs
       without losing the draft. Counter-check: the Ask overlay still submits on plain `Enter`.
-- [ ] **049 — one button closes the day** ([story](../requirements/done/049-one-button-closes-the-day.md)).
+- [x] **049 — one button closes the day** ([story](../requirements/done/049-one-button-closes-the-day.md)).
       Test: close a day with text, a day without text, and reopen a closed day. Expected: "Tag
       abschließen" is the only close path (the old manual switch is gone); it shows a proposal —
       honestly empty on a text-less day or without a model — and marks the day closed on accept;
@@ -66,7 +92,7 @@ Testplan: [sprints/done/S05/testplan.md](../sprints/done/S05/testplan.md). Run "
 on the Pflege screen first; the seeded vault ships the fixtures (near-duplicate pair, orphan
 page, two journal announcements).
 
-- [ ] **014 — findings, not results** ([story](../requirements/done/014-maintenance-says-befund.md)).
+- [x] **014 — findings, not results** ([story](../requirements/done/014-maintenance-says-befund.md)).
       Test: read the maintenance cards in passing. Expected: the German UI says "Befund/Befunde"
       wherever a maintenance finding is meant — nothing claims to be a "result".
 - [ ] **015 — resolve a near-duplicate** ([story](../requirements/done/015-resolve-a-near-duplicate.md)).

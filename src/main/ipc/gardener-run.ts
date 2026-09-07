@@ -10,6 +10,35 @@ import { beginGardenerRun } from '../gardener-run-state';
 import type { Services } from '../services';
 
 /**
+ * `SB_E2E_STAGE_DELAY_MS` — how long the checks stage pauses between two
+ * checks, in milliseconds. Same env family as `SB_VAULT` (`main/index.ts`) and
+ * `SB_DEMO` (`ipc/app.ts`): set by the check scripts, never by the app.
+ *
+ * Why it exists (066, D4): without a model the stage plan is a single `checks`
+ * stage over ten mechanical checks, so a run is over before a spec can navigate
+ * away and come back to it. A run that finishes instantly cannot be observed
+ * *while it runs* — and that, not the report, is what the cross-screen spec is
+ * about.
+ *
+ * Anything that is not a positive integer — unset, empty, `0`, `-1`, `1.5`,
+ * `abc` — is read as "no delay" and never throws: a mistyped variable must not
+ * be able to keep the shipped run from starting. Then no pause is passed at
+ * all, and the run is the run it was before this seam existed.
+ */
+function stageDelayFromEnv(): number | undefined {
+  const raw = process.env['SB_E2E_STAGE_DELAY_MS']?.trim();
+  if (!raw) return undefined;
+  const ms = Number(raw);
+  if (!Number.isInteger(ms) || ms <= 0) return undefined;
+  return ms;
+}
+
+/* Read once, when this module loads — not per run and not per check: the
+   variable belongs to how the process was started, and a run that re-read it
+   would let a mid-session change turn one run into a different one. */
+const STAGE_DELAY_MS = stageDelayFromEnv();
+
+/**
  * The full body of the `gardener:run` handler — moved out of `ipc/gardener.ts`
  * verbatim (behaviour-preserving split, story 027 D5). See that file's header
  * comment for the promises this keeps; nothing about them changes here.
@@ -54,6 +83,7 @@ export async function runGardener(
       ...(useLlm === undefined ? {} : { useLlm }),
       ...(stored === null ? {} : { resumeFrom: stored }),
       ...(runScope === undefined ? {} : { scope: runScope }),
+      ...(STAGE_DELAY_MS === undefined ? {} : { stageDelayMs: STAGE_DELAY_MS }),
       signal: handle.signal,
       trigger: handle.trigger,
       onProgress: handle.publish,

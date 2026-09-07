@@ -55,6 +55,7 @@ The binding file format is documented in [docs/VAULT-FORMAT.md](docs/VAULT-FORMA
 | `npm run shot`         | Start the app via Playwright, PNGs into `.screenshots/`                                                                      |
 | `npm run a11y`         | Run axe-core over every screen                                                                                               |
 | `npm run verify:ui`    | seed → build → shot → a11y, for any UI work                                                                                  |
+| `npm run test:e2e`     | Flow-level acceptance suite (Playwright) against a disposable, no-model vault                                                |
 
 `npm run shot` and `npm run a11y` start the built app against the demo vault. They
 need `npm run build` first, and they never touch the real installation: the vault

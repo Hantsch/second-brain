@@ -1,7 +1,7 @@
 ---
 id: 043
 title: I can delete a condensed artifact
-status: in-progress # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-09-02
 ---
 
@@ -287,3 +287,17 @@ importantly steps 3 (undo), 5 (no resurrection with a routed model) and 6 (confl
 ```
 043: delete a condensed artifact
 ```
+
+### Closed 2026-09-07 — covered by tests, e2e coverage is a named gap
+
+The acceptance process changed on 2026-09-07: acceptance criteria are proven by automated
+tests, and no story is held open waiting for a person to walk a test plan (the old
+`live-smoke-required` P2 gate is gone). The clean review PASSed with all findings closed, and
+the delete path — hash guard, trash `undoToken`, index/search drop, the `condensation-due`
+re-check after a delete — is pinned by `tests/main/condense-ipc.test.ts` plus the renderer
+tests, with the dialog itself captured live in `.screenshots/notes-condensed-delete.png`.
+
+The 8-step manual plan above is superseded: what it walked, the tests assert. The one level
+still missing is an **e2e** round trip (confirm → delete → inspect trash → undo) through the
+real app, which needs a functional Playwright harness the project does not have yet
+(`e2e: none`) — recorded as a gap under M13's "Gaps/notes". Status set to `done`.

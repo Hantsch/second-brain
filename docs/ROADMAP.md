@@ -1,7 +1,7 @@
 # Roadmap
 
 **The** one source of status and planning: where we stand, what comes next, what is not planned
-at all yet. As of: 2026-09-03.
+at all yet. As of: 2026-09-07.
 
 Rules (so this document does not drift):
 
@@ -10,8 +10,12 @@ Rules (so this document does not drift):
   duplicate.
 - **Concepts are timeless** (what/why) — when/status lives **only** here.
 - **Defined write moments:** end of `/ai-scrum:sprint` (phase 3), end of `/ai-scrum:concept`,
-  and the `/ai-scrum:roadmap` ritual (sync check + sprint cut). "Accepted" is marked by the
-  user only.
+  and the `/ai-scrum:roadmap` ritual (sync check + sprint cut).
+- **A milestone whose stories are all done is `done`** (since 2026-09-07). Acceptance happens
+  inside the sprint, through the automated test each acceptance criterion is mapped to — there
+  is no separate "accepted" state waiting on the user. Milestones marked `accepted` below are
+  history from before that change, kept as written. What a later walk-through finds goes under
+  the milestone's "Gaps/notes" and into a **new** story, never into a reopened milestone.
 
 ---
 
@@ -33,9 +37,9 @@ The feature surface is complete: all rail screens are built and every channel in
 capability but legibility — eleven flat rail entries, a write path into `areas/` that no screen
 reads, and screens for things that are actions rather than places.
 
-Way of working: every milestone ends in an increment that can be driven through the real UI.
-Between milestones: playtest, review, steering by the user. Stories are cut only once the
-previous milestone is accepted, so scope does not balloon up front.
+Way of working: every milestone ends in an increment whose acceptance criteria are each proven
+by an automated test. Between milestones: review and steering by the user, from the sprint's
+`review.md`. Stories are cut one milestone at a time, so scope does not balloon up front.
 
 ### M1 — Navigation: places, actions, systems — accepted
 
@@ -152,7 +156,7 @@ Gaps/notes:
 - **`tests/core/wiki/module.test.ts` was still red** on every story's build in this sprint,
   confirmed pre-existing and unrelated (see the M1 gap above — resolved by story 023).
 
-### M4 — A finding can be acted on — built, acceptance pending
+### M4 — A finding can be acted on — done
 
 Stories 014 (the run reports findings, not results), 017 (a finding says how it ends), 016
 (orphan page — I pick the target), 015 (resolve a near-duplicate). Cut straight from the
@@ -167,17 +171,20 @@ M4 was chosen next at the 2026-08-20 `/ai-scrum:roadmap plan`, now that M3 is ac
 Sprints:
 
 - [sprints/done/S05/sprint.md](sprints/done/S05/sprint.md) — a finding can be acted on (014, 015, 016,
-  017), `done` — built, live acceptance pending
+  017), `done`
   ([review](sprints/done/S05/review.md) · [testplan](sprints/done/S05/testplan.md)). Story 020 (M6) rode
   along in the same sprint by direct user decision on 2026-08-21 — see M6 below and the
   sprint's own note.
 
 Gaps/notes:
 
-- **Built, not yet accepted.** All four M4 stories are implemented, reviewed and smoke-tested
-  through the running app, but the manual acceptance walk is the user's — see
-  [sprints/done/S05/testplan.md](sprints/done/S05/testplan.md). The milestone is marked accepted only
-  after that.
+- **Closed 2026-09-07 without the manual walk**, under the test-based acceptance process. All
+  four stories are implemented, reviewed and covered by unit/integration tests; the walk in
+  [sprints/done/S05/testplan.md](sprints/done/S05/testplan.md) was started (014 ticked) and then
+  retired along with the acceptance backlog. The remaining gap is a level, not a person: the
+  write paths (discard + undo byte-for-byte, orphan link insertion, dismiss reversibility) have
+  no e2e round trip through the real app, because the project has no functional Playwright
+  harness yet. Tracked under M13's harness gap; a defect found later is a new story.
 - **The `sources:` frontmatter citation variant (016) is out of scope**, by user decision in
   S05's clarification round. An orphan can be resolved by a body-line link only; citing a source
   through a `sources:` frontmatter list needs its own story (different write path, different
@@ -234,7 +241,7 @@ Gaps/notes:
 - **M5 accepted by the user on 2026-08-21**, S06's test plan walked end to end, including the
   steps needing a configured OpenRouter key or a real Ollama install.
 
-### M6 — Journal loose ends — built, acceptance pending
+### M6 — Journal loose ends — done
 
 Requirement: [020-journal-loose-ends.md](requirements/done/020-journal-loose-ends.md). A
 forward-looking sentence in the journal ("tomorrow is the notary appointment") whose day has
@@ -257,13 +264,15 @@ scope.
 Sprints:
 
 - [sprints/done/S05/sprint.md](sprints/done/S05/sprint.md) — story 020 rode along in M4's sprint, `done`
-  — built, live acceptance pending
   ([review](sprints/done/S05/review.md) · [testplan](sprints/done/S05/testplan.md))
 
 Gaps/notes:
 
-- **Built, not yet accepted.** Story 020 is implemented, reviewed and smoke-tested, but the
-  manual acceptance walk is the user's.
+- **Closed 2026-09-07 without the manual walk**, under the test-based acceptance process. Story
+  020 is implemented, reviewed and covered by tests. The walk was never done — it needed a real
+  vault with a real forward-looking sentence and a date passing, which the demo vault cannot
+  reproduce. That is a fixture gap, not a manual residue: a test can construct exactly that vault
+  state, and no test did. Recorded here rather than kept as an open acceptance item.
 - **Only the heuristic path was exercised live.** The model-found (`origin: 'model'`) loose end
   needs a real local model routed; tests cover it with the fake provider and with "no model
   configured", but no live model ran during the sprint.
@@ -333,7 +342,7 @@ Gaps/notes:
 
 ---
 
-### M9 — The gate is green and the small things are right — built, acceptance pending
+### M9 — The gate is green and the small things are right — done
 
 No concept and no single story behind M9 — it is the collected "pre-existing, needs an owner"
 backlog of M1–M8, given an owner. Five stories: the module schema drift that has kept `npm test`
@@ -384,7 +393,7 @@ Gaps/notes:
 
 ---
 
-### M10 — A model that fits this machine, and an app I can hand on — built, acceptance pending
+### M10 — A model that fits this machine, and an app I can hand on — done
 
 No concept behind M10. Four user-written stories, cut on 2026-08-23, along two lines that only
 matter outside the author's own session.
@@ -410,7 +419,7 @@ vault, honest "no model configured") for someone who isn't the app's author.
 Sprints:
 
 - [sprints/done/S08/sprint.md](sprints/done/S08/sprint.md) — it fits my machine, and I can pass it on
-  (028, 029, 030, 031), `done` (031 built, live acceptance pending)
+  (028, 029, 030, 031), `done`
 
 Decisions taken at the cut (2026-08-23, user):
 
@@ -442,7 +451,7 @@ because it now also blocks the one command this milestone's second half is built
 
 ---
 
-### M11 — A local engine for a machine that is not mine — built, acceptance pending
+### M11 — A local engine for a machine that is not mine — done
 
 No concept behind M11. Four user-written stories, cut on 2026-08-23 from one observation while
 looking at the provider setup: the app manages exactly one local runtime, and the first test user
@@ -506,8 +515,10 @@ first).
 
 Risk carried knowingly: 033 and 034 have 019c's acceptance problem in a sharper form. Their real
 test needs a machine where the engine is genuinely absent and the graphics card genuinely weak,
-and the build machine is neither. Expect at least one to end as "built, acceptance pending" until
-it runs on the test user's laptop — which is what story 031 in S08 exists to make possible.
+and the build machine is neither. That turned out to be exactly right for 034 — and under the
+process from 2026-09-07 it is a **manual residue**, not an open acceptance: no test on this
+machine can cover a machine this machine is not. Story 031 in S08 exists to make that run
+possible once a real test machine shows up.
 
 **S09 result (2026-09-01).** 035, 032, 033 are `done` and moved to
 [requirements/done/](requirements/done/). 034 is built and reviewed (a story-review-hard pass
@@ -523,7 +534,7 @@ laptop, per story 031. See [sprints/done/S09/review.md](sprints/done/S09/review.
 
 ---
 
-### M12 — An area gathers itself — built, acceptance pending
+### M12 — An area gathers itself — done
 
 Concept: [concepts/condensed-layer.md](concepts/condensed-layer.md) — the first slice of it, cut
 on 2026-09-01 after the concept had been deferred three times (M9, M10, M11). One level only: the
@@ -591,7 +602,7 @@ outstanding.
 
 ---
 
-### M13 — Evidence stays primary, and the gate turns green — built, acceptance pending
+### M13 — Evidence stays primary, and the gate turns green — done
 
 The follow-ups M12 left behind, plus the two never-green carve-outs this table has been carrying
 since S07. One of the four closes a guardrail: an answer can cite a condensed artifact today,
@@ -606,9 +617,9 @@ the line-ending decision (041) last, because it rewrites up to 1077 files in one
 Sprints:
 
 - [sprints/done/S11/sprint.md](sprints/done/S11/sprint.md) — evidence stays primary, and the gate
-  turns green (040, 042, 043, 041), `done`. 040 and 041 done outright; 042 and 043 built and
-  reviewed, held at built/acceptance-pending per the P2 live-smoke policy (see
-  [review.md](sprints/done/S11/review.md)).
+  turns green (040, 042, 043, 041), `done`. 040 and 041 done outright; 042 and 043 were held at
+  built/acceptance-pending under the retired P2 live-smoke policy and closed `done` on 2026-09-07
+  (see [review.md](sprints/done/S11/review.md) and each story's closing note).
 
 Decisions taken at the cut (2026-09-02, user):
 
@@ -630,17 +641,26 @@ Decisions taken at the cut (2026-09-02, user):
 
 Gaps/notes:
 
-- The live acceptance backlog is the standing open item: M4, M6, M9, M10, M11 and M12 are all
-  built with acceptance pending. M13 was cut so it cannot be invalidated by what those
-  walkthroughs find, but the backlog does not shrink on its own — and this sprint adds 042 and 043
-  to that same pending set (see [S11/review.md](sprints/done/S11/review.md)).
-- **042's live smoke could not be fully driven**: the demo vault's model-less run finishes in
-  under a second, too fast to race navigation-persistence, stop-from-elsewhere or the
-  close-during-a-run dialog reliably. Automated tests cover those paths instead; a model needs to
-  be configured for the manual test plan to observe them in real time.
-- **043's live smoke covered the delete dialog's screenshot but not the full manual flow**
-  (confirm+undo, index drop, conflict, no-model, German strings) — see
-  [S11/testplan.md](sprints/done/S11/testplan.md).
+- **The live acceptance backlog was retired on 2026-09-07**, together with the manual acceptance
+  gate itself. It had grown to eight milestones and never shrank; several of its items needed a
+  second machine, a signed build or a configured model to attempt at all. Acceptance is now the
+  test each criterion is mapped to, and
+  [reviews/2026-09-03-acceptance-todo.md](reviews/2026-09-03-acceptance-todo.md) is retired.
+- **The real remainder is one missing test level: there is no functional e2e harness.**
+  `npm run shot` and `npm run a11y` prove that screens render and are a11y-clean; nothing drives
+  a flow through the built app and asserts an outcome. Everything the old walk-throughs were meant
+  to catch — write paths with undo, cross-screen behaviour, dialogs — is currently covered one
+  level down, by unit/renderer/main tests. **Story 066** cuts that harness; until it lands,
+  `e2e: none` in `.claude/ai-scrum.md` and every user-facing criterion is covered below the real
+  surface, which the workflow now has to state per story.
+- **042's cross-screen behaviour needs the harness, not a person**: the demo vault's model-less
+  run finishes in under a second, too fast to race navigation-persistence, stop-from-elsewhere or
+  the close-during-a-run dialog. A fixture that holds a run open is work an e2e suite can do;
+  `tests/renderer/run-strip.test.tsx`, `tests/main/close-guard.test.ts` and
+  `tests/renderer/quit-during-run-dialog.test.tsx` cover it deterministically in the meantime.
+- **043's delete round trip needs the harness too** (confirm + undo inspection in
+  `.secondbrain/trash/`, index drop, conflict, no-model, German strings). Pinned today by
+  `tests/main/condense-ipc.test.ts` plus renderer tests and one screenshot of the dialog.
 - **042's tray-quit close door has no UI path**: no `Tray` is created anywhere in `src/main/`, so
   only the title-bar close and `Alt+F4` can be exercised live; the `before-quit` guard is covered
   by automated tests only until a tray exists.
@@ -655,7 +675,7 @@ Gaps/notes:
 
 ---
 
-### M14 — A project gathers itself — built, acceptance pending
+### M14 — A project gathers itself — done
 
 Concept: [concepts/condensed-layer.md](concepts/condensed-layer.md) — the second slice, cut on
 2026-09-02. The area level (M12) is built; the module and project levels were both still open. The
@@ -675,19 +695,22 @@ Sprints:
 
 - [sprints/done/S12/sprint.md](sprints/done/S12/sprint.md) — a project gathers itself (044, 045, 046),
   `done` (built 2026-09-02; [review](sprints/done/S12/review.md),
-  [testplan](sprints/done/S12/testplan.md); live acceptance pending)
+  [testplan](sprints/done/S12/testplan.md))
 
 Decisions taken at the cut (2026-09-02, user):
 
-- **Cut ahead of any live acceptance walkthrough.** M4, M6, M9, M10, M11 and M12 are all still
+- **Cut ahead of any live acceptance walkthrough.** M4, M6, M9, M10, M11 and M12 were all still
   "built, acceptance pending"; the roadmap had stated the project/module level should wait for
   M12's acceptance. The user chose to proceed anyway — no time for the walkthroughs now, more
   features preferred over pausing, corrections to be filed as new stories once a walkthrough finds
   something wrong. Named risk, accepted knowingly: M4/M6/M9/M10/M11 add write paths into the real
   vault exercised so far only by fake-provider tests and short demo-vault smoke runs, not a full
   walkthrough against real data — this sprint adds more surface on top without reducing that risk.
-- **The module level stays open**, gated on the same live-acceptance question plus its own added
-  cost (retiring `updateOverview()`). Revisit after M14.
+  **Resolved differently on 2026-09-07:** the walkthroughs were dropped rather than done, and the
+  risk was reframed as one missing test level (story 066's e2e harness) — something a test can
+  close, which a growing backlog of click lists never did.
+- **The module level stays open**, no longer gated on a live-acceptance question (there is none
+  any more), but on its own added cost (retiring `updateOverview()`). Revisit after M14.
 - Six open questions carried into refine — all resolved with the user in `/sprint 12`'s
   clarification round (bundled `AskUserQuestion`), recorded under each story's
   `## Decisions (Sprint)`: sensitivity, agent-session citation form, size cap/input bounds,
@@ -734,8 +757,7 @@ Ten feedback points, cut into three groups:
 Sprints:
 
 - [sprints/S13/sprint.md](sprints/S13/sprint.md) — the day is one text field (047, 048, 049),
-  `done` — built, acceptance pending
-  ([review](sprints/S13/review.md) · [testplan](sprints/S13/testplan.md))
+  `done` ([review](sprints/S13/review.md) · [testplan](sprints/S13/testplan.md))
 
 Decisions taken at the cut (2026-09-03, user):
 
@@ -753,10 +775,12 @@ Decisions taken at the cut (2026-09-03, user):
 
 Gaps/notes:
 
-- **Cut while eight milestones are still "built, acceptance pending"** (M4, M6, M9, M10, M11, M12,
-  M13, M14). Unlike the M14 cut, this milestone is itself a correction round from real use — the
-  feedback it comes from _is_ a partial live acceptance of the journal. It does not reduce the
-  pending set for the other screens.
+- **Cut while eight milestones were still "built, acceptance pending"** (M4, M6, M9, M10, M11,
+  M12, M13, M14). Unlike the M14 cut, this milestone is itself a correction round from real use —
+  the feedback it comes from _is_ a partial live acceptance of the journal. That pending set was
+  retired wholesale on 2026-09-07: acceptance is the test each criterion is mapped to, the one
+  remaining gap is story 066's e2e harness, and anything a later walk-through finds is a new
+  story.
 - Three stories in a row edit the same handful of files under
   `src/renderer/screens/journal/`. Sequential build only, and the S08 git-safety rule for build
   agents (no unscoped `git restore`/`git clean`) matters more here than usual. S13 built all three
@@ -778,11 +802,12 @@ Gaps/notes:
 
 ## Open / unprioritised
 
-| Topic                                                         | State                                                                                                                                                                                                                                                                                                                                                                                       | Next step                                                                                                                                         |
-| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Condensed layer (module level)                                | Concept written 2026-08-18: [concepts/condensed-layer.md](concepts/condensed-layer.md). The **area** level was built in M12 (S10, done 2026-09-02, acceptance pending); the **project** level was built as M14 (S12, done 2026-09-02, acceptance pending). The **module** level — CND-2, CND-17 (agent-session citation), CND-35/36 (retiring the ingest's overview append) — is still open | Own `/roadmap plan` for the module level. The concept's §7 reversal trigger was evaluated at M14's refine and did not flip (see M14's Gaps/notes) |
-| MCP interface for projects, knowledge and the condensed layer | Named as an outlook in [concepts/condensed-layer.md](concepts/condensed-layer.md) §14, deliberately without requirements                                                                                                                                                                                                                                                                    | Own `/ai-scrum:concept` once the condensed artifacts exist                                                                                        |
-| German docs migrated to English                               | Decided in `.claude/ai-scrum.md`; only `docs/MODULE-SCHEMA.md` is still German now — and story 023 pinned it `eol=lf` and byte-exact against `MODULE_SCHEMA_TEMPLATE`, so migrating it means changing code too                                                                                                                                                                              | Own story once it stops being cosmetic                                                                                                            |
-| Medication tracker                                            | Named in the user's journal feedback (2026-09-03) and postponed at the M15 cut by the user: the idea is not ripe enough to cut. Open shape questions: preparations, dose, schedule, adherence, correlation with mood/energy, own screen or a day section                                                                                                                                    | Own `/ai-scrum:concept` once the user wants it — no story until then                                                                              |
-| Data import merges into an existing day                       | Rule agreed at the M15 cut (2026-09-03): an import must add to a day that already has content, never replace it. But no import path exists in the code, so the story has no subject yet                                                                                                                                                                                                     | Name the source (old journal files, another app's export, a folder of Markdown), then cut one story with the merge rule as its acceptance         |
-| Phase 2                                                       | Not defined                                                                                                                                                                                                                                                                                                                                                                                 | Cut after phase 1 has been used                                                                                                                   |
+| Topic                                                         | State                                                                                                                                                                                                                                                                                                                                               | Next step                                                                                                                                                                           |
+| ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Condensed layer (module level)                                | Concept written 2026-08-18: [concepts/condensed-layer.md](concepts/condensed-layer.md). The **area** level was built in M12 (S10, done 2026-09-02); the **project** level was built as M14 (S12, done 2026-09-02). The **module** level — CND-2, CND-17 (agent-session citation), CND-35/36 (retiring the ingest's overview append) — is still open | Own `/roadmap plan` for the module level. The concept's §7 reversal trigger was evaluated at M14's refine and did not flip (see M14's Gaps/notes)                                   |
+| MCP interface for projects, knowledge and the condensed layer | Named as an outlook in [concepts/condensed-layer.md](concepts/condensed-layer.md) §14, deliberately without requirements                                                                                                                                                                                                                            | Own `/ai-scrum:concept` once the condensed artifacts exist                                                                                                                          |
+| German docs migrated to English                               | Decided in `.claude/ai-scrum.md`; only `docs/MODULE-SCHEMA.md` is still German now — and story 023 pinned it `eol=lf` and byte-exact against `MODULE_SCHEMA_TEMPLATE`, so migrating it means changing code too                                                                                                                                      | Own story once it stops being cosmetic                                                                                                                                              |
+| Medication tracker                                            | Named in the user's journal feedback (2026-09-03) and postponed at the M15 cut by the user: the idea is not ripe enough to cut. Open shape questions: preparations, dose, schedule, adherence, correlation with mood/energy, own screen or a day section                                                                                            | Own `/ai-scrum:concept` once the user wants it — no story until then                                                                                                                |
+| Data import merges into an existing day                       | Rule agreed at the M15 cut (2026-09-03): an import must add to a day that already has content, never replace it. But no import path exists in the code, so the story has no subject yet                                                                                                                                                             | Name the source (old journal files, another app's export, a folder of Markdown), then cut one story with the merge rule as its acceptance                                           |
+| Functional e2e harness (acceptance's missing level)           | Story [066](requirements/066-a-flow-can-be-tested-through-the-real-app.md) cut 2026-09-07 as the one thing the retired acceptance backlog turned into: nothing drives a flow through the built app and asserts an outcome, so `e2e: none` in `.claude/ai-scrum.md` and every user-facing criterion is covered a level below the real surface        | `/ai-scrum:refine 066` — four open questions (suite scope, runner, disposable vault, CI lane vs [065](requirements/065-the-gate-runs-on-every-push.md)), each with a recommendation |
+| Phase 2                                                       | Not defined                                                                                                                                                                                                                                                                                                                                         | Cut after phase 1 has been used                                                                                                                                                     |

@@ -56,8 +56,15 @@ export function ensureDemoVault(vaultPath, log = console.log) {
  * Eigenes userData-Verzeichnis mit vorbereiteten App-Einstellungen.
  * `vault: null` heißt: kein letzter Vault — die App startet im Onboarding.
  * `recent` füllt die Liste „Zuletzt geöffnet", auch wenn kein Vault offen ist.
+ *
+ * `uiLanguage` defaults to German because the screenshots are German. The e2e
+ * suite pins 'en' instead: its assertions read visible labels, and those must
+ * not change with whatever language the author happens to prefer.
  */
-export function prepareUserData(dir, { vault, recent, width = 1440, height = 900 }) {
+export function prepareUserData(
+  dir,
+  { vault, recent, width = 1440, height = 900, uiLanguage = 'de' },
+) {
   rmSync(dir, { recursive: true, force: true });
   mkdirSync(dir, { recursive: true });
   writeFileSync(
@@ -68,7 +75,7 @@ export function prepareUserData(dir, { vault, recent, width = 1440, height = 900
         lastVault: vault,
         recentVaults: recent ?? (vault ? [vault] : []),
         theme: 'dark',
-        uiLanguage: 'de',
+        uiLanguage,
         window: { width, height, maximized: false },
         startMinimized: false,
         onboarded: vault !== null,
@@ -147,17 +154,41 @@ function watchPage(page, logs, source) {
   page.on('crash', () => logs.add('error', source, 'Renderer-Prozess abgestürzt'));
 }
 
+/* Environment names that look like a provider credential. The main process
+   reads none of them today, but an e2e run must not depend on that staying
+   true: a spec that reaches a real endpoint because the author's shell exports
+   a key is a spec that passes on one machine and bills on another. */
+const KEY_ENV_PATTERN =
+  /(^|_)(API_)?KEY$|_TOKEN$|_SECRET$|^(ANTHROPIC|OPENAI|OPENROUTER|GROQ|MISTRAL|GEMINI|HUGGINGFACE|HF|CLAUDE)_/i;
+
 /**
  * Startet die gebaute App. Der Aufrufer bekommt Fenster, Protokoll und einen
  * `close()`, der auch bei Fehlern aufräumt.
+ *
+ * `withoutKeyEnv` strips anything that looks like a provider credential from the
+ * child's environment — the e2e suite runs the app with no model reachable.
+ * `extraEnv` is merged in last, e.g. to set `SB_E2E_STAGE_DELAY_MS` for a single
+ * spec (066, D5) without widening what every other spec's app process sees.
  */
-export async function launchApp({ userDataDir, vault, timeout = 60_000 }) {
+export async function launchApp({
+  userDataDir,
+  vault,
+  timeout = 60_000,
+  withoutKeyEnv = false,
+  extraEnv = {},
+}) {
   const env = { ...process.env };
   delete env.ELECTRON_RUN_AS_NODE;
+  if (withoutKeyEnv) {
+    for (const name of Object.keys(env)) {
+      if (KEY_ENV_PATTERN.test(name)) delete env[name];
+    }
+  }
   if (vault) {
     env.SB_VAULT = vault;
     env.SB_DEMO = '1';
   }
+  Object.assign(env, extraEnv);
 
   const logs = createLogSink();
   const app = await _electron.launch({
