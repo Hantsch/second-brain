@@ -27,6 +27,7 @@ import { cancelGardenerRun } from './gardener-run-state';
 import { fail, noVault } from './ipc/errors';
 import { ensureStructure, isVault } from './vault-layout';
 import { getWorkQueue } from './work-queue';
+import { getTaskResults } from './task-results';
 
 interface OpenVault {
   root: string;
@@ -165,6 +166,10 @@ export class Services {
        list a caller sees right after is genuinely empty. */
     getWorkQueue(this).cancelAll('shutdown');
     getWorkQueue(this).clear();
+    /* The proposals those tasks produced go with them (073, D3): a result is
+       vault content, and Guardrail 6 does not let vault content outlive the
+       vault it was read from. */
+    getTaskResults().clear();
     const previous = this.open;
     this.open = null;
     this.indexState = { docCount: 0, indexedAt: null, indexing: false };

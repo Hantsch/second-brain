@@ -222,6 +222,9 @@ describe('work queue IPC (071, D3)', () => {
         'queuedAt',
         'startedAt',
         'finishedAt',
+        /* 073: a boolean saying a result exists elsewhere — never the result
+           itself, which is exactly what keeps this list leak-free. */
+        'hasResult',
       ].sort(),
     );
     expect(Object.keys(task.subject).sort()).toEqual(['label', 'ref'].sort());

@@ -16,6 +16,7 @@
    result, never color alone. */
 
 import type { UseMutationResult } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import type { WorkTask, WorkTaskKind, WorkTaskState } from '@shared/types';
 import { Badge } from '../../atoms/Badge';
 import { Button } from '../../atoms/Button';
@@ -23,6 +24,7 @@ import { Icon } from '../../atoms/Icon';
 import { ErrorState } from '../../components/ErrorState';
 import { useT } from '../../i18n';
 import { formatDuration } from '../../lib/format';
+import { taskResultRoute } from '../../lib/task-result-route';
 import { formatElapsed } from '../../lib/useElapsed';
 import { isMaintenanceTaskRow, taskDuration, taskQueuePosition } from '../../lib/tasks-view';
 
@@ -77,6 +79,7 @@ function elapsedOf(task: WorkTask): string {
 
 export function TaskRow({ task, cancel, remove, retry }: TaskRowProps) {
   const t = useT();
+  const navigate = useNavigate();
   const kindLabel = t(KIND_LABEL_KEY[task.kind]);
 
   if (task.state === 'running') {
@@ -158,6 +161,10 @@ export function TaskRow({ task, cancel, remove, retry }: TaskRowProps) {
   const outcome: Outcome = task.state;
   const duration = taskDuration(task);
   const retryBusy = retry.isPending && retry.variables === task.id;
+  /* Only a `done` task can carry a result (`WorkTask.hasResult`), and only
+     `condense`/`close-day` currently resolve to a route — gardener/ingest are
+     074's concern (see `task-result-route.ts`). */
+  const resultRoute = outcome === 'done' ? taskResultRoute(task) : null;
   return (
     <div className="sb-trow">
       <div className="sb-trow-head">
@@ -171,17 +178,24 @@ export function TaskRow({ task, cancel, remove, retry }: TaskRowProps) {
           <span className="sb-mono sb-trow-duration">{formatDuration(duration)}</span>
         ) : null}
       </div>
-      {outcome === 'failed' ? (
+      {outcome === 'failed' || resultRoute !== null ? (
         <div className="sb-trow-actions">
-          <Button
-            variant="ghost"
-            size="sm"
-            icon="refresh-cw"
-            loading={retryBusy}
-            onClick={() => retry.mutate(task.id)}
-          >
-            {t('tasks.action.retry')}
-          </Button>
+          {outcome === 'failed' ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              icon="refresh-cw"
+              loading={retryBusy}
+              onClick={() => retry.mutate(task.id)}
+            >
+              {t('tasks.action.retry')}
+            </Button>
+          ) : null}
+          {resultRoute !== null ? (
+            <Button variant="ghost" size="sm" icon="eye" onClick={() => void navigate(resultRoute)}>
+              {t('tasks.action.viewResult')}
+            </Button>
+          ) : null}
         </div>
       ) : null}
       {retry.error !== null && retry.variables === task.id ? (

@@ -27,7 +27,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { IpcChannel, IpcEvents, IpcRequest, IpcResponse } from '@shared/ipc';
-import type { GardenerFinding } from '@shared/types';
+import type { GardenerFinding, JournalCloseSuggestion } from '@shared/types';
 import { createFetchFake, sseChunks, sseResponse } from '../fakes/llm';
 import type { FetchResponder } from '../fakes/llm';
 import { createTempVault } from '../helpers/vault';
@@ -76,12 +76,18 @@ async function createHarness(userDataDir: string) {
   const { forgetSessions } = await import('../../src/main/ipc/overview-deps');
   const { cancelGardenerRun } = await import('../../src/main/gardener-run-state');
   const { buildHandlers } = await import('../../src/main/ipc/register-all');
+  const { getWorkQueue, resetWorkQueue } = await import('../../src/main/work-queue');
+  const { resetTaskResults } = await import('../../src/main/task-results');
 
   /* Zustand aus einem früheren Test darf nicht überleben. */
   forgetSessions();
   forgetOverviewState();
   forgetGardenerState();
   cancelGardenerRun();
+  /* 073, D4: `journal:close` queues its work now — a fresh queue and result
+     store per test, or one test's task would still be there for the next. */
+  resetWorkQueue();
+  resetTaskResults();
 
   const settings = await SettingsService.load(userDataDir);
   const keys = await createKeyStore(userDataDir);
@@ -105,7 +111,7 @@ async function createHarness(userDataDir: string) {
     return (handler as (payload: IpcRequest<K>) => Promise<IpcResponse<K>>)(request);
   };
 
-  return { services, settings, call, streams };
+  return { services, settings, call, streams, queue: getWorkQueue(services) };
 }
 
 type Harness = Awaited<ReturnType<typeof createHarness>>;
@@ -124,6 +130,26 @@ function findingOfKind(findings: readonly GardenerFinding[], kind: string): Gard
   const found = findings.find((finding) => finding.kind === kind);
   expect(found, `Befund der Art ${kind}`).toBeDefined();
   return found as GardenerFinding;
+}
+
+/**
+ * `journal:close` als abgewarteter Task (073, D4): queued, wartet, holt den
+ * Vorschlag über `tasks:result`. `null` bleibt `null` — genau die Antwort, die
+ * der synchrone Kanal vorher direkt gegeben hat (`closeDay`'s eigener
+ * "nichts zu schließen"-Fall).
+ */
+async function closeDay(harness: Harness, date: string): Promise<JournalCloseSuggestion | null> {
+  const task = await harness.call('journal:close', { date });
+  if (task === null) return null;
+  await vi.waitFor(() => {
+    const found = harness.queue.list().find((entry) => entry.id === task.id);
+    if (found === undefined || found.state === 'queued' || found.state === 'running') {
+      throw new Error(`Task ${task.id} läuft noch`);
+    }
+    return found;
+  });
+  const result = await harness.call('tasks:result', { id: task.id });
+  return result?.kind === 'journal-close' ? result.suggestion : null;
 }
 
 describe('Welle E von einer Naht zur nächsten', () => {
@@ -262,7 +288,7 @@ describe('Welle E von einer Naht zur nächsten', () => {
 
     // ── Tagesabschluss: schlägt vor, schreibt nicht ──────────────────────────
     const untouched = (await vault.read(DAY_PATH)) ?? '';
-    const suggestion = await harness.call('journal:close', { date: DATE });
+    const suggestion = await closeDay(harness, DATE);
     expect(suggestion).not.toBeNull();
     /* Ohne Route für `extract-tasks` läuft der Abschluss deterministisch — und
        sagt es, statt eine Deutung zu behaupten. */
@@ -396,7 +422,7 @@ describe('Welle E von einer Naht zur nächsten', () => {
     expect(view?.turns).toEqual([]);
 
     /* Der Tagesabschluss läuft trotzdem und sagt, dass er ohne Modell entstand. */
-    const suggestion = await harness.call('journal:close', { date: DATE });
+    const suggestion = await closeDay(harness, DATE);
     expect(suggestion?.heuristic).toBe(true);
     expect(suggestion?.proposal.todos.length).toBeGreaterThan(0);
 

@@ -27,11 +27,11 @@ import type {
   IpcEvents,
   IpcRequest,
   IpcResponse,
-  JournalCloseSuggestion,
   JournalDayView,
   JournalInterviewPlan,
 } from '@shared/ipc';
 import type {
+  JournalCloseSuggestion,
   JournalDay,
   Project,
   ProviderConfig,
@@ -39,6 +39,7 @@ import type {
   SettingsSnapshot,
   TaskDefinition,
   VaultDoc,
+  WorkTask,
 } from '@shared/types';
 import { JournalScreen } from '@renderer/screens/journal/JournalScreen';
 import type { SbBridge } from '@renderer/lib/bridge';
@@ -47,6 +48,7 @@ import { wireEvents } from '@renderer/lib/events';
 import { clearStream } from '@renderer/lib/llm-stream';
 import { setOpenOnly } from '@renderer/lib/journal-filter';
 import { setLanguage } from '@renderer/i18n';
+import { getWorkTasks, resetWorkTasksStoreForTests, setWorkTasks } from '@renderer/lib/tasks-store';
 
 /* Die IPC-Attrappe steht hier und nicht in `tests/setup.ts`: die Renderer-Tests
    liegen in einer eigenen tsconfig, die den gemeinsamen Aufbau nicht kennt. */
@@ -254,6 +256,54 @@ const suggestion: JournalCloseSuggestion = {
   heuristic: true,
 };
 
+/* Since 073, D4 `journal:close` queues a task instead of answering with the
+   suggestion directly (mirrors `condense:run`, D3); since D6 the screen reads
+   that task back from the shared work queue (`useTaskForSubject`) instead of
+   awaiting it inside the mutation, exactly like `CondensedUnitPanel` reads a
+   condensation (D5). `closeTask` stands in for the task, and `closesTo` wires
+   the channels one close-out now takes (`journal:close`, `work:list`,
+   `tasks:result`) so every test below still describes one close-out and one
+   suggestion.
+
+   `work:list` feeds off the live queue store (`setWorkTasks`/`getWorkTasks`)
+   rather than answering a fixed task unconditionally from the very first
+   render — a static answer would mean the store already reports a *finished*
+   close-day task before any test ever clicks "Tag abschließen", which since
+   D6 would seed a proposal on mount and hide the trigger every test here
+   clicks. `journal:close`'s own handler is what puts the task on the queue,
+   the same moment the real main process's `event:work-tasks` would — see
+   `condense-area.test.tsx`'s `runsTo` for the identical reasoning. */
+function closeTask(id: string): WorkTask {
+  return {
+    id,
+    kind: 'close-day',
+    lane: 'free',
+    subject: { label: TODAY, ref: TODAY },
+    state: 'done',
+    progress: 1,
+    message: null,
+    error: null,
+    queuePosition: null,
+    queuedAt: '2026-08-10T09:00:00.000Z',
+    startedAt: '2026-08-10T09:00:00.000Z',
+    finishedAt: '2026-08-10T09:00:01.000Z',
+    hasResult: true,
+  };
+}
+
+function closesTo(result: JournalCloseSuggestion | null, id = 'close-task'): Handlers {
+  if (result === null) return { 'journal:close': () => null };
+  const task = closeTask(id);
+  return {
+    'journal:close': () => {
+      setWorkTasks([...getWorkTasks(), task]);
+      return task;
+    },
+    'work:list': () => getWorkTasks(),
+    'tasks:result': () => ({ kind: 'journal-close', suggestion: result }),
+  };
+}
+
 /* 012, D6: a minimal plan so opening the interview overlay from the day's own
    button doesn't hit an unhandled channel — none of these tests answer a
    question, they only check that the entry point opens/closes correctly. */
@@ -387,7 +437,7 @@ function renderJournal(extra: Handlers = {}): Rendered {
     'journal:setClosed': ({ closed }) => day({ closed: closed ? NOW.toISOString() : null }),
     'journal:setDay': () => ({ path: DAY_PATH, hash: 'hash-2', created: false }),
     'journal:append': () => ({ path: DAY_PATH, hash: 'hash-2', created: true }),
-    'journal:close': () => suggestion,
+    ...closesTo(suggestion),
     'journal:applyClose': () => ({
       written: [DAY_PATH, project.path],
       undo: [{ path: DAY_PATH, body: doc().body, expectedHash: 'hash-3' }],
@@ -418,6 +468,10 @@ beforeEach(() => {
   /* Der Filter (009, D5) lebt modulweit und überlebt deshalb einen Test —
      ohne Rücksetzen würde ein Test den nächsten filtern. */
   setOpenOnly(false);
+  /* The work queue (073, D6) is a module singleton too — without resetting it,
+     a close-day task one test put on it would still be there for the next
+     (`condense-area.test.tsx` resets it for the same reason). */
+  resetWorkTasksStoreForTests();
   vi.useFakeTimers({ shouldAdvanceTime: true, now: NOW });
   /* jsdom kennt `scrollIntoView` nicht. Ohne Attrappe stirbt `ErrorState` an
      der Stelle, an der sie sich in den Sichtbereich holt (009, D6 ist der
@@ -1568,7 +1622,22 @@ describe('Tagebuch: Tagesabschluss', () => {
     };
     let calls = 0;
     const { sb, panel } = await openClose({
-      'journal:close': () => (calls++ === 0 ? suggestion : rerun),
+      /* Each call puts its own task on the live queue as it happens — the
+         same reason `closesTo` above does, rather than answering `work:list`
+         with both tasks unconditionally from the very first render, which
+         would seed the rerun's result before "Erneut ausführen" was ever
+         clicked. */
+      'journal:close': () => {
+        const task = closeTask(calls === 0 ? 'close-task-1' : 'close-task-2');
+        calls += 1;
+        setWorkTasks([...getWorkTasks(), task]);
+        return task;
+      },
+      'work:list': () => getWorkTasks(),
+      'tasks:result': ({ id }) => ({
+        kind: 'journal-close',
+        suggestion: id === 'close-task-1' ? suggestion : rerun,
+      }),
     });
 
     await userEvent.click(within(panel).getByRole('button', { name: 'Erneut ausführen' }));
@@ -1585,13 +1654,13 @@ describe('Tagebuch: Tagesabschluss', () => {
   });
 
   it('sagt vorher, wenn nichts zu holen ist — aber der Knopf bleibt aktiv, weil Übernehmen den Tag trotzdem abschließt (049, D3)', async () => {
-    const { sb, panel } = await openClose({
-      'journal:close': () => ({
+    const { sb, panel } = await openClose(
+      closesTo({
         ...suggestion,
         proposal: { ...suggestion.proposal, todos: [], waitingOn: [] },
         frontmatter: { people: [], projects: [], areas: [], mood: null, energy: null, tags: [] },
       }),
-    });
+    );
 
     expect(panel.textContent).toContain('Im Tagestext war nichts zu holen');
     /* Das war der Sackgassen-Fall: ein leerer Fund durfte den Knopf früher

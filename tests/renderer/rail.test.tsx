@@ -143,6 +143,7 @@ describe('Rail', () => {
           queuedAt: '2026-08-10T09:00:00.000Z',
           startedAt: '2026-08-10T09:00:00.000Z',
           finishedAt: null,
+          hasResult: false,
         },
         {
           id: 'b',
@@ -157,6 +158,7 @@ describe('Rail', () => {
           queuedAt: '2026-08-10T09:00:00.000Z',
           startedAt: null,
           finishedAt: null,
+          hasResult: false,
         },
       ],
     });

@@ -13,14 +13,15 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { IpcChannel, IpcError, IpcRequest, IpcResponse } from '@shared/ipc';
-import type { CondenseProposal } from '@shared/types';
+import type { CondenseProposal, WorkTask } from '@shared/types';
 import { ProjectKnowledgeTab } from '@renderer/screens/projects/ProjectKnowledgeTab';
 import { AreaCondensedTab } from '@renderer/screens/notes/AreaCondensedTab';
 import { ToastHost } from '@renderer/components/ToastHost';
 import type { SbBridge } from '@renderer/lib/bridge';
 import { setLanguage } from '@renderer/i18n';
+import { getWorkTasks, resetWorkTasksStoreForTests, setWorkTasks } from '@renderer/lib/tasks-store';
 import { clearToasts } from '@renderer/lib/toast';
 
 function ipcError(code: IpcError['code']): Error {
@@ -57,6 +58,51 @@ const ARTIFACT = {
   condensedAt: '2026-08-10T09:00:00+02:00',
   sources: ['projects/work/kundenportal-relaunch/project.md'],
 };
+
+/* Since 073 a run is a queued task, and since D5 the panel reads its whole
+   state back from the work queue (`condense-area.test.tsx` carries the same
+   fixture and the longer note on why). The `subject.ref` is what ties a task
+   to one unit — `<unit>:<slug>`, exactly as `condense:run` writes it. */
+const RUN_TASK: WorkTask = {
+  id: 'condense-task',
+  kind: 'condense',
+  lane: 'model',
+  subject: { label: 'Verdichtung', ref: `project:${PROJECT.slug}` },
+  state: 'done',
+  progress: 1,
+  message: null,
+  error: null,
+  queuePosition: null,
+  queuedAt: '2026-08-10T09:00:00.000Z',
+  startedAt: '2026-08-10T09:00:00.000Z',
+  finishedAt: '2026-08-10T09:00:01.000Z',
+  hasResult: true,
+};
+
+/** Feeds the live queue store the way `main.tsx` does for a real
+    `event:work-tasks` — a test standing in for the main process. */
+let runCount = 0;
+
+function queueTask(task: WorkTask): void {
+  setWorkTasks([...getWorkTasks(), task]);
+}
+
+/** The channels one run now takes, as one spread. */
+function runsTo(proposal: CondenseProposal, task: WorkTask = RUN_TASK): Handlers {
+  return {
+    'condense:run': () => {
+      /* Every run is its own task with its own id, exactly as the real queue
+         mints them — a re-run must not read the previous run's result back
+         out of the cache entry keyed by that id. */
+      runCount += 1;
+      const queued: WorkTask = { ...task, id: `${task.id}-${runCount}` };
+      queueTask(queued);
+      return queued;
+    },
+    'work:list': () => getWorkTasks(),
+    'tasks:result': () => ({ kind: 'condense', proposal }),
+  };
+}
 
 const NOT_ROUTED: Handlers = {
   'llm:routing': () => ({ tasks: {}, defaults: {} }),
@@ -95,6 +141,12 @@ function renderTab(extra: Handlers): { sb: Mock; container: HTMLElement } {
   );
   return { sb, container };
 }
+
+/* The queue store is a module singleton — see `condense-area.test.tsx`. */
+beforeEach(() => {
+  resetWorkTasksStoreForTests();
+  runCount = 0;
+});
 
 afterEach(() => {
   delete window.sb;
@@ -143,7 +195,7 @@ describe('Wissen-Tab eines Projekts (Story 045, D4)', () => {
     };
     const { sb } = renderTab({
       ...ROUTED,
-      'condense:run': () => proposal,
+      ...runsTo(proposal),
       'condense:accept': () => ({ path: ARTIFACT.path, hash: 'hash-after', undoToken: null }),
     });
 
@@ -174,7 +226,7 @@ describe('Wissen-Tab eines Projekts (Story 045, D4)', () => {
       after: 'Neue Zeile.',
       sources: [],
     };
-    renderTab({ ...ROUTED, 'condense:run': () => proposal });
+    renderTab({ ...ROUTED, ...runsTo(proposal) });
 
     await userEvent.click(await screen.findByRole('button', { name: 'Dieses Projekt verdichten' }));
     await screen.findByRole('button', { name: 'Übernehmen' });
@@ -206,7 +258,7 @@ describe('Wissen-Tab eines Projekts (Story 045, D4)', () => {
     };
     const { sb } = renderTab({
       ...ROUTED,
-      'condense:run': () => proposal,
+      ...runsTo(proposal),
       'condense:reject': () => ({ path: ARTIFACT.path }),
     });
 
@@ -317,7 +369,7 @@ describe('Wissen-Tab eines Projekts (Story 045, D4)', () => {
     renderTab({
       ...ROUTED,
       'condense:read': () => ARTIFACT,
-      'condense:run': () => proposal,
+      ...runsTo(proposal),
       'condense:accept': () => {
         throw ipcError('conflict');
       },

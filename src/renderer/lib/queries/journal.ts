@@ -18,13 +18,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { QueryClient, UseMutationResult, UseQueryResult } from '@tanstack/react-query';
 import type {
   IpcRequest,
-  JournalCloseSuggestion,
   JournalDayView,
   JournalInterviewPlan,
   JournalInterviewStep,
   WriteRequest,
 } from '@shared/ipc';
-import type { CoachMode, JournalDay, JournalSettings, WriteResult } from '@shared/types';
+import type { CoachMode, JournalDay, JournalSettings, WorkTask, WriteResult } from '@shared/types';
 import { api } from '../api';
 import { qk } from './keys';
 import { useVaultReady } from './data';
@@ -96,12 +95,25 @@ export interface JournalMutations {
     IpcRequest<'journal:coach'>
   >;
   abort: UseMutationResult<void, unknown, string>;
-  close: UseMutationResult<JournalCloseSuggestion | null, unknown, string>;
+  /** Queues the close-out and answers with its task, or `null` when there was
+      nothing to close (073, D6 — mirrors `condense:run`, D3). Fire-and-forget:
+      waiting for the task to settle and reading back the suggestion it stored
+      is `useTaskForSubject`'s job (`../hooks/use-task-for-subject`), not this
+      mutation's — that is what lets a screen read the run's outcome even
+      after navigating away and back, instead of losing it with the component
+      that triggered it. */
+  close: UseMutationResult<WorkTask | null, unknown, string>;
   applyClose: UseMutationResult<
     { written: string[]; undo: WriteRequest[] },
     unknown,
     IpcRequest<'journal:applyClose'>
   >;
+  /** Discards a stored close-out suggestion (073 review finding 2) — marks it
+      in main the same way `applyClose`'s success already does, so a discard
+      survives a remount instead of only clearing the renderer's own buffer
+      (`lib/close-proposal.ts`). No `onSuccess` refresh: nothing about the
+      day's own view changes. */
+  discardClose: UseMutationResult<void, unknown, string>;
   /** Run the undo path of a day close — exactly the write requests from there. */
   undo: UseMutationResult<void, unknown, readonly WriteRequest[]>;
   /** One-time migration (011, D9): folds a legacy `## Conversation` into the
@@ -128,8 +140,13 @@ export function useJournalMutations(date: string): JournalMutations {
     setClosed: useMutation({ mutationFn: api.journal.setClosed, onSuccess: done }),
     coach: useMutation({ mutationFn: api.journal.coach }),
     abort: useMutation({ mutationFn: api.journal.abort }),
-    close: useMutation({ mutationFn: api.journal.close }),
+    /* Fire-and-forget (073, D6): this hook's job ends the moment the queue has
+       accepted the run (or answered `null` — nothing to close). Waiting for
+       it, reading back the suggestion and surviving a navigation are all
+       `useTaskForSubject`'s. */
+    close: useMutation({ mutationFn: (date: string) => api.journal.close(date) }),
     applyClose: useMutation({ mutationFn: api.journal.applyClose, onSuccess: done }),
+    discardClose: useMutation({ mutationFn: api.journal.discardClose }),
     undo: useMutation({
       mutationFn: async (plan: readonly WriteRequest[]) => {
         /* In order: the write requests arrive in the order they must be run, and

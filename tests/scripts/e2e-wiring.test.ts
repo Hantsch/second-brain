@@ -91,11 +91,22 @@ describe('the e2e fixture configures no provider and passes no key env', () => {
     ).toMatch(/withoutKeyEnv:\s*true/);
   });
 
-  it('passes no llm/provider configuration to prepareUserData or launchApp', () => {
+  /* Until 073, D1 this checked that the fixture referenced no "provider"/"providers" key at
+     all. D1 added an opt-in `fakeProvider` worker option (`undefined` by default, touching
+     nothing) whose `pinFakeProvider` writes exactly one `kind: 'fake'` provider into the
+     throwaway vault's settings — `FakeProvider` makes no network call (see
+     `src/core/llm/providers/fake.ts`), so this legitimately needs a `providers:`/`provider:`
+     reference in the fixture source. The check below is narrowed to what it actually protects
+     against: a *real*, network-reaching provider kind (`anthropic`/`openai-compatible`) ever
+     being wired into the fixture — not the mere presence of the word "provider". The runtime
+     half (no captured network request) still proves the practical guarantee for every spec
+     regardless, via the `noNetworkCalls` auto fixture below. */
+  it('the only provider kind the fixture can configure is the fake one', () => {
+    const kinds = [...fixtureSource.matchAll(/kind:\s*['"]([^'"]+)['"]/g)].map((match) => match[1]);
     expect(
-      fixtureSource,
-      'tests/e2e/fixtures/app.ts must not configure a provider (no "provider"/"providers" key)',
-    ).not.toMatch(/\bproviders?\s*:/);
+      kinds.filter((kind) => kind !== 'fake'),
+      `tests/e2e/fixtures/app.ts must never reference a real provider kind, found: ${kinds.join(', ')}`,
+    ).toEqual([]);
   });
 
   /* The static checks above only prove the fixture never *configures* a

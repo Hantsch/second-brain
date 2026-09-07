@@ -28,4 +28,5 @@ export const enTasks = {
   'tasks.action.stop': 'Stop',
   'tasks.action.remove': 'Remove',
   'tasks.action.retry': 'Retry',
+  'tasks.action.viewResult': 'View result',
 } as const;

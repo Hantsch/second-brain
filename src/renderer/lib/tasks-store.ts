@@ -89,23 +89,30 @@ function seed(): void {
     });
 }
 
-function subscribe(notify: () => void): () => void {
+/** Listen for changes to the queue; returns the unsubscribe. The first
+    subscriber back also triggers the seed — see the header. Exported for
+    callers outside React's render cycle (waiting for one task to finish),
+    which is why it is a plain function and not only `useSyncExternalStore`'s
+    argument. */
+export function subscribeWorkTasks(notify: () => void): () => void {
   if (subscribers.size === 0) seed();
   subscribers.add(notify);
-  return () => subscribers.delete(notify);
+  return () => {
+    subscribers.delete(notify);
+  };
 }
 
 /** The work queue, live. A screen mounting mid-run reads the current answer
     synchronously on its first render — no event has to arrive first. */
 export function useWorkTasks(): WorkTask[] {
-  return useSyncExternalStore(subscribe, getWorkTasks, getWorkTasks);
+  return useSyncExternalStore(subscribeWorkTasks, getWorkTasks, getWorkTasks);
 }
 
 /** Has the queue answered at least once? Gates the tasks screen's empty
     state (AC7) — see `loaded` above for why `tasks.length === 0` alone
     cannot tell that apart from "not asked yet". */
 export function useWorkTasksLoaded(): boolean {
-  return useSyncExternalStore(subscribe, getWorkTasksLoaded, getWorkTasksLoaded);
+  return useSyncExternalStore(subscribeWorkTasks, getWorkTasksLoaded, getWorkTasksLoaded);
 }
 
 /**

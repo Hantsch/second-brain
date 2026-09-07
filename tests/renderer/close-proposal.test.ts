@@ -7,7 +7,7 @@
 
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { JournalCloseSuggestion } from '@shared/ipc';
+import type { JournalCloseSuggestion } from '@shared/types';
 import { clear, emptySuggestion, patch, set, useCloseProposal } from '@renderer/lib/close-proposal';
 
 function suggestion(date: string, reason = 'reason'): JournalCloseSuggestion {

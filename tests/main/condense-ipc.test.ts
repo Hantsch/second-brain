@@ -18,7 +18,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { condensationDueCheck, GERMAN_GARDENER_LABELS, limits } from '@core/gardener';
 import type { GardenerContext } from '@core/gardener';
 import type { IpcChannel, IpcRequest, IpcResponse } from '@shared/ipc';
-import type { CondenseProposal } from '@shared/types';
+import type { CondenseProposal, CondenseUnit } from '@shared/types';
 import { gardenerIndex } from '../../src/main/ipc/gardener-deps';
 import { CLAUDE_PROJECTS_DIR, WORK_PROJECT } from '../fixtures';
 import { createFetchFake, jsonResponse } from '../fakes/llm';
@@ -55,6 +55,18 @@ async function createHarness(userDataDir: string) {
   const { createServices } = await import('../../src/main/services');
   const { SettingsService } = await import('../../src/main/settings');
   const { condenseHandlers } = await import('../../src/main/ipc/condense');
+  /* Since 073, D3 `condense:run` only queues its work — so the proposal comes
+     back through `tasks:result`, and this suite needs that channel alongside
+     the five condense ones to assert on a run at all. */
+  const { tasksHandlers } = await import('../../src/main/ipc/tasks');
+  const { getWorkQueue, resetWorkQueue } = await import('../../src/main/work-queue');
+  const { resetTaskResults } = await import('../../src/main/task-results');
+
+  /* Both are process-wide singletons: without this, one test's queue and its
+     stored proposals would still be there for the next one — and the registry
+     would keep emitting into the previous test's `Services`. */
+  resetWorkQueue();
+  resetTaskResults();
 
   const settings = await SettingsService.load(userDataDir);
   const keys = await createKeyStore(userDataDir);
@@ -62,7 +74,8 @@ async function createHarness(userDataDir: string) {
   services.attachVaultStore((root) => new FsVaultStore(root));
   services.attachIndex((root) => IndexService.open(new FsVaultStore(root)));
 
-  const handlers: Handlers = { ...condenseHandlers(services) };
+  const queue = getWorkQueue(services);
+  const handlers: Handlers = { ...condenseHandlers(services), ...tasksHandlers(services) };
   const events = vi.spyOn(services, 'sendEvent');
   const call = async <K extends IpcChannel>(
     channel: K,
@@ -73,10 +86,39 @@ async function createHarness(userDataDir: string) {
     return (handler as (payload: IpcRequest<K>) => Promise<IpcResponse<K>>)(request);
   };
 
-  return { services, call, events };
+  return { services, call, events, queue };
 }
 
 type Harness = Awaited<ReturnType<typeof createHarness>>;
+
+/**
+ * A full run, from the outside: queue it, wait for the task to settle, and
+ * fetch the proposal it stored. What `condense:run` used to answer with
+ * directly (073, D3) — so the assertions below still speak about a proposal
+ * and stay comparable to what they pinned down before.
+ */
+async function runProposal(
+  harness: Harness,
+  unit: CondenseUnit,
+  slug: string,
+): Promise<CondenseProposal> {
+  const queued = await harness.call('condense:run', { unit, slug });
+  expect(queued.kind).toBe('condense');
+  const finished = await vi.waitFor(() => {
+    const task = harness.queue.list().find((entry) => entry.id === queued.id);
+    if (task === undefined || task.state === 'queued' || task.state === 'running') {
+      throw new Error(`Task ${queued.id} läuft noch`);
+    }
+    return task;
+  });
+  /* A failed run must not be read as "no proposal yet" — the message the task
+     carries is the run's own reason and belongs in the test output. */
+  expect(`${finished.state}: ${finished.message ?? ''}`).toBe('done: ');
+  expect(finished.hasResult).toBe(true);
+  const result = await harness.call('tasks:result', { id: queued.id });
+  if (result === null || result.kind !== 'condense') throw new Error('kein Verdichtungsergebnis');
+  return result.proposal;
+}
 
 /** The findings `condensationDueCheck` (story 039) reports over this vault's real
     index — the same check the maintenance run wires up, but called directly here
@@ -197,6 +239,9 @@ describe('condense channels in main', () => {
       detail: { task: 'condense-area' },
     });
     expect(await vault.exists(CONDENSED_PATH)).toBe(false);
+    /* 073, AC7: the dead end stays a dead end — the refusal happens before
+       anything is queued, so there is no task that could only ever fail. */
+    expect(harness.queue.list()).toEqual([]);
   });
 
   // ── Accepting ──────────────────────────────────────────────────────────────
@@ -476,7 +521,7 @@ describe('condense channels in main', () => {
       open: { text: 'Themen bleiben aktuell.', sources: [AREA_PATH] },
     });
 
-    const proposal = await harness.call('condense:run', { unit: 'area', slug: 'gesundheit' });
+    const proposal = await runProposal(harness, 'area', 'gesundheit');
 
     expect(proposal.after).not.toContain('Der Ton trifft es nicht.');
     const directivesBody = proposal.after.split(/## (?:Direktiven|Directives)/)[1]?.trim() ?? '';
@@ -598,7 +643,7 @@ describe('condense channels in main', () => {
   it('runs a project and proposes an artifact inside that project’s own folder', async () => {
     const fake = await routeCondenseTo(harness, 'condense-project', projectSections());
 
-    const proposal = await harness.call('condense:run', { unit: 'project', slug: PROJECT_SLUG });
+    const proposal = await runProposal(harness, 'project', PROJECT_SLUG);
 
     expect(proposal.unit).toBe('project');
     expect(proposal.slug).toBe(PROJECT_SLUG);
@@ -624,6 +669,7 @@ describe('condense channels in main', () => {
     ).rejects.toMatchObject({ code: 'llm-unavailable', detail: { task: 'condense-project' } });
 
     expect(await vault.exists(PROJECT_CONDENSED)).toBe(false);
+    expect(harness.queue.list()).toEqual([]);
   });
 
   it('accepts a project proposal over an existing artifact and leaves an undo copy', async () => {

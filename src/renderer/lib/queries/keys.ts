@@ -105,7 +105,15 @@ export const qk = {
   /* The work queue itself has no query key: `useWorkTasks` (`tasks-store.ts`)
      reads a module store fed live by `event:work-tasks`, the same "not the
      query cache" choice `gardener-progress.ts` makes for progress, and for
-     the same reason (071/072). Nothing here needs invalidating. */
+     the same reason (071/072). Nothing here needs invalidating.
+
+     A finished task's *result* is the one half that does belong here (073,
+     D5): `tasks:result` is a real round-trip per task id, worth caching and
+     worth clearing once the user has decided about it — unlike the live
+     queue, which no one ever asks for by key. */
+  tasks: {
+    result: (id: string) => ['tasks', 'result', id] as const,
+  },
   claude: {
     sessions: () => ['claude', 'sessions'] as const,
   },

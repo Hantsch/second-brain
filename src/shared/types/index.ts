@@ -9,3 +9,5 @@ export * from './overview';
 export * from './llm';
 export * from './settings';
 export * from './work';
+export * from './journal';
+export * from './tasks';

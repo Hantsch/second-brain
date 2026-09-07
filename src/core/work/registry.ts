@@ -34,8 +34,27 @@ import type { WorkLane, WorkTask } from '@shared/types';
 
 export type { EnqueueTaskInput };
 
-/** The runner a task executes; receives the signal that fires on cancellation. */
-export type WorkRunner = (signal: AbortSignal) => Promise<void>;
+/**
+ * What a runner may report back when it finishes (story 073). Only one thing so
+ * far: that it stored a result somewhere the task record does not carry — the
+ * payload itself stays out of `WorkTask` (`src/core/tasks/results.ts` holds it),
+ * so listing the queue never has to serialize a whole proposal.
+ */
+export interface WorkRunOutcome {
+  hasResult?: boolean;
+}
+
+/** The runner a task executes; receives the signal that fires on cancellation,
+    and the id of THIS entry's own task (073 review finding 1) — a retry reuses
+    the original task's `run` closure for a brand-new `Entry` with its own id
+    (see `retry()` below), so a runner that keyed its stored result off an
+    outer variable captured once, at the first `enqueue()`, would still write
+    under the failed run's id on a retry. Reading the id from the parameter
+    instead is correct for both a fresh enqueue and a retry, since it always
+    names the entry the runner is actually running for.
+    Resolving with nothing is the normal case — a runner that produced a result
+    says so by resolving `{ hasResult: true }`. */
+export type WorkRunner = (signal: AbortSignal, taskId: string) => Promise<WorkRunOutcome | void>;
 
 /** Capacity per lane — a flat map, or a function for callers that compute it. */
 export type WorkLaneCapacity = Partial<Record<WorkLane, number>> | ((lane: WorkLane) => number);
@@ -218,8 +237,8 @@ export class WorkRegistry {
     this.emit();
 
     try {
-      await entry.run(controller.signal);
-      this.settle(entry, null);
+      const outcome = await entry.run(controller.signal, entry.task.id);
+      this.settle(entry, null, outcome ?? undefined);
     } catch (error) {
       this.settle(entry, error);
     } finally {
@@ -248,10 +267,20 @@ export class WorkRegistry {
    * a real failure, or the abort a cancel triggered. The third case, a task
    * `cancel()` already ended, needs no branch here: `markFinished` refuses a
    * second transition, so the user's cancel wins over the runner's own outcome.
+   *
+   * `outcome` is what the runner resolved with, and only the success branch
+   * reads it: a task that failed or was cancelled has no result to point at,
+   * so `hasResult` stays `false` there — the value `createTask` starts from.
    */
-  private settle(entry: Entry, error: unknown): void {
+  private settle(entry: Entry, error: unknown, outcome?: WorkRunOutcome): void {
     if (error === null) {
-      this.markFinished(entry, { state: 'done', progress: 1, message: null, error: null });
+      this.markFinished(entry, {
+        state: 'done',
+        progress: 1,
+        message: null,
+        error: null,
+        hasResult: outcome?.hasResult ?? false,
+      });
     } else {
       const failure = describeFailure(error);
       this.markFinished(entry, {

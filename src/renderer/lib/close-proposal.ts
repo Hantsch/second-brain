@@ -10,8 +10,7 @@
  * close again is a fresh proposal, not a merge with what was ticked before. */
 
 import { useSyncExternalStore } from 'react';
-import type { JournalCloseSuggestion } from '@shared/ipc';
-import type { FilingAction } from '@shared/types';
+import type { FilingAction, JournalCloseSuggestion } from '@shared/types';
 
 /** Edit state, keyed by the todo's index in `suggestion.proposal.todos` plus
  * the waiting-on entries appended after them — the same order `CloseDialog`

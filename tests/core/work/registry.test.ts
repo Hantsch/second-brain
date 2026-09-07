@@ -189,7 +189,92 @@ describe('WorkRegistry', () => {
         'queuedAt',
         'startedAt',
         'finishedAt',
+        'hasResult',
       ].sort(),
     );
+  });
+
+  /* 073: a runner may report that it left a result behind somewhere the task
+     record does not carry (`core/tasks/results.ts`). Every runner written
+     before that says nothing, and must keep meaning "no result". */
+  it('carries hasResult only when the runner reported one', async () => {
+    const registry = new WorkRegistry();
+
+    const withResult = registry.enqueue(
+      { kind: 'condense', lane: 'free', subject: subject('with') },
+      async () => ({ hasResult: true }),
+    );
+    const withoutResult = registry.enqueue(
+      { kind: 'condense', lane: 'free', subject: subject('without') },
+      async () => {},
+    );
+
+    await vi.waitFor(() => {
+      const states = registry.list().map((entry) => entry.state);
+      expect(states).toEqual(['done', 'done']);
+    });
+    const listed = (id: string) => registry.list().find((entry) => entry.id === id);
+    expect(listed(withResult.id)?.hasResult).toBe(true);
+    expect(listed(withoutResult.id)?.hasResult).toBe(false);
+  });
+
+  /* 073 review finding 1: `retry()` reuses the original task's own `run`
+     closure for a brand-new `Entry` with a NEW id — so the closure must learn
+     which id it is running for from `start()`'s own call, not from a variable
+     captured once outside `enqueue()` (that variable would still hold the
+     first, now-failed task's id on a retry). This is the runner-level proof:
+     a runner that records every id it was called with must see a second,
+     DIFFERENT id on the retried run. */
+  it("hands a retried run its OWN new task id, not the failed run's", async () => {
+    const registry = new WorkRegistry();
+    const calledWith: string[] = [];
+    let shouldFail = true;
+
+    const first = registry.enqueue(
+      { kind: 'condense', lane: 'free', subject: subject('flaky') },
+      async (_signal, taskId) => {
+        calledWith.push(taskId);
+        if (shouldFail) throw new Error('erster Versuch schlägt fehl');
+        return { hasResult: true };
+      },
+    );
+
+    await vi.waitFor(() =>
+      expect(registry.list().find((entry) => entry.id === first.id)?.state).toBe('failed'),
+    );
+    expect(calledWith).toEqual([first.id]);
+
+    shouldFail = false;
+    const retried = registry.retry(first.id);
+    expect(retried).not.toBeNull();
+    if (retried === null) throw new Error('unreachable');
+    expect(retried.id).not.toBe(first.id);
+
+    await vi.waitFor(() =>
+      expect(registry.list().find((entry) => entry.id === retried.id)?.state).toBe('done'),
+    );
+
+    // The runner was called a second time with the RETRY's own id, never the
+    // failed run's — this is exactly what lets a caller key a stored result
+    // by the id the runner was actually invoked with.
+    expect(calledWith).toEqual([first.id, retried.id]);
+  });
+
+  it('a failed runner leaves hasResult false, whatever it was about to report', async () => {
+    const registry = new WorkRegistry();
+
+    const task = registry.enqueue(
+      { kind: 'condense', lane: 'free', subject: subject('boom') },
+      async () => {
+        throw new Error('kein Modell');
+      },
+    );
+
+    await vi.waitFor(() =>
+      expect(registry.list().find((entry) => entry.id === task.id)?.state).toBe('failed'),
+    );
+    const failed = registry.list().find((entry) => entry.id === task.id);
+    expect(failed?.hasResult).toBe(false);
+    expect(failed?.message).toBe('kein Modell');
   });
 });

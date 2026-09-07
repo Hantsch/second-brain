@@ -20,3 +20,21 @@
 - 2026-09-07 19:41 · 072 · review-fix cycle 1 (untranslated maintenance label, badge a11y, test-strength findings) · done
 - 2026-09-07 19:53 · 072 · review-fix cycle 2 (AC8 test gaps, AC9 test naming, quote style) · done
 - 2026-09-07 19:55 · 072 · done · moved to docs/requirements/done/
+- 2026-09-07 19:59 · 073 · D1 e2e can drive a deterministic offline model · started
+- 2026-09-07 20:05 · 073 · D1 e2e can drive a deterministic offline model · done
+- 2026-09-07 20:05 · 073 · D2 the result store · started
+- 2026-09-07 20:14 · 073 · D2 the result store · done
+- 2026-09-07 20:14 · 073 · D3 condensation becomes a task · started
+- 2026-09-07 20:36 · 073 · D3 condensation becomes a task · done
+- 2026-09-07 20:36 · 073 · D4 the day's close becomes a task · started
+- 2026-09-07 20:53 · 073 · D4 the day's close becomes a task · done
+- 2026-09-07 20:53 · 073 · D5 the condense panel reads the queue · started
+- 2026-09-07 21:23 · 073 · D5 the condense panel reads the queue · done
+- 2026-09-07 21:23 · 073 · fix e2e-wiring guard test regressed by D1's fake-provider seam · done
+- 2026-09-07 21:23 · 073 · D6 the journal close reads the queue · started
+- 2026-09-07 22:18 · 073 · D6 the journal close reads the queue · done
+- 2026-09-07 22:18 · 073 · D7 the way back · started
+- 2026-09-07 22:31 · 073 · D7 the way back · done
+- 2026-09-07 22:45 · 073 · review-fix cycle 1 (retry stale task id, mark-before-write ordering, journal discard/apply cache staleness) · started
+- 2026-09-07 23:03 · 073 · review-fix cycle 1 (retry stale task id, mark-before-write ordering, journal discard/apply cache staleness) · done
+- 2026-09-07 23:06 · 073 · done · moved to docs/requirements/done/

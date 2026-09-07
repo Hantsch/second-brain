@@ -58,6 +58,7 @@ function workTask(id: string, state: WorkTask['state'] = 'running'): WorkTask {
     state,
     progress: 0.5,
     message: null,
+    hasResult: false,
     error: null,
     queuePosition: state === 'queued' ? 1 : null,
     queuedAt: '2026-09-07T09:00:00.000Z',

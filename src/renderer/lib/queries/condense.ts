@@ -3,7 +3,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { UseMutationResult, UseQueryResult } from '@tanstack/react-query';
-import type { CondenseProposal, CondenseUnit } from '@shared/types';
+import type { CondenseProposal, CondenseUnit, WorkTask } from '@shared/types';
 import { api } from '../api';
 import { qk } from './keys';
 import { useVaultReady } from './data';
@@ -37,10 +37,18 @@ export interface RunCondenseArgs {
   slug: string;
 }
 
-/** Runs the condensation over a unit's deterministic inputs. The resulting
-    proposal is transient renderer state owned by the caller (`CondensedUnitPanel`)
-    — nothing is written yet, so no cache invalidation belongs here. */
-export function useCondenseRun(): UseMutationResult<CondenseProposal, unknown, RunCondenseArgs> {
+/** Queues a condensation run and answers with the task that will carry it
+    (073, D3/D5). Fire-and-forget by design: this hook's job ends the moment
+    the queue has accepted the run. Waiting for it, reading back the proposal
+    and surviving a navigation are all `useTaskForSubject`'s
+    (`../hooks/use-task-for-subject`), which derives them from the session-
+    lived work queue instead of from a mutation that dies with its component.
+
+    What is left here is exactly what cannot come from the queue: the *queueing
+    itself* failing — the dead end when no model is routed, for instance, which
+    `condense:run` throws before any task exists (AC7). That error belongs to
+    the click, not to a run, and the caller renders it as such. */
+export function useCondenseRun(): UseMutationResult<WorkTask, unknown, RunCondenseArgs> {
   return useMutation({
     mutationFn: ({ unit, slug }: RunCondenseArgs) => api.condense.run(unit, slug),
   });

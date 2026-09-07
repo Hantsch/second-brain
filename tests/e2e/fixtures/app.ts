@@ -59,6 +59,15 @@ function watchRequests(page: Page): void {
   });
 }
 
+/** The subset of `FakeProviderOptions` (`src/core/llm/providers/fake.ts`) an e2e spec can
+ * script through the `SB_E2E_FAKE_PROVIDER` seam (073, D1) — replies keyed by `TaskKind`,
+ * an artificial delay, or a blanket failure. */
+export interface FakeProviderScript {
+  replies?: Record<string, string>;
+  latencyMs?: number;
+  failEverything?: string;
+}
+
 export interface AppOptions {
   /** The spec file's base name, e.g. 'smoke' in smoke.spec.ts. */
   specId: string;
@@ -72,6 +81,12 @@ export interface AppOptions {
    * work queue (072, D5). `false` (the default) sets no env var, i.e. every spec but
    * the one that opts in sees the empty queue a real session starts with. */
   tasksFixture: boolean;
+  /** When set, wires up a deterministic, offline `fake` provider (073, D1): the script
+   * is written to a JSON file passed as `SB_E2E_FAKE_PROVIDER`, and the vault's settings
+   * get a `kind: 'fake'` provider plus routing that points every task tier at it. `undefined`
+   * (the default) touches neither the environment nor the vault — every spec that doesn't
+   * opt in keeps running with no model configured, exactly as before this seam existed. */
+  fakeProvider: FakeProviderScript | undefined;
 }
 
 export interface AppFixtures {
@@ -100,6 +115,53 @@ function pinUiLanguage(vault: string, language: 'de' | 'en'): string {
   return vault;
 }
 
+/** Id/model of the one provider `pinFakeProvider` writes — shared so callers that assert
+ * on the routed model don't have to guess the fixture's naming. */
+const FAKE_PROVIDER_ID = 'fake-e2e';
+const FAKE_PROVIDER_MODEL = 'fake-e2e-model';
+
+/**
+ * Writes a `kind: 'fake'` provider into the throwaway vault's settings, with every model
+ * tier routed to it — the same place/mechanism `pinUiLanguage` writes `languages` (merge,
+ * not replace, and the seeded settings.json is read back so `providers`/`routing` from
+ * `scripts/seed/internal.mjs` — `providers: []`, `routing: { tasks: {}, defaults: {} }` —
+ * are overwritten only for this one purpose). Every task kind resolves through
+ * `routing.defaults[tier]` (`RoutingGateway.resolve`, `src/core/llm/gateway.ts`) since
+ * `routing.tasks` stays empty, so this covers whatever task kind a spec exercises without
+ * this fixture having to enumerate `TaskKind` itself.
+ */
+function pinFakeProvider(vault: string): void {
+  const file = join(vault, '.secondbrain', 'settings.json');
+  const settings = JSON.parse(readFileSync(file, 'utf8')) as {
+    providers?: unknown[];
+    routing?: unknown;
+  };
+  const ref = { providerId: FAKE_PROVIDER_ID, model: FAKE_PROVIDER_MODEL };
+  settings.providers = [
+    {
+      id: FAKE_PROVIDER_ID,
+      label: 'Fake (e2e)',
+      kind: 'fake',
+      baseUrl: '',
+      hasKey: false,
+      local: true,
+      enabled: true,
+      models: [FAKE_PROVIDER_MODEL],
+      createdAt: new Date().toISOString(),
+    },
+  ];
+  settings.routing = { tasks: {}, defaults: { cheap: ref, balanced: ref, strong: ref } };
+  writeFileSync(file, `${JSON.stringify(settings, null, 2)}\n`, 'utf8');
+}
+
+/** Writes the fake-provider script to a JSON file in the fixture's temp dir and returns
+ * its path — the value the launched app's `env` passes on as `SB_E2E_FAKE_PROVIDER`. */
+function writeFakeProviderScript(tempRoot: string, script: FakeProviderScript): string {
+  const file = join(tempRoot, 'fake-provider.json');
+  writeFileSync(file, JSON.stringify(script), 'utf8');
+  return file;
+}
+
 export const test = base.extend<
   { specIdMatchesFile: void; noNetworkCalls: void },
   AppOptions & AppFixtures
@@ -109,6 +171,8 @@ export const test = base.extend<
   stageDelayMs: [0, { scope: 'worker', option: true }],
 
   tasksFixture: [false, { scope: 'worker', option: true }],
+
+  fakeProvider: [undefined, { scope: 'worker', option: true }],
 
   specIdMatchesFile: [
     async ({ specId }, use, testInfo) => {
@@ -151,7 +215,8 @@ export const test = base.extend<
   ],
 
   app: [
-    async ({ tempRoot, vaultPath, stageDelayMs, tasksFixture }, use) => {
+    async ({ tempRoot, vaultPath, stageDelayMs, tasksFixture, fakeProvider }, use) => {
+      if (fakeProvider) pinFakeProvider(vaultPath);
       const userDataDir = prepareUserData(join(tempRoot, 'userdata'), {
         vault: vaultPath,
         uiLanguage: 'en',
@@ -159,6 +224,9 @@ export const test = base.extend<
       const extraEnv: Record<string, string> = {
         ...(stageDelayMs > 0 ? { SB_E2E_STAGE_DELAY_MS: String(stageDelayMs) } : {}),
         ...(tasksFixture ? { SB_E2E_TASKS_FIXTURE: '1' } : {}),
+        ...(fakeProvider
+          ? { SB_E2E_FAKE_PROVIDER: writeFakeProviderScript(tempRoot, fakeProvider) }
+          : {}),
       };
       const session = await launchApp({
         userDataDir,

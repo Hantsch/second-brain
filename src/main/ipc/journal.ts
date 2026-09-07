@@ -30,6 +30,7 @@ import {
   closeDay,
   coach,
   dayOf,
+  dayText,
   ensureDay,
   interviewFollowup,
   journalTitle,
@@ -54,7 +55,13 @@ import type {
 import { toVaultDoc } from '@core/vault';
 import { isoDay } from '@core/vault/paths';
 import { COACH_MODES } from '@shared/types';
-import type { Citation, DocLanguage, JournalDay, JournalFrontmatter } from '@shared/types';
+import type {
+  Citation,
+  DocLanguage,
+  JournalDay,
+  JournalFrontmatter,
+  WorkLane,
+} from '@shared/types';
 import type { IpcRequest } from '@shared/ipc';
 import type { HandlerMap } from './registry';
 import { defineHandlers, fail } from './registry';
@@ -65,6 +72,8 @@ import type { StreamRun } from './llm-stream';
 import { requireLists } from './lists';
 import { docLanguage, replyLanguage, settle } from './wiki-bridge';
 import { createGateway } from '../llm-bridge';
+import { getTaskResults } from '../task-results';
+import { getWorkQueue } from '../work-queue';
 import type { IndexLike } from '../contracts';
 import { looseEndState } from '../loose-end-state';
 import type { Services } from '../services';
@@ -364,17 +373,60 @@ export function journalHandlers(services: Services): HandlerMap {
       streams.abort(messageId);
     },
 
-    'journal:close': ({ date }) =>
-      closeDay(
-        {
-          store: journalStore(services),
-          index: journalIndex(services),
-          gateway: createGateway(services),
-          docLanguage: docLanguage(services),
-          now: new Date(),
+    /*
+     * Day close-out (073, D4): queues the run instead of doing it inline —
+     * the same "run I walk away from" shape as `condense:run`. Two things
+     * that don't otherwise show up here:
+     *
+     * - **The "nothing to close" case stays exactly as it was.** It mirrors
+     *   `closeDay`'s own first two lines (`readDay`, then `dayText(...)`
+     *   being empty) so the answer is known *before* anything is enqueued —
+     *   a `null` result must not leave a queued task behind that could only
+     *   ever fail.
+     * - **The lane is decided once, up front.** `closeDay`'s heuristic-ness
+     *   is entirely gated by `gateway.isAvailable('extract-tasks')` (both
+     *   `extractTasks` and `dayFacts` check it), so this same check tells us
+     *   the lane without having to run the close first — unlike
+     *   `condense:run`, a heuristic close is still a useful result (071),
+     *   never a dead end, so nothing here throws `llm-unavailable`.
+     */
+    'journal:close': async ({ date }) => {
+      const store = journalStore(services);
+      const index = journalIndex(services);
+      const language = docLanguage(services);
+      const gateway = createGateway(services);
+
+      const found = await readDay(store, date);
+      if (found === null || dayText(found.doc.body).length === 0) return null;
+
+      const lane: WorkLane = gateway.isAvailable('extract-tasks') ? 'model' : 'free';
+      const ref = date;
+      const task = getWorkQueue(services).enqueue(
+        { kind: 'close-day', lane, subject: { label: date, ref } },
+        /* `taskId` is THIS run's own task id, handed in directly by
+           `WorkRegistry.start` (`core/work/registry.ts`) — not a variable
+           captured once after the first `enqueue()` returns. A retry reuses
+           this exact closure for a fresh task with a fresh id (`retry()`), so
+           only the parameter, never an outer `let`, names the task actually
+           running right now (073 review finding 1). Same pattern as
+           `condense:run`. */
+        async (_signal, taskId) => {
+          const suggestion = await closeDay(
+            { store, index, gateway, docLanguage: language, now: new Date() },
+            date,
+          );
+          if (suggestion === null) {
+            /* The day disappeared between the pre-check above and this run —
+               an extremely unlikely race, but a task must fail with a clear
+               sentence rather than silently finish without a result. */
+            throw new Error('Der Tageseintrag ist zwischen Prüfung und Lauf verschwunden.');
+          }
+          getTaskResults().put(taskId, { kind: 'journal-close', suggestion }, { ref });
+          return { hasResult: true };
         },
-        date,
-      ),
+      );
+      return task;
+    },
 
     'journal:applyClose': async (request) => {
       const store = journalStore(services);
@@ -385,7 +437,26 @@ export function journalHandlers(services: Services): HandlerMap {
         request,
       );
       await settle(services, result.written, 'journal');
+      /* Best-effort: a heuristic-vault-seed test (or any caller) invoking
+         `applyClose` directly, without going through `journal:close` first,
+         has nothing stored for this date — `markBySubject` is a no-op then,
+         not a reason to refuse the write. Placed only here, after `applyClose`
+         has actually succeeded (073 review finding 3): a conflict or an `io`
+         failure from it must leave the stored suggestion retrievable via
+         `tasks:result`, not drop it before anything was written. */
+      getTaskResults().markBySubject('journal-close', request.date, 'accepted');
       return result;
+    },
+
+    /* Discards a stored close-out suggestion (073 review finding 2) —
+       symmetric with `condense:reject`/`condense:delete`, which already mark
+       their unit's stored result the same way. Nothing is written; `date` is
+       exactly `journal:close`'s own `subject.ref`, so this marks the same
+       entry `journal:applyClose` would have marked `'accepted'` had the user
+       applied it instead. Best-effort like every other `markBySubject` call
+       in this file: a date with nothing stored is a no-op. */
+    'journal:discardClose': ({ date }) => {
+      getTaskResults().markBySubject('journal-close', date, 'rejected');
     },
 
     'journal:foldDay': async ({ date, expectedHash }) => {

@@ -38,6 +38,8 @@ import type { HandlerMap } from './registry';
 import { defineHandlers, fail } from './registry';
 import { docLanguage, settle } from './wiki-bridge';
 import { createGateway } from '../llm-bridge';
+import { getTaskResults } from '../task-results';
+import { getWorkQueue } from '../work-queue';
 import type { IndexLike } from '../contracts';
 import type { Services } from '../services';
 
@@ -91,44 +93,88 @@ export function condenseHandlers(services: Services): HandlerMap {
       const store = condenseStore(services);
       const existingText = await store.readText(target.path);
       const language = docLanguage(services);
-      const result = await runCondenseUnit(services, target, {
-        docs: condenseDocs(services),
-        gateway: createGateway(services),
-        docLanguage: language,
-        existing: existingText,
-      });
+      const gateway = createGateway(services);
 
-      if (result.kind === 'proposal') {
-        const proposal: CondenseProposal = {
-          unit: target.unit,
-          slug: target.slug,
-          path: target.path,
-          baseHash: result.baseHash,
-          before: existingText ?? '',
-          after: result.content,
-          sources: [...result.sources],
-          ...(result.truncatedCount === null
-            ? {}
-            : { partialInputs: partialInputsNote(result.truncatedCount, language) }),
-        };
-        return proposal;
-      }
-      if (result.kind === 'no-model') {
-        throw fail('llm-unavailable', `kein Modell für die Aufgabe „${result.task}“ konfiguriert`, {
-          task: result.task,
+      /* The dead end stays a dead end (073, AC7): without a routed model this
+         answers exactly as it did when the run was synchronous — the same
+         `llm-unavailable` failure, thrown BEFORE anything is enqueued, so no
+         task is ever created that could only fail. The project path already
+         made this same cheap check before reading `~/.claude` (see
+         `runLevel` in `./condense-unit`); it is asked here for both levels,
+         because now it also decides whether a task exists at all. The core's
+         own identical guard stays where it is — this one only decides that. */
+      if (!gateway.isAvailable(target.task)) {
+        throw fail('llm-unavailable', `kein Modell für die Aufgabe „${target.task}“ konfiguriert`, {
+          task: target.task,
         });
       }
-      if (result.kind === 'no-inputs') {
-        throw fail('invalid', `für „${slug}“ gibt es noch nichts zu verdichten`);
-      }
-      if (result.kind === 'attribution-failure') {
-        throw fail(
-          'invalid',
-          'die Antwort des Modells ließ sich nicht auf die gelesenen Quellen zurückführen',
-          { problems: result.problems },
-        );
-      }
-      throw fail('unknown', result.reason);
+
+      const ref = `${target.unit}:${target.slug}`;
+      const task = getWorkQueue(services).enqueue(
+        {
+          kind: 'condense',
+          lane: 'model',
+          /* Plain content, no "Verdichtung:" prefix — the tasks screen renders
+             the kind itself (`TaskRow`), so a prefix here would say it twice. */
+          subject: { label: target.project?.title ?? target.slug, ref },
+        },
+        /* `taskId` is THIS run's own task id (`WorkRegistry.start` hands it in
+           directly, see `core/work/registry.ts`) — not a variable captured once
+           after the first `enqueue()` returns. That distinction is what makes a
+           retry store its result under the *new* task's id rather than the
+           failed one's: `retry()` reuses this exact closure for a fresh `Entry`
+           with a fresh id, and only the parameter reflects which one is running
+           right now (073 review finding 1). */
+        async (_signal, taskId) => {
+          const result = await runCondenseUnit(services, target, {
+            docs: condenseDocs(services),
+            gateway,
+            docLanguage: language,
+            existing: existingText,
+          });
+
+          if (result.kind === 'proposal') {
+            const proposal: CondenseProposal = {
+              unit: target.unit,
+              slug: target.slug,
+              path: target.path,
+              baseHash: result.baseHash,
+              before: existingText ?? '',
+              after: result.content,
+              sources: [...result.sources],
+              ...(result.truncatedCount === null
+                ? {}
+                : { partialInputs: partialInputsNote(result.truncatedCount, language) }),
+            };
+            getTaskResults().put(taskId, { kind: 'condense', proposal }, { ref });
+            return { hasResult: true };
+          }
+          /* Every remaining outcome throws the very failure the synchronous
+             channel threw for it. The registry's `describeFailure` keeps the
+             sentence and files it under `unknown` — an `IpcFailure` is not an
+             `IngestError`, so its code does not survive; the task still states
+             its reason, which is what AC8 asks for. */
+          if (result.kind === 'no-model') {
+            throw fail(
+              'llm-unavailable',
+              `kein Modell für die Aufgabe „${result.task}“ konfiguriert`,
+              { task: result.task },
+            );
+          }
+          if (result.kind === 'no-inputs') {
+            throw fail('invalid', `für „${slug}“ gibt es noch nichts zu verdichten`);
+          }
+          if (result.kind === 'attribution-failure') {
+            throw fail(
+              'invalid',
+              'die Antwort des Modells ließ sich nicht auf die gelesenen Quellen zurückführen',
+              { problems: result.problems },
+            );
+          }
+          throw fail('unknown', result.reason);
+        },
+      );
+      return task;
     },
 
     'condense:accept': async ({ proposal }) => {
@@ -174,6 +220,15 @@ export function condenseHandlers(services: Services): HandlerMap {
         proposal.baseHash === null ? { mustNotExist: true } : { expectedHash: proposal.baseHash },
       );
       await settle(services, [path], 'condense');
+      /* The decision the user just made, recorded against whatever task once
+         proposed this unit (073, D3) — best-effort by design: a proposal
+         reached from somewhere other than a queued run, or one already decided
+         about, has nothing stored, and `markBySubject` is then a no-op rather
+         than a reason to refuse the accept itself. Placed only here, after the
+         write has actually landed (073 review finding 3): a conflict or an
+         `io` failure above must leave the stored proposal retrievable for a
+         retry, not drop it before anything was written. */
+      getTaskResults().markBySubject('condense', `${proposal.unit}:${proposal.slug}`, 'accepted');
       return { path: result.path, hash: result.hash, undoToken };
     },
 
@@ -198,6 +253,13 @@ export function condenseHandlers(services: Services): HandlerMap {
         existingText === null ? { mustNotExist: true } : { expectedHash: sha256(existingText) };
       const result = await store.writeText(path, content, guard);
       await settle(services, [path], 'condense');
+      /* Same best-effort mark as in `condense:accept` above, with the other
+         outcome — recorded only once the directive has actually been written
+         (073 review finding 3: a stale-hash write must leave the stored
+         proposal retrievable, not drop it before anything landed), and only
+         once the reason is known to be usable, so a blank one leaves the
+         stored result untouched for the next attempt too. */
+      getTaskResults().markBySubject('condense', `${unit}:${slug}`, 'rejected');
       return { path: result.path };
     },
 
@@ -220,6 +282,14 @@ export function condenseHandlers(services: Services): HandlerMap {
         );
       }
       const { undoToken } = await store.delete(path);
+      /* Same best-effort mark as accept/reject, and for the same reason (073,
+         D5): a stored proposal must not outlive the artifact it was built
+         against — it would otherwise still be offered after the delete, and
+         accepting it would write the deleted directives straight back.
+         Recorded as `rejected` (the only outcome that fits: nothing of the
+         proposal was taken over) and only after the delete really happened,
+         so a refused delete leaves the proposal untouched. */
+      getTaskResults().markBySubject('condense', `${unit}:${slug}`, 'rejected');
       await settle(services, [path], 'condense');
       return { path, undoToken };
     },

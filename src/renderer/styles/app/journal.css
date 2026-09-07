@@ -270,6 +270,15 @@
   justify-content: flex-end;
 }
 
+/* The trigger plus its queue/failure state (073, D6) — mirrors
+   `.sb-condensed-actions` (notes.css) so the two run states read the same. */
+.sb-close-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
 /* ── Loose end (022, D6) ────────────────────────────────────────────────── */
 
 /* One compact row per open loose end, above the entry stream — several can

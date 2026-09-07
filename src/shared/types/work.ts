@@ -48,4 +48,11 @@ export interface WorkTask {
   queuedAt: string;
   startedAt: string | null;
   finishedAt: string | null;
+  /**
+   * Whether this task left a result behind (story 073) — a proposal a run the
+   * user walked away from produced, fetchable via `tasks:result`. Only a `done`
+   * task can carry one; the payload itself never rides along in this record, so
+   * listing the queue stays cheap (see `src/core/tasks/results.ts`).
+   */
+  hasResult: boolean;
 }

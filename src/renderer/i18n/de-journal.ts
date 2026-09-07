@@ -143,6 +143,12 @@ export const deJournal = {
   'journal.facts.title': 'Fakten',
   'journal.facts.empty': 'Hier steht, was der Tagesabschluss gefunden und du bestätigt hast.',
   'journal.close.action': 'Tag abschließen',
+  /* 073, D6: Warten/Fehlschlag des Abschluss-Laufs in der Warteschlange —
+     dieselbe Form wie `notes.condensed.waiting`/`failed.reason`. Eigener
+     Name statt `journal.close.waiting`: der Schlüssel ist schon durch die
+     Warte-auf-Zeile des Vorschlags belegt. */
+  'journal.close.queueWaiting': 'Wartet auf das Modell — Platz {position} in der Warteschlange',
+  'journal.close.failed.reason': 'Grund: {reason}',
   'journal.close.title': 'Tagesabschluss',
   'journal.close.body':
     'Gefunden im Tagestext. Geschrieben ist nichts — du entscheidest, was übernommen wird.',

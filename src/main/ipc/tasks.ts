@@ -11,6 +11,7 @@
 
 import type { HandlerMap } from './registry';
 import { defineHandlers } from './registry';
+import { getTaskResults } from '../task-results';
 import { getWorkQueue } from '../work-queue';
 import type { Services } from '../services';
 
@@ -35,5 +36,12 @@ export function tasksHandlers(services: Services): HandlerMap {
     'tasks:remove': ({ id }) => getWorkQueue(services).cancel(id, 'user'),
 
     'tasks:retry': ({ id }) => getWorkQueue(services).retry(id),
+
+    /* The payload a finished task left behind (073, D3) — held next door in
+       `task-results.ts`, not on the task record, so `work:list` never carries a
+       whole proposal. `null` is the honest answer for an unknown id, a task
+       that produced nothing, and one whose result has already been accepted or
+       rejected alike: in all three there is nothing left to decide about. */
+    'tasks:result': ({ id }) => getTaskResults().get(id),
   });
 }

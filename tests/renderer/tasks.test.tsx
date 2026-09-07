@@ -14,7 +14,9 @@
 
 import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter, useLocation } from 'react-router-dom';
+import { render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import axe from 'axe-core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { IpcChannel, IpcRequest, IpcResponse } from '@shared/ipc';
@@ -60,6 +62,7 @@ function task(patch: Partial<WorkTask> & { id: string; state: WorkTask['state'] 
     subject: { label: 'Bereich Wachstum', ref: null },
     progress: 0,
     message: null,
+    hasResult: false,
     error: null,
     queuePosition: null,
     queuedAt: NOW,
@@ -69,9 +72,24 @@ function task(patch: Partial<WorkTask> & { id: string; state: WorkTask['state'] 
   };
 }
 
+/* Renders the current address, the same helper `garden.test.tsx` uses — D7
+   adds `TaskRow`'s own `useNavigate()` call (the "view result" action), so
+   this screen now needs a router in its test tree too. */
+function Location() {
+  const location = useLocation();
+  return <span data-testid="location">{`${location.pathname}${location.search}`}</span>;
+}
+
 function wrap(node: ReactNode) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(<QueryClientProvider client={client}>{node}</QueryClientProvider>);
+  return render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        {node}
+        <Location />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
 }
 
 beforeEach(() => {
@@ -180,6 +198,49 @@ describe('Aufgaben', () => {
     expect(screen.getByText('1m')).toBeTruthy();
     expect(screen.getByText('<1m')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Erneut versuchen' })).toBeTruthy();
+  });
+
+  it('zeigt bei einem erledigten Lauf mit Ergebnis „Ergebnis ansehen“ und navigiert dorthin (073, D7)', async () => {
+    freezeTime();
+    const finishedWithResult = task({
+      id: 'fin-result',
+      kind: 'condense',
+      state: 'done',
+      startedAt: NOW,
+      finishedAt: NOW,
+      hasResult: true,
+      subject: { label: 'kunden-und-team', ref: 'area:kunden-und-team' },
+    });
+    const finishedWithoutResult = task({
+      id: 'fin-no-result',
+      kind: 'gardener',
+      state: 'done',
+      startedAt: NOW,
+      finishedAt: NOW,
+      hasResult: false,
+      subject: { label: 'Pflegelauf', ref: null },
+    });
+
+    installSbMock({
+      'work:list': () => [finishedWithResult, finishedWithoutResult],
+    });
+
+    wrap(<TasksScreen />);
+
+    expect(await screen.findByText('kunden-und-team')).toBeTruthy();
+    // A finished run with no result (gardener, story 074's concern) offers no button.
+    const gardenerRow = screen.getByText('Pflegelauf').closest('.sb-trow');
+    expect(gardenerRow).not.toBeNull();
+    expect(
+      gardenerRow ? within(gardenerRow as HTMLElement).queryByRole('button') : null,
+    ).toBeNull();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Ergebnis ansehen' }));
+    await waitFor(() =>
+      expect(screen.getByTestId('location').textContent).toBe(
+        '/notes?a=kunden-und-team&tab=condensed',
+      ),
+    );
   });
 
   it('hat keinen A11y-Verstoss', async () => {

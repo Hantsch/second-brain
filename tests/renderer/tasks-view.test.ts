@@ -33,6 +33,7 @@ function task(overrides: Partial<WorkTask> = {}): WorkTask {
     progress: 0,
     message: null,
     error: null,
+    hasResult: false,
     queuePosition: null,
     queuedAt: '2026-09-07T10:00:00.000Z',
     startedAt: null,

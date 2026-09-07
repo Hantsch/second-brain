@@ -46,6 +46,7 @@ import type {
   IngestJob,
   IngestKind,
   JournalDay,
+  JournalFrontmatterFields,
   KnowledgeModule,
   LlamaOverrides,
   LlamaStartPlan,
@@ -72,6 +73,7 @@ import type {
   SettingsSnapshot,
   TaskDefinition,
   TaskKind,
+  TaskResult,
   Todo,
   TranscriptPage,
   VaultDoc,
@@ -231,21 +233,6 @@ export interface JournalDayLooseEnd {
 }
 
 /**
- * The frontmatter fields of a journal day, as the day close-out suggests
- * them and as the user confirms them. `null` for mood and energy means "not
- * found" resp. "do not write" — never "set to null".
- */
-export interface JournalFrontmatterFields {
-  people: string[];
-  /** Project slugs. */
-  projects: string[];
-  areas: string[];
-  mood: number | null;
-  energy: number | null;
-  tags: string[];
-}
-
-/**
  * One of the interview's five fixed topics (012) — mirrors `InterviewTopic`
  * from `@core/journal`. Kept as its own literal union here (not imported from
  * the core) for the same reason `JournalStreamBlock` mirrors `JournalBlock`:
@@ -292,20 +279,6 @@ export interface JournalInterviewPlan {
   finished: boolean;
   /** The one optional loose-end question (020, D8) — `null` when none is open. */
   looseEnd: JournalInterviewLooseEnd | null;
-}
-
-/**
- * The day close-out's suggestion. Nothing from it is written yet: the card
- * shows it, `journal:applyClose` carries out what was confirmed.
- */
-export interface JournalCloseSuggestion {
-  date: string;
-  path: string;
-  /** Same shape as in the inbox — the same card, the same buttons. */
-  proposal: FilingProposal;
-  frontmatter: JournalFrontmatterFields;
-  /** Produced entirely without a model. */
-  heuristic: boolean;
 }
 
 /**
@@ -489,12 +462,17 @@ export interface IpcRoutes {
     } | null;
   };
   /**
-   * Runs the condensation over the unit's deterministic inputs and hands back a
-   * proposal (Guardrail 2: nothing is written here). Throws `llm-unavailable`,
-   * `invalid` (no inputs, or the model's reply could not be attributed to what
-   * it read), or `unknown` (the gateway call failed) instead of a proposal.
+   * Starts the condensation over the unit's deterministic inputs (Guardrail 2:
+   * nothing is written here). Answers with the *task* it queued, not with the
+   * proposal (073, D3): the run may take minutes, so the user walks away and
+   * the finished proposal is fetched via `tasks:result` under the task's id.
+   * Only `llm-unavailable` is still thrown by the channel itself, before any
+   * task exists — a level with no model routed is a dead end, never a queued
+   * task that could only fail. Every other reason a run has no proposal
+   * (`invalid` for no inputs or an unattributable reply, `unknown` for a failed
+   * gateway call) becomes the task's own failure message.
    */
-  'condense:run': { req: { unit: CondenseUnit; slug: string }; res: CondenseProposal };
+  'condense:run': { req: { unit: CondenseUnit; slug: string }; res: WorkTask };
   /**
    * Accepts a proposal: snapshots whatever currently sits at `proposal.path` (for
    * undo), then writes `proposal.after` hash-guarded against `proposal.baseHash`.
@@ -588,8 +566,17 @@ export interface IpcRoutes {
   'journal:coach': { req: CoachRequest; res: { threadId: string; messageId: string } };
   /** Abort a running coaching response. The user's own turn stays written. */
   'journal:abort': { req: { messageId: string }; res: void };
-  /** Day close-out: extract facts, todos, and mood as suggestions. */
-  'journal:close': { req: { date: string }; res: JournalCloseSuggestion | null };
+  /**
+   * Starts the day close-out: extract facts, todos, and mood as a suggestion
+   * (073, D4). Answers with the *task* it queued, not the suggestion itself —
+   * mirrors `condense:run`: the suggestion is fetched via `tasks:result`
+   * under the task's id once it finishes. `null`, with no task created,
+   * means there is nothing to close (no entry, or an entry with no text) —
+   * unlike `condense:run`, a heuristic-only close (no model routed for
+   * `extract-tasks`) still queues a task, just off the model lane: 071's
+   * decision that a heuristic close is still a useful result, not a dead end.
+   */
+  'journal:close': { req: { date: string }; res: WorkTask | null };
   /**
    * Write the confirmed day close-out: todos as checkboxes (under "Facts"
    * resp. in the project file the todo names) and the day's frontmatter
@@ -605,6 +592,18 @@ export interface IpcRoutes {
     };
     res: { written: string[]; undo: WriteRequest[] };
   };
+  /**
+   * Discards a day close-out suggestion without applying it (073 review
+   * finding 2) — the `journal:close` counterpart to `condense:reject`/
+   * `condense:delete`, which already mark their unit's stored result the same
+   * way. Nothing is written; it only marks whatever `journal:close` once
+   * stored for this date as decided, the same best-effort `markBySubject` call
+   * `journal:applyClose` makes on success — a date with nothing stored is a
+   * no-op, not a refusal. Without this, a discarded (or already applied)
+   * suggestion stays retrievable via `tasks:result` and can resurface on a
+   * remount or a cache refetch.
+   */
+  'journal:discardClose': { req: { date: string }; res: void };
   /**
    * One-time migration (011, D5/D6): folds the legacy "Conversation" section
    * into the "Day" stream and removes the heading. `expectedHash` guards the
@@ -1163,6 +1162,13 @@ export interface IpcRoutes {
    * to retry (unknown id, or a task that did not fail).
    */
   'tasks:retry': { req: { id: string }; res: WorkTask | null };
+  /**
+   * The result a finished task left behind (073) — the proposal a run the user
+   * walked away from produced. `null` when there is none: an unknown id, a task
+   * that produced no result (`hasResult: false`), or one whose result has
+   * already been accepted or rejected.
+   */
+  'tasks:result': { req: { id: string }; res: TaskResult | null };
 
   // ── Claude sessions ──────────────────────────────────────────────────────
   'claude:sessions': { req: { limit?: number }; res: ClaudeSession[] };
@@ -1291,6 +1297,7 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'journal:abort',
   'journal:close',
   'journal:applyClose',
+  'journal:discardClose',
   'journal:foldDay',
   'journal:answerLooseEnd',
   'journal:interviewPlan',
@@ -1378,6 +1385,7 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'tasks:cancel',
   'tasks:remove',
   'tasks:retry',
+  'tasks:result',
   'claude:sessions',
   'claude:link',
   'agents:projects',

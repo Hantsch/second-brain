@@ -20,13 +20,14 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { IpcChannel, IpcError, IpcRequest, IpcResponse } from '@shared/ipc';
-import type { CondenseProposal } from '@shared/types';
+import type { CondenseProposal, WorkTask } from '@shared/types';
 import { AreaCondensedTab } from '@renderer/screens/notes/AreaCondensedTab';
 import { ToastHost } from '@renderer/components/ToastHost';
 import type { SbBridge } from '@renderer/lib/bridge';
 import { setLanguage } from '@renderer/i18n';
+import { getWorkTasks, resetWorkTasksStoreForTests, setWorkTasks } from '@renderer/lib/tasks-store';
 import { clearToasts } from '@renderer/lib/toast';
 
 function ipcError(code: IpcError['code']): Error {
@@ -66,6 +67,56 @@ const ARTIFACT = {
   sources: ['areas/gesundheit.md'],
 };
 
+/* Since 073 a run is a queued task, and since D5 the panel reads its whole
+   state back from the work queue rather than from its own mutation. So the
+   fixture below is the queue: `condense:run` puts a task on it (the same
+   `subject.ref` the real handler uses, `<unit>:<slug>` — the panel finds
+   nothing without it) and `tasks:result` hands back what that task stored.
+   Collapsed to one step, because these tests are about one run and one
+   proposal; the intermediate states have their own file
+   (`condensed-unit-panel-task.test.tsx`). */
+const RUN_TASK: WorkTask = {
+  id: 'condense-task',
+  kind: 'condense',
+  lane: 'model',
+  subject: { label: 'Verdichtung', ref: `area:${AREA.slug}` },
+  state: 'done',
+  progress: 1,
+  message: null,
+  error: null,
+  queuePosition: null,
+  queuedAt: '2026-08-10T09:00:00.000Z',
+  startedAt: '2026-08-10T09:00:00.000Z',
+  finishedAt: '2026-08-10T09:00:01.000Z',
+  hasResult: true,
+};
+
+/** Feeds the live queue store the way `main.tsx` does for a real
+    `event:work-tasks` — a component must never do this, a test stands in for
+    the main process here. */
+let runCount = 0;
+
+function queueTask(task: WorkTask): void {
+  setWorkTasks([...getWorkTasks(), task]);
+}
+
+/** The channels one run now takes, as one spread. */
+function runsTo(proposal: CondenseProposal, task: WorkTask = RUN_TASK): Handlers {
+  return {
+    'condense:run': () => {
+      /* Every run is its own task with its own id, exactly as the real queue
+         mints them — a re-run must not read the previous run's result back
+         out of the cache entry keyed by that id. */
+      runCount += 1;
+      const queued: WorkTask = { ...task, id: `${task.id}-${runCount}` };
+      queueTask(queued);
+      return queued;
+    },
+    'work:list': () => getWorkTasks(),
+    'tasks:result': () => ({ kind: 'condense', proposal }),
+  };
+}
+
 const NOT_ROUTED: Handlers = {
   'llm:routing': () => ({ tasks: {}, defaults: {} }),
   'llm:tasks': () => [],
@@ -103,6 +154,13 @@ function renderTab(extra: Handlers): { sb: Mock; container: HTMLElement } {
   );
   return { sb, container };
 }
+
+/* The queue store is a module singleton — without this, a task one test put
+   on it would still be there for the next one. */
+beforeEach(() => {
+  resetWorkTasksStoreForTests();
+  runCount = 0;
+});
 
 afterEach(() => {
   delete window.sb;
@@ -167,13 +225,22 @@ describe('Verdichtet-Tab (Story 038, D6)', () => {
 
   it('deaktiviert den Auslöser während ein Lauf geht und zeigt eine Wartemeldung', async () => {
     setLanguage('de');
-    let resolveRun: (value: CondenseProposal) => void = () => undefined;
-    const runPromise = new Promise<CondenseProposal>((resolve) => {
-      resolveRun = resolve;
+    /* The run is `running` in the queue, not in this component (073, D5) —
+       which is why the click below is not what puts it there. */
+    const running: WorkTask = { ...RUN_TASK, state: 'running', progress: 0.4, hasResult: false };
+    renderTab({
+      ...ROUTED,
+      ...runsTo({
+        unit: 'area',
+        slug: AREA.slug,
+        path: 'areas/gesundheit.md',
+        baseHash: null,
+        before: '',
+        after: 'Neuer Vorschlag.',
+        sources: [],
+      }),
+      'work:list': () => [running],
     });
-    renderTab({ ...ROUTED, 'condense:run': () => runPromise });
-
-    await userEvent.click(await screen.findByRole('button', { name: 'Diesen Bereich verdichten' }));
 
     expect(await screen.findByText('Verdichtung läuft')).toBeTruthy();
     expect(
@@ -181,15 +248,7 @@ describe('Verdichtet-Tab (Story 038, D6)', () => {
         .disabled,
     ).toBe(true);
 
-    resolveRun({
-      unit: 'area',
-      slug: AREA.slug,
-      path: 'areas/gesundheit.md',
-      baseHash: null,
-      before: '',
-      after: 'Neuer Vorschlag.',
-      sources: [],
-    });
+    setWorkTasks([RUN_TASK]);
     await waitFor(() => expect(screen.queryByText('Verdichtung läuft')).toBeNull());
   });
 
@@ -226,7 +285,7 @@ describe('Verdichtet-Tab (Story 038, D6)', () => {
       after: 'Neue Zeile.',
       sources: [],
     };
-    const { sb } = renderTab({ ...ROUTED, 'condense:run': () => proposal });
+    const { sb } = renderTab({ ...ROUTED, ...runsTo(proposal) });
 
     await userEvent.click(await screen.findByRole('button', { name: 'Diesen Bereich verdichten' }));
 
@@ -251,7 +310,7 @@ describe('Verdichtet-Tab (Story 038, D6)', () => {
     renderTab({
       ...ROUTED,
       'condense:read': () => ARTIFACT,
-      'condense:run': () => proposal,
+      ...runsTo(proposal),
       'condense:accept': () => {
         throw ipcError('conflict');
       },
@@ -278,7 +337,7 @@ describe('Verdichtet-Tab (Story 038, D6)', () => {
     };
     const { sb } = renderTab({
       ...ROUTED,
-      'condense:run': () => proposal,
+      ...runsTo(proposal),
       'condense:reject': () => ({ path: 'areas/gesundheit.condensed.md' }),
     });
 
@@ -312,7 +371,7 @@ describe('Verdichtet-Tab (Story 038, D6)', () => {
     };
     renderTab({
       ...ROUTED,
-      'condense:run': () => proposal,
+      ...runsTo(proposal),
       'condense:reject': () => ({ path: 'areas/gesundheit.condensed.md' }),
     });
 
@@ -374,7 +433,7 @@ describe('Verdichtung löschen (Story 043, D2)', () => {
       // mutation triggers actually surfaces a different response, the way a
       // real re-read of the file would.
       'condense:read': () => (artifactDeleted ? null : ARTIFACT),
-      'condense:run': () => proposal,
+      ...runsTo(proposal),
       'condense:delete': () => {
         artifactDeleted = true;
         return { path: 'areas/gesundheit.condensed.md', undoToken: 'token-1' };

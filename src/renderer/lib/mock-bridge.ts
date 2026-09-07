@@ -9,7 +9,13 @@ import {
   isValidResourceBudgetPercent,
 } from '@shared/llm/resource-budget';
 import { isValidVramOverrideMb } from '@shared/llm/vram-override';
-import type { MachineScanResult, RawSource, RecommendationSet, WriteResult } from '@shared/types';
+import type {
+  MachineScanResult,
+  RawSource,
+  RecommendationSet,
+  WorkTask,
+  WriteResult,
+} from '@shared/types';
 import type { SbBridge } from './bridge';
 import { encodeIpcError } from './ipc-error';
 import * as fx from './mock-fixtures';
@@ -145,6 +151,48 @@ function mockMachineScan(): MachineScanResult {
 }
 
 const writeResult: WriteResult = { path: fx.doc.path, hash: 'demo-hash', created: false };
+
+/* 073, D3: `condense:run` queues a task instead of answering with the
+   proposal, so browser mode needs one to hand back — already finished, since
+   there is no real run to wait for here. It only appears in `work:list` once a
+   run was actually triggered (`condenseQueued`), so the tasks screen keeps
+   showing the honest empty queue until then. */
+const DEMO_CONDENSE_TASK: WorkTask = {
+  id: 'demo-condense-task',
+  kind: 'condense',
+  lane: 'model',
+  subject: { label: fx.area.title, ref: `area:${fx.area.slug}` },
+  state: 'done',
+  progress: 1,
+  message: null,
+  error: null,
+  queuePosition: null,
+  queuedAt: fx.NOW,
+  startedAt: fx.NOW,
+  finishedAt: fx.NOW,
+  hasResult: true,
+};
+let condenseQueued = false;
+
+/* 073, D4: `journal:close` queues a task the same way `condense:run` does
+   (073, D3) — a second, already-finished demo task, off the model lane since
+   this demo vault routes no model for `extract-tasks` either. */
+const DEMO_CLOSE_TASK: WorkTask = {
+  id: 'demo-close-task',
+  kind: 'close-day',
+  lane: 'free',
+  subject: { label: fx.journalDay.date, ref: fx.journalDay.date },
+  state: 'done',
+  progress: 1,
+  message: null,
+  error: null,
+  queuePosition: null,
+  queuedAt: fx.NOW,
+  startedAt: fx.NOW,
+  finishedAt: fx.NOW,
+  hasResult: true,
+};
+let closeQueued = false;
 
 /* Ten tasks — one per `TASK_KINDS` entry, in `mock-settings.ts`'s order —
    covering every reason and tradeoff key at least once: a sensitive task
@@ -357,15 +405,12 @@ const RESPONSES: MockResponses = {
   /* Condensation (038, D4/D5-D9): fixed fixtures, no simulated model — the
      screens driven by these channels are a later deliverable of this story. */
   'condense:read': () => null,
-  'condense:run': ({ unit }) => ({
-    unit,
-    slug: fx.area.slug,
-    path: 'areas/gesundheit.condensed.md',
-    baseHash: null,
-    before: '',
-    after: '---\ntype: condensed\ntitle: Gesundheit\n---\n\n## Stand\n\nDemo-Stand.\n',
-    sources: [fx.area.path],
-  }),
+  /* Since 073, D3 a run only queues a task; the proposal is fetched back under
+     that task's id via `tasks:result` below. */
+  'condense:run': () => {
+    condenseQueued = true;
+    return DEMO_CONDENSE_TASK;
+  },
   'condense:accept': () => ({
     path: 'areas/gesundheit.condensed.md',
     hash: 'demo-hash',
@@ -418,21 +463,16 @@ const RESPONSES: MockResponses = {
   }),
   'journal:coach': () => ({ threadId: `journal-${fx.journalDay.date}`, messageId: 'm-demo' }),
   'journal:abort': () => undefined,
-  'journal:close': () => ({
-    date: fx.journalDay.date,
-    path: fx.journalDay.path,
-    proposal: fx.proposal,
-    frontmatter: {
-      people: fx.journalDay.people,
-      projects: fx.journalDay.projects,
-      mood: 3,
-      energy: 2,
-      tags: [],
-      areas: [],
-    },
-    heuristic: true,
-  }),
+  /* Since 073, D4 a close only queues a task; the suggestion is fetched back
+     under that task's id via `tasks:result` below — mirrors `condense:run`. */
+  'journal:close': () => {
+    closeQueued = true;
+    return DEMO_CLOSE_TASK;
+  },
   'journal:applyClose': () => ({ written: [fx.journalDay.path], undo: [] }),
+  /* No stored result to mark in browser mode — a no-op, same as the real
+     handler for a date nothing was ever queued under. */
+  'journal:discardClose': () => undefined,
   'journal:foldDay': () => ({ ...writeResult, path: fx.journalDay.path }),
   'journal:answerLooseEnd': () => ({ path: fx.journalDay.path, hash: writeResult.hash }),
   'journal:interviewPlan': () => ({
@@ -735,13 +775,54 @@ const RESPONSES: MockResponses = {
   'gardener:linkOrphan': () => ({ written: [fx.wikiPage.path], undoToken: 'demo-undo' }),
   /* No work in flight in the demo/screenshot vault (071, D3) — an empty queue
      is the honest state, the same as `gardener:report` returning `null`. */
-  'work:list': () => [],
+  'work:list': () => [
+    ...(condenseQueued ? [DEMO_CONDENSE_TASK] : []),
+    ...(closeQueued ? [DEMO_CLOSE_TASK] : []),
+  ],
   /* And with an empty queue there is never a task to act on (072, D2): every
      verb honestly answers "there was nothing there", the same as the real
      registry does for an id it does not know. */
   'tasks:cancel': () => false,
   'tasks:remove': () => false,
   'tasks:retry': () => null,
+  /* The two exceptions to the empty queue above: the demo condensation run
+     (073, D3) and the demo day close-out (073, D4) each answer with the
+     fixed result the synchronous channel used to return directly, keyed by
+     the task id so the condensed panel and the close-out card each get their
+     own kind back rather than each other's. */
+  'tasks:result': ({ id }) => {
+    if (id === DEMO_CLOSE_TASK.id) {
+      return {
+        kind: 'journal-close',
+        suggestion: {
+          date: fx.journalDay.date,
+          path: fx.journalDay.path,
+          proposal: fx.proposal,
+          frontmatter: {
+            people: fx.journalDay.people,
+            projects: fx.journalDay.projects,
+            mood: 3,
+            energy: 2,
+            tags: [],
+            areas: [],
+          },
+          heuristic: true,
+        },
+      };
+    }
+    return {
+      kind: 'condense',
+      proposal: {
+        unit: 'area',
+        slug: fx.area.slug,
+        path: 'areas/gesundheit.condensed.md',
+        baseHash: null,
+        before: '',
+        after: '---\ntype: condensed\ntitle: Gesundheit\n---\n\n## Stand\n\nDemo-Stand.\n',
+        sources: [fx.area.path],
+      },
+    };
+  },
 
   'claude:sessions': () => [fx.claudeSession],
   'claude:link': () => undefined,

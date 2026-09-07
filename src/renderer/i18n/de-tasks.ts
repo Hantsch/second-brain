@@ -33,4 +33,5 @@ export const deTasks = {
   'tasks.action.stop': 'Stoppen',
   'tasks.action.remove': 'Entfernen',
   'tasks.action.retry': 'Erneut versuchen',
+  'tasks.action.viewResult': 'Ergebnis ansehen',
 } as const;

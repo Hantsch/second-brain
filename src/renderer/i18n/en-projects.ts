@@ -133,6 +133,8 @@ export const enProjects = {
   'project.condensed.trigger': 'Condense this project',
   'project.condensed.triggerAgain': 'Condense again',
   'project.condensed.running': 'Condensation running',
+  'project.condensed.waiting': 'Waiting for the model — queue position {position}',
+  'project.condensed.failed.reason': 'Reason: {reason}',
   'project.condensed.meta.condensedAt': 'Condensed {date}',
   'project.condensed.meta.sources': '{count} sources',
   'project.condensed.notEvidence':

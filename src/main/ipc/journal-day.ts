@@ -33,14 +33,15 @@ import type { JournalBlock, JournalIndexView, JournalStore } from '@core/journal
 import type { DateLike } from '@core/vault/paths';
 import { FsVaultStore, findSections, toVaultDoc } from '@core/vault';
 import type { SectionRange } from '@core/vault';
+import type { IpcRequest, JournalDayView, JournalStreamBlock, WriteRequest } from '@shared/ipc';
 import type {
-  IpcRequest,
-  JournalDayView,
+  DocLanguage,
+  FilingAction,
+  JournalDay,
   JournalFrontmatterFields,
-  JournalStreamBlock,
-  WriteRequest,
-} from '@shared/ipc';
-import type { DocLanguage, FilingAction, JournalDay, VaultDoc, WriteResult } from '@shared/types';
+  VaultDoc,
+  WriteResult,
+} from '@shared/types';
 import { fail } from './errors';
 import type { Services } from '../services';
 

@@ -69,6 +69,8 @@ export const deNotes = {
   'notes.condensed.trigger': 'Diesen Bereich verdichten',
   'notes.condensed.triggerAgain': 'Erneut verdichten',
   'notes.condensed.running': 'Verdichtung läuft',
+  'notes.condensed.waiting': 'Wartet auf das Modell — Platz {position} in der Warteschlange',
+  'notes.condensed.failed.reason': 'Grund: {reason}',
   'notes.condensed.meta.condensedAt': 'Verdichtet am {date}',
   'notes.condensed.meta.sources': '{count} Quellen',
   'notes.condensed.notEvidence':

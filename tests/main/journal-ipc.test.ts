@@ -20,6 +20,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { parseStream } from '@core/journal';
 import { isoDay, journalPath } from '@core/vault/paths';
 import type { IpcChannel, IpcEvents, IpcRequest, IpcResponse } from '@shared/ipc';
+import type { JournalCloseSuggestion } from '@shared/types';
 import { createFetchFake, jsonResponse, sseChunks, sseResponse } from '../fakes/llm';
 import type { FetchResponder } from '../fakes/llm';
 import { createTempVault } from '../helpers/vault';
@@ -49,6 +50,14 @@ async function createHarness(userDataDir: string) {
   const { createServices } = await import('../../src/main/services');
   const { SettingsService } = await import('../../src/main/settings');
   const { journalHandlers } = await import('../../src/main/ipc/journal');
+  const { tasksHandlers } = await import('../../src/main/ipc/tasks');
+  const { getWorkQueue, resetWorkQueue } = await import('../../src/main/work-queue');
+  const { resetTaskResults } = await import('../../src/main/task-results');
+
+  /* 073, D4: `journal:close` queues its work now — a fresh queue and result
+     store per test, or one test's task would still be there for the next. */
+  resetWorkQueue();
+  resetTaskResults();
 
   const settings = await SettingsService.load(userDataDir);
   const keys = await createKeyStore(userDataDir);
@@ -57,7 +66,8 @@ async function createHarness(userDataDir: string) {
   /* Kein Watcher: der Index zieht über den Handler nach, genau das wird geprüft. */
   services.attachIndex((root) => IndexService.open(new FsVaultStore(root)));
 
-  const handlers: Handlers = journalHandlers(services);
+  const queue = getWorkQueue(services);
+  const handlers: Handlers = { ...journalHandlers(services), ...tasksHandlers(services) };
   const streams: IpcEvents['event:llm-stream'][] = [];
   const changed: IpcEvents['event:vault-changed'][] = [];
   const toasts: IpcEvents['event:toast'][] = [];
@@ -76,10 +86,31 @@ async function createHarness(userDataDir: string) {
     return (handler as (payload: IpcRequest<K>) => Promise<IpcResponse<K>>)(request);
   };
 
-  return { services, settings, call, events, streams, changed, toasts };
+  return { services, settings, call, events, streams, changed, toasts, queue };
 }
 
 type Harness = Awaited<ReturnType<typeof createHarness>>;
+
+/**
+ * `journal:close` als abgewarteter Task (073, D4): der Kanal queued den Lauf
+ * jetzt, statt den Vorschlag direkt zu liefern — abgewartet wird hier, und der
+ * Vorschlag kommt über `tasks:result`. `null` bleibt `null` — genau die
+ * Antwort, die der synchrone Kanal vorher direkt gegeben hat (`closeDay`s
+ * eigener "nichts zu schließen"-Fall bleibt unverändert).
+ */
+async function closeDay(harness: Harness, date: string): Promise<JournalCloseSuggestion | null> {
+  const task = await harness.call('journal:close', { date });
+  if (task === null) return null;
+  await vi.waitFor(() => {
+    const found = harness.queue.list().find((entry) => entry.id === task.id);
+    if (found === undefined || found.state === 'queued' || found.state === 'running') {
+      throw new Error(`Task ${task.id} läuft noch`);
+    }
+    return found;
+  });
+  const result = await harness.call('tasks:result', { id: task.id });
+  return result?.kind === 'journal-close' ? result.suggestion : null;
+}
 
 describe('Tagebuch-Kanäle im Main', () => {
   let vault: TempVault;
@@ -503,7 +534,7 @@ describe('Tagebuch-Kanäle im Main', () => {
     );
     const before = (await vault.read(path)) ?? '';
 
-    const suggestion = await harness.call('journal:close', { date: '2026-08-11' });
+    const suggestion = await closeDay(harness, '2026-08-11');
 
     expect(suggestion?.date).toBe('2026-08-11');
     expect(suggestion?.path).toBe(path);

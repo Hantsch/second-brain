@@ -57,6 +57,8 @@ export const enNotes = {
   'notes.condensed.trigger': 'Condense this area',
   'notes.condensed.triggerAgain': 'Condense again',
   'notes.condensed.running': 'Condensation running',
+  'notes.condensed.waiting': 'Waiting for the model — queue position {position}',
+  'notes.condensed.failed.reason': 'Reason: {reason}',
   'notes.condensed.meta.condensedAt': 'Condensed {date}',
   'notes.condensed.meta.sources': '{count} sources',
   'notes.condensed.notEvidence':

@@ -117,6 +117,9 @@ export function maintenanceTaskRow(
     message: progress.check,
     error: null,
     queuePosition: null,
+    /* A maintenance run writes its report itself; there is no proposal waiting
+       under a task id for it (073). */
+    hasResult: false,
     queuedAt: progress.startedAt,
     startedAt: progress.startedAt,
     finishedAt: null,

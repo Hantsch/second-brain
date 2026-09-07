@@ -136,6 +136,8 @@ export const deProjects = {
   'project.condensed.trigger': 'Dieses Projekt verdichten',
   'project.condensed.triggerAgain': 'Erneut verdichten',
   'project.condensed.running': 'Verdichtung läuft',
+  'project.condensed.waiting': 'Wartet auf das Modell — Platz {position} in der Warteschlange',
+  'project.condensed.failed.reason': 'Grund: {reason}',
   'project.condensed.meta.condensedAt': 'Verdichtet am {date}',
   'project.condensed.meta.sources': '{count} Quellen',
   'project.condensed.notEvidence':

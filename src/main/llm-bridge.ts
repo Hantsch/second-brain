@@ -5,17 +5,20 @@
    built fresh from this state on every call — that way there is no second
    source of truth that could go stale. */
 
+import { readFileSync } from 'node:fs';
 import {
+  FakeProvider,
   LlmUnavailableError,
   PROVIDER_PRESETS,
   ProviderRegistry,
   RoutingGateway,
   TASK_DEFINITIONS,
+  createProviderFactory,
   loadCatalogueWithLiveData,
   recommendModels,
   suggestRouting,
 } from '@core/llm';
-import type { KeyStore as CoreKeyStore } from '@core/llm';
+import type { FakeProviderOptions, KeyStore as CoreKeyStore, ProviderFactory } from '@core/llm';
 import type { LlmGateway } from '@core/llm';
 import type { ProviderConfig, RecommendationSet, TaskKind } from '@shared/types';
 import type { LlmBridge } from './contracts';
@@ -25,6 +28,65 @@ import { looksLikeLlamaCppProvider } from './ipc/runtime/llamacpp-provider-port'
 import { providerKeyId } from './secrets';
 import type { KeyStore } from './secrets';
 import type { Services } from './services';
+
+/**
+ * `SB_E2E_FAKE_PROVIDER` — path to a JSON file describing the `fake` provider's
+ * behaviour for this run: `{ replies?, latencyMs?, failEverything? }`, the same
+ * shape `FakeProviderOptions` accepts (minus `errors`/`models`/`chunkSize`/
+ * `usage`/`probeOk`, which no e2e spec needs so far). Same env family as
+ * `SB_E2E_STAGE_DELAY_MS` (`ipc/gardener-run.ts`) and `SB_VAULT`: set by the
+ * e2e fixtures, never by the app.
+ *
+ * Read once, when this module loads — not per call: the file describes how
+ * the process was started, and re-reading it mid-session would let a spec's
+ * later, unrelated call see a script written for an earlier one. Anything
+ * that isn't a readable file with valid JSON — unset env var, missing file,
+ * bad JSON — is read as "no fake-provider config" and never throws: a
+ * mistyped or absent variable must not be able to keep the app from starting,
+ * since this same code path runs for every non-e2e user too.
+ */
+function fakeProviderOptionsFromEnv(): FakeProviderOptions | undefined {
+  const path = process.env['SB_E2E_FAKE_PROVIDER'];
+  if (!path) return undefined;
+  try {
+    const parsed: unknown = JSON.parse(readFileSync(path, 'utf8'));
+    if (typeof parsed !== 'object' || parsed === null) return undefined;
+    const { replies, latencyMs, failEverything } = parsed as Record<string, unknown>;
+    return {
+      ...(isRecordOfStrings(replies) ? { replies } : {}),
+      ...(typeof latencyMs === 'number' ? { latencyMs } : {}),
+      ...(typeof failEverything === 'string' ? { failEverything } : {}),
+    };
+  } catch {
+    return undefined;
+  }
+}
+
+function isRecordOfStrings(value: unknown): value is Record<TaskKind, string> {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    Object.values(value).every((entry) => typeof entry === 'string')
+  );
+}
+
+const FAKE_PROVIDER_OPTIONS = fakeProviderOptionsFromEnv();
+
+/**
+ * The default factory (`createProviderFactory`) for every provider kind
+ * except `fake`, whose one instance this run needs is built with whatever
+ * `SB_E2E_FAKE_PROVIDER` configured (or the same bare `new FakeProvider()` as
+ * always, when the env var is unset). An e2e-only seam (073, D1) — this
+ * wrapper stays local to `llm-bridge.ts` and never touches
+ * `core/llm/factory.ts`, which non-e2e code paths (and their tests) share.
+ */
+function createGatewayProviderFactory(): ProviderFactory {
+  const defaultFactory = createProviderFactory();
+  return (config, apiKey) =>
+    config.kind === 'fake'
+      ? new FakeProvider(FAKE_PROVIDER_OPTIONS ?? {})
+      : defaultFactory(config, apiKey);
+}
 
 /** The core expects a synchronous key store; the actual write happens in the background. */
 function coreKeys(keys: KeyStore): CoreKeyStore {
@@ -57,6 +119,7 @@ export function createGateway(services: Services): LlmGateway {
     routing: settings?.routing ?? { tasks: {}, defaults: {} },
     providers: providersOf(services),
     keys: coreKeys(services.keys),
+    createProvider: createGatewayProviderFactory(),
   });
   return withAutoStart(gateway, services);
 }

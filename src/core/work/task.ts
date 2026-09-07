@@ -46,6 +46,9 @@ export function createTask(id: string, input: EnqueueTaskInput, queuedAt: string
     queuedAt,
     startedAt: null,
     finishedAt: null,
+    /* Only a finished runner can report a result — see `WorkRunner`'s return
+       value in `registry.ts`, which `settle()` merges in on the success branch. */
+    hasResult: false,
   };
 }
 

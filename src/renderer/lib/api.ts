@@ -117,6 +117,7 @@ export const api = {
     abort: (messageId: string) => call('journal:abort', { messageId }),
     close: (date: string) => call('journal:close', { date }),
     applyClose: (request: IpcRequest<'journal:applyClose'>) => call('journal:applyClose', request),
+    discardClose: (date: string) => call('journal:discardClose', { date }),
     foldDay: (date: string, expectedHash?: string) =>
       call('journal:foldDay', { date, expectedHash }),
     answerLooseEnd: (request: IpcRequest<'journal:answerLooseEnd'>) =>
@@ -257,6 +258,7 @@ export const api = {
     cancel: (id: string) => call('tasks:cancel', { id }),
     remove: (id: string) => call('tasks:remove', { id }),
     retry: (id: string) => call('tasks:retry', { id }),
+    result: (id: string) => call('tasks:result', { id }),
   },
   claude: {
     sessions: (limit?: number) => call('claude:sessions', limit === undefined ? {} : { limit }),

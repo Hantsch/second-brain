@@ -133,6 +133,12 @@ export const enJournal = {
   'journal.facts.title': 'Facts',
   'journal.facts.empty': 'What the day close found and you confirmed shows up here.',
   'journal.close.action': 'Close the day',
+  /* 073, D6: waiting/failure of the close-out run in the queue — same shape
+     as `notes.condensed.waiting`/`failed.reason`. Own name rather than
+     `journal.close.waiting`: that key already belongs to the proposal's
+     waiting-on row. */
+  'journal.close.queueWaiting': 'Waiting for the model — queue position {position}',
+  'journal.close.failed.reason': 'Reason: {reason}',
   'journal.close.title': 'Day close',
   'journal.close.body':
     'Found in the text of the day. Nothing is written — you decide what is kept.',

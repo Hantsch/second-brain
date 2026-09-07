@@ -19,8 +19,7 @@
  * `close-proposal.ts`'s `clear`. */
 
 import type { ReactNode } from 'react';
-import type { JournalCloseSuggestion } from '@shared/ipc';
-import type { Project, ProposedTodo, WaitingOn } from '@shared/types';
+import type { JournalCloseSuggestion, Project, ProposedTodo, WaitingOn } from '@shared/types';
 import { Button } from '../../atoms/Button';
 import { Card } from '../../atoms/Card';
 import { Checkbox } from '../../atoms/Checkbox';
