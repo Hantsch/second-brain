@@ -182,6 +182,7 @@ export const enWiki = {
   'sources.duplicate.body':
     'The existing entry was opened. If condensation is still pending, use “Condense” there.',
   'sources.duplicate.condensedTitle': 'Source is already condensed',
+  'sources.duplicate.again': 'Ingest again',
   'sources.noContent.title': 'The source rests in the vault, there is nothing to condense',
   'sources.noContent.body':
     'The raw source is stored, but without readable text — no model could turn it into a page. A retry would end the same way; digesting from the description is the choice offered in the list below.',

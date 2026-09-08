@@ -81,6 +81,7 @@ export {
 } from './file';
 export {
   FETCH_TIMEOUT_MS,
+  FETCH_USER_AGENT,
   MAX_BYTES,
   createUrlIngestor,
   fetchPage,

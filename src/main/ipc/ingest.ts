@@ -58,6 +58,7 @@ import {
   findDuplicate,
   sourceDetail,
 } from './source-detail';
+import { fetchFixtureFor } from './fetch-e2e-fixture';
 import { docLanguage, settle, wikiDeps, wikiStore } from './wiki-bridge';
 import { createGateway } from '../llm-bridge';
 import { getWorkQueue } from '../work-queue';
@@ -171,7 +172,7 @@ function environment(
   services: Services,
 ): Omit<IngestContext, 'store' | 'onProgress' | 'signal' | 'module'> {
   return {
-    fetchImpl: fetch,
+    fetchImpl: fetchFixtureFor() ?? fetch,
     fs: nodeFileSystem(),
     run: nodeProcessRunner(),
     languages: ['original', docLanguage(services), 'en'],
@@ -438,26 +439,29 @@ export function ingestHandlers(services: Services): HandlerMap {
       return result.canceled ? [] : result.filePaths;
     },
 
-    'ingest:start': async ({ kind, input, module }) => {
+    'ingest:start': async ({ kind, input, module, force }) => {
       const text = String(input ?? '').trim();
       if (text.length === 0) throw fail('invalid', 'ohne Eingabe gibt es keine Quelle');
       const queue = holder.current();
-      const fingerprint = sourceFingerprint(kind, text);
-      const session = queue
-        .jobs()
-        .find(
-          (job) =>
-            job.error !== 'cancelled' && sourceFingerprint(job.kind, job.input) === fingerprint,
-        );
-      if (session?.rawPath === null || session?.rawPath === undefined) {
-        if (session !== undefined) return session;
-      } else {
-        return queue.addDuplicate({ kind, input: text, module: module ?? null }, session.rawPath);
+      if (force !== true) {
+        const fingerprint = sourceFingerprint(kind, text);
+        const session = queue
+          .jobs()
+          .find(
+            (job) =>
+              job.error !== 'cancelled' && sourceFingerprint(job.kind, job.input) === fingerprint,
+          );
+        if (session?.rawPath === null || session?.rawPath === undefined) {
+          if (session !== undefined) return session;
+        } else {
+          return queue.addDuplicate({ kind, input: text, module: module ?? null }, session.rawPath);
+        }
+        const duplicate = await findDuplicate(services, kind, text);
+        if (duplicate !== null) {
+          return queue.addDuplicate({ kind, input: text, module: module ?? null }, duplicate);
+        }
       }
-      const duplicate = await findDuplicate(services, kind, text);
-      return duplicate === null
-        ? queue.add({ kind, input: text, module: module ?? null })
-        : queue.addDuplicate({ kind, input: text, module: module ?? null }, duplicate);
+      return queue.add({ kind, input: text, module: module ?? null });
     },
 
     'ingest:jobs': () => holder.current().jobs(),

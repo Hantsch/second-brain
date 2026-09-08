@@ -455,6 +455,35 @@ describe('Quellen- und Modul-Kanäle im Main', () => {
     });
   });
 
+  it('nimmt einen erzwungenen Import erneut auf, ohne die erste Rohquelle anzutasten', async () => {
+    const input = 'Nochmal aufnehmen.';
+    const first = await settled(
+      (
+        await harness.call('ingest:start', {
+          kind: 'text',
+          input,
+          module: null,
+        })
+      ).id,
+    );
+    const firstBytes = await vault.read(`${first.rawPath}/source.md`);
+    expect(firstBytes).not.toBeNull();
+
+    const forced = await harness.call('ingest:start', {
+      kind: 'text',
+      input,
+      module: null,
+      force: true,
+    });
+    /* Kein Duplikat-Kurzschluss: das ist ein echter, neuer Auftrag. */
+    expect(forced.stage).not.toBe('duplicate');
+    expect(forced.duplicateOf ?? null).toBeNull();
+    const second = await settled(forced.id);
+
+    expect(second.rawPath).not.toBe(first.rawPath);
+    expect(await vault.read(`${first.rawPath}/source.md`)).toBe(firstBytes);
+  });
+
   it('verdichtet eine Bestandsquelle aus dem Detailfenster ohne neuen Rohimport', async () => {
     const first = await settled(
       (

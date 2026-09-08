@@ -23,7 +23,8 @@
 
 import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { basename, join } from 'node:path';
+import { basename, dirname, isAbsolute, join, resolve as resolvePath } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { expect, test as base } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import type { AppSession } from '../../../scripts/lib/app-harness.mjs';
@@ -68,6 +69,21 @@ export interface FakeProviderScript {
   failEverything?: string;
 }
 
+/** One entry of the `SB_E2E_FETCH_FIXTURE` manifest (064, D6): a fixed request URL
+ * answered from a local fixture HTML file, never a real request. Mirrors
+ * `FetchFixtureResponse` in `src/main/ipc/fetch-e2e-fixture.ts`. */
+export interface FetchFixtureResponse {
+  url: string;
+  /** Base name of a file under `tests/e2e/fixtures/pages/`, or an absolute path. */
+  file: string;
+  contentType?: string;
+  status?: number;
+}
+
+export interface FetchFixtureManifest {
+  responses: FetchFixtureResponse[];
+}
+
 export interface AppOptions {
   /** The spec file's base name, e.g. 'smoke' in smoke.spec.ts. */
   specId: string;
@@ -94,6 +110,13 @@ export interface AppOptions {
    * (the default) touches neither the environment nor the vault — every spec that doesn't
    * opt in keeps running with no model configured, exactly as before this seam existed. */
   fakeProvider: FakeProviderScript | undefined;
+  /** When set, wires up the offline `SB_E2E_FETCH_FIXTURE` seam (064, D6): the manifest is
+   * written to a JSON file passed as `SB_E2E_FETCH_FIXTURE`, each entry's `file` resolved to
+   * an absolute path under `tests/e2e/fixtures/pages/`. `undefined` (the default) touches
+   * neither the environment nor the vault — every spec that doesn't opt in keeps getting the
+   * real global `fetch` (still blocked from making a real request by `noNetworkCalls` unless
+   * it never tries to fetch anything, exactly as before this seam existed). */
+  fetchFixture: FetchFixtureManifest | undefined;
 }
 
 export interface AppFixtures {
@@ -169,6 +192,26 @@ function writeFakeProviderScript(tempRoot: string, script: FakeProviderScript): 
   return file;
 }
 
+/** Local fixture HTML files a `fetchFixture` manifest entry's `file` resolves against
+ * when it isn't already absolute — `tests/e2e/fixtures/pages/`. */
+const FETCH_FIXTURE_PAGES_DIR = join(dirname(fileURLToPath(import.meta.url)), 'pages');
+
+/** Writes the fetch-fixture manifest to a JSON file in the fixture's temp dir, resolving
+ * every entry's `file` to an absolute path first, and returns the manifest's own path — the
+ * value the launched app's `env` passes on as `SB_E2E_FETCH_FIXTURE`
+ * (`src/main/ipc/fetch-e2e-fixture.ts`). */
+function writeFetchFixtureManifest(tempRoot: string, manifest: FetchFixtureManifest): string {
+  const file = join(tempRoot, 'fetch-fixture.json');
+  const resolved: FetchFixtureManifest = {
+    responses: manifest.responses.map((entry) => ({
+      ...entry,
+      file: isAbsolute(entry.file) ? entry.file : resolvePath(FETCH_FIXTURE_PAGES_DIR, entry.file),
+    })),
+  };
+  writeFileSync(file, JSON.stringify(resolved), 'utf8');
+  return file;
+}
+
 export const test = base.extend<
   { specIdMatchesFile: void; noNetworkCalls: void },
   AppOptions & AppFixtures
@@ -182,6 +225,8 @@ export const test = base.extend<
   tasksFixture: [false, { scope: 'worker', option: true }],
 
   fakeProvider: [undefined, { scope: 'worker', option: true }],
+
+  fetchFixture: [undefined, { scope: 'worker', option: true }],
 
   specIdMatchesFile: [
     async ({ specId }, use, testInfo) => {
@@ -225,7 +270,15 @@ export const test = base.extend<
 
   app: [
     async (
-      { tempRoot, vaultPath, stageDelayMs, ingestDelayMs, tasksFixture, fakeProvider },
+      {
+        tempRoot,
+        vaultPath,
+        stageDelayMs,
+        ingestDelayMs,
+        tasksFixture,
+        fakeProvider,
+        fetchFixture,
+      },
       use,
     ) => {
       if (fakeProvider) pinFakeProvider(vaultPath);
@@ -239,6 +292,9 @@ export const test = base.extend<
         ...(tasksFixture ? { SB_E2E_TASKS_FIXTURE: '1' } : {}),
         ...(fakeProvider
           ? { SB_E2E_FAKE_PROVIDER: writeFakeProviderScript(tempRoot, fakeProvider) }
+          : {}),
+        ...(fetchFixture
+          ? { SB_E2E_FETCH_FIXTURE: writeFetchFixtureManifest(tempRoot, fetchFixture) }
           : {}),
       };
       const session = await launchApp({

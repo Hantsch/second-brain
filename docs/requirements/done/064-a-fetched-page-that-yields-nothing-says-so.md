@@ -1,7 +1,7 @@
 ---
 id: 064
 title: A fetched page that yields nothing says so
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-09-03
 ---
 
@@ -29,15 +29,15 @@ possible.
 
 ## Acceptance Criteria
 
-- [ ] **AC1** — The fetch sends a reasonable User-Agent; a test pins the header.
-- [ ] **AC2** — A fetch whose extracted content is empty or trivially small ends in a named state ("page
+- [x] **AC1** — The fetch sends a reasonable User-Agent; a test pins the header.
+- [x] **AC2** — A fetch whose extracted content is empty or trivially small ends in a named state ("page
       yielded no content"), distinct from "no model configured" and from network errors — and
       writes no digestible source that pretends otherwise.
-- [ ] **AC3** — The duplicate detection gains an explicit "ingest again" path that creates a new dated
+- [x] **AC3** — The duplicate detection gains an explicit "ingest again" path that creates a new dated
       raw source, never overwriting the old one (raw stays immutable).
-- [ ] **AC4** — Content-type rejections and truncations keep their existing behaviour; existing tests are
+- [x] **AC4** — Content-type rejections and truncations keep their existing behaviour; existing tests are
       unweakened.
-- [ ] **AC5** — Tests cover: a consent-wall-shaped page, an empty extraction, and the re-ingest path —
+- [x] **AC5** — Tests cover: a consent-wall-shaped page, an empty extraction, and the re-ingest path —
       all offline against fixtures.
 
 ## Open Questions
@@ -174,24 +174,108 @@ reason is named" terminal shape; 064 adds the URL case to it.
 
 ### Acceptance tests
 
-- AC1 → unit `tests/core/ingest/url.test.ts` › "the fetch sends a User-Agent" (D1)
-- AC2 → unit `tests/core/ingest/url.test.ts` › "a consent wall yields no content" and
-  `tests/core/ingest/queue.test.ts` › "an empty extraction ends with the reason no-content, not
-  as no model configured" (D2/D3); user-visible half → e2e
-  `tests/e2e/url-no-content.spec.ts` › "a page that yields nothing says so, not that a model is
-  missing" (D6)
-- AC3 → e2e `tests/e2e/url-no-content.spec.ts` › "ingest again writes a second raw source and
-  leaves the first one alone" (D6), plus unit `tests/main/ingest-ipc.test.ts` › "force ingests
-  again into a new dated raw source" (D4)
-- AC4 → unit `tests/core/ingest/url.test.ts` › "a truncated but substantial page still digests"
-  and "a PDF is still rejected by content type" (D2) — the existing content-type and truncation
-  tests in that file stay unchanged and green
-- AC5 → covered by the three test lines above; all fixtures are offline
+As actually written (test titles are German where the file's existing tests already were; new
+English titles were used only where the surrounding file is English):
+
+- AC1 → unit `tests/core/ingest/url.test.ts` › "schickt einen User-Agent, der sich zu erkennen
+  gibt" (D1)
+- AC2 → unit `tests/core/ingest/url.test.ts` › "meldet eine Cookie-Wand als leeren Fund, behaelt
+  aber den Beleg in der Rohdatei" and "meldet eine leere SPA-Huelle als leeren Fund, behaelt aber
+  den Beleg in der Rohdatei" (D2); `tests/core/ingest/queue.test.ts` › "an empty extraction ends
+  with the reason no-content, not as no model configured", "names the emptiness, not the
+  truncation, when a cut page yields nothing", "keeps a substantial page without a model at
+  awaiting-llm with no reason", "keeps an unreachable host in error, not in no-content" (D3);
+  `tests/core/ingest/existing.test.ts` › "haelt eine als no-content markierte url-Quelle beim
+  erneuten Verdichten leer" (review-fix: closes the manual-re-condense loophole on a hollow
+  source); user-visible half → e2e `tests/e2e/url-no-content.spec.ts` › "a fetched page that
+  yields nothing readable ends honestly as no-content" (D6)
+- AC3 → e2e `tests/e2e/url-no-content.spec.ts` › "a duplicate URL can be ingested again, leaving
+  the first raw file untouched" (D6), plus unit `tests/main/ingest-ipc.test.ts` › "nimmt einen
+  erzwungenen Import erneut auf, ohne die erste Rohquelle anzutasten" (D4)
+- AC4 → unit `tests/core/ingest/url.test.ts` › "verdichtet eine abgeschnittene, aber
+  substantielle Seite trotzdem" (truncation test added in review-fix; the story's Test Plan had
+  named this test before it actually existed) and "lehnt ab, was kein Text ist" (content-type
+  rejection) — both green and unweakened; "nimmt reinen Text ohne HTML-Wandlung" (pre-existing)
+  had its fixture body lengthened because its original 22-char body incidentally tripped the new
+  200-char threshold — the assertion was strengthened (added an explicit empty-notes check), not
+  weakened
+- AC5 → covered by the four test lines above; all fixtures are offline
   (`tests/core/ingest/fakes.ts`'s `fakeFetch` for unit, `SB_E2E_FETCH_FIXTURE` for e2e) and
   `tests/main/fetch-fixture-seam.test.ts` › "without the env var no fixture fetch is wired"
   proves the seam cannot leak into a real run (D6)
 
-Coverage gate: AC1 → D1, AC2 → D2+D3+D6, AC3 → D4+D5+D6, AC4 → D2, AC5 → D2+D4+D6. No manual
-residue.
+Coverage gate: AC1 → D1, AC2 → D2+D3+D6+review-fix, AC3 → D4+D5+D6, AC4 → D2+review-fix,
+AC5 → D2+D4+D6. No manual residue.
 
 ## Done
+
+**Summary.** The URL fetcher now sends a truthful `FETCH_USER_AGENT`; extracted content under
+200 non-whitespace characters (`MIN_CONTENT_CHARS`, the same bar `pickMainContent` already used)
+is blanked into an empty `IngestOutcome.text` plus a `no-content` note, while the raw `.md` file
+still keeps the real fetched bytes as evidence. The queue's existing `no-content` terminal
+branch (from story 051) now also fires correctly for this case, with a precedence fix so a page
+that is both truncated and hollow reports `no-content`, not `content-truncated`. `ingest:start`
+gained a `force?: boolean` flag that skips duplicate detection for an explicit re-ingest, always
+landing on a new dated raw path (`freeRawPath`), never overwriting the original. The Sources
+screen's duplicate row now offers an "Ingest again" button, disabled while a start-mutation is
+in flight. A new `SB_E2E_FETCH_FIXTURE` seam (mirroring `SB_E2E_FAKE_PROVIDER`) lets
+`tests/e2e/url-no-content.spec.ts` drive both the no-content and the ingest-again flows through
+the real built app, fully offline.
+
+A clean-agent review (`story-review-hard`) found one significant gap beyond the six deliverables:
+a raw source the initial ingest had already marked `no-content` could still be manually
+re-condensed into a real, citable wiki page, because `loadExistingOutcome` re-read the *whole*
+raw file (frontmatter + heading always non-empty) instead of honouring the recorded verdict.
+Fixed in one review-fix round, together with three smaller findings (see Decisions below).
+
+**Commit message:**
+
+```
+064: a fetched page that yields nothing says so
+```
+
+**Verification:**
+
+- `npm run format:check` — clean (one pre-existing, unrelated warning on
+  `docs/requirements/done/051-...md`, a file this story never touches).
+- `npm run lint` — clean.
+- `npm run typecheck` — clean (both `tsconfig.node.json` and `tsconfig.web.json`).
+- `npm test` — 289 files / 3950 tests, all green (an earlier full run hit one unrelated
+  pre-existing flaky timeout in `tests/renderer/journal.test.tsx`, a file untouched by this
+  story, which passed in isolation and passed again on the post-review-fix full run).
+- `npm run build` — clean.
+- `npm run test:e2e` — 53/53 green, including both new `tests/e2e/url-no-content.spec.ts` cases.
+- Code review (`story-review-hard`): verdict PASS with 8 findings. Fixed: the manual-re-condense
+  loophole (finding 3, most severe), the wrong-module bug in "Ingest again" (finding 6), the
+  missing AC4 truncation test (finding 4), and a double-click race guard on "Ingest again"
+  (finding 1). Deliberately left as-is, with reasons:
+  - Finding 2 (the generic `no-content` note text mentions "digest from the description", which
+    only applies to youtube) and the "badge" half of finding 3 (extending
+    `SourceBlockReason`/the undigested-filter badge to the url case) — both fall under
+    "gardener and the undigested filter stay out of scope", explicitly decided during refine:
+    "051's AC4 owns that surface for the whole family; 064 only writes the log note it reads."
+  - Finding 7 (an `already-condensed` duplicate row also shows "Ingest again", which creates a
+    second raw source and a second wiki page with no extra warning) — accepted: the row's
+    existing copy already states the source was condensed once; "the page changed, fetch it
+    again" is exactly what a user forcing that row is asking for, and gating it further was not
+    in the plan or acceptance criteria.
+  - Finding 8 (German comments/quoting style pre-dating this story) — pre-existing repo style,
+    not introduced here, out of scope for a fetch-behaviour story.
+  - Finding 5 (the User-Agent test asserts the imported constant rather than a hardcoded literal
+    string) — accepted: pinning against the exported constant still catches any accidental
+    change to the header wiring, which is what AC1 asks a test to pin; a second, redundant
+    hardcoded-string assertion was judged not worth the churn.
+- AC → test mapping: see `## Test Plan (manual acceptance)` above, updated with the actual test
+  titles as written. No manual residue.
+
+**Decisions (implementation).**
+
+- Reused 051's terminal-state shape exactly as the plan demanded: no new `notDigestedReason`
+  field was added to `IngestJob` — `job.message` already carries the `IngestNoteCode` for stage
+  `no-content` (051's mechanism); D3 only fixed a precedence bug in `noContentReason`'s fallback.
+- The raw file and the outcome's `text` deliberately diverge for a hollow page: the raw `.md`
+  keeps the real extracted markdown (evidence of what the wall returned), the `IngestOutcome`
+  passed to the queue gets `text: ''` — this is the mechanism the review-fix's
+  `existing.ts` change also had to honour on the manual re-condense path.
+- "Ingest again" sits only on the `duplicate` job row's action strip, not inside the note block
+  and not in the source detail dialog, per the sprint's decision.

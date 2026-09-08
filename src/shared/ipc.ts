@@ -696,7 +696,7 @@ export interface IpcRoutes {
 
   // ── Ingesting sources ────────────────────────────────────────────────────
   'ingest:start': {
-    req: { kind: IngestKind; input: string; module?: string | null };
+    req: { kind: IngestKind; input: string; module?: string | null; force?: boolean };
     res: IngestJob;
   };
   'ingest:jobs': { req: void; res: IngestJob[] };

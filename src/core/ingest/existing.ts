@@ -63,7 +63,12 @@ export async function loadExistingOutcome(
   const kind = kindOf(log.kind);
   if (kind === null) throw new IngestError('invalid', `Quellenart von ${rawPath} ist unbekannt.`);
   const basis = options.basis ?? 'transcript';
-  const text = await readableText(store, rawPath, kind, log['file'], log['transcript'], basis);
+  const notes = notesOf(log.notes);
+  let text = await readableText(store, rawPath, kind, log['file'], log['transcript'], basis);
+  // A url source the original ingest already marked hollow (`no-content`) must stay hollow on a
+  // manual re-condense too — the raw file's frontmatter+heading always read as non-empty text,
+  // which would otherwise defeat queue.ts's emptiness check on this second pass.
+  if (kind === 'url' && notes.some((note) => note.code === 'no-content')) text = '';
   return {
     kind,
     rawPath,
@@ -71,6 +76,6 @@ export async function loadExistingOutcome(
     text,
     origin: log.origin,
     provenance: log.provenance,
-    notes: notesOf(log.notes),
+    notes,
   };
 }

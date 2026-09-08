@@ -2,7 +2,7 @@
    `awaiting-llm`, wenn die Rohquelle liegt, aber kein Modell verdichten kann. */
 
 import { describe, expect, it, vi } from 'vitest';
-import { IngestQueue, type IngestOutcome, type SourceIngestor } from '@core/ingest';
+import { IngestError, IngestQueue, type IngestOutcome, type SourceIngestor } from '@core/ingest';
 import { WikiError } from '@core/wiki';
 import type { IngestJob } from '@shared/types';
 import { memoryStore } from './fakes';
@@ -434,6 +434,110 @@ describe('IngestQueue', () => {
     const job = queue.add({ kind: 'text', input: 'nur Leerzeichen' });
     await vi.waitFor(() => expect(queue.job(job.id)?.stage).toBe('no-content'));
     expect(queue.job(job.id)?.message).toBe('no-content');
+  });
+
+  /* 064, D3: the URL case joins 051's terminal shape — no second mechanism. A
+     fetched page that converts to almost nothing arrives here with `text: ''` and
+     the note `no-content`, so the same branch names the reason on `job.message`. */
+  function hollowPageIngestor(notes: IngestOutcome['notes']): SourceIngestor {
+    return {
+      kind: 'url',
+      canHandle: () => true,
+      async ingest(): Promise<IngestOutcome> {
+        return {
+          kind: 'url',
+          rawPath: 'raw/web/2026-09-03-consent-wall.md',
+          title: 'Zustimmung erforderlich',
+          // Die Rohdatei liegt trotzdem; nur der zu verdichtende Text ist leer.
+          text: '',
+          origin: 'https://example.com/article',
+          provenance: { content: 'fetch' },
+          notes: [...notes],
+        };
+      },
+    };
+  }
+
+  it('an empty extraction ends with the reason no-content, not as no model configured', async () => {
+    let condensed = 0;
+    const queue = new IngestQueue({
+      store: memoryStore(),
+      ingestors: [hollowPageIngestor([{ code: 'no-content' }])],
+      condense: async () => {
+        condensed += 1;
+        return { pages: ['modules/m/wiki/sources/s-1.md'], sourcePage: 's-1', modules: ['m'] };
+      },
+      llmAvailable: () => true,
+    });
+
+    const job = queue.add({ kind: 'url', input: 'https://example.com/article' });
+    await vi.waitFor(() => expect(queue.job(job.id)?.stage).toBe('no-content'));
+
+    const done = queue.job(job.id);
+    /* Der Grund steht am Auftrag — genau das unterscheidet die hohle Seite von
+       „kein Modell eingerichtet", wo `message` null bleibt. */
+    expect(done?.message).toBe('no-content');
+    expect(done?.stage).not.toBe('awaiting-llm');
+    expect(done?.error).toBeNull();
+    expect(done?.progress).toBe(1);
+    expect(done?.finishedAt).not.toBeNull();
+    expect(done?.rawPath).toBe('raw/web/2026-09-03-consent-wall.md');
+    /* Keine Wiki-Seite: eine hohle Seite wird nicht verdichtet und damit auch
+       nicht zitierbar. */
+    expect(condensed).toBe(0);
+    expect(done?.touchedPages).toEqual([]);
+  });
+
+  it('names the emptiness, not the truncation, when a cut page yields nothing', async () => {
+    const queue = new IngestQueue({
+      store: memoryStore(),
+      // Eine 5-MB-Seite wird abgeschnitten und liefert danach trotzdem nichts.
+      ingestors: [hollowPageIngestor([{ code: 'content-truncated' }, { code: 'no-content' }])],
+      condense: async () => ({ pages: [] }),
+      llmAvailable: () => true,
+    });
+
+    const job = queue.add({ kind: 'url', input: 'https://example.com/shell' });
+    await vi.waitFor(() => expect(queue.job(job.id)?.stage).toBe('no-content'));
+
+    /* „Abgeschnitten" erklaert die Leere nicht: eine abgeschnittene Seite ist
+       normalerweise verdichtbar. Der Grund ist, dass nichts herauskam. */
+    expect(queue.job(job.id)?.message).toBe('no-content');
+  });
+
+  it('keeps a substantial page without a model at awaiting-llm with no reason', async () => {
+    const queue = new IngestQueue({
+      store: memoryStore(),
+      ingestors: [fakeIngestor()],
+      llmAvailable: () => false,
+    });
+
+    const job = queue.add({ kind: 'text', input: 'genug Inhalt' });
+    await vi.waitFor(() => expect(queue.job(job.id)?.stage).toBe('awaiting-llm'));
+
+    /* Kein Grund am Auftrag heisst genau eines: es fehlt das Modell, nicht der
+       Inhalt. Die Oberflaeche darf die beiden Faelle nie verwechseln. */
+    expect(queue.job(job.id)?.message).toBeNull();
+    expect(queue.job(job.id)?.stage).not.toBe('no-content');
+  });
+
+  it('keeps an unreachable host in error, not in no-content', async () => {
+    const queue = new IngestQueue({
+      store: memoryStore(),
+      ingestors: [
+        fakeIngestor({ fail: new IngestError('io', 'Die Adresse ist nicht erreichbar.') }),
+      ],
+      condense: async () => ({ pages: [] }),
+      llmAvailable: () => true,
+    });
+
+    const job = queue.add({ kind: 'url', input: 'https://nirgendwo.invalid/x' });
+    await vi.waitFor(() => expect(queue.job(job.id)?.stage).toBe('error'));
+
+    const done = queue.job(job.id);
+    expect(done?.error).toBe('io');
+    expect(done?.message).toBe('Die Adresse ist nicht erreichbar.');
+    expect(done?.stage).not.toBe('no-content');
   });
 
   it('raeumt abgeschlossene Auftraege auf Wunsch weg', async () => {

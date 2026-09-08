@@ -41,6 +41,12 @@ export interface JobListProps {
   jobs: readonly IngestJob[];
   onCancel: (id: string) => void;
   onRetry: (id: string) => void;
+  /** Re-run a duplicate job on purpose, bypassing the duplicate check. */
+  onIngestAgain: (id: string) => void;
+  /** A re-ingest is already in flight — disable "ingest again" everywhere so a
+   * second click can't race the first for the same new raw path. Coarse on
+   * purpose: it gates the whole list, not just the row that was clicked. */
+  ingestAgainPending: boolean;
   /** Show the raw source in its folder. */
   onOpenRaw: (path: string) => void;
   /** Jump to the wiki page (path of a touched page). */
@@ -60,6 +66,8 @@ function JobRow({
   job,
   onCancel,
   onRetry,
+  onIngestAgain,
+  ingestAgainPending,
   onOpenRaw,
   onOpenPage,
 }: JobListProps & { job: IngestJob }) {
@@ -195,6 +203,17 @@ function JobRow({
         ) : retryable ? (
           <Button variant="ghost" size="sm" icon="refresh-cw" onClick={() => onRetry(job.id)}>
             {t('sources.job.retry')}
+          </Button>
+        ) : null}
+        {job.stage === 'duplicate' ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            icon="refresh-cw"
+            disabled={ingestAgainPending}
+            onClick={() => onIngestAgain(job.id)}
+          >
+            {t('sources.duplicate.again')}
           </Button>
         ) : null}
         {job.rawPath === null || job.stage === 'awaiting-llm' ? null : (

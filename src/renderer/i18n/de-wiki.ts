@@ -189,6 +189,7 @@ export const deWiki = {
   'sources.duplicate.body':
     'Der vorhandene Eintrag wurde geöffnet. Für eine offene Verdichtung dient dort die Aktion „Verdichten“.',
   'sources.duplicate.condensedTitle': 'Quelle ist bereits verdichtet',
+  'sources.duplicate.again': 'Erneut aufnehmen',
   'sources.noContent.title': 'Quelle liegt im Vault, es gibt nichts zu verdichten',
   'sources.noContent.body':
     'Die Rohquelle ist gespeichert, aber ohne lesbaren Text — kein Modell könnte daraus eine Seite machen. Ein erneuter Versuch endet gleich; ein Digest aus der Beschreibung ist die Wahl in der Bestandsliste.',

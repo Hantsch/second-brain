@@ -46,6 +46,15 @@ const CONDENSING_STAGES: ReadonlySet<IngestStage> = new Set<IngestStage>([
 ]);
 
 /**
+ * Hinweise, die die Leere selbst erklaeren, in dieser Vorrangfolge. Alles andere
+ * (`content-truncated`, `partial-metadata`, `ytdlp-missing`) ist beilaeufig: eine
+ * abgeschnittene Seite ist normalerweise verdichtbar, also waere „abgeschnitten"
+ * an einer leeren Quelle der falsche Grund. Steht kein Hinweis dieser Liste an,
+ * bleibt es beim ersten vorhandenen — er ist naeher an der Quelle als wir.
+ */
+const EMPTINESS_REASONS: readonly IngestNoteCode[] = ['no-transcript', 'no-content'];
+
+/**
  * Warum es nichts zu verdichten gibt — als Code, nicht als Satz. `no-transcript`
  * hat Vorrang: liegen mehrere Hinweise an einer leeren Quelle, ist das fehlende
  * Transcript der Grund, der sie erklaert. Ohne jeden Hinweis bleibt das
@@ -53,7 +62,7 @@ const CONDENSING_STAGES: ReadonlySet<IngestStage> = new Set<IngestStage>([
  */
 function noContentReason(outcome: IngestOutcome): IngestNoteCode {
   const codes = outcome.notes.map((note) => note.code);
-  return codes.find((code) => code === 'no-transcript') ?? codes[0] ?? 'no-content';
+  return EMPTINESS_REASONS.find((code) => codes.includes(code)) ?? codes[0] ?? 'no-content';
 }
 
 export interface CondenseInput {

@@ -76,6 +76,19 @@ export function SourcesTab({ initialModule = null }: SourcesTabProps) {
     mutations.start.mutate({ kind, input: text, module }, { onSuccess: afterStart });
   };
 
+  /* The duplicate check exists so a re-drop doesn't silently double a source —
+     but sometimes running it again is exactly the point (the source changed
+     upstream). The trigger sits on the duplicate row itself and bypasses the
+     check on purpose, once, for that one job. */
+  const ingestAgain = (id: string): void => {
+    const job = (jobs.data ?? []).find((entry) => entry.id === id);
+    if (job === undefined) return;
+    mutations.start.mutate(
+      { kind: job.kind, input: job.input, module: job.module, force: true },
+      { onSuccess: afterStart },
+    );
+  };
+
   /** Selected files come with their path — the original moves into raw/. */
   const pickFiles = (): void => {
     void api.ingest
@@ -157,6 +170,8 @@ export function SourcesTab({ initialModule = null }: SourcesTabProps) {
             jobs={jobs.data ?? []}
             onCancel={(id) => mutations.cancel.mutate(id)}
             onRetry={(id) => mutations.retry.mutate(id)}
+            onIngestAgain={ingestAgain}
+            ingestAgainPending={mutations.start.isPending}
             onOpenRaw={openRaw}
             onOpenPage={openPage}
           />

@@ -159,12 +159,17 @@ export interface FakeFetchOptions {
 export function fakeFetch(reply: FakeFetchOptions | ((url: string) => FakeFetchOptions)): {
   fetchImpl: (url: string, init?: RequestInit) => Promise<Response>;
   urls: string[];
+  /** Was `init` bei jedem Aufruf mitbekam — fuer Kopfzeilen-Zusicherungen. */
+  inits: (RequestInit | undefined)[];
 } {
   const urls: string[] = [];
+  const inits: (RequestInit | undefined)[] = [];
   return {
     urls,
-    fetchImpl: async (url) => {
+    inits,
+    fetchImpl: async (url, init) => {
       urls.push(url);
+      inits.push(init);
       const options = typeof reply === 'function' ? reply(url) : reply;
       const response = new Response(options.body ?? '', {
         status: options.status ?? 200,

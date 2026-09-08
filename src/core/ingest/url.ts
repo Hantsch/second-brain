@@ -26,6 +26,15 @@ export const MAX_BYTES = 5 * 1024 * 1024;
 
 export const FETCH_TIMEOUT_MS = 30_000;
 
+/** Kennt sich zu erkennen geben, statt sich als Browser auszugeben. */
+export const FETCH_USER_AGENT = 'Mozilla/5.0 (compatible; Gaston/1.0)';
+
+/**
+ * Untergrenze an nicht-Leerraum-Zeichen, ab der extrahiertes Markdown als echter
+ * Inhalt gilt — dieselbe Schwelle wie `pickMainContent` in html.ts.
+ */
+export const MIN_CONTENT_CHARS = 200;
+
 const TEXT_TYPES = [
   'text/html',
   'application/xhtml',
@@ -134,7 +143,10 @@ export async function fetchPage(input: string, ctx: IngestContext): Promise<Fetc
     response = await fetchImpl(input, {
       redirect: 'follow',
       signal: timeout.signal,
-      headers: { accept: 'text/html,text/plain;q=0.9,*/*;q=0.1' },
+      headers: {
+        accept: 'text/html,text/plain;q=0.9,*/*;q=0.1',
+        'user-agent': FETCH_USER_AGENT,
+      },
     });
   } catch (error) {
     throwIfCancelled(ctx.signal);
@@ -163,6 +175,15 @@ export async function fetchPage(input: string, ctx: IngestContext): Promise<Fetc
 
   const article = looksLikeHtml ? htmlToArticle(text) : { title: null, markdown: text.trim() };
   const title = article.title ?? titleFromUrl(url);
+
+  // Ein Cookie-Banner oder eine leere SPA-Huelle liefert HTTP 200, aber praktisch
+  // nichts Lesbares. Das ist kein Fehler beim Abruf, sondern ein leerer Fund —
+  // dieselbe 200-Zeichen-Schwelle wie `pickMainContent` in html.ts entscheidet.
+  const nonWhitespaceChars = article.markdown.replace(/\s+/g, '').length;
+  if (nonWhitespaceChars < MIN_CONTENT_CHARS) {
+    notes.push({ code: 'no-content' });
+  }
+
   return {
     url,
     title: title.length > 0 ? title : url,
@@ -224,11 +245,17 @@ export function createUrlIngestor(): SourceIngestor {
         notes: page.notes,
       });
 
+      // Die Rohdatei behaelt den tatsaechlich abgerufenen Inhalt als Beleg, auch
+      // wenn er zu duenn ist, um als echter Fund zu gelten — der Text im
+      // IngestOutcome wird in diesem Fall geleert, damit die Queue die Quelle als
+      // `no-content` behandelt statt eine fast leere Seite still durchzuwinken.
+      const hasNoContent = page.notes.some((note) => note.code === 'no-content');
+
       return {
         kind: 'url',
         rawPath: target,
         title: page.title,
-        text: page.markdown,
+        text: hasNoContent ? '' : page.markdown,
         origin: page.url,
         provenance: { content: 'fetch', metadata: 'fetch' },
         notes: page.notes,

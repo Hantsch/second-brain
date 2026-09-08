@@ -22,8 +22,8 @@ which of the three happened — distinguishable from "no model configured".
 
 - [x] 065 — The gate runs on every push
 - [x] 050 — A digestion completes whole or leaves no trace
-- [ ] 051 — A video without a transcript is an honest failure
-- [ ] 064 — A fetched page that yields nothing says so
+- [x] 051 — A video without a transcript is an honest failure
+- [x] 064 — A fetched page that yields nothing says so
 
 ## Notes
 
