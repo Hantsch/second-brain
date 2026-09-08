@@ -17,6 +17,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { parseTodos } from '@core/index';
 import { parseStream } from '@core/journal';
 import type * as CoreJournal from '@core/journal';
 import { isoDay, journalPath } from '@core/vault/paths';
@@ -409,8 +410,8 @@ describe('Tagebuch-Kanäle im Main', () => {
     expect(result.path).toBe('journal/2026/08/2026-08-08.md');
     const file = (await vault.read(result.path)) ?? '';
     expect(file.indexOf('Werkstatt')).toBeGreaterThan(file.indexOf('## Tag'));
-    /* Ein frischer Tag hat seit 011 nur „Tag" und „Fakten" — die Prosa steht
-       unter „Tag", also vor „Fakten". */
+    /* Ein frischer Tag hat seit 011 nur „Tag" und „Fakten“ — die Prosa steht
+       unter „Tag", also vor „Fakten“. */
     expect(file.indexOf('Werkstatt')).toBeLessThan(file.indexOf('## Fakten'));
 
     const second = await harness.call('journal:append', {
@@ -523,7 +524,7 @@ describe('Tagebuch-Kanäle im Main', () => {
 
     expect(day.mood).toBe(4);
     expect(day.energy).toBe(3);
-    /* Angelegt mit dem Rumpf eines frischen Tages (011: „Tag" und „Fakten"). */
+    /* Angelegt mit dem Rumpf eines frischen Tages (011: „Tag" und „Fakten“). */
     expect((await vault.read('journal/2026/08/2026-08-06.md')) ?? '').toContain('## Tag');
   });
 
@@ -604,8 +605,10 @@ describe('Tagebuch-Kanäle im Main', () => {
 
     expect(applied.written).toEqual([DAY_PATH, PROJECT_PATH]);
     const day = (await vault.read(DAY_PATH)) ?? '';
-    /* Das Todo ohne Projekt steht unter „Fakten", mit Frist und ohne das andere. */
-    expect(day).toContain('- [ ] Abnahmeprotokoll mit Miriam durchgehen @due:2026-08-12');
+    /* Das Todo ohne Projekt steht unter „Fakten“, mit Frist und ohne das andere. */
+    /* Der Bereich steht auf der Zeile, weil der Tag selbst „privat“ ist (075):
+       ohne den Tag läse der Index das Todo wieder als privat. */
+    expect(day).toContain('- [ ] Abnahmeprotokoll mit Miriam durchgehen #work @due:2026-08-12');
     expect(day).not.toContain('Ladezeiten der Angebotsliste messen');
     /* Bestand gewinnt: Miriam und Jonas bleiben, Tobias kommt dazu. */
     expect(day).toContain('people: [Miriam, Jonas, Tobias]');
@@ -750,6 +753,7 @@ describe('Tagebuch-Kanäle im Main', () => {
   it('hält im Frontmatter fest, dass der Tag abgeschlossen ist — und nimmt es zurück', async () => {
     const view = await harness.call('journal:get', { date: DATE });
     expect(view?.day.closed).toBeNull();
+    const before = (await vault.read(DAY_PATH)) ?? '';
 
     /* Kein Todo, kein geändertes Feld: allein der Abschluss selbst ist die
        Tatsache, die in der Datei stehen muss. */
@@ -763,6 +767,10 @@ describe('Tagebuch-Kanäle im Main', () => {
     expect(applied.written).toEqual([DAY_PATH]);
     expect((await vault.read(DAY_PATH)) ?? '').toContain(`closed: ${DATE}`);
     expect((await harness.call('journal:get', { date: DATE }))?.day.closed).toBe(DATE);
+    /* Auch mit der Nachprüfung (075, D5) bleibt „nichts zu schließen“ nichts:
+       kein Todo heißt keine Zeile unter „Fakten“. */
+    const facts = (file: string) => file.slice(file.indexOf('## Fakten'));
+    expect(facts((await vault.read(DAY_PATH)) ?? '')).toBe(facts(before));
 
     for (const entry of applied.undo) {
       await harness.services.requireStore().write(entry);
@@ -859,6 +867,106 @@ describe('Tagebuch-Kanäle im Main', () => {
     expect(await vault.exists('journal/2026/08/2026-08-05.md')).toBe(false);
   });
 
+  it('lehnt einen Abschluss mit veraltetem Hash ab, auch wenn die Todos korrigiert wurden', async () => {
+    const opened = await harness.call('journal:get', { date: DATE });
+    /* Jemand editiert die Datei von außen, während die Abschlusskarte offen ist. */
+    const raw = (await vault.read(DAY_PATH)) ?? '';
+    await vault.write(DAY_PATH, raw.replace('Vormittag', 'Vormittag (extern geändert)'));
+
+    await expect(
+      harness.call('journal:applyClose', {
+        date: DATE,
+        todos: [
+          {
+            text: 'Von Hand korrigiert: Abnahmeprotokoll doch erst Freitag',
+            scope: 'work',
+            due: '2026-08-14',
+            waitingFor: null,
+            priority: 1,
+            project: null,
+          },
+        ],
+        frontmatter: { people: [], projects: [], areas: [], mood: 2, energy: null, tags: [] },
+        expectedHash: opened?.doc.hash,
+      }),
+    ).rejects.toMatchObject({ code: 'conflict' });
+
+    /* Nichts geschrieben: weder das korrigierte Todo noch die Felder. */
+    const file = (await vault.read(DAY_PATH)) ?? '';
+    expect(file).toContain('extern geändert');
+    expect(file).not.toContain('Von Hand korrigiert');
+    expect(file).toContain('mood: 3');
+    expect(file).not.toContain('closed:');
+  });
+
+  it('schreibt den korrigierten Bereich als Tag, den der Index wieder so liest', async () => {
+    const applied = await harness.call('journal:applyClose', {
+      date: DATE,
+      todos: [
+        {
+          text: 'Zahnarzttermin verschieben',
+          scope: 'private',
+          due: null,
+          waitingFor: null,
+          priority: 0,
+          project: null,
+        },
+        {
+          text: 'Abnahmeprotokoll mit Miriam durchgehen',
+          scope: 'work',
+          due: null,
+          waitingFor: null,
+          priority: 0,
+          project: null,
+        },
+      ],
+      frontmatter: { people: [], projects: [], areas: [], mood: null, energy: null, tags: [] },
+    });
+
+    expect(applied.written).toEqual([DAY_PATH]);
+    const view = await harness.call('journal:get', { date: DATE });
+    const doc = view?.doc;
+    /* Der Tag selbst ist „privat" (kein `scope`, keine Bereichs-Tags im
+       Frontmatter): nur das abweichende Todo trägt den Bereich auf der Zeile. */
+    const written = parseTodos(doc?.body ?? '', {
+      path: doc?.path ?? DAY_PATH,
+      frontmatter: doc?.frontmatter ?? {},
+    });
+    const privat = written.find((todo) => todo.text === 'Zahnarzttermin verschieben');
+    const work = written.find((todo) => todo.text === 'Abnahmeprotokoll mit Miriam durchgehen');
+    expect(privat?.scope).toBe('private');
+    expect(privat?.tags).toEqual([]);
+    /* Der Kern: geschriebener Tag und gelesener Bereich sagen dasselbe. */
+    expect(work?.scope).toBe('work');
+    expect(work?.tags).toEqual(['work']);
+  });
+
+  it('lässt ein Todo ohne Text weg, schließt den Tag aber trotzdem', async () => {
+    const before = (await vault.read(DAY_PATH)) ?? '';
+
+    const applied = await harness.call('journal:applyClose', {
+      date: DATE,
+      todos: [
+        {
+          text: '   ',
+          scope: 'work',
+          due: null,
+          waitingFor: null,
+          priority: 0,
+          project: null,
+        },
+      ],
+      frontmatter: { people: [], projects: [], areas: [], mood: null, energy: null, tags: [] },
+    });
+
+    expect(applied.written).toEqual([DAY_PATH]);
+    const file = (await vault.read(DAY_PATH)) ?? '';
+    expect(file).toContain(`closed: ${DATE}`);
+    /* Keine leere Checkbox im Text des Nutzers. */
+    const boxes = (text: string) => text.split('- [ ]').length - 1;
+    expect(boxes(file)).toBe(boxes(before));
+  });
+
   // ── Migration: Gespräch → Strom (011, D6) ───────────────────────────────────
 
   it('faltet den Alt-Abschnitt „Gespräch" in den Strom und entfernt die Überschrift', async () => {
@@ -907,7 +1015,7 @@ describe('Tagebuch-Kanäle im Main', () => {
     /* Wie `journal:setDay`/`journal:setMood`: ein fehlender Tag ist kein
        Fehler, er entsteht über `ensureDay`. Ein frischer Tag hat kein
        „Gespräch" (011), also ist das Falten hier ein reiner Leerlauf — der
-       Tag existiert danach trotzdem, mit „Tag" und „Fakten". */
+       Tag existiert danach trotzdem, mit „Tag" und „Fakten“. */
     const path = 'journal/2026/08/2026-08-06.md';
     expect(await vault.exists(path)).toBe(false);
 

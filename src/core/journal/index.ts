@@ -30,6 +30,9 @@
  *               falten — reine Textfunktion, wird nie von selbst aufgerufen
  *   `coach`     die drei Haltungen — zuhoeren, Tipps, analysieren
  *   `close`     Tagesabschluss: Todos, Warte-auf, Personen, Stimmung als Vorschlag
+ *   `close-request` die serverseitige Nachpruefung der bestaetigten Todos
+ *               (`normalizeCloseTodos`, 075): trimmen, begrenzen, unbekanntes
+ *               Projekt auf den Tag, abweichender Scope als Tag auf der Zeile
  *   `streak`    Serie, laengste Serie, Monat, Stimmungsverlauf
  *
  * Geschrieben wird nur, was der Mensch selbst gesagt hat, plus die Antwort, die
@@ -122,6 +125,7 @@ export {
   type FactsInput,
 } from './facts';
 export { GERMAN_CLOSE_LABELS, closeDay } from './close';
+export { normalizeCloseTodos, type CloseTodoOptions } from './close-request';
 export {
   DEFAULT_MOOD_SPAN,
   entriesInMonth,

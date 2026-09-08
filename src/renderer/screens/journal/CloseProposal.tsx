@@ -18,57 +18,20 @@
  * (`onRunAgain`) are exposed as props — D3 wires them to the vault and to
  * `close-proposal.ts`'s `clear`. */
 
-import type { ReactNode } from 'react';
-import type { JournalCloseSuggestion, Project, ProposedTodo, WaitingOn } from '@shared/types';
+import type { JournalCloseSuggestion, Project, ProposedTodo } from '@shared/types';
 import { Button } from '../../atoms/Button';
 import { Card } from '../../atoms/Card';
-import { Checkbox } from '../../atoms/Checkbox';
 import { Icon } from '../../atoms/Icon';
 import { Select } from '../../atoms/Select';
 import { Tag } from '../../atoms/Tag';
-import { DueField } from '../../components/DueField';
 import { ErrorState } from '../../components/ErrorState';
 import { useT } from '../../i18n';
 import { useAreas } from '../../lib/queries/areas';
-import type { CloseProposalEdits } from '../../lib/close-proposal';
+import type { TodoRowEdit } from '../../lib/close-proposal';
 import { useCloseProposal, patch } from '../../lib/close-proposal';
-
-/** A waiting-on is noted as a todo with `@wait:` — every editor recognizes that. */
-function asTodo(entry: WaitingOn, scope: ProposedTodo['scope']): ProposedTodo {
-  return {
-    text: entry.what.trim().length === 0 ? entry.who : entry.what,
-    scope,
-    due: entry.due ?? null,
-    waitingFor: entry.who,
-    priority: 0,
-    project: null,
-  };
-}
-
-interface Row {
-  todo: ProposedTodo;
-  keep: boolean;
-  /** Arose from a waiting-on — the card says so. */
-  waiting: boolean;
-}
-
-/** Builds the display rows from the suggestion plus the edits made so far —
- * indices line up with `CloseProposalEdits.keepTodo` / `.dueTodo`: todos
- * first, then the waiting-on entries appended after them. */
-function rowsOf(suggestion: JournalCloseSuggestion, edits: CloseProposalEdits): Row[] {
-  const base: ProposedTodo[] = [
-    ...suggestion.proposal.todos,
-    ...suggestion.proposal.waitingOn.map((entry) => asTodo(entry, suggestion.proposal.scope)),
-  ];
-  return base.map((todo, index) => {
-    const due = index in edits.dueTodo ? (edits.dueTodo[index] ?? null) : todo.due;
-    return {
-      todo: { ...todo, due },
-      keep: edits.keepTodo[index] !== false,
-      waiting: index >= suggestion.proposal.todos.length,
-    };
-  });
-}
+import { payloadOf, rowsOf } from '../../lib/close-proposal-view';
+import { CloseFieldRows } from './CloseFieldRows';
+import { CloseTodoRow } from './CloseTodoRow';
 
 export interface CloseProposalProps {
   date: string;
@@ -100,68 +63,49 @@ export function CloseProposal({
   if (entry === undefined) return null;
   const { suggestion, edits } = entry;
   const rows = rowsOf(suggestion, edits);
-  const keeps = (key: string): boolean => edits.keepField[key] !== false;
-  const areas = edits.areas ?? suggestion.frontmatter.areas;
+  const payload = payloadOf(suggestion, edits);
+  const areas = payload.frontmatter.areas;
 
-  const patchTodo = (at: number, next: Partial<Pick<Row, 'keep' | 'todo'>>): void => {
-    if ('keep' in next && next.keep !== undefined) {
-      patch(date, { keepTodo: { ...edits.keepTodo, [at]: next.keep } });
-    }
-    if ('todo' in next && next.todo !== undefined) {
-      patch(date, { dueTodo: { ...edits.dueTodo, [at]: next.todo.due } });
-    }
+  /** Merges one row's correction into the edit state — a row is corrected
+   * field by field, so an earlier due date survives a later keep/drop.
+   * `todo`/`waiting` rows only: their `at` indexes `edits.todoEdits`. */
+  const editTodo = (at: number, next: TodoRowEdit): void => {
+    patch(date, { todoEdits: { ...edits.todoEdits, [at]: { ...edits.todoEdits[at], ...next } } });
   };
 
-  const setField = (key: string, keep: boolean): void => {
-    patch(date, { keepField: { ...edits.keepField, [key]: keep } });
+  /** The same idea for a hand-added row (075, D3) — but merged straight into
+   * `edits.added[at]` itself, a *separate* index space from `editTodo`'s.
+   * Wiring every row to `editTodo` regardless of `kind` would silently
+   * corrupt `edits.todoEdits` at whatever index an added row's `at` happens
+   * to collide with. `keep` has no meaning on a `ProposedTodo` — an added row
+   * is always kept and is only ever taken off the card via `removeAdded`. */
+  const editAdded = (at: number, next: TodoRowEdit): void => {
+    const fields = { ...next };
+    delete fields.keep;
+    patch(date, {
+      added: edits.added.map((todo, i) => (i === at ? { ...todo, ...fields } : todo)),
+    });
   };
 
-  const targetOf = (todo: ProposedTodo): string => {
-    const own =
-      todo.project === null ? null : projects.find((project) => project.slug === todo.project);
-    return own === undefined || own === null
-      ? t('journal.close.target.day')
-      : t('journal.close.target.project', { title: own.title });
+  /** A todo the model missed, added by hand (075, D3, AC5) — a blank
+   * scaffold the user fills in through the same row controls as a proposed
+   * todo. `scope` defaults to `'private'`, the same harmless default
+   * `emptySuggestion` uses elsewhere: the day's real scope isn't known here,
+   * and D5's normalizer decides the written tag server-side regardless of
+   * what the row shows; the user can also change it immediately via the
+   * row's own scope select. */
+  const addTodo = (): void => {
+    patch(date, {
+      added: [
+        ...edits.added,
+        { text: '', scope: 'private', due: null, waitingFor: null, priority: 0, project: null },
+      ],
+    });
   };
 
-  const frontmatter: JournalCloseSuggestion['frontmatter'] = {
-    people: keeps('people') ? suggestion.frontmatter.people : [],
-    projects: keeps('projects') ? suggestion.frontmatter.projects : [],
-    areas,
-    tags: keeps('tags') ? suggestion.frontmatter.tags : [],
-    mood: keeps('mood') ? suggestion.frontmatter.mood : null,
-    energy: keeps('energy') ? suggestion.frontmatter.energy : null,
+  const removeAdded = (at: number): void => {
+    patch(date, { added: edits.added.filter((_, i) => i !== at) });
   };
-  const chosen = rows.filter((row) => row.keep).map((row) => row.todo);
-  /* A button that writes nothing says so beforehand — instead of implying a
-     confirmation for a write that never happened. */
-  const writes =
-    chosen.length > 0 ||
-    frontmatter.people.length > 0 ||
-    frontmatter.projects.length > 0 ||
-    frontmatter.areas.length > 0 ||
-    frontmatter.tags.length > 0 ||
-    frontmatter.mood !== null ||
-    frontmatter.energy !== null;
-
-  /* A heading over an empty list implies there's something there. */
-  const hasFields =
-    suggestion.frontmatter.people.length > 0 ||
-    suggestion.frontmatter.projects.length > 0 ||
-    suggestion.frontmatter.tags.length > 0 ||
-    suggestion.frontmatter.mood !== null ||
-    suggestion.frontmatter.energy !== null;
-
-  const fieldRow = (key: string, label: string, value: string): ReactNode => (
-    <li className="sb-todoedit-row" key={key}>
-      <Checkbox
-        checked={keeps(key)}
-        label={label}
-        onChange={(event) => setField(key, event.target.checked)}
-      />
-      <span className="sb-closefield-value">{value}</span>
-    </li>
-  );
 
   /* Areas are chips plus an add-picker (036, D3) — never the single
      all-or-nothing checkbox the other fields use, because a proposal here is
@@ -200,73 +144,32 @@ export function CloseProposal({
           <ErrorState error={error} variant="secondary" subject={suggestion.path} scrollIntoView />
         )}
 
-        {rows.length === 0 ? null : (
-          <fieldset className="sb-proposal-group">
-            <legend className="gs-label">{t('journal.close.todos')}</legend>
+        <fieldset className="sb-proposal-group">
+          <legend className="gs-label">{t('journal.close.todos')}</legend>
+          {rows.length === 0 ? null : (
             <ul className="sb-todoedit">
-              {rows.map((row, at) => (
-                <li key={`${row.todo.text}-${at}`} className="sb-todoedit-row">
-                  <Checkbox
-                    checked={row.keep}
-                    label={row.todo.text}
-                    onChange={(event) => patchTodo(at, { keep: event.target.checked })}
-                  />
-                  <span className="sb-todoedit-into">
-                    {row.waiting
-                      ? t('journal.close.waitingInto')
-                      : t('journal.close.into', { target: targetOf(row.todo) })}
-                  </span>
-                  <DueField
-                    value={row.todo.due}
-                    ariaLabel={t('journal.close.dueOf', { text: row.todo.text })}
-                    onChange={(due) => patchTodo(at, { todo: { ...row.todo, due } })}
-                  />
-                </li>
+              {rows.map((row) => (
+                <CloseTodoRow
+                  key={`${row.kind}-${row.at}`}
+                  row={row}
+                  projects={projects}
+                  onEdit={row.kind === 'added' ? editAdded : editTodo}
+                  onRemove={row.kind === 'added' ? () => removeAdded(row.at) : undefined}
+                />
               ))}
             </ul>
-          </fieldset>
-        )}
-
-        <fieldset className="sb-proposal-group" hidden={!hasFields}>
-          <legend className="gs-label">{t('journal.close.fields')}</legend>
-          <ul className="sb-todoedit">
-            {suggestion.frontmatter.people.length > 0
-              ? fieldRow(
-                  'people',
-                  t('journal.close.people'),
-                  suggestion.frontmatter.people.join(', '),
-                )
-              : null}
-            {suggestion.frontmatter.projects.length > 0
-              ? fieldRow(
-                  'projects',
-                  t('journal.close.projects'),
-                  suggestion.frontmatter.projects.join(', '),
-                )
-              : null}
-            {suggestion.frontmatter.tags.length > 0
-              ? fieldRow('tags', t('journal.close.tags'), suggestion.frontmatter.tags.join(', '))
-              : null}
-            {suggestion.frontmatter.mood === null
-              ? null
-              : fieldRow(
-                  'mood',
-                  t('journal.close.mood', {
-                    label: t(`journal.mood.${suggestion.frontmatter.mood}`),
-                  }),
-                  '',
-                )}
-            {suggestion.frontmatter.energy === null
-              ? null
-              : fieldRow(
-                  'energy',
-                  t('journal.close.energy', {
-                    label: t(`journal.energy.${suggestion.frontmatter.energy}`),
-                  }),
-                  '',
-                )}
-          </ul>
+          )}
+          <Button variant="ghost" size="sm" icon="plus" onClick={addTodo}>
+            {t('journal.close.addTodo')}
+          </Button>
         </fieldset>
+
+        <CloseFieldRows
+          date={date}
+          frontmatter={payload.frontmatter}
+          keepField={edits.keepField}
+          projects={projects}
+        />
 
         <fieldset className="sb-proposal-group">
           <legend className="gs-label">{t('journal.close.areas')}</legend>
@@ -296,7 +199,7 @@ export function CloseProposal({
           )}
         </fieldset>
 
-        {writes ? null : <p className="sb-panel-empty">{t('journal.close.nothing')}</p>}
+        {payload.writes ? null : <p className="sb-panel-empty">{t('journal.close.nothing')}</p>}
       </div>
 
       <div className="sb-proposal-actions sb-close-actions">
@@ -304,7 +207,7 @@ export function CloseProposal({
           variant="secondary"
           icon="check"
           loading={busy}
-          onClick={() => onApply({ todos: chosen, frontmatter })}
+          onClick={() => onApply({ todos: payload.todos, frontmatter: payload.frontmatter })}
         >
           {t('journal.close.apply')}
         </Button>

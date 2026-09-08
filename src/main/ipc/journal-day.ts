@@ -17,12 +17,14 @@
  */
 
 import { SECTION_FACTS, todoActions, todoBlock } from '@core/capture';
+import { scopeFor } from '@core/index';
 import {
   dayOf,
   ensureDay,
   foldLegacyDay,
   isSectionOf,
   journalSections,
+  normalizeCloseTodos,
   parseDialog,
   parseStream,
   rawDayText,
@@ -249,6 +251,15 @@ export async function applyClose(
   request: IpcRequest<'journal:applyClose'>,
 ): Promise<{ written: string[]; undo: WriteRequest[] }> {
   const day = await requireDay(store, request.date);
+  const projects = index.projects();
+  /* The card is editable (075), so what arrives here is user input: it gets
+     re-validated once, before anything is written, and every path below works
+     on the checked list. Which projects exist and what the day file says about
+     scope are the two facts the pure normalizer can't know by itself. */
+  const todos = normalizeCloseTodos(request.todos, {
+    projectSlugs: new Set(projects.map((project) => project.slug)),
+    dayScope: scopeFor(day.doc.path, day.doc.frontmatter),
+  });
   const section = sectionIn(day.doc.body, 'facts', language) || SECTION_FACTS;
   const home: FilingAction = {
     target: 'journal',
@@ -256,12 +267,11 @@ export async function applyClose(
     section,
     content: todoBlock([]),
   };
-  const projects = index.projects();
   /* The same spot the inbox also uses: only `core/capture/actions` knows
      what a checkbox line looks like and where a todo with a project belongs. */
   const actions = todoActions(
     home,
-    request.todos,
+    todos,
     (slug) => projects.find((project) => project.slug === slug)?.path ?? null,
   );
   /* One patch, one write: the close-out mark travels with the fields, so the

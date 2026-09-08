@@ -79,10 +79,15 @@ describe('close-proposal: set / patch / clear / useCloseProposal', () => {
     const { result } = renderHook(() => useCloseProposal('2026-08-20'));
     expect(result.current?.suggestion).toBe(s);
     expect(result.current?.edits).toEqual({
-      keepTodo: {},
-      dueTodo: {},
+      todoEdits: {},
+      added: [],
       keepField: {},
       areas: null,
+      people: null,
+      projects: null,
+      tags: null,
+      mood: null,
+      energy: null,
     });
   });
 
@@ -91,17 +96,17 @@ describe('close-proposal: set / patch / clear / useCloseProposal', () => {
     set('2026-08-20', s);
 
     const { result } = renderHook(() => useCloseProposal('2026-08-20'));
-    act(() => patch('2026-08-20', { keepTodo: { 0: false } }));
+    act(() => patch('2026-08-20', { todoEdits: { 0: { keep: false, due: '2026-08-25' } } }));
 
     expect(result.current?.suggestion).toBe(s);
-    expect(result.current?.edits.keepTodo).toEqual({ 0: false });
-    expect(result.current?.edits.dueTodo).toEqual({});
+    expect(result.current?.edits.todoEdits).toEqual({ 0: { keep: false, due: '2026-08-25' } });
+    expect(result.current?.edits.added).toEqual([]);
     expect(result.current?.edits.keepField).toEqual({});
 
     act(() => patch('2026-08-20', { keepField: { mood: false } }));
 
-    /* The earlier patch to keepTodo survives a later, unrelated patch. */
-    expect(result.current?.edits.keepTodo).toEqual({ 0: false });
+    /* The earlier patch to todoEdits survives a later, unrelated patch. */
+    expect(result.current?.edits.todoEdits).toEqual({ 0: { keep: false, due: '2026-08-25' } });
     expect(result.current?.edits.keepField).toEqual({ mood: false });
   });
 
@@ -113,8 +118,12 @@ describe('close-proposal: set / patch / clear / useCloseProposal', () => {
     act(() => patch('2026-08-20', { areas: ['gesundheit', 'finanzen'] }));
 
     expect(result.current?.edits.areas).toEqual(['gesundheit', 'finanzen']);
-    expect(result.current?.edits.keepTodo).toEqual({});
+    expect(result.current?.edits.todoEdits).toEqual({});
     expect(result.current?.edits.keepField).toEqual({});
+    /* The sibling chip fields stay untouched — one patched list is not all of them. */
+    expect(result.current?.edits.people).toBeNull();
+    expect(result.current?.edits.projects).toBeNull();
+    expect(result.current?.edits.tags).toBeNull();
 
     act(() => patch('2026-08-20', { areas: [] }));
 
@@ -124,7 +133,7 @@ describe('close-proposal: set / patch / clear / useCloseProposal', () => {
 
   it('patch on a date with no entry does nothing', () => {
     const { result } = renderHook(() => useCloseProposal('2026-08-20'));
-    act(() => patch('2026-08-20', { keepTodo: { 0: false } }));
+    act(() => patch('2026-08-20', { todoEdits: { 0: { keep: false } } }));
     expect(result.current).toBeUndefined();
   });
 
@@ -142,8 +151,25 @@ describe('close-proposal: set / patch / clear / useCloseProposal', () => {
     set('2026-08-20', first);
 
     const { result } = renderHook(() => useCloseProposal('2026-08-20'));
-    act(() => patch('2026-08-20', { keepTodo: { 0: false }, keepField: { mood: false } }));
-    expect(result.current?.edits.keepTodo).toEqual({ 0: false });
+    act(() =>
+      patch('2026-08-20', {
+        todoEdits: { 0: { keep: false } },
+        added: [
+          {
+            text: 'added by hand',
+            scope: 'work',
+            due: null,
+            waitingFor: null,
+            priority: 0,
+            project: null,
+          },
+        ],
+        keepField: { mood: false },
+        mood: 4,
+      }),
+    );
+    expect(result.current?.edits.todoEdits).toEqual({ 0: { keep: false } });
+    expect(result.current?.edits.added).toHaveLength(1);
 
     const second = suggestion('2026-08-20', 'second run');
     act(() => set('2026-08-20', second));
@@ -151,23 +177,30 @@ describe('close-proposal: set / patch / clear / useCloseProposal', () => {
     expect(result.current?.suggestion).toBe(second);
     expect(result.current?.suggestion).not.toBe(first);
     expect(result.current?.edits).toEqual({
-      keepTodo: {},
-      dueTodo: {},
+      todoEdits: {},
+      added: [],
       keepField: {},
       areas: null,
+      people: null,
+      projects: null,
+      tags: null,
+      mood: null,
+      energy: null,
     });
   });
 
   it('survives an unmount/remount within the session', () => {
     const s = suggestion('2026-08-20');
     set('2026-08-20', s);
-    act(() => patch('2026-08-20', { keepTodo: { 1: false } }));
+    act(() => patch('2026-08-20', { todoEdits: { 1: { keep: false, text: 'corrected' } } }));
 
     const first = renderHook(() => useCloseProposal('2026-08-20'));
     first.unmount();
 
     const second = renderHook(() => useCloseProposal('2026-08-20'));
     expect(second.result.current?.suggestion).toBe(s);
-    expect(second.result.current?.edits.keepTodo).toEqual({ 1: false });
+    expect(second.result.current?.edits.todoEdits).toEqual({
+      1: { keep: false, text: 'corrected' },
+    });
   });
 });

@@ -200,3 +200,21 @@ second roadmap.
   actually running the full e2e suite and fixed in a second cycle; verified with build/test (277
   files/3811 tests)/lint/typecheck/format:check (zero overlap with this story's 59 changed files)
   and e2e (35/35, including the three new specs this story added).
+- 075 — A close proposal can be corrected, not just pruned · S15 · Replaced the day-close card's
+  keep-or-prune editing with per-row correction: a new pure `close-proposal-view.ts`
+  (`rowsOf`/`payloadOf`) is the single source both the card and the accept payload derive from; a
+  new `CloseTodoRow.tsx` makes a proposed, waiting-on or hand-added todo's text, target, scope and
+  (waiting rows) person editable inline, plus add/remove for hand-added todos; a new
+  `CloseFieldRows.tsx` turns people/projects/tags into item-by-item removable chips (projects also
+  get an add-picker) and gives mood/energy their own always-visible group with the inline
+  `MoodPicker`; a new pure `src/core/journal/close-request.ts#normalizeCloseTodos` re-validates
+  every todo at the top of `applyClose` (trim/drop-if-blank, clamp priority, literal scope,
+  `YYYY-MM-DD` or null due, unknown project slug falls back to the day, `#work`/`#private` tag on a
+  deviating day-bound row) without touching the existing hash-guarded write/undo/revert path. A
+  `story-review-hard` review PASSed all ten criteria; two confirmed findings (a dead keep checkbox
+  on a hand-added row, an emptied waiting-on person crossing as `''` instead of `null`) fixed in one
+  review-fix cycle, three further findings accepted as documented, narrow, non-blocking edge cases;
+  verified with build/test (281 files/3854 tests)/lint/typecheck/format:check (zero overlap with
+  this story's 20 changed files) and e2e (45/45, including 10 new tests in
+  `journal-close-correct.spec.ts`, run twice); `npm run seed`/`npm run shot` confirmed the new card
+  renders cleanly against the Gaston design system.

@@ -662,9 +662,35 @@
   flex-direction: column;
   gap: var(--space-4);
 }
-.sb-closefield-value {
-  font-size: var(--text-xs);
-  color: var(--text-muted);
+/* The mood/energy keep box sits beside the picker itself (075, D4): the
+   picker fills the row's remaining width the same way a todo row's own
+   fields do, instead of shrinking to its intrinsic size next to the
+   checkbox. */
+.sb-close-proposal .sb-todoedit-row .sb-mood {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* A todo row's own inline fields (075, D2). The base `.gs-check` rule in
+   inbox.css grows the checkbox to fill the row because it used to carry the
+   row's text as its visible label; here the text moved into its own
+   `Input`, so the checkbox goes back to its intrinsic size and the text
+   field takes the room instead. */
+.sb-close-proposal .sb-todoedit-row .gs-check {
+  flex: none;
+}
+.sb-closetodo-text {
+  flex: 1 1 220px;
+  min-width: 160px;
+}
+.sb-closetodo-target,
+.sb-closetodo-scope {
+  flex: 0 1 180px;
+  min-width: 140px;
+}
+.sb-closetodo-person {
+  flex: 0 1 160px;
+  min-width: 120px;
 }
 
 /* The proposal card (018, D2): sits on the day itself, not in a dialog — so

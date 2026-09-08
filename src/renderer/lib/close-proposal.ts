@@ -10,24 +10,72 @@
  * close again is a fresh proposal, not a merge with what was ticked before. */
 
 import { useSyncExternalStore } from 'react';
-import type { FilingAction, JournalCloseSuggestion } from '@shared/types';
+import type { FilingAction, JournalCloseSuggestion, ProposedTodo } from '@shared/types';
 
-/** Edit state, keyed by the todo's index in `suggestion.proposal.todos` plus
- * the waiting-on entries appended after them — the same order `CloseDialog`
- * builds its rows in. */
+/**
+ * One row's corrections (075). Every field is optional and `undefined` means
+ * "untouched — the proposed value still applies"; `null` on `due`, `project`
+ * or `waitingFor` is a real, chosen value ("no due date", "into the day",
+ * "nobody"), which is why they are resolved with an explicit `!== undefined`
+ * and never with `??`.
+ */
+export interface TodoRowEdit {
+  keep?: boolean;
+  text?: string;
+  due?: string | null;
+  /** Project slug the row goes into; `null` is the day file itself. */
+  project?: string | null;
+  scope?: ProposedTodo['scope'];
+  waitingFor?: string | null;
+}
+
+/** Edit state. `todoEdits` is keyed by the row's index in
+ * `suggestion.proposal.todos` plus the waiting-on entries appended after them —
+ * the same order `close-proposal-view.ts#rowsOf` builds its rows in. */
 export interface CloseProposalEdits {
-  keepTodo: Record<number, boolean>;
-  dueTodo: Record<number, string | null>;
+  todoEdits: Record<number, TodoRowEdit>;
+  /** Todos the model missed, added by hand (075, D3). Always kept — an added
+   * row is removed from this list, not unchecked. */
+  added: ProposedTodo[];
+  /** Keep/drop per frontmatter field. Since 075 only `mood` and `energy` still
+   * use it: the list fields below carry their own corrected item list. */
   keepField: Record<string, boolean>;
   /**
-   * The area slugs to write, once touched — `null` as long as the user has
-   * neither removed a proposed chip nor added one from the picker, in which
-   * case `suggestion.frontmatter.areas` still applies as-is. Areas get their
-   * own field here rather than a `keepField` entry: the row is chips plus an
-   * add-picker (036, D3), not a single all-or-nothing checkbox like `people`
-   * or `projects`.
+   * The items to write, once touched — `null` as long as the user has neither
+   * removed a proposed chip nor added one, in which case
+   * `suggestion.frontmatter.<field>` still applies as-is. These get their own
+   * field rather than a `keepField` entry: the row is chips plus (for areas
+   * and projects) an add-picker, not a single all-or-nothing checkbox, because
+   * a proposal here is rarely all-or-nothing (036, D3 for areas; 075, D4 for
+   * the rest).
    */
   areas: string[] | null;
+  people: string[] | null;
+  projects: string[] | null;
+  tags: string[] | null;
+  /**
+   * A corrected mood/energy, or `null` while the proposed value still applies.
+   * Dropping the value altogether is *not* expressed here but by unticking
+   * `keepField.mood` / `keepField.energy`, which stays the card's keep/drop
+   * control (075, D4 — picking a value there re-ticks the box).
+   */
+  mood: number | null;
+  energy: number | null;
+}
+
+/** The edit state a fresh proposal starts from: nothing corrected anywhere. */
+export function noEdits(): CloseProposalEdits {
+  return {
+    todoEdits: {},
+    added: [],
+    keepField: {},
+    areas: null,
+    people: null,
+    projects: null,
+    tags: null,
+    mood: null,
+    energy: null,
+  };
 }
 
 export interface CloseProposalEntry {
@@ -89,10 +137,7 @@ export function emptySuggestion(
 
 /** Replaces the entry for `date` with a fresh suggestion and empty edits. */
 export function set(date: string, suggestion: JournalCloseSuggestion): void {
-  entries.set(date, {
-    suggestion,
-    edits: { keepTodo: {}, dueTodo: {}, keepField: {}, areas: null },
-  });
+  entries.set(date, { suggestion, edits: noEdits() });
   emit();
 }
 

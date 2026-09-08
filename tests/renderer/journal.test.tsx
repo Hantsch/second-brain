@@ -1531,7 +1531,10 @@ describe('Tagebuch: Tagesabschluss', () => {
     const { sb, panel } = await openClose();
 
     await userEvent.click(within(panel).getByLabelText('Belege 2025 sortieren'));
-    await userEvent.click(within(panel).getByLabelText('Personen'));
+    /* Personen sind seit 075, D4 Chips statt einer Alles-oder-nichts-Checkbox
+       — die einzige vorgeschlagene Person wird über ihre eigene Entfernen-
+       Schaltfläche abgewählt, nicht über ein Feld-Kontrollkästchen. */
+    await userEvent.click(within(panel).getByRole('button', { name: '„Miriam“ entfernen' }));
     await userEvent.click(
       within(panel).getByRole('button', { name: 'Übernehmen und abschließen' }),
     );

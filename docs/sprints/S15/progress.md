@@ -55,3 +55,17 @@
 - 2026-09-08 00:50 · 074 · D8 The interview plan is a fast-lane task · started
 - 2026-09-08 00:55 · 074 · D8 The interview plan is a fast-lane task · done
 - 2026-09-08 01:35 · 074 · done · moved to docs/requirements/done/
+- 2026-09-08 01:37 · 075 · D1 Edit state and payload derivation · started
+- 2026-09-08 01:46 · 075 · D1 Edit state and payload derivation · done
+- 2026-09-08 01:46 · 075 · D2 The editable todo row · started
+- 2026-09-08 01:56 · 075 · D2 The editable todo row · done
+- 2026-09-08 01:56 · 075 · D3 Add a todo by hand · started
+- 2026-09-08 02:12 · 075 · D3 Add a todo by hand · done
+- 2026-09-08 02:12 · 075 · D4 Fields item by item and mood/energy · started
+- 2026-09-08 02:24 · 075 · D4 Fields item by item and mood/energy · done
+- 2026-09-08 02:24 · 075 · D5 Re-validated write, scope on the line · started
+- 2026-09-08 02:34 · 075 · D5 Re-validated write, scope on the line · done
+- 2026-09-08 02:34 · 075 · D6 e2e correcting a proposal · started
+- 2026-09-08 03:05 · 075 · D6 e2e correcting a proposal · done
+- 2026-09-08 03:05 · 075 · D7 e2e waiting-on, added todo, fields, survival, discard · started
+- 2026-09-08 03:18 · 075 · D7 e2e waiting-on, added todo, fields, survival, discard · done
