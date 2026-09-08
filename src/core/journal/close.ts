@@ -231,8 +231,12 @@ export async function closeDay(
       people: facts.people,
       projects: facts.projects,
       areas: facts.areas,
-      mood: facts.mood,
-      energy: facts.energy,
+      /* Der Eintragstext ist nicht die einzige Quelle: die Datei kann Stimmung
+         oder Energie schon von einer vorherigen Runde tragen. Findet dieser
+         Lauf nichts Neues, gilt der Bestand — sonst wuerde die Karte "nicht
+         eingetragen" fuer einen Wert zeigen, der in der Datei laengst steht. */
+      mood: facts.mood ?? found.day.mood,
+      energy: facts.energy ?? found.day.energy,
       tags: facts.tags,
     },
     heuristic,

@@ -193,6 +193,22 @@ describe('closeDay', () => {
     expect(suggestion?.proposal.primary.content).toBe('');
   });
 
+  it('behält Stimmung und Energie aus der Datei, wenn der Text an diesem Tag nichts hergibt', async () => {
+    const fixture = await journalFixture({
+      files: {
+        [PATH]: journalFile(DATE, 'Freier Abend in der Werkstatt, nichts notiert.', {
+          mood: 4,
+          energy: 3,
+        }),
+      },
+    });
+
+    const suggestion = await closeDay(fixture.closeDeps(emptyGateway()), DATE);
+
+    expect(suggestion?.frontmatter.mood).toBe(4);
+    expect(suggestion?.frontmatter.energy).toBe(3);
+  });
+
   it('arbeitet auch am Tageseintrag des Fixture-Vaults, ohne ihn anzufassen', async () => {
     const fixture = await journalFixture();
     const before = await fixture.text(DAY_PATH);
