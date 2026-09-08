@@ -1,6 +1,6 @@
 ---
 sprint: S15
-status: in-progress # planned | in-progress | done
+status: done # planned | in-progress | done
 branch: sprint/S15
 milestone: M16 — Work in flight is visible, and what it proposes is correctable
 ---

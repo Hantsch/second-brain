@@ -824,7 +824,7 @@ Gaps/notes:
 
 ---
 
-### M16 — Work in flight is visible, and what it proposes is correctable — in progress
+### M16 — Work in flight is visible, and what it proposes is correctable — done
 
 No concept behind it either: like M15, this milestone comes from the user's own feedback after
 really using the app (2026-09-07). Two reports, one theme — the app does work on the user's
@@ -864,8 +864,38 @@ Decisions taken at the cut (2026-09-07, user):
 
 Sprints:
 
-- [sprints/S15/sprint.md](sprints/S15/sprint.md) — work in flight has a place, and a proposal can
-  be corrected (071, 072, 073, 074, 075), `planned`
+- [sprints/done/S15/sprint.md](sprints/done/S15/sprint.md) — work in flight has a place, and a
+  proposal can be corrected (071, 072, 073, 074, 075), `done`
+  ([review](sprints/done/S15/review.md), no testplan — no criterion was marked manual residue) —
+  all five stories built and merged into `sprint/S15` in strict order (071 → 072 → 073 → 074, then
+  075 independently), as planned.
+
+Gaps/notes:
+
+- **074's close/quit-during-run dialog e2e coverage** is real only for the maintenance run; the
+  condensation/import broadening is proven at main level (registry cancel semantics), not through
+  the dialog itself — the no-model e2e vault cannot hold either producer in a genuinely long
+  `running` state on demand. Same class of gap as story 067 (S14). Candidate follow-up: the same
+  deterministic capacity/provider override already named as a candidate after S14.
+- **074's model lane is not actually shared across producer kinds.** The maintenance run and
+  imports (via the new `WorkRegistry.startExternal()`) never compete for lane capacity, so a
+  condensation enqueued while a maintenance run is going starts immediately rather than queuing
+  behind it — no acceptance criterion covers this cross-producer ordering. Left as a known,
+  accepted gap for whichever story next needs real cross-producer model-lane protection.
+- **073's cancelled condense/close tasks don't thread a real `AbortSignal`** — `runCondenseUnit`/
+  `closeDay` don't check the signal the registry hands them, so a cancelled task's underlying
+  model call can still finish and store an orphaned, unreachable result. Bounded and
+  non-corrupting (evicted by the result store's own retention or cleared on vault close); left for
+  whichever story next hardens cancellation broadly.
+- **074's ingest/vault-switch boundary has a low-probability race**: a terminal import publish
+  arriving after a vault switch can mint one ephemeral, mislabelled, already-terminal task row
+  that self-resolves. Bounded, no vault write, no persisted state; left for whichever story next
+  hardens that boundary.
+- Three of the five stories (071, 073, 074) had their build stalled mid-review-fix once each by
+  infrastructure (a session rate limit, a sub-agent backgrounding its own verification rather than
+  blocking on it) — not a code problem. Resuming the same agent with an explicit
+  "verify synchronously" instruction closed each one clean, same lesson S13 already recorded for a
+  different infra hiccup.
 
 Gaps/notes:
 
