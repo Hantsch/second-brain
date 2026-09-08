@@ -9,7 +9,7 @@
   the commands read both.
 -->
 
-ai-scrum-version: 3.0.0
+ai-scrum-version: 4.0.0
 project: Gaston
 
 ## Verify
@@ -41,6 +41,13 @@ concepts-path: docs/concepts
 systems-path: docs/systems
 story-id-format: NNN <!-- three digits + slug, e.g. 042-npc-haggling.md -->
 sprint-id-format: SNN <!-- e.g. S07 -->
+
+changelog-path: none
+<!--
+  Optional. Path to a USER-FACING changelog (e.g. version.md, CHANGELOG.md) — not the
+  git history. When set, /build and /sprint require an entry for every user-facing
+  change; when `none`, the rule is dormant and nothing asks for it.
+-->
 
 ## Branching
 
