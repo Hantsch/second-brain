@@ -167,6 +167,8 @@ export const deWiki = {
   'sources.stage.error': 'Fehlgeschlagen',
   'sources.stage.duplicate': 'Bereits vorhanden',
   'sources.stage.awaiting-llm': 'Wartet auf ein Modell',
+  'sources.stage.no-content': 'Kein Inhalt',
+  'sources.stage.blocked.no-transcript': 'Kein Transcript verfügbar',
   'sources.job.cancel': 'Abbrechen',
   'sources.job.retry': 'Wiederholen',
   'sources.job.raw': 'Rohquelle ansehen',
@@ -187,6 +189,9 @@ export const deWiki = {
   'sources.duplicate.body':
     'Der vorhandene Eintrag wurde geöffnet. Für eine offene Verdichtung dient dort die Aktion „Verdichten“.',
   'sources.duplicate.condensedTitle': 'Quelle ist bereits verdichtet',
+  'sources.noContent.title': 'Quelle liegt im Vault, es gibt nichts zu verdichten',
+  'sources.noContent.body':
+    'Die Rohquelle ist gespeichert, aber ohne lesbaren Text — kein Modell könnte daraus eine Seite machen. Ein erneuter Versuch endet gleich; ein Digest aus der Beschreibung ist die Wahl in der Bestandsliste.',
 
   // ── Quellen: Bestand ──────────────────────────────────────────────────────
   'sources.list.title': 'Aufgenommene Quellen',
@@ -215,6 +220,7 @@ export const deWiki = {
     'Die Verdichtung schreibt die Source-Seite und pflegt dieses Modul nach.',
   'sources.detail.condense': 'Verdichten',
   'sources.detail.condensing': 'Wird verdichtet',
+  'sources.detail.condenseFromMetadata': 'Aus Beschreibung verdichten',
   'sources.detail.folder': 'Quellordner',
   'sources.detail.wikiPage': 'Wiki-Seite',
   'sources.detail.resources': 'Erwähnte Ressourcen',

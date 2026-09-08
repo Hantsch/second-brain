@@ -1,8 +1,11 @@
 /* Rohquellen unter `raw/`. Unveränderlich, Fixpunkt aller Zitate.
 
-   Drei Quellen, drei Zustände:
+   Vier Quellen, vier Zustände:
    - `raw/youtube/xOFkpf9KgKg/` — verdichtet, `sourcePage` zeigt auf die
      Wiki-Seite (siehe raw-youtube.mjs).
+   - `raw/youtube/zQPz9x2LKrT/` — ohne Transcript (Story 051): kein
+     `sourcePage`, `blocked: 'no-transcript'`, aber `metadata.md` mit voller
+     Description und Kapiteln (siehe raw-youtube.mjs).
    - `raw/files/<datum>-rollenkonzept-workshop/` — hochgeladene Mitschrift,
      ebenfalls verdichtet.
    - `raw/web/<datum>-digital-gardening-ueberblick.md` — absichtlich ohne

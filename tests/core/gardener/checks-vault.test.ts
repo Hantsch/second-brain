@@ -76,6 +76,22 @@ function rawSource(slug: string, sourcePage: string | null): Record<string, stri
   };
 }
 
+/** Eine youtube-Rohquelle ohne Transcript — der Ordner-Aufbau aus VAULT-FORMAT.md. */
+function blockedYoutubeSource(slug: string): Record<string, string> {
+  return {
+    [`raw/youtube/${slug}/transcript.md`]: '_Kein Transcript verfuegbar._\n',
+    [`raw/youtube/${slug}/.ingest.json`]: `${JSON.stringify({
+      kind: 'youtube',
+      origin: `https://www.youtube.com/watch?v=${slug}`,
+      ingestedAt: stamp(-5, '10:00'),
+      title: `Video ${slug}`,
+      sourcePage: null,
+      modules: [],
+      transcript: { available: false, language: null, kind: null, provider: null },
+    })}\n`,
+  };
+}
+
 describe('unfiledDumpCheck', () => {
   it('meldet einen Dump, der die Schwelle erreicht', async () => {
     const fixture = await gardenerFixture(dumpFile('alt', 'raw', 14));
@@ -147,6 +163,16 @@ describe('unprocessedSourceCheck', () => {
     });
 
     expect(unprocessedSourceCheck.run(fixture.ctx({ settings: SETTINGS }))).toEqual([]);
+  });
+
+  it('nennt den Grund, warum eine Quelle blockiert ist', async () => {
+    const fixture = await gardenerFixture(blockedYoutubeSource('no-cues'));
+
+    const findings = unprocessedSourceCheck.run(fixture.ctx({ settings: SETTINGS }));
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.detail).toContain('Kein Transcript verfügbar');
+    expect(findings[0]?.fix?.action).toBe('open-ingest');
   });
 });
 

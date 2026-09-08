@@ -46,6 +46,20 @@ export interface TranscriptInfo {
   cueCount: number | null;
 }
 
+/**
+ * Ob `.ingest.json` ein Transcript als verfuegbar vermerkt hat. `log.transcript`
+ * kommt aus JSON (typisiert als `unknown`), darum die vorsichtige Pruefung statt
+ * einer Annahme ueber die Form.
+ */
+export function isTranscriptAvailable(transcript: unknown): boolean {
+  return (
+    typeof transcript === 'object' &&
+    transcript !== null &&
+    'available' in transcript &&
+    (transcript as Record<'available', unknown>).available === true
+  );
+}
+
 export interface WriteYoutubeOptions {
   store: IngestStore;
   /** Zielordner, vault-relativ (`raw/youtube/<id>`). */
@@ -246,5 +260,5 @@ export async function writeYoutubeSource(
   });
   files.push('.ingest.json');
 
-  return { dir, files, transcript, text: prose, title };
+  return { dir, files, transcript, text: cues.length > 0 ? prose : '', title };
 }

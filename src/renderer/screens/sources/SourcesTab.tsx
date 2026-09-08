@@ -215,6 +215,9 @@ export function SourcesTab({ initialModule = null }: SourcesTabProps) {
                   onCondense={(path, targetModule) =>
                     mutations.condense.mutate({ path, module: targetModule })
                   }
+                  onCondenseFromMetadata={(path, targetModule) =>
+                    mutations.condense.mutate({ path, module: targetModule, basis: 'metadata' })
+                  }
                   /* The button stays locked until the run is through — the
                      mutation is done as soon as the job is queued, and a
                      second click would condense the same source twice. */

@@ -34,6 +34,7 @@ const NOTE_CODES: readonly string[] = [
   'unsupported-content',
   'awaiting-llm',
   'already-condensed',
+  'no-content',
 ];
 
 export interface JobListProps {
@@ -87,7 +88,7 @@ function JobRow({
               ? 'danger'
               : job.stage === 'done'
                 ? 'success'
-                : job.stage === 'duplicate'
+                : job.stage === 'duplicate' || job.stage === 'no-content'
                   ? 'warning'
                   : 'neutral'
           }
@@ -154,6 +155,14 @@ function JobRow({
               </Button>
             )}
           </span>
+        </div>
+      ) : null}
+
+      {job.stage === 'no-content' ? (
+        <div className="sb-job-note">
+          <strong className="sb-job-notetitle">{t('sources.noContent.title')}</strong>
+          <span>{t('sources.noContent.body')}</span>
+          {job.message === null ? null : <span className="sb-note-line">{note(job.message)}</span>}
         </div>
       ) : null}
 

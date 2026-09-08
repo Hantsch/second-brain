@@ -94,6 +94,7 @@ const condensed: RawSource = {
   origin: 'https://www.youtube.com/watch?v=xOFkpf9KgKg',
   bytes: 48210,
   modules: [MODULE],
+  blocked: null,
 };
 
 const raw: RawSource = {
@@ -105,6 +106,19 @@ const raw: RawSource = {
   origin: 'https://example.org/digital-gardening-ueberblick',
   bytes: 4210,
   modules: [],
+  blocked: null,
+};
+
+const blocked: RawSource = {
+  path: 'raw/youtube/no-transcript-1',
+  title: 'Stream ohne Untertitel',
+  kind: 'youtube',
+  ingestedAt: NOW,
+  sourcePage: null,
+  origin: 'https://www.youtube.com/watch?v=no-transcript-1',
+  bytes: 1024,
+  modules: [],
+  blocked: 'no-transcript',
 };
 
 function sourceDetail(source: RawSource, patch: Partial<SourceDetail> = {}): SourceDetail {
@@ -609,6 +623,47 @@ describe('Quellen: Bestand', () => {
     );
     expect(await screen.findByText('workflow.json')).toBeTruthy();
     await expectNoViolations(container);
+  });
+
+  it('zeigt bei einer blockierten Quelle den Grund und die Alternative', async () => {
+    const { sb } = renderScreen({
+      'modules:sources': () => [blocked],
+      'ingest:condense': ({ path, module, basis }) =>
+        job({
+          kind: 'youtube',
+          rawPath: path,
+          module,
+          message: basis ?? null,
+          stage: 'queued',
+          progress: 0,
+        }),
+    });
+
+    const row = (await screen.findByText(blocked.title)).closest('li');
+    expect(row).not.toBeNull();
+    expect(within(row as HTMLElement).getByText('Kein Transcript verfügbar')).toBeTruthy();
+
+    await userEvent.selectOptions(screen.getByLabelText(`Zielmodul für ${blocked.title}`), MODULE);
+    await userEvent.click(screen.getByRole('button', { name: 'Aus Beschreibung verdichten' }));
+
+    await waitFor(() =>
+      expect(sb.calls.find((call) => call.channel === 'ingest:condense')?.payload).toEqual({
+        path: blocked.path,
+        module: MODULE,
+        basis: 'metadata',
+      }),
+    );
+  });
+
+  it('lässt eine gewöhnliche unverdichtete Zeile unverändert', async () => {
+    renderScreen();
+
+    const row = (await screen.findByText(raw.title)).closest('li');
+    expect(row).not.toBeNull();
+    expect(within(row as HTMLElement).queryByText('Kein Transcript verfügbar')).toBeNull();
+    expect(
+      within(row as HTMLElement).queryByRole('button', { name: 'Aus Beschreibung verdichten' }),
+    ).toBeNull();
   });
 
   it('erklärt im Leerzustand die vier Quellenarten', async () => {

@@ -215,7 +215,11 @@ export const EXPECTED_FINDINGS = {
   missingFromIndex: 1,
   stalePages: 1,
   contradictions: 2,
-  unprocessedSources: 1,
+  /* Two: `raw/web/<day>-digital-gardening-ueberblick.md` (never condensed) and
+     `raw/youtube/zQPz9x2LKrT` (Story 051: no transcript, `blocked:
+     'no-transcript'` — condensing it needs an explicit "digest from
+     description" click on the source screen, never a silent fallback). */
+  unprocessedSources: 2,
   unfiledDumps: 1,
   withoutNextStep: 1,
   /* Story 039: `gesundheit` (Artefakt ohne `source_hashes`, gilt als geändert),

@@ -19,7 +19,7 @@ import type { YoutubeProvider } from './pipeline';
 import { createInnertubeProvider } from './provider-innertube';
 import { createYtDlpProvider } from './provider-ytdlp';
 import { parseVideoId, watchUrl } from './video-url';
-import { writeYoutubeSource, YOUTUBE_FILES } from './writer';
+import { isTranscriptAvailable, writeYoutubeSource, YOUTUBE_FILES } from './writer';
 
 /** Welche Provider laufen koennen. Fehlt yt-dlp, bleibt der Fallback. */
 export function buildProviders(ctx: IngestContext): {
@@ -64,7 +64,9 @@ async function reuseExisting(
   origin: string,
 ): Promise<IngestOutcome> {
   const log = await readIngestLog(ctx.store, dir);
-  const text = (await ctx.store.readText(`${dir}/${YOUTUBE_FILES.transcript}`)) ?? '';
+  const text = isTranscriptAvailable(log?.transcript)
+    ? ((await ctx.store.readText(`${dir}/${YOUTUBE_FILES.transcript}`)) ?? '')
+    : '';
   return {
     kind: 'youtube',
     rawPath: dir,

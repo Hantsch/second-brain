@@ -158,9 +158,20 @@ describe('ingestSource mit Modell', () => {
       origin: 'https://example.org/orbit-mandanten',
     });
     expect(doc?.frontmatter['condensed']).toBeUndefined();
+    expect(doc?.frontmatter['source_basis']).toBeUndefined();
     expect(doc?.body).toContain('## Tragende Aussagen');
     expect(doc?.body).toContain('## Rohquelle');
     expect(doc?.body).toContain(`[${RAW_PATH}](${RAW_PATH})`);
+  });
+
+  it('sagt auf der Seite, dass sie aus Beschreibung/Kapiteln statt einem Transcript entstand', async () => {
+    const fixture = await wikiFixture();
+
+    await ingest(fixture, setup().gateway, { basis: 'metadata' });
+
+    const doc = await fixture.store.read(SOURCE_PATH);
+    expect(doc?.frontmatter['source_basis']).toBe('metadata');
+    expect(doc?.body).toContain('Aus Beschreibung und Kapiteln erstellt, es gab kein Transcript.');
   });
 
   it('beruehrt drei Seiten: anlegen, ergaenzen, Widerspruch benennen', async () => {

@@ -45,6 +45,8 @@ export interface WikiPhrases {
   notCondensed: string;
   /** Einzeiler im Katalog, solange keine Verdichtung vorliegt. */
   notCondensedShort: string;
+  /** Steht auf einer Source-Seite, die aus Beschreibung/Kapiteln statt einem Transcript entstand. */
+  builtFromMetadata: string;
   /** Ehrliche Absage, wenn die Suche nichts findet. */
   noEvidence: string;
   /** Ehrliche Absage, wenn kein Modell zugeordnet ist. */
@@ -78,6 +80,7 @@ const DE: WikiPhrases = {
   rawSource: 'Rohquelle',
   notCondensed: 'Noch nicht verdichtet — braucht ein Modell.',
   notCondensedShort: 'noch nicht verdichtet',
+  builtFromMetadata: 'Aus Beschreibung und Kapiteln erstellt, es gab kein Transcript.',
   noEvidence: 'Dazu steht nichts im Vault.',
   noModel:
     'Ich kann die Antwort nicht formulieren — für diese Aufgabe ist kein Modell zugeordnet. Hier sind die Stellen, die zur Frage passen.',
@@ -109,6 +112,7 @@ const EN: WikiPhrases = {
   rawSource: 'Raw source',
   notCondensed: 'Not condensed yet — needs a model.',
   notCondensedShort: 'not condensed yet',
+  builtFromMetadata: 'Built from the description and chapters — there was no transcript.',
   noEvidence: 'Nothing in the vault covers that.',
   noModel:
     'I cannot phrase an answer — no model is routed to this task. Here are the passages that match the question.',

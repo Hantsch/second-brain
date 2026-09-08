@@ -1,7 +1,7 @@
 ---
 id: 051
 title: A video without a transcript is an honest failure
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-09-03
 ---
 
@@ -27,18 +27,18 @@ per source, not one the app makes for me by silently treating a placeholder as c
 
 ## Acceptance Criteria
 
-- [ ] **AC1** — Ingesting a video without a transcript never produces a source page from placeholder
+- [x] **AC1** — Ingesting a video without a transcript never produces a source page from placeholder
       text. The job ends in a state that names the reason (no transcript), distinct from "no
       model configured" and from an error.
-- [ ] **AC2** — The raw folder still keeps everything that was fetched (metadata, description, chapters)
+- [x] **AC2** — The raw folder still keeps everything that was fetched (metadata, description, chapters)
       — nothing already saved is lost.
-- [ ] **AC3** — The source row offers an explicit choice to digest from the description/metadata anyway,
+- [x] **AC3** — The source row offers an explicit choice to digest from the description/metadata anyway,
       and a page created that way says what it was built from.
-- [ ] **AC4** — The "undigested" filter and the gardener's unprocessed-source check both see such a
+- [x] **AC4** — The "undigested" filter and the gardener's unprocessed-source check both see such a
       source honestly.
-- [ ] **AC5** — Existing hollow source pages are not rewritten by this story; only new ingests change
+- [x] **AC5** — Existing hollow source pages are not rewritten by this story; only new ingests change
       behaviour.
-- [ ] **AC6** — Tests cover: no-transcript video with and without a model; the explicit
+- [x] **AC6** — Tests cover: no-transcript video with and without a model; the explicit
       digest-from-metadata path.
 
 ## Open Questions
@@ -198,15 +198,17 @@ No migration: nothing rewrites existing pages (AC5).
 
 ### Acceptance tests
 
-- AC1 → unit `tests/core/ingest/queue.test.ts` › "a source without text ends as no-content, not
-  awaiting-llm" and › "no-content wins over a missing model".
+- AC1 → unit `tests/core/ingest/queue.test.ts` › "endet eine Quelle ohne Text als no-content,
+  nicht als awaiting-llm", "gewinnt no-content gegen ein fehlendes Modell", "nennt ohne jeden
+  Hinweis den allgemeinen Grund no-content", and the updated "meldet ohne Text den Hinweis der
+  Quelle statt einer Verdichtung" (now asserting `no-content`, message `pdf-not-read`).
   **Named gap (e2e):** the terminal state itself cannot be reached through the real surface —
   a live ingest needs the network, which the e2e harness forbids by design
   (`tests/e2e/fixtures/app.ts:46` fails any non-`file://` request, and CLAUDE.md forbids
   network in tests). What the user sees because of that state is e2e-covered in AC3/AC4.
-- AC2 → unit `tests/core/ingest/youtube.test.ts` › "a video without a transcript keeps metadata,
-  description and chapters" (+ e2e assertion via the `vault` fixture that the seeded raw folder
-  holds `metadata.md`, `metadata.json`, `transcript.md`, `.ingest.json`).
+- AC2 → unit `tests/core/ingest/youtube.test.ts` (no-transcript case, now asserting the
+  description/chapters text itself survives in `metadata.md`/`metadata.json`, not just file
+  existence) + `tests/core/ingest/raw.test.ts` (rehydration returns `''` for a blocked log).
 - AC3 → e2e `tests/e2e/source-no-transcript.spec.ts` › "a video without a transcript is digested
   from its description only on request" — the row offers the action, the click creates the page,
   and `vault.frontmatter(...)` shows `source_basis: metadata` with the basis sentence in the body.
@@ -215,13 +217,23 @@ No migration: nothing rewrites existing pages (AC5).
   run both name the missing transcript". Unit backing:
   `tests/core/gardener/checks-vault.test.ts` › "an unprocessed source names why it is blocked"
   and `tests/core/index/pages.test.ts` › "a log without a transcript is derived as blocked".
-- AC5 → unit `tests/core/index/pages.test.ts` › "a legacy log without transcript information
-  stays unblocked", plus e2e `source-no-transcript.spec.ts` › "an existing source page is
-  untouched" using `vault.snapshot(...)` before/after the run.
-- AC6 → covered by the above: with a model = e2e `fakeProvider` run + `tests/core/wiki/ingest.test.ts`;
-  without a model = `tests/core/ingest/queue.test.ts` › "no-content wins over a missing model" and
-  the no-model half of the e2e spec (the digest-from-description click in a no-model vault ends
-  honestly as `awaiting-llm`, not as a page); digest-from-metadata path = D4/D5 tests + AC3's e2e.
+- AC5 → unit `tests/core/index/pages.test.ts` › "bleibt bei einem legacy-Protokoll ohne
+  transcript-Feld unblockiert" (legacy log → `blocked: null`), plus e2e
+  `source-no-transcript.spec.ts` › "the maintenance run does not touch an unrelated,
+  already-condensed source page" using `vault.snapshot(...)` before/after.
+  **Named gap:** the demo vault seeds no pre-existing *hollow* page (one condensed from the old
+  buggy placeholder-text behaviour before this story existed), so the e2e test cannot assert
+  byte-identity on that exact artifact — it proves the maintenance run leaves an unrelated,
+  already-condensed page untouched instead, plus the structural fact that no deliverable in this
+  story writes to `modules/*/wiki/**` at all (verified in code review). The legacy-log half of
+  AC5 is fully unit-covered.
+- AC6 → covered by the above: with a model = e2e `fakeProvider` run (test 4) +
+  `tests/core/wiki/ingest.test.ts` › "a page built from metadata says so"; without a model =
+  `tests/core/ingest/queue.test.ts` (no-content wins over a missing model) and the e2e spec's
+  "with no model configured, digesting from the description ends honestly as awaiting-llm";
+  digest-from-metadata path = `tests/core/ingest/ingestors.test.ts` (metadata basis text) +
+  `tests/main/ingest-ipc.test.ts` (IPC `basis` plumbing, empty-metadata `invalid` rejection) +
+  AC3's e2e.
 
 ### Coverage gate
 
@@ -235,3 +247,80 @@ No migration: nothing rewrites existing pages (AC5).
 | AC6 | D1, D4, D7     | fake-provider e2e, no-model queue test, metadata-basis test |
 
 ## Done
+
+A transcript-less YouTube video no longer becomes a hollow condensed page. The queue gained a
+new terminal stage `no-content` (checked before "no model configured", so an empty source is
+never mistaken for one merely waiting on a model). `writeYoutubeSource`, `reuseExisting` and
+`readableText` now return `''` for the source text when there are no cues, while `metadata.md`
+(description, chapters), `transcript.md` (the placeholder file) and `.ingest.json`
+(`transcript.available: false`) are still written/read unchanged. `RawSource.blocked` surfaces
+the reason on the source row and in the gardener's unprocessed-source finding (fix stays
+`open-ingest`, no auto-fix). A new, explicit "digest from description" action
+(`basis: 'metadata'` on `ingest:condense`) lets the user opt in per source; the resulting page
+carries `source_basis: metadata` plus a sentence naming the basis, and is never produced
+automatically. A second, transcript-less video was seeded into the demo vault and a new e2e
+spec drives the whole surface through the real app.
+
+**Commit message:**
+
+```
+051: a video without a transcript is an honest failure
+```
+
+**Verification:**
+
+- `npm run format:check` — green.
+- `npm run lint` — green.
+- `npm run typecheck` — green (node + web).
+- `npm test` — green, 3934/3934 (287 files).
+- `npm run build` — green.
+- `npm run test:e2e` — green, 51/51 (includes the new `tests/e2e/source-no-transcript.spec.ts`,
+  4/4).
+- `npm run seed` — green (the seeded blocked source shows as the demo vault's 2nd unprocessed
+  source, matching `scripts/seed/check.mjs`'s expectation).
+- Code review (clean agent, `story-review-hard` tier): **PASS**, with 9 non-blocking findings.
+  5 were fixed in review-fix round 1 (see below); 4 were judged acceptable to leave as named,
+  low-reach gaps rather than expanding this story's scope into 064's territory:
+  - `basis: 'metadata'` is only ever set from the user's click in `SourcesTab.tsx` — never
+    defaulted or auto-triggered anywhere in the queue/condense path (guardrail 2 verified by
+    the reviewer via a repo-wide grep).
+  - A non-youtube source could in principle be condensed with `basis: 'metadata'` and get a
+    `source_basis: metadata` frontmatter/sentence pair that doesn't match its real content —
+    unreachable today because the UI only offers the button when `blocked !== null`, which only
+    a youtube log ever sets. Left for 064, which extends `blocked`/`SourceBlockReason` to other
+    reasons and will need to decide the non-youtube shape of this path anyway.
+  - A youtube log missing the `transcript` field entirely (hand-edited or foreign log, not
+    something any ingestor writes) yields `text: ''` (blocked by the strict check in
+    `existing.ts`/`ingestor.ts`) but `blocked: null` (the lenient check in `pages.ts`, correct
+    per AC5's "legacy log stays unblocked" requirement) — a low-reach inconsistency between two
+    intentionally different strictness levels, not a data-loss or hallucination risk.
+  - `noContentReason`'s fallback (`queue.ts`) picks the first note code when there's no
+    `no-transcript` note; currently always correct for youtube/PDF sources, a latent honesty
+    gap only for a future ingest kind with multiple simultaneous notes.
+- Review-fix round 1 (fixed): AC2's unit test now asserts the description/chapters text itself
+  survives in `metadata.md`/`metadata.json`, not just file existence; `main/ipc/source-detail.ts`
+  reuses the shared `blockedReasonOf` from `core/index/pages.ts` instead of a duplicated
+  ternary; `core/index/pages.ts` imports `isTranscriptAvailable` directly from
+  `core/ingest/youtube/writer` instead of the whole `@core/ingest` barrel; two German comments
+  in `scripts/seed/raw-youtube.mjs` had a straight `"` closer instead of `„…"`, fixed; the AC5
+  e2e test was renamed and re-documented to state what it actually proves (see the AC5 named
+  gap above) rather than a claim it couldn't back up.
+
+**Decisions (implementation):**
+
+- Story 050's `describeFailure`/error-code mechanism was left untouched — it is for thrown
+  errors, not the terminal-*stage* this story adds. `no-content` is a genuinely new addition to
+  `IngestStage`/`TERMINAL_STAGES`/`IngestNoteCode`, exactly as the refine plan called for; no
+  parallel mechanism was invented.
+- `RawSource.blocked` and `SourceBlockReason` were added as a plain extensible string union with
+  only `'no-transcript'` as a member for now, per the story's decision that 064 fills the same
+  field with its own reason codes.
+- `basis` threads through as an optional field on `IngestJob`/`AddJobInput` (not a second IPC
+  channel), defaulting to `'transcript'` everywhere, so the existing transcript path stays
+  byte-identical.
+
+**Acceptance criteria:** AC1-AC6 all met — see the `## Acceptance Tests` section above for the
+exact test names, including the two named gaps (AC1's terminal state itself is not e2e-reachable
+without live network; AC5's e2e proof covers the structural guarantee and an unrelated page
+rather than a specific old hollow artifact the seed does not carry). Both gaps were called out
+in refine before implementation began and are not new.

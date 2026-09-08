@@ -320,6 +320,9 @@ describe('IngestQueue', () => {
     expect(runs).toBe(1);
   });
 
+  /* 051, D1: eine leere Quelle endet als `no-content` — der Hinweis der Quelle
+     bleibt der Grund, nur die Stufe ist nicht mehr `awaiting-llm`. Ein ungelesenes
+     PDF wartet auf kein Modell; es enthaelt einfach nichts. */
   it('meldet ohne Text den Hinweis der Quelle statt einer Verdichtung', async () => {
     const queue = new IngestQueue({
       store: memoryStore(),
@@ -345,8 +348,92 @@ describe('IngestQueue', () => {
     });
 
     const job = queue.add({ kind: 'file', input: 'C:/handbuch.pdf' });
-    await vi.waitFor(() => expect(queue.job(job.id)?.stage).toBe('awaiting-llm'));
+    await vi.waitFor(() => expect(queue.job(job.id)?.stage).toBe('no-content'));
     expect(queue.job(job.id)?.message).toBe('pdf-not-read');
+  });
+
+  /** Ein Video, dessen Metadaten liegen, dessen Transcript aber fehlt. */
+  function transcriptlessIngestor(): SourceIngestor {
+    return {
+      kind: 'youtube',
+      canHandle: () => true,
+      async ingest(): Promise<IngestOutcome> {
+        return {
+          kind: 'youtube',
+          rawPath: 'raw/youtube/xOFkpf9KgKg',
+          title: 'Ein Video ohne Untertitel',
+          text: '',
+          origin: 'https://www.youtube.com/watch?v=xOFkpf9KgKg',
+          provenance: { metadata: 'yt-dlp' },
+          notes: [{ code: 'partial-metadata' }, { code: 'no-transcript' }],
+        };
+      },
+    };
+  }
+
+  it('endet eine Quelle ohne Text als no-content, nicht als awaiting-llm', async () => {
+    let condensed = 0;
+    const queue = new IngestQueue({
+      store: memoryStore(),
+      ingestors: [transcriptlessIngestor()],
+      condense: async () => {
+        condensed += 1;
+        return { pages: ['modules/m/wiki/sources/s-1.md'], sourcePage: 's-1', modules: ['m'] };
+      },
+      llmAvailable: () => true,
+    });
+
+    const job = queue.add({
+      kind: 'youtube',
+      input: 'https://www.youtube.com/watch?v=xOFkpf9KgKg',
+    });
+    await vi.waitFor(() => expect(queue.job(job.id)?.stage).toBe('no-content'));
+
+    const done = queue.job(job.id);
+    /* Der Grund ist maschinenlesbar und benennt das fehlende Transcript — nicht
+       den beilaeufigen Hinweis auf die Metadaten. */
+    expect(done?.message).toBe('no-transcript');
+    expect(done?.stage).not.toBe('awaiting-llm');
+    expect(done?.error).toBeNull();
+    expect(done?.progress).toBe(1);
+    expect(done?.finishedAt).not.toBeNull();
+    /* Die Rohquelle liegt, aber kein Modell hat einen Platzhalter verdichtet. */
+    expect(done?.rawPath).toBe('raw/youtube/xOFkpf9KgKg');
+    expect(done?.touchedPages).toEqual([]);
+    expect(condensed).toBe(0);
+  });
+
+  it('gewinnt no-content gegen ein fehlendes Modell', async () => {
+    const queue = new IngestQueue({
+      store: memoryStore(),
+      ingestors: [transcriptlessIngestor()],
+      condense: async () => ({ pages: ['modules/m/wiki/sources/s-1.md'] }),
+      llmAvailable: () => false,
+    });
+
+    const job = queue.add({
+      kind: 'youtube',
+      input: 'https://www.youtube.com/watch?v=xOFkpf9KgKg',
+    });
+    await vi.waitFor(() => expect(queue.job(job.id)?.stage).toBe('no-content'));
+
+    /* Ein Modell wuerde diese Quelle auch nicht vollstaendiger machen: die
+       Warteansage waere unehrlich. */
+    expect(queue.job(job.id)?.stage).not.toBe('awaiting-llm');
+    expect(queue.job(job.id)?.message).toBe('no-transcript');
+  });
+
+  it('nennt ohne jeden Hinweis den allgemeinen Grund no-content', async () => {
+    const queue = new IngestQueue({
+      store: memoryStore(),
+      ingestors: [fakeIngestor({ text: '   ' })],
+      condense: async () => ({ pages: [] }),
+      llmAvailable: () => true,
+    });
+
+    const job = queue.add({ kind: 'text', input: 'nur Leerzeichen' });
+    await vi.waitFor(() => expect(queue.job(job.id)?.stage).toBe('no-content'));
+    expect(queue.job(job.id)?.message).toBe('no-content');
   });
 
   it('raeumt abgeschlossene Auftraege auf Wunsch weg', async () => {

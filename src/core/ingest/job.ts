@@ -15,6 +15,7 @@ export const TERMINAL_STAGES: ReadonlySet<IngestStage> = new Set<IngestStage>([
   'error',
   'duplicate',
   'awaiting-llm',
+  'no-content',
 ]);
 
 /** Laenge der Bezeichnung eines Auftrags in der Liste. */
@@ -24,6 +25,8 @@ export interface AddJobInput {
   kind: IngestKind;
   input: string;
   module?: string | null;
+  /** What to build the page from, for `addExisting`. Undefined behaves as `'transcript'`. */
+  basis?: 'transcript' | 'metadata';
 }
 
 /** Kurzform der Eingabe fuer die Liste — eine Zeile, ohne Umbrueche. */
@@ -48,6 +51,7 @@ export function createJob(id: string, input: AddJobInput, startedAt: string): In
     finishedAt: null,
     rawPath: null,
     touchedPages: [],
+    basis: input.basis,
   };
 }
 

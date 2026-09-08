@@ -311,6 +311,7 @@ class QueueHolder {
       title: outcome.title,
       text: outcome.text,
       origin: outcome.origin,
+      basis: job.basis,
     });
     return {
       pages: result.touchedPages,
@@ -467,7 +468,7 @@ export function ingestHandlers(services: Services): HandlerMap {
 
     'ingest:retry': ({ id }) => holder.current().retry(id),
 
-    'ingest:condense': async ({ path, module }) => {
+    'ingest:condense': async ({ path, module, basis }) => {
       const target = String(module ?? '').trim();
       if (target.length === 0) throw fail('invalid', 'Verdichtung braucht ein Zielmodul');
       const rawPath = assertSafeVaultPath(path);
@@ -486,9 +487,16 @@ export function ingestHandlers(services: Services): HandlerMap {
       /* The same source under a second raw path: it gets condensed once. */
       const twin = await findCondensedTwin(services, rawPath, logFingerprint(log));
       if (twin !== null) throw fail('conflict', `bereits verdichtet: ${twin}`);
-      const outcome = await loadExistingOutcome(store, rawPath);
+      const outcome = await loadExistingOutcome(store, rawPath, { basis });
+      /* An explicit digest-from-description click that turns up nothing (no
+         description, no chapters) would just start a job that ends hollow —
+         reject it up front instead, the same way an empty input to
+         `ingest:start` is refused above. */
+      if (basis === 'metadata' && outcome.text.trim().length === 0) {
+        throw fail('invalid', 'keine Beschreibung zum Verdichten');
+      }
       return queue.addExisting(
-        { kind: outcome.kind, input: outcome.origin, module: target },
+        { kind: outcome.kind, input: outcome.origin, module: target, basis },
         outcome,
       );
     },

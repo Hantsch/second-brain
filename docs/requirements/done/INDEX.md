@@ -225,3 +225,4 @@ second roadmap.
   `tests/scripts/ci-gate.test.ts`; the first real GitHub Actions run and its cold/warm runtime
   numbers remain a manual residue until `sprint/S16` is pushed.
 - 050 — A digestion completes whole or leaves no trace · S16 · Wraps ingestSource writes in a rollback transaction, adds idempotent retry against a leftover source page, per-module write locking, truncation notice, progress ticks and a generalized failure-code path; reviewed PASS with one review-fix round (tautological progress test, error-code leak, stalled progress bar, missing overview.md retry).
+- 051 — A video without a transcript is an honest failure · S16 · A transcript-less YouTube video now ends the ingest job as a new terminal stage `no-content` instead of condensing placeholder text; the source shows the reason, and an explicit "digest from description" action (`basis: metadata`) lets the user opt in per source.

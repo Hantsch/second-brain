@@ -161,6 +161,8 @@ export const enWiki = {
   'sources.stage.error': 'Failed',
   'sources.stage.duplicate': 'Already present',
   'sources.stage.awaiting-llm': 'Waiting for a model',
+  'sources.stage.no-content': 'No content',
+  'sources.stage.blocked.no-transcript': 'No transcript available',
   'sources.job.cancel': 'Cancel',
   'sources.job.retry': 'Retry',
   'sources.job.raw': 'View raw source',
@@ -180,6 +182,9 @@ export const enWiki = {
   'sources.duplicate.body':
     'The existing entry was opened. If condensation is still pending, use “Condense” there.',
   'sources.duplicate.condensedTitle': 'Source is already condensed',
+  'sources.noContent.title': 'The source rests in the vault, there is nothing to condense',
+  'sources.noContent.body':
+    'The raw source is stored, but without readable text — no model could turn it into a page. A retry would end the same way; digesting from the description is the choice offered in the list below.',
 
   // ── Sources: what is already in ───────────────────────────────────────────
   'sources.list.title': 'Sources taken in',
@@ -207,6 +212,7 @@ export const enWiki = {
   'sources.detail.targetHint': 'Condensation writes the source page and updates this module.',
   'sources.detail.condense': 'Condense',
   'sources.detail.condensing': 'Condensing',
+  'sources.detail.condenseFromMetadata': 'Digest from description',
   'sources.detail.folder': 'Source folder',
   'sources.detail.wikiPage': 'Wiki page',
   'sources.detail.resources': 'Mentioned resources',

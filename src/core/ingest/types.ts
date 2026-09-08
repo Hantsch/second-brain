@@ -56,7 +56,13 @@ export type IngestNoteCode =
   /** Rohquelle liegt, die Verdichtung braucht ein Modell. */
   | 'awaiting-llm'
   /** Diese Quelle ist schon verdichtet — ein zweiter Lauf wurde gestoppt. */
-  | 'already-condensed';
+  | 'already-condensed'
+  /**
+   * Die Rohquelle liegt, enthaelt aber nichts zu Verdichtendes — und kein
+   * anderer Hinweis sagt, warum. Der allgemeine Grund zur Stufe `no-content`,
+   * wenn es keinen genaueren gibt.
+   */
+  | 'no-content';
 
 export interface IngestNote {
   code: IngestNoteCode;

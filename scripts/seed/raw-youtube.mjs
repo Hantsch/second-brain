@@ -5,7 +5,17 @@
 
    Kanal, Titel und Transkript sind erfunden. Die beiden Zitate hier sind
    dieselben, die die Wiki-Quellseite belegt: darum steht die Zeitmarke im
-   Transkript und in der Seite an derselben Stelle. */
+   Transkript und in der Seite an derselben Stelle.
+
+   Ein zweites Video (Story 051, D7) ist absichtlich ohne Transcript: eine
+   Aufzeichnung ohne Untertitel, wie sie der echte Ingest antrifft, wenn
+   yt-dlp keine Spur liefert. `renderProseTranscript`
+   (`src/core/ingest/youtube/transcript.ts:198`) schreibt in diesem Fall nur
+   die Platzhalterzeile — genau das bildet `seedYoutubeNoTranscript` nach, statt
+   den echten Ingest-Code hier zu importieren (der Seed bleibt ein reines
+   Node-Skript, siehe `scripts/seed/lib.mjs`). Beschreibung und Kapitel bleiben
+   vollständig, damit der „aus Beschreibung verdichten“-Pfad echten Text zum
+   Verdichten hat. */
 
 const VIDEO_ID = 'xOFkpf9KgKg';
 const VIDEO_TITLE = 'Your AI Second Brain Is Slowly Rotting';
@@ -96,6 +106,11 @@ function wordCount(text) {
 }
 
 export function seedYoutube(seeder, clock) {
+  seedYoutubeCondensed(seeder, clock);
+  seedYoutubeNoTranscript(seeder, clock);
+}
+
+function seedYoutubeCondensed(seeder, clock) {
   const dir = `raw/youtube/${VIDEO_ID}`;
   const proseText = prose();
   const words = wordCount(proseText);
@@ -221,4 +236,163 @@ ${CHAPTERS.map((chapter) => `- ${shortStamp(chapter.start)} ${chapter.title}`).j
   );
   seeder.bump('raw');
   seeder.bump('rawProcessed');
+}
+
+/* ── Zweites Video: kein Transcript (Story 051) ─────────────────────────── */
+
+const VIDEO_ID_2 = 'zQPz9x2LKrT';
+const VIDEO_TITLE_2 = 'Live AMA: Why We Killed Our Wiki Bot';
+const CHANNEL_2 = CHANNEL;
+const CHANNEL_ID_2 = CHANNEL_ID;
+
+/** Nur Zeit und Titel — der Stream hat keine Untertitel, also keine Cues. */
+const CHAPTERS_2 = [
+  { start: 0, title: 'Warm-up und Technikcheck' },
+  { start: 180, title: 'Warum der Wiki-Bot abgeschaltet wurde' },
+  { start: 960, title: 'Fragen aus dem Chat' },
+];
+
+const DESCRIPTION_2 =
+  'Ungeschnittener Livestream, 42 Minuten, ohne Untertitel. Ich erkläre, warum wir den ' +
+  'automatischen Wiki-Bot abgeschaltet haben, bevor er die Sammlung stillschweigend mit ' +
+  'falschen Verknüpfungen gefüllt hätte: er zog Seiten aus Stichwörtern statt aus Belegen, ' +
+  'und niemand hätte es gemerkt, bis ein Zitat nicht mehr stimmte. Kapitel: Warm-up, die ' +
+  'Abschaltung selbst, Fragen aus dem Chat.';
+
+/**
+ * Ein Video ohne Transcript: kein `transcript.timestamped.md`, `transcript.md` nur mit der
+ * Platzhalterzeile (`cue_count: 0`, wie `renderProseTranscript` sie fuer leere Cues schreibt),
+ * `.ingest.json` mit `transcript.available: false` — davon leitet `blockedReasonOf`
+ * (`src/core/index/pages.ts`) `blocked: 'no-transcript'` ab. `metadata.md`/`metadata.json`
+ * tragen Description und Kapitel vollstaendig, damit „aus Beschreibung verdichten“ echten
+ * Text zum Verdichten hat (AC2/AC3).
+ */
+function seedYoutubeNoTranscript(seeder, clock) {
+  const dir = `raw/youtube/${VIDEO_ID_2}`;
+  const grabbed = clock.at(-6, '19:05');
+  const when = clock.date(-6, '19:05');
+  const shared = {
+    video_id: VIDEO_ID_2,
+    title: VIDEO_TITLE_2,
+    channel: CHANNEL_2,
+    url: `https://www.youtube.com/watch?v=${VIDEO_ID_2}`,
+  };
+
+  seeder.doc(
+    `${dir}/metadata.md`,
+    {
+      ...shared,
+      channel_id: CHANNEL_ID_2,
+      channel_url: `https://www.youtube.com/channel/${CHANNEL_ID_2}`,
+      doc_type: 'video-metadata',
+      published: clock.day(-6),
+      published_at: grabbed,
+      duration_seconds: 2520,
+      duration: '42m 00s',
+      view_count: 908,
+      like_count: 61,
+      language: 'en',
+      tags: ['second brain', 'livestream', 'ama'],
+      chapter_count: CHAPTERS_2.length,
+      transcript_available: false,
+      transcript_language: null,
+      transcript_kind: null,
+      transcript_provider: null,
+      transcript_word_count: null,
+      metadata_providers: ['yt-dlp'],
+      grabbed_at: grabbed,
+    },
+    `# ${VIDEO_TITLE_2}
+
+- **Kanal:** [${CHANNEL_2}](https://www.youtube.com/channel/${CHANNEL_ID_2})
+- **Veroeffentlicht:** ${clock.day(-6)}
+- **Dauer:** 42m 00s
+- **Video:** https://www.youtube.com/watch?v=${VIDEO_ID_2}
+- **Transcript:** nicht verfuegbar
+
+## Description
+
+${DESCRIPTION_2}
+
+## Chapters
+
+${CHAPTERS_2.map((chapter) => `- ${shortStamp(chapter.start)} ${chapter.title}`).join('\n')}`,
+    when,
+  );
+
+  seeder.json(
+    `${dir}/metadata.json`,
+    {
+      videoId: VIDEO_ID_2,
+      title: VIDEO_TITLE_2,
+      description: DESCRIPTION_2,
+      channel: CHANNEL_2,
+      channelId: CHANNEL_ID_2,
+      channelUrl: `https://www.youtube.com/channel/${CHANNEL_ID_2}`,
+      publishedAt: grabbed,
+      durationSeconds: 2520,
+      viewCount: 908,
+      likeCount: 61,
+      language: 'en',
+      tags: ['second brain', 'livestream', 'ama'],
+      chapters: CHAPTERS_2.map((chapter) => ({ start: chapter.start, title: chapter.title })),
+      transcript: {
+        available: false,
+        language: null,
+        kind: null,
+        provider: null,
+        wordCount: null,
+        cueCount: null,
+      },
+      grabbedAt: grabbed,
+    },
+    when,
+  );
+
+  /* Platzhalter, wie `renderProseTranscript` ihn fuer `cues.length === 0` schreibt
+     (`src/core/ingest/youtube/transcript.ts:198`) — keine `transcript.timestamped.md`
+     daneben, weil es ohne Cues auch dort nichts zu zitieren gibt. */
+  seeder.doc(
+    `${dir}/transcript.md`,
+    {
+      doc_type: 'transcript',
+      video_id: VIDEO_ID_2,
+      title: VIDEO_TITLE_2,
+      channel: CHANNEL_2,
+      url: `https://www.youtube.com/watch?v=${VIDEO_ID_2}`,
+      transcript_language: null,
+      transcript_kind: null,
+      transcript_provider: null,
+      duration_seconds: 2520,
+      transcript_style: 'prose',
+      word_count: 0,
+      cue_count: 0,
+    },
+    `# ${VIDEO_TITLE_2} — Transcript\n\n_Kein Transcript verfuegbar._`,
+    when,
+  );
+
+  seeder.json(
+    `${dir}/.ingest.json`,
+    {
+      kind: 'youtube',
+      origin: `https://www.youtube.com/watch?v=${VIDEO_ID_2}`,
+      ingestedAt: grabbed,
+      title: VIDEO_TITLE_2,
+      sourcePage: null,
+      modules: ['second-brain-methodik'],
+      provenance: { metadata: 'yt-dlp' },
+      transcript: {
+        available: false,
+        language: null,
+        kind: null,
+        provider: null,
+        wordCount: null,
+        cueCount: null,
+      },
+    },
+    when,
+  );
+  seeder.bump('raw');
+  seeder.bump('rawUnprocessed');
 }

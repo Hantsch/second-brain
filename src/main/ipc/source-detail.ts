@@ -11,6 +11,7 @@ import {
   sourceFingerprint,
   youtubeResourceFallback,
 } from '@core/ingest';
+import { blockedReasonOf } from '@core/index/pages';
 import { assertSafeVaultPath, sanitizeSegment } from '@core/vault/paths';
 import type {
   IngestKind,
@@ -80,6 +81,9 @@ async function sourceFor(services: Services, path: string): Promise<RawSource> {
     modules: Array.isArray(log.modules)
       ? log.modules.filter((entry): entry is string => typeof entry === 'string')
       : [],
+    /* Same rule as `deriveSources`: only a youtube log's `transcript` field
+       can name a reason; anything else stays unblocked. */
+    blocked: blockedReasonOf(log),
   };
 }
 

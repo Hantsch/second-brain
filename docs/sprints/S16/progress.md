@@ -26,3 +26,17 @@
 - 2026-09-08 10:09 · 050 · D9 quit-mid-digestion e2e · done
 - 2026-09-08 10:22 · 050 · review-fix round 1 (findings 1,3,4,7) · started
 - 2026-09-08 10:31 · 050 · review-fix round 1 (findings 1,3,4,7) · done
+- 2026-09-08 10:35 · 051 · D1 honest terminal state in queue · started
+- 2026-09-08 10:40 · 051 · D1 honest terminal state in queue · done
+- 2026-09-08 10:40 · 051 · D2 transcript-less video yields no digestible text · started
+- 2026-09-08 10:43 · 051 · D2 transcript-less video yields no digestible text · done
+- 2026-09-08 10:43 · 051 · D3 index and gardener see the reason · started
+- 2026-09-08 10:51 · 051 · D3 index and gardener see the reason · done
+- 2026-09-08 10:51 · 051 · D4 digest from description in core · started
+- 2026-09-08 10:55 · 051 · D4 digest from description in core · done
+- 2026-09-08 10:55 · 051 · D5 choice reaches core through IPC · started
+- 2026-09-08 11:01 · 051 · D5 choice reaches core through IPC · done
+- 2026-09-08 11:01 · 051 · D6 row and job say it · started
+- 2026-09-08 11:06 · 051 · D6 row and job say it · done
+- 2026-09-08 11:06 · 051 · D7 seed transcript-less video + e2e spec · started
+- 2026-09-08 11:23 · 051 · D7 seed transcript-less video + e2e spec · done

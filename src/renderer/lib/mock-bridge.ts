@@ -332,6 +332,7 @@ const rawSource: RawSource = {
   origin: 'https://www.youtube.com/watch?v=xOFkpf9KgKg',
   bytes: 48210,
   modules: [fx.knowledgeModule.slug],
+  blocked: null,
 };
 
 type MockResponses = {

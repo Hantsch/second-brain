@@ -17,7 +17,12 @@
 
 import { GERMAN_GARDENER_LABELS } from '@core/gardener';
 import type { CondensationUnit, FindingText, GardenerLabels, IndexDriftKind } from '@core/gardener';
-import type { GardenerFindingKind, GardenerFix, UiLanguage } from '@shared/types';
+import type {
+  GardenerFindingKind,
+  GardenerFix,
+  SourceBlockReason,
+  UiLanguage,
+} from '@shared/types';
 
 function percent(value: number): string {
   return `${Math.round(value * 100)}%`;
@@ -106,7 +111,14 @@ export const ENGLISH_GARDENER_LABELS: GardenerLabels = {
     };
   },
 
-  unprocessedSource(source: string): FindingText {
+  unprocessedSource(source: string, reason: SourceBlockReason | null = null): FindingText {
+    if (reason === 'no-transcript') {
+      return {
+        title: `Source without a distillation: ${source}`,
+        detail:
+          'No transcript is available. The raw source sits under raw/; only the description could be distilled — that is a choice for a person on the source screen.',
+      };
+    }
     return {
       title: `Source without a distillation: ${source}`,
       detail:

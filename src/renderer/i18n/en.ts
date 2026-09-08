@@ -211,6 +211,7 @@ export const en: Record<TranslationKey, string> = {
   'ingest.note.awaiting-llm': 'The raw source is stored. Distilling needs a model.',
   'ingest.note.already-condensed':
     'This source is already condensed. A second run would add a second source page for the same content — so it ends here.',
+  'ingest.note.no-content': 'There is nothing to condense from this source.',
 
   ...enScreens,
   ...enAgents,

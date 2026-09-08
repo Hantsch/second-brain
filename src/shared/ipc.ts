@@ -703,7 +703,15 @@ export interface IpcRoutes {
   'ingest:cancel': { req: { id: string }; res: void };
   'ingest:retry': { req: { id: string }; res: IngestJob };
   /** Condense a raw source that already exists, including one from an earlier session. */
-  'ingest:condense': { req: { path: string; module: string }; res: IngestJob };
+  'ingest:condense': {
+    req: {
+      path: string;
+      module: string;
+      /** What to build the page from. Defaults to `'transcript'`. */
+      basis?: 'transcript' | 'metadata';
+    };
+    res: IngestJob;
+  };
   /** Read the persistent state shown by the source detail window. */
   'ingest:detail': { req: { path: string }; res: SourceDetail };
   /** Re-run the YouTube resource check without re-condensing the wiki source. */

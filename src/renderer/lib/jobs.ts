@@ -7,7 +7,13 @@
 import type { IngestJob } from '@shared/types';
 
 /** Stages where nothing is running anymore — same as `TERMINAL_STAGES` in the core. */
-const TERMINAL: readonly IngestJob['stage'][] = ['done', 'error', 'duplicate', 'awaiting-llm'];
+const TERMINAL: readonly IngestJob['stage'][] = [
+  'done',
+  'error',
+  'duplicate',
+  'awaiting-llm',
+  'no-content',
+];
 
 export function isJobRunning(job: IngestJob): boolean {
   return !TERMINAL.includes(job.stage);

@@ -220,6 +220,7 @@ export const de = {
   'ingest.note.awaiting-llm': 'Rohquelle liegt. Die Verdichtung braucht ein Modell.',
   'ingest.note.already-condensed':
     'Diese Quelle ist schon verdichtet. Ein zweiter Lauf würde eine zweite Source-Seite zum selben Inhalt anlegen — deshalb ist er hier zu Ende.',
+  'ingest.note.no-content': 'Aus dieser Quelle gibt es nichts zu verdichten.',
 
   ...deScreens,
   ...deAgents,

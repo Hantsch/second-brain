@@ -21,7 +21,7 @@ which of the three happened — distinguishable from "no model configured".
 <!-- Order = the order the build phase works through. Dependent stories go last. -->
 
 - [x] 065 — The gate runs on every push
-- [ ] 050 — A digestion completes whole or leaves no trace
+- [x] 050 — A digestion completes whole or leaves no trace
 - [ ] 051 — A video without a transcript is an honest failure
 - [ ] 064 — A fetched page that yields nothing says so
 

@@ -47,6 +47,14 @@ export interface WikiPage {
   wordCount: number;
 }
 
+/**
+ * Warum eine Rohquelle nichts zum Verdichten hergibt. Ein string union statt
+ * einer youtube-spezifischen Markierung: Story 064 füllt dasselbe Feld mit
+ * eigenen Gründen — dieser union bekommt dann weitere Mitglieder, ohne dass
+ * `RawSource.blocked` selbst sich ändert.
+ */
+export type SourceBlockReason = 'no-transcript';
+
 /** Eine Rohquelle unter `raw/` — unveränderlich, Fixpunkt aller Zitate. */
 export interface RawSource {
   /** Ordner oder Datei relativ zur Vault-Wurzel. */
@@ -61,6 +69,12 @@ export interface RawSource {
   bytes: number;
   /** Zu welchen Modulen die Quelle verdichtet wurde. */
   modules: string[];
+  /**
+   * Warum die Quelle nichts zum Verdichten hergibt, oder `null` wenn sie es
+   * tut (bzw. ein legacy-Protokoll ohne diese Information keine Aussage
+   * erlaubt). Nur youtube-Quellen kennen bislang einen Grund.
+   */
+  blocked: SourceBlockReason | null;
 }
 
 /** A URL found while checking a YouTube video for downloadable resources. */
@@ -189,7 +203,14 @@ export type IngestStage =
   /** The exact source already exists; no second raw source was written. */
   | 'duplicate'
   /** Rohquelle liegt, aber der Verdichtungsschritt braucht ein LLM. */
-  | 'awaiting-llm';
+  | 'awaiting-llm'
+  /**
+   * The raw source is filed, but it holds nothing to distill — a video without a
+   * transcript, a PDF that isn't read. Terminal and honest: no model can turn an
+   * empty source into content, so this is neither `awaiting-llm` nor an `error`.
+   * `job.message` carries the reason as an `IngestNoteCode`.
+   */
+  | 'no-content';
 
 export interface IngestJob {
   id: string;
@@ -211,4 +232,6 @@ export interface IngestJob {
   touchedPages: string[];
   /** Existing raw path when duplicate detection stopped this import. */
   duplicateOf?: string | null;
+  /** What the condensed page is built from. Undefined behaves as `'transcript'`. */
+  basis?: 'transcript' | 'metadata';
 }

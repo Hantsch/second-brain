@@ -75,6 +75,12 @@ export interface IngestSourceInput {
   tags?: readonly string[];
   /** Slug-Grundlage der Source-Seite; Vorgabe ist der Titel. */
   slug?: string;
+  /**
+   * Woraus die Seite entstand. Vorgabe `'transcript'` — der bisherige Weg bleibt
+   * damit byteidentisch. `'metadata'` ist ein ausdruecklicher Klick der Nutzerin
+   * (guardrail 2), nie ein stiller Rueckfall bei einer leeren Rohquelle.
+   */
+  basis?: 'transcript' | 'metadata';
 }
 
 /** Seiten des Moduls als Hinweis fuer das Modell — Slug, Titel, erster Absatz. */
@@ -100,6 +106,7 @@ function sourceBody(
   const text = phrases(language);
   const origin = input.origin ?? null;
   const lead = markdown ?? `${excerpt(input.text, RAW_LEAD_CHARS)}\n\n${text.notCondensed}`.trim();
+  const basisNote = input.basis === 'metadata' ? text.builtFromMetadata : '';
   const notice = promptClampNotice(clampedChars, language);
   const raw = [
     `## ${text.rawSource}`,
@@ -107,7 +114,7 @@ function sourceBody(
     `- [${input.rawPath}](${input.rawPath})`,
     ...(origin === null || origin.length === 0 || origin === input.rawPath ? [] : [`- ${origin}`]),
   ].join('\n');
-  return `${[lead, notice, raw].filter((part) => part !== '').join('\n\n')}\n`;
+  return `${[lead, basisNote, notice, raw].filter((part) => part !== '').join('\n\n')}\n`;
 }
 
 /** Die Vorschlaege des Modells holen. Ohne Modell bleibt die Liste leer. */
@@ -397,6 +404,8 @@ async function writeSourcePage(
   const extra: Record<string, unknown> = {
     raw: input.rawPath,
     ...(input.origin === undefined || input.origin === null ? {} : { origin: input.origin }),
+    // Nur bei 'metadata' schreiben: 'transcript' (oder fehlend) bleibt byteidentisch zum Bisherigen.
+    ...(input.basis === 'metadata' ? { source_basis: 'metadata' } : {}),
   };
   const leftover = await findSourcePageForRaw(
     { store: deps.store, docs: deps.index.index().docs },

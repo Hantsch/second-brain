@@ -188,6 +188,7 @@ export {
 } from './youtube/metadata';
 export {
   YOUTUBE_FILES,
+  isTranscriptAvailable,
   renderMetadataMarkdown,
   writeYoutubeSource,
   type TranscriptInfo,

@@ -152,6 +152,7 @@ export function rawSource(patch: Partial<RawSource> = {}): RawSource {
     origin: 'https://www.youtube.com/watch?v=xOFkpf9KgKg',
     bytes: 4096,
     modules: [],
+    blocked: null,
     ...patch,
   };
 }

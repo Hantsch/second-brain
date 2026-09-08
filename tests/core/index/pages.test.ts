@@ -181,4 +181,32 @@ describe('deriveSources', () => {
       ['file', '2026-08-10-vertrag', 'M1'],
     ]);
   });
+
+  it('leitet ein Protokoll mit transcript.available: false als blockiert ab', () => {
+    const sources = deriveSources([
+      {
+        path: 'raw/youtube/no-cues',
+        json: JSON.stringify({
+          kind: 'youtube',
+          title: 'Ohne Untertitel',
+          transcript: { available: false, language: null, kind: null, provider: null },
+        }),
+        bytes: 512,
+        modified: 'M1',
+      },
+    ]);
+    expect(sources[0]?.blocked).toBe('no-transcript');
+  });
+
+  it('bleibt bei einem legacy-Protokoll ohne transcript-Feld unblockiert', () => {
+    const sources = deriveSources([
+      {
+        path: 'raw/youtube/xOFkpf9KgKg',
+        json: JSON.stringify({ kind: 'youtube', title: 'Altes Protokoll' }),
+        bytes: 512,
+        modified: 'M1',
+      },
+    ]);
+    expect(sources[0]?.blocked).toBeNull();
+  });
 });

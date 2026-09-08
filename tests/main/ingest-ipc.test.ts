@@ -536,6 +536,71 @@ describe('Quellen- und Modul-Kanäle im Main', () => {
     ).rejects.toMatchObject({ code: 'conflict' });
   });
 
+  // ── 051, D5: die Wahl der Grundlage über IPC ────────────────────────────────
+
+  /** Ein transcript-loses YouTube-Video mit Beschreibung/Kapiteln in `metadata.md`.
+      Ein leerer `description` lässt auch die Überschrift weg — sonst wäre der
+      Textkörper nie wirklich leer, egal wie leer die Beschreibung ist. */
+  async function writeNoTranscriptYoutube(videoId: string, description: string): Promise<string> {
+    const rawPath = `raw/youtube/${videoId}`;
+    const body =
+      description.length === 0
+        ? ''
+        : ['# Ein Video ohne Transcript', '', description, ''].join('\n');
+    await vault.write(
+      `${rawPath}/metadata.md`,
+      ['---', 'title: Ein Video ohne Transcript', '---', body].join('\n'),
+    );
+    await vault.write(`${rawPath}/transcript.md`, '# Video\n\n_Kein Transcript verfuegbar._\n');
+    await vault.write(
+      `${rawPath}/.ingest.json`,
+      `${JSON.stringify({
+        kind: 'youtube',
+        origin: `https://www.youtube.com/watch?v=${videoId}`,
+        ingestedAt: '2026-08-12T08:00:00+02:00',
+        title: 'Ein Video ohne Transcript',
+        sourcePage: null,
+        modules: [],
+        provenance: { metadata: 'youtubei.js' },
+        transcript: { available: false },
+      })}\n`,
+    );
+    return rawPath;
+  }
+
+  it('verdichtet mit basis: metadata, wenn die Beschreibung Text trägt', async () => {
+    await routeToFakeModel();
+    const rawPath = await writeNoTranscriptYoutube(
+      'noTranscript1',
+      'Die Beschreibung des Videos mit den Kapiteln.',
+    );
+    await harness.services.requireIndex().rebuild();
+
+    const started = await harness.call('ingest:condense', {
+      path: rawPath,
+      module: MODULE,
+      basis: 'metadata',
+    });
+    const condensed = await settled(started.id);
+
+    expect(condensed.stage).toBe('done');
+    expect(condensed.rawPath).toBe(rawPath);
+    const sourcePage = condensed.touchedPages.find((path) => path.includes('/wiki/sources/'));
+    expect(sourcePage).toBeDefined();
+    expect(await vault.read(sourcePage ?? '')).toContain('source_basis: metadata');
+  });
+
+  it('weist basis: metadata mit leerer Beschreibung ab, statt einen hohlen Auftrag zu starten', async () => {
+    const rawPath = await writeNoTranscriptYoutube('noTranscript2', '');
+    await harness.services.requireIndex().rebuild();
+
+    await expect(
+      harness.call('ingest:condense', { path: rawPath, module: MODULE, basis: 'metadata' }),
+    ).rejects.toMatchObject({ code: 'invalid' });
+
+    expect(await harness.call('ingest:jobs', undefined)).toEqual([]);
+  });
+
   it('kopiert nachgereichte Dateien kollisionsfrei in den sources-Ordner des Videos', async () => {
     const youtubePath = 'raw/youtube/xOFkpf9KgKg';
     await vault.write(

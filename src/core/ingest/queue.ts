@@ -10,6 +10,9 @@
  *   nicht; sie weiss nur, dass nach der Rohquelle etwas passieren *kann*. Fehlt der
  *   Schritt oder fehlt das Modell, endet der Auftrag als `awaiting-llm`: die
  *   Rohquelle liegt, die Verdichtung ist offen — und niemand behauptet etwas anderes.
+ * - **Eine leere Quelle wartet auf niemanden.** Gibt es keinen Text (Video ohne
+ *   Transcript, ungelesenes PDF), endet der Auftrag als `no-content` mit dem Grund
+ *   als Code — nicht als `awaiting-llm`, denn kein Modell kann daran etwas aendern.
  * - **Wiederholen legt keine zweite Rohquelle an.** Das Ergebnis des ersten Laufs
  *   bleibt am Auftrag haengen; ein `retry` setzt hinter der Rohquelle wieder an.
  * - **Verdichtet wird einmal pro Rohquelle.** Zwei Auftraege zur selben Quelle
@@ -23,6 +26,7 @@ import { patchIngestLog, readIngestLog } from './raw';
 import { IngestError, throwIfCancelled } from './types';
 import type {
   IngestContext,
+  IngestNoteCode,
   IngestOutcome,
   IngestProgressEvent,
   IngestStore,
@@ -40,6 +44,17 @@ const CONDENSING_STAGES: ReadonlySet<IngestStage> = new Set<IngestStage>([
   'wiki-update',
   'indexing',
 ]);
+
+/**
+ * Warum es nichts zu verdichten gibt — als Code, nicht als Satz. `no-transcript`
+ * hat Vorrang: liegen mehrere Hinweise an einer leeren Quelle, ist das fehlende
+ * Transcript der Grund, der sie erklaert. Ohne jeden Hinweis bleibt das
+ * allgemeine `no-content` — auch dann wird nicht geraten.
+ */
+function noContentReason(outcome: IngestOutcome): IngestNoteCode {
+  const codes = outcome.notes.map((note) => note.code);
+  return codes.find((code) => code === 'no-transcript') ?? codes[0] ?? 'no-content';
+}
 
 export interface CondenseInput {
   job: IngestJob;
@@ -273,11 +288,23 @@ export class IngestQueue {
   private async condense(entry: Entry, outcome: IngestOutcome, signal: AbortSignal): Promise<void> {
     const step = this.deps.condense;
     const available = this.deps.llmAvailable?.() ?? step !== undefined;
-    if (step === undefined || !available || outcome.text.trim().length === 0) {
+    /* Der leere Text steht vor dem fehlenden Modell: kein Modell verwandelt eine
+       leere Quelle in Inhalt, also waere `awaiting-llm` hier ein Warten, das nie
+       endet. Der Grund reist als Code mit — geraten wird nicht. */
+    if (outcome.text.trim().length === 0) {
+      this.update(entry, {
+        stage: 'no-content',
+        progress: 1,
+        message: noContentReason(outcome),
+        finishedAt: this.stamp(),
+      });
+      return;
+    }
+    if (step === undefined || !available) {
       this.update(entry, {
         stage: 'awaiting-llm',
         progress: 1,
-        message: outcome.text.trim().length === 0 ? (outcome.notes[0]?.code ?? null) : null,
+        message: null,
         finishedAt: this.stamp(),
       });
       return;

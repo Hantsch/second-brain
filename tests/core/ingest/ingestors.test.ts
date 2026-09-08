@@ -8,10 +8,17 @@ import { mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { allIngestors, nodeFileSystem, type IngestContext } from '@core/ingest';
+import {
+  allIngestors,
+  loadExistingOutcome,
+  nodeFileSystem,
+  writeIngestLog,
+  type IngestContext,
+} from '@core/ingest';
 import { buildIndex } from '@core/index';
 import { withTempVault } from '../../helpers/vault';
 import { NOW_MS } from '../../helpers/time';
+import { memoryStore } from './fakes';
 
 describe('allIngestors', () => {
   it('waehlt fuer jede Eingabe die richtige Art', () => {
@@ -27,6 +34,42 @@ describe('allIngestors', () => {
     // Datei vor Text: ein Pfad ist auch Text.
     expect(first('C:/quellen/notiz.md')).toBe('file');
     expect(first('Ein eingefuegter Absatz ohne Pfad und ohne Adresse.')).toBe('text');
+  });
+});
+
+describe('loadExistingOutcome mit basis: metadata', () => {
+  it('liest den Beschreibungstext aus metadata.md, ohne Frontmatter, statt eines leeren Transcripts', async () => {
+    const store = memoryStore();
+    const dir = 'raw/youtube/xOFkpf9KgKg';
+    await store.writeText(
+      `${dir}/${'metadata.md'}`,
+      [
+        '---',
+        'title: Ein Video ohne Transcript',
+        '---',
+        '# Ein Video ohne Transcript',
+        '',
+        'Die Beschreibung des Videos mit den Kapiteln.',
+        '',
+      ].join('\n'),
+    );
+    await store.writeText(`${dir}/transcript.md`, '# Video\n\n_Kein Transcript verfuegbar._\n');
+    await writeIngestLog(store, dir, {
+      kind: 'youtube',
+      origin: 'https://www.youtube.com/watch?v=xOFkpf9KgKg',
+      ingestedAt: '2026-08-10T14:32:00+02:00',
+      title: 'Ein Video ohne Transcript',
+      sourcePage: null,
+      modules: [],
+      provenance: { metadata: 'youtubei.js' },
+      transcript: { available: false },
+    });
+
+    const outcome = await loadExistingOutcome(store, dir, { basis: 'metadata' });
+
+    expect(outcome.text).toContain('Die Beschreibung des Videos mit den Kapiteln.');
+    expect(outcome.text).not.toContain('title: Ein Video ohne Transcript');
+    expect(outcome.text).not.toContain('Kein Transcript verfuegbar');
   });
 });
 

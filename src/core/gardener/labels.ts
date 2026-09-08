@@ -14,7 +14,7 @@
  * — never a guess.
  */
 
-import type { GardenerFindingKind, GardenerFix } from '@shared/types';
+import type { GardenerFindingKind, GardenerFix, SourceBlockReason } from '@shared/types';
 
 /** Title and explanation of a finding. */
 export interface FindingText {
@@ -51,7 +51,11 @@ export interface GardenerLabels {
   indexDrift(page: string, drift: IndexDriftKind): FindingText;
   stalePage(page: string, reviewed: string, ageDays: number): FindingText;
   unfiledDump(dump: string, ageDays: number): FindingText;
-  unprocessedSource(source: string): FindingText;
+  /**
+   * `reason` kommt aus `RawSource.blocked` — `null` heisst, es gibt keinen
+   * (bekannten) Grund, warum die Quelle liegen blieb, nur dass sie es tut.
+   */
+  unprocessedSource(source: string, reason?: SourceBlockReason | null): FindingText;
   looseEnd(quote: string, day: string): FindingText;
   projectWithoutNextStep(project: string, status: string): FindingText;
   nearDuplicate(first: string, second: string, similarity: number): FindingText;
@@ -185,7 +189,14 @@ export const GERMAN_GARDENER_LABELS: GardenerLabels = {
     };
   },
 
-  unprocessedSource(source: string): FindingText {
+  unprocessedSource(source: string, reason: SourceBlockReason | null = null): FindingText {
+    if (reason === 'no-transcript') {
+      return {
+        title: `Quelle ohne Verdichtung: ${source}`,
+        detail:
+          'Kein Transcript verfügbar. Die Rohquelle liegt unter raw/, verdichtet werden kann nur die Beschreibung — das entscheidet ein Mensch auf der Quellen-Seite.',
+      };
+    }
     return {
       title: `Quelle ohne Verdichtung: ${source}`,
       detail:

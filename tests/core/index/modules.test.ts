@@ -15,6 +15,7 @@ const SOURCE: RawSource = {
   origin: 'https://www.youtube.com/watch?v=xOFkpf9KgKg',
   bytes: 4821,
   modules: ['second-brain-methodik'],
+  blocked: null,
 };
 
 function moduleFile(slug: string, description?: string) {
