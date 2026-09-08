@@ -222,6 +222,7 @@ threshold, filter, or write path was touched — presentation-only, as decided.
 **Commit message:** `067: sensitive task's dead-end recommendation points at the manual table`
 
 **Verification:**
+
 - `npm run format:check` — clean on all files this story touched (`sensitive.ts`/`index.ts` in
   D1 needed a `prettier --write` pass for CRLF line endings introduced by the delegate agent,
   fixed during story-level verification; the repo-wide 238-file warning list is a pre-existing
@@ -239,6 +240,7 @@ threshold, filter, or write path was touched — presentation-only, as decided.
   violations). Full verdict text kept in the sprint's build session, not duplicated here.
 
 **AC → test mapping, as verified:**
+
 - AC1 → `tests/renderer/routing-dead-end.test.tsx` › "a no-pick row shows the reason and a way
   out" — passed, proves the real UI mechanism. The originally-planned e2e half for AC1 could not
   be written: see `### Noted gap` above (second entry) — a genuine plan gap discovered in D4, not

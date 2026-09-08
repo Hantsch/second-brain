@@ -209,7 +209,7 @@ due" and eight "condensation missing" project findings render distinctly, in `.s
   in review.
 - `src/core/index/build.ts` and `src/core/condense/paths.ts` needed no changes for D3:
   `docTypeFromPath()` already classified `projects/<scope>/<slug>/condensed.md` as `docType:
-  'condensed'` separately from the area regex, so no shared `isCondensedPath()` predicate was
+'condensed'` separately from the area regex, so no shared `isCondensedPath()` predicate was
   introduced (per the story's "tests first; a predicate only if a test proves one is needed").
 - D4's route reuses `projectRefFromCondensedPath()` from `@core/condense/paths` (a pure function,
   no Electron/filesystem access) rather than a hand-rolled regex in `targets.ts`.

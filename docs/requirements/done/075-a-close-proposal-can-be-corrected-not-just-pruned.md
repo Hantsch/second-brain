@@ -247,11 +247,13 @@ are otherwise untouched. Ten new/extended e2e tests in `tests/e2e/journal-close-
 real surface.
 
 **Commit message:**
+
 ```
 075: a close proposal can be corrected, not just pruned
 ```
 
 **Verification.**
+
 - `npm run typecheck` — clean.
 - `npm test` — 281 files / 3854 tests, all green (final run, after the review-fix cycle).
 - `npm run lint` — clean.
@@ -272,6 +274,7 @@ real surface.
   accepted without a code change, documented below. 1 review-fix cycle, well under the 3-cycle cap.
 
 **AC → test mapping, as verified:**
+
 - AC1 → `tests/e2e/journal-close-correct.spec.ts` › "an edited todo text is what lands on disk";
   `tests/renderer/close-proposal-todo-row.test.tsx` › "an edited text replaces the proposed one in
   the payload" — both passed.
@@ -300,6 +303,7 @@ real surface.
 No manual residue.
 
 **Decisions.**
+
 - 073 (built earlier in this sprint) had already seeded `close-proposal.ts`'s edit buffer from a
   task result and split `CloseProposal.tsx`'s write path onto 071's task queue — this story's plan
   was written before that, so D1 adapted names/shapes rather than the story's intent: `CloseRow`
@@ -340,11 +344,11 @@ No manual residue.
      reads `waitingFor: null`, not `''`, after clearing the field.
 - **Review findings accepted without a code change:**
   - `src/main/ipc/journal-day.ts#applyClose` computes `dayScope` from the day's frontmatter
-    *before* the same call also writes `request.frontmatter.tags` into it — if an accepted
+    _before_ the same call also writes `request.frontmatter.tags` into it — if an accepted
     proposal's own tags happen to contain a literal scope word from `core/index/todos.ts`'s
-    `WORK_TAGS`/`PRIVATE_TAGS` sets, the day's scope as read back *after* the write could differ
+    `WORK_TAGS`/`PRIVATE_TAGS` sets, the day's scope as read back _after_ the write could differ
     from the one used to decide whether to append a line tag during that same write. Narrow (needs
-    that exact coincidence — a matched tag *and* no other scope signal already present) and
+    that exact coincidence — a matched tag _and_ no other scope signal already present) and
     plausible rather than confirmed by execution; left as a documented, narrow edge case rather
     than restructuring the write order, since the existing `scopeHint` fallback chain (not
     introduced by this story) is what makes it observable at all, and the consequence is a missing

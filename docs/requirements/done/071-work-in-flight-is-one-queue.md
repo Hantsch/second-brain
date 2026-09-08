@@ -239,11 +239,13 @@ clear the queue on shutdown, next to the existing gardener cancel. No producer i
 that is 073/074 — and no rail entry or screen exists yet — that is 072.
 
 **Commit message:**
+
 ```
 071: work in flight is one queue
 ```
 
 **Verification.**
+
 - `npm run build` — green.
 - `npm test` — 262 files / 3661 tests, all green (includes the new `tests/core/work/*.test.ts`
   and `tests/main/work-queue-*.test.ts`).
@@ -257,7 +259,7 @@ that is 073/074 — and no rail entry or screen exists yet — that is 072.
   criteria are proven by `test`, per the profile's own carve-out for criteria without a real
   surface.
 - Code review (clean agent, `story-review-hard` tier): first pass returned **FAIL** — a
-  confirmed AC4 bug (queue positions were recomputed for a lane *after* the emit reporting a
+  confirmed AC4 bug (queue positions were recomputed for a lane _after_ the emit reporting a
   transition, so a late-joining `work:list()` caller could see a different `queuePosition` than
   what was last emitted to a listener) plus two tests that could not have caught it (both only
   exercised a single-task scenario, where a stale position and a correct one are the same
@@ -271,6 +273,7 @@ that is 073/074 — and no rail entry or screen exists yet — that is 072.
   test-tautology check) passed without a finding requiring a code change.
 
 **AC → test mapping, as verified:**
+
 - AC1 → `tests/core/work/registry.test.ts` › "runs a model task and lists it with kind,
   subject, state, progress and timestamps" — passed.
 - AC2 → `tests/core/work/registry.test.ts` › "queues a second model task with its position in
@@ -290,7 +293,7 @@ that is 073/074 — and no rail entry or screen exists yet — that is 072.
   and clears the queue" (a real `Services.closeVault()` integration) and › "the shutdown
   cancel-and-clear sequence will-quit runs leaves nothing running or queued" (proves the same
   registry-level sequence `will-quit` calls, not the Electron handler directly — `src/main/
-  index.ts` cannot be imported in a unit test without triggering `app.requestSingleInstanceLock`
+index.ts` cannot be imported in a unit test without triggering `app.requestSingleInstanceLock`
   and other module-load side effects; the review judged the `runningServices` null-window this
   leaves untested to be a non-issue by inspection, since it is set immediately after
   `bootstrap()` resolves and nothing can reach the singleton before that) — both passed. No
@@ -303,6 +306,7 @@ that is 073/074 — and no rail entry or screen exists yet — that is 072.
   construction: nothing in this story's code logs a task at all.
 
 **Open points carried forward (not blockers for 071, documented in Decisions above):**
+
 - `message`'s free-text exposure via `describeFailure` and `ref`'s lack of runtime validation
   mirror pre-existing `IngestJob` conventions rather than introducing a new gap — worth a look
   when 073/074 wire real producers whose thrown errors could embed vault content.

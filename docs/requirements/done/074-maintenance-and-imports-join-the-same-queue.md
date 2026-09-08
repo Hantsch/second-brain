@@ -287,16 +287,18 @@ directly instead of local state (D2/D3/AC5); `event:ingest-progress` and `event:
 are deleted from `IpcEvents` (D4); `RunStrip`'s store self-derives from the work-tasks feed instead
 of being pushed into (D5), with the tasks screen's pre-existing synthetic maintenance row now
 de-duplicated against the real registry task it represents; the ingest jobs list is live again
-over the new transport (D6); the close/quit guard now vetoes on *any* running task and the prompt
+over the new transport (D6); the close/quit guard now vetoes on _any_ running task and the prompt
 names the kind(s) (D7); `journal:interviewPlan` is a `free`-lane task without changing its
 response contract, `journal:interviewFollowUp` stays untouched (D8).
 
 **Commit message:**
+
 ```
 074: maintenance and imports join the same queue
 ```
 
 **Verification.**
+
 - `npm run build` — green.
 - `npm test` (`npx vitest run`) — 277 files / 3811 tests, all green.
 - `npm run lint` — clean.
@@ -313,7 +315,7 @@ response contract, `journal:interviewFollowUp` stays untouched (D8).
   green (typecheck/lint/format/vitest 3811/3811/build). A **second, self-found regression** — not
   from the reviewer — surfaced only by actually running e2e after cycle 1: F1's renderer fix hid
   the "Retry" button by `kind` (`'gardener'`/`'ingest'`), which incorrectly also hid it for a
-  *normal*, genuinely-retryable `kind: 'ingest'` task (072's own `SB_E2E_TASKS_FIXTURE` synthetic
+  _normal_, genuinely-retryable `kind: 'ingest'` task (072's own `SB_E2E_TASKS_FIXTURE` synthetic
   failed task, used by `tests/e2e/tasks-queue.spec.ts`'s AC6 case) — `kind` does not mean the same
   thing as "was this created via `startExternal`". Fixed in **review-fix cycle 2** by exposing an
   honest `WorkTask.retryable` field instead of guessing from `kind`; re-verified full green
@@ -332,6 +334,7 @@ mechanics are proven for real only via the maintenance run, and at the main/unit
 condense/import).
 
 **Decisions.**
+
 - 074's own Plan assumed `src/core/tasks/registry.ts` with a `TaskRecord` shape; the real, already-
   built surface from 071–073 is `src/core/work/registry.ts`'s `WorkRegistry` and `WorkTask`
   (`src/shared/types/work.ts`) — used throughout, per the sprint's adapt-names-not-shape rule.
@@ -365,7 +368,7 @@ condense/import).
   serialise". As shipped, they do not actually serialise: `startExternal` tasks never occupy lane
   capacity, so a condensation enqueued while a maintenance run is going starts immediately rather
   than queuing behind it (and vice versa). No acceptance criterion tests this cross-producer
-  ordering (AC3 only covers two *gardener* runs, which the local `active` guard still correctly
+  ordering (AC3 only covers two _gardener_ runs, which the local `active` guard still correctly
   refuses/serialises, unaffected by this gap). Implementing real capacity-shared serialisation
   between an externally-paced task and a normally-enqueued one would mean either giving the
   maintenance run/an import a genuine wait-for-the-lane step (a real behavioural change to when a
@@ -378,7 +381,7 @@ condense/import).
 - **(Accepted, not fixed — F6 from the clean review):** a low-probability race on a vault switch
   mid-import: if an import job's terminal (cancelled/failed/done) publish arrives after
   `ipc/ingest.ts`'s per-`QueueHolder` mirror map has already been reset for the new vault, `mirror()`
-  mints a fresh `startExternal` task in the *new* vault's queue carrying the *previous* vault's job
+  mints a fresh `startExternal` task in the _new_ vault's queue carrying the _previous_ vault's job
   label, then immediately settles it — a stray, mislabelled, already-terminal row that self-resolves
   and carries no vault content and no persisted state. Bounded and non-corrupting (no write, no
   UI-visible incorrectness beyond one ephemeral, already-finished row); the review itself classed

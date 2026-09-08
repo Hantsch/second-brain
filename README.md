@@ -62,6 +62,22 @@ need `npm run build` first, and they never touch the real installation: the vaul
 comes in via `SB_VAULT`, and settings live in their own `--user-data-dir`.
 `SB_DEMO=1` marks the run as demo mode.
 
+## Continuous integration
+
+Two workflows run in GitHub Actions:
+
+- `verify.yml` — the required gate. Runs `npm run verify` (format check, lint,
+  typecheck, test, build) on a Windows runner, on every push and pull request.
+- `ui-smoke.yml` — advisory only (`continue-on-error`), on pull requests and pushes
+  to `dev`/`main`. Runs seed → build → shot and uploads the screenshots as an
+  artifact.
+
+`verify.yml`'s status is the actual required gate; `ui-smoke.yml` never blocks
+anything. `npm run test:e2e` is intentionally not part of CI yet — it's a separate,
+longer-running suite that drives a real Electron window; wiring it in is future
+work once `ui-smoke.yml` has proven that Electron booting on a hosted Windows
+runner is stable.
+
 ## Handing it on
 
 `npm run handoff` runs the quality gate, packages the app, and writes a single

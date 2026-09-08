@@ -116,34 +116,34 @@ that wrote it) stays as it is.
 ## Deliverables
 
 - [x] **D1 — Core: verdict instead of a boolean, scan extracted.**
-  `src/core/journal/loose-ends.ts`: exported `announcementsOf(source, today)` (used by
-  `findLooseEnds` itself, so the rule exists once), `resolutionCheck()` returning the verdict,
-  `settledCheck()` as its boolean wrapper. Acceptance: `tests/core/journal/loose-ends.test.ts` and
-  `tests/core/journal/loose-ends-llm.test.ts` green unchanged (no behaviour drift), plus new cases
-  in `tests/core/journal/loose-ends.test.ts` proving the verdict names the answering day for the
-  link branch and reports `{ by: 'todo' }` for the dated-todo branch.
+      `src/core/journal/loose-ends.ts`: exported `announcementsOf(source, today)` (used by
+      `findLooseEnds` itself, so the rule exists once), `resolutionCheck()` returning the verdict,
+      `settledCheck()` as its boolean wrapper. Acceptance: `tests/core/journal/loose-ends.test.ts` and
+      `tests/core/journal/loose-ends-llm.test.ts` green unchanged (no behaviour drift), plus new cases
+      in `tests/core/journal/loose-ends.test.ts` proving the verdict names the answering day for the
+      link branch and reports `{ by: 'todo' }` for the dated-todo branch.
 - [x] **D2 — Core: a day's loose ends with their resolution.**
-  New `src/core/journal/loose-end-resolution.ts`, exported via `src/core/journal/index.ts`;
-  `dayLooseEnds(days, todos, today, date, answered)`, mirroring `loose-ends.ts#findLooseEnds` in
-  shape (pure, `today` handed in, no clock). Acceptance: new
-  `tests/core/journal/loose-end-resolution.test.ts` — an answer on a later day yields
-  `resolution.day` = that day; an unanswered announcement yields `null`; an `answered` map entry
-  resolves a case the heuristic misses ("Erledigt."); a todo-settled announcement is not listed; the
-  function takes no store, so it cannot write.
+      New `src/core/journal/loose-end-resolution.ts`, exported via `src/core/journal/index.ts`;
+      `dayLooseEnds(days, todos, today, date, answered)`, mirroring `loose-ends.ts#findLooseEnds` in
+      shape (pure, `today` handed in, no clock). Acceptance: new
+      `tests/core/journal/loose-end-resolution.test.ts` — an answer on a later day yields
+      `resolution.day` = that day; an unanswered announcement yields `null`; an `answered` map entry
+      resolves a case the heuristic misses ("Erledigt."); a todo-settled announcement is not listed; the
+      function takes no store, so it cannot write.
 - [x] **D3 — Wire it up: contract plus main.**
-  `src/shared/ipc.ts` (`JournalDayLooseEnd`, `JournalDayView.looseEnds`), new
-  `src/main/ipc/journal-loose-ends.ts`, `journal:get` in `src/main/ipc/journal.ts`; mirror
-  `src/main/ipc/journal.ts#openLooseEnds` for the state/gardener plumbing. Acceptance: new cases in
-  `tests/main/journal-ipc.test.ts` — `journal:get` on the announcing day returns the loose end with
-  `resolution.day` = the answering day, a still-open day returns `resolution: null`, and the
-  announcing day's file hash is unchanged after the call.
+      `src/shared/ipc.ts` (`JournalDayLooseEnd`, `JournalDayView.looseEnds`), new
+      `src/main/ipc/journal-loose-ends.ts`, `journal:get` in `src/main/ipc/journal.ts`; mirror
+      `src/main/ipc/journal.ts#openLooseEnds` for the state/gardener plumbing. Acceptance: new cases in
+      `tests/main/journal-ipc.test.ts` — `journal:get` on the announcing day returns the loose end with
+      `resolution.day` = the answering day, a still-open day returns `resolution: null`, and the
+      announcing day's file hash is unchanged after the call.
 - [x] **D4 — Renderer: the resolved row, plus the acceptance flow.**
-  `src/renderer/screens/journal/LooseEndRow.tsx`, `src/renderer/screens/journal/JournalScreen.tsx`,
-  `src/renderer/i18n/de-journal.ts`, `src/renderer/i18n/en-journal.ts`, plus a gaston class in
-  `src/renderer/styles/gaston/components.css` if a new one is needed (tokens only, no raw Tailwind
-  palette); mirror `src/renderer/components/tiles/LooseEndsTile.tsx:82` for the day navigation.
-  Acceptance: the new `tests/e2e/journal-loose-end-resolution.spec.ts` below is green, and
-  `npm run shot` shows the resolved row inline on the announcing day.
+      `src/renderer/screens/journal/LooseEndRow.tsx`, `src/renderer/screens/journal/JournalScreen.tsx`,
+      `src/renderer/i18n/de-journal.ts`, `src/renderer/i18n/en-journal.ts`, plus a gaston class in
+      `src/renderer/styles/gaston/components.css` if a new one is needed (tokens only, no raw Tailwind
+      palette); mirror `src/renderer/components/tiles/LooseEndsTile.tsx:82` for the day navigation.
+      Acceptance: the new `tests/e2e/journal-loose-end-resolution.spec.ts` below is green, and
+      `npm run shot` shows the resolved row inline on the announcing day.
 
 ## Model Hints
 
@@ -213,7 +213,7 @@ Commit message: `069: a day shows how its own loose ends were answered`
   `tests/core/journal/loose-end-answer.test.ts`), re-verified green (lint, typecheck, prettier,
   the two affected test files). A third finding — a dismissed/snoozed loose end that later gets
   vault- or state-file-resolved would still render as a resolved row, since `journalDayLooseEnds`
-  only filters dismissed/snoozed out of the *open* list — was left unfixed: the story's own
+  only filters dismissed/snoozed out of the _open_ list — was left unfixed: the story's own
   Decisions section scopes "dismissed/snoozed stay invisible" explicitly to AC3's open state
   ("not for a new state"), so extending that filter to the new resolved state is a policy call
   outside this story's ACs, not a defect in what was asked for.

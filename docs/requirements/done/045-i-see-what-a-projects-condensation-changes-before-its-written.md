@@ -302,6 +302,7 @@ a project sharing a slug no longer share one cached artifact/hash across mutatio
 falling through to "not condensed yet" when a project's artifact path fails to resolve.
 
 **Decisions (implementation-level, not pre-recorded):**
+
 - `claudeTranscriptTail()` was added to `src/main/ipc/overview-deps.ts` as the missing shell wiring
   for 044's `CondenseProjectSources.readTranscriptTail` (044 shipped backend-only, no shell
   implementation) — otherwise every project run would condense with zero session input despite

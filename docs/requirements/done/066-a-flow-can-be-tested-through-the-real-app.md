@@ -243,11 +243,13 @@ observed across a navigation. Wired `e2e: npm run test:e2e` into the ai-scrum pr
 guarded by a static wiring test so AC2/AC7/AC8/AC9/AC10 don't silently rot.
 
 **Commit message:**
+
 ```
 066: e2e flow suite over the app harness
 ```
 
 **Verification:**
+
 - `npm run format:check` — the story's own files are clean; repo-wide 240 pre-existing
   CRLF-warning files are untouched and predate this story (confirmed via `git stash`).
 - `npm run lint`, `npm run typecheck`, `npm run build` — green.
@@ -262,13 +264,13 @@ guarded by a static wiring test so AC2/AC7/AC8/AC9/AC10 don't silently rot.
   - AC7 — "calls no network" was argued, not tested; added a runtime `noNetworkCalls`
     auto-fixture in `tests/e2e/fixtures/app.ts` that fails any spec making a request outside
     `file://`/`about:blank`/`devtools://`, statically guarded in `tests/scripts/e2e-wiring.test.ts`.
-  Also fixed on the same pass: the AC9 step-naming guard now checks every `test()` individually
-  (not "at least one step in the file"); a loosened assertion in
-  `tests/main/gardener-run-delay.test.ts` tightened to `toBe(true)`; two stale/incorrect
-  AC→test-name pointers in this file's `## Acceptance Tests` corrected to the real test titles;
-  one overclaiming test comment in `smoke.spec.ts` corrected. All fixes were mechanical
-  (doc/assertion precision, no design disagreement); the full verification above is the re-run
-  that covers them.
+    Also fixed on the same pass: the AC9 step-naming guard now checks every `test()` individually
+    (not "at least one step in the file"); a loosened assertion in
+    `tests/main/gardener-run-delay.test.ts` tightened to `toBe(true)`; two stale/incorrect
+    AC→test-name pointers in this file's `## Acceptance Tests` corrected to the real test titles;
+    one overclaiming test comment in `smoke.spec.ts` corrected. All fixes were mechanical
+    (doc/assertion precision, no design disagreement); the full verification above is the re-run
+    that covers them.
 
 **AC → test mapping, as verified:** all ten criteria (AC1–AC10) pass via the tests named in
 `## Acceptance Tests` above, verified in this run. No manual residue — every criterion has an

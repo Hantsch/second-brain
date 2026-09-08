@@ -234,13 +234,14 @@ instead of the click doing nothing. Screenshots `journal-close-proposal` and `jo
 were extended/added in `scripts/shot.mjs`.
 
 **Decisions (build-time, beyond what refinement already decided):**
+
 - Fixed a review finding (F3): `journal.close.nothing`'s copy named the button by its old label
   ("Übernehmen"); corrected to name the actual current label ("Übernehmen und abschließen" /
   "Apply and close") in both `de-journal.ts` and `en-journal.ts`, with matching test updates.
 - Fixed a review finding (F1, test-coverage gap): added a test in `journal.test.tsx`
   ("setzt nach dem Übernehmen die Marke im Kopf …") that pins AC2's second half specifically —
-  the badge appearing after *accepting* a proposal, without a reload — since the only existing
-  coverage for that assertion pattern was on the *reopen* path.
+  the badge appearing after _accepting_ a proposal, without a reload — since the only existing
+  coverage for that assertion pattern was on the _reopen_ path.
 - Left unfixed (review finding F2, low severity): the i18n key `journal.finish.markFinished` in
   `de-journal.ts`/`en-journal.ts` has no consumer left after D1 removed the button. Consistent
   with the story's own refinement decision to treat a prop nobody calls as dead code without

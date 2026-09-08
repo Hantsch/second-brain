@@ -218,3 +218,9 @@ second roadmap.
   this story's 20 changed files) and e2e (45/45, including 10 new tests in
   `journal-close-correct.spec.ts`, run twice); `npm run seed`/`npm run shot` confirmed the new card
   renders cleanly against the Gaston design system.
+- 065 — The gate runs on every push · S16 · Added `.github/workflows/verify.yml` as the
+  required CI gate (Windows, cached `npm ci` → `npm run verify`, no secrets) and a separate
+  advisory `ui-smoke.yml` lane (seed/build/shot, screenshots as artifact, `continue-on-error`),
+  pinned prettier to exact `3.9.6` with a guard test, and added static wiring tests in
+  `tests/scripts/ci-gate.test.ts`; the first real GitHub Actions run and its cold/warm runtime
+  numbers remain a manual residue until `sprint/S16` is pushed.

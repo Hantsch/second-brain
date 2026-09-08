@@ -70,6 +70,7 @@ into memory. Everything has to be reviewable in the repository.
      one layer (core + IPC + renderer), is cut too coarsely — split it. Agent cost grows with
      turn count and turn count grows with the size of the D: two agents at 30 turns cost less
      than one at 65, and each returns a separately reviewable result.
+
    - **`## Model Hints`** — here you fix the **agent tier** per deliverable that
      `/build` will use. There are exactly two tiers:
      - **Default (leave unmarked):** the session/Sonnet tier with `/build`'s effort (`medium`).
@@ -90,6 +91,7 @@ into memory. Everything has to be reviewable in the repository.
        `/build` delegates the code review to a fresh agent that sees only spec +
        diff; this line decides its tier. Default is the cheap tier;
        `story-review-hard` (Opus + effort `high`) only for real risk.
+
    - **`## Acceptance Tests`** — the AC → test mapping, and this is what replaces the manual
      test plan. **If `ac-tests-required: true` in the profile (P1):** every entry in
      `## Acceptance Criteria` gets one line naming the test that will prove it — level, file
@@ -107,18 +109,18 @@ into memory. Everything has to be reviewable in the repository.
        the D as well ("D2 — … plus its test in `<file>`"). A trailing "D5 — write the tests"
        is the anti-pattern: it is the D that gets dropped when time runs short, and the
        coverage was the point.
-     - **`ui-acceptance-required: true`:** a criterion describing something the *user does* is
+     - **`ui-acceptance-required: true`:** a criterion describing something the _user does_ is
        mapped to the `e2e` command from the profile's `## Verify` — the real surface. A
        console command, a direct call into an internal module, or a renderer test with a faked
        backend is not a substitute for the real path. If the profile's `e2e` is `none`, the
        harness does not exist: plan it as the story's **first deliverable** where the scope
-       carries it, otherwise map the criterion one level down *and* write the gap into this
+       carries it, otherwise map the criterion one level down _and_ write the gap into this
        section and into `## Open Questions` for the sprint review. Never turn it into a manual
        step — that is exactly what this workflow is getting rid of.
      - **A missing trigger is a story gap, not a test problem.** If a user-facing action has no
        path through the real surface yet, plan that trigger as a deliverable.
      - **`manual residue`** (only if `manual-residue-allowed: true`) is for a criterion that
-       cannot be automated for a *real* reason: an OS-level dialog, specific hardware, a paid
+       cannot be automated for a _real_ reason: an OS-level dialog, specific hardware, a paid
        external service. It needs the reason on the line. "Hard to test" and "would need a
        fixture" are not reasons — they are work. Residues are listed in the sprint review and
        block nothing.
@@ -154,14 +156,14 @@ into memory. Everything has to be reviewable in the repository.
 - **Acceptance is the test suite (P1)**, if `ac-tests-required: true`: no `status: ready`
   while a criterion has neither a named test nor a `manual residue` reason. There is no
   manual acceptance gate behind this — whatever is not tested here is not checked at all.
-- **The real surface**, if `ui-acceptance-required: true`: a criterion about a *user action*
+- **The real surface**, if `ui-acceptance-required: true`: a criterion about a _user action_
   maps to the `e2e` command, not to a console call or a faked-backend test. Missing trigger or
   missing harness = deliverable, or a named gap; never a manual step.
 - Keep the plan skimmable — the user wants to iterate, not read every detail.
 - Do not commit, do not push. Refine only writes the story file.
 - **Older story files** may use the previous German headings (`## Anforderung`,
   `## Akzeptanzkriterien`, `## Offene Fragen`, `## Modell-Hinweise`, `## Testplan
-  (manuelle Abnahme)`). Treat them as equivalent to the English ones and keep the file's
+(manuelle Abnahme)`). Treat them as equivalent to the English ones and keep the file's
   existing language and headings — do not rename sections of a story in flight. A story that
   still carries `## Test Plan (manual acceptance)` / `## Testplan (manuelle Abnahme)` instead
   of `## Acceptance Tests` gets the AC → test mapping written into that existing section,

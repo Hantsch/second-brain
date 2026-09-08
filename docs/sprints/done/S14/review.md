@@ -8,12 +8,12 @@ only on whichever later day happened to answer it, and a forward-looking mention
 before its day arrives instead of only after it's been missed. A Settings dead-end for a
 sensitive task explains itself and points at the way out.
 
-| Story                                                   | Status | Commit                                                                                |
-| -------------------------------------------------------- | ------ | -------------------------------------------------------------------------------------- |
-| 068 — Adding to a closed day reopens it                  | done   | `18ed74e` — 068: adding to a closed day reopens it                                     |
-| 069 — A day shows how its own loose ends were answered   | done   | `7350d6e` — 069: a day shows how its own loose ends were answered                      |
-| 070 — A future mention becomes visible before its day arrives | done | `949c919` — 070: a future mention becomes visible before its day arrives               |
-| 067 — A sensitive task's recommendation explains a dead end | done | `b990fb4` — 067: sensitive task's dead-end recommendation points at the manual table   |
+| Story                                                         | Status | Commit                                                                               |
+| ------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------ |
+| 068 — Adding to a closed day reopens it                       | done   | `18ed74e` — 068: adding to a closed day reopens it                                   |
+| 069 — A day shows how its own loose ends were answered        | done   | `7350d6e` — 069: a day shows how its own loose ends were answered                    |
+| 070 — A future mention becomes visible before its day arrives | done   | `949c919` — 070: a future mention becomes visible before its day arrives             |
+| 067 — A sensitive task's recommendation explains a dead end   | done   | `b990fb4` — 067: sensitive task's dead-end recommendation points at the manual table |
 
 All four stories are `done`. No blocked stories.
 
@@ -82,6 +82,7 @@ None. All four stories completed without a user-blocking question during build.
 Acceptance is the test suite (per `.claude/ai-scrum.md`). Per-criterion mapping:
 
 **068 — Adding to a closed day reopens it**
+
 - AC1 (a real write reopens the day) → unit `tests/core/journal/reopen.test.ts` + main
   `tests/main/journal-ipc.test.ts` (one case per write path)
 - AC2 (visible without navigating away) → e2e `tests/e2e/journal-reopen.spec.ts`
@@ -90,6 +91,7 @@ Acceptance is the test suite (per `.claude/ai-scrum.md`). Per-criterion mapping:
 - No manual residue.
 
 **069 — A day shows how its own loose ends were answered**
+
 - AC1 (day shows how it was answered) → core `tests/core/journal/loose-end-resolution.test.ts` +
   e2e `tests/e2e/journal-loose-end-resolution.spec.ts`
 - AC2 (derived at read time, no write to the announcing day) → core test + review confirmation
@@ -97,24 +99,26 @@ Acceptance is the test suite (per `.claude/ai-scrum.md`). Per-criterion mapping:
 - No manual residue.
 
 **070 — A future mention becomes visible before its day arrives**
+
 - AC1 (upcoming item visible before its day) → core `tests/core/journal/upcoming-mentions.test.ts`
-  + e2e `tests/e2e/upcoming-mention.spec.ts`
+  - e2e `tests/e2e/upcoming-mention.spec.ts`
 - AC2 (continues into the existing loose-end lifecycle, same id) → core test (id-equality
   assertion) + `tests/core/overview/reminders.test.ts`
 - AC3 (works with no model configured) → core test (heuristic-only path) + e2e run
 - No manual residue.
 
 **067 — A sensitive task's recommendation explains a dead end**
+
 - AC1 (dead-end row shows a next step) → renderer `tests/renderer/routing-dead-end.test.tsx`.
   **Gap:** the planned e2e half could not be added — the harness's local models always pass
   `condense-area`'s filter, so `pick === null` is unreachable through the real surface today.
   Covered one level below the real surface (renderer test on the real component), not by a
   manual step. See roadmap Gaps/notes.
 - AC2 (manual table remains the way out, works and persists) → unit `tests/core/llm/sensitive.test.ts`
-  + renderer `tests/renderer/routing-table.test.tsx` + e2e assertion that the select exists,
-  is enabled, and is unfiltered. **Gap:** the persistence half itself is pre-existing behaviour,
-  not newly driven by e2e in this story — the same harness limitation (no model options in the
-  e2e vault) applies.
+  - renderer `tests/renderer/routing-table.test.tsx` + e2e assertion that the select exists,
+    is enabled, and is unfiltered. **Gap:** the persistence half itself is pre-existing behaviour,
+    not newly driven by e2e in this story — the same harness limitation (no model options in the
+    e2e vault) applies.
 - AC3 (unchanged `llm-unavailable` → Models tab link) → e2e `tests/e2e/settings-models-dead-end.spec.ts`
 - No manual residue (both gaps above are harness-surface gaps, not human-walked steps).
 

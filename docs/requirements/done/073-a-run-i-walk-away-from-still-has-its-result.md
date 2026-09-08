@@ -217,11 +217,13 @@ proposal is already open by construction (no separate "open" step). An e2e env s
 `SB_E2E_FAKE_PROVIDER` (D1), lets the whole flow run scripted and offline in Playwright.
 
 **Commit message:**
+
 ```
 073: a run I walk away from still has its result
 ```
 
 **Verification.**
+
 - `npm run build` — green.
 - `npm test` — 274 files / 3767 tests, all green.
 - `npm run lint` — green.
@@ -239,13 +241,14 @@ proposal is already open by construction (no separate "open" step). An e2e env s
 - Code review (clean agent, `story-review-hard` tier, per Model Hints): **first pass FAIL**, three
   confirmed defects (see Decisions), all fixed in one review-fix cycle and reverified (full
   `npm test` 3767/3767, `npm run build`, `npm run lint`, `npm run typecheck` green; `npm run
-  test:e2e` 32/32 green, run fresh after the fix). Three further findings accepted without a code
+test:e2e` 32/32 green, run fresh after the fix). Three further findings accepted without a code
   change (see Decisions). 1 review-fix cycle, well under the 3-cycle cap; no second reviewer
   round dispatched — the fixes were narrow, each came with its own new regression test proven red
   before the fix and green after, and the full verification suite was independently re-run green
   twice by this session after the fix, not just reported by the fixing agent.
 
 **AC → test mapping, as verified:**
+
 - AC1 → `tests/e2e/task-result-survives-navigation.spec.ts` › "a started condensation shows as
   one task in the panel and in the task list" — passed.
 - AC2 → `tests/e2e/task-result-survives-navigation.spec.ts` › "leaving the panel mid-run and
@@ -266,7 +269,7 @@ proposal is already open by construction (no separate "open" step). An e2e env s
   gateway returns no-model and enqueues nothing" — both passed (the review noted the e2e half is
   weak on its own — the trigger is hidden so `condense:run` is never called, making "no row"
   vacuous — but the unit test is the real, solid proof of the criterion; not reworked further, as
-  a stronger e2e assertion here would mean asserting on the *absence* of a UI element that never
+  a stronger e2e assertion here would mean asserting on the _absence_ of a UI element that never
   had a code path to appear in the first place, which the unit test already proves at the source).
 - AC8 → `tests/e2e/task-run-failure.spec.ts` › "a failed condensation states its reason in the
   panel and in the task list" — passed.
@@ -274,6 +277,7 @@ proposal is already open by construction (no separate "open" step). An e2e env s
 No manual residue.
 
 **Decisions.**
+
 - 071/072's real API differed from this story's own Plan text in two places, adapted per the
   sprint's "adapt names, not shape" rule: `JournalCloseSuggestion` (not `DayCloseSuggestion`) is
   the wire-facing suggestion type, already correctly named in the Plan; `applyClose`'s real
@@ -293,7 +297,7 @@ No manual residue.
   signature change below.
 - `condense:run`/`journal:close`'s "no model"/"nothing to close" dead ends are each decided by a
   cheap, synchronous pre-check (`gateway.isAvailable(...)` for condense, `gateway.isAvailable
-  ('extract-tasks')` deciding the lane and a `readDay`/`dayText` pre-check for close) run BEFORE
+('extract-tasks')` deciding the lane and a `readDay`/`dayText` pre-check for close) run BEFORE
   `enqueue()`, so AC7's "no task is created" holds by construction rather than by a task
   immediately failing.
 - A heuristic (no-model) day close still creates a task, on the `free` lane instead of `model`,
@@ -305,16 +309,15 @@ No manual residue.
   a proposal's existence knowable from the task list without ever putting the proposal itself on
   it (guardrail 6).
 - **Review-fix cycle 1 (three confirmed defects, all fixed):**
-  1. A retried task (via 072's existing "retry" action) stored its result under the *original,
-     failed* task's id, not the new one — `WorkRunner`'s reused closure captured the task id from
-     an outer variable set once at the first `enqueue()`, and `WorkRegistry.retry()` (by design,
-     071) reuses that exact closure for a new task id. Fixed by giving the runner its own task id
+  1. A retried task (via 072's existing "retry" action) stored its result under the _original,
+     failed_ task's id, not the new one — `WorkRunner`'s reused closure captured the task id from
+     an outer variable set once at the first `enqueue()`, and `WorkRegistry.retry()` (by design, 071) reuses that exact closure for a new task id. Fixed by giving the runner its own task id
      as a parameter (`WorkRunner` is now `(signal, taskId) => Promise<...>`, `start()` passes
      `entry.task.id` — correct for a retry too, since `retry()` creates a genuinely new entry with
      the old closure). New tests in `tests/core/work/registry.test.ts` and
-     `tests/main/ipc/condense-task.test.ts` prove a retried run's result is keyed by the *new* id.
+     `tests/main/ipc/condense-task.test.ts` prove a retried run's result is keyed by the _new_ id.
   2. `condense:accept`/`condense:reject` and `journal:applyClose` marked the stored result
-     `accepted` *before* the write/apply that decision represents had actually succeeded — a
+     `accepted` _before_ the write/apply that decision represents had actually succeeded — a
      refused write (stale hash, any other failure) had already dropped the payload even though
      nothing was written, forcing a full re-run to get the proposal back. Fixed by moving the mark
      to after the write succeeds in all three handlers. New tests prove a refused write leaves the

@@ -1,7 +1,7 @@
 ---
 sprint: S16
-status: planned # planned | in-progress | done
-branch: # set by /sprint
+status: in-progress # planned | in-progress | done
+branch: sprint/S16
 milestone: M17 — Nothing enters half-true, and nothing trusts more than it must
 ---
 

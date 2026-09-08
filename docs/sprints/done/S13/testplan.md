@@ -25,7 +25,7 @@ starting the app and seeding the demo vault.
    need to switch.
 5. Note on the model: the seeded vault ships with no LLM provider routed for the
    journal's coaching or close-out tasks. That is intentional — several steps below
-   exist specifically to check the app's behaviour *without* a model. Where a step
+   exist specifically to check the app's behaviour _without_ a model. Where a step
    needs a real model to see the golden path, it says so and names the alternative
    check to run instead.
 

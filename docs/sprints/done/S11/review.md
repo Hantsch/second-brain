@@ -8,12 +8,12 @@ carve-outs sitting in the roadmap's unprioritised table close: the format gate g
 Windows, a maintenance run stays visible on navigation, and a condensed artifact can be deleted
 from inside the app.
 
-| Story                                              | Status                             | Commit                                                              |
-| --------------------------------------------------- | ----------------------------------- | -------------------------------------------------------------------- |
-| 040 — An answer cites the source, never the condensation | done                        | `040: an answer cites the source, never the condensation`          |
-| 042 — A maintenance run stays visible wherever I am | built, live acceptance pending      | `042: strip lives in the shell; close guard warns during a run`    |
-| 043 — I can delete a condensed artifact             | built, live acceptance pending      | `043: delete a condensed artifact`                                  |
-| 041 — The format gate is green on Windows           | done                                 | `041: the format gate is green on Windows`                         |
+| Story                                                    | Status                         | Commit                                                          |
+| -------------------------------------------------------- | ------------------------------ | --------------------------------------------------------------- |
+| 040 — An answer cites the source, never the condensation | done                           | `040: an answer cites the source, never the condensation`       |
+| 042 — A maintenance run stays visible wherever I am      | built, live acceptance pending | `042: strip lives in the shell; close guard warns during a run` |
+| 043 — I can delete a condensed artifact                  | built, live acceptance pending | `043: delete a condensed artifact`                              |
+| 041 — The format gate is green on Windows                | done                           | `041: the format gate is green on Windows`                      |
 
 All four stories built in order on `sprint/S11` (branched from `dev`), one commit per story,
 `npm run build`/`test`/`lint`/`typecheck` green after every story. 040 and 041 are `done` outright;

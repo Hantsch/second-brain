@@ -6,11 +6,11 @@ Sprint goal: the journal's day view reads top to bottom in the order the day is 
 the field to write into is visibly the place to write and only files what the user clicks to file,
 and the day ends through exactly one action.
 
-| Story                                                    | Status | Commit                                                          |
-| --------------------------------------------------------- | ------ | ---------------------------------------------------------------- |
-| 047 — The day view reads in the order I write in           | done   | `047: day view reads top to bottom in write order`               |
+| Story                                                          | Status | Commit                                                               |
+| -------------------------------------------------------------- | ------ | -------------------------------------------------------------------- |
+| 047 — The day view reads in the order I write in               | done   | `047: day view reads top to bottom in write order`                   |
 | 048 — The field I write in is visible, and sends when I say so | done   | `048: journal fields are visibly fields and only send on the button` |
-| 049 — One button closes the day                            | done   | `049: one button closes the day`                                  |
+| 049 — One button closes the day                                | done   | `049: one button closes the day`                                     |
 
 All three stories are done, on branch `sprint/S13`, built strictly in order (047 → 048 → 049)
 since they share `DayEntry.tsx`, `DayText.tsx`, `CoachComposer.tsx`, `CloseProposal.tsx` and the

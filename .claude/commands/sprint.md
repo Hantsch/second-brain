@@ -72,7 +72,7 @@ Before any refine agent starts:
 
 For every story in the sprint list whose requirement is still `draft`, ONE fresh `Agent`
 (`subagent_type: "general-purpose"`, **`model: "opus"`**, **`run_in_background: false`**) —
-all calls in ONE message. Several foreground calls in one message run concurrently *and*
+all calls in ONE message. Several foreground calls in one message run concurrently _and_
 block until all of them have returned, which is exactly what this phase wants; backgrounding
 them instead buys nothing and costs you the completion notifications. Prompt (self-contained,
 the agent does not know this session):
@@ -107,7 +107,7 @@ those stories. Stories still blocked afterwards are marked in their `sprint.md` 
 For every `ready` story ONE fresh `Agent` (`subagent_type: "general-purpose"`,
 **`model: "sonnet"`**, **`run_in_background: false`**) — strictly one after another (later
 stories build on earlier ones). Both parameters are written out on purpose: an unset `model`
-inherits the *session* model rather than this command's frontmatter and re-tiers the entire
+inherits the _session_ model rather than this command's frontmatter and re-tiers the entire
 agent tree below it, and an unset `run_in_background` means **background**, which for a
 story-long build is a coin flip on whether you ever hear back. Do **not** escalate the tier
 on your own — the hard tier is chosen per deliverable inside `/build`, from `## Model Hints`.
@@ -197,8 +197,8 @@ and only on the sprint branch (never push, never on a `protected-branches` entry
      section, not a roadmap line.
    - **"Where we stand"** and "As of": rewrite the block (max. five lines) — what was just
      finished, what is next, what is waiting on the user (the merge).
-   If a concept is thereby fully implemented (all stories done): `git mv` it to
-   `systems-path` and update its status line.
+     If a concept is thereby fully implemented (all stories done): `git mv` it to
+     `systems-path` and update its status line.
 4. **If `changelog-path` is set in the profile:** check that every story done in this sprint
    with a user-facing change has its entry there, under `# Features` / `# Fixes` of the current
    version section. `/build` writes them per story; this is the sweep that catches the ones it

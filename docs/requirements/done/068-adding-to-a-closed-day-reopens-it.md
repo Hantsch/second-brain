@@ -76,32 +76,32 @@ longer true.
 ## Deliverables
 
 - [x] **D1 — `reopenIfClosed` in the core.** New `src/core/journal/reopen.ts`, exported from
-  `src/core/journal/index.ts`. Mirror `src/core/journal/closed.ts` (hash contract, doc-comment
-  style). Test: `tests/core/journal/reopen.test.ts` — a closed day loses `closed` and reports the
-  new hash, an already-open day is not written at all, a stale `expectedHash` raises `conflict`, a
-  missing day raises the same error `requireDay` already raises.
-  Acceptance: those four cases green, no other file touched.
+      `src/core/journal/index.ts`. Mirror `src/core/journal/closed.ts` (hash contract, doc-comment
+      style). Test: `tests/core/journal/reopen.test.ts` — a closed day loses `closed` and reports the
+      new hash, an already-open day is not written at all, a stale `expectedHash` raises `conflict`, a
+      missing day raises the same error `requireDay` already raises.
+      Acceptance: those four cases green, no other file touched.
 
 - [x] **D2 — every journal write path reopens and says so.** `src/main/ipc/journal.ts` only (plus the
-  local helper in it): `journal:append`, `journal:setDay`, `journal:setMood`,
-  `journal:answerLooseEnd`, `journal:interviewAnswer`, `journal:coach` (success **and**
-  `onFailure`). Response hashes replaced with the post-reopen hash; `event:toast`
-  (`toast.journalReopened`) emitted exactly once per reopening write. Change-guards per plan step 2
-  for `setDay` and `setMood`. Test in `tests/main/journal-ipc.test.ts` (mirror its existing
-  append/setDay/setMood/coach cases and their temp-vault setup): one case per write path that a
-  closed day ends up `closed: null` and the toast event fired; plus the two AC4 cases (identical
-  day text, identical mood) leaving `closed` untouched and no toast; plus one case that the hash
-  returned by `journal:setDay` on a closed day is usable for the next save (no false `conflict`).
-  Acceptance: `npm test` green including the pre-existing journal IPC and gardener-flow tests.
+      local helper in it): `journal:append`, `journal:setDay`, `journal:setMood`,
+      `journal:answerLooseEnd`, `journal:interviewAnswer`, `journal:coach` (success **and**
+      `onFailure`). Response hashes replaced with the post-reopen hash; `event:toast`
+      (`toast.journalReopened`) emitted exactly once per reopening write. Change-guards per plan step 2
+      for `setDay` and `setMood`. Test in `tests/main/journal-ipc.test.ts` (mirror its existing
+      append/setDay/setMood/coach cases and their temp-vault setup): one case per write path that a
+      closed day ends up `closed: null` and the toast event fired; plus the two AC4 cases (identical
+      day text, identical mood) leaving `closed` untouched and no toast; plus one case that the hash
+      returned by `journal:setDay` on a closed day is usable for the next save (no false `conflict`).
+      Acceptance: `npm test` green including the pre-existing journal IPC and gardener-flow tests.
 
 - [x] **D3 — the feedback the user sees.** `src/renderer/i18n/de.ts`, `src/renderer/i18n/en.ts` (key
-  `toast.journalReopened`; German with `„…“` if it ever needs quotes) and new
-  `tests/e2e/journal-reopen.spec.ts` (mirror `tests/e2e/journal-close.spec.ts`: `specId`,
-  `isoDayOffset`, `dayPath`, the `app`/`vault` fixtures).
-  Acceptance: e2e — on the seeded closed day at offset -7, typing into the day text and saving
-  makes the "finished on …" badge disappear without navigating away, shows the reopened toast, and
-  leaves `closed: null` on disk; on the closed day at offset -13, focusing and leaving the text
-  field without editing keeps the badge and `closed` on disk unchanged.
+      `toast.journalReopened`; German with `„…“` if it ever needs quotes) and new
+      `tests/e2e/journal-reopen.spec.ts` (mirror `tests/e2e/journal-close.spec.ts`: `specId`,
+      `isoDayOffset`, `dayPath`, the `app`/`vault` fixtures).
+      Acceptance: e2e — on the seeded closed day at offset -7, typing into the day text and saving
+      makes the "finished on …" badge disappear without navigating away, shows the reopened toast, and
+      leaves `closed: null` on disk; on the closed day at offset -13, focusing and leaving the text
+      field without editing keeps the badge and `closed` on disk unchanged.
 
 ## Model Hints
 
@@ -183,6 +183,7 @@ the seeded closed days (offsets -7/-13).
 **Commit message:** `068: adding to a closed day reopens it`
 
 **Verification:**
+
 - `npm run build` — green.
 - `npm test` — 254 files / 3607 tests, all green (incl. 4 new core unit tests, 10 new main IPC
   tests).
@@ -196,6 +197,7 @@ the seeded closed days (offsets -7/-13).
   the e2e spec, typecheck and lint.
 
 **AC → test mapping, as verified:**
+
 - AC1 → `tests/core/journal/reopen.test.ts` ("a closed day loses its closed field") + one case per
   write path in `tests/main/journal-ipc.test.ts` — all green.
 - AC2 → `tests/e2e/journal-reopen.spec.ts` › "new content in the field reopens the day, visibly and
@@ -209,6 +211,7 @@ the seeded closed days (offsets -7/-13).
 No manual residue.
 
 **Findings from review, left unfixed with reasons (verdict was PASS, not blocking):**
+
 - The AC4 e2e case exercises "no interaction" rather than "identical text re-saved" (the Save
   button only enables on an actual draft change), so it proves the editor doesn't autosave rather
   than exercising the `setDay`/`setMood` change-guards directly. Not fixed: those guards are

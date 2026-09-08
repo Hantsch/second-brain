@@ -7,13 +7,13 @@ maintenance with a live list of what runs, what waits and what just finished, in
 back to the result of a run the user walked away from. And the day's close stops being
 all-or-nothing: every proposed line and every field can be corrected before it is accepted.
 
-| Story                                                          | Status | Commit                                                                    |
-| --------------------------------------------------------------- | ------ | -------------------------------------------------------------------------- |
-| 071 — Work in flight is one queue                                | done   | `949e53d` — 071: work in flight is one queue                              |
-| 072 — Tasks have a place above maintenance                       | done   | `920e161` — 072: tasks have a place above maintenance                     |
-| 073 — A run I walk away from still has its result                | done   | `ee3768d` — 073: a run I walk away from still has its result              |
-| 074 — Maintenance and imports join the same queue                | done   | `961485d` — 074: maintenance and imports join the same queue              |
-| 075 — A close proposal can be corrected, not just pruned          | done   | `49aa3d9` — 075: a close proposal can be corrected, not just pruned       |
+| Story                                                    | Status | Commit                                                              |
+| -------------------------------------------------------- | ------ | ------------------------------------------------------------------- |
+| 071 — Work in flight is one queue                        | done   | `949e53d` — 071: work in flight is one queue                        |
+| 072 — Tasks have a place above maintenance               | done   | `920e161` — 072: tasks have a place above maintenance               |
+| 073 — A run I walk away from still has its result        | done   | `ee3768d` — 073: a run I walk away from still has its result        |
+| 074 — Maintenance and imports join the same queue        | done   | `961485d` — 074: maintenance and imports join the same queue        |
+| 075 — A close proposal can be corrected, not just pruned | done   | `49aa3d9` — 075: a close proposal can be corrected, not just pruned |
 
 All five stories are `done`. No blocked stories. Built in strict order (071 → 072 → 073 → 074),
 then 075 independently, exactly as planned in `sprint.md`'s Notes.
@@ -73,14 +73,14 @@ only the journal close screen and its write path.
   `await`), so `WorkRegistry.startExternal()` mirrors an externally-paced task into the registry
   with a bidirectional, reentrancy-safe cancel hook, without ever competing for lane capacity.
 - **Two review-fix cycles caught a real defect each in 071 and 074** that a lighter check would
-  have missed: 071's queue-position recompute happened *after* the emit reporting a transition
+  have missed: 071's queue-position recompute happened _after_ the emit reporting a transition
   (a late joiner could see a stale position); 074's first "hide Retry" fix keyed off `task.kind`
   instead of an honest `retryable` field, silently hiding Retry for a genuinely retryable
   synthetic task — caught only by actually running the full e2e suite after the first fix, not
   by unit tests alone. Both are worth remembering: **trust the full e2e run over a green unit
   suite when a fix touches shared, cross-story surface.**
 - **073 found and fixed a mark-before-write-succeeds bug**: `condense:accept`/`reject` and
-  `journal:applyClose` were marking a task's result as decided *before* confirming the write
+  `journal:applyClose` were marking a task's result as decided _before_ confirming the write
   actually succeeded, so a refused write (stale hash) permanently dropped a recoverable proposal.
   Fixed to mark only after a successful write, across all three handlers.
 - **Accepted, documented, non-blocking gaps** (none covered by an acceptance criterion, none
@@ -106,6 +106,7 @@ Acceptance is the test suite (per `.claude/ai-scrum.md`). Per-criterion mapping 
 each story's own `## Done` section under `docs/requirements/done/`):
 
 **071 — Work in flight is one queue** (8 ACs, all core/IPC, no user-facing surface)
+
 - AC1–AC8 → `tests/core/work/registry.test.ts`, `tests/core/work/cancel.test.ts`,
   `tests/main/work-queue-ipc.test.ts`, `tests/main/work-queue-lifecycle.test.ts`.
 - No manual residue. **Gap:** AC6's user-visible half (the close guard asking before it kills a
@@ -113,6 +114,7 @@ each story's own `## Done` section under `docs/requirements/done/`):
   instead.
 
 **072 — Tasks have a place above maintenance** (9 ACs)
+
 - AC1–AC9 → `tests/renderer/rail.test.tsx`, `tests/e2e/tasks-screen.spec.ts`,
   `tests/e2e/tasks-queue.spec.ts`, `tests/main/tasks-ipc.test.ts`, `tests/renderer/tasks-view.test.ts`,
   `tests/renderer/tasks.test.tsx`, `tests/e2e/tasks-runstrip.spec.ts`,
@@ -121,6 +123,7 @@ each story's own `## Done` section under `docs/requirements/done/`):
   (`SB_E2E_TASKS_FIXTURE`) since 072 itself has no real waiting/failing producer yet.
 
 **073 — A run I walk away from still has its result** (8 ACs)
+
 - AC1–AC8 → `tests/e2e/task-result-survives-navigation.spec.ts`, `tests/e2e/task-no-model.spec.ts`,
   `tests/e2e/task-run-failure.spec.ts`, `tests/renderer/task-result-route.test.ts`,
   `tests/main/ipc/condense-task.test.ts`, `tests/main/ipc/journal-close-task.test.ts`.
@@ -128,6 +131,7 @@ each story's own `## Done` section under `docs/requirements/done/`):
   so "no row appears" is vacuous) — the unit test is the real proof of the criterion.
 
 **074 — Maintenance and imports join the same queue** (7 ACs)
+
 - AC1–AC7 → `tests/e2e/maintenance-task-visible.spec.ts`, `tests/e2e/import-task.spec.ts`,
   `tests/e2e/quit-during-run.spec.ts`, `tests/main/gardener-task.test.ts`,
   `tests/core/work/external-task.test.ts`, `tests/core/work/lanes.test.ts`.
@@ -138,6 +142,7 @@ each story's own `## Done` section under `docs/requirements/done/`):
   demand. Same class of harness gap as story 067 (S14). Not a manual residue.
 
 **075 — A close proposal can be corrected, not just pruned** (10 ACs)
+
 - AC1–AC10 → `tests/e2e/journal-close-correct.spec.ts` (10 tests), `tests/core/journal/close-request.test.ts`,
   `tests/renderer/close-proposal-todo-row.test.tsx`, `tests/renderer/close-proposal-fields.test.tsx`,
   `tests/renderer/close-proposal-view.test.ts`, `tests/main/journal-ipc.test.ts`.

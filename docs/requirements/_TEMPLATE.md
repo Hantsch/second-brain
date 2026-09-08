@@ -65,6 +65,7 @@ the suite, not a click list.
 ## Done
 
 <Leave empty. Filled by `/build <id>` after implementation:
+
 - Short summary (2–5 lines): what was done.
 - Commit message (1–2 lines, keywords are enough).
 - Verification: build/test/lint result + review outcome; open points/blockers, if any.>

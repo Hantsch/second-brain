@@ -8,11 +8,11 @@ _next step_, _waiting on_ and _learned_; the Project knowledge tab shows the dif
 hash-guarded or rejects it with a reason; and Maintenance says when a project's condensation is
 due or missing.
 
-| Story | Status | Commit |
-| ----- | ------ | ------ |
-| [044 — A project can be condensed into one file](../../requirements/done/044-a-project-can-be-condensed-into-one-file.md) | done | `044: a project can be condensed into one file` |
-| [045 — I see what a project's condensation changes before it's written](../../requirements/done/045-i-see-what-a-projects-condensation-changes-before-its-written.md) | done | `045: Project knowledge tab — diff, accept, reject-with-reason, delete` |
-| [046 — Maintenance says a project's condensation is due](../../requirements/done/046-maintenance-says-a-projects-condensation-is-due.md) | done | `046: maintenance flags a project's due or missing condensation` |
+| Story                                                                                                                                                                 | Status | Commit                                                                  |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ----------------------------------------------------------------------- |
+| [044 — A project can be condensed into one file](../../requirements/done/044-a-project-can-be-condensed-into-one-file.md)                                             | done   | `044: a project can be condensed into one file`                         |
+| [045 — I see what a project's condensation changes before it's written](../../requirements/done/045-i-see-what-a-projects-condensation-changes-before-its-written.md) | done   | `045: Project knowledge tab — diff, accept, reject-with-reason, delete` |
+| [046 — Maintenance says a project's condensation is due](../../requirements/done/046-maintenance-says-a-projects-condensation-is-due.md)                              | done   | `046: maintenance flags a project's due or missing condensation`        |
 
 All three stories done, all on branch `sprint/S12`, cut from `dev`. No stories blocked.
 

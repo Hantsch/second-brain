@@ -268,6 +268,7 @@ fields. Clean-agent review verdict: PASS on all 9 acceptance criteria, no test w
 scope creep, no guardrail violations found.
 
 **Decisions:**
+
 - AC 2 (a11y) was verified via the D5 deliverable's own pipeline run (`.screenshots/a11y.json`
   is a build artifact, not tracked/diffable) rather than re-run again at story-level, per the
   "run each command once" verify rule — the tree was untouched between D5 and this closing pass.

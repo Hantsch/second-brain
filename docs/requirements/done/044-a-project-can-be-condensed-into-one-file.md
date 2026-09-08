@@ -414,7 +414,7 @@ change is the `condense-project` row in the settings routing table (verified liv
   carve-out, so 044 mirrors established precedent rather than introducing a new class of risk.
   Retroactively redesigning that precedent is out of this story's scope. Worth a note for whoever
   next touches `section-migration.ts`: "Next step"/"Learned" are more common free-form headings than
-  "Direktiven"/"Muster", so this raises the *probability* of the accepted risk, even though its
+  "Direktiven"/"Muster", so this raises the _probability_ of the accepted risk, even though its
   nature is unchanged.
 
 **Deviations from the plan**
