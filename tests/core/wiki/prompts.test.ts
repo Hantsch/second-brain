@@ -5,6 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   WIKI_INGEST_SCHEMA,
+  mergeSummariesClampedChars,
   mergeSummariesPrompt,
   summarizeSourcePrompt,
   wikiIngestPrompt,
@@ -100,6 +101,28 @@ describe('summarizeSourcePrompt', () => {
     expect(userOf(turns)).toContain('Quelle, Abschnitt 2/5:');
     expect(userOf(turns)).toContain('gekürzt');
     expect(userOf(turns).length).toBeLessThan(9000);
+  });
+
+  it('mergeSummariesClampedChars zaehlt nur, was der Clamp tatsaechlich abschneidet', () => {
+    // Unter der Grenze: nichts wird abgeschnitten, egal wie viele Teile.
+    expect(mergeSummariesClampedChars(['kurzer Teil eins', 'kurzer Teil zwei'])).toBe(0);
+
+    // Ueber der Grenze: der Schnitt ist die Ueberlaenge des zusammengesetzten
+    // Texts (inklusive der "--- Teil N ---"-Praefixe), nicht die Laenge der
+    // Eingabe selbst — sonst waere die Zahl in der Notiz eine Uebertreibung.
+    const parts = ['a'.repeat(7000), 'b'.repeat(7000)];
+    const joined = parts.map((part, index) => `--- Teil ${index + 1} ---\n${part}`).join('\n\n');
+    const expectedCut = joined.length - 12000;
+    expect(mergeSummariesClampedChars(parts)).toBe(expectedCut);
+    expect(mergeSummariesClampedChars(parts)).toBeGreaterThan(0);
+    // Nicht die volle Eingabelaenge — nur der Ueberhang.
+    const totalInputLength = parts.reduce((sum, part) => sum + part.length, 0);
+    expect(mergeSummariesClampedChars(parts)).toBeLessThan(totalInputLength);
+
+    // Ein eigener `maxChars` wird respektiert: der Praefix "--- Teil 1 ---\n"
+    // zaehlt mit, denn genau den schickt `mergeSummariesPrompt` auch ans Modell.
+    const onePart = `--- Teil 1 ---\n${'x'.repeat(100)}`;
+    expect(mergeSummariesClampedChars(['x'.repeat(100)], 50)).toBe(onePart.length - 50);
   });
 
   it('fuehrt Teilergebnisse zusammen, ohne die Regeln zu verlieren', () => {

@@ -17,7 +17,7 @@
 
 import { FsVaultStore } from '@core/vault';
 import type { VaultStore } from '@core/vault/types';
-import type { WikiDeps, WikiIndexView } from '@core/wiki';
+import type { WikiIndexView, WikiIngestDeps } from '@core/wiki';
 import type { DocLanguage, UiLanguage } from '@shared/types';
 import { fail } from './registry';
 import { createGateway } from '../llm-bridge';
@@ -58,8 +58,17 @@ export function replyLanguage(services: Services): UiLanguage {
   return languages?.conversation ?? languages?.ui ?? 'de';
 }
 
-/** Everything ingest, questions, and write-back need. */
-export function wikiDeps(services: Services, signal?: AbortSignal): WikiDeps {
+/**
+ * Everything ingest, questions, and write-back need. Typed as `WikiIngestDeps`
+ * because the digestion writes through a transaction and its way back is
+ * `VaultStore.delete` — the wider of the two contracts, and `FsVaultStore`
+ * satisfies it anyway. Questions and write-back only ever see `WikiDeps`.
+ */
+export function wikiDeps(
+  services: Services,
+  signal?: AbortSignal,
+  onProgress?: (progress: number) => void,
+): WikiIngestDeps {
   return {
     store: wikiStore(services),
     index: wikiIndex(services),
@@ -70,6 +79,7 @@ export function wikiDeps(services: Services, signal?: AbortSignal): WikiDeps {
     translateSources: services.settings.vault()?.languages.translateSources !== false,
     now: new Date(),
     ...(signal === undefined ? {} : { signal }),
+    ...(onProgress === undefined ? {} : { onProgress }),
   };
 }
 

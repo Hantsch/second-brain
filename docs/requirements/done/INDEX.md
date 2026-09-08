@@ -224,3 +224,4 @@ second roadmap.
   pinned prettier to exact `3.9.6` with a guard test, and added static wiring tests in
   `tests/scripts/ci-gate.test.ts`; the first real GitHub Actions run and its cold/warm runtime
   numbers remain a manual residue until `sprint/S16` is pushed.
+- 050 — A digestion completes whole or leaves no trace · S16 · Wraps ingestSource writes in a rollback transaction, adds idempotent retry against a leftover source page, per-module write locking, truncation notice, progress ticks and a generalized failure-code path; reviewed PASS with one review-fix round (tautological progress test, error-code leak, stalled progress bar, missing overview.md retry).

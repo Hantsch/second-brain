@@ -76,6 +76,13 @@ export interface AppOptions {
    * default) sets no env var, i.e. every spec but the one that opts in keeps the
    * unmodified, instant-checks behaviour. */
   stageDelayMs: number;
+  /** Passed through as `SB_E2E_INGEST_DELAY_MS` when > 0 — a spec-local way to hold a
+   * digestion at the boundary between the raw phase and the wiki write long enough to
+   * drive a real window close into it (050, D9). 0 (the default) sets no env var, i.e.
+   * every spec but the one that opts in keeps the unmodified, no-pause digestion. The
+   * pause ends early on the job's own stop (`ipc/ingest.ts#holdBetweenPhases`), so a
+   * generous value costs a spec nothing once it cancels the import. */
+  ingestDelayMs: number;
   /** Passed through as `SB_E2E_TASKS_FIXTURE=1` when true — opts into the synthetic
    * running/waiting/failed task set `tasks-e2e-fixture.ts` enqueues onto the real
    * work queue (072, D5). `false` (the default) sets no env var, i.e. every spec but
@@ -170,6 +177,8 @@ export const test = base.extend<
 
   stageDelayMs: [0, { scope: 'worker', option: true }],
 
+  ingestDelayMs: [0, { scope: 'worker', option: true }],
+
   tasksFixture: [false, { scope: 'worker', option: true }],
 
   fakeProvider: [undefined, { scope: 'worker', option: true }],
@@ -215,7 +224,10 @@ export const test = base.extend<
   ],
 
   app: [
-    async ({ tempRoot, vaultPath, stageDelayMs, tasksFixture, fakeProvider }, use) => {
+    async (
+      { tempRoot, vaultPath, stageDelayMs, ingestDelayMs, tasksFixture, fakeProvider },
+      use,
+    ) => {
       if (fakeProvider) pinFakeProvider(vaultPath);
       const userDataDir = prepareUserData(join(tempRoot, 'userdata'), {
         vault: vaultPath,
@@ -223,6 +235,7 @@ export const test = base.extend<
       });
       const extraEnv: Record<string, string> = {
         ...(stageDelayMs > 0 ? { SB_E2E_STAGE_DELAY_MS: String(stageDelayMs) } : {}),
+        ...(ingestDelayMs > 0 ? { SB_E2E_INGEST_DELAY_MS: String(ingestDelayMs) } : {}),
         ...(tasksFixture ? { SB_E2E_TASKS_FIXTURE: '1' } : {}),
         ...(fakeProvider
           ? { SB_E2E_FAKE_PROVIDER: writeFakeProviderScript(tempRoot, fakeProvider) }

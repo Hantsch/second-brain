@@ -15,5 +15,7 @@ export * from './trash';
 export * from './watch';
 export { sha256, byteLength } from './hash';
 export { assertWritable, composeContent } from './compose';
+export type { RollbackStep, RestoreStepsResult, RollbackTextStore } from './rollback';
+export { restoreSteps } from './rollback';
 export { FsVaultStore } from './fs-store';
 export { MemoryVaultStore } from './memory-store';

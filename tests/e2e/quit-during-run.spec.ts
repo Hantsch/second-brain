@@ -2,10 +2,15 @@
    run is going surfaces `QuitDuringRunDialog` (naming the running task kind),
    and cancelling out of it leaves both the run and the window alone.
 
-   The condensation/import half of AC4 is covered at the main/unit level by
-   `tests/main/close-guard.test.ts` instead — a known, accepted harness gap:
-   this suite's throwaway vault has no model configured, so it cannot drive a
-   condensation into `running` or an import past `awaiting-llm`.
+   The import half of AC4 is no longer a gap: `quit-during-digestion.spec.ts`
+   (050, D9) drives the same close into a running digestion, with the fake
+   provider pinned and `SB_E2E_INGEST_DELAY_MS` holding the job at its phase
+   boundary — the seam this spec's own harness note below was missing.
+
+   The condensation half is still covered at the main/unit level by
+   `tests/main/close-guard.test.ts` instead, and for the same, still-true
+   reason: *this* spec's throwaway vault has no model configured, so nothing
+   here can drive a condensation into `running`.
 
    Mirrors `gardener-run-cross-screen.spec.ts`'s seam: no model is configured
    in this harness (fixtures/app.ts), so the stage plan is just the ten

@@ -7,6 +7,8 @@
  *   `chunk`      lange Quellen in verdichtbare Stuecke schneiden
  *   `summarize`  einmal verdichten (oder ehrlich nichts, wenn kein Modell steht)
  *   `ingest`     Source-Seite, Entitaeten, Konzepte, Katalog, Chronik
+ *                — je Modul serialisiert (`module-lock`), jeder Schreibvorgang
+ *                  mit Hash und begrenztem zweiten Versuch (`write-retry`)
  *   `ask`        Frage → Ausschnitte → Antwort mit gepruefeten Belegen
  *   `file-back`  gute Antwort als Seite ablegen — so fuettern Fragen das Wissen
  */
@@ -54,6 +56,13 @@ export {
   type WikiLogEntry,
   type WikiLogKind,
 } from './log-md';
+export { withModuleLock } from './module-lock';
+export {
+  MAX_WRITE_ATTEMPTS,
+  writeTextWithRetry,
+  type CurrentText,
+  type WriteRetryOptions,
+} from './write-retry';
 export {
   agentsPath,
   createModule,
@@ -67,6 +76,7 @@ export {
   appendUnderSection,
   createPage,
   findPage,
+  findSourcePageForRaw,
   mergeSources,
   pageFrontmatter,
   pageKey,
@@ -76,6 +86,7 @@ export {
   writePage,
   type CreatePageInput,
   type FindPageDeps,
+  type FindSourcePageDeps,
   type WikiPageDoc,
   type WritePageInput,
 } from './pages';
@@ -102,7 +113,8 @@ export {
   type CondenseInput,
   type CondenseResult,
 } from './summarize';
-export { markRawProtocol, protocolPaths } from './raw-protocol';
+export { isRawDigestedInto, markRawProtocol, protocolPaths } from './raw-protocol';
+export { WikiTransaction, type WikiRollbackResult } from './transaction';
 export { ingestSource, knownPages, type IngestSourceInput } from './ingest';
 export {
   CANDIDATE_FACTOR,
@@ -124,8 +136,10 @@ export {
   type WikiDeps,
   type WikiExcerpt,
   type WikiIndexView,
+  type WikiIngestDeps,
   type WikiIngestResult,
   type WikiOptions,
   type WikiStore,
+  type WikiTxStore,
   type WikiWriteInput,
 } from './types';

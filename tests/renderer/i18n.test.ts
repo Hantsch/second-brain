@@ -160,6 +160,27 @@ describe('i18n', () => {
     }
   });
 
+  /* D8 (050): `describeFailure` liest den `code` jedes Fehlers strukturell —
+     ein gescheiterter Auftrag kann also den Code von `IngestError` ODER
+     `WikiError` tragen (und, ab 051/064, den kuenftiger Fehlertypen mit
+     demselben Vertrag). Beide Sprachen brauchen fuer jeden dieser Codes einen
+     Satz, sonst faellt die Oberflaeche auf den rohen Key zurueck. */
+  it('deckt jeden Fehlercode ab, den ein gescheiterter Auftrag tragen kann', () => {
+    for (const code of [
+      // IngestError
+      'invalid',
+      'not-found',
+      'io',
+      'cancelled',
+      'unknown',
+      // WikiError
+      'conflict',
+    ]) {
+      expect(deKeys, `de: error.code.${code}`).toContain(`error.code.${code}`);
+      expect(enKeys, `en: error.code.${code}`).toContain(`error.code.${code}`);
+    }
+  });
+
   it('setzt Platzhalter ein und wechselt die Sprache', () => {
     setLanguage('de');
     expect(t('vault.docs', { count: 7 })).toContain('7');

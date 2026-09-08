@@ -6,3 +6,23 @@
 - 2026-09-08 08:42 · 065 · D3 ui-smoke.yml advisory lane · done
 - 2026-09-08 08:42 · 065 · D4 README CI paragraph · started
 - 2026-09-08 08:44 · 065 · D4 README CI paragraph · done
+- 2026-09-08 08:52 · 050 · D1 shared undo step · started
+- 2026-09-08 08:54 · 050 · D1 shared undo step · done
+- 2026-09-08 08:54 · 050 · D2 WikiTransaction · started
+- 2026-09-08 09:01 · 050 · D2 WikiTransaction · done
+- 2026-09-08 09:01 · 050 · D3 ingestSource transaction · started
+- 2026-09-08 09:11 · 050 · D3 ingestSource transaction · done
+- 2026-09-08 09:11 · 050 · D4 idempotent retry · started
+- 2026-09-08 09:22 · 050 · D4 idempotent retry · done
+- 2026-09-08 09:22 · 050 · D5 module lock · started
+- 2026-09-08 09:36 · 050 · D5 module lock · done
+- 2026-09-08 09:36 · 050 · D6 truncation notice · started
+- 2026-09-08 09:41 · 050 · D6 truncation notice · done
+- 2026-09-08 09:41 · 050 · D7 progress reporting · started
+- 2026-09-08 09:48 · 050 · D7 progress reporting · done
+- 2026-09-08 09:48 · 050 · D8 failure codes · started
+- 2026-09-08 09:50 · 050 · D8 failure codes · done
+- 2026-09-08 09:50 · 050 · D9 quit-mid-digestion e2e · started
+- 2026-09-08 10:09 · 050 · D9 quit-mid-digestion e2e · done
+- 2026-09-08 10:22 · 050 · review-fix round 1 (findings 1,3,4,7) · started
+- 2026-09-08 10:31 · 050 · review-fix round 1 (findings 1,3,4,7) · done

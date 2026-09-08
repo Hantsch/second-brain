@@ -20,6 +20,7 @@ export {
 export {
   summarizeSourcePrompt,
   mergeSummariesPrompt,
+  mergeSummariesClampedChars,
   type KnownPageHint,
   type MergeSummariesInput,
   type SummarizeSourceInput,

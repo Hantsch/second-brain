@@ -40,6 +40,34 @@ function notice(detail: string, docLanguage: DocLanguage): string {
   return `${TRUNCATION_MARKER} ${lead}: ${detail}`;
 }
 
+/**
+ * The one sentence for "characters trimmed to fit the model's input budget" —
+ * shared by `projectTruncationNotice()` (condense/project level) and the source
+ * page's own notice (story 050, D6): both cut on the same reason, a prompt-level
+ * per-item or per-merge clamp, not the deterministic selector's read bound.
+ * Returns `''` when nothing was cut, so a caller can fold the result straight
+ * into a `parts` list without an extra `> 0` check at the call site.
+ */
+function promptClampDetail(clampedChars: number, docLanguage: DocLanguage): string {
+  if (clampedChars <= 0) return '';
+  return docLanguage === 'en'
+    ? `${clampedChars} characters trimmed from what was shown to the model, to fit its input budget`
+    : `${clampedChars} Zeichen beim Einreichen ans Modell gekürzt, um dessen Eingabe-Budget einzuhalten`;
+}
+
+/**
+ * The full notice line for a prompt-level clamp alone — the source page's case,
+ * where there is no selector report to combine it with (unlike
+ * `projectTruncationNotice`, which folds this same sentence in among others).
+ * Empty when nothing was cut, for the same reason `projectTruncationNotice`
+ * defends against an empty `parts`: a future caller should get `''`, not a
+ * malformed "…: were left out.".
+ */
+export function promptClampNotice(clampedChars: number, docLanguage: DocLanguage): string {
+  const detail = promptClampDetail(clampedChars, docLanguage);
+  return detail === '' ? '' : notice(leftOut([detail], docLanguage), docLanguage);
+}
+
 /** The closing verb of a detail: "… were left out." / „… blieben außen vor.“ */
 function leftOut(parts: readonly string[], docLanguage: DocLanguage): string {
   return docLanguage === 'en'
@@ -97,13 +125,8 @@ export function projectTruncationNotice(
       );
     }
   }
-  if (promptClampedChars > 0) {
-    parts.push(
-      docLanguage === 'en'
-        ? `${promptClampedChars} characters trimmed from what was shown to the model, to fit its input budget`
-        : `${promptClampedChars} Zeichen beim Einreichen ans Modell gekürzt, um dessen Eingabe-Budget einzuhalten`,
-    );
-  }
+  const promptClampDetailText = promptClampDetail(promptClampedChars, docLanguage);
+  if (promptClampDetailText !== '') parts.push(promptClampDetailText);
   // A defensive empty check: every current caller only invokes this when it
   // already knows something was cut, but the function is re-exported from
   // `condense/index.ts` — a future caller that skips that check should get an

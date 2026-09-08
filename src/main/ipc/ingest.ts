@@ -36,12 +36,14 @@ import {
   patchIngestLog,
   readIngestLog,
   sourceFingerprint,
+  throwIfCancelled,
 } from '@core/ingest';
 import type {
   CondenseResult,
   IngestContext,
   IngestLogRecord,
   IngestOutcome,
+  IngestProgressFn,
   YtdlpStatus,
 } from '@core/ingest';
 import { ingestSource } from '@core/wiki';
@@ -64,6 +66,65 @@ import type { Services } from '../services';
 
 /** This many jobs run concurrently. */
 const CONCURRENCY = 2;
+
+/**
+ * `SB_E2E_INGEST_DELAY_MS` — how long a job pauses at the boundary between the
+ * raw-source phase and the digestion, in milliseconds. Read and guarded exactly
+ * like `SB_E2E_STAGE_DELAY_MS` in `ipc/gardener-run.ts`: same env family as
+ * `SB_VAULT` (`main/index.ts`) and `SB_DEMO` (`ipc/app.ts`), set by the check
+ * scripts, never by the app.
+ *
+ * Why it exists (050, D9): with the fake provider the digestion of a pasted text
+ * is over in milliseconds, so a spec can never drive a window close *into* a
+ * running import — and that, not the resulting wiki page, is what AC3 is about.
+ *
+ * Anything that is not a positive integer — unset, empty, `0`, `-1`, `1.5`,
+ * `abc` — is read as "no delay" and never throws: a mistyped variable must not
+ * be able to keep a shipped import from digesting. Then no pause happens at all,
+ * and the digestion is the digestion it was before this seam existed.
+ */
+function ingestDelayFromEnv(): number | undefined {
+  const raw = process.env['SB_E2E_INGEST_DELAY_MS']?.trim();
+  if (!raw) return undefined;
+  const ms = Number(raw);
+  if (!Number.isInteger(ms) || ms <= 0) return undefined;
+  return ms;
+}
+
+/* Read once, when this module loads — not per job: the variable belongs to how
+   the process was started, and a job that re-read it would let a mid-session
+   change turn one import into a different one. */
+const INGEST_DELAY_MS = ingestDelayFromEnv();
+
+/**
+ * Hold a job at the phase boundary — but never past its own stop.
+ *
+ * The pause ends on the job's abort signal, not only on the timer, because
+ * `IngestQueue.cancel` does nothing but abort: a pause that sat out its full
+ * delay would leave "stop" waiting for it, and story 050's whole point is that a
+ * stopped digestion writes nothing. The `throwIfCancelled` afterwards is the
+ * same guarantee `IngestQueue.run` gives around its own ingestor — a step that
+ * was aborted must not report success into the phase that follows it.
+ *
+ * Fully inert without the variable: the early return happens before the signal
+ * is even looked at, so nothing about a shipped digestion changes.
+ */
+async function holdBetweenPhases(signal: AbortSignal | undefined): Promise<void> {
+  if (INGEST_DELAY_MS === undefined) return;
+  throwIfCancelled(signal);
+  await new Promise<void>((resolve) => {
+    const timer = setTimeout(resolve, INGEST_DELAY_MS);
+    signal?.addEventListener(
+      'abort',
+      () => {
+        clearTimeout(timer);
+        resolve();
+      },
+      { once: true },
+    );
+  });
+  throwIfCancelled(signal);
+}
 
 /* The most recently found yt-dlp path. A `resolveYtdlp` per job would start a
    process before anything is even fetched; it's queried instead on status
@@ -192,7 +253,8 @@ class QueueHolder {
       environment: () => environment(services),
       llmAvailable: () => createGateway(services).isAvailable('summarize-source'),
       concurrency: () => CONCURRENCY,
-      condense: ({ job, outcome, signal }) => this.condense(job, outcome, signal),
+      condense: ({ job, outcome, signal, onProgress }) =>
+        this.condense(job, outcome, signal, onProgress),
       onUpdate: (job) => this.publish(queue, job),
     });
     return queue;
@@ -203,12 +265,23 @@ class QueueHolder {
     job: IngestJob,
     outcome: IngestOutcome,
     signal: AbortSignal | undefined,
+    onProgress: IngestProgressFn | undefined,
   ): Promise<CondenseResult> {
     const module = job.module;
     /* "File later": don't invent anything. The raw source is filed, the
        catalog stays untouched, and the source shows up as uncondensed in the
        list. */
     if (module === null || module.length === 0) return { pages: [] };
+
+    /* The phase boundary the e2e seam pauses at (050, D9), and the only one this
+       module owns: the raw source is filed and the queue has just claimed
+       `summarizing`, while nothing of the digestion — not the resource report's
+       log patch, not a single wiki write — has happened yet. A job held here is
+       observably `running` in the work registry, and stopping it leaves the vault
+       exactly as the raw phase left it. A pause any later would sit inside
+       `ingestSource`'s own transaction window, where "stopped" and "rolled back"
+       are no longer the same thing. */
+    await holdBetweenPhases(signal);
 
     if (outcome.kind === 'youtube') {
       const resourceReport = await analyzeYoutubeResources({
@@ -220,7 +293,19 @@ class QueueHolder {
       await patchIngestLog(wikiStore(this.services), outcome.rawPath, { resourceReport });
     }
 
-    const result = await ingestSource(wikiDeps(this.services, signal), {
+    /* The queue already holds `job.progress` at a fixed 0.85 before this call
+       and overwrites it with a fixed 0.95 right after (`wiki-update`, queue.ts)
+       — the wiki core's own 0..1 fraction is mapped into that open stretch, so
+       the bar keeps moving during the digestion instead of sitting still
+       (story 050, D7). */
+    const forward =
+      onProgress === undefined
+        ? undefined
+        : (fraction: number): void => {
+            onProgress({ stage: 'summarizing', progress: 0.85 + fraction * 0.1, message: null });
+          };
+
+    const result = await ingestSource(wikiDeps(this.services, signal, forward), {
       rawPath: outcome.rawPath,
       module,
       title: outcome.title,

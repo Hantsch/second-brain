@@ -11,6 +11,10 @@
  * Ob eine Seite existiert, entscheidet der Store: er sieht auch, was dieser Lauf
  * gerade geschrieben hat. Ein Vorschlag auf eine Seite, die es nicht gibt, wird
  * angelegt — ein Widerspruch auf eine Seite, die es nicht gibt, wird verworfen.
+ *
+ * `deps.store` may be a digestion's `WikiTransaction` (`ingest.ts` hands one in):
+ * it reads through unchanged, so the paragraph above still holds, and every page
+ * written here is part of what a failed digestion takes back.
  */
 
 import { excerpt } from '@core/vault/doc';

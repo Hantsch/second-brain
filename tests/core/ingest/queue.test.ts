@@ -3,6 +3,7 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import { IngestQueue, type IngestOutcome, type SourceIngestor } from '@core/ingest';
+import { WikiError } from '@core/wiki';
 import type { IngestJob } from '@shared/types';
 import { memoryStore } from './fakes';
 
@@ -354,6 +355,65 @@ describe('IngestQueue', () => {
     await vi.waitFor(() => expect(queue.job(job.id)?.stage).toBe('awaiting-llm'));
     queue.clearFinished();
     expect(queue.jobs()).toEqual([]);
+  });
+
+  /* D8 (050): jeder Fehler mit `code` traegt ihn weiter — nicht nur `IngestError`.
+     `WikiError` steht hier stellvertretend fuer 051/064's kuenftige Fehlertypen;
+     `describeFailure` liest `code` strukturell, ohne diese Klasse zu kennen. */
+  it('scheitert eine Verdichtung mit WikiError conflict, traegt der Auftrag den Code und die Nachricht', async () => {
+    const queue = new IngestQueue({
+      store: memoryStore(),
+      ingestors: [fakeIngestor()],
+      condense: async () => {
+        throw new WikiError('conflict', 'Die Seite wurde zwischenzeitlich geaendert.');
+      },
+      llmAvailable: () => true,
+    });
+
+    const job = queue.add({ kind: 'text', input: 'kollidiert' });
+    await vi.waitFor(() => expect(queue.job(job.id)?.stage).toBe('error'));
+
+    expect(queue.job(job.id)?.error).toBe('conflict');
+    expect(queue.job(job.id)?.message).toBe('Die Seite wurde zwischenzeitlich geaendert.');
+  });
+
+  /* D8 (050), Nachbesserung: ein roher `errno` — hier fingiert, wie ihn eine
+     ungewrappte `FsVaultStore`-Operation werfen wuerde (`ENOSPC`, `EACCES`, ...) —
+     ist kein Code, fuer den `error.code.*` einen Satz hat. Statt ihn ungeprueft
+     als Auftragscode zu tragen (und die Oberflaeche dann den rohen, unuebersetzten
+     Key rendern zu lassen), faellt er auf `unknown` zurueck — wie vor D8. */
+  it('scheitert eine Verdichtung mit einem rohen Betriebssystem-Fehlercode, faellt der Auftrag auf unknown zurueck', async () => {
+    const fsError = new Error('ENOSPC: no space left on device') as Error & { code: string };
+    fsError.code = 'ENOSPC';
+    const queue = new IngestQueue({
+      store: memoryStore(),
+      ingestors: [fakeIngestor()],
+      condense: async () => {
+        throw fsError;
+      },
+      llmAvailable: () => true,
+    });
+
+    const job = queue.add({ kind: 'text', input: 'plattenfehler' });
+    await vi.waitFor(() => expect(queue.job(job.id)?.stage).toBe('error'));
+
+    expect(queue.job(job.id)?.error).toBe('unknown');
+    expect(queue.job(job.id)?.message).toBe('ENOSPC: no space left on device');
+  });
+
+  it('bleibt ohne Modell bei awaiting-llm — der generalisierte Fehlerpfad greift nicht', async () => {
+    const queue = new IngestQueue({
+      store: memoryStore(),
+      ingestors: [fakeIngestor()],
+      condense: async () => ({ pages: ['modules/m/wiki/sources/s-1.md'] }),
+      llmAvailable: () => false,
+    });
+
+    const job = queue.add({ kind: 'text', input: 'ohne Modell' });
+    await vi.waitFor(() => expect(queue.job(job.id)?.stage).toBe('awaiting-llm'));
+
+    expect(queue.job(job.id)?.stage).not.toBe('error');
+    expect(queue.job(job.id)?.error).toBeNull();
   });
 
   it('meldet einen unbekannten Auftrag ehrlich', () => {

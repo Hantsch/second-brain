@@ -13,7 +13,7 @@
 import { IndexService } from '@core/index/service';
 import type { LlmGateway } from '@core/llm';
 import { MemoryVaultStore } from '@core/vault/memory-store';
-import type { WikiDeps } from '@core/wiki';
+import type { WikiIngestDeps } from '@core/wiki';
 import type { DocLanguage } from '@shared/types';
 import { fixtureVaultFiles } from '../../fixtures';
 import { NOW_MS } from '../../helpers/time';
@@ -106,7 +106,11 @@ export interface WikiFixture {
   refresh(): Promise<void>;
   /** Dateiinhalt; wirft, wenn die Datei fehlt — ein leerer String verschleiert nur. */
   text(path: string): Promise<string>;
-  deps(gateway: LlmGateway, language?: DocLanguage): WikiDeps;
+  /**
+   * `WikiIngestDeps` — die weitere der beiden Sichten: `MemoryVaultStore` kann
+   * loeschen, also passt sie auch dorthin, wo nur `WikiDeps` verlangt wird.
+   */
+  deps(gateway: LlmGateway, language?: DocLanguage): WikiIngestDeps;
 }
 
 export async function wikiFixture(extra: Record<string, string> = {}): Promise<WikiFixture> {

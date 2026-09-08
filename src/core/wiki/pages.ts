@@ -12,6 +12,7 @@
 
 import type { DocLanguage, VaultDoc, WikiPage, WikiPageType, WriteResult } from '@shared/types';
 import { fold } from '@core/index/text';
+import type { IndexedDoc } from '@core/index/types';
 import { isoDay, modulePagePath, slugify } from '@core/vault/paths';
 import type { DateLike } from '@core/vault/paths';
 import { appendToSection, findSections } from '@core/vault/sections';
@@ -293,4 +294,51 @@ export async function findPage(
     }
   }
   return null;
+}
+
+export interface FindSourcePageDeps {
+  store: WikiStore;
+  /**
+   * Indizierte Dateien — nur sie kennen die Seiten eines Moduls samt Frontmatter.
+   * Der Store kann nicht auflisten, und `WikiPage` traegt `raw` nicht.
+   */
+  docs?: readonly IndexedDoc[];
+}
+
+/**
+ * Die Source-Seite eines Moduls zu einer Rohquelle finden: die Seite, deren
+ * Frontmatter `raw` **genau** auf diesen Pfad zeigt.
+ *
+ * Gebraucht wird sie nach einem harten Abbruch — dann steht die Seite schon, ohne
+ * dass das Protokoll sie kennt, und ein zweiter Versuch soll in sie zurueckschreiben
+ * statt eine zweite daneben zu legen (Story 050, D-c).
+ *
+ * Der Index liefert nur die Kandidaten; entschieden wird am Store, denn er ist die
+ * Wahrheit und sein Hash ist der, mit dem zurueckgeschrieben wird. Eine Seite, die
+ * es nicht mehr gibt oder deren `raw` inzwischen anders lautet, faellt damit heraus:
+ * die Seite einer **anderen** Quelle wird nie wiederverwendet.
+ */
+export async function findSourcePageForRaw(
+  deps: FindSourcePageDeps,
+  module: string,
+  rawPath: string,
+): Promise<WikiPageDoc | null> {
+  const wanted = (rawPath ?? '').trim();
+  if (wanted.length === 0 || (module ?? '').trim().length === 0) return null;
+
+  for (const doc of deps.docs ?? []) {
+    if (doc.module !== module || rawOf(doc.frontmatter) !== wanted) continue;
+    const ref = pageRefOf(doc.path, doc.frontmatter);
+    if (ref === null || ref.type !== 'source') continue;
+    const page = await readPage(deps.store, doc.path);
+    if (page === null || page.ref.type !== 'source') continue;
+    if (rawOf(page.doc.frontmatter) === wanted) return page;
+  }
+  return null;
+}
+
+/** Der Weg zurueck zur Rohquelle, wie er im Frontmatter steht. */
+function rawOf(frontmatter: Record<string, unknown>): string | null {
+  const value = frontmatter['raw'];
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 }

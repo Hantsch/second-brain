@@ -12,9 +12,24 @@
  * mit Kopf, erstem Absatz und dem Hinweis „noch nicht verdichtet"; sie steht im
  * Katalog und in der Chronik, traegt `condensed: false` und wartet auf ein Modell.
  * Ein Pflegelauf kann sie spaeter aufgreifen.
+ *
+ * **The write phase is one unit.** Steps 1 to 4 touch six files through five
+ * collaborators; a step that throws halfway used to leave pages written while the
+ * raw protocol still called the source undigested — the badge lying in the worst
+ * direction. Everything from the source page to the protocol therefore writes
+ * through a `WikiTransaction`: it succeeds whole, or it is taken back and the
+ * caller sees the original error (story 050, D-a).
+ *
+ * **And one module at a time.** The import queue digests two sources at once, and
+ * `index.md`, `log.md` and `overview.md` belong to the module, not to one run —
+ * read-modify-write from two sides loses whichever entry was written first. The
+ * two writing stretches therefore run under `withModuleLock`; the model call
+ * between them stays outside it, because AC2 asks both digestions to *complete*
+ * and the summarizing is the expensive part (story 050, D-d).
  */
 
 import type { DocLanguage } from '@shared/types';
+import { promptClampNotice } from '@core/condense';
 import type { KnownPageHint } from '@core/llm';
 import { WIKI_INGEST_SCHEMA, isAbortError, parseJsonLoose, wikiIngestPrompt } from '@core/llm';
 import { excerpt } from '@core/vault/doc';
@@ -26,16 +41,20 @@ import {
   sourceSlug as sourceSlugOf,
   wikiIndexPath,
 } from '@core/vault/paths';
+import type { DateLike } from '@core/vault/paths';
 import { applySuggestions, sourceRef } from './apply-suggestions';
 import { upsertEntries, type WikiIndexEntry } from './index-md';
 import { appendLog } from './log-md';
-import { appendUnderSection, createPage, pagePath, writePage } from './pages';
-import { markRawProtocol } from './raw-protocol';
-import { condenseSource } from './summarize';
+import { withModuleLock } from './module-lock';
+import { appendUnderSection, createPage, findSourcePageForRaw, pagePath, writePage } from './pages';
+import { isRawDigestedInto, markRawProtocol } from './raw-protocol';
+import { condenseSource, type CondenseResult } from './summarize';
 import { readIngestReply, type IngestReply } from './suggestions';
 import { phrases } from './text';
+import { WikiTransaction } from './transaction';
 import { WikiError } from './types';
-import type { WikiDeps, WikiIndexView, WikiIngestResult } from './types';
+import type { PageRef, WikiDeps, WikiIndexView, WikiIngestDeps, WikiIngestResult } from './types';
+import { MAX_WRITE_ATTEMPTS, isConflict, writeTextWithRetry } from './write-retry';
 
 /** Laenge des Katalog-Einzeilers. */
 const SUMMARY_CHARS = 120;
@@ -67,33 +86,28 @@ export function knownPages(index: WikiIndexView, module: string): KnownPageHint[
     .map((page) => ({ slug: page.slug, title: page.title, excerpt: page.excerpt }));
 }
 
-/** Rumpf der Source-Seite: die Verdichtung, dann der Weg zurueck zur Rohquelle. */
+/**
+ * Rumpf der Source-Seite: die Verdichtung, dann — falls der Zusammenfuehrungs-
+ * Clamp etwas abgeschnitten hat (Story 050, D6) — die Kuerzungs-Notiz, dann der
+ * Weg zurueck zur Rohquelle.
+ */
 function sourceBody(
   markdown: string | null,
   input: IngestSourceInput,
   language: DocLanguage,
+  clampedChars: number,
 ): string {
   const text = phrases(language);
   const origin = input.origin ?? null;
   const lead = markdown ?? `${excerpt(input.text, RAW_LEAD_CHARS)}\n\n${text.notCondensed}`.trim();
+  const notice = promptClampNotice(clampedChars, language);
   const raw = [
     `## ${text.rawSource}`,
     '',
     `- [${input.rawPath}](${input.rawPath})`,
     ...(origin === null || origin.length === 0 || origin === input.rawPath ? [] : [`- ${origin}`]),
   ].join('\n');
-  return `${lead}\n\n${raw}\n`;
-}
-
-/** Inhalt und Hash einer Datei ohne Frontmatter — Konfliktschutz fuer `writeText`. */
-async function readRaw(
-  deps: WikiDeps,
-  path: string,
-): Promise<{ content: string; hash: string } | null> {
-  const doc = await deps.store.read(path);
-  if (doc === null) return null;
-  const content = await deps.store.readText(path);
-  return content === null ? null : { content, hash: doc.hash };
+  return `${[lead, notice, raw].filter((part) => part !== '').join('\n\n')}\n`;
 }
 
 /** Die Vorschlaege des Modells holen. Ohne Modell bleibt die Liste leer. */
@@ -127,7 +141,7 @@ async function askForPages(
  * Aufrufer abbricht — alles andere ist ein Ergebnis, kein Fehler.
  */
 export async function ingestSource(
-  deps: WikiDeps,
+  deps: WikiIngestDeps,
   input: IngestSourceInput,
 ): Promise<WikiIngestResult> {
   // Vor dem Slugify pruefen: `slugify('  ')` waere 'notiz' und damit ein Modul,
@@ -139,35 +153,103 @@ export async function ingestSource(
     throw new WikiError('not-found', `Es gibt kein Modul "${module}".`);
   }
   const language = deps.docLanguage ?? 'de';
-  const text = phrases(language);
-  const now = deps.now ?? new Date();
-  const day = isoDay(now);
   const title = (input.title ?? '').trim().length > 0 ? input.title.trim() : input.rawPath;
 
+  // Das Verdichten schreibt nichts — es steht deshalb vor der Transaktion.
   const condensed = await condenseSource(deps, {
     title,
     text: input.text,
     origin: input.origin ?? input.rawPath,
     known: knownPages(deps.index, module),
   });
+  /* Der letzte Tick vor dem Schreiben: alle Stuecke sind verdichtet, der Balken
+     darf sichtbar ueber den Verdichtungs-Anteil hinaus weiterwandern, bevor die
+     Transaktion beginnt (Story 050, D7). */
+  deps.onProgress?.(1);
 
-  // Platz fuer 's-JJJJ-MM-TT-': sonst kappt slugify genau die Datumsmarke wieder weg.
-  const slugBase = sourceSlugOf(day, slugify(input.slug ?? title, MAX_SLUG_LENGTH - 14));
-  const source = await createPage(deps.store, {
-    module,
-    type: 'source',
-    title,
-    slug: slugBase,
-    body: sourceBody(condensed.markdown, input, language),
-    tags: input.tags ?? [],
-    now,
-    language,
-    extra: {
-      raw: input.rawPath,
-      ...(input.origin === undefined || input.origin === null ? {} : { origin: input.origin }),
-      ...(condensed.markdown === null ? { condensed: false } : {}),
-    },
-  });
+  /* Ab hier wird geschrieben, und zwar als ein Vorgang: jede Datei geht durch die
+     Transaktion, damit ein Fehlschlag nichts halb Verdichtetes stehen laesst. */
+  const transaction = new WikiTransaction(deps.store);
+  try {
+    const result = await writeDigestion({ ...deps, store: transaction }, input, {
+      module,
+      title,
+      language,
+      condensed,
+    });
+    transaction.commit();
+    return result;
+  } catch (error) {
+    await takeBack(transaction);
+    // Der Aufrufer braucht den echten Grund — nicht den des Rueckwegs.
+    throw error;
+  }
+}
+
+/**
+ * The way back after a failed digestion. What the rollback cannot undo (a file
+ * somebody else has changed since, a store that no longer writes at all) must not
+ * replace the reason the digestion failed: the caller keeps the original error and
+ * the incomplete way back is a warning.
+ */
+async function takeBack(transaction: WikiTransaction): Promise<void> {
+  try {
+    await transaction.rollback();
+  } catch (error) {
+    console.warn('[wiki/ingest] Rueckweg nach einem Fehlschlag unvollstaendig:', error);
+  }
+}
+
+/** Was der schreibende Teil ausser dem Store schon weiss. */
+interface DigestionPhase {
+  module: string;
+  title: string;
+  language: DocLanguage;
+  condensed: CondenseResult;
+}
+
+/** Was der zweite gesperrte Abschnitt aus dem ersten mitbekommt. */
+interface DigestionTail {
+  now: DateLike;
+  day: string;
+  source: { ref: PageRef; created: boolean };
+  reply: IngestReply;
+}
+
+/**
+ * Der schreibende Teil, in der Reihenfolge aus docs/MODULE-SCHEMA.md. `deps.store`
+ * ist hier die Transaktion — jeder Aufruf, der eine Datei anfasst, geht darueber,
+ * auch die der Mitspieler (`applySuggestions`, `appendLog`, `markRawProtocol`).
+ *
+ * Zwei gesperrte Abschnitte mit dem Modellaufruf dazwischen. Die Sperre wird
+ * ausdruecklich **nicht** ueber den Aufruf gehalten (Story 050, D-d) — und weil
+ * `withModuleLock` nicht wiedereintrittsfaehig ist, stehen die Abschnitte
+ * nebeneinander und nie ineinander.
+ */
+async function writeDigestion(
+  deps: WikiDeps,
+  input: IngestSourceInput,
+  phase: DigestionPhase,
+): Promise<WikiIngestResult> {
+  const { module, title, language, condensed } = phase;
+  const now = deps.now ?? new Date();
+  const day = isoDay(now);
+
+  /* Auch die Source-Seite gehoert unter die Sperre: `createPage` sucht sich den
+     freien Slug ueber `exists`, zwei gleichzeitige Laeufe griffen sonst nach
+     demselben und einer davon bekaeme „Die Datei existiert bereits". */
+  const source = await withModuleLock(module, () =>
+    writeSourcePage(deps, input, {
+      module,
+      title,
+      language,
+      now,
+      // Platz fuer 's-JJJJ-MM-TT-': sonst kappt slugify genau die Datumsmarke wieder weg.
+      slugBase: sourceSlugOf(day, slugify(input.slug ?? title, MAX_SLUG_LENGTH - 14)),
+      body: sourceBody(condensed.markdown, input, language, condensed.clampedChars),
+      condensed: condensed.markdown !== null,
+    }),
+  );
 
   const reply =
     condensed.markdown === null
@@ -178,6 +260,27 @@ export async function ingestSource(
           sourceTitle: title,
           summary: condensed.markdown,
         });
+
+  return withModuleLock(module, () =>
+    finishDigestion(deps, input, phase, { now, day, source, reply }),
+  );
+}
+
+/**
+ * Der zweite gesperrte Abschnitt: Entitaeten und Konzepte, `overview.md`,
+ * Katalog, Chronik, Protokollvermerk. Genau die Dateien, die sich zwei
+ * Verdichtungen desselben Moduls teilen — deshalb liegt hier die Sperre.
+ */
+async function finishDigestion(
+  deps: WikiDeps,
+  input: IngestSourceInput,
+  phase: DigestionPhase,
+  tail: DigestionTail,
+): Promise<WikiIngestResult> {
+  const { module, title, language, condensed } = phase;
+  const { now, day, source, reply } = tail;
+  const text = phrases(language);
+
   const applied = await applySuggestions(deps, {
     module,
     sourceSlug: source.ref.slug,
@@ -206,12 +309,15 @@ export async function ingestSource(
       summary: page.summary,
     })),
   ];
+  /* Wie die Chronik: mit dem Hash des gerade Gelesenen schreiben, und wenn
+     jemand dazwischenkam, neu lesen und die Eintraege in *dessen* Katalog
+     setzen — hoechstens dreimal (Story 050, D-e). */
   const indexPath = wikiIndexPath(module);
-  const known = await readRaw(deps, indexPath);
-  const before = known?.content ?? `# ${text.catalog}\n\n${text.catalogIntro}\n`;
-  await deps.store.writeText(indexPath, upsertEntries(before, entries, { language }), {
-    ...(known === null ? {} : { expectedHash: known.hash }),
-  });
+  await writeTextWithRetry(deps.store, indexPath, (current) =>
+    upsertEntries(current?.content ?? `# ${text.catalog}\n\n${text.catalogIntro}\n`, entries, {
+      language,
+    }),
+  );
   touched.push(indexPath);
 
   const log = await appendLog(
@@ -243,7 +349,9 @@ export async function ingestSource(
     sourceSlug: source.ref.slug,
     touchedPages: touched,
     createdPages: [
-      source.ref.path,
+      // Ein zweiter Versuch schreibt in eine bestehende Seite zurueck — die ist
+      // nicht neu entstanden.
+      ...(source.created ? [source.ref.path] : []),
       ...applied.pages.filter((page) => page.action === 'create').map((page) => page.ref.path),
     ],
     contradictions: applied.contradictions,
@@ -253,10 +361,97 @@ export async function ingestSource(
   };
 }
 
+/** Was die Source-Seite ausser dem Store und der Eingabe braucht. */
+interface SourcePagePlan {
+  module: string;
+  title: string;
+  language: DocLanguage;
+  now: DateLike;
+  /** Slug, den eine **neue** Seite bekommt — mit Datumsmarke. */
+  slugBase: string;
+  body: string;
+  /** Hat ein Modell verdichtet? Steht so auch im Frontmatter. */
+  condensed: boolean;
+}
+
+/**
+ * Die Source-Seite schreiben — neu, oder in eine liegengebliebene zurueck.
+ *
+ * Der Normalfall legt an; `createPage` sucht sich dabei einen freien Slug. Der
+ * andere Fall ist der harte Abbruch: ein `SIGKILL` oder ein Stromausfall laesst den
+ * Rueckweg der Transaktion nicht mehr laufen, also steht die Seite dieser Rohquelle
+ * schon, ohne dass das Protokoll je davon erfahren hat. Ein zweiter Versuch
+ * schreibt dann in genau diese Seite zurueck, statt `…-2` daneben zu legen
+ * (Story 050, D-c).
+ *
+ * Zwei Bedingungen, und die zweite ist die wichtige: die Seite zeigt mit `raw` auf
+ * genau diese Rohquelle, **und** das Protokoll kennt die Quelle fuer dieses Modul
+ * noch nicht. Ohne die zweite wuerde eine bewusst zweite Verdichtung derselben
+ * Quelle die erste ueberschreiben — die gehoert weiter daneben.
+ */
+async function writeSourcePage(
+  deps: WikiDeps,
+  input: IngestSourceInput,
+  plan: SourcePagePlan,
+): Promise<{ ref: PageRef; created: boolean }> {
+  const extra: Record<string, unknown> = {
+    raw: input.rawPath,
+    ...(input.origin === undefined || input.origin === null ? {} : { origin: input.origin }),
+  };
+  const leftover = await findSourcePageForRaw(
+    { store: deps.store, docs: deps.index.index().docs },
+    plan.module,
+    input.rawPath,
+  );
+
+  if (leftover !== null && !(await isRawDigestedInto(deps.store, input.rawPath, plan.module))) {
+    await writePage(
+      deps.store,
+      leftover.ref.path,
+      {
+        frontmatter: {
+          ...extra,
+          title: plan.title,
+          /* Ausdruecklich, in beide Richtungen: ein Frontmatter-Patch kann kein Feld
+             entfernen, und ein geerbtes `condensed: false` wuerde eine inzwischen
+             verdichtete Seite weiter unverdichtet nennen. */
+          condensed: plan.condensed,
+          ...(input.tags === undefined || input.tags.length === 0 ? {} : { tags: [...input.tags] }),
+        },
+        body: plan.body,
+        expectedHash: leftover.doc.hash,
+        now: plan.now,
+      },
+      plan.language,
+    );
+    return { ref: { ...leftover.ref, title: plan.title }, created: false };
+  }
+
+  const created = await createPage(deps.store, {
+    module: plan.module,
+    type: 'source',
+    title: plan.title,
+    slug: plan.slugBase,
+    body: plan.body,
+    tags: input.tags ?? [],
+    now: plan.now,
+    language: plan.language,
+    extra: { ...extra, ...(plan.condensed ? {} : { condensed: false }) },
+  });
+  return { ref: created.ref, created: true };
+}
+
 /**
  * `overview.md` nachziehen — nur wenn das Modell eine wesentliche Aenderung meldet.
  * Eine Quelle allein verschiebt die Synthese selten; jeder Ingest wuerde sie sonst
  * zu einer zweiten Chronik machen.
+ *
+ * `overview.md` ist wie `index.md` und `log.md` modul-gemeinsam und von aussen
+ * erreichbar — durch einen Pflegelauf oder eine Hand-Bearbeitung, die am
+ * Modul-Lock vorbeigeht, weil dieses Lock nur innerhalb dieses Prozesses gilt.
+ * Der Hash, den diese Funktion selbst liest, wird darum wie bei der Chronik und
+ * dem Katalog erneut gelesen und der Schreibversuch wiederholt — hoechstens
+ * `MAX_WRITE_ATTEMPTS`-mal (Story 050, D-e).
  */
 async function updateOverview(
   deps: WikiDeps,
@@ -266,21 +461,29 @@ async function updateOverview(
 ): Promise<boolean> {
   if (change === null || change.trim().length === 0) return false;
   const path = pagePath(module, 'overview', 'overview');
-  const doc = await deps.store.read(path);
-  if (doc === null) return false;
+  const trimmed = change.trim();
   const text = phrases(deps.docLanguage ?? 'de');
-  const line = `- ${change.trim()} ${sourceRef(slug)}`;
-  if (doc.body.includes(change.trim())) return false;
-  await writePage(
-    deps.store,
-    path,
-    {
-      body: appendUnderSection(doc.body, text.decided, line),
-      addSources: [slug],
-      expectedHash: doc.hash,
-      ...(deps.now === undefined ? {} : { now: deps.now }),
-    },
-    deps.docLanguage ?? 'de',
-  );
-  return true;
+  const line = `- ${trimmed} ${sourceRef(slug)}`;
+
+  for (let attempt = 1; ; attempt += 1) {
+    const doc = await deps.store.read(path);
+    if (doc === null) return false;
+    if (doc.body.includes(trimmed)) return false;
+    try {
+      await writePage(
+        deps.store,
+        path,
+        {
+          body: appendUnderSection(doc.body, text.decided, line),
+          addSources: [slug],
+          expectedHash: doc.hash,
+          ...(deps.now === undefined ? {} : { now: deps.now }),
+        },
+        deps.docLanguage ?? 'de',
+      );
+      return true;
+    } catch (error) {
+      if (attempt >= MAX_WRITE_ATTEMPTS || !isConflict(error)) throw error;
+    }
+  }
 }

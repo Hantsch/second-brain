@@ -32,6 +32,7 @@ export {
   partialInputsNote,
   preambleWithoutNotice,
   projectTruncationNotice,
+  promptClampNotice,
   TRUNCATION_MARKER,
 } from './notice';
 export {

@@ -370,6 +370,34 @@ describe('Quellen- und Modul-Kanäle im Main', () => {
     expect(log.modules).toEqual([MODULE]);
   });
 
+  it('lässt den Fortschritt der Warteschlange bis zur Wissens-Verdichtung durchreichen', async () => {
+    // Story 050, D7: der Balken bleibt nicht bei 0.85 stehen, solange die
+    // Verdichtung läuft — die Warteschlange spiegelt den Fortschritt aus
+    // `core/wiki` weiter.
+    await routeToFakeModel();
+
+    const started = await harness.call('ingest:start', {
+      kind: 'text',
+      input: '# Kurze Token\n\nEin Praxisbericht über 15-Minuten-Tokens und Rotation.',
+      module: MODULE,
+    });
+    const job = await settled(started.id);
+    expect(job.stage).toBe('done');
+
+    const snapshots = mirrored(started.id)
+      .map((task) => jobDetail(task)?.progress)
+      .filter((value): value is number => value !== undefined);
+    /* Zwischen dem festen Tick vor dem Modellaufruf (0.85) und dem festen Tick
+       danach (0.95, `wiki-update`) muss der Kern selbst mindestens einmal
+       nachgezogen haben — sonst stünde der Balken die ganze Verdichtung über
+       still. Streng kleiner als 0.95: der Warteschlangen-eigene Tick liegt exakt
+       bei 0.95 (queue.ts) und wuerde diese Behauptung sonst auch dann bestehen
+       lassen, wenn die Weiterleitung von `onProgress` in den Wiki-Kern entfernt
+       wuerde — jeder vom Kern selbst gemeldete Fortschritt landet nach der
+       Abbildung `0.85 + fraction * 0.1` (ingest.ts) strikt zwischen 0.85 und 0.95. */
+    expect(snapshots.some((value) => value > 0.85 && value < 0.95)).toBe(true);
+  });
+
   it('wiederholt einen Auftrag ohne eine zweite Rohquelle anzulegen', async () => {
     const started = await harness.call('ingest:start', {
       kind: 'text',

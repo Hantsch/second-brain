@@ -26,8 +26,8 @@
  */
 
 import type { GardenerFindingKind, GardenerFix } from '@shared/types';
-import { sha256 } from '@core/vault/hash';
 import { joinVaultPath, trashDir } from '@core/vault/paths';
+import { restoreSteps, type RollbackStep } from '@core/vault/rollback';
 import { trashManifestPath } from '@core/vault/trash';
 import type { WikiStore } from '@core/wiki';
 
@@ -45,14 +45,13 @@ export interface UndoStore extends WikiStore {
 export type FixJournalKind = GardenerFindingKind | 'discard' | 'supersede';
 export type FixJournalAction = GardenerFix['action'] | 'discard' | 'supersede';
 
-/** Ein geaenderter Pfad mit seinem Zustand davor. */
-export interface FixStep {
-  path: string;
-  /** Vollstaendiger Dateiinhalt vor der Aenderung. */
-  before: string;
-  /** Hash des Inhalts, den der Fix geschrieben hat. */
-  hashAfter: string;
-}
+/**
+ * Ein geaenderter Pfad mit seinem Zustand davor — dieselbe Form wie
+ * `RollbackStep` aus `core/vault/rollback.ts`, dessen Rueckweg dieser Modul
+ * teilt. Der eigene Name bleibt bestehen, damit nichts, was `FixStep`
+ * importiert, umgeschrieben werden muss.
+ */
+export type FixStep = RollbackStep;
 
 /**
  * The file an action moved to the trash. `token` is `VaultStore.delete`'s own mark,
@@ -183,14 +182,8 @@ export async function undoFix(store: UndoStore, token: string): Promise<UndoFixR
     const back = await restoreDeleted(store, journal.deleted);
     (back ? restored : kept).push(journal.deleted.path);
   }
-  for (const step of [...journal.steps].reverse()) {
-    const current = await store.readText(step.path);
-    if (current === null || sha256(current) !== step.hashAfter) {
-      kept.push(step.path);
-      continue;
-    }
-    await store.writeText(step.path, step.before, { expectedHash: step.hashAfter });
-    restored.push(step.path);
-  }
+  const stepResult = await restoreSteps(store, journal.steps);
+  restored.push(...stepResult.restored);
+  kept.push(...stepResult.kept);
   return { restored, kept };
 }
