@@ -31,20 +31,20 @@ pretend it read everything.
 
 ## Acceptance Criteria
 
-- [ ] A digestion that fails at any step leaves the vault in a state where retrying produces
+- [ ] **AC1** — A digestion that fails at any step leaves the vault in a state where retrying produces
       exactly one source page — no `…-2` duplicates, no orphaned entity pages the protocol
       knows nothing about.
-- [ ] Two sources digested into the same module concurrently both complete, and both of their
+- [ ] **AC2** — Two sources digested into the same module concurrently both complete, and both of their
       chronicle entries are in `wiki/log.md` afterwards.
-- [ ] Quitting the app while a digestion runs is handled the way a running maintenance run is:
+- [ ] **AC3** — Quitting the app while a digestion runs is handled the way a running maintenance run is:
       a warning, a way to let it finish or stop it — not a silent kill into a half-state.
-- [ ] When chunk summaries were truncated to fit the merge prompt, the source page states that,
+- [ ] **AC4** — When chunk summaries were truncated to fit the merge prompt, the source page states that,
       the way condensation artifacts mark truncation.
-- [ ] A digestion that takes many model calls reports progress; the bar does not sit at one
+- [ ] **AC5** — A digestion that takes many model calls reports progress; the bar does not sit at one
       value for minutes.
-- [ ] A failed digestion says what failed on the job, distinguishable from "no model
+- [ ] **AC6** — A failed digestion says what failed on the job, distinguishable from "no model
       configured".
-- [ ] Tests cover: failure after the source page is written + retry; two concurrent digestions
+- [ ] **AC7** — Tests cover: failure after the source page is written + retry; two concurrent digestions
       into one module; the no-model path unchanged.
 
 ## Open Questions

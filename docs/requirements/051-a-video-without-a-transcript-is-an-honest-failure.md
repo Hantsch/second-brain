@@ -27,18 +27,18 @@ per source, not one the app makes for me by silently treating a placeholder as c
 
 ## Acceptance Criteria
 
-- [ ] Ingesting a video without a transcript never produces a source page from placeholder
+- [ ] **AC1** — Ingesting a video without a transcript never produces a source page from placeholder
       text. The job ends in a state that names the reason (no transcript), distinct from "no
       model configured" and from an error.
-- [ ] The raw folder still keeps everything that was fetched (metadata, description, chapters)
+- [ ] **AC2** — The raw folder still keeps everything that was fetched (metadata, description, chapters)
       — nothing already saved is lost.
-- [ ] The source row offers an explicit choice to digest from the description/metadata anyway,
+- [ ] **AC3** — The source row offers an explicit choice to digest from the description/metadata anyway,
       and a page created that way says what it was built from.
-- [ ] The "undigested" filter and the gardener's unprocessed-source check both see such a
+- [ ] **AC4** — The "undigested" filter and the gardener's unprocessed-source check both see such a
       source honestly.
-- [ ] Existing hollow source pages are not rewritten by this story; only new ingests change
+- [ ] **AC5** — Existing hollow source pages are not rewritten by this story; only new ingests change
       behaviour.
-- [ ] Tests cover: no-transcript video with and without a model; the explicit
+- [ ] **AC6** — Tests cover: no-transcript video with and without a model; the explicit
       digest-from-metadata path.
 
 ## Open Questions

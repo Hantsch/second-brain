@@ -25,14 +25,14 @@ gate is a net under it, not a new process.
 
 ## Acceptance Criteria
 
-- [ ] A workflow runs `npm run verify` on every push and pull request, on a Windows runner.
-- [ ] A red verify is visibly red on the commit/PR; the workflow's status is the signal, no
+- [ ] **AC1** — A workflow runs `npm run verify` on every push and pull request, on a Windows runner.
+- [ ] **AC2** — A red verify is visibly red on the commit/PR; the workflow's status is the signal, no
       extra tooling.
-- [ ] The run needs no secrets and touches no network beyond installing dependencies —
+- [ ] **AC3** — The run needs no secrets and touches no network beyond installing dependencies —
       consistent with "tests never call real LLM APIs".
-- [ ] Runtime is kept reasonable (dependency caching); the exact budget is recorded in the
+- [ ] **AC4** — Runtime is kept reasonable (dependency caching); the exact budget is recorded in the
       story's Done section.
-- [ ] Optional, refine decides: a second lane runs `npm run seed && npm run shot` and uploads
+- [ ] **AC5** — Optional, refine decides: a second lane runs `npm run seed && npm run shot` and uploads
       the screenshots as artifacts, closing the "renderer is only tested against the mock"
       gap with a real boot smoke.
 

@@ -1,7 +1,7 @@
 # Roadmap
 
 **The** one source of status and planning: where we stand, what comes next, what is not planned
-at all yet. As of: 2026-09-07.
+at all yet. As of: 2026-09-08.
 
 Rules (so this document does not drift):
 
@@ -913,15 +913,84 @@ Gaps/notes:
 
 ---
 
+### M17 — Nothing enters half-true, and nothing trusts more than it must — planned
+
+No concept behind it: M17 and M18 are the [2026-09-03 architecture
+review](reviews/2026-09-03-architecture-review.md) turned into plan. Its sixteen draft stories
+(050–065) sat in `requirements/` with no milestone line for five days; cut into four sprints by
+theme on 2026-09-08, in the review's own priority order — P0 first, process gate first of all.
+
+M17 is the trust half: what the app writes into the vault at the entrance, and what it believes
+from the renderer and the model. Two parts.
+
+- **The entrance tells the truth (S16).** The CI gate (065) so no red test rides along for five
+  sprints again, then the three P0/P2 ingest findings: a digestion is a transaction or it is
+  nothing (050), a video without a transcript is an honest state instead of a condensed
+  placeholder (051), and a bot wall, a consent page and a genuinely empty extraction stop
+  masquerading as each other and as "no model configured" (064).
+- **Nothing trusts more than it must (S17, not cut yet).** Main re-validates what the renderer
+  sends and a hallucinated absolute path stops being a one-click `shell.openPath` (057, the
+  review's second P0); the app stays reachable and keeps its hotkey and reminder notifier alive
+  from the tray (058); a search hit and a citation open in the app instead of ejecting into
+  Notepad (059); and a knowledge module can be renamed and deleted, not only created (063).
+
+Sprints:
+
+- [sprints/S16/sprint.md](sprints/S16/sprint.md) — the entrance tells the truth, and the gate
+  never sleeps (065, 050, 051, 064), `planned`
+- S17 — nothing trusts more than it must (057, 058, 059, 063), cut after S16's review
+
+Decisions taken at the cut (2026-09-08, user):
+
+- **Four sprints of four, not one 15-story hardening sprint** — the shape the "Open /
+  unprioritised" row already prescribed.
+- **065 is the first story of the first sprint.** The gate lands before the code it is supposed
+  to guard, so S16's own stories are the first ones gated.
+- **050 and 054 are the risky stories** of their sprints and are marked as such at refine, so
+  the hard-deliverable and clean-review passes apply.
+- **Priority beats convenience in the sprint order:** the review's P0s (050, 051, 057) are in
+  the first two sprints even though the index work (054–056) is what the user feels daily.
+
+### M18 — The vault can grow, and an answer finds its evidence — planned
+
+The second half of the architecture-review backlog: the findings that only bite as the vault
+gets bigger. Cut 2026-09-08 together with M17; both sprints follow S17.
+
+- **The vault can grow (S18, not cut yet).** Saving one file stops costing a full tree walk,
+  a re-derivation over every document and a rewrite of an index that holds every body (054); a
+  bulk change from OneDrive, `git checkout` or a copy actually reaches the index instead of
+  resetting the debounce forever (055); loose ends are derived once per index instead of on
+  every screen that asks (056). Story 062 (Codex work counts as a project's last touch) rides
+  along — same overview surface, disjoint files.
+- **An answer finds its evidence (S19, not cut yet).** A scoped question runs its scope inside
+  retrieval instead of filtering after the top-24 cut (052); a two-hour transcript competes as
+  passages rather than as one document with one 700-character window (053); a PDF yields its
+  text to the same pipeline as every other source (060); and the heuristic floor speaks the
+  document language instead of only German (061).
+
+Sprints: none cut yet — S18 and S19 are cut from this milestone once S17 is through.
+
+Decisions taken at the cut (2026-09-08, user):
+
+- **054 → 055 → 056 build strictly sequentially** and alone in their sprint bar one ride-along:
+  all three edit `src/core/index/` and `src/core/vault/watch.ts`, and two sprints (or two
+  parallel stories) editing one index is the failure mode the build order exists to avoid.
+- **052 before 053** — both rewrite the query path in `src/core/wiki/ask.ts` and
+  `excerpts.ts`; scope-inside-retrieval is the smaller change and defines the candidate set
+  053 then splits into passages.
+- **Not in scope for either milestone:** the condensed layer's module level, the MCP interface,
+  the medication tracker and the data import — they stay under "Open / unprioritised" and get
+  their own cut.
+
+---
+
 ## Open / unprioritised
 
-| Topic                                                         | State                                                                                                                                                                                                                                                                                                                                                                                                                                          | Next step                                                                                                                                                                           |
-| ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Condensed layer (module level)                                | Concept written 2026-08-18: [concepts/condensed-layer.md](concepts/condensed-layer.md). The **area** level was built in M12 (S10, done 2026-09-02); the **project** level was built as M14 (S12, done 2026-09-02). The **module** level — CND-2, CND-17 (agent-session citation), CND-35/36 (retiring the ingest's overview append) — is still open                                                                                            | Own `/roadmap plan` for the module level. The concept's §7 reversal trigger was evaluated at M14's refine and did not flip (see M14's Gaps/notes)                                   |
-| MCP interface for projects, knowledge and the condensed layer | Named as an outlook in [concepts/condensed-layer.md](concepts/condensed-layer.md) §14, deliberately without requirements                                                                                                                                                                                                                                                                                                                       | Own `/ai-scrum:concept` once the condensed artifacts exist                                                                                                                          |
-| German docs migrated to English                               | Decided in `.claude/ai-scrum.md`; only `docs/MODULE-SCHEMA.md` is still German now — and story 023 pinned it `eol=lf` and byte-exact against `MODULE_SCHEMA_TEMPLATE`, so migrating it means changing code too                                                                                                                                                                                                                                 | Own story once it stops being cosmetic                                                                                                                                              |
-| Medication tracker                                            | Named in the user's journal feedback (2026-09-03) and postponed at the M15 cut by the user: the idea is not ripe enough to cut. Open shape questions: preparations, dose, schedule, adherence, correlation with mood/energy, own screen or a day section                                                                                                                                                                                       | Own `/ai-scrum:concept` once the user wants it — no story until then                                                                                                                |
-| Data import merges into an existing day                       | Rule agreed at the M15 cut (2026-09-03): an import must add to a day that already has content, never replace it. But no import path exists in the code, so the story has no subject yet                                                                                                                                                                                                                                                        | Name the source (old journal files, another app's export, a folder of Markdown), then cut one story with the merge rule as its acceptance                                           |
-| Functional e2e harness (acceptance's missing level)           | Story [066](requirements/066-a-flow-can-be-tested-through-the-real-app.md) cut 2026-09-07 as the one thing the retired acceptance backlog turned into: nothing drives a flow through the built app and asserts an outcome, so `e2e: none` in `.claude/ai-scrum.md` and every user-facing criterion is covered a level below the real surface                                                                                                   | `/ai-scrum:refine 066` — four open questions (suite scope, runner, disposable vault, CI lane vs [065](requirements/065-the-gate-runs-on-every-push.md)), each with a recommendation |
-| Architecture-review backlog (050-064)                         | 15 draft stories from the [2026-09-03 architecture review](reviews/2026-09-03-architecture-review.md) sit in `requirements/` with no milestone line — invisible to this file since they were cut. Themes: incremental indexing (054, 055, 056), IPC re-validation (057), ingest robustness (050, 051, 060, 064), scoped/passage retrieval (052, 053), and smaller papercuts (058, 059, 061, 062, 063). 065 (CI gate) is tracked with 066 above | Own `/roadmap plan` — cut into one or two hardening milestones by theme, not as one 15-story sprint. Until then they are backlog, not plan                                          |
-| Phase 2                                                       | Not defined                                                                                                                                                                                                                                                                                                                                                                                                                                    | Cut after phase 1 has been used                                                                                                                                                     |
+| Topic                                                         | State                                                                                                                                                                                                                                                                                                                                               | Next step                                                                                                                                         |
+| ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Condensed layer (module level)                                | Concept written 2026-08-18: [concepts/condensed-layer.md](concepts/condensed-layer.md). The **area** level was built in M12 (S10, done 2026-09-02); the **project** level was built as M14 (S12, done 2026-09-02). The **module** level — CND-2, CND-17 (agent-session citation), CND-35/36 (retiring the ingest's overview append) — is still open | Own `/roadmap plan` for the module level. The concept's §7 reversal trigger was evaluated at M14's refine and did not flip (see M14's Gaps/notes) |
+| MCP interface for projects, knowledge and the condensed layer | Named as an outlook in [concepts/condensed-layer.md](concepts/condensed-layer.md) §14, deliberately without requirements                                                                                                                                                                                                                            | Own `/ai-scrum:concept` once the condensed artifacts exist                                                                                        |
+| German docs migrated to English                               | Decided in `.claude/ai-scrum.md`; only `docs/MODULE-SCHEMA.md` is still German now — and story 023 pinned it `eol=lf` and byte-exact against `MODULE_SCHEMA_TEMPLATE`, so migrating it means changing code too                                                                                                                                      | Own story once it stops being cosmetic                                                                                                            |
+| Medication tracker                                            | Named in the user's journal feedback (2026-09-03) and postponed at the M15 cut by the user: the idea is not ripe enough to cut. Open shape questions: preparations, dose, schedule, adherence, correlation with mood/energy, own screen or a day section                                                                                            | Own `/ai-scrum:concept` once the user wants it — no story until then                                                                              |
+| Data import merges into an existing day                       | Rule agreed at the M15 cut (2026-09-03): an import must add to a day that already has content, never replace it. But no import path exists in the code, so the story has no subject yet                                                                                                                                                             | Name the source (old journal files, another app's export, a folder of Markdown), then cut one story with the merge rule as its acceptance         |
+| Phase 2                                                       | Not defined                                                                                                                                                                                                                                                                                                                                         | Cut after phase 1 has been used                                                                                                                   |

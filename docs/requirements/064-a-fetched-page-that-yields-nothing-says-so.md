@@ -29,15 +29,15 @@ possible.
 
 ## Acceptance Criteria
 
-- [ ] The fetch sends a reasonable User-Agent; a test pins the header.
-- [ ] A fetch whose extracted content is empty or trivially small ends in a named state ("page
+- [ ] **AC1** — The fetch sends a reasonable User-Agent; a test pins the header.
+- [ ] **AC2** — A fetch whose extracted content is empty or trivially small ends in a named state ("page
       yielded no content"), distinct from "no model configured" and from network errors — and
       writes no digestible source that pretends otherwise.
-- [ ] The duplicate detection gains an explicit "ingest again" path that creates a new dated
+- [ ] **AC3** — The duplicate detection gains an explicit "ingest again" path that creates a new dated
       raw source, never overwriting the old one (raw stays immutable).
-- [ ] Content-type rejections and truncations keep their existing behaviour; existing tests are
+- [ ] **AC4** — Content-type rejections and truncations keep their existing behaviour; existing tests are
       unweakened.
-- [ ] Tests cover: a consent-wall-shaped page, an empty extraction, and the re-ingest path —
+- [ ] **AC5** — Tests cover: a consent-wall-shaped page, an empty extraction, and the re-ingest path —
       all offline against fixtures.
 
 ## Open Questions
