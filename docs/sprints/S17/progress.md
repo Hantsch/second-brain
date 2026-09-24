@@ -1,0 +1,12 @@
+- 2026-09-24 11:09 · 057 · D1 shell:openPath refuses non-vault paths · started
+- 2026-09-24 11:09 · 057 · D2 rejected citation is text · started
+- 2026-09-24 11:13 · 057 · D1 shell:openPath refuses non-vault paths · done
+- 2026-09-24 11:13 · 057 · D2 rejected citation is text · done
+- 2026-09-24 11:13 · 057 · D3 core verifies filing action · started
+- 2026-09-24 11:19 · 057 · D3 core verifies filing action · done
+- 2026-09-24 11:19 · 057 · D4 capture:apply re-validates · started
+- 2026-09-24 11:23 · 057 · D4 capture:apply re-validates · done
+- 2026-09-24 11:23 · 057 · D5 navigation stays in the app · started
+- 2026-09-24 11:29 · 057 · D5 navigation stays in the app · done
+- 2026-09-24 11:42 · 057 · review-fix D5 navigation host/origin check · started
+- 2026-09-24 11:43 · 057 · review-fix D5 navigation host/origin check · done

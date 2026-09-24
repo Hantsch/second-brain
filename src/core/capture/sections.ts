@@ -62,8 +62,10 @@ export function sectionFor(
  * spelling: if the file already has a heading of that kind — in either language,
  * matched folded — the block joins it, whatever the setting says. Only a file
  * without one gets the document language's word. A named section that is no known
- * kind is taken literally: the user asked for that heading by name, and inventing
- * a different one for them would be worse than honouring it.
+ * kind falls back to `fallback`, exactly like no section at all: no screen lets
+ * the user type a heading, so an unknown one can only be tampered or
+ * model-invented input — and writing it literally would let that input grow a
+ * heading of its own in the user's file.
  */
 export function resolveSection(
   body: string,
@@ -72,7 +74,6 @@ export function resolveSection(
   docLanguage: DocLanguage = 'de',
 ): string {
   const named = action.section?.trim() ?? '';
-  if (named.length === 0) return sectionHeadingIn(body, fallback, docLanguage);
-  const kind = sectionKindOf(named);
-  return kind === null ? named : sectionHeadingIn(body, kind, docLanguage);
+  const kind = named.length === 0 ? null : sectionKindOf(named);
+  return sectionHeadingIn(body, kind ?? fallback, docLanguage);
 }

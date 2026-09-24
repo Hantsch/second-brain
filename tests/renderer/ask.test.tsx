@@ -438,6 +438,40 @@ describe('Fragen: eine Antwort entsteht', () => {
     expect(within(panel).getByRole('button', { name: 'Datei öffnen' })).toBeTruthy();
   });
 
+  /* 057/D2: eine Antwort ist Modelltext, kein Zitatverzeichnis — ein Pfad
+     darin ist deshalb nur klickbar, wenn `validateCitations` ihn auch als
+     Beleg bestätigt hat. Sonst wäre er klickbar, ohne etwas zu behaupten:
+     genau das eine verbleibende Loch, das 057 schließt. */
+  it('an answer path without a validated citation is text, not a button', async () => {
+    const otherPath = `modules/${MODULE}/wiki/concepts/mfa.md`;
+    const content = `${ANSWER} Mehr dazu unter [[${otherPath}]].`;
+    const state = {
+      thread: thread([
+        userMessage(`${messageId}-q`),
+        {
+          id: messageId,
+          role: 'assistant',
+          content,
+          at: NOW,
+          citations: [citation],
+          model: 'qwen2.5:14b',
+        },
+      ]),
+    };
+    open({ ...handlers(state), 'chat:threads': () => [state.thread] });
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: `Gespräch „${QUESTION}“ öffnen` }),
+    );
+
+    /* Der geprüfte Beleg bleibt eine Marke … */
+    expect(await screen.findByRole('button', { name: 'Beleg 1 anzeigen' })).toBeTruthy();
+    /* … der zweite Pfad, ohne Beleg, ist keiner — nur der Name steht da. */
+    expect(screen.queryByRole('button', { name: `Datei öffnen: ${otherPath}` })).toBeNull();
+    const turn = screen.getByRole('article', { name: 'Antwort' });
+    expect(turn.textContent).toContain('mfa.md');
+  });
+
   /* Story 005: notes live under `areas/`, a document type the panel has never
      special-cased. This is the proof — the same citation panel, the same
      `contextOf` relocation, only the path and doc type differ. */

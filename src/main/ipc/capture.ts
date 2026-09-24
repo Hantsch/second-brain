@@ -195,7 +195,13 @@ export function captureHandlers(services: Services): HandlerMap {
 
     'capture:apply': async ({ proposal }) => {
       const docLanguage = services.settings.vault()?.languages.documents ?? 'de';
-      const prepared = normalize(proposal, projectsOf(services), docLanguage);
+      const prepared = normalize(
+        proposal,
+        projectsOf(services),
+        captureIndex(services),
+        new Date(),
+        docLanguage,
+      );
       /* The same document language the proposal was normalized with has to reach
          the write itself: `applyProposal` labels *missing* sections and new project
          files, and without it every filing would fall back to German headings no

@@ -11,7 +11,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { IpcChannel, IpcRequest, IpcResponse } from '@shared/ipc';
-import type { FilingProposal } from '@shared/types';
+import type { FilingAction, FilingProposal } from '@shared/types';
+import { isoDay, journalPath } from '@core/vault/paths';
 import { createFetchFake, jsonResponse } from '../fakes/llm';
 import { createTempVault } from '../helpers/vault';
 import type { TempVault } from '../helpers/vault';
@@ -431,6 +432,98 @@ describe('Erfassen-Kanäle im Main', () => {
     const project = (await vault.read(PROJECT_PATH)) ?? '';
     expect(project).toContain('Vom Nutzer umgeschrieben.');
     expect(project).not.toContain('Ladezeiten der Angebotsliste bis morgen prüfen');
+  });
+
+  // ── Main prüft nach, was der Renderer schickt ─────────────────────────────
+
+  it('capture:apply refuses a tampered primary path and writes nothing', async () => {
+    const item = await dump('Kundenportal: Ladezeiten der Angebotsliste prüfen.');
+    const proposal = await harness.call('capture:classify', { path: item.path });
+    const tampered: FilingProposal = {
+      ...proposal,
+      primary: {
+        ...proposal.primary,
+        target: 'project',
+        path: 'projects/work/gibt-es-nicht/project.md',
+      },
+    };
+
+    await expect(harness.call('capture:apply', { proposal: tampered })).rejects.toMatchObject({
+      code: 'invalid',
+    });
+
+    expect(await vault.exists('projects/work/gibt-es-nicht/project.md')).toBe(false);
+    expect(await vault.read(item.path)).not.toContain('status: filed');
+  });
+
+  it('capture:apply ignores renderer-supplied extras when no todo comes along', async () => {
+    const item = await dump('Kundenportal: Ladezeiten der Angebotsliste prüfen.');
+    const proposal = await harness.call('capture:classify', { path: item.path });
+    const smuggled: FilingAction = {
+      target: 'area',
+      path: 'areas/gesundheit.md',
+      section: 'Todos',
+      content: '- [ ] Eingeschleust',
+    };
+    const tampered: FilingProposal = { ...proposal, todos: [], extras: [smuggled] };
+
+    await harness.call('capture:apply', { proposal: tampered });
+
+    expect(await vault.read('areas/gesundheit.md')).not.toContain('Eingeschleust');
+  });
+
+  it('capture:apply refuses a dumpPath outside the inbox', async () => {
+    const item = await dump('Kundenportal: Ladezeiten der Angebotsliste prüfen.');
+    const proposal = await harness.call('capture:classify', { path: item.path });
+    const tampered: FilingProposal = { ...proposal, dumpPath: PROJECT_PATH };
+
+    await expect(harness.call('capture:apply', { proposal: tampered })).rejects.toMatchObject({
+      code: 'invalid',
+    });
+
+    expect(await vault.read(PROJECT_PATH)).not.toContain('status: filed');
+  });
+
+  it('files into an edited target the proposal offered', async () => {
+    const item = await dump('Kundenportal: Ladezeiten der Angebotsliste prüfen.');
+    const proposal = await harness.call('capture:classify', { path: item.path });
+    const area = proposal.alternatives.find((action) => action.path === 'areas/gesundheit.md');
+    expect(area).toBeDefined();
+    const edited: FilingAction = {
+      ...(area as FilingAction),
+      content: '### 2026-08-22\n\nVom Nutzer umformuliert.',
+    };
+
+    const result = await harness.call('capture:apply', {
+      proposal: { ...proposal, primary: edited, extras: [], todos: [] },
+    });
+
+    expect(result.written).toContain('areas/gesundheit.md');
+    expect(await vault.read('areas/gesundheit.md')).toContain('Vom Nutzer umformuliert.');
+  });
+
+  it('every target withAllTargets offers passes re-validation', async () => {
+    /* `Run.append` in the core only appends to a file that already exists; a
+       fresh day's journal entry is normally created by the journal module
+       (`ensureDay`), before capture ever touches it. Filing into "today" is
+       therefore only reachable once that file exists — same as in the app. */
+    const today = isoDay(new Date());
+    await vault.write(
+      journalPath(today),
+      `---\ntype: journal\ntitle: Testtag\ndate: ${today}\nlang: de\ntags: []\n---\n\n## Tag\n\n## Fakten\n`,
+    );
+    const item = await dump('Kundenportal: Ladezeiten der Angebotsliste prüfen.');
+    const proposal = await harness.call('capture:classify', { path: item.path });
+    expect(proposal.alternatives.length).toBeGreaterThan(0);
+
+    for (const target of proposal.alternatives) {
+      const result = await harness.call('capture:apply', {
+        proposal: { ...proposal, primary: target, extras: [], todos: [] },
+      });
+      if (result.undoToken !== null) {
+        await harness.call('capture:undo', { undoToken: result.undoToken });
+      }
+    }
   });
 
   it('lässt einen Dump bewusst liegen, ohne ihn zu verschieben — und bietet den Rückweg', async () => {

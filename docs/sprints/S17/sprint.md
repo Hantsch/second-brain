@@ -1,6 +1,6 @@
 ---
 sprint: S17
-status: planned # planned | in-progress | done
+status: in-progress # planned | in-progress | done
 branch: sprint/S17
 milestone: M17 — Nothing enters half-true, and nothing trusts more than it must
 ---
@@ -21,7 +21,7 @@ created.
 
 <!-- Order = the order the build phase works through. Dependent stories go last. -->
 
-- [ ] 057 — Main re-validates what the renderer sends
+- [x] 057 — Main re-validates what the renderer sends
 - [ ] 058 — Gaston stays reachable from the tray
 - [ ] 059 — A search hit opens in the app
 - [ ] 063 — A module can be renamed and deleted

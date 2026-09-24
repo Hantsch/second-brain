@@ -24,12 +24,22 @@ import {
   filingAction,
   resolveSection,
   todoActions,
+  verifyFilingAction,
 } from '@core/capture';
 import type { CaptureIndex } from '@core/capture';
-import { journalPath, modulePath } from '@core/vault/paths';
+import { isSafeVaultPath, journalPath, modulePath, toVaultPath } from '@core/vault/paths';
 import type { DateLike } from '@core/vault/paths';
+import { VAULT_DIRS } from '@shared/types';
 import type { DocLanguage, FilingAction, FilingProposal, Project } from '@shared/types';
 import { fail } from './errors';
+
+/** `inbox/` — the only place `applyProposal` may rewrite as the dump's frontmatter. */
+const INBOX_PREFIX = `${VAULT_DIRS.inbox}/`;
+
+/** A dump path is only trustworthy if it is a real vault path that actually lives in the inbox. */
+function isInboxPath(path: string): boolean {
+  return isSafeVaultPath(path) && toVaultPath(path).startsWith(INBOX_PREFIX);
+}
 
 /** This many targets are enough for free choice; the UI lets the user search within them. */
 const MAX_TARGETS = 48;
@@ -97,26 +107,59 @@ export function withAllTargets(
 }
 
 /**
- * Take the proposal as it comes from the UI — only the todo blocks get
- * rebuilt. If no todo comes along, whatever was submitted stands.
+ * Take the proposal as it comes from the UI and re-check everything that is a
+ * write address before `capture:apply` acts on it.
+ *
+ * `primary` is only ever a *selection* from targets the core itself built
+ * (`withAllTargets`) — but what arrives over IPC is plain data, so it is
+ * re-verified against a freshly built `FilingContext` exactly as
+ * `verifyFilingAction` documents. `dumpPath` gets the same scrutiny: it names
+ * the file whose frontmatter `applyProposal` rewrites, so a renderer that (by
+ * bug or tampering) sends a path outside `inbox/` must not reach the write.
+ *
+ * `extras` are never trusted from the renderer either — the same hole one
+ * field over as an unchecked `primary` — so they are always rebuilt from
+ * `todos` here, `[]` when none come along.
+ *
+ * The context is built without a similarity `text` and without the
+ * project/module caps `withAllTargets` uses for ranking: this call checks
+ * membership, not relevance, so a legitimate project must not fall out of a
+ * large vault's top N (`buildFilingContext`'s `maxProjects`/`maxModules`).
  */
 export function normalize(
   proposal: FilingProposal,
   projects: readonly Project[],
+  index: CaptureIndex,
+  now: DateLike,
   docLanguage: DocLanguage = 'de',
 ): FilingProposal {
   if (typeof proposal?.dumpPath !== 'string' || proposal.dumpPath.length === 0) {
     throw fail('invalid', 'der Vorschlag nennt keinen Dump');
   }
+  if (!isInboxPath(proposal.dumpPath)) {
+    throw fail('invalid', 'der Dump-Pfad liegt nicht in der Inbox');
+  }
   if (proposal.primary === null || typeof proposal.primary !== 'object') {
     throw fail('invalid', 'der Vorschlag nennt kein Ziel');
   }
-  if (!Array.isArray(proposal.todos) || proposal.todos.length === 0) return proposal;
-  const extras = todoActions(
-    proposal.primary,
-    proposal.todos,
-    (slug) => projects.find((project) => project.slug === slug)?.path ?? null,
+
+  const context = buildFilingContext(index, { now, maxProjects: Infinity, maxModules: Infinity });
+  const verified = verifyFilingAction(proposal.primary, context, {
+    dumpPath: proposal.dumpPath,
+    createdAt: proposal.createdAt,
     docLanguage,
-  );
-  return { ...proposal, extras };
+  });
+  if (typeof verified === 'string') throw fail('invalid', verified);
+
+  const todos = Array.isArray(proposal.todos) ? proposal.todos : [];
+  const extras =
+    todos.length === 0
+      ? []
+      : todoActions(
+          verified,
+          todos,
+          (slug) => projects.find((project) => project.slug === slug)?.path ?? null,
+          docLanguage,
+        );
+  return { ...proposal, primary: verified, extras };
 }

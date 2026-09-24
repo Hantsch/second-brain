@@ -6,8 +6,10 @@
    1. **Belegmarke.** Ein `[[pfad]]` (oder ein roher Pfad `a/b.md:12`) wird zu
       `[1]`, wenn es dazu einen geprüften Beleg gibt — das ist der Faden vom Satz
       zur Datei.
-   2. **Dateiverweis.** Gibt es keinen Beleg, bleibt der Pfad klickbar, aber ohne
-      Akzent: er behauptet nichts.
+   2. **Dateiverweis.** Gibt es keinen Beleg, bleibt der Pfad nur klickbar, wenn der
+      Aufrufer `onOpenPath` übergibt — sonst ist er reiner Text. Ein Modellsatz mit
+      Pfad, den niemand zum Öffnen anbietet, war die eine verbleibende
+      Klickfläche ohne Akzent; jetzt behauptet er nichts, wenn er nichts tut.
    3. **Nur Text.** Ein `[[begriff]]` ohne Pfad wird Text. Ein Link ins Nichts ist
       schlimmer als keiner.
 
@@ -80,6 +82,10 @@ export function Markdown({
           </button>
         );
       }
+      const shown = label.length > 0 ? label : leaf(target);
+      /* No handler, no click: an uncited path with nowhere to go was the one
+         mark that looked actionable but wasn't — it renders as plain text now. */
+      if (onOpenPath === undefined) return shown;
       return (
         <button
           key={key}
@@ -87,9 +93,9 @@ export function Markdown({
           className="sb-pathref"
           title={target}
           aria-label={t('ask.citation.openPath', { path: target })}
-          onClick={() => onOpenPath?.(target)}
+          onClick={() => onOpenPath(target)}
         >
-          {label.length > 0 ? label : leaf(target)}
+          {shown}
         </button>
       );
     };

@@ -113,12 +113,10 @@ export function ChatMessage({
           <p className="sb-panel-empty">{t('ask.noEvidenceHint')}</p>
         </>
       ) : empty ? null : (
-        <Markdown
-          text={message.content}
-          citations={citations}
-          onCitation={onCitation}
-          onOpenPath={onOpenPath}
-        />
+        /* No `onOpenPath` here: an answer's uncited path stays plain text (D2,
+           057) — only the citation list below opens a file, since only those
+           entries are validated. */
+        <Markdown text={message.content} citations={citations} onCitation={onCitation} />
       )}
 
       {message.unsupported === true && citations.length > 0 ? (

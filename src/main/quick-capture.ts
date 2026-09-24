@@ -3,6 +3,7 @@
    user is currently looking. */
 
 import { BrowserWindow, screen } from 'electron';
+import { attachNavigationGuards } from './navigation';
 import { loadPage, preloadPath } from './renderer-entry';
 import type { Services } from './services';
 
@@ -55,6 +56,7 @@ function create(services: Services): BrowserWindow {
   });
 
   created.setAlwaysOnTop(true, 'floating');
+  attachNavigationGuards(created);
   created.once('ready-to-show', () => created.show());
   created.on('blur', () => {
     if (closeOnBlur) hideQuickCapture();

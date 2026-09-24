@@ -1,12 +1,13 @@
 /* Das Hauptfenster. Rahmenlos mit eigener Titelzeile, dunkel schon vor dem
    ersten Frame, und erst sichtbar, wenn wirklich etwas zu sehen ist. */
 
-import { BrowserWindow, screen, shell } from 'electron';
+import { BrowserWindow, screen } from 'electron';
 import { join, resolve } from 'node:path';
 import type { AppIcon } from '@shared/types';
 import type { WindowBounds } from '@shared/types';
 import { APP_ID, APP_NAME } from './app-identity';
 import { clampBounds } from './bounds';
+import { attachNavigationGuards } from './navigation';
 import { WINDOW_MIN } from './settings-defaults';
 import { isDev, loadPage, preloadPath } from './renderer-entry';
 import type { Services } from './services';
@@ -111,21 +112,6 @@ function attachBoundsPersistence(window: BrowserWindow, services: Services): voi
   window.on('close', () => {
     if (timer) clearTimeout(timer);
     persist();
-  });
-}
-
-/** Kein Fenster, das die App nicht selbst geöffnet hat; Links gehen in den Browser. */
-function attachNavigationGuards(window: BrowserWindow): void {
-  window.webContents.setWindowOpenHandler(({ url }) => {
-    if (url.startsWith('http://') || url.startsWith('https://')) void shell.openExternal(url);
-    return { action: 'deny' };
-  });
-  window.webContents.on('will-navigate', (event, url) => {
-    const current = window.webContents.getURL();
-    if (!url.startsWith('file://') && !url.startsWith(new URL(current).origin)) {
-      event.preventDefault();
-      void shell.openExternal(url);
-    }
   });
 }
 
