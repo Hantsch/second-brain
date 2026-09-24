@@ -936,10 +936,11 @@ from the renderer and the model. Two parts.
 
 Sprints:
 
-- [sprints/S16/sprint.md](sprints/S16/sprint.md) — the entrance tells the truth, and the gate
-  never sleeps (065, 050, 051, 064), `done 2026-09-08`
-  ([review](sprints/S16/review.md) · [testplan](sprints/S16/testplan.md))
-- S17 — nothing trusts more than it must (057, 058, 059, 063), cut after S16's review
+- [sprints/done/S16/sprint.md](sprints/done/S16/sprint.md) — the entrance tells the truth, and
+  the gate never sleeps (065, 050, 051, 064), `done 2026-09-08`
+  ([review](sprints/done/S16/review.md) · [testplan](sprints/done/S16/testplan.md))
+- [sprints/S17/sprint.md](sprints/S17/sprint.md) — nothing trusts more than it must (057, 058,
+  059, 063), `planned` — cut 2026-09-24
 
 Decisions taken at the cut (2026-09-08, user):
 
@@ -954,7 +955,7 @@ Decisions taken at the cut (2026-09-08, user):
 
 **S16 result (2026-09-08).** All four stories done and moved to
 [requirements/done/](requirements/done/); every acceptance criterion proven by a named,
-passing test, see [S16's review](sprints/S16/review.md). Reuse held across the three ingest
+passing test, see [S16's review](sprints/done/S16/review.md). Reuse held across the three ingest
 stories as planned: 051 extended 050's failure-reason mechanism, 064 reused 051's `no-content`
 terminal state — no third mechanism was invented.
 
@@ -963,21 +964,21 @@ Gaps/notes:
 - **Two files are now over CLAUDE.md's ~300-line soft limit**: `src/core/wiki/ingest.ts` (435+
   lines) and `src/main/ipc/ingest.ts` (530+ lines), grown by 050's transaction/lock/progress
   work. Reviewed as still single-responsibility; splitting them is a candidate follow-up story,
-  [S16 review](sprints/S16/review.md).
+  [S16 review](sprints/done/S16/review.md).
 - **050 left two narrower gaps, documented not fixed**: `WikiTransaction.rollback()` runs
   outside the module lock, so a failing digestion's own catalog/chronicle entries can dangle one
   level below AC1 if a concurrent sibling has already advanced past it; `findSourcePageForRaw`'s
   idempotent retry can only see pages the derived index already knows about, so a retry
   immediately after a hard kill can still mint a `…-2` in a narrow window. Candidate follow-up,
-  [S16 review](sprints/S16/review.md).
+  [S16 review](sprints/done/S16/review.md).
 - **065's real-CI-run observations are manual residue**, not open acceptance: whether
   `verify.yml`/`ui-smoke.yml` actually run correctly on GitHub's Windows runner, and the
   cold/warm runtime budget, are only observable once `sprint/S16` is pushed — see
-  [S16 testplan](sprints/S16/testplan.md).
+  [S16 testplan](sprints/done/S16/testplan.md).
 - **050's AC5 and 051's AC1/AC5 are named e2e-harness gaps**, called out at refine rather than
   found late: the e2e fake provider answers instantly, so no test can hold a producer in a long
   `running` state on demand — the same S14/S15 harness limit. See
-  [S16 testplan](sprints/S16/testplan.md) for the one walk-through this enables (050's AC5).
+  [S16 testplan](sprints/done/S16/testplan.md) for the one walk-through this enables (050's AC5).
 
 ### M18 — The vault can grow, and an answer finds its evidence — planned
 

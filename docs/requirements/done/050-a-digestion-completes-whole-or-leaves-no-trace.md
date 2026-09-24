@@ -359,7 +359,7 @@ disk — reusing `WorkRegistry`/`QuitDuringRunDialog` unchanged, per D-i.
   follow-up (candidate: pull the write-phase functions out of `ingest.ts` into their own
   module) but out of scope for this story, which already touches both files across five
   deliverables.
-- `docs/sprints/S16/sprint.md`'s `[x] 065` tick predates this story's work (carried over
+- `docs/sprints/done/S16/sprint.md`'s `[x] 065` tick predates this story's work (carried over
   uncommitted from the previous story's build in this sprint) and was left as-is.
 
 No manual residue beyond the AC5 gap already named and pre-existing in the story's own test

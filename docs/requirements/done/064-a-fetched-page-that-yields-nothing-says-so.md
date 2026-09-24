@@ -47,7 +47,7 @@ _None — every detail decision of this refine is recorded under `## Decisions (
 ## Decisions (Sprint)
 
 Taken during the S16 refine without the user (automated sprint), against the ACs, CLAUDE.md
-and `docs/sprints/S16/sprint.md`.
+and `docs/sprints/done/S16/sprint.md`.
 
 - **User-Agent is truthful, not a browser disguise:**
   `FETCH_USER_AGENT = 'Mozilla/5.0 (compatible; Gaston/1.0)'` — the conventional
