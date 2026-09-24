@@ -389,6 +389,36 @@ describe('Einstellungen: Anpassung', () => {
     await screen.findByRole('radio', { name: 'Neuronaler Kern' });
     await expectNoViolations(container);
   });
+
+  it('speichert beide Tray-Schalter auf App-Ebene', async () => {
+    await openTab('customization');
+
+    const closeToTray = await screen.findByRole('switch', {
+      name: /^Beim Schließen des Fensters im Infobereich weiterlaufen/,
+    });
+    expect(
+      screen.getByText(
+        'Das Schließen des Fensters lässt Gaston im Infobereich weiterlaufen — die Tastenkombination, Erinnerungen und das Schnell-Erfassen bleiben aktiv.',
+      ),
+    ).toBeTruthy();
+    await userEvent.click(closeToTray);
+    await waitFor(() =>
+      expect(invoke).toHaveBeenCalledWith('settings:setApp', {
+        patch: { closeToTray: false },
+      }),
+    );
+
+    const startMinimized = screen.getByRole('switch', { name: /^Im Infobereich starten/ });
+    expect(
+      screen.getByText('Gaston startet versteckt im Infobereich, statt das Fenster zu öffnen.'),
+    ).toBeTruthy();
+    await userEvent.click(startMinimized);
+    await waitFor(() =>
+      expect(invoke).toHaveBeenCalledWith('settings:setApp', {
+        patch: { startMinimized: true },
+      }),
+    );
+  });
 });
 
 describe('Einstellungen: Aufgaben-Routing', () => {

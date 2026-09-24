@@ -9,6 +9,7 @@ import { useT } from '../../i18n';
 import { api } from '../../lib/api';
 import { BACKGROUND_ASSETS, ICON_ASSETS } from '../../lib/customization-assets';
 import { qk } from '../../lib/queries/keys';
+import { TrayPanel } from './TrayPanel';
 
 export function CustomizationTab() {
   const t = useT();
@@ -88,6 +89,8 @@ export function CustomizationTab() {
           </div>
         </fieldset>
       </Panel>
+
+      <TrayPanel app={settings.data.app} onSave={save.mutate} />
     </>
   );
 }

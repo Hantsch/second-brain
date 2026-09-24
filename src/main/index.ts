@@ -3,7 +3,7 @@
    If the last vault fails to open, the app starts in onboarding instead
    of not starting at all. */
 
-import { app, BrowserWindow } from 'electron';
+import { app } from 'electron';
 import { APP_ID } from './app-identity';
 import { attachCloseGuard } from './close-guard';
 import { attachCore } from './core-bridge';
@@ -15,6 +15,8 @@ import { stopOwnedLlamaEngineOnQuit } from './ipc/runtime/llamacpp-lifecycle';
 import { createMainWindow } from './window';
 import { syncQuickCaptureHotkey, unregisterHotkeys, watchQuickCaptureHotkey } from './hotkey';
 import { destroyQuickCapture } from './quick-capture';
+import { createAppTray } from './tray';
+import { showMainWindow } from './show-main-window';
 import { startGardenerAutorun } from './gardener-autorun';
 import { startReminderNotifier } from './reminder-notify';
 import { runTasksFixture } from './ipc/tasks-e2e-fixture';
@@ -23,9 +25,15 @@ import { getWorkQueue } from './work-queue';
 import type { Services } from './services';
 import type { GardenerAutorun } from './gardener-autorun';
 import type { ReminderNotifier } from './reminder-notify';
+import type { Tray } from 'electron';
 
 let reminderNotifier: ReminderNotifier | null = null;
 let gardenerAutorun: GardenerAutorun | null = null;
+/* Module-scope for the same reason as `reminderNotifier`/`gardenerAutorun`
+   just above: a `Tray` that only lives in `start()`'s closure would be
+   garbage-collected and silently vanish from the system tray (a known
+   Electron footgun), and `will-quit` needs the reference to destroy it. */
+let tray: Tray | null = null;
 /* `will-quit` runs at module scope, outside `start()`'s closure — this is the
    one place that reference is kept so the handler below can reach it (071,
    D4), the same pattern `reminderNotifier`/`gardenerAutorun` already use. */
@@ -84,12 +92,32 @@ async function restoreVault(services: Services): Promise<void> {
 async function start(): Promise<void> {
   const services = await bootstrap();
   runningServices = services;
-  const window = createMainWindow(services);
+  /* Tray before window (058, D4): `canStartHidden` below needs to know whether a
+     tray exists, and the tray itself needs no window to be created. */
+  try {
+    tray = createAppTray(services);
+  } catch (error) {
+    /* A tray that can't be built (e.g. an unloadable icon) must cost the app its
+       tray, not its window: without this, `start()` rejects before any window
+       exists and the process sits on the single-instance lock, unreachable. */
+    console.warn('[start] tray could not be created:', error);
+    tray = null;
+  }
+  const trayAlive = tray !== null && !tray.isDestroyed();
+  const window = createMainWindow(services, { canStartHidden: trayAlive });
   services.setMainWindow(window);
+  /* Close-to-tray (058, D-f): hide only while a tray actually exists — a
+     window hidden with no tray icon to bring it back would be an app the user
+     can neither see nor quit. Read on every close, so the setting takes effect
+     without a restart. */
+  const closeGuardOptions = {
+    hideInsteadOfClose: () =>
+      services.settings.app().closeToTray && tray !== null && !tray.isDestroyed(),
+  };
   /* Ask before closing kills a running maintenance pass (042, D6). A layer in
      front of `will-quit`'s `cancelAll('shutdown')` below, which stays the
      last-resort net for every close this one lets through. */
-  attachCloseGuard(services, window);
+  attachCloseGuard(services, window, closeGuardOptions);
 
   /* The hidden quick-capture window must not keep the app alive. */
   window.on('closed', () => {
@@ -97,18 +125,20 @@ async function start(): Promise<void> {
   });
 
   app.on('second-instance', () => {
-    const main = services.mainWindow();
-    if (!main) return;
-    if (main.isMinimized()) main.restore();
-    main.focus();
+    showMainWindow(services);
   });
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      const next = createMainWindow(services);
-      services.setMainWindow(next);
-      attachCloseGuard(services, next);
+    /* A window hidden to the tray still exists, so "no windows at all" is the
+       wrong test here: the dock click would do nothing. Give back the one that
+       exists, and only build a new one when the old one is really gone. */
+    if (services.mainWindow()) {
+      showMainWindow(services);
+      return;
     }
+    const next = createMainWindow(services);
+    services.setMainWindow(next);
+    attachCloseGuard(services, next, closeGuardOptions);
   });
 
   await restoreVault(services);
@@ -142,6 +172,8 @@ app.on('will-quit', () => {
   try {
     unregisterHotkeys();
     destroyQuickCapture();
+    if (tray && !tray.isDestroyed()) tray.destroy();
+    tray = null;
     reminderNotifier?.stop();
     reminderNotifier = null;
     gardenerAutorun?.stop();

@@ -156,6 +156,8 @@ export interface AppSettings {
   window: WindowBounds;
   /** Start minimized to the tray. */
   startMinimized: boolean;
+  /** Closing the window sends the app to the tray instead of quitting. */
+  closeToTray: boolean;
   /** Onboarding already completed. */
   onboarded: boolean;
   /** What's tied to this machine specifically, not to the app installation

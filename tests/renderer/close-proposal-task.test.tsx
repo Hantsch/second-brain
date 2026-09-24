@@ -239,6 +239,7 @@ const settings: SettingsSnapshot = {
     newVaultLanguages: { documents: 'en', conversation: 'en', translateSources: true },
     window: { width: 1440, height: 900 },
     startMinimized: false,
+    closeToTray: true,
     onboarded: true,
     machine: {
       vramOverrideMb: null,

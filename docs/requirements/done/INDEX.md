@@ -228,3 +228,11 @@ second roadmap.
 - 051 — A video without a transcript is an honest failure · S16 · A transcript-less YouTube video now ends the ingest job as a new terminal stage `no-content` instead of condensing placeholder text; the source shows the reason, and an explicit "digest from description" action (`basis: metadata`) lets the user opt in per source.
 - 064 — A fetched page that yields nothing says so · S16 · A hollow fetched page (consent wall, SPA shell, near-empty extraction) now ends honestly as `no-content` instead of becoming a citable wiki source; the fetch identifies itself with a truthful User-Agent, and duplicate detection gains an explicit "ingest again" that writes a new dated raw source without touching the original — reviewed PASS with one review-fix round (manual re-condense of a hollow source, wrong-module bug, missing truncation test, double-click race guard).
 - 057 — Main re-validates what the renderer sends · S17 · Closed four trust-boundary seams (`shell:openPath` vault containment, uncited-path rendering, `capture:apply` server-side re-validation via a new `verifyFilingAction`, and an in-window navigation guard on both windows) — reviewed FAIL then PASS after one review-fix round (navigation guard missed the file:// host and opaque-origin cases).
+- 058 — Gaston stays reachable from the tray · S17 · Added a real system tray (open, quick
+  capture, quit) that outlives the main window; closing the window now hides to the tray
+  (configurable) while a real quit still goes through the existing close-guard veto, `startMinimized`
+  gained a working no-tray fallback, and `ARCHITECTURE.md` documents the lifecycle — reviewed FAIL
+  twice (a hidden-start `maximize()` bug that could show the window, an unguarded `Tray` constructor
+  able to kill startup, a follow-on regression that silently dropped the saved maximized setting,
+  plus test-coverage/doc-accuracy gaps) then PASS after three review-fix rounds, with one accepted
+  residual limitation on the maximized flag across repeated hidden starts.

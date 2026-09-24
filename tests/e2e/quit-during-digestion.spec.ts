@@ -39,7 +39,15 @@ import type { Locator, Page } from '@playwright/test';
 import type { AppSession } from '../../scripts/lib/app-harness.mjs';
 import { expect, test } from './fixtures/vault';
 
-test.use({ specId: 'quit-during-digestion', ingestDelayMs: 20_000, fakeProvider: {} });
+/* closeToTray: false — this spec proves the window-close quit door (058, D-k), which
+   only exists when close-to-tray is off; with it on, closing the window would just
+   hide to the tray and never reach `QuitDuringRunDialog`. */
+test.use({
+  specId: 'quit-during-digestion',
+  ingestDelayMs: 20_000,
+  fakeProvider: {},
+  closeToTray: false,
+});
 
 /** The seeded module both imports are filed into (`scripts/seed/module-identity.mjs`).
     Selected by slug rather than by its displayed title, which is German. */

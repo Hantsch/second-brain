@@ -25,7 +25,10 @@
 
 import { expect, test } from './fixtures/app';
 
-test.use({ specId: 'quit-during-run', stageDelayMs: 300 });
+/* closeToTray: false — this spec proves the window-close quit door (058, D-k), which
+   only exists when close-to-tray is off; with it on, closing the window would just
+   hide to the tray and never reach `QuitDuringRunDialog`. */
+test.use({ specId: 'quit-during-run', stageDelayMs: 300, closeToTray: false });
 
 test('closing the window during a maintenance run asks first, and cancelling leaves the run and window alone', async ({
   app,

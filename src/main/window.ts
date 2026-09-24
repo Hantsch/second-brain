@@ -2,10 +2,9 @@
    ersten Frame, und erst sichtbar, wenn wirklich etwas zu sehen ist. */
 
 import { BrowserWindow, screen } from 'electron';
-import { join, resolve } from 'node:path';
-import type { AppIcon } from '@shared/types';
 import type { WindowBounds } from '@shared/types';
 import { APP_ID, APP_NAME } from './app-identity';
+import { appIconPath } from './app-icon';
 import { clampBounds } from './bounds';
 import { attachNavigationGuards } from './navigation';
 import { WINDOW_MIN } from './settings-defaults';
@@ -16,26 +15,31 @@ import type { Services } from './services';
 const BACKGROUND = '#0A0F16';
 const SAVE_DEBOUNCE_MS = 400;
 
-const ICON_FILES: Record<AppIcon, string> = {
-  'knowledge-garden': 'knowledge-garden.ico',
-  'neural-core': 'neural-core.ico',
-  'circuit-cortex': 'circuit-cortex.ico',
-  'brain-chip': 'brain-chip.ico',
-  'vault-brain': 'vault-brain.ico',
-};
-
-function appIconPath(icon: AppIcon): string {
-  const root = isDev()
-    ? resolve('assets', 'app-icons')
-    : join(process.resourcesPath, 'assets/app-icons');
-  return join(root, ICON_FILES[icon]);
-}
-
 function workAreas(): { x: number; y: number; width: number; height: number }[] {
   return screen.getAllDisplays().map((display) => display.workArea);
 }
 
-export function createMainWindow(services: Services): BrowserWindow {
+export interface CreateMainWindowOptions {
+  /** Whether a tray exists to bring the window back through (058, D-f). Defaults to
+   * `false`, so every call site that doesn't explicitly opt in — a fresh window built
+   * for `activate`, or a test harness — keeps today's behaviour of never starting
+   * hidden. */
+  canStartHidden?: boolean;
+}
+
+/**
+ * Whether the window should start hidden: only when the user asked for it *and*
+ * there is a way back (a tray). Pure so it needs no `BrowserWindow` to test — the
+ * no-tray fallback (058, D-f) is exactly the soft-lock finding 3.5 describes.
+ */
+export function shouldStartHidden(startMinimized: boolean, canStartHidden: boolean): boolean {
+  return startMinimized && canStartHidden;
+}
+
+export function createMainWindow(
+  services: Services,
+  options: CreateMainWindowOptions = {},
+): BrowserWindow {
   const saved = services.settings.app().window;
   const bounds = clampBounds(saved, workAreas(), WINDOW_MIN);
 
@@ -61,12 +65,27 @@ export function createMainWindow(services: Services): BrowserWindow {
     },
   });
 
-  window.once('ready-to-show', () => {
-    if (saved.maximized) window.maximize();
-    if (!services.settings.app().startMinimized) window.show();
+  /* Whether the window has ever actually been shown — flips once, on the real
+     `show` event, regardless of what triggered it (the block below, or a later
+     `showMainWindow()` bringing it back from the tray). `attachBoundsPersistence`
+     needs this: a window that started hidden was deliberately never maximized
+     either (see the comment below), so `isMaximized()` before this flips would
+     read a false `false` and overwrite the saved setting for good. */
+  let becameVisible = false;
+  window.once('show', () => {
+    becameVisible = true;
   });
 
-  attachBoundsPersistence(window, services);
+  window.once('ready-to-show', () => {
+    const startMinimized = services.settings.app().startMinimized;
+    if (shouldStartHidden(startMinimized, options.canStartHidden ?? false)) return;
+    /* `maximize()` shows a hidden window as a side effect, so it may only run on
+       the path that shows it anyway — a hidden start drops the maximized state. */
+    if (saved.maximized) window.maximize();
+    window.show();
+  });
+
+  attachBoundsPersistence(window, services, saved.maximized ?? false, () => becameVisible);
   const stopIconSync = services.settings.onChange(({ app: settings }) => {
     const icon = appIconPath(settings.customization.appIcon);
     window.setIcon(icon);
@@ -86,8 +105,18 @@ export function createMainWindow(services: Services): BrowserWindow {
   return window;
 }
 
-/** Position und Größe merken — gedrosselt, damit Ziehen nicht dauernd schreibt. */
-function attachBoundsPersistence(window: BrowserWindow, services: Services): void {
+/** Position und Größe merken — gedrosselt, damit Ziehen nicht dauernd schreibt.
+    `initialMaximized`/`wasShown` cover the hidden-start case: a window that
+    starts hidden is deliberately never given its saved maximized state (058,
+    D-f — `maximize()` would show it), so `isMaximized()` would read `false`
+    even though nothing about the user's preference changed; the saved value
+    is kept as-is until the window has genuinely been shown at least once. */
+function attachBoundsPersistence(
+  window: BrowserWindow,
+  services: Services,
+  initialMaximized: boolean,
+  wasShown: () => boolean,
+): void {
   let timer: NodeJS.Timeout | null = null;
   const persist = (): void => {
     if (window.isDestroyed()) return;
@@ -97,7 +126,7 @@ function attachBoundsPersistence(window: BrowserWindow, services: Services): voi
       y: normal.y,
       width: normal.width,
       height: normal.height,
-      maximized: window.isMaximized(),
+      maximized: wasShown() ? window.isMaximized() : initialMaximized,
     };
     void services.settings.saveWindow(next);
   };

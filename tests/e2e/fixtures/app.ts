@@ -21,7 +21,9 @@
  * files quietly sharing one app and one vault.
  */
 
+import { spawn } from 'node:child_process';
 import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { basename, dirname, isAbsolute, join, resolve as resolvePath } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -33,7 +35,44 @@ import {
   ensureDemoVault,
   launchApp,
   prepareUserData,
+  REPO_ROOT,
 } from '../../../scripts/lib/app-harness.mjs';
+
+/* Electron's own path, resolved from plain Node — `require('electron')` returns the
+   path to the platform binary when required outside an Electron process, which is
+   exactly what this file is: it runs under Playwright's Node test runner, not inside
+   Electron. This file is real ESM (see `import.meta.url` below), so `require` needs
+   `createRequire` rather than the CommonJS global, which doesn't exist here. */
+const require = createRequire(import.meta.url);
+const electronBinaryPath = require('electron') as unknown as string;
+
+const MAIN_ENTRY = 'out/main/index.cjs';
+
+/**
+ * Proves a second app start against an already-running instance (058, D-m):
+ * `_electron.launch` expects a window from the child, which a refused second
+ * instance never opens (the single-instance lock rejects it immediately and it
+ * calls `app.quit()`), so this spawns the real Electron binary directly and just
+ * waits for it to exit. Reuses the same `--user-data-dir` the primary `app`
+ * fixture's instance is holding — that is what the OS-level single-instance lock
+ * is keyed on.
+ */
+export async function launchSecondInstance(
+  userDataDir: string,
+  extraEnv: Record<string, string> = {},
+): Promise<number | null> {
+  const env = { ...process.env, ...extraEnv };
+  delete env.ELECTRON_RUN_AS_NODE;
+  const child = spawn(
+    electronBinaryPath,
+    [join(REPO_ROOT, MAIN_ENTRY), `--user-data-dir=${userDataDir}`],
+    { cwd: REPO_ROOT, env, stdio: 'ignore' },
+  );
+  return new Promise((resolve, reject) => {
+    child.once('error', reject);
+    child.once('exit', (code) => resolve(code));
+  });
+}
 
 /* AC7's runtime half: not just "no provider configured" (the static half the
    e2e-wiring guard checks) but "no request actually left the app". The built
@@ -117,6 +156,17 @@ export interface AppOptions {
    * real global `fetch` (still blocked from making a real request by `noNetworkCalls` unless
    * it never tries to fetch anything, exactly as before this seam existed). */
   fetchFixture: FetchFixtureManifest | undefined;
+  /** Passed through to `prepareUserData` as `closeToTray` (058, D1): whether closing the
+   * main window sends the app to the tray instead of quitting. `true` (the default)
+   * matches the app-level default in `settings-defaults.ts`, so every spec but the ones
+   * that specifically exercise the window-close quit door (058, D-k) keeps close-to-tray
+   * on, same as a real install. */
+  closeToTray: boolean;
+  /** Passed through to `prepareUserData` as `startMinimized` (058, D1): whether the app
+   * starts hidden in the tray instead of showing its main window. `false` (the default)
+   * keeps the window visible for every spec that doesn't specifically test the
+   * start-minimized path. */
+  startMinimized: boolean;
 }
 
 export interface AppFixtures {
@@ -228,6 +278,10 @@ export const test = base.extend<
 
   fetchFixture: [undefined, { scope: 'worker', option: true }],
 
+  closeToTray: [true, { scope: 'worker', option: true }],
+
+  startMinimized: [false, { scope: 'worker', option: true }],
+
   specIdMatchesFile: [
     async ({ specId }, use, testInfo) => {
       const file = basename(testInfo.file).replace(/\.spec\.ts$/, '');
@@ -278,6 +332,8 @@ export const test = base.extend<
         tasksFixture,
         fakeProvider,
         fetchFixture,
+        closeToTray,
+        startMinimized,
       },
       use,
     ) => {
@@ -285,8 +341,16 @@ export const test = base.extend<
       const userDataDir = prepareUserData(join(tempRoot, 'userdata'), {
         vault: vaultPath,
         uiLanguage: 'en',
+        closeToTray,
+        startMinimized,
       });
       const extraEnv: Record<string, string> = {
+        /* Not read by anything yet (058, D1 just plumbs it through) — later tray e2e
+           specs read `process.env.SB_E2E_TRAY === '1'` in the app to know they're
+           running under the e2e harness. Set unconditionally, unlike the other
+           `SB_E2E_*` vars below, since every spec that touches the `app` fixture is a
+           candidate for exercising tray behaviour, not just the ones that opt in. */
+        SB_E2E_TRAY: '1',
         ...(stageDelayMs > 0 ? { SB_E2E_STAGE_DELAY_MS: String(stageDelayMs) } : {}),
         ...(ingestDelayMs > 0 ? { SB_E2E_INGEST_DELAY_MS: String(ingestDelayMs) } : {}),
         ...(tasksFixture ? { SB_E2E_TASKS_FIXTURE: '1' } : {}),

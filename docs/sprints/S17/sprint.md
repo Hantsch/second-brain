@@ -22,7 +22,7 @@ created.
 <!-- Order = the order the build phase works through. Dependent stories go last. -->
 
 - [x] 057 — Main re-validates what the renderer sends
-- [ ] 058 — Gaston stays reachable from the tray
+- [x] 058 — Gaston stays reachable from the tray
 - [ ] 059 — A search hit opens in the app
 - [ ] 063 — A module can be renamed and deleted
 

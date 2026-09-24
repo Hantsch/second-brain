@@ -28,6 +28,7 @@ import {
 } from './ipc/overview-deps';
 import { dueBody, dueSummary } from './messages';
 import type { Services } from './services';
+import { showMainWindow } from './show-main-window';
 
 /** Check interval: once per hour. */
 export const CHECK_INTERVAL_MS = 60 * 60 * 1000;
@@ -215,9 +216,7 @@ export class ReminderNotifier {
   private openDashboard(): void {
     const window = this.services.mainWindow();
     if (window === null) return;
-    if (window.isMinimized()) window.restore();
-    window.show();
-    window.focus();
+    showMainWindow(this.services);
     void window.webContents
       .executeJavaScript("window.location.hash = '#/dashboard';")
       .catch(() => undefined);

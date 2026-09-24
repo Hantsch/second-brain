@@ -5,6 +5,7 @@ import { BrowserWindow } from 'electron';
 import type { HandlerMap } from './registry';
 import { defineHandlers } from './registry';
 import { cancelClose, confirmClose } from '../close-guard';
+import { showMainWindow } from '../show-main-window';
 import type { Services } from '../services';
 
 function target(services: Services): BrowserWindow | null {
@@ -52,11 +53,7 @@ export function windowHandlers(services: Services): HandlerMap {
        called from quick capture — which is itself the focused window at
        that point. */
     'window:show': () => {
-      const main = services.mainWindow();
-      if (!main) return;
-      if (main.isMinimized()) main.restore();
-      main.show();
-      main.focus();
+      showMainWindow(services);
     },
   });
 }

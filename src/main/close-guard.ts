@@ -66,6 +66,20 @@ let pending: { proceed: () => void; timer: NodeJS.Timeout } | null = null;
  */
 let confirmed = false;
 
+/**
+ * "A quit is under way" (058, D-e) — the one thing that turns a close-to-tray
+ * × back into a real close. A quit closes every window, and a main window that
+ * hid itself instead would cancel the quit it is part of: the tray's "quit"
+ * would then do nothing at all.
+ *
+ * It is only ever set once the quit is *through* this guard — un-vetoed, or
+ * vetoed and then confirmed — never on the attempt itself. Set on the attempt,
+ * it would outlive a cancelled quit and turn the next × into a quit the user
+ * just said no to. Reset in `attachCloseGuard` for the same reason as
+ * `confirmed`: a fresh main window proves the app outlived that quit.
+ */
+let quitting = false;
+
 /** `before-quit` belongs to the app, not to a window: register it exactly once. */
 let quitGuardInstalled = false;
 
@@ -102,12 +116,13 @@ function letThrough(): void {
 /**
  * The guard itself, shared by both call sites. `proceed` is how *this* call
  * site retries once the close is authorised — `window.close()` resp.
- * `app.quit()`.
+ * `app.quit()`. Returns whether it vetoed, so `before-quit` can tell a quit
+ * that got through from one that is waiting for an answer.
  */
-function guard(services: Services, event: VetoableEvent, proceed: () => void): void {
+function guard(services: Services, event: VetoableEvent, proceed: () => void): boolean {
   /* Already authorised. Not preventing it a second time is the whole point of
      the flag — this early return is what keeps the app closable. */
-  if (confirmed) return;
+  if (confirmed) return false;
   /* A queued task is dropped silently on close: nothing has been computed for
      it yet, and the registry's own shutdown handling clears the queue anyway
      (see `work-queue.ts`), so only a `running` task needs a veto of its own. */
@@ -116,14 +131,14 @@ function guard(services: Services, event: VetoableEvent, proceed: () => void): v
       .list()
       .some((task) => task.state === 'running')
   )
-    return;
+    return false;
   /* Nobody left to ask. Vetoing here would stall the shutdown for the length of
      the timer and then do it anyway, because the confirm can never arrive — the
      window that would show the prompt is gone. This is also the normal path of
      a confirmed window close: `closed` calls `app.quit()`, and by then the
      window is destroyed. */
   const window = services.mainWindow();
-  if (!window) return;
+  if (!window) return false;
 
   event.preventDefault();
 
@@ -141,7 +156,7 @@ function guard(services: Services, event: VetoableEvent, proceed: () => void): v
      top of it) is vetoed just as well — but must not ask again or restart the
      timer, or holding the key down would push the dead-man switch out for as
      long as the user keeps pressing. */
-  if (pending) return;
+  if (pending) return true;
 
   pending = {
     proceed,
@@ -155,6 +170,7 @@ function guard(services: Services, event: VetoableEvent, proceed: () => void): v
     timer: setTimeout(letThrough, CONFIRM_TIMEOUT_MS),
   };
   services.sendEvent('event:close-requested', undefined);
+  return true;
 }
 
 /**
@@ -181,23 +197,54 @@ export function cancelClose(): void {
   endCycle();
 }
 
+export interface CloseGuardOptions {
+  /**
+   * Asked on every window close that is not part of a quit: `true` hides the
+   * window to the tray instead of closing it (058, D-d). Omitted means "never
+   * hide" — every close is a close, exactly as before the tray existed.
+   */
+  hideInsteadOfClose?: () => boolean;
+}
+
 /**
  * Guards `window`'s close and — once per process — every quit that does not go
  * through a window close. Call it for each main window, including a
  * re-created one: attaching is also what drops a stale authorisation (see
- * `confirmed`).
+ * `confirmed`) and a stale quit (see `quitting`).
  */
-export function attachCloseGuard(services: Services, window: BrowserWindow): void {
+export function attachCloseGuard(
+  services: Services,
+  window: BrowserWindow,
+  options: CloseGuardOptions = {},
+): void {
   /* A new main window means the app outlived whatever was confirmed before it,
      so neither the authorisation nor a half-answered prompt belongs to this
      window. */
   confirmed = false;
+  quitting = false;
   if (pending) {
     clearTimeout(pending.timer);
     pending = null;
   }
 
+  /* One listener, not a second one for the tray (058, D-d): two `close`
+     listeners would both run, and the guard would veto and prompt on a close
+     the other one had already turned into a hide. */
   window.on('close', (event) => {
+    /* Hiding to the tray is not a close (058, D-c): the app, and any run in it,
+       stays alive, so there is nothing to ask about — no veto, no prompt.
+       Three states rule it out. A quit under way (`quitting`) or an authorised
+       close (`confirmed`) must reach the real close, or the window would cancel
+       the very shutdown it is part of. And while a prompt is open (`pending`),
+       hiding would hide the prompt with it and leave the dead-man timer to
+       quit behind the user's back — the guard below re-surfaces it instead.
+       The `preventDefault` here is Electron's "do not destroy", not a veto:
+       nothing is left waiting for an answer. */
+    if (!quitting && !confirmed && !pending && options.hideInsteadOfClose?.()) {
+      event.preventDefault();
+      window.hide();
+      return;
+    }
     /* Retry this window, not `services.mainWindow()`: it is this window's close
        that was vetoed, and the `isDestroyed` check keeps a confirm that arrives
        after the window went away from throwing. */
@@ -206,12 +253,28 @@ export function attachCloseGuard(services: Services, window: BrowserWindow): voi
     });
   });
 
+  /* Windows logoff/shutdown closes the windows without a `before-quit` (in
+     Electron this is a window event, not an app one). The session is ending
+     either way, and a window that hid itself instead would only stand in its
+     way — so the closes that follow are closes, not hides. */
+  window.on('session-end', () => {
+    quitting = true;
+  });
+
   if (quitGuardInstalled) return;
   quitGuardInstalled = true;
   /* `close` covers the title bar's × and Alt+F4; `before-quit` covers the quit
-     paths that never pass through a window close — the macOS menu today, a tray
-     item tomorrow. */
+     paths that never pass through a window close — the macOS menu and the
+     tray's "quit". */
   app.on('before-quit', (event) => {
-    guard(services, event, () => app.quit());
+    /* `quitting` only once the quit is through (see the flag): straight away
+       when nothing vetoed it, else inside the retry — i.e. only after the user
+       confirmed, right before the second `app.quit()`. A cancelled quit never
+       reaches either line. */
+    const vetoed = guard(services, event, () => {
+      quitting = true;
+      app.quit();
+    });
+    if (!vetoed) quitting = true;
   });
 }

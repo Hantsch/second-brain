@@ -63,7 +63,15 @@ export function ensureDemoVault(vaultPath, log = console.log) {
  */
 export function prepareUserData(
   dir,
-  { vault, recent, width = 1440, height = 900, uiLanguage = 'de' },
+  {
+    vault,
+    recent,
+    width = 1440,
+    height = 900,
+    uiLanguage = 'de',
+    startMinimized = false,
+    closeToTray = true,
+  },
 ) {
   rmSync(dir, { recursive: true, force: true });
   mkdirSync(dir, { recursive: true });
@@ -77,7 +85,8 @@ export function prepareUserData(
         theme: 'dark',
         uiLanguage,
         window: { width, height, maximized: false },
-        startMinimized: false,
+        startMinimized,
+        closeToTray,
         onboarded: vault !== null,
       },
       null,

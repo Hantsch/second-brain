@@ -23,6 +23,10 @@ export interface UserDataOptions {
   height?: number;
   /** Defaults to 'de' (the screenshots); the e2e suite pins 'en'. */
   uiLanguage?: 'de' | 'en';
+  /** Defaults to `false` — the app starts with its main window visible. */
+  startMinimized?: boolean;
+  /** Defaults to `true`, matching the app-level default (058, D1). */
+  closeToTray?: boolean;
 }
 
 /** Writes a fresh userData directory with prepared app settings. */

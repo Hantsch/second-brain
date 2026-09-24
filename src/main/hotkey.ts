@@ -16,13 +16,19 @@ function configuredShortcut(services: Services): string {
   );
 }
 
+/** Opens quick capture and gives it focus — the one action both the global
+    hotkey and the tray's "quick capture" menu item trigger (058, D2). Kept
+    here rather than in `quick-capture.ts` because the hotkey module already
+    owned this exact body; the tray just calls it too, instead of duplicating it. */
+export function triggerQuickCapture(services: Services): void {
+  showQuickCapture(services);
+  services.sendEvent('event:capture-focus', {});
+}
+
 /** `globalShortcut.register` can return false or throw — both mean "already claimed". */
 function tryRegister(services: Services, shortcut: string): boolean {
   try {
-    return globalShortcut.register(shortcut, () => {
-      showQuickCapture(services);
-      services.sendEvent('event:capture-focus', {});
-    });
+    return globalShortcut.register(shortcut, () => triggerQuickCapture(services));
   } catch {
     return false;
   }

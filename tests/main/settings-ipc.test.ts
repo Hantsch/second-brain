@@ -104,6 +104,21 @@ describe('Einstellungs-Kanäle im Main', () => {
     ).rejects.toMatchObject({ code: 'invalid' });
   });
 
+  it('settings:setApp stores a boolean closeToTray and refuses anything else', async () => {
+    const snapshot = await harness.call('settings:setApp', {
+      patch: { closeToTray: false },
+    });
+
+    expect(snapshot.app.closeToTray).toBe(false);
+    expect((await storedApp()).closeToTray).toBe(false);
+
+    await expect(
+      harness.call('settings:setApp', {
+        patch: { closeToTray: 'yes' } as unknown as IpcRequest<'settings:setApp'>['patch'],
+      }),
+    ).rejects.toMatchObject({ code: 'invalid' });
+  });
+
   it('mergt tief und lässt den Rest des Abschnitts stehen', async () => {
     const snapshot = await harness.call('settings:setVault', {
       patch: { overview: { staleAfterDays: 21 } },

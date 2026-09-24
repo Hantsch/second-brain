@@ -840,6 +840,7 @@ describe('MonthCalendar wired into JournalScreen (010, D2)', () => {
       newVaultLanguages: { documents: 'de', conversation: 'de', translateSources: true },
       window: { width: 1440, height: 900 },
       startMinimized: false,
+      closeToTray: true,
       onboarded: true,
       machine: {
         vramOverrideMb: null,

@@ -31,6 +31,15 @@ const own = {
   'settings.customization.icon.brain-chip': 'Brain chip',
   'settings.customization.icon.vault-brain': 'Vault brain',
 
+  'settings.customization.tray.title': 'Tray',
+  'settings.customization.tray.closeToTray.label':
+    'Keep running in the tray when the window closes',
+  'settings.customization.tray.closeToTray.hint':
+    'Closing the window leaves Gaston running in the tray — the hotkey, reminders and quick capture keep working.',
+  'settings.customization.tray.startMinimized.label': 'Start in the tray',
+  'settings.customization.tray.startMinimized.hint':
+    'Gaston starts hidden in the tray instead of opening the window.',
+
   'settings.vault.about':
     'A vault is an ordinary folder of markdown files. It is portable: copy it to a USB stick or an external drive and it keeps working there in full.',
   'settings.vault.reveal': 'Show in the file manager',

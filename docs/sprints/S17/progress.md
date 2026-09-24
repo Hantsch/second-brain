@@ -10,3 +10,22 @@
 - 2026-09-24 11:29 · 057 · D5 navigation stays in the app · done
 - 2026-09-24 11:42 · 057 · review-fix D5 navigation host/origin check · started
 - 2026-09-24 11:43 · 057 · review-fix D5 navigation host/origin check · done
+- 2026-09-24 11:46 · 058 · D1 closeToTray setting and harness options · started
+- 2026-09-24 11:52 · 058 · D1 closeToTray setting and harness options · done
+- 2026-09-24 11:52 · 058 · D2 tray module · started
+- 2026-09-24 11:59 · 058 · D2 tray module · done
+- 2026-09-24 11:59 · 058 · D3 close hides quit quits guard still asks · started
+- 2026-09-24 13:25 · 058 · D3 close hides quit quits guard still asks (resumed) · started
+- 2026-09-24 13:33 · 058 · D3 close hides quit quits guard still asks (resumed) · done
+- 2026-09-24 13:34 · 058 · D4 start in the tray second start shows · started
+- 2026-09-24 13:41 · 058 · D4 start in the tray second start shows · done
+- 2026-09-24 13:42 · 058 · D5 reminder click reaches hidden window · started
+- 2026-09-24 13:46 · 058 · D5 reminder click reaches hidden window · done
+- 2026-09-24 13:48 · 058 · D6 tray switches in settings · started
+- 2026-09-24 13:56 · 058 · D6 tray switches in settings · done
+- 2026-09-24 13:56 · 058 · D7 ARCHITECTURE.md tells the truth · started
+- 2026-09-24 13:59 · 058 · D7 ARCHITECTURE.md tells the truth · done
+- 2026-09-24 14:33 · 058 · review-fix start-hidden maximize/tray-throw/AC4-test/close-guard-test · started
+- 2026-09-24 14:40 · 058 · review-fix start-hidden maximize/tray-throw/AC4-test/close-guard-test · done
+- 2026-09-24 14:57 · 058 · review-fix maximized-state-lost-on-hidden-start + tray-throw-test-gap · started
+- 2026-09-24 14:59 · 058 · review-fix maximized-state-lost-on-hidden-start + tray-throw-test-gap · done

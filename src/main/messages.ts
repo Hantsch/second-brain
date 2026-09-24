@@ -1,4 +1,4 @@
-/* The main process's only user-facing text. Two spots, both justified:
+/* The main process's only user-facing text. Three spots, all justified:
 
    1. **The Windows notification.** It's created in the main process, even
       when no window is open — the renderer can't compose it. A string that
@@ -8,8 +8,11 @@
       renderer translates). The core lets the labels be injected
       (`core/overview/labels`) and defaults to German; the English
       counterpart lives here, because `src/core/` never chooses a language.
+   3. **The tray menu.** Same reasoning as the notification: `Tray`/`Menu` are
+      built in the main process, independent of whether any renderer window
+      exists at all, so their labels can't go through `t()` either.
 
-   Both follow `settings.uiLanguage()`. Sentence case, no emoji, statements
+   All three follow `settings.uiLanguage()`. Sentence case, no emoji, statements
    instead of exclamations — the same tone as the UI. */
 
 import { GERMAN_RECENT_LABELS } from '@core/overview';
@@ -70,6 +73,30 @@ export function dueSummary(language: UiLanguage, overdue: number, today: number)
     parts.push(today === 1 ? '1 Sache ist heute fällig' : `${today} Sachen sind heute fällig`);
   }
   return parts.join(', ');
+}
+
+/** Labels for the tray menu's three items (058, D2). */
+export interface TrayLabels {
+  open: string;
+  quickCapture: string;
+  quit: string;
+}
+
+const ENGLISH_TRAY_LABELS: TrayLabels = {
+  open: 'Open Gaston',
+  quickCapture: 'Quick capture',
+  quit: 'Quit Gaston',
+};
+
+const GERMAN_TRAY_LABELS: TrayLabels = {
+  open: 'Gaston öffnen',
+  quickCapture: 'Schnell erfassen',
+  quit: 'Gaston beenden',
+};
+
+/** Labels for the tray menu in the UI's language. */
+export function trayLabels(language: UiLanguage): TrayLabels {
+  return language === 'en' ? ENGLISH_TRAY_LABELS : GERMAN_TRAY_LABELS;
 }
 
 /** The notification's body: the titles, plus how many more aren't listed. */

@@ -30,6 +30,15 @@ const own = {
   'settings.customization.icon.brain-chip': 'Gehirn-Chip',
   'settings.customization.icon.vault-brain': 'Vault-Gehirn',
 
+  'settings.customization.tray.title': 'Infobereich',
+  'settings.customization.tray.closeToTray.label':
+    'Beim Schließen des Fensters im Infobereich weiterlaufen',
+  'settings.customization.tray.closeToTray.hint':
+    'Das Schließen des Fensters lässt Gaston im Infobereich weiterlaufen — die Tastenkombination, Erinnerungen und das Schnell-Erfassen bleiben aktiv.',
+  'settings.customization.tray.startMinimized.label': 'Im Infobereich starten',
+  'settings.customization.tray.startMinimized.hint':
+    'Gaston startet versteckt im Infobereich, statt das Fenster zu öffnen.',
+
   'settings.vault.about':
     'Ein Vault ist ein gewöhnlicher Ordner mit Markdown-Dateien. Er ist portabel: kopiere ihn auf einen USB-Stick oder eine externe Platte, dort funktioniert er vollständig weiter.',
   'settings.vault.reveal': 'Im Explorer öffnen',

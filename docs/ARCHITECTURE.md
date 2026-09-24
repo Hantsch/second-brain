@@ -141,6 +141,30 @@ opener routes: they open the overlay and hand the address straight on to
 `/dashboard`. Any change of the path closes an open overlay. The global
 `Ctrl+Shift+Space` is unaffected — it opens the separate quick-capture window.
 
+## Window, tray and quit
+
+The tray (`src/main/tray.ts`) exists for as long as the app runs, independent of
+any setting — menu: open, quick capture, quit. Two app-level settings govern this
+area, both declared in `src/shared/types/settings.ts`: `closeToTray` (default on)
+governs what closing the window does, `startMinimized` (default off) governs
+whether the app starts hidden in the tray. Both are exposed in Settings →
+Customization (`src/renderer/screens/settings/TrayPanel.tsx`), each with a hint
+next to it stating its effect — the same "no dormant toggle" principle as
+"Errors and empty states" below states for the Behavior tab's switches.
+
+Closing the window hides it to the tray instead of quitting when `closeToTray` is
+on and a tray exists — the `hideInsteadOfClose` policy inside
+`src/main/close-guard.ts`'s one `close` listener. A real quit (the tray's "Quit",
+the app menu, or a window close with `closeToTray` off) still goes through that
+same module's existing veto: if a maintenance run is going, the quit is prevented,
+the window is shown, and `event:close-requested` reaches the renderer, which shows
+`src/renderer/components/QuitDuringRunDialog.tsx` — the M13 prompt fires exactly
+there, unchanged by the tray's existence.
+
+`showMainWindow` (`src/main/show-main-window.ts`) is the one door back to the
+window: the tray, `activate`, `window:show`, a second app start, and a reminder
+notification click all call it instead of each keeping its own copy.
+
 ## State in the renderer
 
 - **TanStack Query** for everything that comes over IPC. One hook per channel in

@@ -270,6 +270,9 @@ export function sanitizeAppPatch(patch: unknown): DeepPartial<AppSettings> {
   if (source.startMinimized !== undefined) {
     out.startMinimized = boolean(source.startMinimized, 'startMinimized');
   }
+  if (source.closeToTray !== undefined) {
+    out.closeToTray = boolean(source.closeToTray, 'closeToTray');
+  }
   if (source.onboarded !== undefined) {
     out.onboarded = boolean(source.onboarded, 'onboarded');
   }

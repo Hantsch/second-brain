@@ -29,3 +29,16 @@ await test.step('vault isolation — settings shows the open vault path', async 
 A step that only asserts against the vault on disk (see `fixtures/vault.ts`)
 still gets a step name — the flow/step naming applies regardless of whether
 the assertion reads the DOM or the filesystem.
+
+## Worker options (`fixtures/app.ts`)
+
+Every spec file sets these via `test.use({ ... })`, one Electron instance per
+worker (see `specId`). Two settings-related ones (058, D1):
+
+- `closeToTray` (default `true`) — whether closing the main window sends the
+  app to the tray instead of quitting, matching the real app-level default.
+  `quit-during-run.spec.ts` and `quit-during-digestion.spec.ts` set this to
+  `false`, since they prove the window-close quit door that only exists when
+  close-to-tray is off.
+- `startMinimized` (default `false`) — whether the app starts hidden in the
+  tray instead of showing its main window.
