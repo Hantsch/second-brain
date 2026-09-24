@@ -21,7 +21,6 @@ stop and say: run `/ai-scrum:setup` (ai-scrum plugin) first. Below, `<requiremen
 ## Precondition
 
 Open `<requirements>/$1-*.md`. Status must be **`ready`**.
-
 - `draft` → stop, say "run `/refine $1` first".
 - `done` → stop, say "already done".
 - Not found → look in `<requirements>/done/$1-*.md`; if it is there, also "already done".
@@ -46,11 +45,11 @@ finishes or quietly stops with nothing in the working tree to show for it.
 - **Never start a background child.** Put `run_in_background: false` on every `Agent` call you
   make. Completion notifications are delivered to the **top-level session only** — you are a
   subagent, so a background child you start will never wake you again, however long you wait.
-- **Never end a turn with "waiting".** A turn without a tool call _ends you_. "Waiting for D2
+- **Never end a turn with "waiting".** A turn without a tool call *ends you*. "Waiting for D2
   and D3 to come back" is not a pause, it is your final answer, and the build stops there. If
   you have nothing left to do, you are not waiting — you are done, so return your report.
 - **Parallelism is several foreground calls in ONE message**, never background plus polling.
-  Multiple `Agent` calls in a single message run concurrently _and_ block until all of them
+  Multiple `Agent` calls in a single message run concurrently *and* block until all of them
   have returned. That is the only safe way to overlap deliverables, and it applies only to Ds
   that touch disjoint files — anything sharing a file (an i18n bundle, a barrel export, a
   central test file) stays strictly sequential, or the two agents overwrite each other.
@@ -66,7 +65,6 @@ finishes or quietly stops with nothing in the working tree to show for it.
   ```powershell
   Add-Content -Encoding utf8 <progress-file> ("- " + (Get-Date -Format "yyyy-MM-dd HH:mm") + " · <id> · D<n> <short title> · started")
   ```
-
   ```bash
   echo "- $(date '+%Y-%m-%d %H:%M') · <id> · D<n> <short title> · started" >> <progress-file>
   ```
@@ -88,7 +86,7 @@ finishes or quietly stops with nothing in the working tree to show for it.
    `D` you are the orchestrator — the actual implementation is delegated to a fresh `Agent`:
    - **Pick the tier:** default is `model: "sonnet"`, written out on the `Agent` call.
      **Never leave `model` unset.** An unset `model` does not inherit this command's
-     frontmatter — it inherits the _session_ model, and hands that down to the children of
+     frontmatter — it inherits the *session* model, and hands that down to the children of
      your children. A session switched to Opus therefore re-tiers the whole agent tree
      silently, and that is the single largest cost item in this workflow: measured across
      real sprints, the same sprint shape came out at ~$255 per story on an inherited Opus
@@ -106,11 +104,10 @@ finishes or quietly stops with nothing in the working tree to show for it.
      complicated. No marking means default tier. If an unmarked D turns out to feel risky
      enough for the hard tier while implementing, that is a plan-gap signal → stop briefly
      and ask the user instead of silently escalating.
-
    - **Delegate:** if a progress file was named, run the `started` trail command first (see
      the delegation rules — one command, timestamp produced by the shell). Then ONE `Agent`
      call with **`run_in_background: false`** spelled out, and a
-     self-contained prompt. Spelling it out is the point: `false` is _not_ the default, and a
+     self-contained prompt. Spelling it out is the point: `false` is *not* the default, and a
      background child never wakes you again — see the delegation rules above. The agent
      cannot see this conversation, so give it:
      - the full text of exactly this one deliverable (not the other Ds),
@@ -123,7 +120,7 @@ finishes or quietly stops with nothing in the working tree to show for it.
      - **the test lines from `## Acceptance Tests` that belong to this D** (verbatim: level,
        file, test name, and the criterion they prove), with the instruction to write them as
        part of this deliverable — same agent, same turn sequence, not as a follow-up. The test
-       asserts the _criterion_ as a user would observe it; a test that merely mirrors what the
+       asserts the *criterion* as a user would observe it; a test that merely mirrors what the
        implementation happens to do proves nothing and will be rejected in the review. If the
        named test file does not exist yet, it creates it next to the project's existing ones
        and follows their shape.
@@ -154,7 +151,7 @@ finishes or quietly stops with nothing in the working tree to show for it.
      `## Verify` section. Entries set to `none` are skipped. Run `test` when tests exist or
      were touched.
    - **Run `e2e` too, if the profile sets it and this story mapped any criterion to it.**
-     That run _is_ the acceptance of those criteria — there is no manual round behind it, so a
+     That run *is* the acceptance of those criteria — there is no manual round behind it, so a
      skipped or red e2e suite is a blocker, not a note for the user. If the harness cannot run
      here (no display, missing dependency), say exactly that and treat it as a blocker: leave
      `status: in-progress`, name what is missing, and let the sprint report it. Do **not**
@@ -185,21 +182,21 @@ finishes or quietly stops with nothing in the working tree to show for it.
        story's whole acceptance — nobody walks it by hand afterwards,
      - the review assignment:
        (a) each acceptance criterion individually: PASS / FAIL / UNCLEAR with evidence
-       (`file:line`),
+           (`file:line`),
        (a2) **the test named for each criterion: does it actually prove it?** The reviewer
-       opens each one and judges whether a broken implementation would make it fail.
-       Report as a finding: a test that asserts nothing meaningful, that re-states the
-       implementation instead of the criterion (asserting the value the code happens to
-       produce), that mocks away the very thing under test, that is skipped or
-       conditionally skipped, or that covers a narrower case than the criterion claims.
-       This item exists because whoever implements also wrote the test, and a green
-       tautology looks exactly like acceptance from the outside.
+           opens each one and judges whether a broken implementation would make it fail.
+           Report as a finding: a test that asserts nothing meaningful, that re-states the
+           implementation instead of the criterion (asserting the value the code happens to
+           produce), that mocks away the very thing under test, that is skipped or
+           conditionally skipped, or that covers a narrower case than the criterion claims.
+           This item exists because whoever implements also wrote the test, and a green
+           tautology looks exactly like acceptance from the outside.
        (b) weakened or deleted tests, disabled assertions, suppressed warnings, silenced
-       null checks or commented-out validations without a justifying comment on the
-       same line,
+           null checks or commented-out validations without a justifying comment on the
+           same line,
        (c) scope creep: changes with no visible relation to plan/deliverables,
        (d) correctness bugs, removed validation or error handling, violations of the
-       guardrails in `CLAUDE.md`,
+           guardrails in `CLAUDE.md`,
      - the agent proposes no fixes and changes no files — it returns a verdict
        (PASS/FAIL/UNCLEAR) + a findings list (`file:line` + one line of reasoning).
    - **Handle findings:** fix confirmed ones, then repeat the verification from step 5;
@@ -217,19 +214,19 @@ finishes or quietly stops with nothing in the working tree to show for it.
      verified** (which criterion, which test, passed), every `manual residue` with its reason,
      and open points or blockers.
 9. Check all `## Acceptance Criteria` and tick the ones that are met.
-   9b. **If `changelog-path` is set in the profile:** every user-facing feature or fix in this
-   story gets an entry there, under `# Features` or `# Fixes` of the **current** version
-   section — appended, never restructuring an earlier one. Short, punchy, a little funny, in
-   `doc-language`; what the user can now do, not how it was built. Tests, refactors and
-   internal changes get no entry, because they change nothing for the user. A story with no
-   user-facing change adds nothing at all — an empty entry is worse than none. When
-   `changelog-path` is `none`, skip this step entirely.
+9b. **If `changelog-path` is set in the profile:** every user-facing feature or fix in this
+    story gets an entry there, under `# Features` or `# Fixes` of the **current** version
+    section — appended, never restructuring an earlier one. Short, punchy, a little funny, in
+    `doc-language`; what the user can now do, not how it was built. Tests, refactors and
+    internal changes get no entry, because they change nothing for the user. A story with no
+    user-facing change adds nothing at all — an empty entry is worse than none. When
+    `changelog-path` is `none`, skip this step entirely.
 10. Set `status: done` once verification (step 5) is green and the review (step 6) is through.
     **That is the whole gate** — there is no user acceptance round to wait for, and a story is
     not held open so someone can look at it later. `in-progress` is only for a real blocker:
     red tests you cannot fix, a criterion whose test was never written, an e2e harness that
     cannot run, or review-fix cycles exhausted. Name the blocker in the story file; anything
-    a walk-through finds _after_ this becomes a new story, not a reopened one.
+    a walk-through finds *after* this becomes a new story, not a reopened one.
     Then `git mv` the file to `<requirements>/done/` and append a line to
     `<requirements>/done/INDEX.md`
     (`- NNN — <title> · <sprint or —> · <one-sentence result>`) — move and index line are
@@ -239,7 +236,7 @@ finishes or quietly stops with nothing in the working tree to show for it.
 
 - **You orchestrate, you do not read.** Resist opening source files yourself: your context is
   re-read in full on every turn, so a file you pull in during D2 is still being paid for at
-  the review in step 6. Read the story file, and whatever you need in order to _decide_
+  the review in step 6. Read the story file, and whatever you need in order to *decide*
   something — the code itself belongs to the agents you delegate to. Catching yourself reading
   a file a second time is the signal that you are doing an agent's job.
 - **Do not commit, do not push**, unless the user explicitly asks. `/build` writes
