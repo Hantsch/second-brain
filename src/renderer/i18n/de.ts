@@ -13,6 +13,7 @@ import { deJournalCalendar } from './de-journal-calendar';
 import { deNotes } from './de-notes';
 import { deProjects } from './de-projects';
 import { deScreens } from './de-screens';
+import { deSearch } from './de-search';
 import { deSettings } from './de-settings';
 import { deTasks } from './de-tasks';
 import { deWiki } from './de-wiki';
@@ -84,6 +85,7 @@ export const de = {
   'palette.group.screens': 'Bereiche',
   'palette.group.actions': 'Aktionen',
   'palette.group.search': 'Suche',
+  'palette.search.showAll': 'Alle Ergebnisse für „{query}“ anzeigen',
   'palette.screen.sources': 'Quellen',
   'palette.screen.agentSessions': 'Agent-Sitzungen',
   'palette.screen.unfiled': 'Nicht abgelegt',
@@ -230,6 +232,7 @@ export const de = {
   ...deJournalCalendar,
   ...deNotes,
   ...deProjects,
+  ...deSearch,
   ...deSettings,
   ...deTasks,
   ...deWiki,

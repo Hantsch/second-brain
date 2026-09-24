@@ -46,6 +46,7 @@ import { useChatMutations, useThread, useThreads } from '../../lib/queries/chat'
 import { useModules, useProjects } from '../../lib/queries/data';
 import { useTaskRouted } from '../../lib/queries/llm';
 import { qk } from '../../lib/queries/keys';
+import { useOpenDoc } from '../../lib/use-open-doc';
 import { AnswerFeed } from './AnswerFeed';
 import { Examples } from './Examples';
 import { FileBack } from './FileBack';
@@ -165,7 +166,15 @@ export function AskPanel({ prefill = {}, onControls, onEscape }: AskPanelProps) 
     anchor?.scrollIntoView?.({ block: 'nearest' });
   };
 
-  const openPath = (path: string): void => {
+  /* A citation's path opens in the app (059): `openDoc` closes the ask overlay
+     first, then navigates to the document's home. Only validated citations get
+     this far — the answer text passes no opener to `Markdown`, so an
+     unconfirmed path there stays plain text (057). */
+  const openDoc = useOpenDoc();
+
+  /* The filed wiki page is a different exit: the file-back dialog promises
+     the file itself, so it keeps the OS editor. */
+  const openExternally = (path: string): void => {
     void api.shell.openPath(path).catch(() => undefined);
   };
 
@@ -277,7 +286,7 @@ export function AskPanel({ prefill = {}, onControls, onEscape }: AskPanelProps) 
                 }
                 active={active}
                 onCitation={showCitation}
-                onOpenPath={openPath}
+                onOpenPath={openDoc}
                 onFileBack={setFileBackFor}
               />
             )}
@@ -318,7 +327,7 @@ export function AskPanel({ prefill = {}, onControls, onEscape }: AskPanelProps) 
         messages={messages}
         threadTitle={thread.data?.title ?? ''}
         modules={modules.data ?? []}
-        onOpen={openPath}
+        onOpen={openExternally}
         onClose={() => setFileBackFor(null)}
       />
     </>

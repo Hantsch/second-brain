@@ -17,6 +17,25 @@ export const qk = {
   },
   search: {
     query: (text: string) => ['search', text] as const,
+    /** Batched link resolution for one rendered document (059, D4): sorted so
+        the key stays stable no matter what order the body's references were
+        collected in. */
+    resolveLinks: (from: string, targets: readonly string[]) =>
+      ['search', 'resolveLinks', from, [...targets].sort()] as const,
+    /** The full result view (059, D5): scope, the chosen type group's
+        `DocType`s, and the current page size are all part of the key — they
+        change what the server returns for the same query text, so reusing
+        `query()`'s key (the command palette's own six-hit lookup) would let
+        the two collide on one cache entry despite asking for different,
+        differently filtered results. Types are sorted for the same reason
+        `resolveLinks` sorts its targets: one canonical key regardless of
+        the group's own declaration order. */
+    results: (
+      text: string,
+      scope: string | undefined,
+      types: readonly string[] | undefined,
+      limit: number,
+    ) => ['search', 'results', text, scope ?? null, [...(types ?? [])].sort(), limit] as const,
   },
   capture: {
     inbox: () => ['capture', 'inbox'] as const,

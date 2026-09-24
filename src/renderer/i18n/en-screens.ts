@@ -160,7 +160,8 @@ export const enScreens = {
   'ask.citation.openPath': 'Open file: {path}',
   'ask.citation.of': 'Evidence {index} — {path}',
   'ask.citation.context': 'The passage in context',
-  'ask.citation.openFile': 'Open file',
+  'ask.citation.openInApp': 'Open in app',
+  'ask.citation.openExternal': 'Open externally',
   'ask.citation.moved': 'This passage is no longer in the file — it has been changed since.',
 
   'ask.examples.title': 'Start here',

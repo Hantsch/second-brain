@@ -324,6 +324,21 @@ export interface IpcRoutes {
   'index:stats': { req: void; res: IndexStats };
   'index:rebuild': { req: void; res: IndexStats };
   'search:query': { req: SearchQuery; res: SearchHit[] };
+  /**
+   * Resolves each of `targets` — a vault path, a wikilink, or a bare slug, as
+   * it stands in the file at `from` — to the vault-relative path it means, via
+   * `resolveLink()` in `core/index/resolve-link.ts` (059, D2). One batched
+   * round trip per rendered document, not one channel call per link. The
+   * response is keyed by the input target string, so a target that appears
+   * more than once still needs only one lookup, and a target nothing can
+   * resolve comes back `null` rather than a guess (guardrail 3/5). Without an
+   * index, every target resolves to `null` — the same honest-empty-state
+   * guard `search:query` uses, never a throw.
+   */
+  'search:resolveLinks': {
+    req: { from: string; targets: string[] };
+    res: Record<string, string | null>;
+  };
 
   // ── Capture & filing ─────────────────────────────────────────────────────
   'capture:dump': {
@@ -1261,6 +1276,7 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'index:stats',
   'index:rebuild',
   'search:query',
+  'search:resolveLinks',
   'capture:dump',
   'capture:inbox',
   'capture:classify',

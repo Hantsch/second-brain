@@ -18,6 +18,8 @@
 @import './styles/app/journal.css';
 @import './styles/app/journal-calendar.css';
 @import './styles/app/modules.css';
+@import './styles/app/reader.css';
+@import './styles/app/search.css';
 @import './styles/app/sources.css';
 @import './styles/app/garden.css';
 @import './styles/app/tasks.css';

@@ -359,6 +359,8 @@ const RESPONSES: MockResponses = {
   'index:stats': () => fx.indexStats,
   'index:rebuild': () => fx.indexStats,
   'search:query': () => [fx.searchHit],
+  'search:resolveLinks': ({ targets }) =>
+    Object.fromEntries(targets.map((target) => [target, null])),
 
   'capture:dump': ({ text, origin }) => ({ ...fx.dump, text, origin }),
   'capture:inbox': () => [fx.dump],

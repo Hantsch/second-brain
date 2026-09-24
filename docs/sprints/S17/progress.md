@@ -29,3 +29,21 @@
 - 2026-09-24 14:40 · 058 · review-fix start-hidden maximize/tray-throw/AC4-test/close-guard-test · done
 - 2026-09-24 14:57 · 058 · review-fix maximized-state-lost-on-hidden-start + tray-throw-test-gap · started
 - 2026-09-24 14:59 · 058 · review-fix maximized-state-lost-on-hidden-start + tray-throw-test-gap · done
+- 2026-09-24 15:05 · 059 · D1 search scope + link resolver (core) · started
+- 2026-09-24 15:11 · 059 · D1 search scope + link resolver (core) · done
+- 2026-09-24 15:11 · 059 · D2 search:resolveLinks channel · started
+- 2026-09-24 15:16 · 059 · D2 search:resolveLinks channel · done
+- 2026-09-24 15:17 · 059 · D3 homeOf + useOpenDoc · started
+- 2026-09-24 15:22 · 059 · D3 homeOf + useOpenDoc · done
+- 2026-09-24 15:22 · 059 · D4 reading view · started
+- 2026-09-24 15:51 · 059 · D4 reading view · done
+- 2026-09-24 15:51 · 059 · D5 full result view · started
+- 2026-09-24 16:11 · 059 · D5 full result view · done
+- 2026-09-24 16:11 · 059 · D6 Ctrl+K wiring · started
+- 2026-09-24 16:29 · 059 · D6 Ctrl+K wiring · done
+- 2026-09-24 16:30 · 059 · D7 citations open in-app · started
+- 2026-09-24 16:37 · 059 · D7 citations open in-app · done
+- 2026-09-24 18:43 · 059 · verification (build/test/lint/typecheck/format/e2e, resumed after rate-limit interruption) · started
+- 2026-09-24 18:43 · 059 · verification (build/test/lint/typecheck/format/e2e, resumed after rate-limit interruption) · done
+- 2026-09-24 18:43 · 059 · clean-agent review (full story diff) · started
+- 2026-09-24 18:43 · 059 · clean-agent review (full story diff) · done (PASS, no fix cycle)

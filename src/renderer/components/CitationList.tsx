@@ -131,7 +131,7 @@ export interface CitationListProps {
   active?: number | null;
   /** View citation in context, 1-based. */
   onSelect: (index: number) => void;
-  /** Open file in the editor. */
+  /** Open the cited file — in the app since 059 (`AskPanel` hands in `useOpenDoc`). */
   onOpen: (path: string) => void;
   /** Question whose words get highlighted in the quote. */
   question?: string;
@@ -174,9 +174,9 @@ export function CitationList({
               </span>
             </button>
             <IconButton
-              icon="external-link"
+              icon="book-open"
               size="sm"
-              label={t('common.openInEditor')}
+              label={t('ask.citation.openInApp')}
               onClick={() => onOpen(citation.path)}
             />
           </li>

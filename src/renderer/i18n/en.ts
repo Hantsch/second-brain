@@ -13,6 +13,7 @@ import { enJournalCalendar } from './en-journal-calendar';
 import { enNotes } from './en-notes';
 import { enProjects } from './en-projects';
 import { enScreens } from './en-screens';
+import { enSearch } from './en-search';
 import { enSettings } from './en-settings';
 import { enTasks } from './en-tasks';
 import { enWiki } from './en-wiki';
@@ -84,6 +85,7 @@ export const en: Record<TranslationKey, string> = {
   'palette.group.screens': 'Places',
   'palette.group.actions': 'Actions',
   'palette.group.search': 'Search',
+  'palette.search.showAll': 'Show all results for {query}',
   'palette.screen.sources': 'Sources',
   'palette.screen.agentSessions': 'Agent sessions',
   'palette.screen.unfiled': 'Unfiled',
@@ -221,6 +223,7 @@ export const en: Record<TranslationKey, string> = {
   ...enJournalCalendar,
   ...enNotes,
   ...enProjects,
+  ...enSearch,
   ...enSettings,
   ...enTasks,
   ...enWiki,

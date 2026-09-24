@@ -1,8 +1,17 @@
 /* A citation in context.
 
    A quote alone leaves it open whether it still fits. So this panel shows the
-   spot along with its surroundings, with real line numbers in mono — and a link
-   to the file.
+   spot along with its surroundings, with real line numbers in mono — and the
+   way into the file: in the app first (`useOpenDoc`, story 059), the OS editor
+   only as the secondary exit. No scroll-to-line in the reader: rendered
+   Markdown has no stable line mapping, and this panel already shows the line
+   in context.
+
+   The panel is reachable only for a citation `validateCitations` confirmed:
+   the caller hands in an entry of the answer's `citations`, and an unconfirmed
+   path in the answer text never becomes a mark (057, `Markdown.tsx`). Both
+   buttons act on that same `citation.path`, so neither opens a path the panel
+   was not given.
 
    The spot is located within the file's body, not by the line number alone:
    the user is free to edit their files at any time. If the quote can no longer
@@ -16,6 +25,7 @@ import { Skeleton } from './Skeleton';
 import { useT } from '../i18n';
 import { api } from '../lib/api';
 import { qk } from '../lib/queries/keys';
+import { useOpenDoc } from '../lib/use-open-doc';
 
 /** This many lines are shown above and below the match. */
 const RADIUS = 4;
@@ -71,6 +81,7 @@ export interface CitationPanelProps {
 
 export function CitationPanel({ citation, index, onClose }: CitationPanelProps) {
   const t = useT();
+  const openDoc = useOpenDoc();
   const path = citation?.path ?? null;
   const { data: doc, isPending } = useQuery({
     queryKey: qk.vault.doc(path ?? ''),
@@ -95,14 +106,27 @@ export function CitationPanel({ citation, index, onClose }: CitationPanelProps) 
       closeLabel={t('common.close')}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose}>
             {t('common.close')}
           </Button>
           <Button
+            variant="secondary"
             icon="external-link"
             onClick={() => void api.shell.openPath(citation.path).catch(() => undefined)}
           >
-            {t('ask.citation.openFile')}
+            {t('ask.citation.openExternal')}
+          </Button>
+          {/* The panel closes itself first: `openDoc` closes the ask overlay
+              around it, but the panel is also embeddable where no overlay
+              exists — it must not linger over the screen it navigated to. */}
+          <Button
+            icon="book-open"
+            onClick={() => {
+              onClose();
+              openDoc(citation.path);
+            }}
+          >
+            {t('ask.citation.openInApp')}
           </Button>
         </>
       }

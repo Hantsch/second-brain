@@ -27,7 +27,7 @@ import { decodeIpcError } from '../../lib/ipc-error';
 import { useModuleMutations } from '../../lib/queries/modules';
 import { PageBody } from './PageBody';
 import { PageEdit } from './PageEdit';
-import { WikiRef } from './WikiRef';
+import { WikiRef } from '../../components/WikiRef';
 
 export interface PageViewProps {
   page: WikiPage;

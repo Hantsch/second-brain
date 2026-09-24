@@ -13,7 +13,7 @@
 
 import { useT } from '../../i18n';
 import { renderMarkdown } from '../../components/markdown-render';
-import { WikiRef } from './WikiRef';
+import { WikiRef } from '../../components/WikiRef';
 
 export interface PageBodyProps {
   body: string;

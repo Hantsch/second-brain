@@ -1,6 +1,6 @@
 /* Wissens-Module (Karpathy-Wiki), Suche, Chat und Ingest. */
 
-import type { BaseFrontmatter, DocType } from './vault';
+import type { BaseFrontmatter, DocType, Scope } from './vault';
 
 export type WikiPageType = 'source' | 'entity' | 'concept' | 'overview';
 
@@ -142,6 +142,8 @@ export interface SearchQuery {
   types?: DocType[];
   /** Auf ein Modul einschränken. */
   module?: string;
+  /** Auf Arbeit oder Privat einschränken. */
+  scope?: Scope;
   tags?: string[];
   /** Nur Dokumente ab diesem Datum. */
   since?: string;

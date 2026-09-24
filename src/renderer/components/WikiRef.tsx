@@ -3,9 +3,14 @@
    Ein Knopf, kein Link: das Ziel liegt in derselben Ansicht, nicht im Web. Ein
    Ziel, das es nicht gibt, sagt das ausdrücklich — sichtbar (Marke), hörbar
    (`aria-label`) und im Tooltip. Ein kaputter Wikilink, der wie ein guter
-   aussieht, ist der Anfang von Knowledge-Rot. */
+   aussieht, ist der Anfang von Knowledge-Rot.
 
-import { useT } from '../../i18n';
+   Moved from `screens/modules/` (059, D4): the reader screen needs the exact
+   same "missing" affordance for a body reference or a vault-path source, so
+   this lives in `components/` for both to import instead of each growing its
+   own copy (CLAUDE.md "reuse instead of copying"). */
+
+import { useT } from '../i18n';
 
 export interface WikiRefProps {
   /** Ziel, wie es in der Datei steht: `slug` oder `modul/slug`. */

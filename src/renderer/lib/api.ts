@@ -54,6 +54,8 @@ export const api = {
   search: {
     query: (text: string, options: Omit<IpcRequest<'search:query'>, 'text'> = {}) =>
       call('search:query', { text, ...options }),
+    resolveLinks: (from: string, targets: string[]) =>
+      call('search:resolveLinks', { from, targets }),
   },
   capture: {
     dump: (request: IpcRequest<'capture:dump'>) => call('capture:dump', request),

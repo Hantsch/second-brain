@@ -236,3 +236,9 @@ second roadmap.
   able to kill startup, a follow-on regression that silently dropped the saved maximized setting,
   plus test-coverage/doc-accuracy gaps) then PASS after three review-fix rounds, with one accepted
   residual limitation on the maximized flag across repeated hidden starts.
+- 059 — A search hit opens in the app · S17 · Search gained a full result view
+  (`/search?q=&scope=&types=`, snippets, scope/type filters) and a new in-app reading view
+  (`/read`, rendered Markdown, frontmatter as facts not raw YAML, in-app wikilink/path
+  resolution via a new batched `search:resolveLinks` channel); Ctrl+K, search rows and ask
+  citations all now open documents in-app by default with "open externally" as an explicit
+  secondary action — reviewed PASS on the first pass, no fix cycle needed.

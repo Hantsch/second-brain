@@ -5,12 +5,18 @@
    leads there — for everything else there's the path through the operating
    system, and the button is named accordingly.
 
+   The general "which route does this vault path belong to" question is
+   `homeOf` (`lib/doc-home.ts`) — garden only adds its own local
+   readings on top: a finding lists the plain area path first even when the
+   condensed artifact is what's due, `inbox/` reads as unfiled, and `raw/` as
+   a source, none of which are true of a path in general.
+
    The catalog and the log (`wiki/index.md`, `wiki/log.md`) are not wiki pages
    (VAULT-FORMAT.md: they carry no frontmatter). The page view wouldn't load
    them; the log has its own tab, the catalog has no view at all — so it's a
    file. */
 
-import { projectRefFromCondensedPath } from '@core/condense/paths';
+import { homeOf } from '../../lib/doc-home';
 
 export interface RouteTarget {
   kind: 'route';
@@ -25,45 +31,16 @@ export interface FileTarget {
 
 export type PathTarget = RouteTarget | FileTarget;
 
-const WIKI_PAGE = /^modules\/([^/]+)\/wiki\/(sources|entities|concepts)\/[^/]+\.md$/;
-const WIKI_OVERVIEW = /^modules\/([^/]+)\/wiki\/overview\.md$/;
-const WIKI_LOG = /^modules\/([^/]+)\/wiki\/log\.md$/;
-const PROJECT = /^projects\/(?:work|private)\/([^/]+)\/project\.md$/;
 /* Mirrors `areaSlugFromCondensedPath` (`@core/condense/paths.ts`), plus the plain
    area file itself: a `condensation-due` finding lists the area path first
    (`areas/<slug>.md`), not the condensed sibling, and `FindingCard` opens
-   `paths[0]` — so both spellings have to land on the same route. */
+   `paths[0]` — so both spellings have to land on the same route. `homeOf`
+   only sends the condensed spelling to the condensed tab; garden overrides
+   the plain one here to match. */
 const AREA = /^areas\/([^/]+?)(?:\.condensed)?\.md$/;
 
 /** The place where this path is visible in the app — otherwise the file itself. */
 export function targetFor(path: string): PathTarget {
-  const page = WIKI_PAGE.exec(path) ?? WIKI_OVERVIEW.exec(path);
-  if (page !== null) {
-    const module = page[1] ?? '';
-    return {
-      kind: 'route',
-      to: `/knowledge?m=${encodeURIComponent(module)}&p=${encodeURIComponent(path)}`,
-    };
-  }
-  const log = WIKI_LOG.exec(path);
-  if (log !== null) {
-    return { kind: 'route', to: `/knowledge?m=${encodeURIComponent(log[1] ?? '')}&tab=log` };
-  }
-  const project = PROJECT.exec(path);
-  if (project !== null) {
-    return { kind: 'route', to: `/projects?p=${encodeURIComponent(project[1] ?? '')}` };
-  }
-  /* Mirrors `projectRefFromCondensedPath` (`@core/condense/paths.ts`): the condensed
-     artifact lives at `projects/<scope>/<slug>/condensed.md`, next to `project.md`,
-     but the finding card should land on the project's knowledge tab (story 045),
-     not the overview the plain route above resolves to. */
-  const condensedProject = projectRefFromCondensedPath(path);
-  if (condensedProject !== undefined) {
-    return {
-      kind: 'route',
-      to: `/projects?p=${encodeURIComponent(condensedProject.slug)}&tab=knowledge`,
-    };
-  }
   const area = AREA.exec(path);
   if (area !== null) {
     return {
@@ -73,6 +50,16 @@ export function targetFor(path: string): PathTarget {
   }
   if (path.startsWith('inbox/')) return { kind: 'route', to: '/notes?filter=unfiled' };
   if (path.startsWith('raw/')) return { kind: 'route', to: '/knowledge?tab=sources' };
+  /* `homeOf` also recognizes journal days and, for everything else, the
+     generic reader (`/read?path=…`) — neither of those had a garden view
+     before this refactor, and garden's own behaviour must not change because
+     the shared helper grew a case garden never had. Only the two screens
+     garden always understood (knowledge, projects) are taken as routes; a
+     `home` outside that whitelist falls to the file it always was. */
+  const home = homeOf(path);
+  if (home.startsWith('/knowledge?') || home.startsWith('/projects?')) {
+    return { kind: 'route', to: home };
+  }
   return { kind: 'file', path };
 }
 

@@ -174,7 +174,8 @@ export const deScreens = {
   'ask.citation.openPath': 'Datei öffnen: {path}',
   'ask.citation.of': 'Beleg {index} — {path}',
   'ask.citation.context': 'Die Stelle im Kontext',
-  'ask.citation.openFile': 'Datei öffnen',
+  'ask.citation.openInApp': 'In der App öffnen',
+  'ask.citation.openExternal': 'Extern öffnen',
   'ask.citation.moved':
     'Diese Stelle steht so nicht mehr in der Datei — sie wurde inzwischen geändert.',
 

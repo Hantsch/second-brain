@@ -8,7 +8,7 @@
  */
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import axe from 'axe-core';
@@ -25,6 +25,7 @@ import type {
   VaultDoc,
 } from '@shared/types';
 import { AskPanel } from '@renderer/screens/ask/AskPanel';
+import { homeOf } from '@renderer/lib/doc-home';
 import type { SbBridge } from '@renderer/lib/bridge';
 import { wireEvents } from '@renderer/lib/events';
 import { clearStream } from '@renderer/lib/llm-stream';
@@ -191,6 +192,17 @@ function thread(messages: ChatMessage[], id = 'c-2026-08-10-1432-aaaa'): ChatThr
   return { id, kind: 'ask', title: QUESTION, created: NOW, updated: NOW, messages, context: null };
 }
 
+/* Where the router stands — opening a citation in the app (059) is observed
+   here, the same probe the other screen tests use. */
+function LocationProbe() {
+  const location = useLocation();
+  return (
+    <span data-testid="location" hidden>
+      {`${location.pathname}${location.search}`}
+    </span>
+  );
+}
+
 interface Rendered {
   sb: Mock;
   container: HTMLElement;
@@ -223,6 +235,7 @@ function renderAsk(extra: Handlers = {}): Rendered {
     <QueryClientProvider client={client}>
       <MemoryRouter>
         <AskPanel />
+        <LocationProbe />
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -435,7 +448,76 @@ describe('Fragen: eine Antwort entsteht', () => {
     const hit = within(panel).getByText(VERBATIM).closest('li');
     expect(hit?.textContent?.startsWith('13')).toBe(true);
     expect(hit?.className).toContain('sb-context-line--hit');
-    expect(within(panel).getByRole('button', { name: 'Datei öffnen' })).toBeTruthy();
+    /* 059/D7: the way in is the app — primary; the OS editor is secondary. */
+    const inApp = within(panel).getByRole('button', { name: 'In der App öffnen' });
+    expect(inApp.className).toContain('gs-btn--primary');
+    const external = within(panel).getByRole('button', { name: 'Extern öffnen' });
+    expect(external.className).toContain('gs-btn--secondary');
+  });
+
+  /* 059/D7: the panel's primary action navigates to the document's home and
+     never asks the OS; the secondary one still does, with the same path. */
+  it('opens a citation in the app from the panel, externally only on request', async () => {
+    const state = {
+      thread: thread([
+        userMessage(`${messageId}-q`),
+        {
+          id: messageId,
+          role: 'assistant',
+          content: ANSWER,
+          at: NOW,
+          citations: [citation],
+          model: 'qwen2.5:14b',
+        },
+      ]),
+    };
+    const { sb } = open({ ...handlers(state), 'chat:threads': () => [state.thread] });
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: `Gespräch „${QUESTION}“ öffnen` }),
+    );
+    await userEvent.click(await screen.findByRole('button', { name: 'Beleg 1 anzeigen' }));
+    let panel = await screen.findByRole('dialog', { name: 'Token-Lebensdauer' });
+
+    await userEvent.click(within(panel).getByRole('button', { name: 'Extern öffnen' }));
+    await waitFor(() => expect(sb.payloadOf('shell:openPath')).toEqual({ path: TOKEN_PAGE }));
+
+    sb.calls.length = 0;
+    await userEvent.click(screen.getByRole('button', { name: 'Beleg 1 anzeigen' }));
+    panel = await screen.findByRole('dialog', { name: 'Token-Lebensdauer' });
+    await userEvent.click(within(panel).getByRole('button', { name: 'In der App öffnen' }));
+
+    expect(screen.getByTestId('location').textContent).toBe(homeOf(TOKEN_PAGE));
+    expect(screen.queryByRole('dialog', { name: 'Token-Lebensdauer' })).toBeNull();
+    expect(sb.calls.some((call) => call.channel === 'shell:openPath')).toBe(false);
+  });
+
+  /* 059/D7: the path under a validated citation in the list opens in the app
+     too — the list's own button, not only the panel's. */
+  it('opens a listed citation in the app, not in the OS editor', async () => {
+    const state = {
+      thread: thread([
+        userMessage(`${messageId}-q`),
+        {
+          id: messageId,
+          role: 'assistant',
+          content: ANSWER,
+          at: NOW,
+          citations: [citation],
+          model: 'qwen2.5:14b',
+        },
+      ]),
+    };
+    const { sb } = open({ ...handlers(state), 'chat:threads': () => [state.thread] });
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: `Gespräch „${QUESTION}“ öffnen` }),
+    );
+    const cites = await screen.findByRole('list', { name: 'Belege' });
+    await userEvent.click(within(cites).getByRole('button', { name: 'In der App öffnen' }));
+
+    expect(screen.getByTestId('location').textContent).toBe(homeOf(TOKEN_PAGE));
+    expect(sb.calls.some((call) => call.channel === 'shell:openPath')).toBe(false);
   });
 
   /* 057/D2: eine Antwort ist Modelltext, kein Zitatverzeichnis — ein Pfad
@@ -458,7 +540,7 @@ describe('Fragen: eine Antwort entsteht', () => {
         },
       ]),
     };
-    open({ ...handlers(state), 'chat:threads': () => [state.thread] });
+    const { sb } = open({ ...handlers(state), 'chat:threads': () => [state.thread] });
 
     await userEvent.click(
       await screen.findByRole('button', { name: `Gespräch „${QUESTION}“ öffnen` }),
@@ -470,6 +552,17 @@ describe('Fragen: eine Antwort entsteht', () => {
     expect(screen.queryByRole('button', { name: `Datei öffnen: ${otherPath}` })).toBeNull();
     const turn = screen.getByRole('article', { name: 'Antwort' });
     expect(turn.textContent).toContain('mfa.md');
+
+    /* 059/D7 builds its in-app opening on exactly this guard, so the invariant
+       is spelled out here too: every in-app opener in this answer belongs to
+       the one validated citation (its list entry), none to the unconfirmed
+       path — and clicking that path's text opens nothing, in app or outside. */
+    expect(within(turn).getAllByRole('button', { name: 'In der App öffnen' })).toHaveLength(1);
+    const location = screen.getByTestId('location').textContent;
+    await userEvent.click(within(turn).getByText(/mfa\.md/));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.getByTestId('location').textContent).toBe(location);
+    expect(sb.calls.some((call) => call.channel === 'shell:openPath')).toBe(false);
   });
 
   /* Story 005: notes live under `areas/`, a document type the panel has never
@@ -505,7 +598,8 @@ describe('Fragen: eine Antwort entsteht', () => {
     const hit = within(panel).getByText(AREA_QUOTE).closest('li');
     expect(hit?.textContent?.startsWith('5')).toBe(true);
     expect(hit?.className).toContain('sb-context-line--hit');
-    expect(within(panel).getByRole('button', { name: 'Datei öffnen' })).toBeTruthy();
+    expect(within(panel).getByRole('button', { name: 'In der App öffnen' })).toBeTruthy();
+    expect(within(panel).getByRole('button', { name: 'Extern öffnen' })).toBeTruthy();
   });
 });
 

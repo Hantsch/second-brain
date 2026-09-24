@@ -161,6 +161,28 @@ export const DEEP_STATES = [
     hash: '/projects?p=orbit-sso-migration&tab=sessions',
     wait: '.sb-trace',
   },
+  {
+    /* Story 059, D4: the generic reading view — the fallback `homeOf()` gives
+       any document with no dedicated home. `module.md` is exactly that case
+       (see `docs/VAULT-FORMAT.md` and `tests/renderer/doc-home.test.ts`'s own
+       fallback example): real frontmatter (`type: note`, a description) but
+       no page view of its own. `.sb-pageview` only stands once the document
+       has actually loaded, never on the loading skeleton. */
+    id: 'reader',
+    hash: '/read?path=modules%2Fidentity-management%2Fmodule.md',
+    wait: '.sb-pageview',
+  },
+  {
+    /* Story 059, D5: the full search result view — a route, not a rail
+       entry, reached straight from its own address. 'Rollenkonzept' is a
+       term the seed vault uses across multiple document kinds (project,
+       condensed project, wiki), so this shows real snippets, not an empty
+       result list. `.sb-searchresults` only renders once hits actually
+       came back, never on the loading skeleton. */
+    id: 'search-results',
+    hash: '/search?q=Rollenkonzept',
+    wait: '.sb-searchresults',
+  },
 ];
 
 /**

@@ -22,6 +22,8 @@ import { NotesScreen } from './screens/notes/NotesScreen';
 import { OnboardingScreen } from './screens/onboarding/OnboardingScreen';
 import { AllSessionsScreen } from './screens/projects/AllSessionsScreen';
 import { ProjectsScreen } from './screens/projects/ProjectsScreen';
+import { ReaderScreen } from './screens/reader/ReaderScreen';
+import { SearchScreen } from './screens/search/SearchScreen';
 import { SettingsScreen } from './screens/settings/SettingsScreen';
 import { TasksScreen } from './screens/tasks/TasksScreen';
 
@@ -168,6 +170,12 @@ export function App() {
         <Route path="/notes" element={<NotesScreen />} />
         <Route path="/journal" element={<JournalScreen />} />
         <Route path="/knowledge" element={<ModulesScreen />} />
+        {/* The generic reading view (059, D4) — where a document with no
+            dedicated home (`homeOf`'s fallback) opens. */}
+        <Route path="/read" element={<ReaderScreen />} />
+        {/* The full search result view (059, D5) — a route, not a rail entry,
+            so the address carries query and filters through Back/reload. */}
+        <Route path="/search" element={<SearchScreen />} />
         {/* Capture and ask live as overlays inside the shell; these addresses
             open them over the dashboard instead of leading to a screen. */}
         <Route path="/capture" element={<OpenOverlayRoute kind="capture" />} />

@@ -11,8 +11,8 @@ import { ErrorState } from '../../components/ErrorState';
 import { Skeleton } from '../../components/Skeleton';
 import { useT } from '../../i18n';
 import { api } from '../../lib/api';
+import { WikiRef } from '../../components/WikiRef';
 import { fieldLabelKey, isRefField, parseLog, partsOf, refsOf } from './log';
-import { WikiRef } from './WikiRef';
 
 export interface ModuleLogProps {
   /** The chronicle as a document; `null` if it doesn't exist. */

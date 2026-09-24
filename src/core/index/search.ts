@@ -78,13 +78,20 @@ function matchesTypes(doc: IndexedDoc, types: readonly DocType[] | undefined): b
   return types === undefined || types.length === 0 || types.includes(doc.docType);
 }
 
-/** All of the query's filters as one predicate. */
+/**
+ * All of the query's filters as one predicate — including `scope`. This predicate
+ * is applied to every candidate *before* the result count is cut down to `limit`
+ * (see `search()` and `substringHits()`): a related bug (story 052) came from
+ * applying a filter after the limit cut, which can silently drop matching
+ * documents that the limit already excluded in favor of non-matching ones.
+ */
 function filterFor(query: SearchQuery): (doc: IndexedDoc | undefined) => boolean {
   const tags = query.tags ?? [];
   return (doc) => {
     if (doc === undefined) return false;
     if (!matchesTypes(doc, query.types)) return false;
     if (query.module !== undefined && doc.module !== query.module) return false;
+    if (query.scope !== undefined && doc.scope !== query.scope) return false;
     if (query.since !== undefined && doc.updated.slice(0, 10) < query.since) return false;
     return matchesTags(doc, tags);
   };
