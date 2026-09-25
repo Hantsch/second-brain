@@ -30,6 +30,7 @@ import { joinVaultPath, trashDir } from '@core/vault/paths';
 import { restoreSteps, type RollbackStep } from '@core/vault/rollback';
 import { trashManifestPath } from '@core/vault/trash';
 import type { WikiStore } from '@core/wiki';
+import { GardenerError } from './types';
 
 /**
  * What the undo needs of the store: the knowledge core's write surface **and** the
@@ -39,11 +40,18 @@ import type { WikiStore } from '@core/wiki';
  */
 export interface UndoStore extends WikiStore {
   undo(token: string): Promise<string[]>;
+  /** Only a journal with `moved` (a module rename) calls this — to put the folder back. */
+  move(from: string, to: string): Promise<unknown>;
 }
 
-/** A journal can also come from an action no finding triggered. */
-export type FixJournalKind = GardenerFindingKind | 'discard' | 'supersede';
-export type FixJournalAction = GardenerFix['action'] | 'discard' | 'supersede';
+/**
+ * A journal can also come from an action no finding triggered. `module-rename` and
+ * `module-delete` are story 063's: the whole module under one mark.
+ */
+export type FixJournalKind =
+  GardenerFindingKind | 'discard' | 'supersede' | 'module-rename' | 'module-delete';
+export type FixJournalAction =
+  GardenerFix['action'] | 'discard' | 'supersede' | 'module-rename' | 'module-delete';
 
 /**
  * Ein geaenderter Pfad mit seinem Zustand davor — dieselbe Form wie
@@ -65,13 +73,31 @@ export interface FixDelete {
   token: string;
 }
 
+/**
+ * The folder a module rename moved (`VaultStore.move(from, to)`). The one structural
+ * step without a hash guard, so it is written into the journal only **after** the
+ * move landed — a journal that names a move always describes one that happened.
+ */
+export interface FixMove {
+  /** The folder's path before the rename, e.g. `modules/old`. */
+  from: string;
+  /** The folder's path after the rename, e.g. `modules/new`. */
+  to: string;
+}
+
 export interface FixJournal {
   version: 1;
   kind: FixJournalKind;
   action: FixJournalAction;
+  /**
+   * Content steps. For a rename, the steps inside the folder carry the **old** path:
+   * they were written before the move, and `undoFix` moves the folder back first.
+   */
   steps: FixStep[];
   /** Only for a discard: the file that went to the trash. */
   deleted?: FixDelete;
+  /** Only for a module rename that changed the slug: the folder that moved. */
+  moved?: FixMove;
 }
 
 /** `.secondbrain/trash/<marke>/gardener.json` */
@@ -83,6 +109,12 @@ function isDelete(value: unknown): value is FixDelete {
   if (value === null || typeof value !== 'object') return false;
   const record = value as Record<string, unknown>;
   return typeof record['path'] === 'string' && typeof record['token'] === 'string';
+}
+
+function isMove(value: unknown): value is FixMove {
+  if (value === null || typeof value !== 'object') return false;
+  const record = value as Record<string, unknown>;
+  return typeof record['from'] === 'string' && typeof record['to'] === 'string';
 }
 
 function isStep(value: unknown): value is FixStep {
@@ -108,12 +140,14 @@ export function parseFixJournal(raw: string | null): FixJournal | null {
     const action = record['action'];
     if (typeof kind !== 'string' || typeof action !== 'string') return null;
     const deleted = record['deleted'];
+    const moved = record['moved'];
     return {
       version: 1,
       kind: kind as FixJournalKind,
       action: action as FixJournalAction,
       steps: steps.filter(isStep),
       ...(isDelete(deleted) ? { deleted } : {}),
+      ...(isMove(moved) ? { moved } : {}),
     };
   } catch {
     return null;
@@ -164,6 +198,30 @@ async function restoreDeleted(store: UndoStore, deleted: FixDelete): Promise<boo
 }
 
 /**
+ * Put a renamed module's folder back where it was. `false` when there is nothing to
+ * move — the folder no longer sits at `to` (already moved back: the second undo) —
+ * and the steps then run against whatever lies at the old paths, each with its own
+ * hash check.
+ *
+ * Something at **both** places is the one case with no safe answer: the old path has
+ * been taken since, so the folder cannot go back, and the steps inside it were
+ * recorded at exactly that old path — restoring them would write the rename's
+ * "before" into a folder that is not the one it came from. So the whole undo stops
+ * here, before a single byte is written, and says so.
+ */
+async function moveBack(store: UndoStore, moved: FixMove): Promise<boolean> {
+  if (!(await store.exists(moved.to))) return false;
+  if (await store.exists(moved.from)) {
+    throw new GardenerError(
+      'conflict',
+      `„${moved.from}“ ist inzwischen wieder belegt; „${moved.to}“ bleibt, wo es ist.`,
+    );
+  }
+  await store.move(moved.to, moved.from);
+  return true;
+}
+
+/**
  * Einen Fix zurueckdrehen. Ohne Protokoll passiert nichts — die Marke ist dann
  * unbekannt, und das ist kein Fehler, den der Nutzer beheben kann.
  *
@@ -171,6 +229,10 @@ async function restoreDeleted(store: UndoStore, deleted: FixDelete): Promise<boo
  * also kommt sie **zuerst** zurueck — danach die Dateien, deren Inhalt sich
  * geaendert hat. Fuer die Zusicherungen macht die Reihenfolge keinen Unterschied
  * (jeder Schritt prueft selbst), fuer das Lesen des Protokolls schon.
+ *
+ * A moved folder is the exception where the order *is* the guarantee: its steps
+ * name the old paths, so the folder has to be back there before they run — and a
+ * refused move-back (`moveBack`) throws before any step is touched.
  */
 export async function undoFix(store: UndoStore, token: string): Promise<UndoFixResult> {
   const journal = parseFixJournal(await store.readText(fixJournalPath(token)));
@@ -178,6 +240,10 @@ export async function undoFix(store: UndoStore, token: string): Promise<UndoFixR
   const kept: string[] = [];
   if (journal === null) return { restored, kept };
 
+  if (journal.moved !== undefined) {
+    const back = await moveBack(store, journal.moved);
+    (back ? restored : kept).push(journal.moved.from);
+  }
   if (journal.deleted !== undefined) {
     const back = await restoreDeleted(store, journal.deleted);
     (back ? restored : kept).push(journal.deleted.path);

@@ -177,6 +177,8 @@ export function ModulesScreen() {
           onTab={(next) => go({ tab: next })}
           onPage={(next) => go({ tab: 'pages', p: next })}
           onBack={() => go({ m: null, screenTab: 'modules' })}
+          onRenamed={(newSlug) => go({ m: newSlug, tab: 'pages', p: null })}
+          onDeleted={() => go({ m: null, screenTab: 'modules' })}
         />,
       );
     }

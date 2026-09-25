@@ -53,6 +53,11 @@ export class Services {
   private watcherFactory: VaultWatcherFactory | null = null;
   private llmBridge: LlmBridge | null = null;
   private main: BrowserWindow | null = null;
+  /* Serializes `withoutWatcher` calls: without this, two module-lifecycle
+     operations racing each other could both see a live watcher, both dispose
+     it, and both later recreate one — orphaning whichever recreate lost the
+     race (never disposed) instead of leaving exactly one watcher behind. */
+  private watcherGate: Promise<unknown> = Promise.resolve();
 
   constructor(
     readonly settings: SettingsService,
@@ -144,6 +149,72 @@ export class Services {
     }
     await this.refreshIndexState();
     return this.status();
+  }
+
+  /* Windows' chokidar recursive watch holds a handle on the vault root that
+     deterministically `EPERM`s a directory rename/delete beneath it — not the
+     transient antivirus-style lock `fs-io.ts`'s retry-with-backoff already
+     covers, but a structural one that only releasing the whole watcher clears
+     (`unwatch()` on the subpath alone does not help; chokidar keeps one
+     handle on the watched root, not per-subdirectory ones). Folder-moving
+     module-lifecycle operations (rename/delete/undo) run their apply through
+     here so the watcher steps aside for the duration and always comes back
+     — on success, on a conflict, and on a rolled-back write alike. */
+  async withoutWatcher<T>(fn: () => Promise<T>): Promise<T> {
+    /* A single chain, not a queue: the next caller's dispose→run→recreate
+       only starts once the previous one has fully settled (success or
+       failure), so two concurrent module-lifecycle operations never both see
+       a live watcher to dispose, nor both race to recreate one. */
+    const previous = this.watcherGate;
+    let release!: () => void;
+    this.watcherGate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await previous;
+    try {
+      return await this.runWithoutWatcher(fn);
+    } finally {
+      release();
+    }
+  }
+
+  private async runWithoutWatcher<T>(fn: () => Promise<T>): Promise<T> {
+    const session = this.open;
+    if (!session || !session.watcher) return fn();
+
+    await session.watcher.dispose();
+    session.watcher = null;
+
+    /* `fn`'s own outcome must reach the caller untouched — a failing watcher
+       recreate below is a secondary, derived problem (mirroring the
+       `handleVaultChange` index-refresh below: a follow-up must not turn a
+       successful action into a failure, nor hide the action's real error). */
+    let outcome: { ok: true; value: T } | { ok: false; error: unknown };
+    try {
+      outcome = { ok: true, value: await fn() };
+    } catch (error) {
+      outcome = { ok: false, error };
+    }
+
+    /* The vault may have been closed or reopened while `fn` ran (e.g. it
+       opened a different vault) — in that case this session's watcher slot
+       is no longer this session's to fill back in, mirroring the same
+       `this.open === session` guard `openVault` uses above. */
+    if (this.open === session && this.watcherFactory) {
+      try {
+        session.watcher = await this.watcherFactory(session.root, (paths, external) =>
+          this.handleVaultChange(paths, external),
+        );
+      } catch (error) {
+        /* Degraded but safe: the vault is simply left unwatched until the
+           next openVault/withoutWatcher call. Never turn `fn`'s success into
+           a failure, and never mask `fn`'s own error with this one. */
+        console.warn('[modules] Watcher-Wiederaufnahme fehlgeschlagen:', error);
+      }
+    }
+
+    if (!outcome.ok) throw outcome.error;
+    return outcome.value;
   }
 
   async createVault(root: string, name: string): Promise<VaultStatus> {

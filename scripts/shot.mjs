@@ -1370,6 +1370,79 @@ async function shootCondenseDelete(session, shooter, log, skipped) {
   await closeOverlay(session.page);
 }
 
+/**
+ * Story 063, D6: die beiden Modul-Lifecycle-Dialoge (Umbenennen D5, Löschen
+ * D6) auf einem echten Modul mit Inhalt — `second-brain-methodik`
+ * (`scripts/seed/module-methodik.mjs`), damit die gezeigte Vorschau nie leer
+ * ist. Wie `shootCondenseDelete`: jeder Dialog wird geöffnet, fotografiert und
+ * ohne Bestätigung wieder geschlossen — ein echtes Umbenennen oder Löschen
+ * nähme dem Demo-Vault für den Rest dieses Laufs genau das Modul, das andere
+ * Aufnahmen noch brauchen.
+ */
+async function shootModuleLifecycleDialogs(session, shooter, log, skipped) {
+  const page = session.page;
+  const ready = await gotoHash(page, '/knowledge?m=second-brain-methodik', {
+    wait: '.sb-moduledetail',
+  });
+  if (!ready) {
+    skipped.push('Modul umbenennen/löschen: second-brain-methodik öffnete nicht');
+    return;
+  }
+  /* Auf den Kopfbereich beschränkt: eine Seite im Modul kann eigene
+     „Löschen“-artige Aktionen zeigen, und die Suche soll eindeutig den
+     Umbenennen-/Löschen-Knopf der Modulaktionen treffen, keinen von dort. */
+  const actions = page.locator('.sb-moduleactions');
+
+  const renameButton = actions.getByRole('button', { name: 'Umbenennen' });
+  const renameThere = await renameButton.waitFor({ state: 'visible', timeout: 4000 }).then(
+    () => true,
+    () => false,
+  );
+  if (!renameThere) {
+    skipped.push('Modul umbenennen: der Umbenennen-Knopf stand nicht im Kopf');
+  } else {
+    await renameButton.click();
+    const renameDialog = page.getByRole('dialog');
+    const renameOpen = await renameDialog.waitFor({ state: 'visible', timeout: 4000 }).then(
+      () => true,
+      () => false,
+    );
+    await settle(page);
+    if (renameOpen) {
+      log(`  Modul umbenennen → ${await shooter.shotAs('module-rename.png', page)}`);
+    } else {
+      skipped.push('Modul umbenennen: der Knopf öffnete keinen Dialog');
+    }
+    /* Vorhang weg, ohne zu bestätigen — siehe Kommentar oben. */
+    await closeOverlay(page);
+  }
+
+  const deleteButton = actions.getByRole('button', { name: 'Löschen' });
+  const deleteThere = await deleteButton.waitFor({ state: 'visible', timeout: 4000 }).then(
+    () => true,
+    () => false,
+  );
+  if (!deleteThere) {
+    skipped.push('Modul löschen: der Löschen-Knopf stand nicht im Kopf');
+    return;
+  }
+  await deleteButton.click();
+  const deleteDialog = page.getByRole('dialog');
+  const deleteOpen = await deleteDialog.waitFor({ state: 'visible', timeout: 4000 }).then(
+    () => true,
+    () => false,
+  );
+  await settle(page);
+  if (deleteOpen) {
+    log(`  Modul löschen → ${await shooter.shotAs('module-delete.png', page)}`);
+  } else {
+    skipped.push('Modul löschen: der Knopf öffnete keinen Dialog');
+  }
+  /* Vorhang weg, ohne zu bestätigen — ein echtes Löschen nähme dem Demo-Vault
+     das Modul für den Rest dieses Laufs. */
+  await closeOverlay(page);
+}
+
 /** Wie viel von der Meldung im Rollbereich steht — in Pixeln, nicht im Gefühl. */
 function measureAlert(page) {
   return page.evaluate(() => {
@@ -1579,6 +1652,7 @@ async function main() {
     }
     if (options.screens.includes('knowledge')) {
       await shootPageConflict(session, shooter, log, skipped);
+      await shootModuleLifecycleDialogs(session, shooter, log, skipped);
     }
     await shootRailFocus(session, shooter, log, skipped);
 

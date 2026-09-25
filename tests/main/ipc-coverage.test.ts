@@ -120,6 +120,20 @@ describe('043: condense:delete', () => {
   });
 });
 
+describe('063: modules:renamePlan|rename|deletePlan|delete|undo', () => {
+  it.each([
+    'modules:renamePlan',
+    'modules:rename',
+    'modules:deletePlan',
+    'modules:delete',
+    'modules:undo',
+  ] as const)('%s ist im Vertrag, hat einen Handler und ist im Preload-Allowlist', (channel) => {
+    expect(IPC_CHANNELS).toContain(channel);
+    expect(channels).toContain(channel);
+    expect(typeof handlers.get(channel)).toBe('function');
+  });
+});
+
 describe('Preload-Freigabe', () => {
   function bridge(): {
     invoke: (channel: string, payload?: unknown) => Promise<unknown>;

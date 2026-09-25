@@ -242,3 +242,9 @@ second roadmap.
   resolution via a new batched `search:resolveLinks` channel); Ctrl+K, search rows and ask
   citations all now open documents in-app by default with "open externally" as an explicit
   secondary action — reviewed PASS on the first pass, no fix cycle needed.
+- 063 — A module can be renamed and deleted · S17 · Added rename/delete for knowledge modules
+  (preview-then-confirm, hash-aware, undoable through the existing gardener journal) plus a
+  Windows-specific fix (the live vault watcher blocked the folder move) — reviewed FAIL then PASS
+  after one review-fix round (a frontmatter data-loss bug in the reference rewriters, hardcoded
+  German preview strings, string-replace/word-boundary bugs, a watcher-pause race, and a silent
+  undo-failure gap).

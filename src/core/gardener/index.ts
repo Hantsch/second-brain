@@ -171,6 +171,7 @@ export {
   type FixJournal,
   type FixJournalAction,
   type FixJournalKind,
+  type FixMove,
   type FixStep,
   type UndoFixResult,
   type UndoStore,

@@ -51,6 +51,11 @@ import type {
   LocalRuntimeStatus,
   MachineScanResult,
   ModelRef,
+  ModuleDeletePlan,
+  ModuleDeleteResult,
+  ModuleRenamePlan,
+  ModuleRenameResult,
+  ModuleUndoResult,
   OrphanTargets,
   Project,
   ProjectFrontmatter,
@@ -677,6 +682,39 @@ export interface IpcRoutes {
     req: { module: string };
     res: { nodes: { id: string; title: string; type: string }[]; edges: [string, string][] };
   };
+  /**
+   * Preview of a module rename (063, D4): the folder move (unless title-only)
+   * and every page/frontmatter/`AGENTS.md`/protocol/wikilink rewrite it would
+   * make — nothing is written yet. `blocked: 'target-exists'` comes straight
+   * out of the vault content (the core plan); `'digestion-pending'` is added
+   * here, at the IPC layer, when the ingest queue still holds a job targeting
+   * this module — a queued digestion would recreate the old folder right
+   * after a rename lands.
+   */
+  'modules:renamePlan': { req: { slug: string; title: string }; res: ModuleRenamePlan };
+  /**
+   * Confirms a rename. `fingerprint` is the preview's own, from `renamePlan` —
+   * a plan re-computed at apply time and found to differ refuses with
+   * `conflict`, and so does a digestion that started after the preview.
+   */
+  'modules:rename': {
+    req: { slug: string; title: string; fingerprint: string };
+    res: ModuleRenameResult;
+  };
+  /**
+   * Preview of a module delete (063, D4): page count, every affected raw
+   * source ("returns to undigested" vs. "stays digested elsewhere"), inbound
+   * wikilinks that would break, and projects that would lose the slug.
+   */
+  'modules:deletePlan': { req: { slug: string }; res: ModuleDeletePlan };
+  /** Confirms a delete — same `fingerprint`/digestion-pending guard as `rename`. */
+  'modules:delete': { req: { slug: string; fingerprint: string }; res: ModuleDeleteResult };
+  /**
+   * Undoes a rename or a delete — one token, one way back (`undoFix`, extended
+   * for the whole module by 063). Settles with a full index refresh: a moved
+   * or restored folder has no `.md` extension for a path-scoped refresh to key on.
+   */
+  'modules:undo': { req: { undoToken: string }; res: ModuleUndoResult };
 
   // ── Asking questions ─────────────────────────────────────────────────────
   /** Question to Gaston; answer streams over `event:llm-stream`. */
@@ -1332,6 +1370,11 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'modules:savePage',
   'modules:sources',
   'modules:graph',
+  'modules:renamePlan',
+  'modules:rename',
+  'modules:deletePlan',
+  'modules:delete',
+  'modules:undo',
   'chat:ask',
   'chat:threads',
   'chat:thread',

@@ -426,8 +426,18 @@ function jobWorkingOn(queue: IngestQueue, rawPath: string, log: IngestLogRecord)
   );
 }
 
+/**
+ * The `QueueHolder` behind each open vault's `Services`, kept for
+ * `hasPendingJobForModule` below (063, D4). A `WeakMap` rather than a field on
+ * `Services` itself: the queue is this file's own state, the same way
+ * `ytdlpCache` above is, and a `Services` that closes its vault simply drops
+ * out of the map instead of needing to be told to forget it.
+ */
+const queueHolders = new WeakMap<Services, QueueHolder>();
+
 export function ingestHandlers(services: Services): HandlerMap {
   const holder = new QueueHolder(services);
+  queueHolders.set(services, holder);
 
   return defineHandlers({
     'ingest:pickFiles': async () => {
@@ -542,4 +552,25 @@ export function ingestHandlers(services: Services): HandlerMap {
       return ytdlpView(status);
     },
   });
+}
+
+/**
+ * Whether the ingest queue holds a non-terminal job targeting `moduleSlug` —
+ * asked by module rename/delete (063, D4) before a plan (→ `blocked:
+ * 'digestion-pending'`) and before an apply (→ `conflict`): the lock in
+ * `withModuleLock` only covers a running *write* phase, so a queued or
+ * running digestion would otherwise recreate `modules/<slug>/` right after
+ * the folder was renamed or trashed out from under it.
+ *
+ * `false` when this `services` never had `ingestHandlers` wired (no vault
+ * open yet, or a caller that doesn't ingest) — "nothing pending" is the
+ * honest default there, not a thrown error, since there is no queue to ask.
+ */
+export function hasPendingJobForModule(services: Services, moduleSlug: string): boolean {
+  const holder = queueHolders.get(services);
+  if (holder === undefined) return false;
+  return holder
+    .current()
+    .jobs()
+    .some((job) => job.module === moduleSlug && !TERMINAL_STAGES.has(job.stage));
 }

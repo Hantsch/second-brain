@@ -94,6 +94,32 @@
   align-items: flex-start;
   gap: var(--space-3);
 }
+/* Back button and module actions (063, D5) on one row, apart — the actions
+   never crowd the back button, however many D6 adds next to rename. */
+.sb-moduledetail-headrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  width: 100%;
+}
+.sb-moduleactions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+/* The rename dialog's grouped changes (063, D5): a real module's page count
+   is unbounded, and the shared `gs-dialog` has no scroll of its own — without
+   this, a module with many pages pushes the confirm button past the window's
+   bottom edge, unreachable. The title input and the summary/blocked sentences
+   around it stay outside this box, so they are never scrolled out of view. */
+.sb-modulerename-changes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-height: 280px;
+  overflow-y: auto;
+}
 .sb-moduledetail-title {
   display: flex;
   flex-direction: column;

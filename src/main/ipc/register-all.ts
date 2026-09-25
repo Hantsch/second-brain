@@ -19,6 +19,7 @@ import { ingestHandlers } from './ingest';
 import { journalHandlers } from './journal';
 import { llmHandlers } from './llm';
 import { machineScanHandlers } from './machine-scan';
+import { moduleLifecycleHandlers } from './module-lifecycle';
 import { moduleHandlers } from './modules';
 import { createInstallerPathTracker, createOllamaInstallPart } from './ollama-install';
 import { createOllamaPullPart } from './ollama-pull';
@@ -107,6 +108,7 @@ export function buildHandlers(services: Services): HandlerMap {
     ...todoHandlers(services),
     ...journalHandlers(services),
     ...moduleHandlers(services),
+    ...moduleLifecycleHandlers(services),
     ...chatHandlers(services),
     ...ingestHandlers(services),
     ...llmHandlers(services),

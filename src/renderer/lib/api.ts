@@ -144,6 +144,11 @@ export const api = {
     savePage: (request: IpcRequest<'modules:savePage'>) => call('modules:savePage', request),
     sources: (module?: string) => call('modules:sources', module === undefined ? {} : { module }),
     graph: (module: string) => call('modules:graph', { module }),
+    renamePlan: (slug: string, title: string) => call('modules:renamePlan', { slug, title }),
+    rename: (request: IpcRequest<'modules:rename'>) => call('modules:rename', request),
+    deletePlan: (slug: string) => call('modules:deletePlan', { slug }),
+    delete: (request: IpcRequest<'modules:delete'>) => call('modules:delete', request),
+    undo: (undoToken: string) => call('modules:undo', { undoToken }),
   },
   chat: {
     ask: (request: IpcRequest<'chat:ask'>) => call('chat:ask', request),

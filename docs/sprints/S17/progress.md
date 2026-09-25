@@ -47,3 +47,28 @@
 - 2026-09-24 18:43 · 059 · verification (build/test/lint/typecheck/format/e2e, resumed after rate-limit interruption) · done
 - 2026-09-24 18:43 · 059 · clean-agent review (full story diff) · started
 - 2026-09-24 18:43 · 059 · clean-agent review (full story diff) · done (PASS, no fix cycle)
+- 2026-09-24 18:45 · 063 · D1 read-only plans + reference rewriters · started
+- 2026-09-24 19:05 · 063 · D1 read-only plans + reference rewriters · done
+- 2026-09-24 19:05 · 063 · D2 rename apply + journal moved entry · started
+- 2026-09-24 19:17 · 063 · D2 rename apply + journal moved entry · done
+- 2026-09-24 19:17 · 063 · D3 delete apply · started
+- 2026-09-24 19:22 · 063 · D3 delete apply · done
+- 2026-09-24 19:22 · 063 · D4 channels, main handler, index settle · started
+- 2026-09-25 07:53 · 063 · D4 channels, main handler, index settle (resumed after rate-limit interruption) · started
+- 2026-09-25 08:15 · 063 · D4 channels, main handler, index settle · done
+- 2026-09-25 08:15 · 063 · D5 rename in the app · started
+- 2026-09-25 08:41 · 063 · D5 rename in the app · done (found real bug: dir move fails under live vault watcher on Windows, EPERM — confirmed reproducible, fix dispatched separately)
+- 2026-09-25 08:41 · 063 · fix: pause vault watcher around module move/delete (Windows EPERM) · started
+- 2026-09-25 08:44 · 063 · fix: pause vault watcher around module move/delete (Windows EPERM) · done
+- 2026-09-25 08:44 · 063 · D6 delete in the app, screenshots · started
+- 2026-09-25 09:00 · 063 · D6 delete in the app, screenshots · done
+- 2026-09-25 09:00 · 063 · verification (build/test/lint/typecheck/format/e2e) · started
+- 2026-09-25 09:06 · 063 · verification (build/test/lint/typecheck/format/e2e) · done (green; quick-capture.test.tsx 9 failures confirmed pre-existing via stash)
+- 2026-09-25 09:06 · 063 · clean-agent review (full story diff, story-review-hard) · started
+- 2026-09-25 09:35 · 063 · clean-agent review (full story diff, story-review-hard) · done (FAIL: 1 HIGH + several MEDIUM/LOW findings)
+- 2026-09-25 09:35 · 063 · review-fix cycle 1: frontmatter data-loss + hardcoded strings + string-replace bugs (core) · started
+- 2026-09-25 09:35 · 063 · review-fix cycle 1: frontmatter data-loss + hardcoded strings + string-replace bugs (core) · done
+- 2026-09-25 09:35 · 063 · review-fix cycle 1: watcher-pause race + silent undo + rename confirm gaps (main/renderer) · started
+- 2026-09-25 09:35 · 063 · review-fix cycle 1: watcher-pause race + silent undo + rename confirm gaps (main/renderer) · done
+- 2026-09-25 09:35 · 063 · re-verification after review-fix (build/test/lint/typecheck/format/e2e) · done (green; quick-capture.test.tsx 9 failures still confirmed pre-existing)
+- 2026-09-25 09:38 · 063 · Done section filled, moved to docs/requirements/done/, INDEX.md updated, status: done · done

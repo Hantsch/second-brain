@@ -30,6 +30,59 @@ export const enWiki = {
     'Created are the folder, the catalogue, the chronicle, the synthesis and AGENTS.md — the schema that lets any model maintain this module.',
   'modules.create.submit': 'Create',
 
+  // ── Modules: rename (063, D5) ─────────────────────────────────────────────
+  'modules.rename.action': 'Rename',
+  'modules.rename.title': 'Rename module',
+  'modules.rename.what':
+    'Renaming rewrites the module file, every affected page, AGENTS.md and the catalogue. Changing the slug also moves the folder and updates every wikilink, ingest protocol, project and filed dump that names it.',
+  'modules.rename.name': 'Title',
+  'modules.rename.submit': 'Rename',
+  'modules.rename.titleOnly': 'Only the title changes — the folder stays where it is.',
+  'modules.rename.moves': 'The module folder moves from modules/{from} to modules/{to}.',
+  'modules.rename.kind.module-file': 'Module file',
+  'modules.rename.kind.page': 'Pages',
+  'modules.rename.kind.wikilink': 'Wikilinks',
+  'modules.rename.kind.agents-md': 'AGENTS.md',
+  'modules.rename.kind.catalog': 'Catalogue',
+  'modules.rename.kind.ingest-protocol': 'Ingest protocols',
+  'modules.rename.kind.project': 'Projects',
+  'modules.rename.kind.dump': 'Filed dumps',
+  'modules.rename.blocked.target-exists':
+    'A module with this name already exists — pick a different title.',
+  'modules.rename.blocked.digestion-pending':
+    'A source is still being taken into this module — try again once it finishes.',
+  'modules.rename.conflict':
+    'Nothing was renamed — the module changed since the changes above were shown. Close and try again.',
+  'modules.rename.done': 'Renamed to “{title}”.',
+  'modules.rename.undoFailed': 'Undo failed — the module was not restored.',
+  'modules.rename.undoPartial': 'Undo partially applied — some changes could not be reverted.',
+
+  // ── Modules: delete (063, D6) ──────────────────────────────────────────────
+  'modules.delete.action': 'Delete',
+  'modules.delete.title': 'Delete “{title}”?',
+  'modules.delete.what':
+    'Deleting moves the module folder to the trash. Sources that named it return to undigested, inbound links from other modules break, and projects lose it from their list.',
+  'modules.delete.pagesOne': 'One page is deleted with the module.',
+  'modules.delete.pages': '{count} pages are deleted with the module.',
+  'modules.delete.sourcesNone': 'No raw source names this module.',
+  'modules.delete.sourcesHeading': 'What happens to the sources that named this module:',
+  'modules.delete.source.undigested': '{path} returns to undigested — no module claims it anymore.',
+  'modules.delete.source.staysDigested': '{path} stays digested in {module}.',
+  'modules.delete.brokenLinksOne': 'One inbound wikilink from outside the module breaks.',
+  'modules.delete.brokenLinks': '{count} inbound wikilinks from outside the module break.',
+  'modules.delete.brokenLink': '{path} links to {target}, which will be gone.',
+  'modules.delete.projectsOne': 'One project loses this module from its list.',
+  'modules.delete.projects': '{count} projects lose this module from their list.',
+  'modules.delete.project': '{slug} no longer lists this module.',
+  'modules.delete.blocked.digestion-pending':
+    'A source is still being taken into this module — try again once it finishes.',
+  'modules.delete.conflict':
+    'Nothing was deleted — the module changed since the changes above were shown. Close and try again.',
+  'modules.delete.submit': 'Delete',
+  'modules.delete.done': 'Deleted “{title}”.',
+  'modules.delete.undoFailed': 'Undo failed — the module was not restored.',
+  'modules.delete.undoPartial': 'Undo partially applied — some changes could not be reverted.',
+
   // ── Modules: detail ───────────────────────────────────────────────────────
   'modules.tab.pages': 'Pages',
   'modules.tab.graph': 'Graph',

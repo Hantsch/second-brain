@@ -24,7 +24,7 @@ created.
 - [x] 057 — Main re-validates what the renderer sends
 - [x] 058 — Gaston stays reachable from the tray
 - [x] 059 — A search hit opens in the app
-- [ ] 063 — A module can be renamed and deleted
+- [x] 063 — A module can be renamed and deleted
 
 ## Notes
 

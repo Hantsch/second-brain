@@ -28,6 +28,7 @@ import {
   useModulePages,
   useModuleSources,
 } from '../../lib/queries/modules';
+import { ModuleActions } from './ModuleActions';
 import { ModuleLog } from './ModuleLog';
 import { PageView } from './PageView';
 import { SourceRow } from '../sources/SourceRow';
@@ -52,6 +53,10 @@ export interface ModuleDetailProps {
   onTab: (tab: ModuleTab) => void;
   onPage: (path: string | null) => void;
   onBack: () => void;
+  /** Runs after a confirmed rename (063, D5), with the module's slug afterwards. */
+  onRenamed: (newSlug: string) => void;
+  /** Runs after a confirmed delete (063, D6) — the module no longer exists. */
+  onDeleted: () => void;
 }
 
 /** Kennung einer Seite im Graphen und in `outbound`/`inbound`: `modul/slug`. */
@@ -70,7 +75,16 @@ function countOf(pages: readonly WikiPage[], type: WikiPageType): number {
   return pages.filter((entry) => entry.type === type).length;
 }
 
-export function ModuleDetail({ module, tab, page, onTab, onPage, onBack }: ModuleDetailProps) {
+export function ModuleDetail({
+  module,
+  tab,
+  page,
+  onTab,
+  onPage,
+  onBack,
+  onRenamed,
+  onDeleted,
+}: ModuleDetailProps) {
   const t = useT();
   const language = useLanguage();
   const navigate = useNavigate();
@@ -121,9 +135,12 @@ export function ModuleDetail({ module, tab, page, onTab, onPage, onBack }: Modul
   return (
     <div className="sb-moduledetail">
       <div className="sb-moduledetail-head">
-        <Button variant="ghost" size="sm" icon="chevron-left" onClick={onBack}>
-          {t('modules.back')}
-        </Button>
+        <div className="sb-moduledetail-headrow">
+          <Button variant="ghost" size="sm" icon="chevron-left" onClick={onBack}>
+            {t('modules.back')}
+          </Button>
+          <ModuleActions module={module} onRenamed={onRenamed} onDeleted={onDeleted} />
+        </div>
         {/* Der Modultitel steht im Kopf des Screens — hier wäre er ein Echo. */}
         <div className="sb-moduledetail-title">
           <p className="sb-empty-body">

@@ -521,6 +521,54 @@ const RESPONSES: MockResponses = {
     ],
     edges: [[`${fx.wikiPage.module}/${fx.wikiPage.slug}`, `${fx.wikiPage.module}/auth0`]],
   }),
+  /* 063, D4/D5/D6: rename/delete plans and results. Plausible, fixture-shaped
+     data — browser mode never actually rewrites or trashes anything. */
+  'modules:renamePlan': ({ slug, title }) => ({
+    slug,
+    newSlug: slug,
+    oldTitle: fx.knowledgeModule.title,
+    title,
+    titleOnly: true,
+    changes: [
+      { path: `modules/${slug}/module.md`, kind: 'module-file', summary: 'Titel ändert sich.' },
+    ],
+    pages: [fx.wikiPage],
+    blocked: null,
+    fingerprint: 'demo-fingerprint',
+  }),
+  'modules:rename': ({ slug, title }) => ({
+    slug,
+    newSlug: slug,
+    title,
+    moved: false,
+    written: [`modules/${slug}/module.md`],
+    undoToken: 'demo-undo-token',
+    logged: `modules/${slug}/wiki/log.md`,
+  }),
+  'modules:deletePlan': ({ slug }) => ({
+    slug,
+    changes: [],
+    pages: [fx.wikiPage],
+    sources: [
+      {
+        path: rawSource.path,
+        protocolPath: `${rawSource.path}.ingest.json`,
+        outcome: 'undigested',
+        remainingModule: null,
+      },
+    ],
+    brokenLinks: [],
+    projects: [],
+    blocked: null,
+    fingerprint: 'demo-fingerprint',
+  }),
+  'modules:delete': ({ slug }) => ({
+    slug,
+    written: [],
+    deleted: `modules/${slug}`,
+    undoToken: 'demo-undo-token',
+  }),
+  'modules:undo': () => ({ restored: [fx.wikiPage.path], kept: [] }),
 
   /* The message ID already present in the fixture conversation: without
      events (the mock bridge sends none) a new ID would be a stream that

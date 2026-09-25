@@ -214,6 +214,119 @@ export type IngestStage =
    */
   | 'no-content';
 
+/**
+ * Warum ein Modul-Plan (Umbenennen/Löschen, Story 063) nicht angewendet werden
+ * kann. `target-exists` liest der Kern selbst aus dem Vaultinhalt heraus;
+ * `digestion-pending` kennt nur der IPC-Handler, weil nur er die
+ * Ingest-Warteschlange sieht — deshalb ist diese Vereinigung eigenständig und
+ * nicht einfach der Kern-Typ `LifecycleBlockReason` (`@core/wiki`), der nur den
+ * ersten Grund kennt.
+ */
+export type ModuleLifecycleBlockReason = 'target-exists' | 'digestion-pending';
+
+export type ModuleLifecycleChangeKind =
+  | 'module-file'
+  | 'page'
+  | 'agents-md'
+  | 'catalog'
+  | 'ingest-protocol'
+  | 'project'
+  | 'dump'
+  | 'wikilink';
+
+/** Eine Datei, die Umbenennen/Löschen umschreiben würde. Spiegelt `LifecycleChange`
+ * (`@core/wiki`) — nie eine Löschung, nie `log.md`. */
+export interface ModuleLifecycleChange {
+  path: string;
+  kind: ModuleLifecycleChangeKind;
+  summary: string;
+}
+
+/** Vorschau eines Modul-Umbenennens (`modules:renamePlan`, Story 063 D4). Spiegelt
+ * `RenamePlan` (`@core/wiki`) — nichts ist geschrieben, solange nur geplant wird. */
+export interface ModuleRenamePlan {
+  slug: string;
+  newSlug: string;
+  oldTitle: string;
+  title: string;
+  /** `newSlug === slug`: nur Titelzeilen ändern sich, der Ordner bleibt stehen. */
+  titleOnly: boolean;
+  changes: ModuleLifecycleChange[];
+  pages: readonly WikiPage[];
+  blocked: ModuleLifecycleBlockReason | null;
+  /** sha256 über sortierte `pfad:hash`-Paare — die Bestätigung reicht ihn zurück. */
+  fingerprint: string;
+}
+
+/** Wie eine Rohquelle nach der Löschung dasteht. Spiegelt `AffectedSource`. */
+export interface ModuleAffectedSource {
+  path: string;
+  protocolPath: string;
+  /** `undigested`: ihre `modules`-Liste wird leer. `stays-digested`: ein anderes Modul bleibt. */
+  outcome: 'undigested' | 'stays-digested';
+  remainingModule: string | null;
+}
+
+/** Ein eingehender Wikilink, der nach der Löschung ins Leere zeigt. Spiegelt
+ * `BrokenInboundLink` — wird nicht umgebogen, es gibt kein Ziel mehr. */
+export interface ModuleBrokenInboundLink {
+  path: string;
+  target: string;
+  line: string;
+}
+
+/** Ein Projekt, dessen `modules:`-Liste die Löschung verliert. Spiegelt `AffectedProject`. */
+export interface ModuleAffectedProject {
+  path: string;
+  slug: string;
+}
+
+/** Vorschau eines Modul-Löschens (`modules:deletePlan`, Story 063 D4). Spiegelt
+ * `DeletePlan` (`@core/wiki`). */
+export interface ModuleDeletePlan {
+  slug: string;
+  changes: ModuleLifecycleChange[];
+  pages: readonly WikiPage[];
+  sources: ModuleAffectedSource[];
+  brokenLinks: ModuleBrokenInboundLink[];
+  projects: ModuleAffectedProject[];
+  blocked: ModuleLifecycleBlockReason | null;
+  fingerprint: string;
+}
+
+/** Ergebnis eines bestätigten Umbenennens (`modules:rename`). Spiegelt `RenameResult`. */
+export interface ModuleRenameResult {
+  slug: string;
+  newSlug: string;
+  title: string;
+  /** `false` bei einem reinen Titel-Umbenennen: der Ordner blieb stehen. */
+  moved: boolean;
+  /** Jede umgeschriebene Datei, am jetzigen Pfad. */
+  written: string[];
+  /** Eine Marke für die ganze Aktion — `modules:undo` dreht sie zurück. */
+  undoToken: string;
+  /** Der Chronik-Eintrag mit dem `lint`-Vermerk; er wird nicht zurückgedreht. */
+  logged: string;
+}
+
+/** Ergebnis eines bestätigten Löschens (`modules:delete`). Spiegelt `DeleteResult`. */
+export interface ModuleDeleteResult {
+  slug: string;
+  /** Umgeschriebene Dateien außerhalb des gelöschten Ordners. */
+  written: string[];
+  /** Der Modulordner, jetzt im Papierkorb. */
+  deleted: string;
+  undoToken: string;
+}
+
+/** Ergebnis von `modules:undo` — dieselbe Form wie `gardener:undoFix`s Antwort. */
+export interface ModuleUndoResult {
+  /** Pfade, die wieder auf dem Stand von vorher sind. */
+  restored: string[];
+  /** Pfade, die unberührt bleiben, weil sie sich seither geändert haben. */
+  kept: string[];
+}
+
 export interface IngestJob {
   id: string;
   kind: IngestKind;

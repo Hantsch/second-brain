@@ -36,6 +36,64 @@ export const deWiki = {
     'Angelegt werden der Ordner, der Katalog, die Chronik, die Synthese und AGENTS.md — das Schema, mit dem auch ein fremdes Modell das Modul pflegen kann.',
   'modules.create.submit': 'Anlegen',
 
+  // ── Module: Umbenennen (063, D5) ──────────────────────────────────────────
+  'modules.rename.action': 'Umbenennen',
+  'modules.rename.title': 'Modul umbenennen',
+  'modules.rename.what':
+    'Umbenennen schreibt die Moduldatei, jede betroffene Seite, AGENTS.md und den Katalog um. Ändert sich der Slug, zieht auch der Ordner um, und jeder Wikilink, jedes Ingest-Protokoll, jedes Projekt und jeder abgelegte Zettel, der ihn nennt, wird nachgezogen.',
+  'modules.rename.name': 'Titel',
+  'modules.rename.submit': 'Umbenennen',
+  'modules.rename.titleOnly': 'Nur der Titel ändert sich — der Ordner bleibt stehen.',
+  'modules.rename.moves': 'Der Modulordner zieht von modules/{from} nach modules/{to} um.',
+  'modules.rename.kind.module-file': 'Moduldatei',
+  'modules.rename.kind.page': 'Seiten',
+  'modules.rename.kind.wikilink': 'Wikilinks',
+  'modules.rename.kind.agents-md': 'AGENTS.md',
+  'modules.rename.kind.catalog': 'Katalog',
+  'modules.rename.kind.ingest-protocol': 'Ingest-Protokolle',
+  'modules.rename.kind.project': 'Projekte',
+  'modules.rename.kind.dump': 'Abgelegte Zettel',
+  'modules.rename.blocked.target-exists':
+    'Ein Modul mit diesem Namen gibt es schon — wähle einen anderen Titel.',
+  'modules.rename.blocked.digestion-pending':
+    'In dieses Modul wird gerade noch eine Quelle aufgenommen — versuche es erneut, wenn das fertig ist.',
+  'modules.rename.conflict':
+    'Umbenannt wurde nichts — das Modul hat sich seit der oben gezeigten Vorschau geändert. Schließen und erneut versuchen.',
+  'modules.rename.done': 'Umbenannt in „{title}“.',
+  'modules.rename.undoFailed':
+    'Rückgängig machen fehlgeschlagen — das Modul wurde nicht wiederhergestellt.',
+  'modules.rename.undoPartial':
+    'Rückgängig machen nur teilweise gelungen — manche Änderungen ließen sich nicht zurücknehmen.',
+
+  // ── Module: Löschen (063, D6) ──────────────────────────────────────────────
+  'modules.delete.action': 'Löschen',
+  'modules.delete.title': '„{title}“ löschen?',
+  'modules.delete.what':
+    'Löschen verschiebt den Modulordner in den Papierkorb. Quellen, die es nannten, gelten wieder als nicht verdichtet, eingehende Links aus anderen Modulen brechen, und Projekte verlieren es aus ihrer Liste.',
+  'modules.delete.pagesOne': 'Eine Seite wird mit dem Modul gelöscht.',
+  'modules.delete.pages': '{count} Seiten werden mit dem Modul gelöscht.',
+  'modules.delete.sourcesNone': 'Keine Rohquelle nennt dieses Modul.',
+  'modules.delete.sourcesHeading': 'Was mit den Quellen passiert, die dieses Modul nannten:',
+  'modules.delete.source.undigested':
+    '{path} gilt wieder als nicht verdichtet — kein Modul beansprucht sie mehr.',
+  'modules.delete.source.staysDigested': '{path} bleibt verdichtet in {module}.',
+  'modules.delete.brokenLinksOne': 'Ein eingehender Wikilink von außerhalb des Moduls bricht.',
+  'modules.delete.brokenLinks': '{count} eingehende Wikilinks von außerhalb des Moduls brechen.',
+  'modules.delete.brokenLink': '{path} verlinkt auf {target}, das dann fehlt.',
+  'modules.delete.projectsOne': 'Ein Projekt verliert dieses Modul aus seiner Liste.',
+  'modules.delete.projects': '{count} Projekte verlieren dieses Modul aus ihrer Liste.',
+  'modules.delete.project': '{slug} führt dieses Modul nicht mehr.',
+  'modules.delete.blocked.digestion-pending':
+    'In dieses Modul wird gerade noch eine Quelle aufgenommen — versuche es erneut, wenn das fertig ist.',
+  'modules.delete.conflict':
+    'Gelöscht wurde nichts — das Modul hat sich seit der oben gezeigten Vorschau geändert. Schließen und erneut versuchen.',
+  'modules.delete.submit': 'Löschen',
+  'modules.delete.done': '„{title}“ gelöscht.',
+  'modules.delete.undoFailed':
+    'Rückgängig machen fehlgeschlagen — das Modul wurde nicht wiederhergestellt.',
+  'modules.delete.undoPartial':
+    'Rückgängig machen nur teilweise gelungen — manche Änderungen ließen sich nicht zurücknehmen.',
+
   // ── Module: Detail ────────────────────────────────────────────────────────
   'modules.tab.pages': 'Seiten',
   'modules.tab.graph': 'Graph',

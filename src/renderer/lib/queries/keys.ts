@@ -77,6 +77,11 @@ export const qk = {
     page: (path: string) => ['modules', 'page', path] as const,
     sources: (module?: string) => ['modules', 'sources', module ?? 'all'] as const,
     graph: (module: string) => ['modules', 'graph', module] as const,
+    /** The rename preview (063, D5) for one slug and typed title — its own key
+        per title, so a title the user already typed once serves from cache
+        instead of asking again while they type back and forth. */
+    renamePlan: (module: string, title: string) =>
+      ['modules', 'renamePlan', module, title] as const,
   },
   chat: {
     threads: (kind?: string) => ['chat', 'threads', kind ?? 'all'] as const,

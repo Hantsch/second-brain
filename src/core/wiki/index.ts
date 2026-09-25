@@ -114,6 +114,50 @@ export {
   type CondenseResult,
 } from './summarize';
 export { isRawDigestedInto, markRawProtocol, protocolPaths } from './raw-protocol';
+export {
+  findModuleLinks,
+  retargetDumpFiledInto,
+  retargetHeadlineTitle,
+  retargetIngestModules,
+  retargetModuleFile,
+  retargetModuleLinks,
+  retargetModulePaths,
+  retargetOverviewTitle,
+  retargetPageModule,
+  retargetProjectModules,
+  retargetSlugList,
+  withFrontmatterPatch,
+  type IngestModulesEdit,
+  type ListEdit,
+  type ModuleLinkHit,
+} from './module-lifecycle/refs';
+export { deletePlan, renamePlan } from './module-lifecycle/plan';
+export {
+  deleteModule,
+  type DeleteInput,
+  type DeleteResult,
+  type DeleteWriteDeps,
+} from './module-lifecycle/delete';
+export {
+  renameModule,
+  type RenameInput,
+  type RenameResult,
+  type RenameWriteDeps,
+} from './module-lifecycle/rename';
+export {
+  type AffectedProject,
+  type AffectedSource,
+  type BrokenInboundLink,
+  type DeletePlan,
+  type DeletePlanInput,
+  type LifecycleBlockReason,
+  type LifecycleChange,
+  type LifecycleChangeKind,
+  type ModuleLifecycleDeps,
+  type ModuleLifecycleIndexView,
+  type RenamePlan,
+  type RenamePlanInput,
+} from './module-lifecycle/types';
 export { WikiTransaction, type WikiRollbackResult } from './transaction';
 export { ingestSource, knownPages, type IngestSourceInput } from './ingest';
 export {
