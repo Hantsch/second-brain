@@ -3,12 +3,14 @@
 **The** one source of status and planning: where we stand, what comes next, what is not planned
 at all yet. As of: 2026-09-25.
 
-Where we stand: M17 just finished (S16 + S17, both `done`) — the app now holds the renderer and
-the model to the same trust standard it holds itself to, and stays reachable from the tray with
-search/citations reading in-app. Next: `/ai-scrum:sprint S18` — all eight of M18's stories (054,
-055, 056, 062, 052, 053, 060, 061) were cut into one sprint on 2026-09-25 instead of the planned
-S18/S19 split. Nothing is waiting on the user beyond starting that sprint and the eventual
-`sprint/S17` → `dev` merge, which stays the user's own decision.
+Where we stand: M18 just finished (S18, `done`) — saving one file now costs one file, a bulk
+external change reliably reaches the index, loose ends derive once per index instead of once
+per screen, a Codex session counts as work, a scoped question retrieves inside its scope, a
+long transcript answers by passage, a PDF becomes a readable source, and the heuristic floor
+speaks the vault's document language. Both M17 and M18 are now fully built. Next: nothing is
+cut yet beyond "Open / unprioritised" below — a `/roadmap plan` picks the next milestone.
+Nothing is waiting on the user beyond the eventual `sprint/S17` → `dev` and
+`sprint/S18` → `dev` merges, which stay the user's own decision.
 
 Rules (so this document does not drift):
 
@@ -1014,7 +1016,7 @@ Gaps/notes:
   loses its maximized flag on the next close until manually re-maximized. Cosmetic, session-scoped,
   not vault data.
 
-### M18 — The vault can grow, and an answer finds its evidence — planned
+### M18 — The vault can grow, and an answer finds its evidence — done 2026-09-25
 
 The second half of the architecture-review backlog: the findings that only bite as the vault
 gets bigger. Cut 2026-09-08 together with M17; both sprints follow S17.
@@ -1033,10 +1035,11 @@ gets bigger. Cut 2026-09-08 together with M17; both sprints follow S17.
 
 Sprints:
 
-- [sprints/S18/sprint.md](sprints/S18/sprint.md) — the vault can grow, and an answer finds its
-  evidence (054, 055, 056, 062, 052, 053, 060, 061), `planned` — cut 2026-09-25 as one sprint
-  covering all eight of the milestone's stories, by user decision to try a larger sprint instead
-  of the two four-story sprints (S18/S19) originally planned at the 2026-09-08 cut.
+- [sprints/done/S18/sprint.md](sprints/done/S18/sprint.md) — the vault can grow, and an answer
+  finds its evidence (054, 055, 056, 062, 052, 053, 060, 061), `done 2026-09-25`
+  ([review](sprints/done/S18/review.md)) — cut 2026-09-25 as one sprint covering all eight of
+  the milestone's stories, by user decision to try a larger sprint instead of the two
+  four-story sprints (S18/S19) originally planned at the 2026-09-08 cut.
 
 Decisions taken at the cut (2026-09-08, user):
 
@@ -1054,9 +1057,34 @@ Decision taken at the 2026-09-25 re-cut (user): one sprint (S18) instead of two.
 split protected against two sprints editing the same index files in parallel — moot within one
 sequential sprint — so all eight stories run in one branch, one review and one regression gate,
 in the same pairwise order (054→055→056, 052→053) the 2026-09-08 cut already fixed. See
-[S18's own notes](sprints/S18/sprint.md) for the full ordering rationale, including two file
-overlaps (053/054 on `index/build.ts`, 056/061 on `journal/loose-ends.ts`) the original two-sprint
-split had also crossed.
+[S18's own notes](sprints/done/S18/sprint.md) for the full ordering rationale, including two
+file overlaps (053/054 on `index/build.ts`, 056/061 on `journal/loose-ends.ts`) the original
+two-sprint split had also crossed.
+
+**S18 result (2026-09-25).** All eight stories done and moved to
+[requirements/done/](requirements/done/); every acceptance criterion proven by a named, passing
+test, see [S18's review](sprints/done/S18/review.md). The regression gate ran once across all
+eight stories and came back green apart from one pre-existing, unrelated jsdom failure
+(`tests/renderer/quick-capture.test.tsx`, confirmed red at the sprint's own start commit). No
+manual residue in this sprint — every criterion has a passing automated test, no `testplan.md`
+was written. Two real bugs were caught inside story reviews before they shipped: 054's
+path-scoped refresh wasn't dropping a renamed/deleted module's old docs, and 060's PDF text
+extraction silently failed on every real PDF (`Buffer` vs `Uint8Array`) until fixed — see S18's
+review for both.
+
+Gaps/notes:
+
+- **052's AC6 (thread-context follow-up retrieval) was deliberately deferred**, not built. It
+  needs its own design call on topic changes and ranking, and overlaps 053's query rewrite.
+  Candidate follow-up story once that design call happens, see
+  [S18 review](sprints/done/S18/review.md).
+- **054's manifest is still rewritten in full on every save**; only the 256 body buckets are
+  scoped. Matches AC2's own wording (body cost), but worth revisiting if save cost on very
+  large vaults becomes a felt problem.
+- **`src/core/index/service.ts` (599 lines) and `build.ts` are now over CLAUDE.md's ~300-line
+  soft limit**, reshaped across 054/055/056/053; `src/core/journal/loose-ends.ts` stays ~500
+  lines even after 061 split `forward.ts` out of it. Same class of gap as M17's `ingest.ts`
+  split candidates — worth one future split-only pass across all of them.
 
 ---
 

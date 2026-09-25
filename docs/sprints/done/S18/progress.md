@@ -130,3 +130,5 @@
 - 2026-09-25 18:18 · 061 · review 1 · started
 - 2026-09-25 18:21 · 061 · review 1 · done: PASS - no blocking findings (1 minor: unused TASK_VERBS_EN export)
 - 2026-09-25 18:21 · 061 · story · done
+- 2026-09-25 18:21:52 · gate · short-suites · started
+- 2026-09-25 18:25:43 · gate · short-suites · done: build green, test red (9 quick-capture.test.tsx), e2e green

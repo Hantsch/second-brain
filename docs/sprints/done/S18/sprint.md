@@ -1,6 +1,6 @@
 ---
 sprint: S18
-status: in-progress # planned | in-progress | done
+status: done # planned | in-progress | done
 branch: sprint/S18
 milestone: M18 — The vault can grow, and an answer finds its evidence
 ---
@@ -31,6 +31,22 @@ German.
 - [x] 053 — Long sources answer by passage, not by file
 - [x] 060 — A PDF becomes a readable source
 - [x] 061 — The heuristic floor speaks the document language
+
+## Regression gate
+
+Ran once on HEAD (47f33c9), after all 8 stories:
+
+- `npm run build` — green, ~0.5 min
+- `npm test` — red, ~1 min (58.5s) — 9 failures, all in tests/renderer/quick-capture.test.tsx
+  (`window.localStorage.clear is not a function`, same root cause for all 9)
+- `npm run test:e2e` — green, ~2.2 min
+- `e2e-all` — `none` in profile (`e2e` already runs the whole Playwright suite); skipped
+
+**Attribution:** the 9 quick-capture.test.tsx failures were checked against the merge-base
+with `dev` (e74528f, "S18: sprint started" — the sprint's own starting commit) in an isolated
+worktree: identical error, identical lines. **Pre-existing** — predates the sprint entirely
+(a jsdom/localStorage mocking gap), none of the 8 sprint commits introduced it. Not fixed here,
+not a merge blocker.
 
 ## Notes
 
