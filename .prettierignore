@@ -8,3 +8,6 @@ test-results/
 playwright-report/
 package-lock.json
 src/renderer/styles/gaston/
+.claude/
+docs/requirements/done/
+docs/sprints/done/

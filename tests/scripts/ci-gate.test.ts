@@ -49,16 +49,13 @@ const verifyWorkflow = parse(verifyWorkflowRaw) as Workflow;
 const verifyJobs = Object.values(verifyWorkflow.jobs ?? {});
 const verifySteps = verifyJobs.flatMap((job) => job.steps ?? []);
 
-describe('verify.yml runs npm run verify on push and pull_request on a windows runner', () => {
-  it('triggers on both push and pull_request', () => {
-    /* "on: push / pull_request" with no filters parses as { push: null, pull_request: null } —
-       the keys are what AC1 asks for ("on every push and every pull request"), so presence of
-       the keys is the assertion, not their (empty) values. */
-    const triggers = verifyWorkflow.on;
+describe('verify.yml runs npm run verify on pull requests into main on a windows runner', () => {
+  it('triggers only on pull_request targeting main', () => {
+    const triggers = verifyWorkflow.on as Record<string, unknown>;
     expect(triggers, 'verify.yml must set an "on" trigger block').toBeTruthy();
-    expect(Object.keys(triggers as Record<string, unknown>)).toEqual(
-      expect.arrayContaining(['push', 'pull_request']),
-    );
+    expect(Object.keys(triggers)).toEqual(['pull_request']);
+    const pullRequestTrigger = triggers.pull_request as { branches?: string[] } | null;
+    expect(pullRequestTrigger?.branches).toEqual(['main']);
   });
 
   it('runs on a windows-latest runner', () => {
@@ -199,13 +196,12 @@ describe('the advisory UI lane lives in its own workflow file', () => {
   });
 });
 
-describe('ui-smoke.yml triggers on pull_request and push to dev/main only', () => {
-  it('does not trigger on push to every branch', () => {
+describe('ui-smoke.yml triggers only on pull_request targeting main', () => {
+  it('does not trigger on push to any branch', () => {
     const triggers = uiSmokeWorkflow.on as Record<string, unknown>;
     expect(triggers, 'ui-smoke.yml must set an "on" trigger block').toBeTruthy();
-    expect(Object.keys(triggers)).toEqual(expect.arrayContaining(['pull_request', 'push']));
-    const pushTrigger = triggers.push as { branches?: string[] } | null;
-    expect(pushTrigger?.branches).toEqual(expect.arrayContaining(['dev', 'main']));
-    expect(pushTrigger?.branches?.length).toBe(2);
+    expect(Object.keys(triggers)).toEqual(['pull_request']);
+    const pullRequestTrigger = triggers.pull_request as { branches?: string[] } | null;
+    expect(pullRequestTrigger?.branches).toEqual(['main']);
   });
 });

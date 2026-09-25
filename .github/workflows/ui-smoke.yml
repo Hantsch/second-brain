@@ -2,9 +2,7 @@ name: ui-smoke
 
 on:
   pull_request:
-  push:
     branches:
-      - dev
       - main
 
 permissions:
