@@ -1,7 +1,13 @@
 # Roadmap
 
 **The** one source of status and planning: where we stand, what comes next, what is not planned
-at all yet. As of: 2026-09-08.
+at all yet. As of: 2026-09-25.
+
+Where we stand: M17 just finished (S16 + S17, both `done`) — the app now holds the renderer and
+the model to the same trust standard it holds itself to, and stays reachable from the tray with
+search/citations reading in-app. Next: cut S18 from M18 ("the vault can grow") via
+`/ai-scrum:roadmap plan`, now that S17 is through. Nothing is waiting on the user beyond that cut
+and the eventual `sprint/S17` → `dev` merge, which stays the user's own decision.
 
 Rules (so this document does not drift):
 
@@ -913,7 +919,7 @@ Gaps/notes:
 
 ---
 
-### M17 — Nothing enters half-true, and nothing trusts more than it must — planned
+### M17 — Nothing enters half-true, and nothing trusts more than it must — done 2026-09-25
 
 No concept behind it: M17 and M18 are the [2026-09-03 architecture
 review](reviews/2026-09-03-architecture-review.md) turned into plan. Its sixteen draft stories
@@ -939,8 +945,9 @@ Sprints:
 - [sprints/done/S16/sprint.md](sprints/done/S16/sprint.md) — the entrance tells the truth, and
   the gate never sleeps (065, 050, 051, 064), `done 2026-09-08`
   ([review](sprints/done/S16/review.md) · [testplan](sprints/done/S16/testplan.md))
-- [sprints/S17/sprint.md](sprints/S17/sprint.md) — nothing trusts more than it must (057, 058,
-  059, 063), `planned` — cut 2026-09-24
+- [sprints/done/S17/sprint.md](sprints/done/S17/sprint.md) — nothing trusts more than it must
+  (057, 058, 059, 063), `done 2026-09-25`
+  ([review](sprints/done/S17/review.md) · [testplan](sprints/done/S17/testplan.md))
 
 Decisions taken at the cut (2026-09-08, user):
 
@@ -958,6 +965,16 @@ Decisions taken at the cut (2026-09-08, user):
 passing test, see [S16's review](sprints/done/S16/review.md). Reuse held across the three ingest
 stories as planned: 051 extended 050's failure-reason mechanism, 064 reused 051's `no-content`
 terminal state — no third mechanism was invented.
+
+**S17 result (2026-09-25).** All four stories done and moved to
+[requirements/done/](requirements/done/); every acceptance criterion proven by a named, passing
+test, see [S17's review](sprints/done/S17/review.md). M17 is now fully built: both its halves
+(S16, S17) are done. Reuse held again: 057 reused `isSafeVaultPath`, 059's `homeOf()` came out of
+garden's existing `targetFor()`, and 063 built on 015/066's discard/undo framework rather than a
+fourth write path. Two review passes (058, 063) each caught a real bug before it shipped — see
+S17's review for both. Two criteria (058's hotkey-while-hidden, notification-click) are manual
+residue, named with reasons in [S17's testplan](sprints/done/S17/testplan.md); every other
+criterion in the sprint runs through the real app via `npm run test:e2e`.
 
 Gaps/notes:
 
@@ -979,6 +996,22 @@ Gaps/notes:
   found late: the e2e fake provider answers instantly, so no test can hold a producer in a long
   `running` state on demand — the same S14/S15 harness limit. See
   [S16 testplan](sprints/done/S16/testplan.md) for the one walk-through this enables (050's AC5).
+- **A real Windows bug surfaced by 063's e2e run**: the live vault watcher (chokidar) blocks
+  `fs.rename()` on any directory beneath it, so the first real folder move failed with `EPERM`
+  even though every watcher-less unit test was green. Fixed with `Services.withoutWatcher()`.
+  Worth checking for the same class of bug in any future story that moves or deletes a directory
+  under vault watch.
+- **063 deliberately left two narrow "undo after the world moved on" gaps, documented not
+  fixed**: `modules:undo` has no lock/digestion-check on the slug it restores, and restoring a
+  deleted module after its slug has been reused could mispoint protocols/projects at the wrong
+  module. Both narrow and already an accepted class of risk elsewhere in the codebase; candidate
+  follow-up if either is ever seen in practice. See [S17 review](sprints/done/S17/review.md).
+- **Two more files are now over CLAUDE.md's ~300-line soft limit**: `src/core/wiki/module-lifecycle/plan.ts`
+  (357 lines) and `rename.ts` (338 lines), added by 063. Same class of gap as `ingest.ts` above;
+  candidate for the same future split-only pass.
+- **058's one accepted low-severity residual**: reopening a hidden-started window from the tray
+  loses its maximized flag on the next close until manually re-maximized. Cosmetic, session-scoped,
+  not vault data.
 
 ### M18 — The vault can grow, and an answer finds its evidence — planned
 
