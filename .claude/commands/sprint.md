@@ -5,7 +5,7 @@ model: sonnet
 effort: medium
 ---
 
-<!-- ai-scrum:managed 4.3.0 - plugin-owned, written by /ai-scrum:setup. Do not edit:
+<!-- ai-scrum:managed 4.4.0 - plugin-owned, written by /ai-scrum:setup. Do not edit:
      setup diffs this file on update and asks before replacing it. Project facts go in .claude/ai-scrum.md. -->
 
 Run sprint **$1**.
@@ -115,7 +115,12 @@ that "knew" its agent had stopped while it was still editing the tree has happen
 Before any refine agent starts:
 
 1. From every story in the sprint list with status `draft`, read `## Open Questions`. Skip
-   entries already marked as answered (resume).
+   entries already marked as answered (resume). If any are open, say so in one line before
+   asking — `3 open questions in 114, 116 block the start; the run continues once they are
+   answered` — because a sprint started before leaving the desk waits here until someone comes
+   back (measured: a sprint started at 17:14 asked at 17:27 and got its answers at 05:50 the
+   next morning). Open questions are best resolved in planning, with `/refine`, before
+   `/sprint` is called; this round exists for the ones that slipped through.
 2. If open entries exist: put them to the user **bundled** via `AskUserQuestion` (max. 4
    questions per call, as many calls as needed). Per question: one sentence of story
    context, sensible answer options derived from spec/concept doc, one marked as
@@ -152,17 +157,28 @@ Prompt (self-contained, the agent does not know this session):
   - **Triage "trivial":** do not wait for GO, do not implement anything directly — even
     trivial stories get a minimal plan + 1 deliverable and `status: ready`, so the build
     phase works uniformly.
+  - **Tier budget, as in `refine.md`:** at most one `deliverable-hard` per story; the review
+    line is `Review: → default` unless you can name the plausible wrong implementation that
+    would pass the tests and a default review — then `Review: → story-review-hard`, which
+    adds a second review pass, it does not replace the first. A story that seems to need two
+    hard Ds is cut too big: put the split proposal into `## Open Questions`, leave `draft`
+    and return `BLOCKED: user question`.
   - If you hit a **new** decision that belongs to the user (design direction, a
     contradiction in the spec, a missing factual basis): leave status `draft`, phrase the
     question precisely with answer options in `## Open Questions`, and return
     `BLOCKED: user question`.
 - Return: `ready` or `BLOCKED: <reason>` + max. 5 lines of plan essence + the list of
-  decisions taken.
+  decisions taken + one line `tiers: D <n> / hard <h> · review default[+hard]`.
 
 **Follow-up:** if a story came back with `BLOCKED: user question`, put the new questions to
 the user (as in phase 1a), record the answers and start exactly ONE more refine round for
 those stories. Stories still blocked afterwards are marked in their `sprint.md` line
 (`(blocked: <reason>)`) — they are skipped in phase 2.
+
+**Then one line of tiers**, from the refine returns, before the first build starts —
+`Tiers: 114 D5/hard 1 · review default+hard — 115 D6/hard 1 · review default — …`. It is not
+a question and needs no answer; it is the moment the user can still stop the run if the
+budget looks wrong, and it is what the tier record in phase 3 is compared against.
 
 ## Phase 2 — Build (all stories, sequentially in list order)
 
@@ -201,8 +217,10 @@ it returns the closing line, before the commit (`## Status lines`). Prompt (self
     tells the user a long build is alive — they watch that file, where a running agent and a
     dead one look identical the moment the lines stop.
 - Return: `done` or `BLOCKED: <reason>`, the commit message from the Done section, changed
-  files, findings/decisions as bullet points — **at most 20 lines**, no diffs and no pasted
-  file contents. Everything it returns stays in your context for the rest of the sprint.
+  files, findings/decisions as bullet points, and the `tiers:` line from the Done section
+  verbatim (`tiers: D <n> / hard <h> · review default[+hard] · cycles <c> · agents <a>`) —
+  **at most 20 lines**, no diffs and no pasted file contents. Everything it returns stays in
+  your context for the rest of the sprint.
 
 **After each story YOU commit** — but only if `auto-commit-per-story: true` in the profile,
 and only on the sprint branch (never push, never on a `protected-branches` entry). If it is
@@ -351,6 +369,13 @@ story builds together.
      reason. That list is the sprint's acceptance record. It is also the honest place to say
      that a criterion was covered a level below the real surface because the `e2e` harness
      does not exist yet.
+   - **Tier record:** one table from the `tiers:` lines the build agents returned — story ·
+     Ds · hard Ds · review stages · review cycles · agents dispatched · build minutes (from the
+     trail) — plus a totals row and one sentence: did the second-stage (hard) review find
+     anything the default review had missed? That table is the sprint's cost signal: the hard
+     tier is the bulk of the bill, and the next planning reads this table to decide whether the
+     budget in `refine.md` holds or needs tightening. A hard review that found nothing new
+     three sprints in a row is the cue to drop it to a final confirmation only.
 2. **`<sprints>/$1/testplan.md`** — governed by `testplan` in the profile, and **it is not an
    acceptance gate**; the tests are. Default `optional`:
    - **`optional`:** collect every `manual residue` line from the sprint's stories. If there
@@ -426,7 +451,8 @@ the regression gate in one line (green, or which story broke what and whether it
 red gate first and loudly, because it decides the merge), the acceptance record in one line
 (criteria proven by tests / manual residues / criteria covered below the real surface), one
 line of measured minutes (refine, each story, each gate command — from the trail and the gate
-record; the next sprint's estimates come from there), that nothing is still running
+record; the next sprint's estimates come from there), one line of tiers (the totals row of the
+tier record: `tiers: D 22 / hard 3 · hard reviews 1 of 4 · agents 41`), that nothing is still running
 (`background tasks: none`, or the list and why), and that merging into `branch-base` is the
 user's decision. A `protected-branches` entry is never the target of a sprint branch merge you
 make.

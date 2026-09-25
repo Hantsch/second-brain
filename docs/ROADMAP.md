@@ -5,9 +5,10 @@ at all yet. As of: 2026-09-25.
 
 Where we stand: M17 just finished (S16 + S17, both `done`) — the app now holds the renderer and
 the model to the same trust standard it holds itself to, and stays reachable from the tray with
-search/citations reading in-app. Next: cut S18 from M18 ("the vault can grow") via
-`/ai-scrum:roadmap plan`, now that S17 is through. Nothing is waiting on the user beyond that cut
-and the eventual `sprint/S17` → `dev` merge, which stays the user's own decision.
+search/citations reading in-app. Next: `/ai-scrum:sprint S18` — all eight of M18's stories (054,
+055, 056, 062, 052, 053, 060, 061) were cut into one sprint on 2026-09-25 instead of the planned
+S18/S19 split. Nothing is waiting on the user beyond starting that sprint and the eventual
+`sprint/S17` → `dev` merge, which stays the user's own decision.
 
 Rules (so this document does not drift):
 
@@ -1030,7 +1031,12 @@ gets bigger. Cut 2026-09-08 together with M17; both sprints follow S17.
   text to the same pipeline as every other source (060); and the heuristic floor speaks the
   document language instead of only German (061).
 
-Sprints: none cut yet — S18 and S19 are cut from this milestone once S17 is through.
+Sprints:
+
+- [sprints/S18/sprint.md](sprints/S18/sprint.md) — the vault can grow, and an answer finds its
+  evidence (054, 055, 056, 062, 052, 053, 060, 061), `planned` — cut 2026-09-25 as one sprint
+  covering all eight of the milestone's stories, by user decision to try a larger sprint instead
+  of the two four-story sprints (S18/S19) originally planned at the 2026-09-08 cut.
 
 Decisions taken at the cut (2026-09-08, user):
 
@@ -1043,6 +1049,14 @@ Decisions taken at the cut (2026-09-08, user):
 - **Not in scope for either milestone:** the condensed layer's module level, the MCP interface,
   the medication tracker and the data import — they stay under "Open / unprioritised" and get
   their own cut.
+
+Decision taken at the 2026-09-25 re-cut (user): one sprint (S18) instead of two. The original
+split protected against two sprints editing the same index files in parallel — moot within one
+sequential sprint — so all eight stories run in one branch, one review and one regression gate,
+in the same pairwise order (054→055→056, 052→053) the 2026-09-08 cut already fixed. See
+[S18's own notes](sprints/S18/sprint.md) for the full ordering rationale, including two file
+overlaps (053/054 on `index/build.ts`, 056/061 on `journal/loose-ends.ts`) the original two-sprint
+split had also crossed.
 
 ---
 
