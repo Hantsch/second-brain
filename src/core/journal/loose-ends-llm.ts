@@ -50,8 +50,9 @@ import {
   MAX_LOOSE_END_SUBJECT_WORDS,
   journalLooseEndsPrompt,
 } from '@core/llm/prompts';
-import { findLooseEnds, looseEndId, sentencesOf, settledCheck } from './loose-ends';
+import { findLooseEnds, looseEndId, resolutionCheck, sentencesOf } from './loose-ends';
 import type { LooseEndDay, LooseEndTodo } from './loose-ends';
+import type { LooseEndDerivation } from './loose-ends-derived';
 import { parseStream } from './stream';
 
 /**
@@ -73,6 +74,13 @@ export interface LooseEndModelInput {
   days: readonly LooseEndDay[];
   todos: readonly LooseEndTodo[];
   today: string;
+  /**
+   * The heuristic result and its resolution check, already computed once for
+   * this index and day (056 D2). When present, the model stage reuses it
+   * instead of running `findLooseEnds`/`settledCheck` a second time over the
+   * same `days`/`todos` — the same derivation, not a second truth.
+   */
+  derived?: Pick<LooseEndDerivation, 'looseEnds' | 'resolve'>;
 }
 
 export interface LooseEndModelOptions {
@@ -258,9 +266,11 @@ export async function modelLooseEnds(
   /* No prose, nothing to read: no call, no cost, no data leaving the machine. */
   if (sources.size === 0) return emptyResult();
 
-  const heuristic = findLooseEnds(input.days, input.todos, input.today);
+  const heuristic = input.derived?.looseEnds ?? findLooseEnds(input.days, input.todos, input.today);
   const known = new Set(heuristic.map((looseEnd) => looseEnd.id));
-  const settled = settledCheck(input.days, input.todos);
+  const resolve = input.derived?.resolve ?? resolutionCheck(input.days, input.todos);
+  const settled = (day: string, quote: string, at?: number): boolean =>
+    resolve(day, quote, at) !== null;
 
   try {
     const result = await options.gateway.complete({

@@ -13,15 +13,30 @@
      (Guardrail 6);
    - ein abgebrochenes `signal` bricht den Aufruf ab, nicht den Pflegelauf. */
 
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { runGardener } from '@core/gardener';
-import { findLooseEnds, modelLooseEnds } from '@core/journal';
+import { findLooseEnds, modelLooseEnds, resolutionCheck } from '@core/journal';
 import type { LooseEndDay } from '@core/journal';
+import type * as LooseEnds from '@core/journal/loose-ends';
 import type { GardenerFinding } from '@shared/types';
 import { emptyGateway, gatewayWithReplies } from '../../helpers/llm';
 import { SETTINGS, gardenerFixture } from '../gardener/fixtures';
 import { journalFile, journalPathOf } from './fixtures';
 import { day } from '../../helpers/time';
+
+/* The real rule, wrapped in a spy — same pattern as
+   `tests/core/journal/loose-ends-derived.test.ts` — so a test can pin how
+   often `modelLooseEnds` actually asks it. */
+vi.mock('@core/journal/loose-ends', async (importOriginal) => {
+  const actual = await importOriginal<typeof LooseEnds>();
+  return { ...actual, findLooseEnds: vi.fn(actual.findLooseEnds) };
+});
+
+const findLooseEndsSpy = vi.mocked(findLooseEnds);
+
+beforeEach(() => {
+  findLooseEndsSpy.mockClear();
+});
 
 /** Uhr der Fixtures (`tests/helpers/time.ts`). */
 const TODAY = '2026-08-10';
@@ -241,6 +256,31 @@ describe('modelLooseEnds', () => {
 
     expect(future.usedLlm).toBe(false);
     expect(provider.callCount).toBe(0);
+  });
+
+  it('the model stage reuses a passed derivation instead of finding loose ends again (056, D3)', async () => {
+    findLooseEndsSpy.mockClear();
+    const control = await modelLooseEnds(
+      { days: days(), todos: [], today: TODAY },
+      looseEndGateway([VALID]),
+    );
+    expect(findLooseEndsSpy).toHaveBeenCalledTimes(1);
+
+    const derived = {
+      looseEnds: findLooseEnds(days(), [], TODAY),
+      resolve: resolutionCheck(days(), []),
+    };
+    findLooseEndsSpy.mockClear();
+
+    const result = await modelLooseEnds(
+      { days: days(), todos: [], today: TODAY, derived },
+      looseEndGateway([VALID]),
+    );
+
+    // The derivation was handed in — the stage never calls the rule itself again.
+    expect(findLooseEndsSpy).not.toHaveBeenCalled();
+    expect(result.looseEnds).toEqual(control.looseEnds);
+    expect(result.usedLlm).toBe(control.usedLlm);
   });
 
   it('bleibt still, wenn die Antwort kein JSON ist', async () => {

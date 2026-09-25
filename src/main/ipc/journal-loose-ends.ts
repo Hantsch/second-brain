@@ -12,21 +12,24 @@
  * so `journal:get` cannot touch the announcing day's hash (069, AC2).
  */
 
-import { findingId, looseEndInput } from '@core/gardener';
-import { announcementsOf, dayLooseEnds, findLooseEnds } from '@core/journal';
-import type { LooseEndDay, LooseEndTodo } from '@core/journal';
+import { findingId } from '@core/gardener';
+import { announcementsOf, dayLooseEnds, looseEndsDerived } from '@core/journal';
+import type { LooseEndDay, LooseEndDerivation } from '@core/journal';
 import type { JournalDayLooseEnd, JournalInterviewLooseEnd } from '@shared/ipc';
 import { gardenerIndex, gardenerStateFor, gardenerToday } from './gardener-deps';
 import { looseEndState } from '../loose-end-state';
 import type { Services } from '../services';
 
 /** The day/todo stock every loose-end read starts from — one derivation, shared
-    by `openLooseEnds` and the resolution composition below. */
+    by `openLooseEnds` and the resolution composition below. Memoized by
+    `looseEndsDerived` itself (056), so calling this more than once per index
+    and day is cheap, not a second scan. */
 async function looseEndContext(
   services: Services,
-): Promise<{ days: LooseEndDay[]; todos: LooseEndTodo[]; today: string }> {
-  const { days, todos } = looseEndInput({ index: gardenerIndex(services) });
-  return { days, todos, today: gardenerToday() };
+): Promise<{ derived: LooseEndDerivation; today: string }> {
+  const today = gardenerToday();
+  const derived = looseEndsDerived(gardenerIndex(services).index(), today);
+  return { derived, today };
 }
 
 /**
@@ -46,8 +49,8 @@ async function looseEndContext(
  * disappear from those surfaces too, not just from this one dialog.
  */
 export async function openLooseEnds(services: Services): Promise<JournalInterviewLooseEnd[]> {
-  const { days, todos, today } = await looseEndContext(services);
-  const found = findLooseEnds(days, todos, today);
+  const { derived, today } = await looseEndContext(services);
+  const found = derived.looseEnds;
   if (found.length === 0) return [];
 
   const answered = (await looseEndState(services.requireVaultRoot())).answeredIds();
@@ -105,7 +108,7 @@ export async function journalDayLooseEnds(
   services: Services,
   date: string,
 ): Promise<JournalDayLooseEnd[]> {
-  const [open, { days, todos, today }] = await Promise.all([
+  const [open, { derived, today }] = await Promise.all([
     openLooseEnds(services),
     looseEndContext(services),
   ]);
@@ -113,9 +116,16 @@ export async function journalDayLooseEnds(
     .filter((looseEnd) => looseEnd.day === date)
     .map((looseEnd) => ({ ...looseEnd, resolution: null }));
 
-  const source = days.find((candidate) => candidate.day.date === date);
+  const source = derived.days.find((candidate) => candidate.day.date === date);
   const answered = await answeredFor(services, source, today);
-  const resolved: JournalDayLooseEnd[] = dayLooseEnds(days, todos, today, date, answered)
+  const resolved: JournalDayLooseEnd[] = dayLooseEnds(
+    derived.days,
+    derived.todos,
+    today,
+    date,
+    answered,
+    derived.resolve,
+  )
     .filter((end) => end.resolution !== null)
     .map((end) => ({
       id: findingId('loose-end', end.id),

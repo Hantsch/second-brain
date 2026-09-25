@@ -506,13 +506,19 @@ export function announcementsOf(
  * The deduplication stays here rather than in `announcementsOf`: an id is day
  * plus sentence, so it can only collide inside one day — but the same day may
  * reach this function twice, and then the first one listed is the one kept.
+ *
+ * `resolve` is optional so a caller that already prepared the subtraction for
+ * this stock (`looseEndsDerived`) does not fold every day a second time; it must
+ * be `resolutionCheck` over the same `days` and `todos`, or the answer drifts.
  */
 export function findLooseEnds(
   days: readonly LooseEndDay[],
   todos: readonly LooseEndTodo[],
   today: string,
+  resolve: ReturnType<typeof resolutionCheck> = resolutionCheck(days, todos),
 ): LooseEnd[] {
-  const settled = settledCheck(days, todos);
+  const settled = (day: string, quote: string, at?: number): boolean =>
+    resolve(day, quote, at) !== null;
   const found = new Map<string, LooseEnd>();
 
   for (const source of days) {

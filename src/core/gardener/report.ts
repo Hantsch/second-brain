@@ -26,7 +26,7 @@
 
 import type { DocLanguage, GardenerFinding, GardenerReport, UiLanguage } from '@shared/types';
 import type { LlmGateway } from '@core/llm';
-import { modelLooseEnds } from '@core/journal';
+import { looseEndsDerived, modelLooseEnds } from '@core/journal';
 import { isoDay, wikiIndexPath } from '@core/vault/paths';
 import type { DateLike } from '@core/vault/paths';
 import { auditFindings } from './audit';
@@ -157,7 +157,11 @@ export async function runGardener(
      und ersetzt keinen. */
   const looseEnds = useLlm
     ? await modelLooseEnds(
-        { ...looseEndInput(ctx), today: ctx.today },
+        {
+          ...looseEndInput(ctx),
+          today: ctx.today,
+          derived: looseEndsDerived(ctx.index.index(), ctx.today),
+        },
         {
           gateway: deps.gateway,
           ...(deps.signal === undefined ? {} : { signal: deps.signal }),

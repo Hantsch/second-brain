@@ -44,6 +44,7 @@ export interface GardenerIndexData {
   byPath: ReadonlyMap<string, IndexedDoc>;
   /** Schon beim Indexlauf gefunden — der Gardener zaehlt sie nur aus. */
   brokenLinks: readonly BrokenLink[];
+  todos: readonly Todo[];
 }
 
 /**

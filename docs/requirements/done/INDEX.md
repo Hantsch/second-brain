@@ -254,3 +254,7 @@ second roadmap.
   into at most one queued follow-up, and a failed watcher refresh marks a timestamp-only
   `indexRefreshFailedAt` (visible in the rail and Settings › Vault) instead of silently
   reporting success.
+- 056 — Loose ends are derived once per index · S18 · Loose-end findings, upcoming mentions and
+  the resolution check are now computed once per index state (`looseEndsDerived`,
+  `WeakMap`-memoized) and shared by `journal:get`, the dashboard, the reminders list, the
+  interview plan, the gardener check and the reminder notifier.

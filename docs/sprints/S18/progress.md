@@ -44,3 +44,15 @@
 - 2026-09-25 15:28 · 055 · verify · started
 - 2026-09-25 15:31 · 055 · verify · done
 - 2026-09-25 15:31 · 055 · story · done
+- 2026-09-25 15:32:13 · 056 · build · started
+- 2026-09-25 15:33 · 056 · D1 once-per-index loose-end derivation (core) · started
+- 2026-09-25 15:37 · 056 · D1 once-per-index loose-end derivation (core) · done
+- 2026-09-25 15:37 · 056 · D2 core consumers read the derivation · started
+- 2026-09-25 15:44 · 056 · D2 core consumers read the derivation · done
+- 2026-09-25 15:44 · 056 · D3 main consumers read the derivation, plus cross-surface count · started
+- 2026-09-25 15:51 · 056 · D3 main consumers read the derivation, plus cross-surface count · done
+- 2026-09-25 15:51 · 056 · verify · started
+- 2026-09-25 15:53 · 056 · verify · done
+- 2026-09-25 15:53 · 056 · review 1 · started
+- 2026-09-25 15:58 · 056 · review 1 · done: PASS - no findings
+- 2026-09-25 15:58 · 056 · story · done

@@ -58,6 +58,10 @@ function dateOfPath(days: readonly LooseEndDay[], path: string): string | undefi
  * 'todo' }` is dropped from the result unless `answered` names an answering day
  * for it — the state file can turn a todo-settled announcement into a shown,
  * resolved one, but nothing here can turn a shown one back into a todo-only one.
+ *
+ * `resolve` is optional for a caller that already prepared the subtraction for
+ * this stock (`looseEndsDerived`); it must be `resolutionCheck` over the same
+ * `days` and `todos`.
  */
 export function dayLooseEnds(
   days: readonly LooseEndDay[],
@@ -65,11 +69,11 @@ export function dayLooseEnds(
   today: string,
   date: string,
   answered: ReadonlyMap<string, string>,
+  resolve: ReturnType<typeof resolutionCheck> = resolutionCheck(days, todos),
 ): DayLooseEnd[] {
   const source = days.find((candidate) => candidate.day.date === date);
   if (source === undefined) return [];
 
-  const resolve = resolutionCheck(days, todos);
   const found: DayLooseEnd[] = [];
 
   for (const { at, ...announcement } of announcementsOf(source, today)) {

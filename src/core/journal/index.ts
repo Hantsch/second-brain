@@ -10,6 +10,8 @@
  *               mit `appendEntry`/`appendAnswer`
  *   `loose-ends` was ein Tag angekuendigt hat und niemand mehr erwaehnt hat
  *               (`findLooseEnds`) — reine Ableitung ueber Tage und Todos, ohne Uhr
+ *   `loose-ends-derived` dieselbe Ableitung einmal pro Index und Tag
+ *               (`looseEndsDerived`), fuer alle Aufrufer geteilt
  *   `loose-end-resolution` ein Tag als Liste seiner Ankuendigungen samt Aufloesung
  *               (`dayLooseEnds`) — Vault zuerst, `answered`-Map (state file) nur
  *               dort, wo die Vault-Heuristik nichts findet
@@ -83,6 +85,7 @@ export {
   type LooseEndResolution,
   type LooseEndTodo,
 } from './loose-ends';
+export { looseEndsDerived, type LooseEndDerivation } from './loose-ends-derived';
 export { findUpcomingMentions } from './upcoming-mentions';
 export { dayLooseEnds, type DayLooseEnd, type DayLooseEndResolution } from './loose-end-resolution';
 export {

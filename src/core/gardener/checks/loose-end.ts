@@ -16,7 +16,7 @@
  * entscheiden, die App wuerde sonst eine Antwort erfinden.
  */
 
-import { findLooseEnds } from '@core/journal';
+import { looseEndsDerived } from '@core/journal';
 import type { LooseEndDay, LooseEndTodo } from '@core/journal';
 import type { GardenerFinding, LooseEnd } from '@shared/types';
 import { buildFinding } from '../types';
@@ -81,7 +81,8 @@ export const looseEndCheck: Check = {
   kind: 'loose-end',
 
   run(ctx: GardenerContext): GardenerFinding[] {
-    const { days, todos } = looseEndInput(ctx);
-    return findLooseEnds(days, todos, ctx.today).map((looseEnd) => looseEndFinding(ctx, looseEnd));
+    return looseEndsDerived(ctx.index.index(), ctx.today).looseEnds.map((looseEnd) =>
+      looseEndFinding(ctx, looseEnd),
+    );
   },
 };

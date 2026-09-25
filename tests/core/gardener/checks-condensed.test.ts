@@ -87,7 +87,7 @@ function fakeIndex(
 ): GardenerIndexView {
   const byPath = new Map(docs.map((doc) => [doc.path, doc]));
   return {
-    index: () => ({ docs, byPath, brokenLinks: [] }),
+    index: () => ({ docs, byPath, brokenLinks: [], todos: [] }),
     pages: () => [],
     projects: () => projects,
     sources: () => [],

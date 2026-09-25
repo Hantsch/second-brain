@@ -1,7 +1,7 @@
 ---
 id: 056
 title: Loose ends are derived once per index
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-09-03
 ---
 
@@ -31,14 +31,14 @@ Opening a day or the dashboard must not scale with the length of my journal hist
 
 ## Acceptance Criteria
 
-- [ ] Between two index changes, the loose-end derivation runs at most once, no matter how many
+- [x] Between two index changes, the loose-end derivation runs at most once, no matter how many
       screens ask; a test counts invocations across `journal:get`, `dashboard:data`,
       `reminders:list`, and the interview plan.
-- [ ] A vault change invalidates the cached result; the next reader recomputes.
-- [ ] The derived findings are byte-identical to today's — pinned by existing tests, none of
+- [x] A vault change invalidates the cached result; the next reader recomputes.
+- [x] The derived findings are byte-identical to today's — pinned by existing tests, none of
       which are weakened.
-- [ ] `journal:get` for one day no longer pays for the whole history.
-- [ ] The gardener check and the notifier read the same single source of truth.
+- [x] `journal:get` for one day no longer pays for the whole history.
+- [x] The gardener check and the notifier read the same single source of truth.
 
 ## Open Questions
 
@@ -105,9 +105,9 @@ reminders and gardener test runs unchanged.
 
 - **D1 — Once-per-index loose-end derivation (core).** Create
   `src/core/journal/loose-ends-derived.ts` exporting `looseEndsDerived(index: VaultIndex, today:
-  string): LooseEndDerivation`, where `LooseEndDerivation = { days: LooseEndDay[]; todos:
-  LooseEndTodo[]; resolve: ReturnType<typeof resolutionCheck>; looseEnds: LooseEnd[];
-  upcoming(horizonDays: number): UpcomingMention[] }`. Build `days` from
+string): LooseEndDerivation`, where `LooseEndDerivation = { days: LooseEndDay[]; todos:
+LooseEndTodo[]; resolve: ReturnType<typeof resolutionCheck>; looseEnds: LooseEnd[];
+upcoming(horizonDays: number): UpcomingMention[] }`. Build `days` from
   `deriveJournalDays(index.docs)` (`@core/index/journal`) joined to `index.docs` by path for
   `body`/`bodyLine`, skipping days without a doc, which is the same transformation as
   `looseEndDaysOf` in `src/core/overview/reminders.ts:220`. Build `todos` from `index.todos` as
@@ -125,7 +125,7 @@ reminders and gardener test runs unchanged.
   `tests/core/journal/loose-ends-derived.test.ts` (mirror the fixtures of
   `tests/core/journal/loose-ends.test.ts`; count with
   `vi.mock('@core/journal/loose-ends', async (orig) => ({ ...(await orig()), findLooseEnds:
-  vi.fn((await orig()).findLooseEnds) }))` or an equivalent spy on the real function):
+vi.fn((await orig()).findLooseEnds) }))` or an equivalent spy on the real function):
   - "the derivation equals findLooseEnds on the same stock". `looseEnds` deep-equals a direct
     `findLooseEnds(days, todos, today)`, and `upcoming(h)` deep-equals
     `findUpcomingMentions(...)`.
@@ -208,9 +208,73 @@ reminders and gardener test runs unchanged.
   the history".
 - AC5 → unit `tests/main/loose-ends-once.test.ts` › "the gardener check and the notifier read the
   same derivation" (plus `tests/core/journal/loose-ends-llm.test.ts` › "the model stage reuses a
-  passed derivation").
+  passed derivation instead of finding loose ends again (056, D3)").
 
 Coverage: AC1 → D1 + D3 · AC2 → D1 + D3 · AC3 → D1 + D2 · AC4 → D1 (prepared check) + D3 ·
 AC5 → D2 + D3.
 
 ## Done
+
+Loose-end findings, upcoming mentions and the resolution check are now computed once per
+`VaultIndex` object plus `today` (`src/core/journal/loose-ends-derived.ts`, `looseEndsDerived`,
+`WeakMap`-memoized) instead of once per caller. `journal:get`, `dashboard:data`,
+`reminders:list`, `journal:interviewPlan`, the gardener's `loose-end` check and its model stage,
+and the reminder notifier all read the same derivation; `journal:get` now passes the prepared
+`resolve` into `dayLooseEnds` so a single-day read no longer folds the whole journal.
+
+**Commit message:**
+
+```
+056: derive loose ends once per index instead of once per caller
+```
+
+**Verification (narrow gate):**
+
+- `npm run build` — green.
+- `npm run lint` — green.
+- `npm run typecheck` — green.
+- `npm run format:check` — red on 5 files; 4 pre-existing and unrelated to this story
+  (`docs/requirements/052-*.md`, `061-*.md`, `062-*.md`, `tests/main/services.test.ts`), left
+  untouched; this story's own file (this one) was reformatted and is green now.
+- `npx vitest run --changed HEAD` (test-story) — 89 files, 1259 tests, all green.
+- No `e2e-story`: every AC maps to unit tests only (no user-facing surface), so `e2e` was not run,
+  per the profile's rule for stories with no e2e-mapped criterion.
+- AC → test mapping, all verified green in the run above: AC1 →
+  `tests/main/loose-ends-once.test.ts` "loose ends derive once across journal:get, dashboard:data,
+  reminders:list and the interview plan" + `loose-ends-derived.test.ts` "the same index and day
+  derive once". AC2 → `loose-ends-derived.test.ts` "a refreshed index recomputes" +
+  `loose-ends-once.test.ts` "a vault change invalidates the derived loose ends". AC3 →
+  `loose-ends-derived.test.ts` "the derivation equals findLooseEnds on the same stock" + unweakened
+  `loose-ends.test.ts`, `loose-end-resolution.test.ts`, `loose-ends-llm.test.ts`, `reminders.test.ts`,
+  `journal-ipc.test.ts`. AC4 → `loose-ends-once.test.ts` "journal:get for one day does not re-derive
+  the history". AC5 → `loose-ends-once.test.ts` "the gardener check and the notifier read the same
+  derivation" + `loose-ends-llm.test.ts` "the model stage reuses a passed derivation…". No manual
+  residues.
+- Review (default tier, per `Review: → default`): PASS, no findings, 0 fix cycles needed.
+
+**Decisions:**
+
+- **Identity-keyed `WeakMap`, not 054's `generation()`.** Verified directly in
+  `src/core/index/service.ts`'s `update()`/`updateScoped()`: every state-changing refresh assigns a
+  fresh `VaultIndex` object to `this.current`, and `updateScoped` returns early — leaving identity
+  untouched — when nothing changed. The invariant "new object ⇒ maybe stale, needs recompute; same
+  object ⇒ definitely same state" holds without needing `IndexService.generation()`, which is
+  private and would have required a new public surface for no correctness gain (D1's own decision
+  #2 was conditional on refresh mutating in place, which it does not).
+- **`looseEndsDerived`'s parameter narrowed from `VaultIndex` to a local `{ docs, todos }` shape
+  (`LooseEndIndexSource`, D3).** The gardener's `GardenerIndexData` (via `ctx.index.index()`) is
+  structurally narrower than `VaultIndex` and doesn't carry `todos`; the derivation only ever reads
+  `.docs` and `.todos`, so narrowing the parameter (rather than force-widening `GardenerIndexData`
+  to the full `VaultIndex` shape) let both the overview and gardener call sites pass their real,
+  identity-stable index objects without an unsound cast.
+- **`GardenerIndexData` widened with `todos: readonly Todo[]`.** `IndexService` already returns an
+  object with `todos` at runtime (`GardenerIndexView`'s own doc comment: "IndexService erfuellt es
+  strukturell") — the interface just hadn't said so. No test fake needed hand-editing beyond the one
+  hand-built fixture in `tests/core/gardener/checks-condensed.test.ts`.
+- **`OverviewIndex.index()` widened from `{docs}` to full `VaultIndex` (D2).** Needed so
+  `reminders()` hands `looseEndsDerived` the same object `IndexService` hands out elsewhere — a
+  narrower copy would defeat the identity-keyed cache and silently reintroduce a recompute per call.
+
+tiers: D 3 / hard 1 · review default · cycles 0 · agents 5
+
+

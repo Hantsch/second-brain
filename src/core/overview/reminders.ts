@@ -20,13 +20,18 @@
  *   ruhen — bis das Ruhen ablaeuft.
  */
 
-import type { Project, Reminder, ReminderUrgency, Todo, WaitingOn } from '@shared/types';
+import type {
+  LooseEnd,
+  Project,
+  Reminder,
+  ReminderUrgency,
+  Todo,
+  UpcomingMention,
+  WaitingOn,
+} from '@shared/types';
 import { daysBetween } from '@core/index/dates';
-import { deriveJournalDays } from '@core/index/journal';
 import { scopeFromPath } from '@core/index/todos';
-import type { IndexedDoc } from '@core/index/types';
-import { findLooseEnds, findUpcomingMentions } from '@core/journal';
-import type { LooseEndDay, LooseEndTodo } from '@core/journal';
+import { looseEndsDerived } from '@core/journal';
 import { sha256 } from '@core/vault/hash';
 import { isoDay } from '@core/vault/paths';
 import type { DateLike } from '@core/vault/paths';
@@ -211,27 +216,6 @@ function fromStale(projects: readonly Project[], today: string, staleDays: numbe
 }
 
 /**
- * Tage des Index, so wie `findLooseEnds` sie braucht — dieselbe Umformung wie
- * `core/gardener/checks/loose-end.ts`'s `looseEndInput`, nur ueber die schmale
- * `OverviewIndex`-Sicht statt des Pflegelauf-Kontexts: `deriveJournalDays`
- * liefert Datum und Pfad, der Rumpf kommt aus demselben `docs`-Array (bereits
- * das Muster von `dashboard.ts`'s `journalStreak`).
- */
-function looseEndDaysOf(docs: readonly IndexedDoc[]): LooseEndDay[] {
-  const byPath = new Map(docs.map((doc) => [doc.path, doc] as const));
-  const days: LooseEndDay[] = [];
-  for (const entry of deriveJournalDays(docs)) {
-    const doc = byPath.get(entry.path);
-    if (doc === undefined) continue;
-    days.push({
-      day: { date: entry.date, path: entry.path },
-      doc: { body: doc.body, bodyLine: doc.bodyLine },
-    });
-  }
-  return days;
-}
-
-/**
  * Erinnerungen aus losen Enden (020, D1): eine Ankuendigung im Tagebuch, deren
  * Tag vorbei ist und niemand seitdem etwas dazu gesagt hat. Die Erkennung
  * selbst steckt vollstaendig in `findLooseEnds` — hier wird nur abgebildet,
@@ -246,12 +230,8 @@ function looseEndDaysOf(docs: readonly IndexedDoc[]): LooseEndDay[] {
  * Oberflaechen dieselbe Kennung traegt: nur so zaehlt ein „beantwortet" aus
  * D5 oder ein „passt so"/„ruhen" aus 017 auch hier.
  */
-function fromLooseEnds(
-  days: readonly LooseEndDay[],
-  todos: readonly LooseEndTodo[],
-  today: string,
-): Reminder[] {
-  return findLooseEnds(days, todos, today).map((looseEnd) => ({
+function fromLooseEnds(looseEnds: readonly LooseEnd[], today: string): Reminder[] {
+  return looseEnds.map((looseEnd) => ({
     id: idFor('loose-end', looseEnd.id),
     source: 'loose-end',
     urgency: 'open',
@@ -283,13 +263,8 @@ function fromLooseEnds(
  * noch nicht faellig, nur schon sichtbar. `DaySummary`s „heute faellig" und
  * `DeadlinesTile`s Quellenfilter fragen ohnehin nicht nach `upcoming-mention`.
  */
-function fromUpcomingMentions(
-  days: readonly LooseEndDay[],
-  todos: readonly LooseEndTodo[],
-  today: string,
-  horizon: number,
-): Reminder[] {
-  return findUpcomingMentions(days, todos, today, horizon).map((mention) => ({
+function fromUpcomingMentions(mentions: readonly UpcomingMention[], today: string): Reminder[] {
+  return mentions.map((mention) => ({
     id: idFor('loose-end', mention.id),
     source: 'upcoming-mention',
     urgency: 'upcoming',
@@ -332,23 +307,15 @@ export function reminders(
   const { staleAfterDays, deadlineHorizonDays, waitingNudgeDays } = limits(settings);
   const projects = index.projects();
   const todos = index.todos();
+  const derived = looseEndsDerived(index.index(), day);
 
   const all = [
     ...fromTodos(todos, day, deadlineHorizonDays, closedProjects(projects)),
     ...fromDeadlines(projects, day, deadlineHorizonDays),
     ...fromWaiting(projects, day, waitingNudgeDays),
     ...fromStale(projects, day, staleAfterDays),
-    ...fromLooseEnds(
-      looseEndDaysOf(index.index().docs),
-      todos.map((todo) => ({ text: todo.text, due: todo.due })),
-      day,
-    ),
-    ...fromUpcomingMentions(
-      looseEndDaysOf(index.index().docs),
-      todos.map((todo) => ({ text: todo.text, due: todo.due })),
-      day,
-      deadlineHorizonDays,
-    ),
+    ...fromLooseEnds(derived.looseEnds, day),
+    ...fromUpcomingMentions(derived.upcoming(deadlineHorizonDays), day),
   ].filter((reminder) => !snoozed(reminder.id, day, snoozes));
 
   all.sort(

@@ -36,7 +36,7 @@ export function indexFrom(
     projects: () => index.projects,
     todos: () => index.todos,
     sources: () => index.sources,
-    index: () => ({ docs: index.docs }),
+    index: () => index,
   };
 }
 

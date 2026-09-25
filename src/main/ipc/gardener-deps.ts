@@ -46,7 +46,7 @@ import type {
   GardenerStageId,
   StagePlanEntry,
 } from '@core/gardener';
-import { modelLooseEnds } from '@core/journal';
+import { looseEndsDerived, modelLooseEnds } from '@core/journal';
 import { isoDay } from '@core/vault/paths';
 import type {
   DocLanguage,
@@ -491,7 +491,11 @@ export async function runWithProgress(
         await tick();
         stopIfCancelled(options.signal);
         looseEnds = await modelLooseEnds(
-          { ...looseEndInput(ctx), today: ctx.today },
+          {
+            ...looseEndInput(ctx),
+            today: ctx.today,
+            derived: looseEndsDerived(ctx.index.index(), ctx.today),
+          },
           {
             gateway: run.gateway,
             ...(options.signal === undefined ? {} : { signal: options.signal }),

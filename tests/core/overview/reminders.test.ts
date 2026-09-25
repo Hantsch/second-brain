@@ -1,6 +1,23 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { findLooseEnds } from '@core/journal/loose-ends';
+import type * as LooseEnds from '@core/journal/loose-ends';
 import { reminders, urgencyFor } from '@core/overview';
 import { NOW, TODAY, day, indexFrom, journalDoc, projectDoc, stamp } from './fixtures';
+
+/* The real rule, wrapped in a spy — same pattern as
+   `tests/core/journal/loose-ends-derived.test.ts` — so the count shows how
+   often `reminders()` actually asked it, and the output is still the rule's
+   own. */
+vi.mock('@core/journal/loose-ends', async (importOriginal) => {
+  const actual = await importOriginal<typeof LooseEnds>();
+  return { ...actual, findLooseEnds: vi.fn(actual.findLooseEnds) };
+});
+
+const findLooseEndsSpy = vi.mocked(findLooseEnds);
+
+beforeEach(() => {
+  findLooseEndsSpy.mockClear();
+});
 
 const LIMITS = { staleAfterDays: 14, deadlineHorizonDays: 14, waitingNudgeDays: 5 };
 
@@ -279,6 +296,27 @@ describe('reminders — lose Enden (020, D7)', () => {
 
     const wiederDa = reminders(index, LIMITS, TODAY, new Map([[before.id, TODAY]]));
     expect(wiederDa.some((entry) => entry.id === before.id)).toBe(true);
+  });
+
+  it('reminders derive loose ends once per index (056, D2)', () => {
+    const index = indexFrom([notary()]);
+
+    const first = reminders(index, LIMITS, TODAY);
+    const second = reminders(index, LIMITS, TODAY);
+
+    // Same index, same day: `looseEndsDerived` answers from its cache the
+    // second time — `findLooseEnds` itself runs only once.
+    expect(findLooseEndsSpy).toHaveBeenCalledTimes(1);
+    expect(second).toEqual(first);
+
+    const list = first.filter((entry) => entry.source === 'loose-end');
+    expect(list).toHaveLength(1);
+    expect(list[0]).toMatchObject({
+      source: 'loose-end',
+      urgency: 'open',
+      date: day(-5),
+      scope: 'private',
+    });
   });
 });
 
