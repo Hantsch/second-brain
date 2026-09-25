@@ -68,3 +68,13 @@
 - 2026-09-25 16:23 · 062 · review 1 · started
 - 2026-09-25 16:27 · 062 · review 1 · done
 - 2026-09-25 16:28 · 062 · story · done
+- 2026-09-25 16:28:55 · 052 · build · started
+- 2026-09-25 16:29 · 052 · D1 SearchQuery.project filters before limit cut · started
+- 2026-09-25 16:30 · 052 · D1 SearchQuery.project filters before limit cut · done
+- 2026-09-25 16:30 · 052 · D2 retrieve scopes inside the search · started
+- 2026-09-25 16:42 · 052 · D2 retrieve scopes inside the search · done
+- 2026-09-25 16:42 · 052 · verify · started
+- 2026-09-25 16:45 · 052 · verify · done
+- 2026-09-25 16:45 · 052 · review 1 · started
+- 2026-09-25 16:46 · 052 · review 1 · done
+- 2026-09-25 16:47 · 052 · story · done

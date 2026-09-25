@@ -2,7 +2,11 @@
  * Fragen beantworten — nur aus dem Vault, mit Beleg und Fundstelle.
  *
  * Der Weg ist immer derselbe, und er endet nie in einem toten Zustand:
- * 1. **Kandidaten** aus der Volltextsuche, optional vom Modell sortiert.
+ * 1. **Kandidaten** aus der Volltextsuche, optional vom Modell sortiert. Modul,
+ *    Scope und Projekt gehen als Filter in die Suchanfrage selbst hinein — die
+ *    Kandidaten kommen also schon eingeschraenkt zurueck, statt hinterher
+ *    ausgeduennt zu werden (sonst koennte der Limit-Schnitt der Suche einen
+ *    passenden Treffer schon verwerfen, bevor der Filter ihn je sieht).
  * 2. **Keine Treffer** → ehrliche Absage. Ohne Beleg wird kein Modell gefragt: es
  *    haette nichts zu lesen und wuerde raten (Guardrail 3).
  * 3. **Kein Modell** → die Suchtreffer selbst sind die Antwort („ich kann nicht
@@ -70,6 +74,10 @@ export function retrieve(
     text,
     limit: Math.min(MAX_CANDIDATES, limit),
     ...(options.module === undefined || options.module === null ? {} : { module: options.module }),
+    ...(options.scope === undefined || options.scope === null ? {} : { scope: options.scope }),
+    ...(options.project === undefined || options.project === null
+      ? {}
+      : { project: options.project }),
     types,
   });
   const byPath = index.index().byPath;
@@ -79,16 +87,6 @@ export function retrieve(
   for (const hit of hits) {
     const doc = byPath.get(hit.path);
     if (doc === undefined) continue;
-    if (options.scope !== undefined && options.scope !== null && doc.scope !== options.scope) {
-      continue;
-    }
-    if (
-      options.project !== undefined &&
-      options.project !== null &&
-      doc.project !== options.project
-    ) {
-      continue;
-    }
     const slice = buildExcerpt(doc, terms);
     if (slice === null) continue;
     excerpts.push({

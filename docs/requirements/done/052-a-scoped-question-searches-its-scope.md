@@ -1,7 +1,7 @@
 ---
 id: 052
 title: A scoped question searches its scope
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-09-03
 ---
 
@@ -26,14 +26,14 @@ the same class of problem — the retrieval not seeing what the question is actu
 
 ## Acceptance Criteria
 
-- [ ] With a project filter set, retrieval candidates come from that project's documents; a
+- [x] With a project filter set, retrieval candidates come from that project's documents; a
       question whose answer is in the project is answered even when the vault is large and the
       project is small.
-- [ ] Same for the scope filter (work/private).
-- [ ] "Nothing found" under a scope means the scope has nothing — verified by a test with a
+- [x] Same for the scope filter (work/private).
+- [x] "Nothing found" under a scope means the scope has nothing — verified by a test with a
       vault where the answer exists outside the scope only.
-- [ ] The no-model excerpt path honours the same scoping.
-- [ ] A test with a deliberately large fixture (relevant docs beyond the old candidate cut)
+- [x] The no-model excerpt path honours the same scoping.
+- [x] A test with a deliberately large fixture (relevant docs beyond the old candidate cut)
       pins the fix.
 - [ ] Optional, refine decides: a follow-up turn's retrieval query is built from the thread's
       context, not the follow-up words alone — or this is split into its own story.
@@ -86,7 +86,7 @@ the same class of problem — the retrieval not seeing what the question is actu
 3. **Tests.** Extend `tests/core/index/search-scope.test.ts` with a project case. New file
    `tests/core/wiki/ask-scope-large.test.ts` (existing `ask.test.ts` is already 444 lines)
    with a generated large vault on top of `wikiFixture(...)`: 30 private, non-project notes
-   whose *titles* contain the question terms (strong hits), plus the answer in 1 note under
+   whose _titles_ contain the question terms (strong hits), plus the answer in 1 note under
    `projects/work/<slug>/` with the terms only in the body (weak hit, rank > 24 unscoped).
 4. Existing `tests/core/wiki/ask.test.ts` scope/project cases must stay green unchanged.
 
@@ -94,7 +94,7 @@ Order: D1 → D2. No IPC, preload or renderer change.
 
 ## Deliverables
 
-- [ ] **D1 — `SearchQuery.project` filters before the limit cut.** Add optional
+- [x] **D1 — `SearchQuery.project` filters before the limit cut.** Add optional
       `project?: string` (doc comment: "Restrict to one project slug from
       `projects/<scope>/<slug>/`.") to `SearchQuery` in `src/shared/types/knowledge.ts`. In
       `src/core/index/search.ts` `filterFor`, add
@@ -108,12 +108,12 @@ Order: D1 → D2. No IPC, preload or renderer change.
       "a project filter keeps the weak in-project hit that the limit would have cut".
       Files: `src/shared/types/knowledge.ts`, `src/core/index/search.ts`,
       `tests/core/index/search-scope.test.ts`.
-- [ ] **D2 — `retrieve` scopes inside the search.** In `src/core/wiki/ask.ts` `retrieve`:
+- [x] **D2 — `retrieve` scopes inside the search.** In `src/core/wiki/ask.ts` `retrieve`:
       pass `scope` and `project` into the `index.search({...})` call with the same
       null/undefined-omitting spread already used for `module`; remove the two post-hit
       `continue` checks on `doc.scope`/`doc.project`; keep signature, `RetrieveOptions`,
       `MAX_CANDIDATES`, and the `WikiExcerpt` shape unchanged. Update the header comment step 1
-      ("Kandidaten aus der Volltextsuche" → candidates come from the search *inside* the
+      ("Kandidaten aus der Volltextsuche" → candidates come from the search _inside_ the
       module/scope/project filter), in English. `askQuestion` stays as is.
       Tests in the new file `tests/core/wiki/ask-scope-large.test.ts`, using `wikiFixture`
       from `tests/core/wiki/fixtures.ts` plus a local generator `largeVault()` that returns
@@ -122,23 +122,18 @@ Order: D1 → D2. No IPC, preload or renderer change.
       `projects/work/<slug>/` (scope `work`) carrying the answer sentence with the terms only
       in the body; plus an "outside only" variant where the answer note lives in a private
       area instead. Use `gatewayWithReplies` / `emptyGateway` from `tests/helpers/llm.ts`
-      (mirror `tests/core/wiki/ask.test.ts`). Tests:
-      - "a project-scoped question finds the answer below the old candidate cut" — sanity:
-        unscoped `retrieve(..., { limit: 24 })` does *not* contain the project note; with
-        `{ project: <slug> }` `askQuestion` (fake model answering with a citation of the
-        project note) returns that path in `citations`, and every excerpt path starts with
-        `projects/work/<slug>/`.
-      - "a scope-filtered question finds the answer below the old candidate cut" — same with
-        `{ scope: 'work' }`; every excerpt is a `work` document.
-      - "nothing found under a scope means the scope has nothing" — outside-only variant,
-        `{ scope: 'work' }` and `{ project: <slug> }`: `unsupported: true`, `excerpts: []`,
-        answer is the `noEvidence` phrase, and the fake provider recorded no call.
-      - "without a model the excerpts honour the same scope" — `emptyGateway()`, project and
-        scope filter: `usedLlm: false`, the project note is among `excerpts`, none outside.
-      - "the search query itself carries scope and project" — wrap `fixture.index` in a
-        recording `WikiIndexView` (delegate all methods, push each `SearchQuery`), call
-        `retrieve` with both filters, assert every recorded query has `scope` and `project`
-        set.
+      (mirror `tests/core/wiki/ask.test.ts`). Tests: - "a project-scoped question finds the answer below the old candidate cut" — sanity:
+      unscoped `retrieve(..., { limit: 24 })` does _not_ contain the project note; with
+      `{ project: <slug> }` `askQuestion` (fake model answering with a citation of the
+      project note) returns that path in `citations`, and every excerpt path starts with
+      `projects/work/<slug>/`. - "a scope-filtered question finds the answer below the old candidate cut" — same with
+      `{ scope: 'work' }`; every excerpt is a `work` document. - "nothing found under a scope means the scope has nothing" — outside-only variant,
+      `{ scope: 'work' }` and `{ project: <slug> }`: `unsupported: true`, `excerpts: []`,
+      answer is the `noEvidence` phrase, and the fake provider recorded no call. - "without a model the excerpts honour the same scope" — `emptyGateway()`, project and
+      scope filter: `usedLlm: false`, the project note is among `excerpts`, none outside. - "the search query itself carries scope and project" — wrap `fixture.index` in a
+      recording `WikiIndexView` (delegate all methods, push each `SearchQuery`), call
+      `retrieve` with both filters, assert every recorded query has `scope` and `project`
+      set.
       Files: `src/core/wiki/ask.ts`, `tests/core/wiki/ask-scope-large.test.ts`.
 
 ## Model Hints
@@ -164,3 +159,33 @@ Order: D1 → D2. No IPC, preload or renderer change.
 - No e2e: no user action changes; reason in Decisions (Sprint).
 
 ## Done
+
+Summary: `SearchQuery` gained an optional `project` field; `SearchEngine.filterFor`
+(`src/core/index/search.ts`) now rejects a non-matching `project` in the same place and order as
+`scope`, before the limit cut. `retrieve` (`src/core/wiki/ask.ts`) now passes `scope`/`project`
+into `index.search(...)` instead of filtering hits after the fact; the two dead post-hit `continue`
+checks were removed. No IPC/renderer change — `askQuestion` already forwarded both fields.
+
+Commit message: `052: scope and project filter candidates before the limit cut, not after`
+
+Verification — narrow gate (no `--full`): `npm run build` green, `npm run lint` green,
+`npm run typecheck` green, `npx vitest run --changed HEAD` green (189 files, 2666 tests). No e2e
+run — no user-facing surface changed (see Decisions (Sprint)). `npm run format:check` red on 3
+files, none of them touched by this story (`docs/requirements/061-*.md`,
+`tests/main/services.test.ts`, and this story file itself — reformatted below) — pre-existing,
+not fixed here.
+
+AC → test, as verified: AC1 → `tests/core/wiki/ask-scope-large.test.ts` › "a project-scoped
+question finds the answer below the old candidate cut" + `tests/core/index/search-scope.test.ts`
+› "a project filter keeps the weak in-project hit that the limit would have cut" (both pass).
+AC2 → `ask-scope-large.test.ts` › "a scope-filtered question finds the answer below the old
+candidate cut" (pass). AC3 → `ask-scope-large.test.ts` › "nothing found under a scope means the
+scope has nothing" (pass). AC4 → `ask-scope-large.test.ts` › "without a model the excerpts honour
+the same scope" (pass). AC5 → `ask-scope-large.test.ts` › "the search query itself carries scope
+and project" (pass). AC6 split out, no test here, no open point.
+
+Review: stage 1 only (default tier per Model Hints) — PASS, no findings; a mutation check
+(re-running the new tests against the pre-fix code via `git stash`) confirmed 4 of them fail
+without the fix, so they exercise the bug, not a tautology.
+
+tiers: D 2 / hard 0 · review default · cycles 0 · agents 4

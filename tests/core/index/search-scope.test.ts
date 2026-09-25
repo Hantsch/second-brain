@@ -72,3 +72,47 @@ describe('SearchEngine: scope', () => {
     expect(engine.search({ text: 'Kobalt', scope: 'private' }, byPath)).toEqual([]);
   });
 });
+
+describe('SearchEngine: project', () => {
+  function docsFor() {
+    // Four docs in an unrelated project (or no project at all), all with the
+    // query term in the title — the strongest possible score (BOOST.title in
+    // search.ts) — plus one doc in the wanted project that only carries the
+    // term in its body, the weakest score. Ranked by relevance alone, every
+    // other-project doc outranks the wanted one.
+    const other = ['one', 'two', 'three', 'four'].map((suffix) =>
+      makeDoc({
+        path: `projects/work/other-project/${suffix}.md`,
+        docType: 'project',
+        title: `Kobalt Vorhaben ${suffix}`,
+        project: 'other-project',
+        body: 'Nichts weiter von Belang.',
+      }),
+    );
+    const inProject = makeDoc({
+      path: 'projects/work/wanted-project/notes.md',
+      docType: 'note',
+      title: 'Etwas anderes',
+      project: 'wanted-project',
+      body: 'Kobalt taucht hier nur im Fliesstext auf.',
+    });
+    return [...other, inProject];
+  }
+
+  function search(query: SearchQuery): SearchHit[] {
+    const docs = docsFor();
+    const engine = SearchEngine.from(docs);
+    const byPath = new Map(docs.map((doc) => [doc.path, doc]));
+    return engine.search(query, byPath);
+  }
+
+  it('a project filter keeps the weak in-project hit that the limit would have cut', () => {
+    // Without correct ordering, the top-ranked other-project doc would be
+    // taken by `limit: 1` first and only then discarded by the project
+    // filter, leaving an empty result even though a matching in-project doc
+    // exists.
+    const hits = search({ text: 'Kobalt', project: 'wanted-project', limit: 1 });
+    expect(hits).toHaveLength(1);
+    expect(hits[0]?.path).toBe('projects/work/wanted-project/notes.md');
+  });
+});

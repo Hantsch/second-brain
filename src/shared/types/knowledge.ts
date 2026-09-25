@@ -144,6 +144,8 @@ export interface SearchQuery {
   module?: string;
   /** Auf Arbeit oder Privat einschränken. */
   scope?: Scope;
+  /** Restrict to one project slug from `projects/<scope>/<slug>/`. */
+  project?: string;
   tags?: string[];
   /** Nur Dokumente ab diesem Datum. */
   since?: string;

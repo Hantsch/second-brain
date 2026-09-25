@@ -27,7 +27,7 @@ German.
 - [x] 055 — A bulk change reaches the index
 - [x] 056 — Loose ends are derived once per index
 - [x] 062 — Codex work counts as work
-- [ ] 052 — A scoped question searches its scope
+- [x] 052 — A scoped question searches its scope
 - [ ] 053 — Long sources answer by passage, not by file
 - [ ] 060 — A PDF becomes a readable source
 - [ ] 061 — The heuristic floor speaks the document language

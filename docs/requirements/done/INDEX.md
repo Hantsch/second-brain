@@ -6,6 +6,10 @@ Format: `- NNN — <title> · <sprint or —> · <one-sentence result>`.
 The full texts live next to this file. This index is the fast overview — do not turn it into a
 second roadmap.
 
+- 052 — A scoped question searches its scope · S18 · `project`/`scope` now filter search
+  candidates inside `SearchEngine.filterFor` before the limit cut, and `retrieve` passes both
+  into the search instead of filtering hits afterward, so a scoped question in a large vault no
+  longer loses its answer to the top-24 candidate cut; passed clean-agent review with no findings.
 - 001 — Agent session browser (Claude & Codex) · — · New three-level screen (sources → projects
   → sessions/transcript) reading both Claude Code and Codex CLI session trails, read-only, with
   project linking and honest empty/off/misconfigured states; passed clean-agent review after one
