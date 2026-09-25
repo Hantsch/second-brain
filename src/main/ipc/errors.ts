@@ -14,6 +14,7 @@ const CODES: readonly IpcError['code'][] = [
   'io',
   'cancelled',
   'unknown',
+  'too-large',
 ];
 
 /** An error with an IPC code. Handlers throw exclusively this type. */

@@ -17,6 +17,7 @@ const CODES: readonly IpcError['code'][] = [
   'io',
   'cancelled',
   'unknown',
+  'too-large',
 ];
 
 export function isIpcError(value: unknown): value is IpcError {

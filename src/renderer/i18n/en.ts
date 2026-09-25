@@ -106,6 +106,7 @@ export const en: Record<TranslationKey, string> = {
   'error.code.io': 'File access failed.',
   'error.code.cancelled': 'Cancelled.',
   'error.code.unknown': 'Unexpected error.',
+  'error.code.too-large': 'The file is larger than 5 MB and was not taken in.',
   'error.about.no-vault': 'No vault is open for “{subject}”.',
   'error.about.not-found': '“{subject}” does not exist (any more).',
   'error.about.conflict': '“{subject}” changed in the meantime. Nothing was overwritten.',
@@ -201,7 +202,9 @@ export const en: Record<TranslationKey, string> = {
      (`IngestNoteCode`); the sentence lives here. Every refusal states something about
      the source instead of apologising. */
   'ingest.note.pdf-not-read':
-    'PDFs are not read yet — the file is stored as a source, please paste the text.',
+    'This PDF could not be opened — damaged or password-protected. The file is stored as a source.',
+  'ingest.note.pdf-no-text-layer':
+    'This PDF has no text layer — it looks scanned. The file is stored as a source; text recognition is not supported.',
   'ingest.note.binary-not-read':
     'This file type is not read — the file is stored as a source, please paste the text.',
   'ingest.note.no-transcript':

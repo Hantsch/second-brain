@@ -76,6 +76,7 @@ const KNOWN_ERROR_CODES: ReadonlySet<string> = new Set<KnownErrorCode>([
   'cancelled',
   'unknown',
   'conflict',
+  'too-large',
 ]);
 
 /**

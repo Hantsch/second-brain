@@ -267,3 +267,8 @@ second roadmap.
   like Claude sessions, via a new `mergeTouches` that combines both CLIs' touches into one
   `applyExternalTouches` call so neither erases the other's; reviewed PASS with no fix cycle.
 - 053 — Long sources answer by passage, not by file · S18 · Long documents (transcripts, articles) now index as line-anchored passages, not one whole-document entry, so an answer from the middle of a two-hour transcript can be retrieved and cited by its real line, while search (Ctrl+K) still shows one hit per file; raw/ files also index as type `raw` instead of `note`; reviewed PASS + hard PASS with no fix cycle.
+- 060 — A PDF becomes a readable source · S18 · Text-based PDFs are now extracted (via pure-JS
+  `unpdf`) into a `source.md` next to the original and digested like any text source; scanned
+  PDFs end honestly as `no-content`/`pdf-no-text-layer`, damaged PDFs keep `pdf-not-read`, and
+  oversized PDFs (>5 MB) fail visibly with a new `too-large` error code — reviewed PASS with no
+  fix cycle.

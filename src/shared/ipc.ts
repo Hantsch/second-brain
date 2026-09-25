@@ -1581,7 +1581,8 @@ export interface IpcError {
     | 'invalid'
     | 'io'
     | 'cancelled'
-    | 'unknown';
+    | 'unknown'
+    | 'too-large';
   message: string;
   detail?: unknown;
 }

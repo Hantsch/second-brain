@@ -39,8 +39,10 @@ export type IngestProgressFn = (event: IngestProgressEvent) => void;
  * reist ein Code: der Renderer setzt ihn als `ingest.note.<code>` in Text um.
  */
 export type IngestNoteCode =
-  /** PDF wird noch nicht gelesen — die Datei liegt als Quelle, der Text fehlt. */
+  /** Das PDF liess sich nicht oeffnen — beschaedigt oder passwortgeschuetzt. */
   | 'pdf-not-read'
+  /** Das PDF hat keine Textebene — gescannte Seiten, nichts zu extrahieren. */
+  | 'pdf-no-text-layer'
   /** Dateiart unbekannt: abgelegt, aber nicht ausgelesen. */
   | 'binary-not-read'
   /** Das Video hat keine Untertitel — Metadaten liegen trotzdem. */
@@ -113,6 +115,8 @@ export interface IngestFileStat {
  */
 export interface IngestFileSystem {
   readText(path: string): Promise<string | null>;
+  /** Rohe Bytes lesen; `null`, wenn es die Datei nicht gibt. */
+  readBytes(path: string): Promise<Uint8Array | null>;
   stat(path: string): Promise<IngestFileStat | null>;
   /** Kopiert eine Datei; Zielordner wird angelegt. */
   copyFile(from: string, to: string): Promise<void>;
@@ -201,7 +205,7 @@ export interface SourceIngestor {
 
 /** Fehler des Aufnehmens. `code` entspricht `IpcError.code`. */
 export class IngestError extends Error {
-  readonly code: 'invalid' | 'not-found' | 'io' | 'cancelled' | 'unknown';
+  readonly code: 'invalid' | 'not-found' | 'io' | 'cancelled' | 'unknown' | 'too-large';
   readonly detail: string | undefined;
 
   constructor(

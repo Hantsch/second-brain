@@ -29,7 +29,7 @@ German.
 - [x] 062 — Codex work counts as work
 - [x] 052 — A scoped question searches its scope
 - [x] 053 — Long sources answer by passage, not by file
-- [ ] 060 — A PDF becomes a readable source
+- [x] 060 — A PDF becomes a readable source
 - [ ] 061 — The heuristic floor speaks the document language
 
 ## Notes

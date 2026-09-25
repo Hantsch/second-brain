@@ -26,6 +26,7 @@ const ROUTING_ROUTE = '/settings?tab=models';
    would produce "ingest.note.ENOENT" on screen. */
 const NOTE_CODES: readonly string[] = [
   'pdf-not-read',
+  'pdf-no-text-layer',
   'binary-not-read',
   'no-transcript',
   'partial-metadata',

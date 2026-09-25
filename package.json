@@ -75,6 +75,7 @@
     "react-router-dom": "^7.18.1",
     "tar": "^7.5.22",
     "turndown": "^7.2.4",
+    "unpdf": "^1.8.1",
     "yaml": "^2.8.1",
     "youtubei.js": "^17.2.0"
   },

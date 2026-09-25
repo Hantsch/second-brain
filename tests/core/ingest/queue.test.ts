@@ -2,10 +2,20 @@
    `awaiting-llm`, wenn die Rohquelle liegt, aber kein Modell verdichten kann. */
 
 import { describe, expect, it, vi } from 'vitest';
-import { IngestError, IngestQueue, type IngestOutcome, type SourceIngestor } from '@core/ingest';
+import {
+  createFileIngestor,
+  IngestError,
+  IngestQueue,
+  type CondenseInput,
+  type IngestContext,
+  type IngestOutcome,
+  type SourceIngestor,
+} from '@core/ingest';
 import { WikiError } from '@core/wiki';
 import type { IngestJob } from '@shared/types';
-import { memoryStore } from './fakes';
+import { fakeFileSystem, memoryStore } from './fakes';
+import { NOW_MS } from '../../helpers/time';
+import { makeImageOnlyPdf, makeTextPdf } from '../../fixtures/pdf/make-pdf';
 
 /** Ein Ingestor, der nichts holt, sondern nur meldet, dass er lief. */
 function fakeIngestor(
@@ -605,6 +615,69 @@ describe('IngestQueue', () => {
 
     expect(queue.job(job.id)?.stage).not.toBe('error');
     expect(queue.job(job.id)?.error).toBeNull();
+  });
+
+  /* D3 (060): der Datei-Ingestor liest PDFs jetzt wirklich — die Queue muss die
+     beiden neuen Ausgaenge (keine Textebene, verdichtbarer Text) genauso ehrlich
+     behandeln wie die schon bestehenden `no-content`/`awaiting-llm`-Faelle. */
+  function pdfContext(bytesByPath: Record<string, Uint8Array>): IngestContext {
+    const fs = fakeFileSystem();
+    for (const [path, bytes] of Object.entries(bytesByPath)) fs.put(path, bytes);
+    return { store: memoryStore(), fs, now: new Date(NOW_MS) };
+  }
+
+  it('a scanned PDF ends no-content with its own reason, not awaiting-llm', async () => {
+    const path = 'C:/quellen/Scan.pdf';
+    const ctx = pdfContext({ [path]: makeImageOnlyPdf() });
+    const queue = new IngestQueue({
+      store: ctx.store,
+      ingestors: [createFileIngestor()],
+      environment: () => ({ fs: ctx.fs }),
+      condense: async () => ({ pages: [] }),
+      llmAvailable: () => false,
+    });
+
+    const job = queue.add({ kind: 'file', input: path });
+    await vi.waitFor(() => expect(queue.job(job.id)?.stage).toBe('no-content'));
+    expect(queue.job(job.id)?.message).toBe('pdf-no-text-layer');
+  });
+
+  it('a text PDF is condensed like any text source', async () => {
+    const path = 'C:/quellen/Handbuch.pdf';
+    const ctx = pdfContext({ [path]: makeTextPdf(['Seite eins.', 'Seite zwei.']) });
+    const condense = vi.fn(async (_input: CondenseInput) => ({
+      pages: ['modules/m/wiki/sources/s-1.md'],
+    }));
+    const queue = new IngestQueue({
+      store: ctx.store,
+      ingestors: [createFileIngestor()],
+      environment: () => ({ fs: ctx.fs }),
+      condense,
+      llmAvailable: () => true,
+    });
+
+    const job = queue.add({ kind: 'file', input: path });
+    await vi.waitFor(() => expect(queue.job(job.id)?.stage).toBe('done'));
+    expect(condense).toHaveBeenCalledTimes(1);
+    const [call] = condense.mock.calls[0] ?? [];
+    expect(call?.outcome.text.length ?? 0).toBeGreaterThan(0);
+  });
+
+  it('an oversized PDF ends the job in error with code too-large', async () => {
+    const path = 'C:/quellen/Riesig.pdf';
+    const oversized = new TextEncoder().encode('%PDF-1.7 '.repeat(600_000));
+    const ctx = pdfContext({ [path]: oversized });
+    const queue = new IngestQueue({
+      store: ctx.store,
+      ingestors: [createFileIngestor()],
+      environment: () => ({ fs: ctx.fs }),
+      condense: async () => ({ pages: [] }),
+      llmAvailable: () => true,
+    });
+
+    const job = queue.add({ kind: 'file', input: path });
+    await vi.waitFor(() => expect(queue.job(job.id)?.stage).toBe('error'));
+    expect(queue.job(job.id)?.error).toBe('too-large');
   });
 
   it('meldet einen unbekannten Auftrag ehrlich', () => {

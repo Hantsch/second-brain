@@ -478,7 +478,9 @@ A statement backed by evidence (source: [[s-2026-07-02-auth0-rbac-guide]]).
 and original files are never overwritten — they are the fixed point citations
 are backed by. A new version = a new, dated folder. Two companions may grow:
 `.ingest.json` records app bookkeeping, and a YouTube folder's `sources/`
-contains files the user supplies manually. Every source carries `.ingest.json`:
+contains files the user supplies manually. A `raw/files/` folder holds the
+untouched original plus, for HTML pages and text-layer PDFs, a `source.md` with
+the readable text extracted from it. Every source carries `.ingest.json`:
 
 ```json
 {

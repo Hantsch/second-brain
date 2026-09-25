@@ -16,8 +16,8 @@ export function ingestFixture(name: string): string {
 }
 
 export interface FakeFileSystem extends IngestFileSystem {
-  /** Datei anlegen, als laege sie auf der Platte. */
-  put(path: string, content: string, options?: { executable?: boolean }): void;
+  /** Datei anlegen, als laege sie auf der Platte — Text oder rohe Bytes. */
+  put(path: string, content: string | Uint8Array, options?: { executable?: boolean }): void;
   /** Was geschrieben wurde: Pfad → Groesse in Byte. */
   written(): Record<string, number>;
   /** Was kopiert wurde: Ziel → Quelle. */
@@ -26,7 +26,7 @@ export interface FakeFileSystem extends IngestFileSystem {
 }
 
 interface Entry {
-  content: string;
+  content: string | Uint8Array;
   bytes: number;
   dir: boolean;
   executable: boolean;
@@ -41,10 +41,14 @@ export function fakeFileSystem(initial: Record<string, string> = {}): FakeFileSy
 
   const normalize = (path: string): string => path.replace(/\\/g, '/').replace(/\/+$/, '');
 
-  const put = (path: string, content: string, options: { executable?: boolean } = {}): void => {
+  const put = (
+    path: string,
+    content: string | Uint8Array,
+    options: { executable?: boolean } = {},
+  ): void => {
     files.set(normalize(path), {
       content,
-      bytes: Buffer.byteLength(content, 'utf8'),
+      bytes: typeof content === 'string' ? Buffer.byteLength(content, 'utf8') : content.byteLength,
       dir: false,
       executable: options.executable ?? false,
     });
@@ -59,7 +63,15 @@ export function fakeFileSystem(initial: Record<string, string> = {}): FakeFileSy
     chmods: () => Object.fromEntries(modes),
 
     async readText(path) {
-      return files.get(normalize(path))?.content ?? null;
+      const entry = files.get(normalize(path));
+      if (entry === undefined) return null;
+      return typeof entry.content === 'string' ? entry.content : null;
+    },
+    async readBytes(path) {
+      const entry = files.get(normalize(path));
+      if (entry === undefined) return null;
+      if (entry.content instanceof Uint8Array) return entry.content;
+      return Buffer.from(entry.content, 'latin1');
     },
     async stat(path): Promise<IngestFileStat | null> {
       const entry = files.get(normalize(path));

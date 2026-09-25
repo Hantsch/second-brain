@@ -96,3 +96,19 @@
 - 2026-09-25 17:25 · 053 · review 2 (hard) · started
 - 2026-09-25 17:27 · 053 · review 2 (hard) · done
 - 2026-09-25 17:29 · 053 · story · done
+- 2026-09-25 17:29:27 · 060 · build · started
+- 2026-09-25 17:30 · 060 · D1 unpdf dependency + no-native guard · started
+- 2026-09-25 17:30 · 060 · D1 unpdf dependency + no-native guard · done
+- 2026-09-25 17:30 · 060 · D2 PDF text extraction in core · started
+- 2026-09-25 17:33 · 060 · D2 PDF text extraction in core · done
+- 2026-09-25 17:33 · 060 · D3 file ingestor reads PDFs · started
+- 2026-09-25 17:36 · 060 · D3 file ingestor reads PDFs · done
+- 2026-09-25 17:36 · 060 · D4 oversized PDF fails visibly · started
+- 2026-09-25 17:39 · 060 · D4 oversized PDF fails visibly · done
+- 2026-09-25 17:39 · 060 · D5 strings + e2e through the real inbox · started
+- 2026-09-25 17:52 · 060 · D5 strings + e2e through the real inbox · done
+- 2026-09-25 17:52 · 060 · verify · started
+- 2026-09-25 17:56 · 060 · verify · done
+- 2026-09-25 17:56 · 060 · review 1 · started
+- 2026-09-25 17:57 · 060 · review 1 · done
+- 2026-09-25 17:58 · 060 · story · done

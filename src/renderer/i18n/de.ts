@@ -106,6 +106,7 @@ export const de = {
   'error.code.io': 'Der Dateizugriff ist fehlgeschlagen.',
   'error.code.cancelled': 'Abgebrochen.',
   'error.code.unknown': 'Unerwarteter Fehler.',
+  'error.code.too-large': 'Die Datei ist größer als 5 MB und wurde nicht aufgenommen.',
   /* The same cases with a subject. An error without an object leaves the user
      guessing what was meant — "Couldn't open the vault 'broken-vault'" says
      it. The caller passes the subject along when it knows it. */
@@ -210,7 +211,9 @@ export const de = {
      (`IngestNoteCode`); hier steht der Satz dazu. Jede Absage ist eine Aussage über
      die Quelle, nie eine Entschuldigung. */
   'ingest.note.pdf-not-read':
-    'PDF wird noch nicht gelesen — die Datei liegt als Quelle, den Text bitte einfügen.',
+    'Dieses PDF ließ sich nicht öffnen — beschädigt oder passwortgeschützt. Die Datei liegt als Quelle.',
+  'ingest.note.pdf-no-text-layer':
+    'Dieses PDF hat keine Textebene — es wirkt gescannt. Die Datei liegt als Quelle; Texterkennung wird nicht unterstützt.',
   'ingest.note.binary-not-read':
     'Diese Dateiart wird nicht gelesen — die Datei liegt als Quelle, den Text bitte einfügen.',
   'ingest.note.no-transcript':
