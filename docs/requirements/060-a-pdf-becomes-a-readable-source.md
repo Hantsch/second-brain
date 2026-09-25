@@ -41,6 +41,6 @@ existing no-native-modules constraint holds: whatever extracts the text must be 
 
 ## Model Hints
 
-## Test Plan (manual acceptance)
+## Acceptance Tests
 
 ## Done

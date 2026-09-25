@@ -47,6 +47,6 @@ wiring is Claude-shaped.
 
 ## Model Hints
 
-## Test Plan (manual acceptance)
+## Acceptance Tests
 
 ## Done

@@ -55,6 +55,6 @@ what's missing is that the walk, the derivations, and the persist take advantage
 
 ## Model Hints
 
-## Test Plan (manual acceptance)
+## Acceptance Tests
 
 ## Done

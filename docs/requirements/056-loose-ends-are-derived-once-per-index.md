@@ -48,6 +48,6 @@ Opening a day or the dashboard must not scale with the length of my journal hist
 
 ## Model Hints
 
-## Test Plan (manual acceptance)
+## Acceptance Tests
 
 ## Done

@@ -50,6 +50,6 @@ finer retrieval units.
 
 ## Model Hints
 
-## Test Plan (manual acceptance)
+## Acceptance Tests
 
 ## Done

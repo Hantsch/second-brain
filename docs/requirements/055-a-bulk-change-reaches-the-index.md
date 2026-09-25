@@ -44,6 +44,6 @@ content, and a failed refresh must not report success.
 
 ## Model Hints
 
-## Test Plan (manual acceptance)
+## Acceptance Tests
 
 ## Done

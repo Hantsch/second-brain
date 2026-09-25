@@ -46,6 +46,6 @@ the same class of problem — the retrieval not seeing what the question is actu
 
 ## Model Hints
 
-## Test Plan (manual acceptance)
+## Acceptance Tests
 
 ## Done
