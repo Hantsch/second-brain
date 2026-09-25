@@ -1,6 +1,6 @@
 ---
 sprint: S18
-status: planned # planned | in-progress | done
+status: in-progress # planned | in-progress | done
 branch: sprint/S18
 milestone: M18 — The vault can grow, and an answer finds its evidence
 ---
