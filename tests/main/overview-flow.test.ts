@@ -100,7 +100,9 @@ async function createHarness(userDataDir: string, vaultRoot: string) {
 
   await services.openVault(vaultRoot);
   /* Die Sitzungen kommen aus den Fixtures, nie aus dem echten ~/.claude. */
-  await settings.patchVault({ overview: { claudeProjectsDir: CLAUDE_PROJECTS_DIR } });
+  await settings.patchVault({
+    overview: { claudeProjectsDir: CLAUDE_PROJECTS_DIR, useCodexSessions: false },
+  });
   return { services, settings, call };
 }
 

@@ -95,7 +95,9 @@ describe('reminder-notify: the notification click', () => {
     harness = await createHarness(userDataDir);
     await harness.services.openVault(vault.root);
     /* Sessions come from fixtures, never from the real ~/.claude. */
-    await harness.settings.patchVault({ overview: { claudeProjectsDir: CLAUDE_PROJECTS_DIR } });
+    await harness.settings.patchVault({
+      overview: { claudeProjectsDir: CLAUDE_PROJECTS_DIR, useCodexSessions: false },
+    });
   });
 
   afterEach(async () => {

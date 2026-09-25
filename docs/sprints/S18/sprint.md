@@ -26,7 +26,7 @@ German.
 - [x] 054 — Saving one file costs one file
 - [x] 055 — A bulk change reaches the index
 - [x] 056 — Loose ends are derived once per index
-- [ ] 062 — Codex work counts as work
+- [x] 062 — Codex work counts as work
 - [ ] 052 — A scoped question searches its scope
 - [ ] 053 — Long sources answer by passage, not by file
 - [ ] 060 — A PDF becomes a readable source

@@ -83,7 +83,7 @@ export const deDashboard = {
   'module.stale-projects.purpose': 'Lange nicht angefasst und noch nicht abgeschlossen.',
   'module.journal-streak.name': 'Tagebuch-Serie',
   'module.journal-streak.purpose': 'Tage in Folge, letzter Eintrag, Stimmung der letzten Wochen.',
-  'module.claude-sessions.name': 'Claude-Sessions',
+  'module.claude-sessions.name': 'Agent-Sitzungen',
   'module.claude-sessions.purpose': 'Arbeitsspuren der Agenten-CLI, den Projekten zugeordnet.',
   'module.gardener.name': 'Pflege',
   'module.gardener.purpose': 'Gesundheit und Befunde der letzten Prüfung.',
@@ -109,7 +109,7 @@ export const deDashboard = {
     'Noch keine Arbeitsspur. Wer eine Datei ändert, eine Sitzung fährt oder einen Tageseintrag schreibt, steht hier.',
 
   'tile.claude.empty': 'Keine Sitzung in den letzten Tagen.',
-  'tile.claude.off': 'Das Mitlesen der Claude-Sessions ist ausgeschaltet.',
+  'tile.claude.off': 'Das Mitlesen der Agent-Sitzungen ist ausgeschaltet.',
   'tile.claude.settings': 'Einschalten',
   'tile.claude.messages': '{count} Nachrichten',
   'tile.claude.unlinked': 'Ohne Projekt',

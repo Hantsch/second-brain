@@ -152,7 +152,7 @@ describe('condense:run as a queued task (073, D3)', () => {
        `~/.claude` of whoever runs the suite — same reason as in
        `condense-ipc.test.ts`. */
     await harness.services.settings.patchVault({
-      overview: { claudeProjectsDir: CLAUDE_PROJECTS_DIR },
+      overview: { claudeProjectsDir: CLAUDE_PROJECTS_DIR, useCodexSessions: false },
     });
   });
 

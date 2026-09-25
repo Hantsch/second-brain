@@ -81,7 +81,9 @@ describe('Projekt- und Todo-Kanäle im Main', () => {
     await harness.services.openVault(vault.root);
     /* `projects:suggestStatus` liest Arbeitsspuren mit. Sie kommen aus den
        Fixtures, nie aus dem echten `~/.claude`. */
-    await harness.settings.patchVault({ overview: { claudeProjectsDir: CLAUDE_PROJECTS_DIR } });
+    await harness.settings.patchVault({
+      overview: { claudeProjectsDir: CLAUDE_PROJECTS_DIR, useCodexSessions: false },
+    });
   });
 
   afterEach(async () => {

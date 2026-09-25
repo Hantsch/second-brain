@@ -1,72 +1,38 @@
 /* Agent sessions (Claude Code & Codex CLI) as one unified work trail —
    story 001, D10.
 
-   Claude runs through `overview-deps.ts`: `claudeSessions()` reads, caches
-   briefly and links via `repos` (`linkSessions` from `@core/claude`). That is
-   exactly the path `claude:sessions` already takes — it is reused here, not
-   built a second time.
-
-   Codex has no read path of its own in the main process yet. It gets one, with
-   an equally short cache (`CODEX_CACHE_MS`, the same order of magnitude as
-   Claude's `SESSION_CACHE_MS` — both readers only pay head/tail per file, and
-   `agents:projects` plus `agents:sessions` would otherwise read twice per
-   request). Linking to the vault project runs through the same proven logic as
-   Claude's (`linkSessions`): for that, the Codex sessions are briefly brought
-   into `ClaudeSession` shape — only `cwd` and the name derived from it matter
-   for the match, every other field is a placeholder that is never returned.
-   That keeps "`repos` first, then a unique name match, otherwise none"
-   (guardrail 3) maintained in one place instead of being rebuilt a second
-   time. */
+   Both CLIs are read in `overview-deps.ts`: `claudeSessions()` and
+   `codexSessions()` read, cache briefly and link via `repos` (`linkSessions`
+   from `@core/claude`, the same logic for both). Those are exactly the paths
+   the dashboard, the reminders and `claude:sessions` take — they are reused
+   here, not built a second time, so the session browser and the overview never
+   disagree about which project a session belongs to or when it was last
+   touched. This file only shapes both CLIs' sessions for the agent channels. */
 
 import { aggregateAgentProjects, readTranscriptPage } from '@core/agents';
 import type { AgentProjectInput } from '@core/agents';
-import { linkSessions, nodeClaudeFileSystem, pathKey, projectNameOf } from '@core/claude';
-import { CodexSessionReader } from '@core/codex';
-import type { CodexSessionSummary } from '@core/codex';
+import { nodeClaudeFileSystem, pathKey } from '@core/claude';
 import type { AgentKind, AgentSessionSummary, ClaudeSession } from '@shared/types';
 import type { HandlerMap } from './registry';
 import { defineHandlers, fail } from './registry';
 import {
+  AGENT_SESSION_LIMIT,
   claudeReader,
   claudeSessions,
+  codexReader,
+  codexSessions,
+  forgetCodexSessions,
   forgetSessions,
-  overviewIndex,
   overviewSettings,
   usesClaudeSessions,
   usesCodexSessions,
 } from './overview-deps';
+import type { LinkedCodexSession } from './overview-deps';
 import { linkRepoToProject } from './repo-link';
 import type { Services } from '../services';
 
-/** Highest number of sessions a request sees across both channels. */
-const AGENT_SESSION_LIMIT = 100;
-
-/** How long a read Codex list counts as fresh — see the file header. */
-const CODEX_CACHE_MS = 4000;
-
-interface LinkedCodexSession extends CodexSessionSummary {
-  vaultProject: string | null;
-}
-
-interface CodexCache {
-  root: string;
-  at: number;
-  sessions: LinkedCodexSession[];
-}
-
-let codexCache: CodexCache | null = null;
-
-/** Discards the Codex cache — for tests, mirrors `forgetSessions` from overview-deps.ts. */
-export function forgetCodexSessions(): void {
-  codexCache = null;
-}
-
-function codexReader(services: Services): CodexSessionReader {
-  return new CodexSessionReader({
-    fs: nodeClaudeFileSystem(),
-    sessionsDir: overviewSettings(services)?.codexSessionsDir ?? null,
-  });
-}
+/* Existing callers (and tests) import the Codex cache reset from here. */
+export { forgetCodexSessions };
 
 /** Does this vault read this CLI's sessions? */
 function usesSessions(services: Services, agent: AgentKind): boolean {
@@ -99,55 +65,6 @@ async function requireSessionsDir(services: Services, agent: AgentKind): Promise
   throw fail('not-found', `dieses Verzeichnis gibt es nicht: ${configured}`, {
     missingDir: configured,
   });
-}
-
-/**
- * A Codex session brought into `ClaudeSession` shape as far as `linkSessions`
- * needs for the match (`cwd`, `projectName`). The rest are placeholders — never
- * read, only there so the type fits.
- */
-function asLinkable(session: CodexSessionSummary): ClaudeSession {
-  const cwd = session.cwd ?? '';
-  return {
-    id: session.id,
-    cwd,
-    projectName: projectNameOf(cwd),
-    vaultProject: null,
-    gitBranch: session.gitBranch,
-    startedAt: session.startedAt,
-    lastActivity: session.lastActivity,
-    messageCount: session.messageCount,
-    firstPrompt: '',
-    summary: null,
-    files: [],
-    model: session.model,
-    subagents: null,
-    contextTokens: session.contextTokens,
-  };
-}
-
-/**
- * The Codex sessions, linked to vault projects. The same honesty as
- * `claudeSessions()`: switched off means empty, not "none found".
- */
-async function codexSessions(services: Services): Promise<LinkedCodexSession[]> {
-  const root = services.requireVaultRoot();
-  if (!usesCodexSessions(services)) return [];
-
-  const fresh =
-    codexCache !== null && codexCache.root === root && Date.now() - codexCache.at < CODEX_CACHE_MS;
-  if (fresh && codexCache !== null) return codexCache.sessions;
-
-  const raw = await codexReader(services).list({ limit: AGENT_SESSION_LIMIT });
-  const projects = overviewIndex(services).projects();
-  const linked = linkSessions(raw.map(asLinkable), projects);
-  const sessions: LinkedCodexSession[] = raw.map((session, index) => ({
-    ...session,
-    vaultProject: linked.sessions[index]!.vaultProject,
-  }));
-
-  codexCache = { root, at: Date.now(), sessions };
-  return sessions;
 }
 
 /** The raw Claude sessions — empty when reading them is switched off. */

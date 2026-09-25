@@ -258,3 +258,7 @@ second roadmap.
   the resolution check are now computed once per index state (`looseEndsDerived`,
   `WeakMap`-memoized) and shared by `journal:get`, the dashboard, the reminders list, the
   interview plan, the gardener check and the reminder notifier.
+- 062 — Codex work counts as work · S18 · Codex sessions now update a project's last touch,
+  suppress the stale-project reminder, and appear in recent work and the sessions tile exactly
+  like Claude sessions, via a new `mergeTouches` that combines both CLIs' touches into one
+  `applyExternalTouches` call so neither erases the other's; reviewed PASS with no fix cycle.

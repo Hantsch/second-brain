@@ -17,14 +17,11 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { ClaudeSession } from '@shared/types';
+import type { AgentWorkSession } from '@shared/types';
 import { useT } from '../../i18n';
 import { useProjects } from '../../lib/queries/data';
-import {
-  useClaudeSessions,
-  useLinkSession,
-  useOverviewSettings,
-} from '../../lib/queries/dashboard';
+import { useDashboardData, useLinkSession, useOverviewSettings } from '../../lib/queries/dashboard';
+import { useLinkAgentProject } from '../../lib/queries/agents';
 import { useProjectMutations } from '../../lib/queries/projects';
 import { pushToast } from '../../lib/toast';
 import { RelativeTime } from '../RelativeTime';
@@ -33,21 +30,31 @@ import { SessionLink } from './SessionLink';
 
 const LIMIT = 6;
 
+/** Agent name, mono like the rest of a row's data. Reuses the switch labels
+    the session browser already carries — one place names each CLI. */
+const AGENT_LABEL_KEY: Record<AgentWorkSession['agent'], string> = {
+  claude: 'agents.switch.claude',
+  codex: 'agents.switch.codex',
+};
+
 export function ClaudeSessionsTile() {
   const t = useT();
   const navigate = useNavigate();
   const overview = useOverviewSettings();
-  const sessions = useClaudeSessions();
+  const dashboard = useDashboardData();
   const projects = useProjects();
   const link = useLinkSession();
+  const linkAgent = useLinkAgentProject();
   const { patch } = useProjectMutations();
   const [linking, setLinking] = useState<string | null>(null);
-  const off = overview !== undefined && !overview.useClaudeSessions;
-  const rows: ClaudeSession[] = off ? [] : (sessions.data ?? []).slice(0, LIMIT);
+  /* Off is a statement about both CLIs, not either one: a row from the CLI
+     that's still on must keep showing while the other is switched off. */
+  const off = overview !== undefined && !overview.useClaudeSessions && !overview.useCodexSessions;
+  const rows: AgentWorkSession[] = off ? [] : (dashboard.data?.sessions ?? []).slice(0, LIMIT);
 
   /* The state of `repos` **before** the write is the undo. It's captured
      here before the queries re-run. */
-  const linkTo = (session: ClaudeSession, slug: string): void => {
+  const linkTo = (session: AgentWorkSession, slug: string): void => {
     const target = (projects.data ?? []).find((project) => project.slug === slug);
     const before = target?.repos ?? [];
     link.mutate(
@@ -67,13 +74,36 @@ export function ClaudeSessionsTile() {
     );
   };
 
+  /* Same write as `linkTo`, through `agents:link` — the channel every Codex
+     project row goes through, session browser included. */
+  const linkAgentTo = (session: AgentWorkSession, slug: string): void => {
+    const target = (projects.data ?? []).find((project) => project.slug === slug);
+    const before = target?.repos ?? [];
+    linkAgent.mutate(
+      { agent: session.agent, projectKey: session.projectKey, project: slug },
+      {
+        onSuccess: () =>
+          pushToast('success', {
+            message: 'agents.link.done',
+            values: { name: target?.title ?? slug },
+            description: 'agents.link.hint',
+            action: {
+              label: 'common.undo',
+              run: () => patch.mutate({ slug, patch: { repos: [...before] } }),
+            },
+          }),
+        onError: () => pushToast('error', 'agents.link.failed'),
+      },
+    );
+  };
+
   return (
     <TileFrame
       id="claude-sessions"
       title={t('module.claude-sessions.name')}
-      pending={!off && sessions.isPending}
-      error={sessions.error ?? link.error ?? patch.error}
-      onRetry={() => void sessions.refetch()}
+      pending={!off && dashboard.isPending}
+      error={dashboard.error ?? link.error ?? linkAgent.error ?? patch.error}
+      onRetry={() => void dashboard.refetch()}
       isEmpty={off || rows.length === 0}
       empty={
         off
@@ -97,50 +127,59 @@ export function ClaudeSessionsTile() {
       }
     >
       <ul className="sb-lines">
-        {rows.map((session) => (
-          <li key={session.id} className="sb-line sb-line--stack">
-            <span className="sb-line-top">
-              <span className="sb-line-name">
-                {session.vaultProject === null
-                  ? session.projectName
-                  : (projects.data?.find((project) => project.slug === session.vaultProject)
-                      ?.title ?? session.projectName)}
+        {rows.map((session) => {
+          /* A Codex session without a known working directory can't be
+             written into `repos` — `agents:link` has no cwd to resolve, the
+             same reason the session browser's project list drops it. */
+          const canLink = session.agent === 'claude' || session.cwd.length > 0;
+          const detail = session.summary ?? session.firstPrompt;
+          return (
+            <li key={session.id} className="sb-line sb-line--stack">
+              <span className="sb-line-top">
+                <span className="sb-mono">{t(AGENT_LABEL_KEY[session.agent])}</span>
+                <span className="sb-line-name">
+                  {session.vaultProject === null
+                    ? session.projectName
+                    : (projects.data?.find((project) => project.slug === session.vaultProject)
+                        ?.title ?? session.projectName)}
+                </span>
+                {session.gitBranch === null ? null : (
+                  <span className="sb-mono sb-line-branch">{session.gitBranch}</span>
+                )}
+                <RelativeTime at={session.lastActivity} className="sb-line-meta" />
               </span>
-              {session.gitBranch === null ? null : (
-                <span className="sb-mono sb-line-branch">{session.gitBranch}</span>
+              {detail.length === 0 ? null : (
+                <span className="sb-line-detail" title={detail}>
+                  {detail}
+                </span>
               )}
-              <RelativeTime at={session.lastActivity} className="sb-line-meta" />
-            </span>
-            {session.firstPrompt.length === 0 ? null : (
-              <span className="sb-line-detail" title={session.firstPrompt}>
-                {session.firstPrompt}
+              <span className="sb-line-bottom">
+                <span className="sb-line-count">
+                  {t('tile.claude.messages', { count: session.messageCount })}
+                </span>
+                {session.vaultProject !== null || !canLink ? null : linking === session.id ? (
+                  <SessionLink
+                    name={session.projectName}
+                    projects={projects.data ?? []}
+                    onPick={(slug) => {
+                      setLinking(null);
+                      if (session.agent === 'claude') linkTo(session, slug);
+                      else linkAgentTo(session, slug);
+                    }}
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    className="sb-textlink"
+                    onClick={() => setLinking(session.id)}
+                  >
+                    {t('tile.claude.link')}
+                  </button>
+                )}
               </span>
-            )}
-            <span className="sb-line-bottom">
-              <span className="sb-line-count">
-                {t('tile.claude.messages', { count: session.messageCount })}
-              </span>
-              {session.vaultProject !== null ? null : linking === session.id ? (
-                <SessionLink
-                  name={session.projectName}
-                  projects={projects.data ?? []}
-                  onPick={(slug) => {
-                    setLinking(null);
-                    linkTo(session, slug);
-                  }}
-                />
-              ) : (
-                <button
-                  type="button"
-                  className="sb-textlink"
-                  onClick={() => setLinking(session.id)}
-                >
-                  {t('tile.claude.link')}
-                </button>
-              )}
-            </span>
-          </li>
-        ))}
+            </li>
+          );
+        })}
       </ul>
     </TileFrame>
   );

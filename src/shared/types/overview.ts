@@ -2,6 +2,7 @@
 
 import type { Scope } from './vault';
 import type { Todo, WaitingOn } from './domain';
+import type { AgentKind } from './agents';
 
 /** All building blocks that can live on the dashboard. */
 export type DashboardModuleId =
@@ -172,10 +173,19 @@ export interface ClaudeSession {
   contextTokens: number | null;
 }
 
+/**
+ * A work session from either agent CLI, in the Claude shape. Codex sessions
+ * (`src/core/codex/`) travel as `ClaudeSession` with `agent: 'codex'`:
+ * `summary` carries the thread title, `firstPrompt` is always `''` (Codex
+ * doesn't record a separate first prompt), `files` is always `[]` (not
+ * tracked), and `subagents` is always `null` (Codex has no subagent concept).
+ */
+export type AgentWorkSession = ClaudeSession & { agent: AgentKind; projectKey: string };
+
 /** Work from recent days, mixed from file changes and Claude sessions. */
 export interface RecentWorkItem {
   at: string;
-  kind: 'file' | 'claude-session' | 'journal' | 'ingest';
+  kind: 'file' | 'claude-session' | 'codex-session' | 'journal' | 'ingest';
   title: string;
   detail: string;
   path: string | null;
@@ -204,5 +214,5 @@ export interface DashboardData {
    * claiming a number.
    */
   healthKnown?: boolean;
-  sessions: ClaudeSession[];
+  sessions: AgentWorkSession[];
 }

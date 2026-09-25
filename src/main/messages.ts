@@ -17,7 +17,7 @@
 
 import { GERMAN_RECENT_LABELS } from '@core/overview';
 import type { RecentWorkLabels } from '@core/overview';
-import type { UiLanguage } from '@shared/types';
+import type { AgentKind, UiLanguage } from '@shared/types';
 
 const ENGLISH_KIND_NAMES: Record<string, string> = {
   youtube: 'YouTube',
@@ -32,8 +32,8 @@ const ENGLISH_RECENT_LABELS: RecentWorkLabels = {
     return count === 1 ? '1 file changed' : `${count} files changed`;
   },
 
-  session(messages: number, branch: string | null): string {
-    const parts = ['Session'];
+  session(agent: AgentKind, messages: number, branch: string | null): string {
+    const parts = [agent === 'codex' ? 'Codex session' : 'Claude session'];
     parts.push(messages === 1 ? '1 message' : `${messages} messages`);
     if (branch !== null && branch.length > 0) parts.push(`branch ${branch}`);
     return parts.join(', ');

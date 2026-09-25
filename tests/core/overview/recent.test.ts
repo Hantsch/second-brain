@@ -65,10 +65,35 @@ describe('recentWork', () => {
     expect(items[0]).toMatchObject({
       kind: 'claude-session',
       title: 'Ueberblick-Kern bauen',
-      detail: 'Session, 47 Nachrichten, Branch feature/auth',
+      detail: 'Claude-Session, 47 Nachrichten, Branch feature/auth',
       project: 'second-brain',
       // Die Verlaufsdatei liegt ausserhalb des Vaults.
       path: null,
+    });
+  });
+
+  it('a Codex session appears as codex-session with its agent in the detail', () => {
+    const index = indexFrom([projectDoc({ slug: 'second-brain', updated: stamp(-1) })]);
+    const items = recentWork(
+      index,
+      [
+        session({
+          agent: 'codex',
+          vaultProject: 'second-brain',
+          lastActivity: stamp(0, '09:00'),
+          summary: 'Thread-Titel aus Codex',
+          firstPrompt: '',
+          files: [],
+          subagents: null,
+        }),
+      ],
+      { now: NOW },
+    );
+    expect(items[0]).toMatchObject({
+      kind: 'codex-session',
+      title: 'Thread-Titel aus Codex',
+      detail: 'Codex-Session, 47 Nachrichten, Branch feature/auth',
+      project: 'second-brain',
     });
   });
 

@@ -209,6 +209,32 @@ describe('dashboardData — Inbox, Journal und Sitzungen', () => {
     expect(data.sessions).not.toBe(sessions);
   });
 
+  it('dashboard sessions carry both agent kinds', () => {
+    const claude = session({ id: 'c-1', agent: 'claude', vaultProject: 'x' });
+    const codex = session({
+      id: 'x-1',
+      agent: 'codex',
+      vaultProject: 'x',
+      firstPrompt: '',
+      files: [],
+      subagents: null,
+    });
+    const data = dashboardData(indexFrom([]), [claude, codex], LIMITS, TODAY);
+
+    expect(data.sessions).toHaveLength(2);
+    const byId = new Map(data.sessions.map((s) => [s.id, s]));
+    expect(byId.get('c-1')).toMatchObject({ agent: 'claude' });
+    expect(byId.get('x-1')).toMatchObject({ agent: 'codex' });
+
+    const recentKindsByAgent = new Map(
+      data.recentWork
+        .filter((item) => item.kind === 'claude-session' || item.kind === 'codex-session')
+        .map((item) => [item.kind, item.kind]),
+    );
+    expect(recentKindsByAgent.has('claude-session')).toBe(true);
+    expect(recentKindsByAgent.has('codex-session')).toBe(true);
+  });
+
   it('mischt Sitzungen und Quellen in „zuletzt gearbeitet"', () => {
     const index = indexFrom([projectDoc({ slug: 'a', updated: stamp(-1) })], {
       sources: [rawSource()],

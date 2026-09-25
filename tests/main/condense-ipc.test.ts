@@ -186,7 +186,7 @@ describe('condense channels in main', () => {
        at the fixture sessions. Without it a project run would read the *real*
        `~/.claude` of whoever runs the suite. */
     await harness.services.settings.patchVault({
-      overview: { claudeProjectsDir: CLAUDE_PROJECTS_DIR },
+      overview: { claudeProjectsDir: CLAUDE_PROJECTS_DIR, useCodexSessions: false },
     });
   });
 

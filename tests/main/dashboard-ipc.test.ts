@@ -109,7 +109,9 @@ describe('Dashboard-, Erinnerungs- und Session-Kanäle im Main', () => {
     harness = await createHarness(userDataDir);
     await harness.services.openVault(vault.root);
     /* Die Sitzungen kommen aus den Fixtures, nie aus dem echten ~/.claude. */
-    await harness.settings.patchVault({ overview: { claudeProjectsDir: CLAUDE_PROJECTS_DIR } });
+    await harness.settings.patchVault({
+      overview: { claudeProjectsDir: CLAUDE_PROJECTS_DIR, useCodexSessions: false },
+    });
   });
 
   afterEach(async () => {

@@ -56,3 +56,15 @@
 - 2026-09-25 15:53 · 056 · review 1 · started
 - 2026-09-25 15:58 · 056 · review 1 · done: PASS - no findings
 - 2026-09-25 15:58 · 056 · story · done
+- 2026-09-25 15:59:15 · 062 · build · started
+- 2026-09-25 15:59 · 062 · D1 Types and core treat both CLIs as work traces · started
+- 2026-09-25 16:04 · 062 · D1 Types and core treat both CLIs as work traces · done
+- 2026-09-25 16:05 · 062 · D2 The overview reads Codex, and one touches map holds both CLIs · started
+- 2026-09-25 16:13 · 062 · D2 The overview reads Codex, and one touches map holds both CLIs · done
+- 2026-09-25 16:13 · 062 · D3 The sessions tile shows both CLIs · started
+- 2026-09-25 16:18 · 062 · D3 The sessions tile shows both CLIs · done
+- 2026-09-25 16:18 · 062 · verify · started
+- 2026-09-25 16:23 · 062 · verify · done
+- 2026-09-25 16:23 · 062 · review 1 · started
+- 2026-09-25 16:27 · 062 · review 1 · done
+- 2026-09-25 16:28 · 062 · story · done

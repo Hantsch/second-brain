@@ -74,7 +74,7 @@ export const enDashboard = {
   'module.stale-projects.purpose': 'Untouched for a while and not finished.',
   'module.journal-streak.name': 'Journal streak',
   'module.journal-streak.purpose': 'Days in a row, last entry, mood over the past weeks.',
-  'module.claude-sessions.name': 'Claude sessions',
+  'module.claude-sessions.name': 'Agent sessions',
   'module.claude-sessions.purpose': 'Work traces of the agent CLI, linked to your projects.',
   'module.gardener.name': 'Care',
   'module.gardener.purpose': 'Health and results from the last check.',
@@ -100,7 +100,7 @@ export const enDashboard = {
     'No trace of work yet. Change a file, run a session or write a journal entry and it shows up here.',
 
   'tile.claude.empty': 'No session in the past few days.',
-  'tile.claude.off': 'Reading Claude sessions is switched off.',
+  'tile.claude.off': 'Reading agent sessions is switched off.',
   'tile.claude.settings': 'Switch on',
   'tile.claude.messages': '{count} messages',
   'tile.claude.unlinked': 'No project',

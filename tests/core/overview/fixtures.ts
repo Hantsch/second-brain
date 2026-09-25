@@ -7,7 +7,7 @@
 
    Alle Daten liegen um `TODAY` aus `tests/helpers/time.ts` (2026-08-10). */
 
-import type { ClaudeSession, ProjectStatus, RawSource, Scope, WaitingOn } from '@shared/types';
+import type { AgentWorkSession, ProjectStatus, RawSource, Scope, WaitingOn } from '@shared/types';
 import { deriveIndex } from '@core/index/build';
 import type { IndexedDoc } from '@core/index/types';
 import type { OverviewIndex } from '@core/overview';
@@ -157,8 +157,8 @@ export function rawSource(patch: Partial<RawSource> = {}): RawSource {
   };
 }
 
-/** Eine Claude-Sitzung. */
-export function session(patch: Partial<ClaudeSession> = {}): ClaudeSession {
+/** Eine Sitzung einer Agenten-CLI, Vorgabe Claude. */
+export function session(patch: Partial<AgentWorkSession> = {}): AgentWorkSession {
   return {
     id: 's-1',
     cwd: 'c:/development/Hantsch/second-brain',
@@ -174,6 +174,8 @@ export function session(patch: Partial<ClaudeSession> = {}): ClaudeSession {
     model: null,
     subagents: null,
     contextTokens: null,
+    agent: 'claude',
+    projectKey: 'c:/development/hantsch/second-brain',
     ...patch,
   };
 }

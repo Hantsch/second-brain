@@ -9,12 +9,14 @@
  * Zahlen bleiben Zahlen: was hier steht, ist gezaehlt, nicht geschaetzt.
  */
 
+import type { AgentKind } from '@shared/types';
+
 /** Was „zuletzt gearbeitet" an Formulierungen braucht. */
 export interface RecentWorkLabels {
   /** `count` geaenderte Dateien in einem Projekt an einem Tag. */
   filesChanged(count: number): string;
-  /** Eine Claude-Sitzung mit Nachrichtenzahl und Branch. */
-  session(messages: number, branch: string | null): string;
+  /** Eine Sitzung einer Agenten-CLI mit Nachrichtenzahl und Branch. */
+  session(agent: AgentKind, messages: number, branch: string | null): string;
   /** Ein Tageseintrag mit Wortzahl und Dialogrunden. */
   journalEntry(words: number, turns: number): string;
   /** Eine aufgenommene Quelle; `distilled` sagt, ob sie schon verdichtet ist. */
@@ -35,8 +37,8 @@ export const GERMAN_RECENT_LABELS: RecentWorkLabels = {
     return count === 1 ? '1 Datei geändert' : `${count} Dateien geändert`;
   },
 
-  session(messages: number, branch: string | null): string {
-    const parts = ['Session'];
+  session(agent: AgentKind, messages: number, branch: string | null): string {
+    const parts = [agent === 'codex' ? 'Codex-Session' : 'Claude-Session'];
     parts.push(messages === 1 ? '1 Nachricht' : `${messages} Nachrichten`);
     if (branch !== null && branch.length > 0) parts.push(`Branch ${branch}`);
     return parts.join(', ');

@@ -14,7 +14,7 @@
  * Renderers — er kennt die Sprache des Nutzers, der Kern nicht.
  */
 
-import type { ClaudeSession, RecentWorkItem, Scope } from '@shared/types';
+import type { AgentWorkSession, RecentWorkItem, Scope } from '@shared/types';
 import { countTurns } from '@core/index/journal';
 import type { IndexedDoc } from '@core/index/types';
 import { isInternalPath, isInside, isoDay } from '@core/vault/paths';
@@ -136,7 +136,7 @@ function fileItem(group: FileGroup, labels: RecentWorkLabels): RecentWorkItem {
 }
 
 function sessionItem(
-  session: ClaudeSession,
+  session: AgentWorkSession,
   labels: RecentWorkLabels,
   scopes: ReadonlyMap<string, Scope>,
 ): RecentWorkItem {
@@ -144,9 +144,9 @@ function sessionItem(
     session.summary ?? (session.firstPrompt.length > 0 ? session.firstPrompt : session.projectName);
   return {
     at: session.lastActivity,
-    kind: 'claude-session',
+    kind: session.agent === 'codex' ? 'codex-session' : 'claude-session',
     title,
-    detail: labels.session(session.messageCount, session.gitBranch),
+    detail: labels.session(session.agent, session.messageCount, session.gitBranch),
     // Die Verlaufsdatei liegt ausserhalb des Vaults; hier steht nur, was im Vault liegt.
     path: null,
     project: session.vaultProject,
@@ -174,7 +174,7 @@ function journalItem(doc: IndexedDoc, labels: RecentWorkLabels): RecentWorkItem 
  */
 export function recentWork(
   index: OverviewIndex,
-  sessions: readonly ClaudeSession[],
+  sessions: readonly AgentWorkSession[],
   options: RecentWorkOptions = {},
 ): RecentWorkItem[] {
   const now = options.now ?? new Date();

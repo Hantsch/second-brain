@@ -170,6 +170,7 @@ export const enProjects = {
   'project.trace.lastTouch': 'Last trace {age}',
   'project.trace.source.file': 'File change in the project folder',
   'project.trace.source.claude-session': 'Claude session',
+  'project.trace.source.codex-session': 'Codex session',
   'project.trace.source.journal': 'Journal entry',
   'project.trace.noRepos':
     'Without the repos field in the frontmatter no session can be matched. Matching goes by working directory.',

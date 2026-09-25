@@ -282,7 +282,7 @@ export const reminder: Reminder = {
   who: 'Stefan',
 };
 
-export const claudeSession: ClaudeSession = {
+export const claudeSession: ClaudeSession & { agent: 'claude'; projectKey: string } = {
   id: 'session-1',
   cwd: 'C:/development/Kunde/Nyota-Auth0-Infrastructure',
   projectName: 'Nyota-Auth0-Infrastructure',
@@ -297,6 +297,8 @@ export const claudeSession: ClaudeSession = {
   model: null,
   subagents: null,
   contextTokens: null,
+  agent: 'claude',
+  projectKey: 'c:/development/kunde/nyota-auth0-infrastructure',
 };
 
 /* The mock report carries three kinds of findings, because the maintenance

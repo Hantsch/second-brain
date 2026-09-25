@@ -88,7 +88,7 @@ export interface Project {
   /** Jüngste Spur: Dateiänderung im Projekt oder Claude-Session, ISO. */
   lastTouch: string;
   /** Woher `lastTouch` kommt. */
-  lastTouchSource: 'file' | 'claude-session' | 'journal';
+  lastTouchSource: 'file' | 'claude-session' | 'codex-session' | 'journal';
   /** Tage seit `lastTouch`. */
   ageDays: number;
   /** Länger unangetastet als die eingestellte Schwelle und noch nicht fertig. */

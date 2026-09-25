@@ -14,7 +14,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ExternalTouch } from '@core/index/types';
 import { IndexService } from '@core/index/service';
-import { ClaudeSessionReader, linkSessions, nodeClaudeFileSystem } from '@core/claude';
+import { ClaudeSessionReader, linkSessions, nodeClaudeFileSystem, pathKey } from '@core/claude';
 import { dashboardData, recentWork, reminders, suggestProjectStatus } from '@core/overview';
 import type { OverviewIndex } from '@core/overview';
 import { createEmptyGateway } from '../../fakes/llm';
@@ -65,7 +65,15 @@ describe('Überblick auf echten Dateien', () => {
         expect(project?.lastTouchSource).toBe('claude-session');
         expect(project?.lastTouch).toBe('2026-08-10T08:43:55.000Z');
 
-        const data = dashboardData(index, linking.sessions, LIMITS, TODAY);
+        // Die echte Sitzungsliste kommt als `ClaudeSession`; das Dashboard braucht
+        // die gemeinsame Agenten-Form mit `agent` und `projectKey`.
+        const agentSessions = linking.sessions.map((s) => ({
+          ...s,
+          agent: 'claude' as const,
+          projectKey: pathKey(s.cwd),
+        }));
+
+        const data = dashboardData(index, agentSessions, LIMITS, TODAY);
 
         // Todos getrennt nach Bereich, beide Seiten gefüllt.
         expect(data.todos.work.length).toBeGreaterThan(0);
@@ -107,7 +115,7 @@ describe('Überblick auf echten Dateien', () => {
 
         // Dieselben Zahlen auch über die Einzelaufrufe.
         expect(reminders(index, LIMITS, TODAY)).toEqual(data.reminders);
-        expect(recentWork(index, linking.sessions, { now: TODAY })).toEqual(data.recentWork);
+        expect(recentWork(index, agentSessions, { now: TODAY })).toEqual(data.recentWork);
       },
       { sample: true },
     );

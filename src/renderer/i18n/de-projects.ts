@@ -173,6 +173,7 @@ export const deProjects = {
   'project.trace.lastTouch': 'Letzte Spur {age}',
   'project.trace.source.file': 'Dateiänderung im Projektordner',
   'project.trace.source.claude-session': 'Claude-Session',
+  'project.trace.source.codex-session': 'Codex-Session',
   'project.trace.source.journal': 'Tageseintrag',
   'project.trace.noRepos':
     'Ohne das Feld repos im Frontmatter lässt sich keine Session zuordnen. Zugeordnet wird über das Arbeitsverzeichnis.',

@@ -1,4 +1,5 @@
-/* External work traces — the bridge between Claude sessions and the index.
+/* External work traces — the bridge between agent sessions (Claude Code and
+   Codex CLI) and the index.
 
    `IndexService.open({ externalTouches })` takes a `ReadonlyMap` and re-reads it
    on **every** run. That's why it's the same map for the lifetime of a vault:
@@ -45,4 +46,24 @@ export function applyExternalTouches(next: ReadonlyMap<string, ExternalTouch>): 
     changed = true;
   }
   return changed;
+}
+
+/**
+ * Both CLIs' traces as one map — the only shape `applyExternalTouches` may be
+ * fed. It replaces the map wholesale, so applying Claude's and Codex's traces
+ * one after the other would let the second erase the first.
+ *
+ * Per slug the newer `at` wins; on an exact tie (or an unreadable stamp) `a`
+ * wins. Neither input is changed.
+ */
+export function mergeTouches(
+  a: ReadonlyMap<string, ExternalTouch>,
+  b: ReadonlyMap<string, ExternalTouch>,
+): Map<string, ExternalTouch> {
+  const merged = new Map(a);
+  for (const [slug, touch] of b) {
+    const known = merged.get(slug);
+    if (known === undefined || Date.parse(touch.at) > Date.parse(known.at)) merged.set(slug, touch);
+  }
+  return merged;
 }

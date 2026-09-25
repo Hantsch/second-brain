@@ -65,6 +65,7 @@ import type { SbBridge } from '@renderer/lib/bridge';
 import {
   NOW,
   TODAY,
+  codexSession,
   dashboardFixture,
   day,
   emptyDashboard,
@@ -72,6 +73,7 @@ import {
   projects,
   reminders,
   sessions,
+  stamp,
 } from './dashboard-fixtures';
 
 /** Antworten je Kanal. Was fehlt, wird zum Fehler — so fällt Fehlendes auf. */
@@ -742,11 +744,11 @@ const DATA_TILES: {
     emptyWith: { data: emptyDashboard },
   },
   {
-    name: 'Claude-Sessions',
+    name: 'Agent-Sitzungen',
     node: <ClaudeSessionsTile />,
     filled: 'feature/rollen',
     emptyText: /Keine Sitzung in den letzten Tagen/,
-    emptyWith: { extra: { 'claude:sessions': () => [] } },
+    emptyWith: { data: { ...dashboardFixture, sessions: [] } },
   },
   {
     name: 'Stagnierende Projekte',
@@ -792,6 +794,29 @@ describe('Kacheln', () => {
       expect(await screen.findByText(tile.emptyText)).toBeTruthy();
     });
   }
+
+  it('zeigt eine Codex-Sitzung in „Zuletzt gearbeitet" mit ihrem Detailtext', async () => {
+    mount({
+      data: {
+        ...dashboardFixture,
+        recentWork: [
+          ...dashboardFixture.recentWork,
+          {
+            at: stamp(-1, '11:30'),
+            kind: 'codex-session' as const,
+            title: 'Terraform-Drift geprüft',
+            detail: 'Codex-Sitzung, 6 Nachrichten',
+            path: null,
+            project: 'nyota-auth0-migration',
+            scope: null,
+          },
+        ],
+      },
+    });
+    wrap(<RecentWorkTile />);
+    expect(await screen.findByText('Terraform-Drift geprüft')).toBeTruthy();
+    expect(screen.getByText('Codex-Sitzung, 6 Nachrichten')).toBeTruthy();
+  });
 
   it('erfasst einen Gedanken mit Ctrl+Enter und bietet den Rückweg an', async () => {
     const dumped: string[] = [];
@@ -857,13 +882,60 @@ describe('Kacheln', () => {
     );
   });
 
-  it('sagt bei abgeschaltetem Mitlesen, dass es aus ist — nicht „keine Sitzungen"', async () => {
-    mount({ overview: { useClaudeSessions: false } });
+  it('sagt bei abgeschaltetem Mitlesen beider CLIs, dass es aus ist — nicht „keine Sitzungen"', async () => {
+    mount({ overview: { useClaudeSessions: false, useCodexSessions: false } });
     wrap(<ClaudeSessionsTile />);
     expect(
-      await screen.findByText('Das Mitlesen der Claude-Sessions ist ausgeschaltet.'),
+      await screen.findByText('Das Mitlesen der Agent-Sitzungen ist ausgeschaltet.'),
     ).toBeTruthy();
     expect(screen.queryByText(/Keine Sitzung/)).toBeNull();
+  });
+
+  it('ist nicht aus, solange nur eine der beiden CLIs abgeschaltet ist', async () => {
+    mount({ overview: { useClaudeSessions: false, useCodexSessions: true } });
+    wrap(<ClaudeSessionsTile />);
+    await screen.findByText('feature/rollen');
+    expect(screen.queryByText(/Mitlesen der Agent-Sitzungen ist ausgeschaltet/)).toBeNull();
+  });
+
+  it('zeigt eine Codex-Sitzung mit eigenem Agent-Label, getrennt von Claude', async () => {
+    mount({ data: { ...dashboardFixture, sessions: [...sessions, codexSession] } });
+    wrap(<ClaudeSessionsTile />);
+
+    const codexLabel = await screen.findByText('Codex');
+    expect(codexLabel.closest('.sb-line')?.textContent).toContain('Terraform-Drift geprüft');
+    /* Die Claude-Sitzungen bleiben mit ihrem eigenen Label stehen. */
+    expect(screen.getAllByText('Claude Code').length).toBeGreaterThan(0);
+  });
+
+  it('ordnet eine Codex-Sitzung über agents:link einem Projekt zu', async () => {
+    const linked: { agent: string; projectKey: string; project: string }[] = [];
+    mount({
+      data: { ...dashboardFixture, sessions: [codexSession] },
+      extra: {
+        'agents:link': (request) => {
+          linked.push(request);
+          return undefined;
+        },
+      },
+    });
+    wrap(<ClaudeSessionsTile />);
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Projekt zuordnen' }));
+    await userEvent.selectOptions(
+      screen.getByRole('combobox', { name: /Nyota-Auth0-Infrastructure/ }),
+      'hochbeet-bauen',
+    );
+
+    await waitFor(() =>
+      expect(linked).toEqual([
+        {
+          agent: 'codex',
+          projectKey: 'c:/development/kunde/nyota-auth0-infrastructure',
+          project: 'hochbeet-bauen',
+        },
+      ]),
+    );
   });
 
   /* Der Fuß der Kachel ist der sichtbare Weg von den letzten Sitzungen in die

@@ -37,6 +37,11 @@ export interface LinkOptions {
    * Nutzer weiss es besser als jede Heuristik.
    */
   manual?: ReadonlyMap<string, string>;
+  /**
+   * Woher die erzeugten `touches` stammen. Vorgabe `'claude-session'` — Codex
+   * (oder ein anderer Aufrufer) gibt hier seine eigene Quelle mit.
+   */
+  source?: ExternalTouch['source'];
 }
 
 export interface SessionLinking {
@@ -123,6 +128,7 @@ export function linkSessions(
   projects: readonly LinkableProject[],
   options: LinkOptions = {},
 ): SessionLinking {
+  const source = options.source ?? 'claude-session';
   const bySlug = new Map(projects.map((project) => [project.slug, project]));
   const result: SessionLinking = {
     sessions: [],
@@ -152,7 +158,7 @@ export function linkSessions(
     if (known === undefined || known.at < session.lastActivity) {
       result.touches.set(found.project.slug, {
         at: session.lastActivity,
-        source: 'claude-session',
+        source,
       });
     }
   }
