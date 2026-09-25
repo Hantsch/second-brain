@@ -302,9 +302,10 @@ describe('Pflege-Kanäle im Main', () => {
   /** Der Tag, der zwei Ankündigungen macht: eine deutsche, eine englische. */
   const ANNOUNCING_DAY = day(-5);
   const ANNOUNCING_PATH = `journal/2026/08/${ANNOUNCING_DAY}.md`;
-  /* Die englische Ankündigung — `findDates()` löst sie nicht auf, also ist sie
-     genau das, was nur die Modellstufe finden kann. */
-  const ENGLISH_QUOTE = 'Tomorrow I finally call the tax office.';
+  /* Die englische Ankündigung mit vager Zeitspanne — „tomorrow“ löst `findDates()`
+     seit 061 auf, „in a few days“ in keiner Sprache. Also ist sie genau das, was
+     nur die Modellstufe finden kann. */
+  const ENGLISH_QUOTE = 'In a few days I finally call the tax office.';
 
   async function seedAnnouncingDay(): Promise<void> {
     await vault.write(

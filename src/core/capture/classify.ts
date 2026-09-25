@@ -193,15 +193,16 @@ export async function classifyDump(deps: ClassifyDeps, dumpPath: string): Promis
   const text = doc.body.replace(/\r\n/g, '\n').trim();
   const context = buildFilingContext(deps.index, { now: deps.now ?? new Date(), text });
   const tags = Array.isArray(doc.frontmatter['tags']) ? (doc.frontmatter['tags'] as string[]) : [];
+  const docLanguage = deps.docLanguage ?? 'de';
   const base = heuristicDraft({
     dumpPath,
     text,
     context,
     tags,
     scope: asScope(doc.frontmatter['scope']),
+    docLanguage,
   });
   const at = deps.now ?? context.today;
-  const docLanguage = deps.docLanguage ?? 'de';
 
   if (text.length === 0 || !deps.gateway.isAvailable('classify-dump')) {
     return buildProposal(base, context, at, docLanguage);

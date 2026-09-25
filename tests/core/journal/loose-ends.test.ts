@@ -190,6 +190,84 @@ describe('findLooseEnds', () => {
   });
 });
 
+/* 061, D6: the same rule over English relative phrasing. Every sentence is read in
+   German and English at once, so these cases need no language switch. */
+const LEASE = day('2026-08-18', 'Tomorrow I am signing the lease at the notary.');
+
+describe('findLooseEnds in English', () => {
+  it('finds an English announcement whose day has passed', () => {
+    const ends = findLooseEnds([LEASE], [], TODAY);
+
+    expect(ends).toHaveLength(1);
+    expect(ends[0]).toMatchObject({
+      day: '2026-08-18',
+      path: 'journal/2026/08/2026-08-18.md',
+      quote: 'Tomorrow I am signing the lease at the notary.',
+      subject: 'signing lease notary',
+      refDate: '2026-08-19',
+      /* Found by the rule itself, not by a model — no model is anywhere in sight. */
+      origin: 'heuristic',
+    });
+    expect(ends[0]?.line).toBe(BODY_LINE + 2);
+  });
+
+  it('English day after tomorrow, next week and next friday are forward', () => {
+    const ends = findLooseEnds(
+      [
+        day('2026-08-10', 'The day after tomorrow I pick up the keys.'),
+        day('2026-08-11', 'Next week I renovate the kitchen.'),
+        day('2026-08-12', 'Next Friday is the appointment at the notary.'),
+      ],
+      [],
+      TODAY,
+    );
+
+    /* 2026-08-10 is a Monday: two days on, not one — "tomorrow" inside "day after
+       tomorrow" must not count on its own. */
+    expect(ends.map((end) => end.refDate)).toEqual(['2026-08-12', '2026-08-17', '2026-08-14']);
+  });
+
+  it('does not let the tomorrow inside day after tomorrow announce anything', () => {
+    /* Two days on is today — not come due yet. The bare "tomorrow" in it would
+       point at yesterday and invent a loose end. */
+    const ends = findLooseEnds(
+      [day('2026-08-19', 'The day after tomorrow I pick up the keys.')],
+      [],
+      TODAY,
+    );
+
+    expect(ends).toEqual([]);
+  });
+
+  it('a bare English weekday is not an announcement', () => {
+    /* `findDates` projects every weekday forward; without "next" or "coming" the
+       sentence may just as well tell of the past. */
+    const plain = day('2026-08-10', 'Friday I have a meeting with the notary.');
+    const past = day('2026-08-11', 'On Friday the notary was there.');
+
+    expect(findLooseEnds([plain, past], [], TODAY)).toEqual([]);
+    expect(
+      findLooseEnds([day('2026-08-10', 'Coming Friday I meet the notary.')], [], TODAY),
+    ).toHaveLength(1);
+  });
+
+  it('English today and yesterday announce nothing', () => {
+    const today = day('2026-08-18', 'Today I am at the notary.');
+    const yesterday = day('2026-08-18', 'Yesterday I was at the notary.');
+
+    expect(findLooseEnds([today, yesterday], [], TODAY)).toEqual([]);
+  });
+
+  it('a later English day that links back settles it', () => {
+    const answered = day('2026-08-20', 'The lease is signed, see [[2026-08-18]].');
+    const unlinked = day('2026-08-20', 'The lease is signed.');
+
+    expect(findLooseEnds([LEASE, answered], [], TODAY)).toEqual([]);
+    /* Without the link it stays open — being named is no answer. */
+    expect(findLooseEnds([LEASE, unlinked], [], TODAY)).toHaveLength(1);
+  });
+});
+
 /* 069, D1: dieselbe Subtraktion, aber sie sagt jetzt auch *wodurch* etwas
    erledigt ist. `settledCheck` ist nur noch die Ja/Nein-Fassade davor — die
    Tests oben prüfen über `findLooseEnds` weiterhin genau dieses Ja/Nein. */

@@ -112,3 +112,21 @@
 - 2026-09-25 17:56 · 060 · review 1 · started
 - 2026-09-25 17:57 · 060 · review 1 · done
 - 2026-09-25 17:58 · 060 · story · done
+- 2026-09-25 17:58:54 · 061 · build · started
+- 2026-09-25 17:59 · 061 · D1 English relative dates in findDates · started
+- 2026-09-25 18:02 · 061 · D1 English relative dates in findDates · done
+- 2026-09-25 18:02 · 061 · D2 English lexicon and task detection · started
+- 2026-09-25 18:05 · 061 · D2 English lexicon and task detection · done
+- 2026-09-25 18:05 · 061 · D3 heuristic speaks document language · started
+- 2026-09-25 18:08 · 061 · D3 heuristic speaks document language · done
+- 2026-09-25 18:08 · 061 · D4 link files to module only when named · started
+- 2026-09-25 18:08 · 061 · D4 link files to module only when named · done
+- 2026-09-25 18:08 · 061 · D5 ask path no-evidence marker follows reply language · started
+- 2026-09-25 18:09 · 061 · D5 ask path no-evidence marker follows reply language · done
+- 2026-09-25 18:09 · 061 · D6 loose ends in English forward-looking phrasing (hard) · started
+- 2026-09-25 18:14 · 061 · D6 loose ends in English forward-looking phrasing (hard) · done
+- 2026-09-25 18:14 · 061 · verify · started
+- 2026-09-25 18:18 · 061 · verify · done
+- 2026-09-25 18:18 · 061 · review 1 · started
+- 2026-09-25 18:21 · 061 · review 1 · done: PASS - no blocking findings (1 minor: unused TASK_VERBS_EN export)
+- 2026-09-25 18:21 · 061 · story · done

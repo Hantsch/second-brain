@@ -13,6 +13,7 @@
    file. */
 
 import type { ChatTurn, DocLanguage, UiLanguage } from '@shared/types';
+import { phrases } from '@core/wiki/text';
 import { documentLanguageRule, replyLanguageRule, turns, type PromptExcerpt } from './shared';
 
 /** An excerpt with a location. `line` is the first line of the quote in the file. */
@@ -29,8 +30,13 @@ export interface QueryAnswerInput {
   module?: string | null;
 }
 
-/** The sentence that must appear when no citation was found. Tests and the UI check for it. */
-export const NO_EVIDENCE_MARKER = 'Dazu steht nichts im Vault.';
+/** The sentence that must appear when no citation was found, in the given language. */
+export function noEvidenceMarker(language: UiLanguage | DocLanguage): string {
+  return phrases(language).noEvidence;
+}
+
+/** The German no-evidence sentence. Tests and the UI check for it. */
+export const NO_EVIDENCE_MARKER = noEvidenceMarker('de');
 
 /**
  * Excerpts in the form the model can cite them in. Like `formatExcerpts` in
@@ -67,7 +73,7 @@ export function queryAnswerPrompt(
       'Benutze ausschließlich die mitgegebenen Ausschnitte. Kein Weltwissen, keine Vermutungen, keine Ergänzungen.',
       'Belege jede Aussage mit dem Pfad des Ausschnitts in doppelten eckigen Klammern, z. B. [[projects/work/nyota/project.md]]. Mehrere Belege stehen hintereinander.',
       'Zitiere wortwörtlich: was du in Anführungszeichen setzt, muss Zeichen für Zeichen in einem Ausschnitt stehen. Ein Zitat, das sich nicht wiederfinden lässt, wird verworfen.',
-      `Findest du in den Ausschnitten keine Antwort, schreibe genau: "${NO_EVIDENCE_MARKER}" — und nenne höchstens einen Satz dazu, wonach der Nutzer stattdessen suchen könnte.`,
+      `Findest du in den Ausschnitten keine Antwort, schreibe genau: "${noEvidenceMarker(replyLanguage)}" — und nenne höchstens einen Satz dazu, wonach der Nutzer stattdessen suchen könnte.`,
       'Widersprechen sich Ausschnitte, benenne den Widerspruch mit beiden Belegen statt ihn zu glätten.',
       'Antworte knapp und sachlich: erst die Antwort, dann bei Bedarf zwei bis drei Stichpunkte. Keine Einleitung, kein Lob, keine Emoji.',
       input.module ? `Die Frage bezieht sich auf das Modul ${input.module}.` : '',

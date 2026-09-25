@@ -1,7 +1,7 @@
 ---
 id: 061
 title: The heuristic floor speaks the document language
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-09-03
 ---
 
@@ -33,15 +33,15 @@ mention.
 
 ## Acceptance Criteria
 
-- [ ] With `languages.documents: en`, the heuristic detects moods, tasks, scopes, and relative
+- [x] With `languages.documents: en`, the heuristic detects moods, tasks, scopes, and relative
       dates in English text; test coverage mirrors the German cases.
-- [ ] Heuristic reason strings and the ask path's no-evidence marker follow the reply/document
+- [x] Heuristic reason strings and the ask path's no-evidence marker follow the reply/document
       language.
-- [ ] Loose ends are detected in English forward-looking phrasing, with the same honesty about
+- [x] Loose ends are detected in English forward-looking phrasing, with the same honesty about
       being heuristic.
-- [ ] A URL-bearing dump is filed to a module only when the module is actually mentioned;
+- [x] A URL-bearing dump is filed to a module only when the module is actually mentioned;
       otherwise it stays in the inbox with an honest reason.
-- [ ] German behaviour is unchanged — pinned by the existing tests, none weakened.
+- [x] German behaviour is unchanged — pinned by the existing tests, none weakened.
 
 ## Open Questions
 
@@ -120,7 +120,7 @@ documented premise moves.
 
 ## Deliverables
 
-- [ ] **D1 — English relative dates in `findDates`.** Files: `src/core/capture/dates.ts`, new
+- [x] **D1 — English relative dates in `findDates`.** Files: `src/core/capture/dates.ts`, new
       `src/core/capture/date-phrases-en.ts`, new `tests/core/capture/dates-en.test.ts` (mirror
       `tests/core/capture/dates.test.ts`). Change the signature to
       `findDates(text: string, today: string, languages: readonly DocLanguage[] = ['de'])`
@@ -142,7 +142,7 @@ documented premise moves.
       "resolves English weekday and month names", "day after tomorrow yields one date, not two",
       "English phrases are ignored without 'en'", "dayLabel renders ISO in English and 15.08.
       in German". Existing `dates.test.ts` must pass unedited.
-- [ ] **D2 — English lexicon and task detection.** Files: `src/core/capture/lexicon.ts`, new
+- [x] **D2 — English lexicon and task detection.** Files: `src/core/capture/lexicon.ts`, new
       `src/core/capture/lexicon-en.ts`, `src/core/capture/signals.ts`,
       `src/core/capture/tasks.ts`, new `tests/core/capture/signals-en.test.ts` (mirror
       `tests/core/capture/signals.test.ts`), `tests/core/capture/tasks.test.ts` (add cases).
@@ -171,7 +171,7 @@ documented premise moves.
       "I feel tired" → `[]`), "heuristicTasks extracts an English todo with its deadline"
       ("Call the dentist tomorrow." with `['en','de']` → due = today + 1). Existing
       `signals.test.ts` / `tasks.test.ts` cases pass unedited.
-- [ ] **D3 — The heuristic speaks the document language.** Files:
+- [x] **D3 — The heuristic speaks the document language.** Files:
       `src/core/capture/heuristic.ts`, new `src/core/capture/reasons.ts`,
       `src/core/capture/classify.ts`, new `tests/core/capture/heuristic-en.test.ts` (mirror
       `tests/core/capture/heuristic.test.ts`; reuse `captureFixture` from
@@ -182,10 +182,10 @@ documented premise moves.
       `reasons(language)` — mirror `phrases()` in `src/core/wiki/text.ts`. The DE entries must
       produce **byte-identical** strings to today (straight `"` quotes, `und`, `am 15.08.`).
       EN: `Mentions "X".`, `Mentions "X" and a date on 2026-08-15`, `Contains mood words ("a"
-      and "b") and no project reference.`, `Contains a link (host) and matches the module
-      "Title".`, `Contains a link (host), but no module it belongs to.`, `Mentions "X" from an
-      active area`, `No project reference, no day reference and no source recognizable — stays
-      in the inbox.` Dates in reasons via `dayLabel(iso, today, language)` from D1. English
+and "b") and no project reference.`, `Contains a link (host) and matches the module
+"Title".`, `Contains a link (host), but no module it belongs to.`, `Mentions "X" from an
+active area`, `No project reference, no day reference and no source recognizable — stays
+in the inbox.` Dates in reasons via `dayLabel(iso, today, language)` from D1. English
       strings never contain U+201E. Update the `docLanguage` doc comment on `HeuristicInput`
       (it now also selects lexicons and reason language). In `classify.ts` `classifyDump`, pass
       `docLanguage` into the `heuristicDraft({...})` call. Tests: "files an English work dump
@@ -198,7 +198,7 @@ documented premise moves.
       ("without a model, an English dump gets English detection and reasons"). Existing
       `heuristic.test.ts`, `classify.test.ts`, `document-language.test.ts` pass unedited
       (except D4's one documented change).
-- [ ] **D4 — A link files to a module only when the module is named.** Files:
+- [x] **D4 — A link files to a module only when the module is named.** Files:
       `src/core/capture/mentions.ts`, `tests/core/capture/heuristic.test.ts`. In
       `findModuleMention`, remove the `modules.length === 1` fallback and its doc sentence:
       return a module only if its slug or title occurs in the text, else `null`. The URL
@@ -211,7 +211,7 @@ documented premise moves.
       all three assertions. Add „lässt einen Link liegen, wenn das einzige Modul nicht genannt
       ist" (the old dump text, default fixture with its one module → `primary.target` `inbox`,
       `primary.path` = dump path, reason contains `kein Modul`).
-- [ ] **D5 — The ask path's no-evidence marker follows the reply language.** Files:
+- [x] **D5 — The ask path's no-evidence marker follows the reply language.** Files:
       `src/core/llm/prompts/query-answer.ts`, `src/core/llm/prompts/index.ts`,
       `tests/core/llm/prompts.test.ts`. Add
       `export function noEvidenceMarker(language: UiLanguage | DocLanguage): string` returning
@@ -222,9 +222,9 @@ documented premise moves.
       `noEvidenceMarker(replyLanguage)`. Export `noEvidenceMarker` from the prompts barrel.
       Tests in `prompts.test.ts`: "the no-evidence marker follows the reply language"
       (`queryAnswerPrompt(input, 'de', 'en')` system contains `Nothing in the vault covers
-      that.` and not `Dazu steht nichts im Vault.`; `(input, 'en', 'de')` contains the German
+that.` and not `Dazu steht nichts im Vault.`; `(input, 'en', 'de')` contains the German
       one). The existing „schreibt vor, was bei fehlendem Beleg zu sagen ist" passes unedited.
-- [ ] **D6 — Loose ends in English forward-looking phrasing.** Files:
+- [x] **D6 — Loose ends in English forward-looking phrasing.** Files:
       `src/core/journal/loose-ends.ts` (optionally extract `isForward` + its tables into a new
       `src/core/journal/forward.ts`; the file is far over 300 lines),
       `src/core/journal/loose-ends-llm.ts`, `tests/core/journal/loose-ends.test.ts`,
@@ -294,3 +294,36 @@ documented premise moves.
   Decisions (all D's)
 
 ## Done
+
+Added an English lexicon/date/reason path alongside the existing German one across
+`src/core/capture/` (dates, moods, tasks, scopes, heuristic reasons), the ask path's
+no-evidence marker (`query-answer.ts`), and loose-end detection (`journal/`); German
+output stays byte-identical (confirmed by the unedited German suites and a dedicated
+"German unchanged" test per D). Also removed the `modules.length === 1` fallback in
+`findModuleMention` — a link now files to a module only when it is actually named.
+
+Commit message: `061: the heuristic floor speaks the document language`
+
+Verification: narrow gate — `npm run build` green, `npm run lint` green,
+`npm run typecheck` green, `npm run format:check` green after formatting the 4 files
+this story touched (one pre-existing red file, `tests/main/services.test.ts`, is
+untouched by this story and not fixed here). `npx vitest run --changed HEAD` green
+(2610 tests); supplementary targeted run of `tests/core/capture/`, `tests/core/journal/`,
+`tests/core/llm/prompts.test.ts`, `tests/core/wiki/ask.test.ts`,
+`tests/main/gardener-ipc.test.ts` green (570 tests). No e2e-story run — this story's own
+`## Acceptance Tests` section states all ACs map to unit tests, no e2e. AC1–AC5 all
+verified PASS against their named tests (see `## Acceptance Tests` above, unchanged from
+refine). Review (default tier, one cycle): PASS, no blocking findings — one non-blocking
+note (an unused `TASK_VERBS_EN` export in `lexicon-en.ts`, dead code with a misleading
+comment, left as-is since it doesn't affect correctness and a fix cycle wasn't warranted
+for it).
+
+Decisions: confirmed against the landed 056 cache (`loose-ends-derived.ts`, a WeakMap
+keyed on the index object plus `today`) that D6 needs no new cache key — the language
+list (`['de','en']`) is a fixed constant, not a caller-supplied parameter, so the
+existing key shape already covers it. `isForward` and its tables were extracted from
+`loose-ends.ts` into a new `journal/forward.ts`; `loose-ends.ts` is still noticeably over
+the ~300-line soft limit even after the split (~500 lines) — left as a follow-up, not a
+blocker for this story.
+
+tiers: D 6 / hard 1 · review default · cycles 1 · agents 9

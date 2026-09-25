@@ -272,3 +272,7 @@ second roadmap.
   PDFs end honestly as `no-content`/`pdf-no-text-layer`, damaged PDFs keep `pdf-not-read`, and
   oversized PDFs (>5 MB) fail visibly with a new `too-large` error code — reviewed PASS with no
   fix cycle.
+- 061 — The heuristic floor speaks the document language · S18 · English documents now get the
+  same no-model heuristic floor as German (moods, tasks, scopes, relative dates, reasons, loose
+  ends, ask no-evidence marker); the sole-module URL fallback was removed, a link only files to a
+  module that is actually named — reviewed PASS with no fix cycle.

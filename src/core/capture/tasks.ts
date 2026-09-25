@@ -37,6 +37,8 @@ export interface TaskOptions {
   scope?: Scope;
   /** Projekt-Slug, in dessen Datei die Aufgaben sollen. */
   project?: string | null;
+  /** Dokumentsprachen, die bei Erkennung und Fristen mitlaufen. Standard: Deutsch. */
+  languages?: readonly DocLanguage[];
 }
 
 export interface ExtractTasksDeps extends TaskOptions {
@@ -70,6 +72,7 @@ export function heuristicTasks(text: string, options: TaskOptions = {}): Extract
   const today = isoDay(options.now ?? new Date());
   const scope = options.scope ?? 'private';
   const project = options.project ?? null;
+  const languages = options.languages ?? ['de'];
   const todos: ProposedTodo[] = [];
   const waiting: WaitingOn[] = [];
   const seenTodo = new Set<string>();
@@ -80,7 +83,7 @@ export function heuristicTasks(text: string, options: TaskOptions = {}): Extract
       const key = hit.who.toLowerCase();
       if (seenWaiting.has(key) || waiting.length >= MAX_WAITING) continue;
       seenWaiting.add(key);
-      const due = primaryDate(findDates(sentence.text, today), today);
+      const due = primaryDate(findDates(sentence.text, today, languages), today);
       waiting.push({
         who: hit.who,
         what: hit.what,
@@ -89,12 +92,12 @@ export function heuristicTasks(text: string, options: TaskOptions = {}): Extract
       });
     }
 
-    if (!isTask(sentence) || todos.length >= MAX_TODOS) continue;
-    const entry = todo(taskText(sentence.text), { scope, project });
+    if (!isTask(sentence, languages) || todos.length >= MAX_TODOS) continue;
+    const entry = todo(taskText(sentence.text, languages), { scope, project });
     const key = entry.text.toLowerCase();
     if (key.length === 0 || seenTodo.has(key)) continue;
     seenTodo.add(key);
-    const due = primaryDate(findDates(sentence.text, today), today);
+    const due = primaryDate(findDates(sentence.text, today, languages), today);
     if (due !== null) entry.due = due.iso;
     const waitFor = findWaitingOn(sentence.text)[0];
     if (waitFor !== undefined) entry.waitingFor = waitFor.who;

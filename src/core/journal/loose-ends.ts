@@ -12,10 +12,11 @@
  * 1. Only the user's own `entry` blocks of the "Day" stream count (`parseStream`).
  *    An `answer` block is the app's own text — an announcement it wrote itself
  *    would be a loose end of its own making.
- * 2. Per sentence, the dates come from `findDates()` (`@core/capture`), resolved
- *    against **the day the sentence stands in**: "morgen" in a day from last week
- *    means the day after that day, not tomorrow.
- * 3. One of those dates has to be **forward-looking** (`isForward`) and lie
+ * 2. Per sentence, the dates come from `findDates()` (`@core/capture`), in German
+ *    and English at once, resolved against **the day the sentence stands in**:
+ *    "morgen" or "tomorrow" in a day from last week means the day after that day,
+ *    not the day after today.
+ * 3. One of those dates has to be **forward-looking** (`isForward`, `forward.ts`) and lie
  *    strictly between the day itself and today. Strictly: an announcement for
  *    today or later has not come due yet, and one for the day itself or earlier
  *    is a report, not an announcement. Which side of today counts is the one
@@ -24,11 +25,16 @@
  * 4. What is already answered drops out: a later day that links this day and
  *    picks its subject back up, or a todo carrying the subject and a deadline.
  *
- * Scope of the heuristic, deliberately: `findDates()` resolves German relative
- * phrasing plus language-neutral dates (`15.08.`, `2026-08-15`, `KW 34`). English
- * relative phrasing ("tomorrow", "next week") resolves to no date at all and can
- * therefore not produce a loose end here — that is the model pass's job, not this
- * one's. An English sentence naming a real date works exactly like a German one.
+ * Scope of the heuristic, deliberately: `findDates()` resolves fixed relative
+ * phrasing in both languages — "morgen"/"tomorrow", "übermorgen"/"day after
+ * tomorrow", "nächste Woche"/"next week", "nächsten Freitag"/"next Friday",
+ * "Monatsende"/"end of the month" — plus language-neutral dates (`15.08.`,
+ * `2026-08-15`, `KW 34`). Both languages are read in every sentence, whatever
+ * the document language is set to: a journal mixes them within one day. Vague
+ * spans ("in ein paar Tagen", "bald", "in a few days", "soon") resolve to no date
+ * in either language and can therefore not produce a loose end here — that is
+ * the model pass's job, not this one's. The same restraint holds for both: a
+ * guessed day is worse than none.
  */
 
 import type { IndexedDoc } from '@core/index/types';
@@ -36,6 +42,7 @@ import type { JournalDay, LooseEnd, Todo } from '@shared/types';
 import { findDates } from '@core/capture';
 import { collapse, fold } from '@core/index/text';
 import { sha256 } from '@core/vault/hash';
+import { isForward } from './forward';
 import { parseStream } from './stream';
 
 /**
@@ -89,57 +96,19 @@ const NOISE = new Set(
   kommenden kommender woche wochen monat monats monatsende ende tage tagen jahr
   montag dienstag mittwoch donnerstag freitag samstag sonnabend sonntag
   januar februar maerz april juni juli august september oktober november dezember
-  today tomorrow yesterday week weeks month next monday tuesday wednesday thursday
+  today tomorrow yesterday days week weeks month next coming monday tuesday wednesday thursday
   friday saturday sunday january february march june july october december
   eins zwei drei vier fuenf sechs sieben acht neun zehn zwoelf zwanzig hundert tausend
   three four five seven eight nine eleven twelve twenty thirty hundred thousand
   `.split(/\s+/u),
 );
 
-/** Weekday labels `findDates()` produces, folded — always projected forward. */
-const WEEKDAYS = new Set([
-  'montag',
-  'dienstag',
-  'mittwoch',
-  'donnerstag',
-  'freitag',
-  'samstag',
-  'sonnabend',
-  'sonntag',
-]);
-
 /**
- * Relative phrases that point forward. `heute` and `gestern` are deliberately
- * absent: neither of them announces anything.
+ * The languages every sentence is read in. Fixed, not a setting: a journal mixes
+ * German and English within one day, and the document-language setting says what
+ * the app writes, not what the user may have written.
  */
-const FORWARD_PHRASES: readonly RegExp[] = [
-  /^morgen$/,
-  /^uebermorgen$/,
-  /^(naechste|kommende)[nrs]?\s+woche$/,
-  /^in\s+(einer|zwei)\s+wochen?$/,
-  /^(monatsende|ende\s+des\s+monats)$/,
-];
-
-/**
- * Is this date reference an announcement?
- *
- * A reference carrying digits is a date the user wrote out (`15.08.`, `KW 34`,
- * "in 3 Tagen"). Whether it lies ahead is then the date's business, not the
- * wording's — and step 3 of the rule has already decided that.
- *
- * A bare weekday is the one ambiguous case: `findDates()` always projects
- * `Freitag` forward, so "am Freitag war der Notar da" would resolve to a day that
- * was never announced. It therefore only counts with a word in front of it that
- * can only mean the future. Anything softer is left to the model pass — an
- * invented loose end costs the user more than one this rule passes on.
- */
-function isForward(label: string, sentence: string): boolean {
-  const key = collapse(fold(label));
-  if (/\d/.test(key)) return true;
-  if (FORWARD_PHRASES.some((phrase) => phrase.test(key))) return true;
-  if (!WEEKDAYS.has(key)) return false;
-  return new RegExp(`(naechste|kommende)[nrs]?\\s+${key}`, 'u').test(fold(sentence));
-}
+export const SENTENCE_LANGUAGES = ['de', 'en'] as const;
 
 /** A sentence out of an entry block, with the line it starts on. */
 interface Fragment {
@@ -477,7 +446,7 @@ export function announcementsOf(
   for (const block of parseStream(source.doc.body)) {
     if (block.kind !== 'entry') continue;
     for (const sentence of sentencesOf(block.text)) {
-      const hit = findDates(sentence.text, date).find(
+      const hit = findDates(sentence.text, date, SENTENCE_LANGUAGES).find(
         (candidate) =>
           candidate.iso > date &&
           window.accepts(candidate.iso, today) &&

@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { extractTasks, heuristicTasks } from '@core/capture';
 import { emptyGateway, gatewayWithReplies } from '../../helpers/llm';
-import { TODAY } from '../../helpers/time';
+import { day, TODAY } from '../../helpers/time';
 
 const TEXT = [
   'Der Testlauf lief durch.',
@@ -64,6 +64,16 @@ describe('heuristicTasks', () => {
       waitingOn: [],
       heuristic: true,
     });
+  });
+
+  it('heuristicTasks extracts an English todo with its deadline', () => {
+    const { todos } = heuristicTasks('Call the dentist tomorrow.', {
+      now: TODAY,
+      languages: ['en', 'de'],
+    });
+
+    expect(todos.map((todo) => todo.text)).toEqual(['Call the dentist tomorrow']);
+    expect(todos[0]?.due).toBe(day(1));
   });
 });
 

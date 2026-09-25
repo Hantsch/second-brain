@@ -1,10 +1,11 @@
 /**
  * The optional model pass over loose ends — the second, additive step.
  *
- * `findLooseEnds()` (D1) resolves German relative phrasing and written dates and
- * stops there, on purpose. This step catches what that rule cannot see: English
- * phrasing ("tomorrow", "next week"), an announcement worded around its date, a
- * sentence whose subject only a reader recognizes. Without a route for
+ * `findLooseEnds()` (D1) resolves fixed relative phrasing in German and English
+ * ("morgen", "tomorrow", "next week") and written dates, and stops there, on
+ * purpose. This step catches what that rule cannot see: a vague span in either
+ * language ("in ein paar Tagen", "in a few days", "soon"), an announcement worded
+ * around its date, a sentence whose subject only a reader recognizes. Without a route for
  * `journal-loose-ends` it does nothing at all and the heuristic result stands
  * whole — that is guardrail 1: the loose-end list is complete without a model,
  * only poorer in judgment.
@@ -50,7 +51,13 @@ import {
   MAX_LOOSE_END_SUBJECT_WORDS,
   journalLooseEndsPrompt,
 } from '@core/llm/prompts';
-import { findLooseEnds, looseEndId, resolutionCheck, sentencesOf } from './loose-ends';
+import {
+  SENTENCE_LANGUAGES,
+  findLooseEnds,
+  looseEndId,
+  resolutionCheck,
+  sentencesOf,
+} from './loose-ends';
 import type { LooseEndDay, LooseEndTodo } from './loose-ends';
 import type { LooseEndDerivation } from './loose-ends-derived';
 import { parseStream } from './stream';
@@ -205,13 +212,15 @@ function readLooseEnds(value: unknown): RawLooseEnd[] {
  * Where the proposed `refDate` stands inside the quote — the same anchor
  * `findLooseEnds` uses for its own subject terms. The model does not report an
  * offset, so it is recovered the same way the quote itself is grounded: run
- * the same date parser over the same text and take the position of whichever
+ * the same date parser over the same text, in the same languages
+ * (`SENTENCE_LANGUAGES`), and take the position of whichever
  * hit matches the date the model proposed. `undefined` when none does — the
  * settled check then falls back to reading the subject from the sentence's
  * head, exactly as it did before `at`-anchoring existed.
  */
 function anchorOf(raw: RawLooseEnd): number | undefined {
-  return findDates(raw.quote, raw.day).find((hit) => hit.iso === raw.refDate)?.at;
+  return findDates(raw.quote, raw.day, SENTENCE_LANGUAGES).find((hit) => hit.iso === raw.refDate)
+    ?.at;
 }
 
 function toLooseEnd(

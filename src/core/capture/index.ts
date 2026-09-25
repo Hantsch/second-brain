@@ -85,6 +85,7 @@ export {
 } from './tasks';
 export {
   addDays,
+  dayLabel,
   findDates,
   germanDay,
   isCalendarDay,

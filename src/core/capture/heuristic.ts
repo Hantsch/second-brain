@@ -18,7 +18,7 @@ import type { DateLike } from '@core/vault/paths';
 import { buildProposal } from './actions';
 import type { ProposalDraft } from './actions';
 import type { FilingContext } from './context';
-import { findDates, germanDay, primaryDate } from './dates';
+import { dayLabel, findDates, primaryDate } from './dates';
 import type { DateHit } from './dates';
 import { dumpTitle } from './dump';
 import {
@@ -28,6 +28,8 @@ import {
   findModuleMention,
   findProjectMentions,
 } from './mentions';
+import { reasons } from './reasons';
+import type { ReasonPhrases } from './reasons';
 import { findEntities, findUrls, hostOf, moodSignals, scopeSignals, sentences } from './signals';
 import { heuristicTasks } from './tasks';
 
@@ -45,16 +47,23 @@ export interface HeuristicInput {
   /** Vom Nutzer beim Erfassen gesetzter Scope. */
   scope?: Scope | null;
   /**
-   * Dokumentsprache — sie benennt die Abschnitte des Vorschlags. Die Entscheidung
-   * selbst (`heuristicDraft`) haengt nicht daran: welches Projekt gemeint ist,
-   * steht im Text, nicht in der Sprache der Ueberschriften.
+   * Dokumentsprache — sie benennt die Abschnitte des Vorschlags, waehlt die
+   * Lexika fuer Erkennung (Stimmung, Scope, Aufgaben, Daten) und die Sprache der
+   * Begruendungssaetze. Welches Projekt gemeint ist, steht weiterhin im Text,
+   * nicht in dieser Einstellung — sie erweitert nur, welche Sprachtabellen
+   * mitlaufen ('en' laeuft zusaetzlich zu 'de', nie an dessen Stelle).
    */
   docLanguage?: DocLanguage;
 }
 
+/** Sprachtabellen, die zur Dokumentsprache gehoeren — Deutsch bleibt immer dabei. */
+function languagesFor(docLanguage: DocLanguage | undefined): readonly DocLanguage[] {
+  return docLanguage === 'en' ? ['en', 'de'] : ['de'];
+}
+
 /** Scope aus den Signalwoertern: Mehrheit gewinnt, Gleichstand entscheidet nicht. */
-function scopeFromSignals(text: string): Scope | null {
-  const signals = scopeSignals(text);
+function scopeFromSignals(text: string, languages: readonly DocLanguage[]): Scope | null {
+  const signals = scopeSignals(text, languages);
   if (signals.work.length > signals.private.length) return 'work';
   if (signals.private.length > signals.work.length) return 'private';
   return null;
@@ -69,11 +78,17 @@ interface Decision {
 }
 
 /** Begruendung mit Termin, wenn einer im Text steht. */
-function withDate(clause: string, dates: readonly DateHit[], today: string): string {
+function withDate(
+  clause: string,
+  dates: readonly DateHit[],
+  today: string,
+  language: DocLanguage,
+  phrase: ReasonPhrases,
+): string {
   const date = primaryDate(dates, today);
   return date === null
-    ? `${clause}.`
-    : `${clause} und einen Termin am ${germanDay(date.iso, today)}`;
+    ? phrase.withoutDate(clause)
+    : phrase.withDate(clause, dayLabel(date.iso, today, language));
 }
 
 /**
@@ -81,10 +96,16 @@ function withDate(clause: string, dates: readonly DateHit[], today: string): str
  * danach zaehlt der Tag (Stimmung), dann Wissen (Link), dann ein Bereich. Bleibt
  * nichts, bleibt der Dump liegen — das ist ein ehrliches Ergebnis, kein Fehler.
  */
-function decide(input: HeuristicInput, dates: readonly DateHit[]): Decision {
+function decide(
+  input: HeuristicInput,
+  dates: readonly DateHit[],
+  languages: readonly DocLanguage[],
+): Decision {
   const { text, context } = input;
   const today = context.today;
-  const scope = scopeFromSignals(text);
+  const language = input.docLanguage ?? 'de';
+  const phrase = reasons(language);
+  const scope = scopeFromSignals(text, languages);
   const mentions = findProjectMentions(text, context.projects);
   const best = mentions[0];
 
@@ -100,22 +121,23 @@ function decide(input: HeuristicInput, dates: readonly DateHit[]): Decision {
       target: 'project',
       targetKey: best.project.slug,
       scope: best.project.scope,
-      reason: withDate(`Erwähnt "${best.matched}"`, dates, today),
+      reason: withDate(phrase.mentionsClause(best.matched), dates, today, language, phrase),
       confidence: base + (mentions.length === 1 ? 0.05 : 0),
     };
   }
 
-  const mood = moodSignals(text);
+  const mood = moodSignals(text, languages);
   if (mood.length > 0) {
+    const joiner = language === 'en' ? ' and ' : ' und ';
     const words = mood
       .slice(0, 2)
       .map((word) => `"${word}"`)
-      .join(' und ');
+      .join(joiner);
     return {
       target: 'journal',
       targetKey: null,
       scope,
-      reason: `Enthält Gefühlsworte (${words}) und keinen Projektbezug.`,
+      reason: phrase.moodWords(words),
       confidence: 0.3 + Math.min(0.15, 0.05 * mood.length),
     };
   }
@@ -128,7 +150,7 @@ function decide(input: HeuristicInput, dates: readonly DateHit[]): Decision {
         target: 'module',
         targetKey: module.slug,
         scope,
-        reason: `Enthält einen Link (${hostOf(url)}) und passt zum Modul "${module.title}".`,
+        reason: phrase.linkWithModule(hostOf(url), module.title),
         confidence: 0.35,
       };
     }
@@ -136,7 +158,7 @@ function decide(input: HeuristicInput, dates: readonly DateHit[]): Decision {
       target: 'inbox',
       targetKey: null,
       scope,
-      reason: `Enthält einen Link (${hostOf(url)}), aber kein Modul, in das er gehört.`,
+      reason: phrase.linkWithoutModule(hostOf(url)),
       confidence: 0.25,
     };
   }
@@ -147,7 +169,7 @@ function decide(input: HeuristicInput, dates: readonly DateHit[]): Decision {
       target: 'area',
       targetKey: area.area.slug,
       scope,
-      reason: withDate(`Erwähnt "${area.matched}" aus einem laufenden Bereich`, dates, today),
+      reason: withDate(phrase.areaMentionClause(area.matched), dates, today, language, phrase),
       confidence: 0.35,
     };
   }
@@ -156,7 +178,7 @@ function decide(input: HeuristicInput, dates: readonly DateHit[]): Decision {
     target: 'inbox',
     targetKey: null,
     scope,
-    reason: 'Kein Projektbezug, kein Tagesbezug und keine Quelle erkennbar — bleibt liegen.',
+    reason: phrase.noMatch,
     confidence: 0.2,
   };
 }
@@ -165,11 +187,12 @@ function decide(input: HeuristicInput, dates: readonly DateHit[]): Decision {
 export function heuristicDraft(input: HeuristicInput): ProposalDraft {
   const text = input.text.replace(/\r\n/g, '\n').trim();
   const today = input.context.today;
-  const dates = findDates(text, today);
-  const decision = decide(input, dates);
+  const languages = languagesFor(input.docLanguage);
+  const dates = findDates(text, today, languages);
+  const decision = decide(input, dates, languages);
   const scope = input.scope ?? decision.scope ?? 'private';
   const project = decision.target === 'project' ? decision.targetKey : null;
-  const tasks = heuristicTasks(text, { now: today, scope, project });
+  const tasks = heuristicTasks(text, { now: today, scope, project, languages });
   const userTags = (input.tags ?? []).map((tag) => tag.trim()).filter((tag) => tag.length > 0);
   const tags = [...new Set([...userTags, ...findKnownTags(text, input.context.tags)])];
 

@@ -1,7 +1,7 @@
 /* Die Modellstufe der losen Enden (020, D4). Geprüft wird vor allem, was **nicht**
    durchkommt, denn hier redet ein Modell über Tagebuchprosa:
 
-   - es findet, was die Regel nicht sieht (englische Zeitangabe) — und der Fund
+   - es findet, was die Regel nicht sieht (vage englische Zeitspanne) — und der Fund
      trägt `origin: 'model'`, mit Pfad und Zeile aus der Datei, nicht aus der
      Antwort;
    - ein umschriebenes, erfundenes oder aus einem unbekannten Tag zitiertes
@@ -41,11 +41,12 @@ beforeEach(() => {
 /** Uhr der Fixtures (`tests/helpers/time.ts`). */
 const TODAY = '2026-08-10';
 
-/* Der Fall, den die Heuristik bewusst offen lässt: englische Zeitangabe ohne
-   ausgeschriebenes Datum — `findDates()` löst sie nicht auf (D1, „Scope of the
+/* Der Fall, den die Heuristik bewusst offen lässt: eine vage englische Zeitspanne
+   ohne ausgeschriebenes Datum. Feste Wendungen wie „tomorrow“ löst `findDates()`
+   seit 061 auf, „in a few days“ aber in keiner Sprache (D1, „Scope of the
    heuristic"). Der Tag ist vorbei, niemand hat seither etwas dazu gesagt. */
 const ENGLISH_DAY = day(-5);
-const ENGLISH_TEXT = 'Tomorrow I am signing the lease at the notary.';
+const ENGLISH_TEXT = 'In a few days I am signing the lease at the notary.';
 /* Und ein Fall, den die Heuristik selbst findet — damit „was das Modell
    dazulegt" von „was ohnehin schon dasteht" unterscheidbar bleibt. */
 const GERMAN_DAY = day(-8);
@@ -112,7 +113,7 @@ describe('modelLooseEnds', () => {
       refDate: day(-4),
       origin: 'model',
     });
-    /* Zeile aus der Datei: 'Tomorrow …' steht auf Rumpfzeile 2 hinter '## Tag'. */
+    /* Zeile aus der Datei: 'In a few days …' steht auf Rumpfzeile 2 hinter '## Tag'. */
     expect(result.looseEnds[0]?.line).toBe(8 + 2);
     expect(provider.countFor('journal-loose-ends')).toBe(1);
   });
@@ -120,7 +121,7 @@ describe('modelLooseEnds', () => {
   it('verwirft ein Zitat, das nicht wortwörtlich in der genannten Datei steht', async () => {
     const { gateway } = looseEndGateway([
       /* Umschrieben — dasselbe gemeint, andere Worte. */
-      { ...VALID, quote: 'Tomorrow I sign the lease at the notary office.' },
+      { ...VALID, quote: 'In a few days I sign the lease at the notary office.' },
       /* Frei erfunden. */
       { ...VALID, quote: 'Morgen bin ich beim Notar.' },
       /* Wortwörtlich, aber aus einem Tag, der nicht mitgeschickt wurde. */

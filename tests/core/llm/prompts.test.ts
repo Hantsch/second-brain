@@ -105,6 +105,15 @@ describe('queryAnswerPrompt', () => {
     expect(systemOf(queryAnswerPrompt(input, 'de'))).toContain(NO_EVIDENCE_MARKER);
   });
 
+  it('the no-evidence marker follows the reply language', () => {
+    const enReply = systemOf(queryAnswerPrompt(input, 'de', 'en'));
+    expect(enReply).toContain('Nothing in the vault covers that.');
+    expect(enReply).not.toContain('Dazu steht nichts im Vault.');
+
+    const deReply = systemOf(queryAnswerPrompt(input, 'en', 'de'));
+    expect(deReply).toContain('Dazu steht nichts im Vault.');
+  });
+
   it('trennt Dokumentsprache und Antwortsprache', () => {
     const system = systemOf(queryAnswerPrompt(input, 'en', 'de'));
     expect(system).toContain('Antworte dem Nutzer auf Deutsch');
