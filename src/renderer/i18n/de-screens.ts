@@ -30,6 +30,8 @@ export const deScreens = {
   'stats.todos': 'Todos',
   'stats.pages': 'Wiki-Seiten',
   'stats.words': 'Wörter',
+  'stats.oversized':
+    '{count} Dateien sind größer als 2 MB und werden nur mit ihrem Namen indiziert.',
 
   'screen.capture.overline': 'Reindumpen',
   'screen.capture.title': 'Erfassen',

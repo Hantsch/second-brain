@@ -43,6 +43,7 @@ export const indexStats: IndexStats = {
   words: 18420,
   builtAt: NOW,
   durationMs: 640,
+  oversized: [],
 };
 
 export const appInfo: AppInfo = {

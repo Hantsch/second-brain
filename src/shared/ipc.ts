@@ -103,6 +103,8 @@ export interface IndexStats {
   words: number;
   builtAt: string | null;
   durationMs: number | null;
+  /** Vault-relative paths of files skipped because they exceed the size guard. */
+  oversized: string[];
 }
 
 export interface AppInfo {

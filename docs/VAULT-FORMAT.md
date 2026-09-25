@@ -54,7 +54,9 @@ so it never falls back to `project`.
     settings.json              vault settings (travel with it)
     overview.json               reminder quiet periods, deadlines already reported
     gardener.json               latest maintenance report, "dismissed", snoozed days, completed findings
-    index/index.json           search index + file hashes
+    index/index.json           manifest: file hashes + derived lists, no bodies
+    index/index.bodies/<xx>.json  bodies, 256 buckets (xx = first two hex chars of sha256(path))
+    index/index.search.json    search state + the hashes it covers
     chats/<id>.json            conversation histories
     logs/                      app logs
     trash/                     copies for undo

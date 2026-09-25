@@ -19,6 +19,7 @@ export function emptyStats(): IndexStats {
     words: 0,
     builtAt: null,
     durationMs: null,
+    oversized: [],
   };
 }
 
@@ -26,7 +27,12 @@ export function emptyStats(): IndexStats {
 export function indexStats(index: VaultIndex | null): IndexStats {
   if (index === null) return emptyStats();
   let words = 0;
-  for (const doc of index.docs) words += doc.words;
+  const oversized: string[] = [];
+  for (const doc of index.docs) {
+    words += doc.words;
+    if (doc.oversized === true) oversized.push(doc.path);
+  }
+  oversized.sort();
   return {
     docs: index.docs.length,
     todos: index.todos.length,
@@ -36,5 +42,6 @@ export function indexStats(index: VaultIndex | null): IndexStats {
     words,
     builtAt: index.builtAt.length > 0 ? index.builtAt : null,
     durationMs: index.durationMs,
+    oversized,
   };
 }

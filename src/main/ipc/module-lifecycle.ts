@@ -39,7 +39,7 @@ import type {
   ModuleLifecycleIndexView,
   RenamePlan,
 } from '@core/wiki';
-import { modulePath } from '@core/vault/paths';
+import { moduleDir, modulePath } from '@core/vault/paths';
 import type {
   ModuleDeletePlan,
   ModuleDeleteResult,
@@ -139,8 +139,17 @@ export function moduleLifecycleHandlers(services: Services): HandlerMap {
       /* `result.written` already names the new module.md (the plan always lists
          it), so the path-scoped gate in `settle()` never skips this — but the
          explicit `modulePath` below keeps that true even if a future plan ever
-         didn't rewrite it, e.g. two modules merging into an unrelated slug. */
-      await settle(services, [...result.written, modulePath(result.newSlug)], 'modules');
+         didn't rewrite it, e.g. two modules merging into an unrelated slug.
+         `moduleDir(slug)` (the *old* slug, extension-less) is what makes
+         `refreshPaths` diff that subtree via `refreshDirectory` — without it
+         the old module folder's docs, now living elsewhere, never get dropped
+         from the index (they just vanished from `slug`'s directory, which
+         nothing else in `result.written` names). */
+      await settle(
+        services,
+        [...result.written, modulePath(result.newSlug), moduleDir(slug)],
+        'modules',
+      );
       return result;
     },
 
@@ -154,9 +163,13 @@ export function moduleLifecycleHandlers(services: Services): HandlerMap {
       );
       /* Unlike rename, `result.written` can be empty (no outside source or
          project referenced the module) — `modulePath` guarantees at least one
-         `.md`-extension path so `settle()`'s gate always runs the rebuild that
-         notices the folder is gone. */
-      await settle(services, [...result.written, modulePath(slug)], 'modules');
+         `.md`-extension path so `settle()`'s gate always runs the rebuild.
+         `moduleDir(slug)` (extension-less) is what actually makes that rebuild
+         notice the folder is gone: `refreshPaths` only diffs a subtree for an
+         extension-less path (`refreshDirectory`); a lone `modulePath(slug)`
+         just gets statted as a single now-missing file, dropping *that* path
+         from the index but never checking siblings under the same folder. */
+      await settle(services, [...result.written, modulePath(slug), moduleDir(slug)], 'modules');
       return result;
     },
 

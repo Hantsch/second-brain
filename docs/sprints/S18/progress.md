@@ -1,0 +1,26 @@
+- 2026-09-25 13:33:19 · refine · 054 055 056 062 052 053 060 061 · started
+- 2026-09-25 13:40:19 · refine · 054 055 056 062 052 053 060 061 · done
+- 2026-09-25 13:40:22 · 054 · build · started
+- 2026-09-25 13:40 · 054 · D1 persistence split · started
+- 2026-09-25 13:53 · 054 · D1 persistence split · done
+- 2026-09-25 13:54 · 054 · D2 incremental derivation stage · started
+- 2026-09-25 14:02 · 054 · D2 incremental derivation stage · done
+- 2026-09-25 14:02 · 054 · D3 path-scoped refresh · started
+- 2026-09-25 14:12 · 054 · D3 path-scoped refresh · done
+- 2026-09-25 14:12 · 054 · D4 startup no re-derive · started
+- 2026-09-25 14:20 · 054 · D4 startup no re-derive · done
+- 2026-09-25 14:20 · 054 · D5 document-size guard · started
+- 2026-09-25 14:23 · 054 · D5 document-size guard · done
+- 2026-09-25 14:23 · 054 · D6 index stats card note · started
+- 2026-09-25 14:25 · 054 · D6 index stats card note · done
+- 2026-09-25 14:26 · 054 · D7 realistic perf test · started
+- 2026-09-25 14:39 · 054 · D7 realistic perf test · done
+- 2026-09-25 14:39 · 054 · verify · started
+- 2026-09-25 14:47 · 054 · verify · blocked: module-lifecycle-ipc regression from path-scoped refresh
+- 2026-09-25 14:48 · 054 · verify · started
+- 2026-09-25 14:52 · 054 · verify · done
+- 2026-09-25 14:52 · 054 · review 1 · started
+- 2026-09-25 14:56 · 054 · review 1 · done
+- 2026-09-25 14:59 · 054 · verify · started
+- 2026-09-25 15:02 · 054 · verify · done
+- 2026-09-25 15:03 · 054 · story · done

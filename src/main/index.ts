@@ -189,6 +189,17 @@ app.on('will-quit', () => {
     if (runningServices) {
       getWorkQueue(runningServices).cancelAll('shutdown');
       getWorkQueue(runningServices).clear();
+      /* The same safety net an explicit `vault:close` already gets via
+         `Services.closeVault` (054): a normal quit must flush a pending
+         deferred search-state save too, not only a crash — the coverage map
+         tolerates a missed flush, but a flushed one saves the next open a
+         needless re-tokenize. Fire-and-forget like the rest of this handler:
+         `will-quit` does not await its listener, so this can only be started
+         here, not guaranteed finished — same ceiling the JSON write already
+         lives under. */
+      void Promise.resolve(runningServices.index()?.dispose?.()).catch((error: unknown) => {
+        console.warn('[vault] Index-Flush beim Beenden fehlgeschlagen:', error);
+      });
     }
   } finally {
     /* What the app started, the app stops (034, AC 6): the llama.cpp engine is

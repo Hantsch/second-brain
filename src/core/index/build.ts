@@ -13,7 +13,7 @@
  */
 
 import { ALL_DOC_TYPES } from '@shared/types';
-import type { DocType, RawSource } from '@shared/types';
+import type { DocType, RawSource, Todo } from '@shared/types';
 import { parse } from '@core/vault/frontmatter';
 import { sha256 } from '@core/vault/hash';
 import { titleFor, wordCount } from '@core/vault/doc';
@@ -24,8 +24,15 @@ import { deriveAreas } from './areas';
 import { derivePages, deriveSources, moduleOfPath } from './pages';
 import type { IngestEntry } from './pages';
 import { deriveProjects, projectTitles } from './projects';
-import { applyProjectTitles, parseTodos, projectOfPath, scopeHint } from './todos';
+import {
+  applyProjectTitles,
+  parseTodos,
+  projectOfPath,
+  refreshDueInDays,
+  scopeHint,
+} from './todos';
 import { asStringList, asText } from './text';
+import { YIELD_EVERY, yieldToEventLoop } from './yield';
 import type {
   ExternalTouches,
   IndexProgress,
@@ -45,6 +52,13 @@ const INGEST_SUFFIX = '.ingest.json';
 
 /** Hoechstzahl an Fortschrittsmeldungen eines Laufs — der Renderer braucht keine 5000. */
 const PROGRESS_STEPS = 50;
+
+/**
+ * Groessengrenze fuer gelesene Dateien. Darueber liegende Dateien werden nie
+ * geoeffnet, nur als Stub mit Namen gefuehrt — ein einzelnes pathologisch grosses
+ * Dokument soll weder den Speicher noch die Suche eines ganzen Laufs sprengen.
+ */
+export const MAX_INDEXED_BYTES = 2 * 1024 * 1024;
 
 /**
  * So viele Dateien werden gleichzeitig gelesen. Ein Vault auf einem USB-Stick lebt
@@ -67,6 +81,8 @@ export interface BuildOptions extends DerivationOptions {
   /** Vorhandener Index. Unveraenderte Dateien werden daraus uebernommen. */
   previous?: VaultIndex | null;
   onProgress?: IndexProgress;
+  /** Wer den Event-Loop zwischendurch bedienen will — Tests zaehlen die Aufrufe. */
+  yieldControl?: () => Promise<void>;
 }
 
 /** Dokumenttyp aus dem Pfad, wenn das Frontmatter keinen nennt. */
@@ -128,6 +144,32 @@ export function toIndexedDoc(path: string, content: string, stat: VaultStat): In
 }
 
 /**
+ * Stub fuer eine Datei jenseits von `MAX_INDEXED_BYTES`: nie gelesen, deshalb ohne
+ * Rumpf, Todos oder Suchtext — nur ueber den Titel aus dem Pfad auffindbar.
+ */
+function oversizedDoc(stat: VaultStat): IndexedDoc {
+  return {
+    path: stat.path,
+    docType: docTypeFromPath(stat.path),
+    title: titleFor(stat.path, {}),
+    tags: [],
+    lang: null,
+    updated: stat.modified,
+    hash: '',
+    size: stat.size,
+    body: '',
+    text: '',
+    words: 0,
+    bodyLine: 1,
+    frontmatter: {},
+    module: moduleOfPath(stat.path),
+    scope: scopeHint(stat.path, {}),
+    project: projectOfPath(stat.path),
+    oversized: true,
+  };
+}
+
+/**
  * Alle Ableitungen aus den Dokumenten — ohne Dateizugriff, damit sie einzeln
  * testbar bleiben und ein Neuaufbau nichts zweimal liest.
  */
@@ -141,14 +183,81 @@ export function deriveIndex(docs: IndexedDoc[], options: DerivationOptions = {})
      input selector already refuses to read back (`inputs-project.ts`). */
   const todos = docs
     .filter((doc) => doc.docType !== 'condensed')
-    .flatMap((doc) =>
-      parseTodos(doc.body, {
-        path: doc.path,
-        frontmatter: doc.frontmatter,
-        lineOffset: doc.bodyLine,
-        today: now,
-      }),
-    );
+    .flatMap((doc) => todosOf(doc, now));
+  return aggregateIndex(docs, todos, now, options);
+}
+
+/** Todos einer Datei, mit dem gemeinsamen Vokabular aus `parseTodos`. */
+function todosOf(doc: IndexedDoc, today: DateLike): Todo[] {
+  return parseTodos(doc.body, {
+    path: doc.path,
+    frontmatter: doc.frontmatter,
+    lineOffset: doc.bodyLine,
+    today,
+  });
+}
+
+export interface IncrementalDerivationOptions extends DerivationOptions {
+  /** Wer den Event-Loop zwischendurch bedienen will — Tests zaehlen die Aufrufe. */
+  yieldControl?: () => Promise<void>;
+}
+
+/**
+ * Dieselbe Ableitung wie `deriveIndex`, aber inkrementell und dem Event-Loop
+ * gegenueber hoeflich: Todos eines Dokuments, dessen Hash sich gegenueber `previous`
+ * nicht geaendert hat, werden aus dem alten Index uebernommen statt neu geparst —
+ * nur ihre Fristen ziehen am Ende auf das uebergebene „heute" nach, damit auch
+ * unveraenderte Dokumente korrekte `dueInDays` zeigen. Zwischen Haeppchen von
+ * `YIELD_EVERY` Dokumenten gibt der Lauf den Event-Loop einmal frei, damit ein
+ * grosser Vault die Shell nicht fuer die ganze Laufzeit einfriert.
+ */
+export async function deriveIndexIncremental(
+  docs: IndexedDoc[],
+  previous: VaultIndex | null,
+  options: IncrementalDerivationOptions = {},
+): Promise<VaultIndex> {
+  const now = options.now ?? new Date();
+  const yieldControl = options.yieldControl ?? yieldToEventLoop;
+  const previousTodosByPath = new Map<string, Todo[]>();
+  for (const todo of previous?.todos ?? []) {
+    const list = previousTodosByPath.get(todo.path);
+    if (list === undefined) previousTodosByPath.set(todo.path, [todo]);
+    else list.push(todo);
+  }
+
+  const todos: Todo[] = [];
+  let sinceYield = 0;
+  for (const doc of docs) {
+    if (doc.docType !== 'condensed') {
+      const known = previous?.byPath.get(doc.path);
+      if (known !== undefined && known.hash === doc.hash) {
+        for (const todo of previousTodosByPath.get(doc.path) ?? []) todos.push({ ...todo });
+      } else {
+        todos.push(...todosOf(doc, now));
+      }
+    }
+    sinceYield += 1;
+    if (sinceYield >= YIELD_EVERY) {
+      sinceYield = 0;
+      await yieldControl();
+    }
+  }
+  refreshDueInDays(todos, now);
+
+  return aggregateIndex(docs, todos, now, options);
+}
+
+/**
+ * Alles, was aus Dokumenten und ihren Todos folgt — Projekte, Bereiche, der
+ * Wiki-Graph. Eine Stelle fuer beide Ableitungswege (`deriveIndex` und
+ * `deriveIndexIncremental`), damit sie nie auseinanderlaufen.
+ */
+function aggregateIndex(
+  docs: IndexedDoc[],
+  todos: Todo[],
+  now: DateLike,
+  options: DerivationOptions,
+): VaultIndex {
   const projects = deriveProjects(docs, todos, {
     now,
     staleAfterDays: options.staleAfterDays,
@@ -185,7 +294,7 @@ function withModuleCounts(
 }
 
 /** Eine gefundene Rohquelle samt dem Ort ihres Protokolls. */
-interface IngestScan extends IngestEntry {
+export interface IngestScan extends IngestEntry {
   /** Pfad der `.ingest.json` selbst — bei beiden Varianten ein anderer. */
   protocol: string;
 }
@@ -198,7 +307,7 @@ interface IngestScan extends IngestEntry {
  * Geschwisterdatei neben ihrem Markdown liegen — und meldet dem Nutzer eine
  * Zahl ueber seinen Vault, die kleiner ist als der Vault.
  */
-function collectIngest(files: readonly VaultStat[]): Map<string, IngestScan> {
+export function collectIngest(files: readonly VaultStat[]): Map<string, IngestScan> {
   const entries = new Map<string, IngestScan>();
   const siblings: IngestScan[] = [];
   for (const file of files) {
@@ -244,15 +353,22 @@ function folderOf(entries: Map<string, IngestScan>, path: string): IngestScan | 
   return undefined;
 }
 
+/** What a tree walk finds, before any derivation runs over it. */
+export interface ScanResult {
+  docs: IndexedDoc[];
+  sources: RawSource[];
+}
+
 /**
- * Den Vault durchlaufen und den Index bauen. `.secondbrain/` bleibt aussen vor,
- * Binaerdateien unter `raw/` ebenso — indiziert wird, was Markdown ist.
+ * Den Vault durchlaufen: stat alles, lies nur, was sich gegenueber `previous`
+ * geaendert hat. Reine Sammlung — keine Ableitung, damit ein Aufrufer, der nur
+ * wissen will *ob* sich etwas geaendert hat, dafuer nicht auch die teuren
+ * Ableitungen (Projekte, Seiten, Todos) mitbezahlt.
  */
-export async function buildIndex(
+export async function scanVault(
   store: VaultStore,
   options: BuildOptions = {},
-): Promise<VaultIndex> {
-  const startedAt = Date.now();
+): Promise<ScanResult> {
   const previous = options.previous ?? null;
   const files: VaultStat[] = [];
   for await (const entry of store.walk()) files.push(entry);
@@ -283,9 +399,22 @@ export async function buildIndex(
     }),
   );
 
-  return deriveIndex(docs, {
+  return { docs, sources: deriveSources([...ingest.values()]) };
+}
+
+/**
+ * Den Vault durchlaufen und den Index bauen. `.secondbrain/` bleibt aussen vor,
+ * Binaerdateien unter `raw/` ebenso — indiziert wird, was Markdown ist.
+ */
+export async function buildIndex(
+  store: VaultStore,
+  options: BuildOptions = {},
+): Promise<VaultIndex> {
+  const startedAt = Date.now();
+  const { docs, sources } = await scanVault(store, options);
+  return deriveIndexIncremental(docs, options.previous ?? null, {
     ...options,
-    sources: deriveSources([...ingest.values()]),
+    sources,
     builtAt: new Date().toISOString(),
     durationMs: Date.now() - startedAt,
   });
@@ -295,7 +424,7 @@ export async function buildIndex(
  * Ein Dokument holen — aus dem alten Index, wenn die Datei unberuehrt ist.
  * `null`, wenn die Datei zwischen Verzeichnislauf und Lesen verschwunden ist.
  */
-async function indexOne(
+export async function indexOne(
   store: VaultStore,
   file: VaultStat,
   previous: VaultIndex | null,
@@ -304,6 +433,7 @@ async function indexOne(
   if (known !== undefined && known.updated === file.modified && known.size === file.size) {
     return known;
   }
+  if (file.size > MAX_INDEXED_BYTES) return oversizedDoc(file);
   const content = await store.readText(file.path);
   if (content === null) return null;
   if (known !== undefined && known.hash === sha256(content)) {

@@ -277,7 +277,7 @@ describe('areas in the index', () => {
     const store = vaultStore();
     const persistence = new VaultIndexStore(store);
     const index = await buildIndex(store, { now: TODAY });
-    await persistence.save(index);
+    await persistence.save(index, 'all');
 
     const loaded = await persistence.load();
     expect(loaded?.index.areas).toEqual(index.areas);

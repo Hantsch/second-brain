@@ -147,6 +147,41 @@ describe('IndexService: eigene Ablage', () => {
   });
 });
 
+describe('IndexService: derived() Memoisierung', () => {
+  it('rechnet einmal je Generation und erneut nach einer Aenderung', async () => {
+    const vault = store();
+    const service = await IndexService.open(vault, OPTIONS);
+    const before = service.dumps();
+    const generationBefore = service.generation();
+    // Zweiter Aufruf ohne Aenderung: dieselbe Referenz, nicht neu gerechnet.
+    expect(service.dumps()).toBe(before);
+
+    await vault.writeText(
+      'inbox/2026-08-10-1500-neuer-gedanke.md',
+      '---\ntype: dump\ntitle: Neuer Gedanke\nstatus: raw\n---\n\nNoch unsortiert.\n',
+    );
+    await service.refresh(['inbox/2026-08-10-1500-neuer-gedanke.md']);
+
+    expect(service.generation()).toBeGreaterThan(generationBefore);
+    const after = service.dumps();
+    expect(after).not.toBe(before);
+    expect(after.length).toBe(before.length + 1);
+  });
+
+  it('rechnet nicht neu, wenn ein Lauf nichts am Index aendert', async () => {
+    const vault = store();
+    const service = await IndexService.open(vault, OPTIONS);
+    const before = service.dumps();
+    const generationBefore = service.generation();
+
+    await vault.writeText('raw/files/x/bild.png', 'binaer');
+    await service.refresh(['raw/files/x/bild.png']);
+
+    expect(service.generation()).toBe(generationBefore);
+    expect(service.dumps()).toBe(before);
+  });
+});
+
 describe('IndexService: abgeleitete Listen', () => {
   it('liefert Projekte, Todos, Dumps, Tage, Module und Quellen', async () => {
     const service = await IndexService.open(store(), OPTIONS);

@@ -23,6 +23,7 @@ export const enScreens = {
   'stats.todos': 'Todos',
   'stats.pages': 'Wiki pages',
   'stats.words': 'Words',
+  'stats.oversized': '{count} files are larger than 2 MB and are indexed by name only.',
 
   'screen.capture.overline': 'Dump it',
   'screen.capture.title': 'Capture',

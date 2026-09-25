@@ -1,10 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { buildIndex, deriveIndex, docTypeFromPath, toIndexedDoc } from '@core/index/build';
+import {
+  buildIndex,
+  deriveIndex,
+  deriveIndexIncremental,
+  docTypeFromPath,
+  toIndexedDoc,
+} from '@core/index/build';
 import { SearchEngine } from '@core/index/search';
+import type { IndexedDoc } from '@core/index/types';
+import { YIELD_EVERY } from '@core/index/yield';
 import { MemoryVaultStore } from '@core/vault/memory-store';
 import type { VaultStat } from '@core/vault/types';
 import { ALL_DOC_TYPES } from '@shared/types';
-import { CountingStore, NYOTA_PROJECT, TODAY, vaultFiles, vaultStore } from './fixtures';
+import { CountingStore, NYOTA_PROJECT, TODAY, makeDoc, vaultFiles, vaultStore } from './fixtures';
 
 const NOTE = (title: string, body: string): string =>
   ['---', 'type: note', `title: ${title}`, '---', '', body, ''].join('\n');
@@ -82,6 +90,33 @@ describe('buildIndex: Durchlauf', () => {
     expect(seen[0]).toEqual([0, total]);
     expect(seen[seen.length - 1]).toEqual([total, total]);
     expect(seen.every(([done, count]) => done <= count && count === total)).toBe(true);
+  });
+});
+
+describe('buildIndex: Groessengrenze', () => {
+  it('an oversized file is indexed by name only and never read', async () => {
+    const store = smallStore();
+    const big = 'x'.repeat(2 * 1024 * 1024 + 1);
+    await store.write({ path: 'areas/big.md', body: big });
+    store.reads.length = 0;
+
+    const index = await buildIndex(store);
+
+    expect(store.markdownReads()).not.toContain('areas/big.md');
+    expect(store.markdownReads().sort()).toEqual(['areas/a.md', 'areas/b.md', 'inbox/c.md']);
+
+    const doc = index.byPath.get('areas/big.md');
+    expect(doc).toMatchObject({
+      docType: 'area',
+      body: '',
+      text: '',
+      words: 0,
+      hash: '',
+      frontmatter: {},
+      oversized: true,
+    });
+    expect(doc?.title.length).toBeGreaterThan(0);
+    expect(index.docs).toHaveLength(4);
   });
 });
 
@@ -268,6 +303,48 @@ describe('deriveIndex', () => {
     expect(doc.docType).toBe('condensed');
     const index = deriveIndex([doc], { now: '2026-08-14' });
     expect(index.todos).toEqual([]);
+  });
+});
+
+describe('deriveIndexIncremental', () => {
+  it('yields to the event loop between chunks on a large build', async () => {
+    const docs: IndexedDoc[] = [];
+    for (let i = 0; i < 1000; i += 1) {
+      docs.push(makeDoc({ path: `areas/n-${i}.md`, body: `Text ${i}` }));
+    }
+    let calls = 0;
+    await deriveIndexIncremental(docs, null, {
+      now: TODAY,
+      yieldControl: async () => {
+        calls += 1;
+      },
+    });
+    expect(calls).toBeGreaterThanOrEqual(Math.floor(1000 / YIELD_EVERY));
+  });
+
+  it("reuses an unchanged doc's todos instead of re-parsing, but refreshes dueInDays", async () => {
+    const stat: VaultStat = {
+      path: 'projects/work/nyota-auth0-migration/project.md',
+      size: NYOTA_PROJECT.length,
+      modified: '2026-08-10T09:00:00.000Z',
+      dir: false,
+    };
+    const doc = toIndexedDoc(stat.path, NYOTA_PROJECT, stat);
+    const previous = deriveIndex([doc], { now: '2026-08-10' });
+    // A marker a real parse run would never produce — proof that the todo was
+    // carried over from the previous index instead of parsed anew.
+    const target = previous.todos.find((todo) => todo.due === '2026-08-15');
+    expect(target).toBeDefined();
+    if (target !== undefined) target.text = 'MARKER-FROM-PREVIOUS-RUN';
+
+    const next = await deriveIndexIncremental([doc], previous, { now: '2026-08-14' });
+    const reused = next.todos.find((todo) => todo.due === '2026-08-15');
+    expect(reused?.text).toBe('MARKER-FROM-PREVIOUS-RUN');
+    // Reused, not the exact same object — a shallow copy so refreshing dueInDays
+    // below does not mutate the previous index's todo.
+    expect(reused).not.toBe(target);
+    expect(reused?.dueInDays).toBe(1);
+    expect(target?.dueInDays).not.toBe(1);
   });
 });
 

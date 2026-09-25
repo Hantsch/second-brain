@@ -47,6 +47,8 @@ export interface IndexedDoc {
   scope: Scope | null;
   /** Projekt-Slug bei allem unter `projects/<scope>/<slug>/`. */
   project: string | null;
+  /** true, wenn die Datei die Groessengrenze sprengt und nie gelesen wurde. */
+  oversized?: true;
 }
 
 /** Ein Wikilink, der ins Nichts zeigt. Futter fuer den Pflegelauf. */
@@ -90,11 +92,31 @@ export interface VaultIndex {
 /** Serialisierter MiniSearch-Zustand. Nur `search.ts` deutet ihn. */
 export type SerializedSearch = AsPlainObject;
 
+/** The day and threshold the date-dependent derivations (stale projects, …) were computed for. */
+export interface IndexDerivedFor {
+  /** Local day, `YYYY-MM-DD`. */
+  day: string;
+  staleAfterDays: number;
+}
+
 /** Was `IndexStore.load()` zurueckgibt: Daten plus Suchzustand. */
 export interface StoredIndex {
+  /** Only documents whose body bucket entry matched the manifest's hash. */
   index: VaultIndex;
   /** null, wenn der Suchzustand fehlte oder nicht passte — dann neu aufbauen. */
   search: SerializedSearch | null;
+  /**
+   * Path → hash the search state was built from. Empty when `search` is null. A
+   * caller may only trust `search` for documents whose hash matches here.
+   */
+  covers: ReadonlyMap<string, string>;
+  /**
+   * true when the manifest listed documents that were dropped (bucket missing or
+   * broken, entry missing, hash mismatch). They are simply absent from `index`, so
+   * the next build reads them from the files again.
+   */
+  partial: boolean;
+  derivedFor: IndexDerivedFor | null;
 }
 
 /**
@@ -103,7 +125,18 @@ export interface StoredIndex {
  */
 export interface IndexStore {
   load(): Promise<StoredIndex | null>;
-  save(index: VaultIndex, search?: SerializedSearch | null): Promise<void>;
+  /**
+   * Rewrites the body buckets of `touched` (a deleted path's bucket is rewritten
+   * without it), then the manifest — in that order, so a manifest never points at
+   * bucket entries that were not written yet.
+   */
+  save(
+    index: VaultIndex,
+    touched: readonly string[] | 'all',
+    derivedFor?: IndexDerivedFor,
+  ): Promise<void>;
+  /** Writes the search state together with the path → hash pairs it covers. */
+  saveSearch(state: SerializedSearch, covers: ReadonlyMap<string, string>): Promise<void>;
   clear(): Promise<void>;
 }
 

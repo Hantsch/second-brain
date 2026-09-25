@@ -46,6 +46,19 @@ describe('indexStats', () => {
       words: index.docs[0]!.words + index.docs[1]!.words,
       builtAt: '2026-08-10T09:00:00.000Z',
       durationMs: 42,
+      oversized: [],
     });
+  });
+
+  it('stats list oversized files', () => {
+    const index = deriveIndex(
+      [
+        makeDoc({ path: 'areas/small.md', body: 'Kurzer Text.' }),
+        makeDoc({ path: 'areas/z-big.md', body: '', oversized: true }),
+        makeDoc({ path: 'areas/a-big.md', body: '', oversized: true }),
+      ],
+      { now: '2026-08-10' },
+    );
+    expect(indexStats(index).oversized).toEqual(['areas/a-big.md', 'areas/z-big.md']);
   });
 });

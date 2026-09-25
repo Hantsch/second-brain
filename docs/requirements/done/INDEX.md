@@ -248,3 +248,4 @@ second roadmap.
   after one review-fix round (a frontmatter data-loss bug in the reference rewriters, hardcoded
   German preview strings, string-replace/word-boundary bugs, a watcher-pause race, and a silent
   undo-failure gap).
+- 054 — Saving one file costs one file · S18 · Index persistence/derivation/refresh/startup made incremental and scoped to the change; size guard added; perf-budgeted.

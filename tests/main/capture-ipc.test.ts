@@ -44,6 +44,7 @@ function crippledIndex() {
       words: 0,
       builtAt: null,
       durationMs: null,
+      oversized: [],
     }),
     rebuild: async () => crippledIndex().stats(),
     search: () => [],

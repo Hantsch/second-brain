@@ -267,6 +267,35 @@ export function ingestLogPath(rawDir: string): string {
 export const markerPath = (): string => VAULT_MARKER_FILE;
 export const vaultSettingsPath = (): string => VAULT_SETTINGS_FILE;
 export const indexPath = (): string => `${INTERNAL_DIRS.index}/index.json`;
+
+/** The files a persisted index consists of, all derived from its manifest path. */
+export interface IndexFiles {
+  /** `<dir>/<stem>.json` — everything except bodies and search state. */
+  manifest: string;
+  /** `<dir>/<stem>.bodies` — one bucket file per first two hex chars of `sha256(path)`. */
+  bodiesDir: string;
+  /** `<dir>/<stem>.search.json` — the MiniSearch state plus the hashes it covers. */
+  search: string;
+}
+
+/** Layout of the index next to a manifest; the stem is the file name without `.json`. */
+export function indexFiles(manifest: string = indexPath()): IndexFiles {
+  const dir = dirName(manifest);
+  const name = baseName(manifest);
+  const stem = name.toLowerCase().endsWith('.json') ? name.slice(0, -'.json'.length) : name;
+  const sibling = (file: string): string => (dir.length === 0 ? file : `${dir}/${file}`);
+  return {
+    manifest: toVaultPath(manifest),
+    bodiesDir: sibling(`${stem}.bodies`),
+    search: sibling(`${stem}.search.json`),
+  };
+}
+
+/** One body bucket file, `<bodiesDir>/<bucket>.json`. */
+export function indexBucketPath(files: IndexFiles, bucket: string): string {
+  return `${files.bodiesDir}/${bucket}.json`;
+}
+
 export const chatPath = (id: string): string => joinVaultPath(INTERNAL_DIRS.chats, `${id}.json`);
 export const trashDir = (): string => INTERNAL_DIRS.trash;
 

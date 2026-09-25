@@ -39,6 +39,21 @@ export function IndexStatsCard() {
           </div>
         ))}
       </dl>
+      {/* D5 read files > 2 MiB by name only, never their content — this is the
+          honest note that tells the user which files that is, so a "why isn't
+          this found" question has an answer instead of a silent gap. */}
+      {data.oversized.length > 0 ? (
+        <div className="sb-setting">
+          <p className="sb-setting-example">
+            {t('stats.oversized', { count: data.oversized.length })}
+          </p>
+          <ul className="sb-mono sb-vault-path">
+            {data.oversized.map((path) => (
+              <li key={path}>{path}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
     </Panel>
   );
 }

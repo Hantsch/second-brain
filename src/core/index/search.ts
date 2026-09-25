@@ -21,6 +21,7 @@ import { makeSnippet } from './snippet';
 import { fold } from './text';
 import { DEFAULT_SEARCH_LIMIT } from './types';
 import type { IndexedDoc, SerializedSearch } from './types';
+import { YIELD_EVERY, yieldToEventLoop } from './yield';
 
 /** What MiniSearch sees of a document. */
 interface SearchDoc {
@@ -161,6 +162,21 @@ export class SearchEngine {
 
   addAll(docs: Iterable<IndexedDoc>): void {
     this.mini.addAll([...docs].map(toSearchDoc));
+  }
+
+  /**
+   * Wie `addAll`, aber in Haeppchen von `YIELD_EVERY` Dokumenten mit einem Yield
+   * dazwischen — ein voller Neuaufbau des Suchindex soll die Shell nicht fuer die
+   * ganze Laufzeit einfrieren.
+   */
+  async addAllYielding(
+    docs: readonly IndexedDoc[],
+    yieldControl: () => Promise<void> = yieldToEventLoop,
+  ): Promise<void> {
+    for (let start = 0; start < docs.length; start += YIELD_EVERY) {
+      this.mini.addAll(docs.slice(start, start + YIELD_EVERY).map(toSearchDoc));
+      if (start + YIELD_EVERY < docs.length) await yieldControl();
+    }
   }
 
   /** Add or replace — both the same operation from the caller's perspective. */
