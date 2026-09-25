@@ -1,12 +1,12 @@
 {
-  "ai-scrum-version": "4.0.0",
+  "ai-scrum-version": "4.3.0",
   "files": {
-    ".claude/commands/refine.md": "3159f6f013218d24194c1df0a46725cafe82c005",
-    ".claude/commands/build.md": "24c7dfae2818ad7031c6e70b8a9b202353e2e5c5",
-    ".claude/commands/sprint.md": "99483ca95702cefdf6a985096be09d93d8c53e80",
-    ".claude/commands/roadmap.md": "25355941d61bcdeebb344519973a4962dc07ef1c",
-    ".claude/commands/concept.md": "92508609827e5ce5d1bccc1bc854cb19159ad64b",
-    ".claude/agents/deliverable-hard.md": "104a0cf78d992632deb7cc962df2a85167641d69",
-    ".claude/agents/story-review-hard.md": "34a4dc9598f3af065e41c03c796f75769c667cff"
+    ".claude/commands/refine.md": "8e8d3acb3e0f780ab4b3374d9bdd1d7cb2ee5866",
+    ".claude/commands/build.md": "eccfc79216d187d05d9ebf8cb6fafa034c754467",
+    ".claude/commands/sprint.md": "315b3483d13dd9af184383a3fb1daa17a5ea060f",
+    ".claude/commands/roadmap.md": "1d7ad3165f26d2e4f0a148895eb1c01d73da2b69",
+    ".claude/commands/concept.md": "264400608fd1fe9feb46fd8af90da55f64871955",
+    ".claude/agents/deliverable-hard.md": "bebd82c668513ea1bbdabe75ba4601c2265b1fb6",
+    ".claude/agents/story-review-hard.md": "952b54cb3b93490f8ac9fcba310db469715798a5"
   }
 }

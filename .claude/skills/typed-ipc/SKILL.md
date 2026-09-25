@@ -3,7 +3,7 @@ name: typed-ipc
 description: "Contract-first, end-to-end typed IPC for Electron: one map of channels in the shared layer from which main handlers, the preload allowlist and renderer types all derive, with boot-time and compile-time exhaustiveness checks plus an IPC coverage test. Use when: adding, renaming or removing an IPC channel; adding a main-to-renderer event; writing or reviewing a preload bridge; adding an ipcMain handler; typing window.<bridge> in the renderer; seeing 'no handler registered for channel' at runtime; setting up IPC in a new Electron app. DO NOT USE FOR: Electron layering and security questions (use electron-arch); non-Electron IPC."
 ---
 
-<!-- tech-rules:managed 1.0.0 -->
+<!-- tech-rules:managed 2.1.0 -->
 
 # Contract-First Typed IPC
 
@@ -11,7 +11,7 @@ One file is the single source of truth. Main handlers, the preload allowlist and
 all derive from it, and three separate checks make a drift impossible to ship: a compile error, a
 boot-time crash and a test.
 
-**The rule:** add or change a channel in the contract _first_. Everything else follows from it, and
+**The rule:** add or change a channel in the contract *first*. Everything else follows from it, and
 none of it compiles or starts if it does not.
 
 ## 1. The contract
@@ -21,22 +21,22 @@ In the shared layer (no `node:*`, no `electron`, no DOM), two maps:
 ```ts
 /** Every request/response channel, in one place. */
 export interface IpcInvokeMap {
-  'app:getInfo': { req: void; res: AppInfo };
-  'app:revealPath': { req: string; res: Outcome<null> };
-  'installations:addExisting': { req: AddExistingInput; res: Outcome<Installation> };
+  'app:getInfo': { req: void; res: AppInfo }
+  'app:revealPath': { req: string; res: Outcome<null> }
+  'installations:addExisting': { req: AddExistingInput; res: Outcome<Installation> }
 }
 
 /** Push traffic, main -> renderer. */
 export interface IpcEventMap {
-  'window:state': WindowChromeState;
-  'app:toast': ToastMessage;
+  'window:state': WindowChromeState
+  'app:toast': ToastMessage
 }
 
-export type InvokeChannel = keyof IpcInvokeMap;
-export type InvokeRequest<C extends InvokeChannel> = IpcInvokeMap[C]['req'];
-export type InvokeResponse<C extends InvokeChannel> = IpcInvokeMap[C]['res'];
-export type EventChannel = keyof IpcEventMap;
-export type EventPayload<E extends EventChannel> = IpcEventMap[E];
+export type InvokeChannel = keyof IpcInvokeMap
+export type InvokeRequest<C extends InvokeChannel> = IpcInvokeMap[C]['req']
+export type InvokeResponse<C extends InvokeChannel> = IpcInvokeMap[C]['res']
+export type EventChannel = keyof IpcEventMap
+export type EventPayload<E extends EventChannel> = IpcEventMap[E]
 ```
 
 Naming: `domain:verb`, lower camel verb. The domain prefix is what keeps the map readable at fifty
@@ -57,22 +57,19 @@ export const INVOKE_CHANNELS = [
   'app:getInfo',
   'app:revealPath',
   'installations:addExisting',
-] as const satisfies readonly InvokeChannel[];
+] as const satisfies readonly InvokeChannel[]
 
-export const EVENT_CHANNELS = [
-  'window:state',
-  'app:toast',
-] as const satisfies readonly EventChannel[];
+export const EVENT_CHANNELS = ['window:state', 'app:toast'] as const satisfies readonly EventChannel[]
 
 /**
  * Fails the build when a channel exists in the map but not in the array above.
- * `never` is the only assignable value, so a missing channel is a type error at
- * the assignment, naming exactly which one is missing.
+ * Only `never` is assignable to `never`, so a missing channel is a type error at
+ * the assignment - `Type '"x:y"' is not assignable to type 'never'` - naming it.
  */
-export const ALL_INVOKE_CHANNELS_LISTED: Exclude<InvokeChannel, (typeof INVOKE_CHANNELS)[number]> =
-  undefined as never;
-export const ALL_EVENT_CHANNELS_LISTED: Exclude<EventChannel, (typeof EVENT_CHANNELS)[number]> =
-  undefined as never;
+export const ALL_INVOKE_CHANNELS_LISTED: never =
+  undefined as unknown as Exclude<InvokeChannel, (typeof INVOKE_CHANNELS)[number]>
+export const ALL_EVENT_CHANNELS_LISTED: never =
+  undefined as unknown as Exclude<EventChannel, (typeof EVENT_CHANNELS)[number]>
 ```
 
 `satisfies` catches a name that is not a channel; the `Exclude<>` assertion catches a channel that is
@@ -84,33 +81,29 @@ Typed, narrow, and it re-checks the allowlist at runtime. The compile-time work 
 code; the runtime check is what protects you from a compromised renderer.
 
 ```ts
-const allowedInvoke = new Set<string>(INVOKE_CHANNELS);
-const allowedEvents = new Set<string>(EVENT_CHANNELS);
+const allowedInvoke = new Set<string>(INVOKE_CHANNELS)
+const allowedEvents = new Set<string>(EVENT_CHANNELS)
 
 function invoke<C extends InvokeChannel>(
   channel: C,
   ...args: InvokeRequest<C> extends void ? [] : [InvokeRequest<C>]
 ): Promise<InvokeResponse<C>> {
   if (!allowedInvoke.has(channel)) {
-    return Promise.reject(new Error(`[preload] blocked invoke on unknown channel: ${channel}`));
+    return Promise.reject(new Error(`[preload] blocked invoke on unknown channel: ${channel}`))
   }
-  return ipcRenderer.invoke(channel, ...(args as unknown[])) as Promise<InvokeResponse<C>>;
+  return ipcRenderer.invoke(channel, ...(args as unknown[])) as Promise<InvokeResponse<C>>
 }
 
-function on<E extends EventChannel>(
-  channel: E,
-  listener: (payload: EventPayload<E>) => void,
-): () => void {
+function on<E extends EventChannel>(channel: E, listener: (payload: EventPayload<E>) => void): () => void {
   if (!allowedEvents.has(channel)) {
-    throw new Error(`[preload] blocked subscription on unknown channel: ${channel}`);
+    throw new Error(`[preload] blocked subscription on unknown channel: ${channel}`)
   }
-  const handler = (_event: IpcRendererEvent, payload: unknown): void =>
-    listener(payload as EventPayload<E>);
-  ipcRenderer.on(channel, handler);
-  return () => ipcRenderer.removeListener(channel, handler);
+  const handler = (_event: IpcRendererEvent, payload: unknown): void => listener(payload as EventPayload<E>)
+  ipcRenderer.on(channel, handler)
+  return () => ipcRenderer.removeListener(channel, handler)
 }
 
-contextBridge.exposeInMainWorld('app', { invoke, on });
+contextBridge.exposeInMainWorld('app', { invoke, on })
 ```
 
 Note the void-request trick: `InvokeRequest<C> extends void ? [] : [InvokeRequest<C>]` means
@@ -129,8 +122,8 @@ function handle<C extends InvokeChannel>(
   channel: C,
   handler: (request: InvokeRequest<C>) => Promise<InvokeResponse<C>> | InvokeResponse<C>,
 ): void {
-  registered.add(channel);
-  ipcMain.handle(channel, (_event, request) => handler(request as InvokeRequest<C>));
+  registered.add(channel)
+  ipcMain.handle(channel, (_event, request) => handler(request as InvokeRequest<C>))
 }
 
 /**
@@ -138,8 +131,8 @@ function handle<C extends InvokeChannel>(
  * crash in development, not a rejected promise a user stumbles into months later.
  */
 export function assertContractFullyHandled(): void {
-  const missing = INVOKE_CHANNELS.filter((channel) => !registered.has(channel));
-  if (missing.length > 0) throw new Error(`unhandled IPC channels: ${missing.join(', ')}`);
+  const missing = INVOKE_CHANNELS.filter((channel) => !registered.has(channel))
+  if (missing.length > 0) throw new Error(`unhandled IPC channels: ${missing.join(', ')}`)
 }
 ```
 

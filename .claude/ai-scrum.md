@@ -9,7 +9,7 @@
   the commands read both.
 -->
 
-ai-scrum-version: 4.0.0
+ai-scrum-version: 4.3.0
 project: Gaston
 
 ## Verify
@@ -29,6 +29,19 @@ e2e: npm run test:e2e
   app against a disposable, no-model vault (tests/e2e/). `npm run shot` / `npm run a11y` still
   prove that screens render and are a11y-clean, but only `e2e` drives a flow and asserts an
   outcome. `test` covers everything without a user-facing surface (core logic, IPC, parsing).
+-->
+
+test-story: npx vitest run --changed HEAD
+e2e-story: npx playwright test {files}
+e2e-all: none
+e2e-cleanup: none
+<!--
+  Narrow and broad gates. /build runs `test-story` and `e2e-story` instead of the full
+  `test`/`e2e` per story; /sprint runs full `test`, full `e2e` and `e2e-all` once after the
+  last story. `e2e-all` is `none` because `e2e` already runs the whole Playwright suite —
+  there is no separate "every flow" script to run in addition. `e2e-cleanup` is `none`;
+  revisit if a leftover Electron instance from a killed run ever blocks the next one (only
+  one Electron instance can run at a time on this machine — shared tray icon and hotkey).
 -->
 
 ## Conventions

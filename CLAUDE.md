@@ -172,7 +172,7 @@ Neighbor repos this project deliberately draws from:
 - `../yougrab` — YouTube pipeline (yt-dlp + fallback provider, transcript preparation)
 - `../claude-control` — reading Claude Code sessions from `~/.claude/projects`
 
-<!-- tech-rules:managed:start 1.0.0 -->
+<!-- tech-rules:managed:start 2.1.0 -->
 
 ## House rules
 
@@ -190,3 +190,9 @@ Do not edit a skill to make it fit this project. A deviation is recorded **here*
 reason, and wins over the skill; a deviation without a reason is a violation that has been
 written down.
 <!-- tech-rules:managed:end -->
+
+The `electron` group's one-time templates (`scripts/launch.js`, a self-healing JSON store) were
+declined during `/tech-rules:setup`: this project already has equivalent functionality under
+different names — `scripts/start.mjs` strips `ELECTRON_RUN_AS_NODE` before starting Electron, and
+`src/main/settings.ts` + `src/main/fs-json.ts` (`readJson`, `writeJsonAtomic`) already do atomic,
+versioned JSON persistence. Keep declining both templates on future setup runs.
