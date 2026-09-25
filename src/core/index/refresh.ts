@@ -62,6 +62,7 @@ async function refreshFile(
   previous: VaultIndex,
   docsByPath: Map<string, IndexedDoc>,
   touched: Set<string>,
+  passageThreshold?: number,
 ): Promise<void> {
   const stat = await store.stat(path);
   if (stat === null) {
@@ -70,7 +71,13 @@ async function refreshFile(
   }
   // A document can disappear between the stat and the read (`indexOne` returns
   // null then, same handling as a plain deletion).
-  applyDoc(path, await indexOne(store, stat, previous), previous, docsByPath, touched);
+  applyDoc(
+    path,
+    await indexOne(store, stat, previous, passageThreshold),
+    previous,
+    docsByPath,
+    touched,
+  );
 }
 
 /**
@@ -85,6 +92,7 @@ async function refreshDirectory(
   previous: VaultIndex,
   docsByPath: Map<string, IndexedDoc>,
   touched: Set<string>,
+  passageThreshold?: number,
 ): Promise<void> {
   const known = [...previous.byPath.keys()].filter((path) => isInside(dir, path));
   const files: VaultStat[] = [];
@@ -94,7 +102,13 @@ async function refreshDirectory(
   const found = new Set<string>();
   for (const file of files) {
     found.add(file.path);
-    applyDoc(file.path, await indexOne(store, file, previous), previous, docsByPath, touched);
+    applyDoc(
+      file.path,
+      await indexOne(store, file, previous, passageThreshold),
+      previous,
+      docsByPath,
+      touched,
+    );
   }
   for (const path of known) {
     if (found.has(path)) continue;
@@ -117,6 +131,7 @@ export async function refreshPaths(
   store: VaultStore,
   paths: readonly string[],
   previous: VaultIndex,
+  passageThreshold?: number,
 ): Promise<PathRefreshResult> {
   const docsByPath = new Map(previous.byPath);
   const touched = new Set<string>();
@@ -125,9 +140,9 @@ export async function refreshPaths(
   for (const path of new Set(paths)) {
     const ext = extName(path);
     if (ext === '.md') {
-      await refreshFile(store, path, previous, docsByPath, touched);
+      await refreshFile(store, path, previous, docsByPath, touched, passageThreshold);
     } else if (ext === '') {
-      await refreshDirectory(store, path, previous, docsByPath, touched);
+      await refreshDirectory(store, path, previous, docsByPath, touched, passageThreshold);
     }
     if (touchesSources(path)) sourcesChanged = true;
   }

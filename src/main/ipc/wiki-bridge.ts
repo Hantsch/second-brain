@@ -25,7 +25,13 @@ import type { IndexLike } from '../contracts';
 import type { Services } from '../services';
 
 /** What the knowledge core needs from the index — `IndexService` satisfies it. */
-const WIKI_INDEX_METHODS: readonly string[] = ['index', 'search', 'pages', 'modules'];
+const WIKI_INDEX_METHODS: readonly string[] = [
+  'index',
+  'search',
+  'searchPassages',
+  'pages',
+  'modules',
+];
 
 /**
  * The store as the core needs it: catalog and history are written as raw text

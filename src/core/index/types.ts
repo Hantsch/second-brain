@@ -8,6 +8,7 @@
 
 import type { AsPlainObject } from 'minisearch';
 import type { Area, DocType, Project, RawSource, Scope, Todo, WikiPage } from '@shared/types';
+import type { Passage } from './passages';
 
 /**
  * Eine indizierte Markdown-Datei.
@@ -39,6 +40,8 @@ export interface IndexedDoc {
   words: number;
   /** 1-basierte Zeilennummer der ersten Rumpfzeile in der Datei. */
   bodyLine: number;
+  /** Rumpf in zeilenverankerte Passagen geschnitten (053) — siehe `passages.ts`. */
+  passages: Passage[];
   /** Frontmatter, wie es in der Datei steht — unbekannte Felder eingeschlossen. */
   frontmatter: Record<string, unknown>;
   /** Modul-Slug bei allem unter `modules/<slug>/`. */
@@ -91,6 +94,14 @@ export interface VaultIndex {
 
 /** Serialisierter MiniSearch-Zustand. Nur `search.ts` deutet ihn. */
 export type SerializedSearch = AsPlainObject;
+
+/** One matching passage of a file, with its real file lines (053) — see `SearchEngine.searchPassages`. */
+export interface PassageHit {
+  path: string;
+  startLine: number;
+  endLine: number;
+  score: number;
+}
 
 /** The day and threshold the date-dependent derivations (stale projects, …) were computed for. */
 export interface IndexDerivedFor {

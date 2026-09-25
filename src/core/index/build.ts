@@ -12,7 +12,7 @@
  * zum uebergebenen „heute", auch fuer Dokumente, die nicht neu gelesen wurden.
  */
 
-import { ALL_DOC_TYPES } from '@shared/types';
+import { ALL_DOC_TYPES, VAULT_DIRS } from '@shared/types';
 import type { DocType, RawSource, Todo } from '@shared/types';
 import { parse } from '@core/vault/frontmatter';
 import { sha256 } from '@core/vault/hash';
@@ -31,6 +31,7 @@ import {
   refreshDueInDays,
   scopeHint,
 } from './todos';
+import { PASSAGE_THRESHOLD_CHARS, splitPassages } from './passages';
 import { asStringList, asText } from './text';
 import { YIELD_EVERY, yieldToEventLoop } from './yield';
 import type {
@@ -75,6 +76,12 @@ export interface DerivationOptions {
   sources?: RawSource[];
   builtAt?: string;
   durationMs?: number;
+  /**
+   * Override for `PASSAGE_THRESHOLD_CHARS` (053/`passages.ts`). Only a perf test
+   * uses this — to measure whole-document (no-passage) baseline behaviour with
+   * `Infinity` — production callers rely on the default.
+   */
+  passageThreshold?: number;
 }
 
 export interface BuildOptions extends DerivationOptions {
@@ -89,6 +96,7 @@ export interface BuildOptions extends DerivationOptions {
 export function docTypeFromPath(path: string): DocType {
   if (isInside('inbox', path)) return 'dump';
   if (isInside('journal', path)) return 'journal';
+  if (isInside(VAULT_DIRS.raw, path)) return 'raw';
   if (/^projects\/[^/]+\/[^/]+\/condensed\.md$/.test(path)) return 'condensed';
   if (/^projects\/[^/]+\/[^/]+\/project\.md$/.test(path)) return 'project';
   if (/^areas\/[^/]+\.condensed\.md$/.test(path)) return 'condensed';
@@ -120,9 +128,15 @@ function bodyLineOf(content: string, body: string): number {
 }
 
 /** Rohtext einer Datei zu einem indizierten Dokument machen. */
-export function toIndexedDoc(path: string, content: string, stat: VaultStat): IndexedDoc {
+export function toIndexedDoc(
+  path: string,
+  content: string,
+  stat: VaultStat,
+  passageThreshold: number = PASSAGE_THRESHOLD_CHARS,
+): IndexedDoc {
   const parsed = parse(content);
   const frontmatter = parsed.frontmatter;
+  const bodyLine = bodyLineOf(content, parsed.body);
   return {
     path,
     docType: docTypeOf(path, frontmatter),
@@ -135,7 +149,8 @@ export function toIndexedDoc(path: string, content: string, stat: VaultStat): In
     body: parsed.body,
     text: parsed.body.toLowerCase(),
     words: wordCount(parsed.body),
-    bodyLine: bodyLineOf(content, parsed.body),
+    bodyLine,
+    passages: splitPassages(parsed.body, bodyLine, passageThreshold),
     frontmatter,
     module: moduleOfPath(path),
     scope: scopeHint(path, frontmatter),
@@ -161,6 +176,7 @@ function oversizedDoc(stat: VaultStat): IndexedDoc {
     text: '',
     words: 0,
     bodyLine: 1,
+    passages: [],
     frontmatter: {},
     module: moduleOfPath(stat.path),
     scope: scopeHint(stat.path, {}),
@@ -383,7 +399,9 @@ export async function scanVault(
   let reported = 0;
   for (let start = 0; start < total; start += READ_BATCH) {
     const batch = markdown.slice(start, start + READ_BATCH);
-    const read = await Promise.all(batch.map((file) => indexOne(store, file, previous)));
+    const read = await Promise.all(
+      batch.map((file) => indexOne(store, file, previous, options.passageThreshold)),
+    );
     for (const doc of read) if (doc !== null) docs.push(doc);
     done += batch.length;
     if (done - reported >= step || done === total) {
@@ -428,6 +446,7 @@ export async function indexOne(
   store: VaultStore,
   file: VaultStat,
   previous: VaultIndex | null,
+  passageThreshold?: number,
 ): Promise<IndexedDoc | null> {
   const known = previous?.byPath.get(file.path);
   if (known !== undefined && known.updated === file.modified && known.size === file.size) {
@@ -440,5 +459,5 @@ export async function indexOne(
     // Nur angefasst, nicht geaendert: Ableitung behalten, Zeitstempel nachziehen.
     return { ...known, updated: file.modified, size: file.size };
   }
-  return toIndexedDoc(file.path, content, file);
+  return toIndexedDoc(file.path, content, file, passageThreshold);
 }

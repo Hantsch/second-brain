@@ -3,7 +3,7 @@ import { SearchEngine } from '@core/index/search';
 import { buildIndex } from '@core/index/build';
 import { makeSnippet } from '@core/index/snippet';
 import type { SearchHit, SearchQuery } from '@shared/types';
-import type { VaultIndex } from '@core/index/types';
+import type { IndexedDoc, VaultIndex } from '@core/index/types';
 import { makeDoc, TODAY, vaultStore } from './fixtures';
 
 let index: VaultIndex;
@@ -249,5 +249,127 @@ describe('SearchEngine: Nachziehen', () => {
     lookup.delete('a.md');
     expect(engineTwo.has('a.md')).toBe(false);
     expect(engineTwo.search({ text: 'Kaffeemaschine' }, lookup)).toEqual([]);
+  });
+});
+
+// ── 053: passages, not whole files ──────────────────────────────────────────
+
+/** One paragraph just under the passage target, so every paragraph is its own passage. */
+function paragraph(lead: string): string {
+  return `${lead} ${'fuellwort '.repeat(270)}`.trim();
+}
+
+/** A body of `count` paragraphs; `lead(i)` opens paragraph i. Long enough to be split. */
+function longBody(count: number, lead: (i: number) => string): string {
+  return Array.from({ length: count }, (_, i) => paragraph(lead(i))).join('\n\n');
+}
+
+function lookupOf(docs: readonly IndexedDoc[]): Map<string, IndexedDoc> {
+  return new Map(docs.map((doc) => [doc.path, doc]));
+}
+
+describe('SearchEngine: passages (053)', () => {
+  const LONG = 'raw/youtube/lang/transcript.md';
+
+  it('a long document matching in several passages is one search hit', () => {
+    const long = makeDoc({
+      path: LONG,
+      body: longBody(10, (i) => ([1, 4, 7].includes(i) ? 'zitronenfalter' : 'absatz')),
+    });
+    expect(long.passages).toHaveLength(10);
+    const other = makeDoc({ path: 'notes/other.md', body: 'Nichts Passendes hier.' });
+    const docs = [long, other];
+    const hits = SearchEngine.from(docs).search({ text: 'zitronenfalter' }, lookupOf(docs));
+    expect(hits.map((hit) => hit.path)).toEqual([LONG]);
+  });
+
+  it('collapsing happens before the limit cut', () => {
+    const MARKED = [0, 2, 4, 6, 8];
+    // The term ten times per passage: the long file's passages outrank every short file,
+    // so cutting to the limit before collapsing would leave a single path.
+    const long = makeDoc({
+      path: LONG,
+      body: longBody(10, (i) => (MARKED.includes(i) ? 'zitronenfalter '.repeat(10) : 'absatz')),
+    });
+    const shorts = ['a', 'b', 'c'].map((name) =>
+      makeDoc({ path: `notes/${name}.md`, body: paragraph('zitronenfalter') }),
+    );
+    const docs = [long, ...shorts];
+    const engine = SearchEngine.from(docs);
+    // Precondition of the claim: uncollapsed, the top three all belong to the long file.
+    const top = engine.searchPassages({ text: 'zitronenfalter', limit: 3 }, lookupOf(docs));
+    expect(top.map((hit) => hit.path)).toEqual([LONG, LONG, LONG]);
+
+    const hits = engine.search({ text: 'zitronenfalter', limit: 3 }, lookupOf(docs));
+    expect(hits).toHaveLength(3);
+    expect(new Set(hits.map((hit) => hit.path)).size).toBe(3);
+    expect(hits[0]?.path).toBe(LONG);
+  });
+
+  it('searchPassages returns several passages of one document with their lines', () => {
+    const long = makeDoc({
+      path: LONG,
+      bodyLine: 6,
+      body: longBody(10, (i) => ([1, 4, 7].includes(i) ? 'zitronenfalter' : 'absatz')),
+    });
+    const docs = [long];
+    const hits = SearchEngine.from(docs).searchPassages({ text: 'zitronenfalter' }, lookupOf(docs));
+    expect(hits).toHaveLength(3);
+    const expected = [1, 4, 7].map((n) => {
+      const passage = long.passages[n];
+      return { path: LONG, startLine: passage?.startLine, endLine: passage?.endLine };
+    });
+    const got = hits
+      .map(({ path, startLine, endLine }) => ({ path, startLine, endLine }))
+      .sort((a, b) => a.startLine - b.startLine);
+    expect(got).toEqual(expected);
+    expect(got[0]?.startLine).toBeGreaterThan(6);
+    for (let i = 1; i < hits.length; i += 1) {
+      expect(hits[i]?.score).toBeLessThanOrEqual(hits[i - 1]?.score ?? 0);
+    }
+  });
+
+  it('replacing a long document leaves no stale passage', () => {
+    const before = makeDoc({
+      path: LONG,
+      body: longBody(10, (i) => (i === 8 ? 'schmetterling' : 'absatz')),
+    });
+    const after = makeDoc({ path: LONG, body: longBody(2, () => 'absatz') });
+    expect(after.passages).toHaveLength(2);
+    const engine = SearchEngine.from([before]);
+    expect(engine.search({ text: 'schmetterling' }, lookupOf([before]))).toHaveLength(1);
+
+    engine.replace(after);
+    const lookup = lookupOf([after]);
+    expect(engine.search({ text: 'schmetterling' }, lookup)).toEqual([]);
+    expect(engine.searchPassages({ text: 'schmetterling' }, lookup)).toEqual([]);
+    expect(engine.serialize().documentCount).toBe(2);
+    expect(engine.size).toBe(1);
+
+    engine.remove(LONG);
+    expect(engine.has(LONG)).toBe(false);
+    expect(engine.serialize().documentCount).toBe(0);
+  });
+
+  it('a persisted engine reloads and still replaces per path', () => {
+    const before = makeDoc({
+      path: LONG,
+      body: longBody(10, (i) => (i === 8 ? 'schmetterling' : 'absatz')),
+    });
+    const other = makeDoc({ path: 'notes/other.md', body: 'Ein kurzer Eintrag.' });
+    const saved = JSON.parse(JSON.stringify(SearchEngine.from([before, other]).serialize()));
+    const restored = SearchEngine.restore(saved);
+    if (restored === null) throw new Error('restore rejected its own state');
+    expect(restored.size).toBe(2);
+    expect(restored.has(LONG)).toBe(true);
+
+    const after = makeDoc({ path: LONG, body: longBody(2, () => 'absatz') });
+    restored.replace(after);
+    const lookup = lookupOf([after, other]);
+    expect(restored.search({ text: 'schmetterling' }, lookup)).toEqual([]);
+    expect(restored.serialize().documentCount).toBe(3);
+    expect(restored.search({ text: 'kurzer Eintrag' }, lookup).map((hit) => hit.path)).toEqual([
+      'notes/other.md',
+    ]);
   });
 });

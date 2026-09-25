@@ -35,6 +35,11 @@ export const DEFAULT_RETRIEVE_LIMIT = 6;
 export const CANDIDATE_FACTOR = 3;
 /** Obergrenze der Kandidatenliste — mehr kostet nur Tokens. */
 export const MAX_CANDIDATES = 24;
+/**
+ * Hoechstzahl Ausschnitte je Datei (053): ein langes Dokument darf mehrere
+ * Passagen beisteuern, aber nicht die ganze Antwort mit sich selbst fuellen.
+ */
+export const MAX_PASSAGES_PER_DOC = 3;
 
 export interface RetrieveOptions {
   /** Auf ein Modul einschraenken. */
@@ -70,7 +75,7 @@ export function retrieve(
      (`matchesTypes`), das Durchreichen wuerde die Einschraenkung umdrehen. */
   if (types.length === 0) return [];
   const limit = Math.max(1, options.limit ?? DEFAULT_RETRIEVE_LIMIT);
-  const hits = index.search({
+  const hits = index.searchPassages({
     text,
     limit: Math.min(MAX_CANDIDATES, limit),
     ...(options.module === undefined || options.module === null ? {} : { module: options.module }),
@@ -83,20 +88,28 @@ export function retrieve(
   const byPath = index.index().byPath;
   const terms = questionTerms(text);
   const excerpts: WikiExcerpt[] = [];
+  const perDoc = new Map<string, number>();
 
   for (const hit of hits) {
     const doc = byPath.get(hit.path);
     if (doc === undefined) continue;
-    const slice = buildExcerpt(doc, terms);
+    const usedForPath = perDoc.get(hit.path) ?? 0;
+    if (usedForPath >= MAX_PASSAGES_PER_DOC) continue;
+    const lines = doc.body.replace(/\r\n/g, '\n').split('\n');
+    const startIndex = Math.max(0, hit.startLine - doc.bodyLine);
+    const endIndex = Math.max(startIndex, hit.endLine - doc.bodyLine);
+    const passageBody = lines.slice(startIndex, endIndex + 1).join('\n');
+    const slice = buildExcerpt({ body: passageBody, bodyLine: hit.startLine }, terms);
     if (slice === null) continue;
     excerpts.push({
       path: hit.path,
-      title: hit.title,
+      title: doc.title,
       module: doc.module,
       quote: slice.quote,
       line: slice.line,
       score: hit.score,
     });
+    perDoc.set(hit.path, usedForPath + 1);
     if (excerpts.length >= limit) break;
   }
   return excerpts;
@@ -147,9 +160,12 @@ async function rerank(
 function sourcesFor(index: WikiIndexView, excerpts: readonly WikiExcerpt[]): CitationSource[] {
   const byPath = index.index().byPath;
   const sources: CitationSource[] = [];
+  const seen = new Set<string>();
   for (const excerpt of excerpts) {
+    if (seen.has(excerpt.path)) continue;
     const doc: IndexedDoc | undefined = byPath.get(excerpt.path);
     if (doc === undefined) continue;
+    seen.add(excerpt.path);
     sources.push({
       path: doc.path,
       title: doc.title,

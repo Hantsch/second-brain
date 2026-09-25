@@ -66,7 +66,8 @@ describe('VaultIndexStore: Roundtrip', () => {
     expect(await store.exists(indexPath())).toBe(true);
     expect(await store.exists(FILES.search)).toBe(true);
     expect((await readJson(store, indexPath()))['schema']).toBe(INDEX_SCHEMA_VERSION);
-    expect(INDEX_SCHEMA_VERSION).toBe(3);
+    // 4 since 053: search entries are passages, a schema-3 search file is discarded.
+    expect(INDEX_SCHEMA_VERSION).toBe(4);
   });
 
   it('gibt jedes Feld unveraendert zurueck', async () => {

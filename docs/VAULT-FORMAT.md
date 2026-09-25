@@ -500,6 +500,9 @@ models, or other files. During condensation, `resourceReport` in `.ingest.json`
 records resources mentioned in the transcript or description and preserves all
 description links. Re-running ingestion never removes or overwrites `sources/`.
 
+Files under `raw/` index as type `raw`, derived from the path, without any
+frontmatter change.
+
 ## What the app never does
 
 - Change or delete an ingested source payload under `raw/`; bookkeeping in

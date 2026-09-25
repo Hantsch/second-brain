@@ -16,7 +16,11 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { buildIndex } from '@core/index/build';
+import { PASSAGE_THRESHOLD_CHARS } from '@core/index/passages';
 import { bodyBucket } from '@core/index/persist';
+import { refreshPaths } from '@core/index/refresh';
+import { SearchEngine } from '@core/index/search';
 import { IndexService } from '@core/index/service';
 import { byteLength, ensureStructure, FsVaultStore } from '@core/vault';
 import type { WriteResult } from '@shared/types';
@@ -250,4 +254,116 @@ describe('IndexService: realistic perf budget', () => {
     expect(refreshBytes).toBeGreaterThan(0);
     expect(refreshBytes).toBeLessThan(totalBodyBytes * 0.01);
   }, 120_000);
+});
+
+// ── D5 (053): passage indexing cost at realistic sizes ────────────────────────
+
+const PASSAGE_JOURNAL_DAYS = 500;
+const PASSAGE_TRANSCRIPTS = 300;
+const PASSAGE_NOTES = 2_000;
+
+function passageJournalContent(dayIndex: number): string {
+  const { iso } = journalDate(dayIndex);
+  return [
+    '---',
+    'type: journal',
+    `date: ${iso}`,
+    'tags: [perf]',
+    '---',
+    '',
+    '## Day',
+    '',
+    padTo(`Eintrag fuer ${iso}. `, 1_500),
+    '',
+  ].join('\n');
+}
+
+function passageTranscriptContent(index: number): string {
+  return [
+    '---',
+    'type: note',
+    `title: Transkript ${index}`,
+    '---',
+    '',
+    padTo(`Transkript-Inhalt Nummer ${index}. `, 40_000),
+    '',
+  ].join('\n');
+}
+
+function passageNoteContent(index: number): string {
+  return [
+    '---',
+    'type: note',
+    `title: Notiz ${index}`,
+    '---',
+    '',
+    padTo(`Notizinhalt Nummer ${index}. `, 300),
+    '',
+  ].join('\n');
+}
+
+describe('passage indexing at realistic sizes (D5, 053)', () => {
+  let root: string;
+
+  beforeAll(async () => {
+    root = await mkdtemp(join(tmpdir(), 'sb-perf-passages-'));
+    const setupStore = new FsVaultStore(root);
+    await ensureStructure(setupStore, { name: 'Perfvault', now: new Date('2025-01-01T08:00:00Z') });
+
+    for (let i = 0; i < PASSAGE_JOURNAL_DAYS; i += 1) {
+      await writeDirect(root, journalPathFor(i), passageJournalContent(i));
+    }
+    for (let i = 0; i < PASSAGE_TRANSCRIPTS; i += 1) {
+      await writeDirect(root, transcriptPath(i), passageTranscriptContent(i));
+    }
+    for (let i = 0; i < PASSAGE_NOTES; i += 1) {
+      await writeDirect(root, notePath(i), passageNoteContent(i));
+    }
+  }, 120_000);
+
+  afterAll(async () => {
+    await rm(root, { recursive: true, force: true });
+  });
+
+  it('passage indexing stays proportional at realistic sizes', async () => {
+    async function measure(
+      passageThreshold: number,
+      editIndex: number,
+    ): Promise<{ buildMs: number; stateSize: number; refreshMs: number }> {
+      const store = new FsVaultStore(root);
+      const buildStart = Date.now();
+      const index = await buildIndex(store, { passageThreshold });
+      const engine = SearchEngine.from(index.docs);
+      const buildMs = Date.now() - buildStart;
+      const stateSize = JSON.stringify(engine.serialize()).length;
+
+      // Single-transcript scoped refresh — the path-scoped API from 054.
+      const editedPath = transcriptPath(editIndex);
+      const absoluteEdited = join(root, ...editedPath.split('/'));
+      const original = await readFile(absoluteEdited, 'utf8');
+      await writeFile(absoluteEdited, `${original}\nBearbeitet.\n`, 'utf8');
+
+      const refreshStart = Date.now();
+      const found = await refreshPaths(store, [editedPath], index, passageThreshold);
+      expect(found.changed).toBe(true);
+      const refreshMs = Date.now() - refreshStart;
+
+      // Restore, so the next measurement's build sees the original fixture.
+      await writeFile(absoluteEdited, original, 'utf8');
+
+      return { buildMs, stateSize, refreshMs };
+    }
+
+    // Different transcripts edited per run — the same root is reused for both
+    // measurements, and each run's own edit must not linger into the other's.
+    const withPassages = await measure(PASSAGE_THRESHOLD_CHARS, 0);
+    const wholeDocument = await measure(Number.POSITIVE_INFINITY, 1);
+
+    process.stdout.write(`D5 passage perf: ${JSON.stringify({ withPassages, wholeDocument })}\n`);
+
+    expect(withPassages.buildMs).toBeLessThanOrEqual(wholeDocument.buildMs * 2);
+    expect(withPassages.buildMs).toBeLessThan(COLD_OPEN_BUDGET_MS);
+    expect(withPassages.stateSize).toBeLessThanOrEqual(wholeDocument.stateSize * 3);
+    expect(withPassages.refreshMs).toBeLessThan(REFRESH_BUDGET_MS);
+  }, 180_000);
 });

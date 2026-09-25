@@ -49,6 +49,7 @@ export const TYPE_LABEL_KEY: Record<DocType, string> = {
   entity: 'modules.type.entity',
   concept: 'modules.type.concept',
   overview: 'modules.type.overview',
+  raw: 'reader.type.raw',
 };
 
 function isScope(value: unknown): value is Scope {

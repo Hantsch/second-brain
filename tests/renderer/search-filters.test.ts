@@ -20,7 +20,7 @@ describe('TYPE_GROUPS', () => {
 
   it('maps the composite groups the story names by name', () => {
     expect(TYPE_GROUPS.knowledge.slice().sort()).toEqual(
-      ['concept', 'entity', 'overview', 'source'].sort(),
+      ['concept', 'entity', 'overview', 'source', 'raw'].sort(),
     );
     expect(TYPE_GROUPS.notes.slice().sort()).toEqual(['dump', 'note'].sort());
   });

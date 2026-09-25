@@ -12,7 +12,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { askQuestion, retrieve } from '@core/wiki';
+import { MAX_PASSAGES_PER_DOC, askQuestion, retrieve } from '@core/wiki';
 import type { RetrieveOptions, WikiIndexView } from '@core/wiki';
 import type { SearchQuery } from '@shared/types';
 import { emptyGateway, gatewayWithReplies } from '../../helpers/llm';
@@ -324,9 +324,10 @@ function watchIndex(inner: WikiIndexView): { view: WikiIndexView; queries: Searc
   const queries: SearchQuery[] = [];
   const view: WikiIndexView = {
     index: () => inner.index(),
-    search: (query) => {
+    search: (query) => inner.search(query),
+    searchPassages: (query) => {
       queries.push(query);
-      return inner.search(query);
+      return inner.searchPassages(query);
     },
     pages: () => inner.pages(),
     modules: () => inner.modules(),
@@ -440,5 +441,213 @@ describe('Beleg-Ausschluss: Verdichtungs-Artefakte', () => {
     expect(
       fixture.index.search({ text: CONDENSED_ONLY_QUESTION, limit: 10 }).map((hit) => hit.path),
     ).toEqual([CONDENSED_PATH]);
+  });
+});
+
+/* ── Lange Dokumente: mehrere Passagen statt einer ganzen Datei (053) ────────
+ *
+ * `retrieve()` fragt seit D4 `searchPassages` statt `search`: eine lange
+ * Aufzeichnung liefert die Zeilen, die die Frage wirklich beantworten, statt
+ * (wie zuvor) immer nur ihren Textanfang. Die Fixture unten baut so eine Datei
+ * selbst — ~40k Zeichen unter `raw/`, aus lauter Fuelltext-Absaetzen, mit ein
+ * paar Absaetzen, die eine seltene Wortfolge tragen und so als Zielpassage
+ * auffindbar sind.
+ */
+
+const LONG_PATH = 'raw/web/2026-08-01-lange-aufzeichnung.md';
+/* Sechs Absaetze pro Passage (052-Zielgroesse ~3000 Zeichen, ein Absatz hier
+   ~130 Zeichen inkl. Leerzeile) — 320 Absaetze ergeben ein gutes Dutzend
+   Passagen und ~42k Zeichen Rumpf. */
+const TOTAL_PARAGRAPHS = 320;
+/** Kopfzeilen vor dem Rumpf — daraus folgt die erste Rumpfzeile in der Datei. */
+const HEADER_LINES = [
+  '---',
+  'type: raw',
+  'title: Lange Aufzeichnung',
+  'created: 2026-08-01',
+  'updated: 2026-08-01',
+  'lang: de',
+  '---',
+  '',
+];
+const LONG_DOC_BODY_LINE = HEADER_LINES.length + 1;
+
+function fillerParagraph(index: number): string {
+  return `Absatz ${index}: Sitzungsprotokoll ohne besonderen Inhalt, nur Fuelltext, um die Aufzeichnung lang genug zu machen fuer den Test.`;
+}
+
+/**
+ * Eine lange `raw/`-Datei aus Fuelltext-Absaetzen, mit `targets` an bestimmten
+ * Absatz-Indizes ueberschrieben. Jeder Absatz belegt genau zwei Zeilen (Text,
+ * Leerzeile) — die Zeile eines Absatzes folgt daher direkt aus seinem Index,
+ * ohne den Text selbst nach ihr durchsuchen zu muessen.
+ */
+function longRawDoc(targets: ReadonlyMap<number, string>): {
+  content: string;
+  lineOf: (index: number) => number;
+} {
+  const bodyLines: string[] = [];
+  for (let index = 0; index < TOTAL_PARAGRAPHS; index += 1) {
+    bodyLines.push(targets.get(index) ?? fillerParagraph(index), '');
+  }
+  const content = [...HEADER_LINES, ...bodyLines].join('\n');
+  return {
+    content,
+    lineOf: (index: number) => LONG_DOC_BODY_LINE + index * 2,
+  };
+}
+
+function shortNote(path: string, title: string, body: string): Record<string, string> {
+  return {
+    [path]: [
+      '---',
+      'type: note',
+      `title: ${title}`,
+      'created: 2026-08-01',
+      'updated: 2026-08-01',
+      'lang: de',
+      '---',
+      '',
+      body,
+      '',
+    ].join('\n'),
+  };
+}
+
+/** Sechs kurze Notizen, die das generische Wort der Fuelltext-Absaetze teilen. */
+function sixGenericNotes(): Record<string, string> {
+  let files: Record<string, string> = {};
+  for (let n = 0; n < 6; n += 1) {
+    files = {
+      ...files,
+      ...shortNote(
+        `notes/sitzungsnotiz-${n}.md`,
+        `Sitzungsnotiz ${n}`,
+        `Sitzungsprotokoll vom ${n}. Tag: nichts Aussergewoehnliches zu vermerken.`,
+      ),
+    };
+  }
+  return files;
+}
+
+describe('retrieve: lange Dokumente in mehreren Passagen (053)', () => {
+  it('die Antwort in der Mitte einer langen Aufzeichnung wird als genau diese Passage gefunden', async () => {
+    const targetIndex = 160;
+    const targetText = `Absatz ${targetIndex}: Wanderzirkusprotokoll meldet: Radweg wird am Dienstag gesperrt, weil der Zirkus durchzieht.`;
+    const { content, lineOf } = longRawDoc(new Map([[targetIndex, targetText]]));
+    const fixture = await wikiFixture({ [LONG_PATH]: content, ...sixGenericNotes() });
+
+    const excerpts = retrieve(fixture.index, 'Wanderzirkusprotokoll Radweg gesperrt', { limit: 5 });
+
+    const hit = excerpts.find((entry) => entry.path === LONG_PATH);
+    expect(hit).toBeDefined();
+    expect(hit?.quote.toLowerCase()).toContain('wanderzirkusprotokoll');
+    expect(hit?.quote).toContain('Radweg');
+    // Der Ausschnitt beginnt woertlich an seiner gemeldeten Zeile ...
+    const firstQuoteLine = (hit?.quote ?? '').split('\n')[0] ?? '';
+    expect(await lineAt(fixture, LONG_PATH, hit?.line ?? 0)).toBe(firstQuoteLine);
+    // ... und diese Zeile liegt in der Passage der Zielaussage, nicht am Dateianfang.
+    expect(hit?.line ?? 0).toBeLessThanOrEqual(lineOf(targetIndex));
+    expect(hit?.line ?? 0).toBeGreaterThan(lineOf(targetIndex) - 8);
+  });
+
+  it('zwei einschlaegige Passagen einer Datei werden beide zum Beleg', async () => {
+    const phrase = 'Quirlmechanismus im Testprotokoll';
+    const targets = new Map([
+      [30, `Absatz 30: ${phrase} erstmals erwaehnt, noch ohne Messwerte.`],
+      [220, `Absatz 220: ${phrase} zeigte beim zweiten Durchlauf ein anderes Verhalten.`],
+    ]);
+    const { content, lineOf } = longRawDoc(targets);
+    const fixture = await wikiFixture({ [LONG_PATH]: content });
+
+    const answer = await askQuestion(fixture.deps(emptyGateway()), { question: phrase, limit: 10 });
+
+    const fromLongDoc = answer.excerpts.filter((entry) => entry.path === LONG_PATH);
+    expect(fromLongDoc).toHaveLength(2);
+    const lines = fromLongDoc.map((entry) => entry.line).sort((a, b) => a - b);
+    expect(lines[0]).not.toBe(lines[1]);
+    // Jede gemeldete Zeile liegt in der Passage ihrer Zielaussage (30 vor 220).
+    expect(lines[0]).toBeLessThanOrEqual(lineOf(30));
+    expect(lines[0]).toBeGreaterThan(lineOf(30) - 8);
+    expect(lines[1]).toBeLessThanOrEqual(lineOf(220));
+    expect(lines[1]).toBeGreaterThan(lineOf(220) - 8);
+    for (const entry of fromLongDoc) {
+      expect(answer.answer).toContain(`${LONG_PATH}:${entry.line}`);
+    }
+  });
+
+  it('mehr als drei Passagen derselben Datei werden nicht alle zum Beleg', async () => {
+    const phrase = 'Flauschomat Feldversuch';
+    const targets = new Map([
+      [20, `Absatz 20: ${phrase} Ergebnis eins dokumentiert.`],
+      [100, `Absatz 100: ${phrase} Ergebnis zwei dokumentiert.`],
+      [180, `Absatz 180: ${phrase} Ergebnis drei dokumentiert.`],
+      [260, `Absatz 260: ${phrase} Ergebnis vier dokumentiert.`],
+    ]);
+    const { content } = longRawDoc(targets);
+    const fixture = await wikiFixture({ [LONG_PATH]: content });
+
+    const excerpts = retrieve(fixture.index, phrase, { limit: 10 });
+
+    const fromLongDoc = excerpts.filter((entry) => entry.path === LONG_PATH);
+    expect(fromLongDoc.length).toBe(MAX_PASSAGES_PER_DOC);
+    expect(new Set(fromLongDoc.map((entry) => entry.line)).size).toBe(MAX_PASSAGES_PER_DOC);
+  });
+
+  it('ein Zitat aus der zweiten Passage wird gegen die ganze Datei geprueft', async () => {
+    const quote =
+      'Kompressionsleitfaden zweite Fassung mit ausfuehrlichem Kommentar versehen und geprueft.';
+    const targets = new Map([
+      [30, 'Absatz 30: Kompressionsleitfaden erste Fassung ohne Kommentare festgehalten.'],
+      [220, `Absatz 220: ${quote}`],
+    ]);
+    const { content, lineOf } = longRawDoc(targets);
+    const fixture = await wikiFixture({ [LONG_PATH]: content });
+    const answerText = [
+      `Der Kompressionsleitfaden wurde ueberarbeitet [[${LONG_PATH}]].`,
+      '',
+      `Wörtlich: „${quote}"`,
+    ].join('\n');
+    const { gateway } = gatewayWithReplies({ 'query-answer': answerText }, ['query-answer']);
+
+    const answer = await askQuestion(fixture.deps(gateway), {
+      question: 'Kompressionsleitfaden zweite Fassung Kommentar',
+      limit: 10,
+    });
+
+    expect(answer.usedLlm).toBe(true);
+    expect(answer.unsupported).toBe(false);
+    const citation = answer.citations.find((entry) => entry.path === LONG_PATH);
+    expect(citation).toBeDefined();
+    expect(citation?.quote).toBe(quote);
+    expect(citation?.line).toBe(lineOf(220));
+  });
+
+  it('ein erfundenes Zitat zu einer langen Datei wird trotzdem verworfen', async () => {
+    const targets = new Map([
+      [30, 'Absatz 30: Kompressionsleitfaden erste Fassung ohne Kommentare festgehalten.'],
+      [
+        220,
+        'Absatz 220: Kompressionsleitfaden zweite Fassung mit ausfuehrlichem Kommentar versehen und geprueft.',
+      ],
+    ]);
+    const { content } = longRawDoc(targets);
+    const fixture = await wikiFixture({ [LONG_PATH]: content });
+    const invented = [
+      `Der Kompressionsleitfaden wurde ueberarbeitet [[${LONG_PATH}]].`,
+      '',
+      `Wörtlich: „Kompressionsleitfaden wurde komplett verworfen und neu geschrieben"`,
+    ].join('\n');
+    const { gateway } = gatewayWithReplies({ 'query-answer': invented }, ['query-answer']);
+
+    const answer = await askQuestion(fixture.deps(gateway), {
+      question: 'Kompressionsleitfaden zweite Fassung Kommentar',
+      limit: 10,
+    });
+
+    expect(answer.unsupported).toBe(true);
+    expect(answer.citations.some((entry) => entry.quote.includes('komplett verworfen'))).toBe(
+      false,
+    );
   });
 });

@@ -121,9 +121,10 @@ function recordingIndex(inner: WikiIndexView): {
   const recordedQueries: SearchQuery[] = [];
   const view: WikiIndexView = {
     index: () => inner.index(),
-    search: (query) => {
+    search: (query) => inner.search(query),
+    searchPassages: (query) => {
       recordedQueries.push(query);
-      return inner.search(query);
+      return inner.searchPassages(query);
     },
     pages: () => inner.pages(),
     modules: () => inner.modules(),

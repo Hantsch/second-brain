@@ -34,7 +34,8 @@ export type DocType =
   | 'source'
   | 'entity'
   | 'concept'
-  | 'overview';
+  | 'overview'
+  | 'raw';
 
 /**
  * Alle Mitglieder von `DocType`, zur Laufzeit erreichbar. Einzige Wahrheit —
@@ -52,6 +53,7 @@ export const ALL_DOC_TYPES: readonly DocType[] = [
   'entity',
   'concept',
   'overview',
+  'raw',
 ];
 
 /**

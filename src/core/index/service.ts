@@ -38,6 +38,7 @@ import type {
   IndexDerivedFor,
   IndexProgress,
   IndexStore,
+  PassageHit,
   StoredIndex,
   VaultIndex,
 } from './types';
@@ -161,6 +162,12 @@ export interface IndexServiceOptions {
    * sich so einen Schreibvorgang statt jede ihren eigenen.
    */
   searchPersistDelayMs?: number;
+  /**
+   * Override for `PASSAGE_THRESHOLD_CHARS` (053/`passages.ts`). Only a perf test
+   * uses this — to measure whole-document (no-passage) baseline behaviour with
+   * `Infinity` — production callers rely on the default.
+   */
+  passageThreshold?: number;
 }
 
 export class IndexService {
@@ -219,6 +226,11 @@ export class IndexService {
 
   search(query: SearchQuery): SearchHit[] {
     return this.engine.search(query, this.current.byPath);
+  }
+
+  /** Matching passages with their file lines — one file may appear several times. */
+  searchPassages(query: SearchQuery): PassageHit[] {
+    return this.engine.searchPassages(query, this.current.byPath);
   }
 
   // ── Abgeleitete Listen ────────────────────────────────────────────────────
@@ -364,6 +376,7 @@ export class IndexService {
       staleAfterDays: this.options.staleAfterDays,
       externalTouches: this.options.externalTouches,
       yieldControl: this.options.yieldControl,
+      passageThreshold: this.options.passageThreshold,
     });
     await this.applyToEngine(previous, next);
     this.current = next;
@@ -386,7 +399,7 @@ export class IndexService {
    */
   private async updateScoped(paths: readonly string[]): Promise<void> {
     const previous = this.current;
-    const found = await refreshPaths(this.store, paths, previous);
+    const found = await refreshPaths(this.store, paths, previous, this.options.passageThreshold);
     if (!found.changed) return;
 
     const now = this.options.now?.() ?? new Date();
@@ -531,6 +544,7 @@ export class IndexService {
       staleAfterDays: this.options.staleAfterDays,
       externalTouches: this.options.externalTouches,
       yieldControl: this.options.yieldControl,
+      passageThreshold: this.options.passageThreshold,
     });
     const touched = changedPaths(stored.index, docs);
     const docsChanged = touched.length > 0;

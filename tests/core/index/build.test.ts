@@ -232,6 +232,7 @@ describe('ALL_DOC_TYPES', () => {
       'entity',
       'concept',
       'overview',
+      'raw',
     ];
     expect([...ALL_DOC_TYPES].sort()).toEqual([...expected].sort());
   });
@@ -248,7 +249,7 @@ describe('docTypeFromPath', () => {
     expect(docTypeFromPath('modules/m/wiki/entities/x.md')).toBe('entity');
     expect(docTypeFromPath('modules/m/wiki/concepts/x.md')).toBe('concept');
     expect(docTypeFromPath('modules/m/wiki/overview.md')).toBe('overview');
-    expect(docTypeFromPath('raw/youtube/abc/transcript.md')).toBe('note');
+    expect(docTypeFromPath('raw/youtube/abc/transcript.md')).toBe('raw');
   });
 
   it('erkennt beide Verdichtungs-Artefakte am Pfad, auch ohne Frontmatter (046, D3)', () => {
@@ -258,6 +259,39 @@ describe('docTypeFromPath', () => {
     expect(docTypeFromPath('projects/work/nyota/condensed.md')).toBe('condensed');
     // Eine gewoehnliche Projektdatei bleibt `project`, keine falsche Uebernahme.
     expect(docTypeFromPath('projects/work/nyota/project.md')).toBe('project');
+  });
+
+  it('a raw transcript indexes as raw, not note', async () => {
+    const store = smallStore();
+    const content = [
+      '---',
+      'doc_type: transcript',
+      'title: Transkript',
+      '---',
+      '',
+      'Ein Second Brain verrottet, wenn niemand es pflegt.',
+      '',
+    ].join('\n');
+    await store.writeText('raw/youtube/abc123/transcript.md', content);
+    const before = await store.readText('raw/youtube/abc123/transcript.md');
+
+    const index = await buildIndex(store, { now: TODAY });
+
+    expect(index.byPath.get('raw/youtube/abc123/transcript.md')?.docType).toBe('raw');
+    const after = await store.readText('raw/youtube/abc123/transcript.md');
+    expect(after).toBe(before);
+  });
+
+  it('a note outside raw keeps type note', async () => {
+    const store = smallStore();
+    const content = ['---', 'title: Gewoehnliche Notiz', '---', '', 'Text ohne Typ.', ''].join(
+      '\n',
+    );
+    await store.writeText('projects/work/x/notes/ohne-typ.md', content);
+
+    const index = await buildIndex(store, { now: TODAY });
+
+    expect(index.byPath.get('projects/work/x/notes/ohne-typ.md')?.docType).toBe('note');
   });
 });
 

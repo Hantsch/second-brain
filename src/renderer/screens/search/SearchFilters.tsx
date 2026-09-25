@@ -15,7 +15,7 @@ export const TYPE_GROUPS: Record<TypeGroup, readonly DocType[]> = {
   journal: ['journal'],
   projects: ['project'],
   areas: ['area'],
-  knowledge: ['source', 'entity', 'concept', 'overview'],
+  knowledge: ['source', 'entity', 'concept', 'overview', 'raw'],
   notes: ['note', 'dump'],
   condensed: ['condensed'],
 };

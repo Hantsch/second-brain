@@ -63,6 +63,7 @@ describe('evidenceTypesFor', () => {
     expect(isEvidenceExcluded('entity')).toBe(false);
     expect(isEvidenceExcluded('concept')).toBe(false);
     expect(isEvidenceExcluded('overview')).toBe(false);
+    expect(isEvidenceExcluded('raw')).toBe(false);
 
     const result = evidenceTypesFor(ALL_DOC_TYPES);
     expect(result).toEqual([
@@ -75,6 +76,7 @@ describe('evidenceTypesFor', () => {
       'entity',
       'concept',
       'overview',
+      'raw',
     ]);
   });
 });

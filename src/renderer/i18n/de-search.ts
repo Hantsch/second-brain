@@ -28,6 +28,7 @@ export const deSearch = {
   'reader.type.area': 'Bereich',
   'reader.type.condensed': 'Verdichtet',
   'reader.type.journal': 'Tagebuch',
+  'reader.type.raw': 'Rohquelle',
 
   /* Die vollständige Trefferliste der Suche (059, D5). */
   'screen.search.overline': 'Suche',

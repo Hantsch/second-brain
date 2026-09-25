@@ -177,10 +177,38 @@ ${EXTERNAL_TERM} marks this note for the open-externally test.
   );
 }
 
+// ── Story 053 fixture: one long transcript matching the same term in five passages ──
+
+const LONG_TERM = 'gastonpassageterm053';
+const LONG_PATH = 'raw/youtube/gaston-e2e-long/transcript.md';
+
+/** ~20k chars: twenty filler paragraphs, the term in five of them far apart —
+    far enough that each lands in its own passage. */
+function writeLongFixture(vaultPath: string): void {
+  const filler = 'The speaker keeps talking about something else entirely here. '.repeat(15);
+  const paragraphs = Array.from({ length: 20 }, (_, i) =>
+    i % 4 === 1 ? `${LONG_TERM} comes up again. ${filler}` : filler,
+  );
+  writeDoc(
+    vaultPath,
+    LONG_PATH,
+    `---
+title: Gaston long transcript fixture
+transcript_style: prose
+---
+
+# Gaston long transcript fixture — Transcript
+
+${paragraphs.map((text) => text.trim()).join('\n\n')}
+`,
+  );
+}
+
 test.beforeAll(async ({ vaultPath }) => {
   writeScopeFixtures(vaultPath);
   writeHomeFixtures(vaultPath);
   writeExternalFixture(vaultPath);
+  writeLongFixture(vaultPath);
 });
 
 /** Navigates straight to the results view — the address is the state, exactly
@@ -245,6 +273,16 @@ test('the full result view shows snippets and narrows by scope and type', async 
     await expect(page.locator('.sb-searchresult-meta', { hasText: PRIVATE_AREA_PATH })).toHaveCount(
       0,
     );
+  });
+});
+
+test('a long document appears once in the results', async ({ app }) => {
+  const { page } = app;
+
+  await test.step('search — five matching passages of one file are one result row', async () => {
+    await openSearch(page, LONG_TERM);
+    await mainButtonFor(page, LONG_PATH);
+    await expect.poll(() => page.locator('.sb-searchresult').count(), { timeout: 15000 }).toBe(1);
   });
 });
 

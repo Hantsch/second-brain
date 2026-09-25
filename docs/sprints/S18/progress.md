@@ -78,3 +78,21 @@
 - 2026-09-25 16:45 · 052 · review 1 · started
 - 2026-09-25 16:46 · 052 · review 1 · done
 - 2026-09-25 16:47 · 052 · story · done
+- 2026-09-25 16:47:28 · 053 · build · started
+- 2026-09-25 16:47 · 053 · D1 raw DocType · started
+- 2026-09-25 16:52 · 053 · D1 raw DocType · done
+- 2026-09-25 16:52 · 053 · D2 passage splitter · started
+- 2026-09-25 16:59 · 053 · D2 passage splitter · done
+- 2026-09-25 16:59 · 053 · D3 passage search engine (hard) · started
+- 2026-09-25 17:05 · 053 · D3 passage search engine (hard) · done
+- 2026-09-25 17:05 · 053 · D4 ask retrieves passages · started
+- 2026-09-25 17:14 · 053 · D4 ask retrieves passages · done
+- 2026-09-25 17:14 · 053 · D5 perf test realistic sizes · started
+- 2026-09-25 17:19 · 053 · D5 perf test realistic sizes · done
+- 2026-09-25 17:19 · 053 · verify · started
+- 2026-09-25 17:22 · 053 · verify · done
+- 2026-09-25 17:22 · 053 · review 1 · started
+- 2026-09-25 17:25 · 053 · review 1 · done
+- 2026-09-25 17:25 · 053 · review 2 (hard) · started
+- 2026-09-25 17:27 · 053 · review 2 (hard) · done
+- 2026-09-25 17:29 · 053 · story · done

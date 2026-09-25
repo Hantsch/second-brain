@@ -24,6 +24,7 @@ import { sha256 } from '@core/vault/hash';
 import { baseName, indexBucketPath, indexFiles, indexPath } from '@core/vault/paths';
 import type { IndexFiles } from '@core/vault/paths';
 import type { VaultStore } from '@core/vault/types';
+import { splitPassages } from './passages';
 import type {
   BrokenLink,
   IndexDerivedFor,
@@ -42,14 +43,20 @@ import type {
  * 3: split into manifest, body buckets and search file. A schema-2 `index.json`
  * carries bodies in the manifest slot and no buckets — it is discarded whole, never
  * half-read.
+ * 4: search entries are passages (`<path>#<n>`), no longer whole documents (053).
  */
-export const INDEX_SCHEMA_VERSION = 3;
+export const INDEX_SCHEMA_VERSION = 4;
 
 /** Neutral content for `clear()`: read back as "nothing there". */
 const CLEARED = '{"schema":0}\n';
 
-/** A document as the manifest holds it: no body, no search field. */
-type ManifestDoc = Omit<IndexedDoc, 'text' | 'body'>;
+/**
+ * A document as the manifest holds it: no body, no search field. `passages` is
+ * derived from `body` and `bodyLine` alone (see `passages.ts`), so it is dropped
+ * here too and recomputed on load once the body is back from its bucket — storing
+ * it would just be the body text again under another name.
+ */
+type ManifestDoc = Omit<IndexedDoc, 'text' | 'body' | 'passages'>;
 
 interface Manifest {
   schema: number;
@@ -110,9 +117,11 @@ function reviveManifestDoc(value: unknown): ManifestDoc | null {
   if (!isRecord(value)) return null;
   if (typeof value['path'] !== 'string' || typeof value['hash'] !== 'string') return null;
   // A body in the manifest is never read: bodies only come from the buckets.
+  // Passages are recomputed from the body once it is back, not carried here.
   const doc: Record<string, unknown> = { ...value };
   delete doc['body'];
   delete doc['text'];
+  delete doc['passages'];
   return doc as unknown as ManifestDoc;
 }
 
@@ -177,7 +186,7 @@ function toManifest(index: VaultIndex, derivedFor: IndexDerivedFor | null): Mani
     builtAt: index.builtAt,
     durationMs: index.durationMs,
     derivedFor,
-    docs: index.docs.map(({ text: _text, body: _body, ...rest }) => rest),
+    docs: index.docs.map(({ text: _text, body: _body, passages: _passages, ...rest }) => rest),
     todos: index.todos,
     projects: index.projects,
     areas: index.areas,
@@ -241,7 +250,12 @@ export class VaultIndexStore implements IndexStore {
         partial = true;
         continue;
       }
-      docs.push({ ...doc, body: entry.body, text: entry.body.toLowerCase() });
+      docs.push({
+        ...doc,
+        body: entry.body,
+        text: entry.body.toLowerCase(),
+        passages: splitPassages(entry.body, doc.bodyLine),
+      });
     }
 
     const index: VaultIndex = {

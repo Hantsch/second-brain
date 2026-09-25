@@ -20,7 +20,7 @@ import type {
   WikiPageType,
   WriteResult,
 } from '@shared/types';
-import type { IndexedDoc } from '@core/index/types';
+import type { IndexedDoc, PassageHit } from '@core/index/types';
 import type { LlmGateway } from '@core/llm';
 import type { DateLike } from '@core/vault/paths';
 import type { DeleteResult } from '@core/vault/types';
@@ -74,6 +74,8 @@ export interface WikiTxStore extends WikiStore {
 export interface WikiIndexView {
   index(): { docs: readonly IndexedDoc[]; byPath: ReadonlyMap<string, IndexedDoc> };
   search(query: SearchQuery): SearchHit[];
+  /** Matching passages with their file lines, not collapsed per file (053). */
+  searchPassages(query: SearchQuery): PassageHit[];
   pages(): readonly WikiPage[];
   modules(): readonly KnowledgeModule[];
 }

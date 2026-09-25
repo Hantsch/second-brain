@@ -29,6 +29,7 @@ export const enSearch = {
   'reader.type.area': 'Area',
   'reader.type.condensed': 'Condensed',
   'reader.type.journal': 'Journal',
+  'reader.type.raw': 'Raw source',
 
   /* The full search result view (059, D5). */
   'screen.search.overline': 'Search',

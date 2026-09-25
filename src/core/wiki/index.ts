@@ -164,6 +164,7 @@ export {
   CANDIDATE_FACTOR,
   DEFAULT_RETRIEVE_LIMIT,
   MAX_CANDIDATES,
+  MAX_PASSAGES_PER_DOC,
   askQuestion,
   retrieve,
   type AskInput,

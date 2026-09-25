@@ -266,3 +266,4 @@ second roadmap.
   suppress the stale-project reminder, and appear in recent work and the sessions tile exactly
   like Claude sessions, via a new `mergeTouches` that combines both CLIs' touches into one
   `applyExternalTouches` call so neither erases the other's; reviewed PASS with no fix cycle.
+- 053 — Long sources answer by passage, not by file · S18 · Long documents (transcripts, articles) now index as line-anchored passages, not one whole-document entry, so an answer from the middle of a two-hour transcript can be retrieved and cited by its real line, while search (Ctrl+K) still shows one hit per file; raw/ files also index as type `raw` instead of `note`; reviewed PASS + hard PASS with no fix cycle.
