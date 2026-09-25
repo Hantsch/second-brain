@@ -181,6 +181,7 @@ function renderScreen(extra: Handlers = {}) {
       docCount: 12,
       indexedAt: NOW,
       indexing: false,
+      indexRefreshFailedAt: null,
     }),
     'modules:list': () => [knowledgeModule],
     'modules:sources': () => [condensed, raw],

@@ -3,7 +3,7 @@
  * selbst in einem echten temporaeren Ordner mit kurzem Debounce.
  */
 
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { appendFile, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -56,6 +56,53 @@ describe('createBatcher', () => {
     batcher.add('areas/y.md');
     batcher.cancel();
     vi.advanceTimersByTime(1000);
+    expect(calls).toHaveLength(1);
+  });
+
+  it('flusht innerhalb der Maximalwartezeit bei anhaltendem Ereignisstrom', () => {
+    vi.useFakeTimers();
+    const start = Date.now();
+    const calls: string[][] = [];
+    const flushTimes: number[] = [];
+    const batcher = createBatcher(
+      (paths) => {
+        flushTimes.push(Date.now() - start);
+        calls.push(paths);
+      },
+      250,
+      2000,
+    );
+
+    const added: string[] = [];
+    for (let elapsed = 0; elapsed < 5000; elapsed += 100) {
+      const path = `inbox/${elapsed}.md`;
+      added.push(path);
+      batcher.add(path);
+      vi.advanceTimersByTime(100);
+    }
+    batcher.flush();
+
+    expect(calls.length).toBeGreaterThanOrEqual(2);
+    expect(flushTimes[0]).toBeLessThanOrEqual(2000);
+
+    const reported = calls.flat();
+    expect(reported.sort()).toEqual([...added].sort());
+    expect(new Set(reported).size).toBe(reported.length);
+  });
+
+  it('ein einzelnes Ereignis flusht 250 ms danach, nicht erst bei der Maximalwartezeit', () => {
+    vi.useFakeTimers();
+    const calls: string[][] = [];
+    const batcher = createBatcher((paths) => calls.push(paths), 250, 2000);
+
+    batcher.add('inbox/a.md');
+    vi.advanceTimersByTime(249);
+    expect(calls).toEqual([]);
+
+    vi.advanceTimersByTime(1);
+    expect(calls).toEqual([['inbox/a.md']]);
+
+    vi.advanceTimersByTime(2000 - 250);
     expect(calls).toHaveLength(1);
   });
 });
@@ -117,5 +164,54 @@ describe('watchVault', () => {
     await writeFile(join(root, 'inbox', 'vier.md'), 'vier\n', 'utf8');
     await new Promise((resolve) => setTimeout(resolve, 200));
     expect(batches.length).toBe(countAfterDispose);
+  }, 15000);
+
+  it('reports a file written in chunks only once it is complete', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'sb-watch-'));
+    roots.push(root);
+    await mkdir(join(root, 'inbox'), { recursive: true });
+    await mkdir(join(root, '.secondbrain', 'index'), { recursive: true });
+
+    const filePath = join(root, 'inbox', 'chunked.md');
+    const chunks = ['erster teil\n', 'zweiter teil\n', 'dritter teil\n'];
+    const reportsForFile: string[][] = [];
+    const contentsWhenReported: string[] = [];
+
+    const watcher = watchVault(
+      root,
+      (paths) => {
+        if (paths.includes('inbox/chunked.md')) {
+          reportsForFile.push(paths);
+          void readFile(filePath, 'utf8').then((content) => {
+            contentsWhenReported.push(content);
+          });
+        }
+      },
+      { debounceMs: 50, writeStabilityMs: 400 },
+    );
+    await watcher.whenReady();
+
+    for (const chunk of chunks) {
+      await appendFile(filePath, chunk, 'utf8');
+      await new Promise((resolve) => setTimeout(resolve, 150));
+    }
+
+    await vi.waitFor(
+      () => {
+        expect(reportsForFile.length).toBeGreaterThan(0);
+      },
+      { timeout: 8000, interval: 40 },
+    );
+
+    expect(reportsForFile).toHaveLength(1);
+    await vi.waitFor(
+      () => {
+        expect(contentsWhenReported).toHaveLength(1);
+      },
+      { timeout: 2000, interval: 20 },
+    );
+    expect(contentsWhenReported[0]).toBe(chunks.join(''));
+
+    await watcher.dispose();
   }, 15000);
 });

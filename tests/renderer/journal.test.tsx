@@ -425,6 +425,7 @@ function renderJournal(extra: Handlers = {}): Rendered {
       docCount: 12,
       indexedAt: NOW.toISOString(),
       indexing: false,
+      indexRefreshFailedAt: null,
     }),
     'settings:get': () => settings,
     'journal:list': () => [day(), earlierDay],

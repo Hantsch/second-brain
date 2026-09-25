@@ -107,6 +107,7 @@ function renderWithQueue(tasks: WorkTask[], extra: Handlers = {}): Mock {
       docCount: 5,
       indexedAt: '2026-08-10T09:00:00+02:00',
       indexing: false,
+      indexRefreshFailedAt: null,
     }),
     'condense:read': () => null,
     'work:list': () => tasks,

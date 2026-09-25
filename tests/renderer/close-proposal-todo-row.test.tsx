@@ -131,6 +131,7 @@ function renderPanel(): void {
       docCount: 1,
       indexedAt: NOW,
       indexing: false,
+      indexRefreshFailedAt: null,
     }),
     'areas:list': () => [],
   });

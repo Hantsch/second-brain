@@ -128,6 +128,7 @@ function renderTab(extra: Handlers): { sb: Mock; container: HTMLElement } {
       docCount: 5,
       indexedAt: '2026-08-10T09:00:00+02:00',
       indexing: false,
+      indexRefreshFailedAt: null,
     }),
     'condense:read': () => null,
     ...extra,
@@ -328,6 +329,7 @@ describe('Wissen-Tab eines Projekts (Story 045, D4)', () => {
         docCount: 5,
         indexedAt: '2026-08-10T09:00:00+02:00',
         indexing: false,
+        indexRefreshFailedAt: null,
       }),
       'llm:tasks': () => [],
       'llm:routing': () => ({

@@ -14,6 +14,7 @@ function indexLabel(
   status: VaultStatus,
 ): string {
   if (status.indexing) return t('vault.indexing');
+  if (status.indexRefreshFailedAt !== null) return t('vault.indexFailed');
   if (status.indexedAt) return t('vault.indexed');
   return t('vault.noIndex');
 }
@@ -38,7 +39,7 @@ export function VaultIndicator() {
           <>
             {/* The dot is the index indicator; its meaning is in the label. */}
             <span
-              className={`sb-dot ${status.indexing ? 'sb-dot--busy' : status.indexedAt ? 'sb-dot--ok' : ''}`}
+              className={`sb-dot ${status.indexing ? 'sb-dot--busy' : status.indexRefreshFailedAt !== null ? 'sb-dot--warn' : status.indexedAt ? 'sb-dot--ok' : ''}`}
               role="img"
               aria-label={indexLabel(t, status)}
             />

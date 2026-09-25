@@ -482,6 +482,7 @@ function handlers(report: GardenerReport | null, extra: SbHandlers = {}): SbHand
       docCount: 42,
       indexedAt: NOW,
       indexing: false,
+      indexRefreshFailedAt: null,
     }),
     'gardener:report': () => report,
     'gardener:run': () => report ?? REPORT,

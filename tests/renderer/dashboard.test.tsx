@@ -168,6 +168,7 @@ function mount(
       docCount: 12,
       indexedAt: NOW,
       indexing: false,
+      indexRefreshFailedAt: null,
     }),
     'dashboard:layout': () => layout,
     'dashboard:setLayout': (request: IpcRequest<'dashboard:setLayout'>) => {

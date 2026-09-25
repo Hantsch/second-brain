@@ -118,6 +118,32 @@ function isRelevantPath(path: string): boolean {
   return ext === '' || RELEVANT_EXTENSIONS.has(ext);
 }
 
+/**
+ * Der eine Refresh, der hinter dem laufenden wartet. Alle Aufrufe, die waehrend
+ * eines Laufs eintreffen, teilen sich ihn — und damit sein Versprechen.
+ * `paths === undefined` heisst voller Baumlauf.
+ */
+interface QueuedRefresh {
+  paths: Set<string> | undefined;
+  promise: Promise<void>;
+  resolve: () => void;
+  reject: (error: unknown) => void;
+}
+
+/**
+ * Vereinigt die Pfade zweier Refresh-Wuensche. Ein voller Lauf (`undefined`)
+ * gewinnt; wird die Vereinigung groesser als `MAX_SCOPED_PATHS`, gilt dieselbe
+ * Abwaegung wie fuer einen einzelnen Aufruf — dann ist der Baumlauf billiger.
+ */
+function mergeScopes(
+  into: Set<string> | undefined,
+  scope: readonly string[] | undefined,
+): Set<string> | undefined {
+  if (into === undefined || scope === undefined) return undefined;
+  for (const path of scope) into.add(path);
+  return into.size > MAX_SCOPED_PATHS ? undefined : into;
+}
+
 export interface IndexServiceOptions {
   /** Uhr des Dienstes. Tests geben eine feste Zeit — nie `Date.now()` im Kern. */
   now?: () => Date;
@@ -147,6 +173,8 @@ export class IndexService {
   private derivedGeneration = 0;
   private derivedCache = new Map<string, DerivedEntry<unknown>>();
   private pendingSearchSave: ReturnType<typeof setTimeout> | null = null;
+  private runningRefresh: Promise<void> | null = null;
+  private queuedRefresh: QueuedRefresh | null = null;
 
   private constructor(
     store: VaultStore,
@@ -273,18 +301,57 @@ export class IndexService {
    * Loeschungen jenseits der gemeldeten Pfade findet. Mit ein paar Pfaden wird
    * gezielt nachgezogen: nur diese Pfade werden gestattet und gelesen. Beruehrt
    * keine der Pfade eine indizierte Dateiart, bleibt alles, wie es ist.
+   *
+   * Aufrufe waehrend eines laufenden Refreshs stauen sich nicht: sie landen alle
+   * in genau einem Folgelauf (Pfade vereinigt, ein voller Lauf gewinnt) und
+   * bekommen dessen Versprechen. Nie im laufenden Lauf — der kann an der
+   * gemeldeten Datei schon vorbei sein.
    */
-  async refresh(paths?: readonly string[]): Promise<void> {
-    if (paths === undefined) {
-      await this.serialize(async () => this.update(this.current));
-      return;
+  refresh(paths?: readonly string[]): Promise<void> {
+    if (paths !== undefined && !paths.some(isRelevantPath)) return Promise.resolve();
+    const scope = paths === undefined || paths.length > MAX_SCOPED_PATHS ? undefined : paths;
+
+    const queued = this.queuedRefresh;
+    if (queued !== null) {
+      queued.paths = mergeScopes(queued.paths, scope);
+      return queued.promise;
     }
-    if (!paths.some(isRelevantPath)) return;
-    if (paths.length > MAX_SCOPED_PATHS) {
-      await this.serialize(async () => this.update(this.current));
-      return;
-    }
-    await this.serialize(async () => this.updateScoped(paths));
+    if (this.runningRefresh === null) return this.startRefresh(scope);
+
+    // Never join the running run: it may already have walked past the path
+    // that triggered this call. Queue exactly one follow-up instead.
+    let resolve!: () => void;
+    let reject!: (error: unknown) => void;
+    const promise = new Promise<void>((res, rej) => {
+      resolve = res;
+      reject = rej;
+    });
+    this.queuedRefresh = { paths: mergeScopes(new Set(), scope), promise, resolve, reject };
+    return promise;
+  }
+
+  /**
+   * Startet einen Refresh-Lauf und haengt daran, dass nach seinem Ende — auch
+   * nach einem Fehler — der gesammelte Folgelauf (falls vorhanden) startet.
+   */
+  private startRefresh(scope: ReadonlySet<string> | readonly string[] | undefined): Promise<void> {
+    const paths = scope === undefined ? undefined : [...scope];
+    const run = this.serialize(async () =>
+      paths === undefined ? this.update(this.current) : this.updateScoped(paths),
+    );
+    this.runningRefresh = run;
+    // Registered before the caller can await `run`, so the hand-over happens
+    // before any caller continuation — a call in between still sees `running`
+    // and lands in the queued run, which has not started yet.
+    const handOver = (): void => {
+      this.runningRefresh = null;
+      const next = this.queuedRefresh;
+      if (next === null) return;
+      this.queuedRefresh = null;
+      void this.startRefresh(next.paths).then(next.resolve, next.reject);
+    };
+    void run.then(handOver, handOver);
+    return run;
   }
 
   /** Voller Lauf: ganzer Baum, Suchindex nachziehen, Ablage komplett neu. */

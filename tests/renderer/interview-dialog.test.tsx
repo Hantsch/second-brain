@@ -60,6 +60,7 @@ const status: VaultStatus = {
   docCount: 12,
   indexedAt: new Date().toISOString(),
   indexing: false,
+  indexRefreshFailedAt: null,
 };
 
 const LOCAL_PROVIDER: ProviderConfig = {

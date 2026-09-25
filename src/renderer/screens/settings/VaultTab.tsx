@@ -38,8 +38,13 @@ function vaultName(path: string): string {
   return parts.at(-1) ?? path;
 }
 
-function indexStateKey(status: { indexing: boolean; indexedAt: string | null }): string {
+function indexStateKey(status: {
+  indexing: boolean;
+  indexedAt: string | null;
+  indexRefreshFailedAt: string | null;
+}): string {
   if (status.indexing) return 'settings.vault.indexBuilding';
+  if (status.indexRefreshFailedAt !== null) return 'settings.vault.indexFailed';
   return status.indexedAt ? 'settings.vault.indexReady' : 'settings.vault.indexMissing';
 }
 
@@ -133,7 +138,13 @@ export function VaultTab() {
             </div>
             <div>
               <dt>{t('settings.vault.indexState')}</dt>
-              <dd>{t(indexStateKey(status ?? { indexing: false, indexedAt: null }))}</dd>
+              <dd>
+                {t(
+                  indexStateKey(
+                    status ?? { indexing: false, indexedAt: null, indexRefreshFailedAt: null },
+                  ),
+                )}
+              </dd>
             </div>
             <div>
               <dt>{t('settings.vault.indexAt')}</dt>

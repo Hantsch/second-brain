@@ -407,6 +407,7 @@ function mount(options: { overview?: Partial<OverviewSettings>; extra?: Handlers
       docCount: 12,
       indexedAt: NOW,
       indexing: false,
+      indexRefreshFailedAt: null,
     }),
     'settings:get': () => ({
       app: {

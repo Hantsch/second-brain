@@ -140,6 +140,7 @@ function renderScreen(overview: Partial<OverviewSettings> = {}) {
       docCount: 12,
       indexedAt: NOW,
       indexing: false,
+      indexRefreshFailedAt: null,
     }),
     'settings:get': () => ({ app: APP_SETTINGS, vault }),
     /* Stands in for the main process's merge: the returned snapshot is what

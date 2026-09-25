@@ -24,7 +24,7 @@ German.
 <!-- Order = the order the build phase works through. Dependent stories go last. -->
 
 - [x] 054 — Saving one file costs one file
-- [ ] 055 — A bulk change reaches the index
+- [x] 055 — A bulk change reaches the index
 - [ ] 056 — Loose ends are derived once per index
 - [ ] 062 — Codex work counts as work
 - [ ] 052 — A scoped question searches its scope

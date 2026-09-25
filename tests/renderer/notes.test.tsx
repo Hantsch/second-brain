@@ -173,6 +173,7 @@ function renderNotes(path = '/notes', extra: Handlers = {}): { sb: Mock; contain
       docCount: 5,
       indexedAt: NOW,
       indexing: false,
+      indexRefreshFailedAt: null,
     }),
     'areas:list': () => [defaultArea, healthArea],
     'areas:notes': ({ slug }) => (slug === 'gesundheit' ? healthNotes : []),

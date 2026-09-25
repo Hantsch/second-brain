@@ -122,4 +122,6 @@ export interface VaultStatus {
   indexedAt: string | null;
   /** Läuft gerade ein (Neu-)Aufbau des Index? */
   indexing: boolean;
+  /** ISO timestamp of the last failed watcher-driven index refresh, or null when the index is current. A timestamp only — never the error text (Guardrail 6). */
+  indexRefreshFailedAt: string | null;
 }

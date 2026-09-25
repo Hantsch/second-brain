@@ -43,11 +43,21 @@ const EMPTY_STATUS: VaultStatus = {
   docCount: 0,
   indexedAt: null,
   indexing: false,
+  indexRefreshFailedAt: null,
 };
 
 export class Services {
   private open: OpenVault | null = null;
-  private indexState = { docCount: 0, indexedAt: null as string | null, indexing: false };
+  private indexState = {
+    docCount: 0,
+    indexedAt: null as string | null,
+    indexing: false,
+    indexRefreshFailedAt: null as string | null,
+  };
+  /* Set while a watcher-driven refresh has failed and not yet been superseded
+     by a successful one — merged into the next successful refresh's report so
+     the paths that failed to index still reach the renderer eventually. */
+  private pendingFailedChange: { paths: Set<string>; external: boolean } | null = null;
   private storeFactory: VaultStoreFactory | null = null;
   private indexFactory: IndexFactory | null = null;
   private watcherFactory: VaultWatcherFactory | null = null;
@@ -104,6 +114,7 @@ export class Services {
       docCount: this.indexState.docCount,
       indexedAt: this.indexState.indexedAt,
       indexing: this.indexState.indexing,
+      indexRefreshFailedAt: this.indexState.indexRefreshFailedAt,
     };
   }
 
@@ -121,7 +132,8 @@ export class Services {
        in the background. `indexing` signals that the numbers aren't final yet. */
     const session: OpenVault = { root, name: layout.name, store, index: null, watcher: null };
     this.open = session;
-    this.indexState = { docCount: 0, indexedAt: null, indexing: true };
+    this.indexState = { docCount: 0, indexedAt: null, indexing: true, indexRefreshFailedAt: null };
+    this.pendingFailedChange = null;
     this.broadcastStatus();
     this.sendEvent('event:index-progress', { done: 0, total: 0, indexing: true });
 
@@ -241,7 +253,8 @@ export class Services {
     getTaskResults().clear();
     const previous = this.open;
     this.open = null;
-    this.indexState = { docCount: 0, indexedAt: null, indexing: false };
+    this.indexState = { docCount: 0, indexedAt: null, indexing: false, indexRefreshFailedAt: null };
+    this.pendingFailedChange = null;
     if (previous) {
       await previous.watcher?.dispose();
       await previous.index?.dispose?.();
@@ -316,7 +329,15 @@ export class Services {
       docCount: stats.docs,
       indexedAt: stats.builtAt,
       indexing: this.indexState.indexing,
+      indexRefreshFailedAt: this.indexState.indexRefreshFailedAt,
     };
+    this.broadcastStatus();
+  }
+
+  /** Clears a previously recorded watcher-refresh failure, e.g. after a successful manual rebuild. */
+  clearIndexRefreshFailure(): void {
+    if (this.indexState.indexRefreshFailedAt === null) return;
+    this.indexState.indexRefreshFailedAt = null;
     this.broadcastStatus();
   }
 
@@ -325,7 +346,12 @@ export class Services {
   }
 
   /* The watcher reports; the index catches up, and only then does the message
-     go to the renderer — this way the reloaded query finds the new state. */
+     go to the renderer — this way the reloaded query finds the new state. A
+     failed refresh reports no `event:vault-changed` and instead marks the
+     status (Guardrail 6: timestamp only, never the error) so the UI can show
+     the index as stale rather than silently reporting success. The failed
+     paths are remembered and folded into the next successful refresh's
+     report, so nothing gets lost — only delayed. */
   private handleVaultChange(paths: string[], external: boolean): void {
     const index = this.index();
     if (!index?.refresh) {
@@ -338,6 +364,27 @@ export class Services {
         await this.refreshIndexState();
       } catch (error) {
         console.warn('[vault] Index-Nachlauf fehlgeschlagen:', error);
+        this.indexState.indexRefreshFailedAt = new Date().toISOString();
+        if (this.pendingFailedChange) {
+          for (const p of paths) this.pendingFailedChange.paths.add(p);
+          this.pendingFailedChange.external = this.pendingFailedChange.external || external;
+        } else {
+          this.pendingFailedChange = { paths: new Set(paths), external };
+        }
+        this.broadcastStatus();
+        return;
+      }
+
+      if (this.pendingFailedChange) {
+        const pending = this.pendingFailedChange;
+        this.pendingFailedChange = null;
+        this.indexState.indexRefreshFailedAt = null;
+        const mergedPaths = new Set([...pending.paths, ...paths]);
+        this.sendEvent('event:vault-changed', {
+          paths: [...mergedPaths],
+          external: pending.external || external,
+        });
+        return;
       }
       this.sendEvent('event:vault-changed', { paths, external });
     })();

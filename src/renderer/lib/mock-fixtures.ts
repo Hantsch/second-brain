@@ -32,6 +32,7 @@ export const vaultStatus: VaultStatus = {
   docCount: 42,
   indexedAt: NOW,
   indexing: false,
+  indexRefreshFailedAt: null,
 };
 
 export const indexStats: IndexStats = {

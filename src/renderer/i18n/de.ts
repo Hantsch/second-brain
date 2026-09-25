@@ -139,6 +139,7 @@ export const de = {
   'vault.choose': 'Vault öffnen',
   'vault.docs': '{count} Dokumente',
   'vault.indexing': 'Index wird gebaut',
+  'vault.indexFailed': 'Index-Update fehlgeschlagen',
   'vault.indexed': 'Index aktuell',
   'vault.noIndex': 'Kein Index',
   'vault.statusAria': 'Vault-Status, öffnet die Einstellungen',

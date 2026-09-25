@@ -5,6 +5,16 @@
  * Ausgewiesener Adapter: benutzt `chokidar`. 250 ms trailing debounce, damit ein
  * Speichervorgang aus Obsidian (Datei schreiben, umbenennen, Index anfassen) genau
  * eine Meldung erzeugt und nicht fuenf.
+ *
+ * The batcher also carries a bounded max-wait timer (2 s by default). Without it, a
+ * sustained stream of events — a sync client or a git checkout touching hundreds of
+ * files — would keep resetting the trailing debounce indefinitely and the batch would
+ * never flush. The max-wait timer starts once, on the first `add` into an empty batch,
+ * and is not reset by later adds, so it guarantees a flush within `maxWaitMs`.
+ *
+ * chokidar's `awaitWriteFinish` holds back the `add`/`change` event until a file's size
+ * has been stable for `writeStabilityMs` — OneDrive syncs and bulk copies write files in
+ * chunks, and without this a still-growing file would be reported (and read) half-written.
  */
 
 import { watch } from 'chokidar';
@@ -13,8 +23,18 @@ import { toVaultPath } from './paths';
 /** Trailing debounce in Millisekunden. */
 export const WATCH_DEBOUNCE_MS = 250;
 
+/** Obergrenze fuer die Wartezeit, siehe Kopfkommentar. */
+export const WATCH_MAX_WAIT_MS = 2000;
+
+/** Wie lange die Dateigroesse stabil sein muss, bevor eine Meldung rausgeht; siehe Kopfkommentar. */
+export const WATCH_WRITE_STABILITY_MS = 300;
+
 export interface WatchOptions {
   debounceMs?: number;
+  /** Obergrenze fuer die Wartezeit bis zum Flush; siehe `WATCH_MAX_WAIT_MS`. */
+  maxWaitMs?: number;
+  /** Wartezeit auf stabile Dateigroesse vor der Meldung; siehe `WATCH_WRITE_STABILITY_MS`. */
+  writeStabilityMs?: number;
   /** Fehler des Watchers; ohne Angabe landen sie als Warnung im Log. */
   onError?: (error: unknown) => void;
 }
@@ -60,12 +80,21 @@ export function isIgnoredPath(path: string): boolean {
 export function createBatcher(
   onFlush: (paths: string[]) => void,
   debounceMs = WATCH_DEBOUNCE_MS,
+  maxWaitMs = WATCH_MAX_WAIT_MS,
 ): Batcher {
   const pending = new Set<string>();
   let timer: ReturnType<typeof setTimeout> | null = null;
+  let maxWaitTimer: ReturnType<typeof setTimeout> | null = null;
+
+  const clearTimers = (): void => {
+    if (timer !== null) clearTimeout(timer);
+    timer = null;
+    if (maxWaitTimer !== null) clearTimeout(maxWaitTimer);
+    maxWaitTimer = null;
+  };
 
   const send = (): void => {
-    timer = null;
+    clearTimers();
     if (pending.size === 0) return;
     const paths = [...pending].sort((a, b) => a.localeCompare(b));
     pending.clear();
@@ -74,17 +103,19 @@ export function createBatcher(
 
   return {
     add(path: string): void {
+      const wasEmpty = pending.size === 0;
       pending.add(path);
       if (timer !== null) clearTimeout(timer);
       timer = setTimeout(send, debounceMs);
+      if (wasEmpty) {
+        maxWaitTimer = setTimeout(send, maxWaitMs);
+      }
     },
     flush(): void {
-      if (timer !== null) clearTimeout(timer);
       send();
     },
     cancel(): void {
-      if (timer !== null) clearTimeout(timer);
-      timer = null;
+      clearTimers();
       pending.clear();
     },
   };
@@ -99,12 +130,20 @@ export function watchVault(
   onChange: (paths: string[]) => void,
   options: WatchOptions = {},
 ): VaultWatcher {
-  const batcher = createBatcher(onChange, options.debounceMs ?? WATCH_DEBOUNCE_MS);
+  const batcher = createBatcher(
+    onChange,
+    options.debounceMs ?? WATCH_DEBOUNCE_MS,
+    options.maxWaitMs ?? WATCH_MAX_WAIT_MS,
+  );
   const watcher = watch(root, {
     cwd: root,
     ignoreInitial: true,
     persistent: true,
     ignored: (path: string) => isIgnoredPath(path),
+    awaitWriteFinish: {
+      stabilityThreshold: options.writeStabilityMs ?? WATCH_WRITE_STABILITY_MS,
+      pollInterval: 100,
+    },
   });
 
   const ready = new Promise<void>((resolve) => {

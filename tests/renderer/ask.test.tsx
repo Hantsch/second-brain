@@ -218,6 +218,7 @@ function renderAsk(extra: Handlers = {}): Rendered {
       docCount: 12,
       indexedAt: NOW,
       indexing: false,
+      indexRefreshFailedAt: null,
     }),
     'chat:threads': () => [],
     'chat:thread': () => null,

@@ -92,7 +92,15 @@ beforeEach(() => {
   document.documentElement.lang = 'de';
   invoke.mockClear();
   state = {
-    status: { root: null, name: null, ready: false, docCount: 0, indexedAt: null, indexing: false },
+    status: {
+      root: null,
+      name: null,
+      ready: false,
+      docCount: 0,
+      indexedAt: null,
+      indexing: false,
+      indexRefreshFailedAt: null,
+    },
     snapshot: {
       ...(JSON.parse(JSON.stringify(settingsSnapshot)) as SettingsSnapshot),
       vault: null,

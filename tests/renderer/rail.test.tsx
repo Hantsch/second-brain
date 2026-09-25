@@ -25,6 +25,7 @@ const READY_STATUS: VaultStatus = {
   name: 'Demo-Vault',
   ready: true,
   indexing: false,
+  indexRefreshFailedAt: null,
   indexedAt: '2026-08-10T09:00:00+02:00',
   docCount: 42,
 };

@@ -135,6 +135,7 @@ export const en: Record<TranslationKey, string> = {
   'vault.choose': 'Open a vault',
   'vault.docs': '{count} documents',
   'vault.indexing': 'Building the index',
+  'vault.indexFailed': 'Index update failed',
   'vault.indexed': 'Index up to date',
   'vault.noIndex': 'No index',
   'vault.statusAria': 'Vault status, opens the settings',

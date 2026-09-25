@@ -48,6 +48,7 @@ const own = {
   'settings.vault.indexState': 'Index state',
   'settings.vault.indexReady': 'up to date',
   'settings.vault.indexBuilding': 'building',
+  'settings.vault.indexFailed': 'update failed — rebuild the index',
   'settings.vault.indexMissing': 'no index',
   'settings.vault.indexAt': 'Last index run',
   'settings.vault.indexNever': 'never',

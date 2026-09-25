@@ -1,7 +1,7 @@
 ---
 id: 055
 title: A bulk change reaches the index
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-09-03
 ---
 
@@ -27,14 +27,14 @@ content, and a failed refresh must not report success.
 
 ## Acceptance Criteria
 
-- [ ] Under a sustained event stream, the index still updates within a bounded interval — a
+- [x] Under a sustained event stream, the index still updates within a bounded interval — a
       test simulates events arriving faster than the debounce and asserts a flush happens.
-- [ ] Files still being written by an external tool are not indexed half-written.
-- [ ] A refresh that fails does not emit `event:vault-changed` as if it succeeded; the failure
+- [x] Files still being written by an external tool are not indexed half-written.
+- [x] A refresh that fails does not emit `event:vault-changed` as if it succeeded; the failure
       is visible (at minimum in the maintenance/health surface, not only on the console).
-- [ ] Back-to-back storms do not queue a pile of sequential full rebuilds; pending work
+- [x] Back-to-back storms do not queue a pile of sequential full rebuilds; pending work
       collapses.
-- [ ] Normal single-file editing behaviour (250 ms trailing debounce) is unchanged.
+- [x] Normal single-file editing behaviour (250 ms trailing debounce) is unchanged.
 
 ## Open Questions
 
@@ -99,7 +99,7 @@ against that landed shape (coalescing must then union the paths, `undefined` = f
 
 ## Deliverables
 
-- [ ] **D1 — The watcher batch flushes within a bounded wait.** In `src/core/vault/watch.ts`,
+- [x] **D1 — The watcher batch flushes within a bounded wait.** In `src/core/vault/watch.ts`,
       export `WATCH_MAX_WAIT_MS = 2000` and give `createBatcher(onFlush, debounceMs, maxWaitMs =
       WATCH_MAX_WAIT_MS)` a max-wait timer: it starts on the first `add` into an empty batch and
       is not reset by later adds; the existing trailing timer is reset on each add as today;
@@ -114,7 +114,7 @@ against that landed shape (coalescing must then union the paths, `undefined` = f
       ms after it, not at the max wait"` (one add → nothing at 249 ms, one flush at 250 ms, no
       second flush at 2000 ms). The existing three `createBatcher` tests stay unchanged and green.
       Files: `src/core/vault/watch.ts`, `tests/core/vault/watch.test.ts`.
-- [ ] **D2 — The watcher does not report a file that is still being written.** In
+- [x] **D2 — The watcher does not report a file that is still being written.** In
       `src/core/vault/watch.ts`, `WatchOptions` gets `writeStabilityMs?: number` (default 300,
       exported as `WATCH_WRITE_STABILITY_MS`); `watchVault` passes
       `awaitWriteFinish: { stabilityThreshold: writeStabilityMs, pollInterval: 100 }` to
@@ -127,7 +127,7 @@ against that landed shape (coalescing must then union the paths, `undefined` = f
       the test fails without `awaitWriteFinish`); in `onChange`, read the file and assert it
       already holds all three chunks, and assert exactly one report for that path.
       Files: `src/core/vault/watch.ts`, `tests/core/vault/watch.test.ts`.
-- [ ] **D3 — Back-to-back refreshes collapse instead of queueing.** In
+- [x] **D3 — Back-to-back refreshes collapse instead of queueing.** In
       `src/core/index/service.ts`, `refresh(paths?)` keeps at most one *queued* refresh on top of
       the running one: a call while a refresh is queued (not yet started) merges into it and
       returns that same promise; a call while a refresh is running and none is queued creates the
@@ -144,7 +144,7 @@ against that landed shape (coalescing must then union the paths, `undefined` = f
       resolve) and `"a refresh arriving mid-run is not lost"` (write a new file while the first
       run is held, call refresh → after both settle, the new file is searchable).
       Files: `src/core/index/service.ts`, `tests/core/index/service.test.ts`.
-- [ ] **D4 — A failed refresh does not report success and marks the vault status.** Add
+- [x] **D4 — A failed refresh does not report success and marks the vault status.** Add
       `indexRefreshFailedAt: string | null` (ISO timestamp) to `VaultStatus` in
       `src/shared/types/vault.ts` with a doc comment (a timestamp only, never the error text —
       guardrail 6); fill it in `EMPTY_STATUS` and `status()` in `src/main/services.ts`, keep it in
@@ -164,7 +164,7 @@ against that landed shape (coalescing must then union the paths, `undefined` = f
       path"`. Extend the existing close-vault `toEqual` expectation with the new field.
       Files: `src/shared/types/vault.ts`, `src/main/services.ts`, `src/main/ipc/index.ts`,
       `src/renderer/lib/mock-fixtures.ts`, `tests/main/services.test.ts`.
-- [ ] **D5 — The failed index update is visible in the rail and in Settings › Vault.** In
+- [x] **D5 — The failed index update is visible in the rail and in Settings › Vault.** In
       `src/renderer/components/VaultIndicator.tsx`, `indexLabel` precedence becomes indexing →
       failed (`status.indexRefreshFailedAt !== null`) → indexed → none; the failed state uses
       `sb-dot--warn` (currently defined in `src/renderer/styles/app/projects.css`; if that file
@@ -198,19 +198,65 @@ against that landed shape (coalescing must then union the paths, `undefined` = f
 
 ## Acceptance Tests
 
-- AC1 → unit `tests/core/vault/watch.test.ts` › "flushes within the max wait under a sustained
-  event stream" (D1)
+- AC1 → unit `tests/core/vault/watch.test.ts` › "flusht innerhalb der Maximalwartezeit bei
+  anhaltendem Ereignisstrom" (D1)
 - AC2 → unit `tests/core/vault/watch.test.ts` › "reports a file written in chunks only once it
   is complete" (D2)
 - AC3 → unit `tests/main/services.test.ts` › "a failed refresh sends no vault-changed and marks
   the status" (D4); unit `tests/main/services.test.ts` › "the next successful refresh clears the
-  failure and reports every path" (D4); renderer `tests/renderer/index-refresh-failure.test.tsx`
-  › "shows a failed index update in the rail and the vault settings" (D5)
+  failure and reports every path" (D4); unit `tests/main/services.test.ts` › "a pending failure
+  from a closed vault does not leak into the next vault's refresh" (review-fix); renderer
+  `tests/renderer/index-refresh-failure.test.tsx` › "shows a failed index update in the rail and
+  the vault settings" (D5)
 - AC4 → unit `tests/core/index/service.test.ts` › "refresh calls during a running update
   collapse into one follow-up run" (D3); unit `tests/core/index/service.test.ts` › "a refresh
   arriving mid-run is not lost" (D3)
-- AC5 → unit `tests/core/vault/watch.test.ts` › "a single event still flushes 250 ms after it,
-  not at the max wait" (D1), plus the unchanged existing case "meldet erst nach 250 ms Ruhe und
-  dann gebuendelt"
+- AC5 → unit `tests/core/vault/watch.test.ts` › "ein einzelnes Ereignis flusht 250 ms danach,
+  nicht erst bei der Maximalwartezeit" (D1), plus the unchanged existing case "meldet erst nach
+  250 ms Ruhe und dann gebuendelt"
 
 ## Done
+
+Watcher batching now caps a sustained event storm to a flush at most every 2 s
+(`WATCH_MAX_WAIT_MS`) without changing the normal 250 ms trailing debounce, and
+chokidar's `awaitWriteFinish` (300 ms default) keeps a file being written in
+chunks from being read half-finished. `IndexService.refresh` collapses a storm
+of calls into at most one running run plus one queued follow-up (paths union,
+`undefined` wins). A failed watcher-driven refresh no longer sends
+`event:vault-changed`; it sets a timestamp-only `VaultStatus.indexRefreshFailedAt`
+(Guardrail 6), surfaced in the rail dot and the Settings › Vault row, and clears
+on the next success or a manual rebuild.
+
+Commit message: `055: bound the watcher storm, honest index-refresh failure`
+
+Decisions:
+
+- D4 introduced a new required `VaultStatus` field, which broke `tsc` in 23
+  unrelated renderer test files that hand-build `VaultStatus` literals — fixed
+  mechanically as an unplanned "D4-fix" (each file gained one
+  `indexRefreshFailedAt: null,` line, nothing else).
+- Review 1 found `pendingFailedChange` (the paths remembered across a failed
+  refresh) was never reset by `openVault`/`closeVault`, leaking a closed
+  vault's paths into the next vault's first successful `event:vault-changed`
+  — fixed with a reset in both methods plus a regression test.
+- `sb-dot--warn` already lived in `projects.css`, which — like `shell.css` — is
+  unconditionally imported in `index.css`; it is not screen-scoped, so D5
+  reused the class as-is instead of moving it, per the plan's own fallback.
+- `src/core/index/service.ts` grew to 599 lines (was 532) from D3's coalescing
+  logic — over the ~300-line soft limit; noted here as a split candidate for a
+  future story, not addressed in this one (D3 was scoped to the coalescing
+  behaviour, not a file-layout refactor).
+
+Verification: narrow gate only (`npm run build`, `npm run lint`,
+`npm run typecheck`, `npx vitest run --changed HEAD`) — all green after the
+review fix. `npm run format:check` and `tests/renderer/quick-capture.test.tsx`
+are red but pre-existing (confirmed via `git stash` against bare HEAD, both
+predate this story: 5 already-misformatted requirement docs from an earlier
+refine batch, and an unrelated jsdom `localStorage.clear` issue). No e2e run
+— story's own decision: no criterion is a user action. AC → test mapping
+verified: AC1 (D1 test, passed), AC2 (D2 test, passed), AC3 (3 tests, passed),
+AC4 (2 tests, passed), AC5 (D1 test + unchanged existing test, passed). Review:
+stage 1 (default) ran once, found 1 confirmed issue (cross-vault leak), fixed
+and re-verified; no stage 2 (Model Hints: `Review: → default`).
+
+tiers: D 5 / hard 1 · review default · cycles 1 · agents 10

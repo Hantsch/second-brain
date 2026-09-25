@@ -130,6 +130,7 @@ function renderPanel(frontmatter: Partial<JournalFrontmatterFields> = {}): void 
       docCount: 1,
       indexedAt: DATE,
       indexing: false,
+      indexRefreshFailedAt: null,
     }),
     'areas:list': () => [],
   });

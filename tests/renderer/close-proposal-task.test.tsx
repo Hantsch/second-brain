@@ -300,6 +300,7 @@ function renderJournal(
       docCount: 3,
       indexedAt: NOW.toISOString(),
       indexing: false,
+      indexRefreshFailedAt: null,
     }),
     'settings:get': () => settings,
     'journal:list': () => [day()],

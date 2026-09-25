@@ -901,6 +901,7 @@ describe('MonthCalendar wired into JournalScreen (010, D2)', () => {
         docCount: days.length,
         indexedAt: NOW.toISOString(),
         indexing: false,
+        indexRefreshFailedAt: null,
       }),
       'settings:get': () => settings,
       'journal:list': () => days,

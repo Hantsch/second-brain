@@ -234,6 +234,7 @@ function renderInbox(extra: Handlers = {}): Rendered {
       docCount: 12,
       indexedAt: NOW,
       indexing: false,
+      indexRefreshFailedAt: null,
     }),
     'capture:inbox': () => [fresh, old],
     'capture:classify': ({ path }) => proposalFor(path === old.path ? old : fresh),

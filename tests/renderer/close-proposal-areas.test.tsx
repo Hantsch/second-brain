@@ -85,6 +85,7 @@ function renderPanel(areas: string[]): { onApply: ReturnType<typeof vi.fn> } {
       docCount: 1,
       indexedAt: new Date().toISOString(),
       indexing: false,
+      indexRefreshFailedAt: null,
     }),
     'areas:list': () => AREAS,
   });

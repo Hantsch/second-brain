@@ -22,6 +22,7 @@ export function indexHandlers(services: Services): HandlerMap {
         const stats = await index.rebuild((done, total) =>
           services.reportIndexProgress(done, total, true),
         );
+        services.clearIndexRefreshFailure();
         return stats;
       } finally {
         services.reportIndexProgress(0, 0, false);

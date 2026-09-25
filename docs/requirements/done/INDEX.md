@@ -249,3 +249,8 @@ second roadmap.
   German preview strings, string-replace/word-boundary bugs, a watcher-pause race, and a silent
   undo-failure gap).
 - 054 — Saving one file costs one file · S18 · Index persistence/derivation/refresh/startup made incremental and scoped to the change; size guard added; perf-budgeted.
+- 055 — A bulk change reaches the index · S18 · Watcher storms now flush within a bounded 2 s
+  max wait, half-written files wait for `awaitWriteFinish`, back-to-back refreshes collapse
+  into at most one queued follow-up, and a failed watcher refresh marks a timestamp-only
+  `indexRefreshFailedAt` (visible in the rail and Settings › Vault) instead of silently
+  reporting success.
