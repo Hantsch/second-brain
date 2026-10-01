@@ -3,7 +3,7 @@ name: ui-verify
 description: "Drive a built Electron app through Playwright's _electron to produce screenshots of every screen and an axe-core accessibility report, without anyone starting the app by hand. Use when: asked to verify, screenshot, smoke-test or look at the UI of an Electron app; setting up UI verification or a visual check; a story needs a live smoke test on a running app; writing functional acceptance or e2e tests that drive the real Electron UI; making a test run stay off the desktop and out of the keyboard focus; splitting e2e runs into one flow per story and all flows per sprint; adding an accessibility gate to CI; reviewing whether a UI change actually renders. DO NOT USE FOR: unit or component tests; web-only apps (use plain Playwright); Electron layering or IPC questions."
 ---
 
-<!-- tech-rules:managed 2.1.0 -->
+<!-- tech-rules:managed 2.2.0 -->
 
 # UI Verification for Electron
 
@@ -131,9 +131,24 @@ window.once('ready-to-show', () => {
 - **`showInactive()` and `focusable: false` together.** `focusable: false` alone leaves Electron
   requesting a focus the window then refuses; `showInactive()` paints without asking for activation.
   On Windows `focusable: false` also keeps the window off the taskbar.
+- **Every window, from one place.** The flags, the offscreen position and the throttling switch
+  live in one shared module (`window-shared.ts`: `HARNESS`, `OFFSCREEN`, `OFFSCREEN_MARGIN`,
+  `rendererWebPreferences()`), and every `new BrowserWindow` uses it - overlays, secondary windows,
+  a settings window, not just the main one. The window that forgot is the one that pops up, and an
+  always-on-top overlay forgetting covers the whole desktop. A window sized to a display goes left
+  of every display at that display's width; `focusable: false` and `showInactive()` apply to it the
+  same way.
 - **The harness keeps it there.** A `resize()` helper must not `center()` the window; it re-derives
   the offscreen position from the new width. Anything else that moves the window - maximize,
   fullscreen, restoring a saved position - is skipped offscreen.
+- **The harness picks windows by identity, not by index.** Once a second window can be open,
+  `BrowserWindow.getAllWindows()[0]` is whichever was created last; `resize()` and the offscreen
+  flow select the main window by its URL (or an id the main process exposes).
+- **On a mixed-DPI Windows desktop an offscreen frameless window's content comes out larger than
+  asked** (measured: +16x+8 at 940x620), so a flow "at 940 px" measures 956. After `setSize`, read
+  `getContentSize()`; if it is off, lift the minimum size, re-size by the measured delta, re-place
+  the window, wait for the move to land (~200 ms) and restore the minimum - restoring it earlier
+  clamps straight back.
 - **`APP_UI_VISIBLE=1` puts the window back on screen** (prefix both variables with the app's name).
   That is the debugging path, not a mode a run needs.
 - **One flow checks all of it** (`flows/harness-offscreen.mjs`): the window's bounds intersect no
@@ -290,6 +305,8 @@ Two runners, matching the split in Shape:
 - [ ] `ELECTRON_RUN_AS_NODE` scrubbed from the environment
 - [ ] The run neither takes the keyboard focus nor appears on the desktop: offscreen, still
       painting, `showInactive()`; a visible opt-out; normal launches unchanged; one flow checks it
+- [ ] Every `BrowserWindow` - overlays and secondary windows included - takes the harness flags
+      from the one shared module; harness helpers select windows by identity, not by index
 - [ ] Test run split: screen pass per story, one flow by name per story, every flow once per
       sprint - each flow in its own process on a freshly written fixture, a subset by name
 - [ ] One session per fixture variant, `reload()` between screens, a new app only for declared

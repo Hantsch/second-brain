@@ -172,7 +172,7 @@ Neighbor repos this project deliberately draws from:
 - `../yougrab` — YouTube pipeline (yt-dlp + fallback provider, transcript preparation)
 - `../claude-control` — reading Claude Code sessions from `~/.claude/projects`
 
-<!-- tech-rules:managed:start 2.1.0 -->
+<!-- tech-rules:managed:start 2.2.0 -->
 
 ## House rules
 

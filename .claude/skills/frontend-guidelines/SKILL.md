@@ -3,7 +3,7 @@ name: frontend-guidelines
 description: "Frontend architecture rules and conventions for React/TypeScript apps using Atomic Design. Use when: creating or editing files in a frontend source tree; adding atoms/molecules/organisms/templates/pages; building forms, lists, dashboards or detail screens; introducing a new route; wiring server state with a data-fetching library (TanStack Query, SWR, RTK Query); adding UI-kit components (shadcn/ui, MUI, Chakra); adding icons; writing Storybook stories; rendering a name for another user/owner/author; adding or changing translatable strings; deciding which atomic layer a component or hook belongs in; reviewing a diff for layering, naming or duplication violations. DO NOT USE FOR: backend changes; infrastructure/Docker; auth/role/permission matrix changes; non-React frontends."
 ---
 
-<!-- tech-rules:managed 2.1.0 -->
+<!-- tech-rules:managed 2.2.0 -->
 
 # Frontend Guidelines
 
