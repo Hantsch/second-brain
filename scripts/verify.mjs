@@ -1,21 +1,30 @@
 #!/usr/bin/env node
-/* Startet die gebaute App auf dem Demo-Vault und legt Bildschirmfotos jedes
-   Screens nach `.screenshots/`. Damit ist die Oberfläche prüfbar, ohne dass
-   jemand die App von Hand startet.
+/* Der Bildschirmdurchgang (ui-verify): startet die gebaute App auf einem frisch
+   geschriebenen Demo-Vault, besucht jeden Screen und jeden Zustand einmal,
+   legt ein Bildschirmfoto nach `.screenshots/` und lässt axe-core über genau
+   diesen Zustand laufen (`scripts/lib/axe-audit.mjs` → `.screenshots/a11y.json`).
+   Bild und Befund stammen aus demselben Besuch — nicht aus zwei App-Instanzen,
+   deren zweite einen Zustand beschreibt, von dem niemand ein Bild hat.
 
    Aufruf:
-     node scripts/shot.mjs [--screens dashboard,projects] [--out dir]
-                           [--vault pfad] [--keep-open]
+     node scripts/verify.mjs [--only shot|a11y] [--screens dashboard,projects]
+                             [--out dir] [--vault pfad] [--keep-open]
+
+   `npm run verify:ui` ist der ganze Durchgang, `npm run shot` und `npm run a11y`
+   sind seine beiden Filter: nur Bilder, oder nur axe (dann entsteht kein Bild).
 
    Voraussetzung: `npm run build`. Fehlt `out/`, sagt das Skript das deutlich.
-   Fehlt `.demo-vault/`, legt es ihn selbst an.
+   Der Demo-Vault wird zu Beginn jedes Laufs neu geschrieben: die App schreibt in
+   ihn, während sie geprüft wird, und ein Lauf soll nicht erben, was der vorige
+   hinterließ.
 
    Neben den Rail-Screens entstehen: die beiden Overlays der Hülle (Erfassen,
    Fragen), Befehlspalette offen, Tastaturfokus in der Rail, Onboarding ohne
-   Vault, das Schnell-Erfassen-Fenster und ein Fehlerzustand. Der Zustand
-   „kein Modell konfiguriert" wird im Fragen-Overlay geprüft (der Demo-Vault
-   trägt keinen Provider). Was nicht erreichbar ist, wird gemeldet, nicht
-   erfunden.
+   Vault, das Schnell-Erfassen-Fenster, ein Fehlerzustand, die Meldung mit
+   „Rückgängig" und zwei Dialoge, deren Schließen-Knopf gegen `--sb-hit`
+   gemessen wird. Der Zustand „kein Modell konfiguriert" wird im Fragen-Overlay
+   geprüft (der Demo-Vault trägt keinen Provider). Was nicht erreichbar ist, wird
+   gemeldet, nicht erfunden.
 
    Erfassen und Fragen sind seit Story 007 keine Screens mehr. Ihre Aufnahmen
    heißen deshalb `capture-overlay` und `ask-overlay` statt `NN-<screen>` — eine
@@ -27,8 +36,12 @@
    Ordner zwei Builds, ohne dass man es am Bild sieht. Der Lauf sagt am Ende,
    welche Aufnahmen fehlen.
 
-   Rückgabewert 1, wenn Konsolenfehler oder unbehandelte Renderer-Ausnahmen
-   aufgetreten sind. Warnungen zählen nicht. */
+   Rückgabewert:
+     0  sauber, oder nur `minor`/`moderate`-Befunde
+     1  Harness oder App versagt: kein Build, Zustand unerreichbar, Konsolenfehler
+        oder unbehandelte Ausnahme, ein Layout-Gate dieses Skripts schlägt an
+     2  die App lief, aber axe fand `serious`/`critical`, oder eine Fläche
+        unterschreitet `--sb-hit` */
 
 import { mkdirSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
@@ -37,10 +50,12 @@ import {
   HarnessError,
   REPO_ROOT,
   ensureBuild,
-  ensureDemoVault,
   launchApp,
   prepareUserData,
+  seedDemoVault,
 } from './lib/app-harness.mjs';
+import { createAudit } from './lib/axe-audit.mjs';
+import { shootDialogCloses, shootToastUndo } from './lib/hit-area-states.mjs';
 import {
   DEEP_STATES,
   NARROW_DEEP_STATES,
@@ -84,6 +99,8 @@ function parseArgs(argv) {
     vault: join(REPO_ROOT, '.demo-vault'),
     screens: SCREENS,
     keepOpen: false,
+    shots: true,
+    audit: true,
   };
   for (let index = 0; index < argv.length; index += 1) {
     const [flag, inline] = argv[index].split('=');
@@ -94,7 +111,14 @@ function parseArgs(argv) {
       return value;
     };
     if (flag === '--keep-open') options.keepOpen = true;
-    else if (flag === '--out') options.out = join(REPO_ROOT, take());
+    else if (flag === '--only') {
+      const only = take();
+      if (only !== 'shot' && only !== 'a11y') {
+        throw new HarnessError(`--only kennt shot oder a11y, nicht ${only}.`);
+      }
+      options.shots = only === 'shot';
+      options.audit = only === 'a11y';
+    } else if (flag === '--out') options.out = join(REPO_ROOT, take());
     else if (flag === '--vault') options.vault = join(REPO_ROOT, take());
     else if (flag === '--screens') {
       const wanted = take()
@@ -144,32 +168,69 @@ async function capture(target, path, timeout) {
  * Das Fenster wird immer mitgegeben — es gibt mehr als eines, und ein falsches
  * Standardfenster wäre ein Bild, das eine Lüge erzählt.
  *
+ * Jede Aufnahme ist ein Besuch: Bild (außer bei `--only a11y`), danach axe über
+ * genau diesen Zustand (außer bei `--only shot`), und die Konsolenmeldungen seit
+ * dem vorigen Besuch werden diesem zugeschrieben — eine Fehlerliste über die
+ * ganze Sitzung wäre kein Befund, sondern ein Gerücht.
+ *
  * `written` sammelt jede geschriebene Datei — daran hängt die Aufräumung am Ende.
  * `missed` sammelt, was nicht entstand, samt Grund.
  */
-function createShooter(outDir) {
+function createShooter(outDir, { shots, audit, log }) {
   let counter = 0;
   const taken = [];
   const written = new Set();
   const missed = [];
+  /** Konsolenfehler je Besuch: `{ state, errors }`. */
+  const consoleErrors = [];
+  let logs = null;
+  let mark = 0;
+
+  const attribute = (state) => {
+    if (logs === null) return;
+    const errors = logs.entries.slice(mark).filter((entry) => entry.level === 'error');
+    mark = logs.entries.length;
+    if (errors.length > 0) consoleErrors.push({ state, errors });
+  };
 
   /** Aufnahme unter genau diesem Dateinamen. Gibt den Namen zurück, sonst `null`. */
   const shotAs = async (file, target, timeout = SHOT_TIMEOUT_MS) => {
-    const why = await capture(target, join(outDir, file), timeout);
-    if (why === null) {
-      written.add(file);
-      taken.push(file);
-      return file;
+    const state = file.replace(/\.png$/, '').replace(/^\d+-/, '');
+    let result = file;
+    if (shots) {
+      const why = await capture(target, join(outDir, file), timeout);
+      if (why === null) {
+        written.add(file);
+        taken.push(file);
+      } else {
+        missed.push({ file, why });
+        result = null;
+      }
     }
-    missed.push({ file, why });
-    return null;
+    attribute(state);
+    if (audit !== null) {
+      /* Ein Element-Ausschnitt gehört zu einer Seite; axe prüft das ganze Dokument. */
+      const page = typeof target.page === 'function' ? target.page() : target;
+      log(`      axe ${state}: ${await audit.check(state, page)}`);
+    }
+    return result;
   };
 
   return {
     taken,
     written,
     missed,
+    consoleErrors,
     shotAs,
+    /** Die Sitzung, deren Meldungen ab jetzt den Besuchen zugeschrieben werden. */
+    attach(sessionLogs) {
+      logs = sessionLogs;
+      mark = sessionLogs.entries.length;
+    },
+    /** Was seit dem letzten Besuch noch auflief — sonst ginge es verloren. */
+    flush(state) {
+      attribute(state);
+    },
     /** Nummerierte Aufnahme. Die Nummer zählt auch mit, wenn das Bild ausbleibt. */
     async shot(name, target, timeout = SHOT_TIMEOUT_MS) {
       counter += 1;
@@ -395,7 +456,7 @@ async function prepareGardenerHidden(session, log, skipped) {
     skipped.push('Pflege-Foto: der Demo-Vault lieferte keinen Befund zum Wegzulegen');
     return;
   }
-  /* Wiederholte Läufe von `npm run shot` ohne erneutes Seed sollen nicht bei
+  /* Ein Lauf mit `--vault` auf einen schon benutzten Vault soll nicht bei
      jedem Aufruf einen weiteren Befund wegräumen — sonst wüchse die Zahl der
      weggelegten Befunde mit jedem Aufruf. Steht schon etwas ausgeblendet
      (aus einem früheren Lauf dieses Skripts oder dem Seed selbst), bleibt es
@@ -1502,6 +1563,7 @@ async function shootColdStates(options, shooter, log, skipped) {
     ...WIDE,
   });
   const session = await launchApp({ userDataDir, vault: null });
+  shooter.attach(session.logs);
   try {
     await session.resize(WIDE.width, WIDE.height);
     await settle(session.page);
@@ -1593,6 +1655,7 @@ async function shootColdStates(options, shooter, log, skipped) {
       );
       skipped.push('Fehlerzustand: das Onboarding zeigte keine Fehlerkarte');
     }
+    shooter.flush('cold-start');
     return session.logs;
   } finally {
     await session.close();
@@ -1604,19 +1667,23 @@ async function main() {
   ensureBuild();
   checkScreenList();
   mkdirSync(options.out, { recursive: true });
-  ensureDemoVault(options.vault);
+  seedDemoVault(options.vault);
 
   const log = (line) => console.log(line);
-  log(`Screenshots nach ${options.out}`);
-  log(`Vault: ${options.vault}`);
+  const mode =
+    options.shots && options.audit ? 'Bilder + axe' : options.shots ? 'nur Bilder' : 'nur axe';
+  log(`Bildschirmdurchgang (${mode}) nach ${options.out}`);
+  log(`Vault: ${options.vault} (frisch geschrieben)`);
 
   const skipped = [];
+  const audit = options.audit ? createAudit() : null;
   const userDataDir = prepareUserData(join(options.out, '.userdata'), {
     vault: options.vault,
     ...WIDE,
   });
   const session = await launchApp({ userDataDir, vault: options.vault });
-  const shooter = createShooter(options.out);
+  const shooter = createShooter(options.out, { shots: options.shots, audit, log });
+  shooter.attach(session.logs);
   let coldLogs = null;
 
   try {
@@ -1654,7 +1721,16 @@ async function main() {
       await shootPageConflict(session, shooter, log, skipped);
       await shootModuleLifecycleDialogs(session, shooter, log, skipped);
     }
+    /* Die Flächen unter `--sb-hit` misst nur ein Lauf mit axe — ein reiner
+       Bilderlauf hat keinen Bericht, in den der Befund gehörte. */
+    if (audit !== null) {
+      if (options.screens.includes('dashboard')) {
+        await shootToastUndo(session, shooter, audit, log, skipped);
+      }
+      await shootDialogCloses(session, shooter, audit, options.screens, log, skipped);
+    }
     await shootRailFocus(session, shooter, log, skipped);
+    shooter.flush('session');
 
     if (options.keepOpen) {
       log('\n--keep-open: das Fenster bleibt offen. Schließen beendet das Skript.');
@@ -1664,7 +1740,6 @@ async function main() {
     }
 
     const entries = [...session.logs.entries, ...(coldLogs?.entries ?? [])];
-    const errors = entries.filter((entry) => entry.level === 'error');
     const logFile = join(options.out, 'console.log');
     const protocol = [session.logs.format(), coldLogs?.format() ?? ''].filter(Boolean).join('\n');
     writeFileSync(logFile, `${protocol}\n`, 'utf8');
@@ -1673,7 +1748,7 @@ async function main() {
        Bei eingeschränkter Auswahl bleibt alles liegen — die anderen Bilder sind
        nicht veraltet, sie waren nur nicht gefragt. */
     const full = options.screens.length === SCREENS.length && !options.keepOpen;
-    const stale = full ? sweepStale(options.out, shooter.written) : [];
+    const stale = full && options.shots ? sweepStale(options.out, shooter.written) : [];
 
     log('');
     log(
@@ -1683,16 +1758,28 @@ async function main() {
     for (const gap of shooter.missed) log(`  fehlt: ${gap.file} — ${gap.why}`);
     if (stale.length > 0) {
       log(`  veraltet, auf *.stale umbenannt: ${stale.join(', ')}`);
-    } else if (!full) {
+    } else if (!full && options.shots) {
       log('  Teillauf: alte Aufnahmen bleiben liegen, der Ordner mischt zwei Läufe.');
     }
     for (const note of skipped) log(`  übersprungen: ${note}`);
-    if (errors.length > 0) {
-      log(`\n${errors.length} Fehler in der Konsole:`);
-      for (const entry of errors.slice(0, 10)) log(`  ${entry.source}: ${entry.text}`);
+    if (shooter.consoleErrors.length > 0) {
+      const count = shooter.consoleErrors.reduce((sum, item) => sum + item.errors.length, 0);
+      log(`\n${count} Fehler in der Konsole:`);
+      for (const { state, errors } of shooter.consoleErrors) {
+        for (const entry of errors.slice(0, 5)) log(`  ${state} · ${entry.source}: ${entry.text}`);
+      }
       process.exitCode = 1;
     } else {
       log('Keine Konsolenfehler.');
+    }
+
+    if (audit !== null) {
+      const failedGate = audit.finish(options.out, log);
+      const unreachable = audit.report.screens.some((entry) => !entry.reached);
+      if (unreachable) process.exitCode = 1;
+      /* 2 nur, wenn die App sich sonst benommen hat: ein Harness-Fehler (1)
+         wiegt schwerer und darf von einem axe-Befund nicht überdeckt werden. */
+      if (failedGate && process.exitCode !== 1) process.exitCode = 2;
     }
   } finally {
     if (!options.keepOpen) await session.close();

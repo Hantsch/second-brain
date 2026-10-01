@@ -61,8 +61,8 @@ async function bootstrap(): Promise<Services> {
 /**
  * Which vault is opened at startup.
  *
- * `SB_VAULT` overrides the history: the check scripts (`npm run shot`,
- * `npm run a11y`) use it to start the app on the demo vault without
+ * `SB_VAULT` overrides the history: the check scripts (`npm run verify:ui`,
+ * `npm run test:e2e`) use it to start the app on the demo vault without
  * touching the user's settings. If the variable is missing, the last
  * vault applies. If neither fits, the app starts in onboarding — never
  * not at all.

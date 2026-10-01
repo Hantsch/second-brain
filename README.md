@@ -52,15 +52,19 @@ The binding file format is documented in [docs/VAULT-FORMAT.md](docs/VAULT-FORMA
 | `npm run format:check` | Check Prettier (`npm run format` writes; line endings are normalized to LF via `.gitattributes`, so this is green on any OS) |
 | `npm run verify`       | format:check → lint → typecheck → test → build. Must be green.                                                               |
 | `npm run seed`         | Build `.demo-vault/` with realistic sample content                                                                           |
-| `npm run shot`         | Start the app via Playwright, PNGs into `.screenshots/`                                                                      |
-| `npm run a11y`         | Run axe-core over every screen                                                                                               |
-| `npm run verify:ui`    | seed → build → shot → a11y, for any UI work                                                                                  |
+| `npm run verify:ui`    | build → one pass over every screen: PNG and axe-core from the same visit, for any UI work                                    |
+| `npm run shot`         | The same pass, screenshots only (PNGs into `.screenshots/`)                                                                  |
+| `npm run a11y`         | The same pass, axe-core only (`.screenshots/a11y.json`)                                                                      |
 | `npm run test:e2e`     | Flow-level acceptance suite (Playwright) against a disposable, no-model vault                                                |
 
-`npm run shot` and `npm run a11y` start the built app against the demo vault. They
-need `npm run build` first, and they never touch the real installation: the vault
-comes in via `SB_VAULT`, and settings live in their own `--user-data-dir`.
-`SB_DEMO=1` marks the run as demo mode.
+All three run `scripts/verify.mjs` against the built app. `shot` and `a11y` need
+`npm run build` first. Each run rewrites `.demo-vault/` before it starts, so no run
+inherits what the previous one wrote. They never touch the real installation: the
+vault comes in via `SB_VAULT`, settings live in their own `--user-data-dir`, and
+the window stays off the desktop and out of the keyboard focus (set
+`SB_UI_VISIBLE=1` to watch). `SB_DEMO=1` marks the run as demo mode. Exit codes:
+`0` clean, `1` the harness or the app failed, `2` axe found `serious`/`critical`
+or a hit area falls short of `--sb-hit`.
 
 ## Continuous integration
 

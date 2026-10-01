@@ -1,6 +1,6 @@
 /* The only way an e2e spec gets a running app.
  *
- * It does exactly what scripts/a11y.mjs does — ensureBuild, ensureDemoVault,
+ * It does exactly what scripts/verify.mjs does — ensureBuild, ensureDemoVault,
  * prepareUserData, launchApp — and deliberately owns no `_electron.launch` of
  * its own. That single launch path is the guarantee that a spec can never read
  * the author's real vault, their real ~/.claude sessions or their stored keys:

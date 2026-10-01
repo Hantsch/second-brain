@@ -56,10 +56,10 @@
     "test:e2e": "playwright test",
     "test:watch": "vitest",
     "seed": "node scripts/seed-vault.mjs",
-    "shot": "node scripts/shot.mjs",
-    "a11y": "node scripts/a11y.mjs",
+    "shot": "node scripts/verify.mjs --only shot",
+    "a11y": "node scripts/verify.mjs --only a11y",
     "verify": "npm run format:check && npm run lint && npm run typecheck && npm test && npm run build",
-    "verify:ui": "npm run seed && npm run build && npm run shot && npm run a11y"
+    "verify:ui": "npm run build && node scripts/verify.mjs"
   },
   "dependencies": {
     "@fontsource/ibm-plex-mono": "^5.2.7",

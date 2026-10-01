@@ -96,6 +96,12 @@
 .sb-tile--xl {
   grid-column: span 4;
 }
+/* A stack in the two-column grid (`gridPlacements`, layout.ts): the grid
+   spreads the tall tile's extra height over both rows, so the short tiles
+   fill their cells and the gaps between them stay the grid's own gap. */
+.sb-tile--stacked {
+  align-self: stretch;
+}
 
 /* The dragged tile stays fixed to the pointer: it's taken out of the grid
    flow, so it doesn't jump when the gap moves. */
@@ -581,6 +587,10 @@
 }
 .sb-tiletodos .sb-todolist {
   gap: 0;
+  /* The list's own `flex-start` sizes each row to its unbroken title, so the
+     single-line ellipsis above never applies and a long title runs past the
+     card. In the tile a row is as wide as the card. */
+  align-items: stretch;
 }
 
 .sb-tilejournal {

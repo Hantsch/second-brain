@@ -1,7 +1,7 @@
 /* What every BrowserWindow shares: the secure renderer preferences and the
    verification-run flags (ui-verify, "An invisible run").
 
-   A UI verification run (`npm run shot`, `npm run a11y`, `npm run test:e2e`)
+   A UI verification run (`npm run verify:ui`, `shot`, `a11y`, `test:e2e`)
    sets `SB_UI_HARNESS=1`. Its windows then stay off the desktop and out of the
    keyboard focus, so the developer can keep working while a run goes. Every
    window takes these flags from here — the one that forgot is the one that

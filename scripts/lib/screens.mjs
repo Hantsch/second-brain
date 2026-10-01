@@ -31,7 +31,7 @@ export const SCREENS = [
 /** Screens, die zusätzlich im engen Fenster geprüft werden: die mit Inhalt.
     Die beiden Overlays gehören hier nicht hinein — sie sind keine Rail-Screens.
     Eng geprüft werden sie trotzdem, ausdrücklich und unter eigenem Namen
-    (`shootOverlaysNarrow` in shot.mjs). */
+    (`shootOverlaysNarrow` in verify.mjs). */
 export const NARROW_SCREENS = [
   'dashboard',
   'projects',
@@ -43,7 +43,7 @@ export const NARROW_SCREENS = [
   'notes',
   /* Zwei Spalten mit Detailspalte: bei 1152 px steht der Tag über der
      Tagesliste, und Composer samt Abschluss-Knopf sind am unteren Rand der
-     Detailspalte verankert (`measureJournalNarrow` in shot.mjs misst das —
+     Detailspalte verankert (`measureJournalNarrow` in verify.mjs misst das —
      Tageseintrag, Tagesliste und Aktionsleiste je einzeln). */
   'journal',
   /* Die Pflege stellt Widersprüche zweispaltig hin und trägt Vorschauen in Mono:

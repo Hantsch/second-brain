@@ -229,8 +229,10 @@ two modules with wiki pages, daily entries, inbox dumps, maintenance findings) �
 Without it, the demo run would read the real `~/.claude`, and foreign session
 titles would end up in the screenshots.
 
-`npm run shot` starts the app against it via Playwright's `_electron`, visits
-every screen, and writes PNGs into `.screenshots/`. It's checked both wide
+`npm run verify:ui` (`scripts/verify.mjs`) rewrites that vault, starts the app against it
+via Playwright's `_electron`, visits every screen once, writes a PNG into
+`.screenshots/` and runs axe-core over the same state (`a11y.json`). `shot` and `a11y`
+are that pass with only one of the two halves. It's checked both wide
 (1440×900) **and** narrow (1152×720), the latter also for states behind a detail
 address (`NARROW_DEEP_STATES`), because an idle rail screen reveals nothing about
 a detail column. Anything taller than the window also gets an extra screenshot

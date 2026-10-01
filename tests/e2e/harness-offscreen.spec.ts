@@ -10,6 +10,7 @@
  */
 
 import type { ElectronApplication, Page } from '@playwright/test';
+import { evaluateMain } from '../../scripts/lib/app-harness.mjs';
 import { expect, test } from './fixtures/app';
 
 test.use({ specId: 'harness-offscreen' });
@@ -23,18 +24,23 @@ interface WindowFacts {
 }
 
 function windowFacts(app: ElectronApplication, id: number): Promise<WindowFacts | null> {
-  return app.evaluate(({ BrowserWindow, screen }, windowId) => {
-    const window = BrowserWindow.fromId(windowId);
-    if (!window || window.isDestroyed()) return null;
-    const bounds = window.getBounds();
-    const onAnyDisplay = screen.getAllDisplays().some(({ bounds: display }) => {
-      const overlapX = bounds.x < display.x + display.width && bounds.x + bounds.width > display.x;
-      const overlapY =
-        bounds.y < display.y + display.height && bounds.y + bounds.height > display.y;
-      return overlapX && overlapY;
-    });
-    return { onAnyDisplay, focused: window.isFocused(), visible: window.isVisible() };
-  }, id);
+  return evaluateMain(
+    app,
+    ({ BrowserWindow, screen }, windowId) => {
+      const window = BrowserWindow.fromId(windowId);
+      if (!window || window.isDestroyed()) return null;
+      const bounds = window.getBounds();
+      const onAnyDisplay = screen.getAllDisplays().some(({ bounds: display }) => {
+        const overlapX =
+          bounds.x < display.x + display.width && bounds.x + bounds.width > display.x;
+        const overlapY =
+          bounds.y < display.y + display.height && bounds.y + bounds.height > display.y;
+        return overlapX && overlapY;
+      });
+      return { onAnyDisplay, focused: window.isFocused(), visible: window.isVisible() };
+    },
+    id,
+  );
 }
 
 /** Ten animation frames within two seconds — a window that stopped painting never gets there.

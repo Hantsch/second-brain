@@ -131,8 +131,7 @@ is therefore expected to be green on Windows too, not just Linux/macOS.
 Plus, for every UI change:
 
 ```
-npm run seed           # builds .demo-vault/ with realistic sample content
-npm run shot           # starts the app via Playwright and drops PNGs in .screenshots/
+npm run verify:ui      # build, rewrite .demo-vault/, one pass: PNGs + axe in .screenshots/
 ```
 
 Mandatory tests:
@@ -197,9 +196,13 @@ different names — `scripts/start.mjs` strips `ELECTRON_RUN_AS_NODE` before sta
 `src/main/settings.ts` + `src/main/fs-json.ts` (`readJson`, `writeJsonAtomic`) already do atomic,
 versioned JSON persistence. Keep declining both templates on future setup runs.
 
-`/ui-verify` deviation: flows are Playwright specs (`tests/e2e/*.spec.ts`, run by `npm run
-test:e2e`), not `scripts/flows/<name>.mjs` + `flow`/`flows` runners. The reason is that the suite
-already existed in that form, and Playwright gives the split the skill asks for. `npx playwright
-test <file>` is the per-story run (`e2e-story`), and the full suite is the sprint gate. Each spec
-file gets its own app and a freshly seeded throwaway vault (`fixtures/app.ts`, `specId`). The same
-`scripts/lib/app-harness.mjs` launches both the specs and `shot`/`a11y`.
+`/ui-verify` deviations:
+
+- The screen pass is `npm run verify:ui` (`scripts/verify.mjs`), not `npm run verify`, because
+  `verify` is this project's quality gate. `shot` and `a11y` are its two filters.
+- Flows are Playwright specs (`tests/e2e/*.spec.ts`, run by `npm run test:e2e`), not
+  `scripts/flows/<name>.mjs` + `flow`/`flows` runners. The suite already existed in that form, and
+  Playwright gives the split the skill asks for. `npx playwright test <file>` is the per-story run
+  (`e2e-story`), and the full suite is the sprint gate. Each spec file gets its own app and a
+  freshly seeded throwaway vault (`fixtures/app.ts`, `specId`), launched through the same
+  `scripts/lib/app-harness.mjs` as the screen pass.

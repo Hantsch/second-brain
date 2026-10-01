@@ -76,7 +76,7 @@ export interface DashboardLayout {
  *
  * Nine modules start hidden, and for a reason: **space is the scarce
  * resource.** The default grid must stay within 1152×720 across two screens
- * (checked in `scripts/shot.mjs`), otherwise the screen only answers its one
+ * (checked in `scripts/verify.mjs`), otherwise the screen only answers its one
  * question after scrolling. Two empty input fields ("quick capture", "ask")
  * on the most valuable real estate would be the worst trade for that: both
  * are one keypress away (`Ctrl+Shift+Space`, digit 4) and sit as a button in

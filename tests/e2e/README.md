@@ -51,7 +51,7 @@ worker (see `specId`). Two settings-related ones (058, D1):
 ## An invisible run
 
 The harness (`scripts/lib/app-harness.mjs`) sets `SB_UI_HARNESS=1` for every
-app it starts: `npm run test:e2e`, `npm run shot` and `npm run a11y`. The main
+app it starts: `npm run test:e2e` and the screen pass (`npm run verify:ui`). The main
 process then places every window (main window, quick capture) left of all
 displays, makes it unfocusable and shows it with `showInactive()`. It also
 sends no reminder notifications and registers no hotkey. All of this lives in

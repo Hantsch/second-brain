@@ -94,7 +94,11 @@ test('with the window in the tray the quick-capture hotkey stays registered and 
     );
 
   await test.step('the hotkey is registered to begin with', async () => {
-    expect(await isRegistered(), `${QUICK_CAPTURE_CHORD} is claimed by another app`).toBe(true);
+    /* Polled: the app registers it only once the vault is open, which under a
+       full suite run can land after this test starts. */
+    await expect
+      .poll(isRegistered, { message: `${QUICK_CAPTURE_CHORD} is claimed by another app` })
+      .toBe(true);
   });
 
   await test.step('close the window to the tray, and put away quick capture from before', async () => {

@@ -76,6 +76,53 @@ export function spanOf(size: ModuleSize, columns: number): number {
   return SPANS[size];
 }
 
+/** Where a tile sits in the grid beyond its column span. */
+export interface GridPlacement {
+  /** Grid rows the tile spans. */
+  rows: number;
+  /** Part of a stack: fills its cell, so the stack's gaps stay even. */
+  stacked: boolean;
+}
+
+/**
+ * How each tile is placed, in grid order (gap included).
+ *
+ * Only the two-column grid stacks: when a row ends with an `sm` tile and the
+ * next tile is `sm` too, the row's first tile spans two rows, and the grid's
+ * own auto-placement puts the second `sm` tile under the first. Without this
+ * a short tile next to a tall one leaves a hole, and the next short tile
+ * opens a row of its own. At 1152×720 that row is what pushed the default
+ * grid past its two-screen budget (`MAX_DASHBOARD_SCREENS`, scripts/verify.mjs).
+ *
+ * The three tiles of a stack fill their cells: the grid spreads the tall
+ * tile's extra height over both rows, which would otherwise open a wider gap
+ * between the two short ones than anywhere else in the grid.
+ *
+ * Pure, and fed the same sequence the DOM gets — the drag preview's gap
+ * included — so the preview stacks exactly like the result will.
+ */
+export function gridPlacements(sizes: readonly ModuleSize[], columns: number): GridPlacement[] {
+  const placements = sizes.map(() => ({ rows: 1, stacked: false }));
+  if (columns !== 2) return placements;
+  let index = 0;
+  while (index < sizes.length) {
+    const first = sizes[index]!;
+    const second = sizes[index + 1];
+    const next = sizes[index + 2];
+    const pair = spanOf(first, columns) === 1 && second !== undefined;
+    if (pair && second === 'sm' && next === 'sm') {
+      placements[index] = { rows: 2, stacked: true };
+      placements[index + 1] = { rows: 1, stacked: true };
+      placements[index + 2] = { rows: 1, stacked: true };
+      /* first + second fill this row, next fills the cell under second. */
+      index += 3;
+    } else {
+      index += pair && spanOf(second, columns) === 1 ? 2 : 1;
+    }
+  }
+  return placements;
+}
+
 /**
  * The rows as the grid fills them: row by row, a tile wraps when it no
  * longer fits. Basis for the vertical arrow keys.

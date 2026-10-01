@@ -14,6 +14,8 @@ export declare function ensureBuild(): void;
 
 /** Seeds the sample vault at `vaultPath` unless it is already there. */
 export declare function ensureDemoVault(vaultPath: string, log?: (message: string) => void): string;
+/** Rewrites the demo vault even when it exists; refuses a real vault. */
+export declare function seedDemoVault(vaultPath: string): string;
 
 export interface UserDataOptions {
   /** `null` starts the app in onboarding — no last vault. */
@@ -68,6 +70,13 @@ export interface LaunchOptions {
   /** Merged into the child's environment last, e.g. `SB_E2E_STAGE_DELAY_MS` for one spec. */
   extraEnv?: Record<string, string>;
 }
+
+/** `app.evaluate`, retried when Playwright loses the promise during a busy app start. */
+export declare function evaluateMain<R, Arg>(
+  app: ElectronApplication,
+  fn: (electron: typeof import('electron'), arg: Arg) => R | Promise<R>,
+  arg?: Arg,
+): Promise<R>;
 
 /** Starts the built app and returns window, log and a forgiving `close()`. */
 export declare function launchApp(options: LaunchOptions): Promise<AppSession>;

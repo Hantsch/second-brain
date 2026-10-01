@@ -8,10 +8,11 @@
 
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import type { DashboardLayout, DashboardModuleId, ModuleSize } from '@shared/types';
+import type { DashboardLayout, DashboardModuleId, DashboardTile, ModuleSize } from '@shared/types';
 import { TileControlsProvider } from '../../components/TileFrame';
 import { useT } from '../../i18n';
-import { gridColumns, spanOf } from './layout';
+import { gridColumns, gridPlacements, spanOf } from './layout';
+import type { GridPlacement } from './layout';
 import { useTileMove } from './use-tile-move';
 
 /**
@@ -56,23 +57,47 @@ export function TileGrid({ layout, onSave, render, focus = null }: TileGridProps
     jumpTo(focus.id);
   }, [focus, jumpTo]);
 
-  const items: ReactNode[] = [];
+  /* Grid order as the DOM gets it: the dragged tile is `position: fixed` and
+     out of the flow, the gap stands where it would land. The placements are
+     computed over exactly this sequence, so the preview stacks like the result. */
+  const entries: ({ kind: 'tile'; tile: DashboardTile } | { kind: 'gap'; size: ModuleSize })[] = [];
   let placed = 0;
   for (const tile of move.visible) {
     const dragged = drag !== null && drag.id === tile.id;
     if (drag !== null && !dragged) {
-      if (placed === drag.over) {
-        items.push(<Gap key="gap" size={move.sizeOf(drag.id)} columns={columns} />);
-      }
+      if (placed === drag.over) entries.push({ kind: 'gap', size: move.sizeOf(drag.id) });
       placed += 1;
     }
-    items.push(
+    entries.push({ kind: 'tile', tile });
+  }
+  if (drag !== null && placed === drag.over) {
+    entries.push({ kind: 'gap', size: move.sizeOf(drag.id) });
+  }
+  const inFlow = entries.filter(
+    (entry) => entry.kind === 'gap' || drag === null || entry.tile.id !== drag.id,
+  );
+  const placements = gridPlacements(
+    inFlow.map((entry) => (entry.kind === 'gap' ? entry.size : entry.tile.size)),
+    columns,
+  );
+  const placementOf = (entry: (typeof entries)[number]): GridPlacement =>
+    placements[inFlow.indexOf(entry)] ?? { rows: 1, stacked: false };
+
+  const items: ReactNode[] = entries.map((entry) => {
+    if (entry.kind === 'gap') {
+      return <Gap key="gap" size={entry.size} columns={columns} placement={placementOf(entry)} />;
+    }
+    const { tile } = entry;
+    const dragged = drag !== null && drag.id === tile.id;
+    const { rows, stacked } = placementOf(entry);
+    return (
       <li
         key={tile.id}
         ref={(element) => move.registerTile(tile.id, element)}
         className={[
           'sb-tile',
           `sb-tile--${tile.size}`,
+          stacked ? 'sb-tile--stacked' : '',
           dragged ? 'sb-tile--dragging' : '',
           move.lifted === tile.id ? 'sb-tile--lifted' : '',
         ]
@@ -87,16 +112,15 @@ export function TileGrid({ layout, onSave, render, focus = null }: TileGridProps
                 width: drag.width,
                 height: drag.height,
               }
-            : undefined
+            : rows > 1
+              ? { gridRow: `span ${rows}` }
+              : undefined
         }
       >
         {render(tile.id)}
-      </li>,
+      </li>
     );
-  }
-  if (drag !== null && placed === drag.over) {
-    items.push(<Gap key="gap" size={move.sizeOf(drag.id)} columns={columns} />);
-  }
+  });
 
   return (
     <TileControlsProvider value={move.controls}>
@@ -127,11 +151,22 @@ export function TileGrid({ layout, onSave, render, focus = null }: TileGridProps
  * Calculated with `spanOf`, the same version the arrow keys use and which
  * mirrors the media queries in `styles/app/dashboard.css`.
  */
-function Gap({ size, columns }: { size: ModuleSize; columns: number }) {
+function Gap({
+  size,
+  columns,
+  placement,
+}: {
+  size: ModuleSize;
+  columns: number;
+  placement: GridPlacement;
+}) {
   return (
     <li
-      className="sb-tile sb-tile-gap"
-      style={{ gridColumn: `span ${spanOf(size, columns)}` }}
+      className={`sb-tile sb-tile-gap${placement.stacked ? ' sb-tile--stacked' : ''}`}
+      style={{
+        gridColumn: `span ${spanOf(size, columns)}`,
+        ...(placement.rows > 1 ? { gridRow: `span ${placement.rows}` } : {}),
+      }}
       aria-hidden="true"
     />
   );

@@ -26,6 +26,7 @@ import { DEFAULT_DASHBOARD_TILES } from '@shared/types';
 import type {
   DashboardData,
   DashboardLayout,
+  ModuleSize,
   OverviewSettings,
   Project,
   Reminder,
@@ -36,6 +37,7 @@ import {
   dropIndex,
   gridColumns,
   moveTile,
+  gridPlacements,
   resizeTile,
   setTileHidden,
   shiftTile,
@@ -454,6 +456,38 @@ describe('Dashboard-Gitter', () => {
     ]);
     /* Und die Spaltenzahl kommt aus denselben Schwellen wie das CSS. */
     expect([gridColumns(1440), gridColumns(1152), gridColumns(900)]).toEqual([4, 2, 1]);
+  });
+
+  /* Zwei schmale Kacheln neben einer hohen stehen übereinander, statt dass die
+     zweite eine eigene Reihe aufmacht — genau diese Reihe sprengte bei
+     1152×720 das Budget von zwei Bildschirmen. */
+  it('stapelt im zweispaltigen Gitter zwei schmale Kacheln neben einer hohen', () => {
+    const sizes = DEFAULT_DASHBOARD_TILES.filter((tile) => tile.hidden !== true).map(
+      (tile) => tile.size,
+    );
+    const rows = (placed: readonly ModuleSize[], columns: number): number[] =>
+      gridPlacements(placed, columns).map((placement) => placement.rows);
+    /* Steht an | Warte auf, Zuletzt gearbeitet, Todos Arbeit (zwei Reihen) | Pflege
+       über Kommende Erwähnungen. */
+    expect(rows(sizes, 2)).toEqual([1, 1, 1, 2, 1, 1]);
+    /* Die drei Kacheln des Stapels füllen ihre Zellen, sonst niemand. */
+    expect(gridPlacements(sizes, 2).map((placement) => placement.stacked)).toEqual([
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+    ]);
+    /* Vier Spalten und eine Spalte stapeln nicht. */
+    expect(rows(sizes, 4)).toEqual([1, 1, 1, 1, 1, 1]);
+    expect(rows(sizes, 1)).toEqual([1, 1, 1, 1, 1, 1]);
+    /* Nur zwei schmale stapeln: eine mittlere als dritte bekommt ihre eigene Reihe. */
+    expect(rows(['md', 'sm', 'md'], 2)).toEqual([1, 1, 1]);
+    /* Eine breite Kachel füllt ihre Reihe allein; gezählt wird ab der nächsten. */
+    expect(rows(['xl', 'md', 'sm', 'sm'], 2)).toEqual([1, 2, 1, 1]);
+    /* Eine Kachel, die allein in ihrer Reihe steht, verschiebt die Zählung nicht. */
+    expect(rows(['md', 'xl', 'sm', 'sm', 'sm'], 2)).toEqual([1, 1, 2, 1, 1]);
   });
 
   it('zeigt den Verschiebemodus sichtbar an, nicht nur für den Screenreader', async () => {

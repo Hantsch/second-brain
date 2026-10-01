@@ -40,7 +40,9 @@
   padding: var(--space-2);
   font-family: var(--font-mono);
   font-size: var(--text-2xs);
-  color: var(--text-disabled);
+  /* Like every other key hint (`.sb-journal-keys`, `.sb-capture-keys`): it is
+     information, not a disabled control — `--text-disabled` failed contrast. */
+  color: var(--text-faint);
   line-height: var(--leading-snug);
 }
 

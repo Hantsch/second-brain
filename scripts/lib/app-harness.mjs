@@ -1,4 +1,4 @@
-/* Gemeinsame Grundlage von scripts/shot.mjs und scripts/a11y.mjs: die gebaute
+/* Gemeinsame Grundlage von scripts/verify.mjs und der e2e-Suite: die gebaute
    App über Playwrights `_electron` starten und dabei alles mitschreiben, was in
    der Konsole landet. Das Anfahren der Screens liegt daneben in screens.mjs.
 
@@ -43,6 +43,16 @@ export function ensureBuild() {
 export function ensureDemoVault(vaultPath, log = console.log) {
   if (existsSync(join(vaultPath, '.secondbrain/vault.json'))) return vaultPath;
   log(`Demo-Vault fehlt, lege ihn an: ${vaultPath}`);
+  return seedDemoVault(vaultPath);
+}
+
+/**
+ * Schreibt den Demo-Vault neu, auch wenn er schon da ist. Die App schreibt in
+ * ihn, während sie geprüft wird (ein Tagesabschluss, eine ruhende Erinnerung):
+ * „nur anlegen, wenn er fehlt" ließe Lauf N+1 erben, was Lauf N hinterließ.
+ * Der Seeder verweigert das Überschreiben eines echten Vaults.
+ */
+export function seedDemoVault(vaultPath) {
   const result = spawnSync(
     process.execPath,
     ['scripts/seed-vault.mjs', '--out', vaultPath, '--quiet'],
@@ -184,6 +194,25 @@ const KEY_ENV_PATTERN =
  * `extraEnv` is merged in last, e.g. to set `SB_E2E_STAGE_DELAY_MS` for a single
  * spec (066, D5) without widening what every other spec's app process sees.
  */
+/**
+ * Runs a main-process `evaluate` and retries it when Playwright reports
+ * "Resulting promise was garbage collected". Measured right after launch under
+ * a full e2e run: while the main process opens and indexes the vault, the
+ * inspector can lose the promise of a trivial synchronous call. That is the
+ * bridge failing, not the app, so it is retried; every other error stays one.
+ */
+export async function evaluateMain(app, fn, arg) {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      return await app.evaluate(fn, arg);
+    } catch (error) {
+      const lost = error instanceof Error && /garbage collected/.test(error.message);
+      if (!lost || attempt >= 3) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    }
+  }
+}
+
 /** Debugging opt-out: the windows of this run appear on screen (still unfocusable). */
 const OFFSCREEN = process.env.SB_UI_VISIBLE !== '1';
 /** Mirrors `OFFSCREEN_MARGIN` in src/main/window-shared.ts. */
@@ -237,7 +266,8 @@ export async function launchApp({
   /* Das Hauptfenster an seiner Seite erkennen, nicht an der Reihenfolge: später
      kommen weitere Fenster dazu (Schnell-Erfassen), und `getAllWindows()[0]` ist
      dann das zuletzt erzeugte. */
-  const mainWindowId = await app.evaluate(
+  const mainWindowId = await evaluateMain(
+    app,
     ({ BrowserWindow }) =>
       BrowserWindow.getAllWindows().find((window) =>
         /\/index\.html(?:[?#]|$)/.test(window.webContents.getURL()),
@@ -246,7 +276,7 @@ export async function launchApp({
 
   /* Prüfen, dass Electron unser userData wirklich benutzt — sonst hätte die App
      die echten Einstellungen des Nutzers geladen und der Vault fehlte. */
-  const actualUserData = await app.evaluate(({ app: electronApp }) =>
+  const actualUserData = await evaluateMain(app, ({ app: electronApp }) =>
     electronApp.getPath('userData'),
   );
   if (actualUserData.replace(/\\/g, '/') !== userDataDir.replace(/\\/g, '/')) {
