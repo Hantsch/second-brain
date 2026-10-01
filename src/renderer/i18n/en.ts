@@ -111,6 +111,18 @@ export const en: Record<TranslationKey, string> = {
   'error.about.not-found': '“{subject}” does not exist (any more).',
   'error.about.conflict': '“{subject}” changed in the meantime. Nothing was overwritten.',
   'error.about.llm-unavailable': 'No language model is reachable for “{subject}”.',
+  'error.code.llm-unavailable.no-route':
+    'No model is assigned to the task “{task}”. Assign one under Settings → Models.',
+  'error.code.llm-unavailable.no-key':
+    'No API key is stored for {provider}. Enter it under Settings → Models.',
+  'error.code.llm-unavailable.provider-disabled':
+    'The provider {provider} is switched off. Switch it on under Settings → Models.',
+  'error.about.llm-unavailable.no-route':
+    '“{subject}” cannot be processed: no model is assigned to the task “{task}”. Assign one under Settings → Models.',
+  'error.about.llm-unavailable.no-key':
+    '“{subject}” cannot be processed: no API key is stored for {provider}. Enter it under Settings → Models.',
+  'error.about.llm-unavailable.provider-disabled':
+    '“{subject}” cannot be processed: the provider {provider} is switched off. Switch it on under Settings → Models.',
   'error.about.invalid': '“{subject}” does not fit.',
   'error.about.io': '“{subject}” could not be opened — the folder is not writable.',
   'error.about.cancelled': '“{subject}” was cancelled.',

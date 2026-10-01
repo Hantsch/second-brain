@@ -35,9 +35,9 @@ import type { IndexedDoc } from '@core/index/types';
 import type { CondenseProposal } from '@shared/types';
 import { artifactHeader, resolveCondenseUnit, runCondenseUnit } from './condense-unit';
 import type { HandlerMap } from './registry';
-import { defineHandlers, fail } from './registry';
+import { defineHandlers, fail, llmUnavailable } from './registry';
 import { docLanguage, settle } from './wiki-bridge';
-import { createGateway } from '../llm-bridge';
+import { createGateway, llmUnavailableReason } from '../llm-bridge';
 import { getTaskResults } from '../task-results';
 import { getWorkQueue } from '../work-queue';
 import type { IndexLike } from '../contracts';
@@ -103,11 +103,8 @@ export function condenseHandlers(services: Services): HandlerMap {
          `runLevel` in `./condense-unit`); it is asked here for both levels,
          because now it also decides whether a task exists at all. The core's
          own identical guard stays where it is — this one only decides that. */
-      if (!gateway.isAvailable(target.task)) {
-        throw fail('llm-unavailable', `kein Modell für die Aufgabe „${target.task}“ konfiguriert`, {
-          task: target.task,
-        });
-      }
+      const unavailable = llmUnavailableReason(services, target.task);
+      if (unavailable !== null) throw llmUnavailable(unavailable);
 
       const ref = `${target.unit}:${target.slug}`;
       const task = getWorkQueue(services).enqueue(
@@ -155,10 +152,13 @@ export function condenseHandlers(services: Services): HandlerMap {
              `IngestError`, so its code does not survive; the task still states
              its reason, which is what AC8 asks for. */
           if (result.kind === 'no-model') {
-            throw fail(
-              'llm-unavailable',
-              `kein Modell für die Aufgabe „${result.task}“ konfiguriert`,
-              { task: result.task },
+            /* The route can change while the task waited in the queue — ask
+               again so the reason is the one that held when the run started. */
+            throw llmUnavailable(
+              llmUnavailableReason(services, result.task) ?? {
+                reason: 'no-route',
+                task: result.task,
+              },
             );
           }
           if (result.kind === 'no-inputs') {

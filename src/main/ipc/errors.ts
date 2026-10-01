@@ -3,7 +3,9 @@
    message. Unknown errors therefore get a fixed, content-free message — no
    stack trace, no file content, no key ever leaves the main process. */
 
+import { LlmUnavailableError } from '@core/llm';
 import type { IpcError } from '@shared/ipc';
+import type { LlmUnavailable } from '@shared/types';
 
 const CODES: readonly IpcError['code'][] = [
   'no-vault',
@@ -32,6 +34,16 @@ export class IpcFailure extends Error implements IpcError {
 
 export function fail(code: IpcError['code'], message: string, detail?: unknown): IpcFailure {
   return new IpcFailure(code, message, detail);
+}
+
+/**
+ * A task that cannot reach a model, with the exact reason in `detail` — the
+ * renderer turns `reason` and `provider` into a sentence that says what to fix,
+ * instead of one generic "no model" for every cause. The message is the core's
+ * own wording (`LlmUnavailableError`), so main and core never disagree.
+ */
+export function llmUnavailable(info: LlmUnavailable): IpcFailure {
+  return new IpcFailure('llm-unavailable', new LlmUnavailableError(info).message, info);
 }
 
 export function noVault(): IpcFailure {

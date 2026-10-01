@@ -666,10 +666,60 @@ describe('condense channels in main', () => {
   it('names condense-project when no model is configured, and writes nothing', async () => {
     await expect(
       harness.call('condense:run', { unit: 'project', slug: PROJECT_SLUG }),
-    ).rejects.toMatchObject({ code: 'llm-unavailable', detail: { task: 'condense-project' } });
+    ).rejects.toMatchObject({
+      code: 'llm-unavailable',
+      detail: { reason: 'no-route', task: 'condense-project' },
+    });
 
     expect(await vault.exists(PROJECT_CONDENSED)).toBe(false);
     expect(harness.queue.list()).toEqual([]);
+  });
+
+  it('names the missing key, not a missing model, when the tier default points at a keyless cloud provider', async () => {
+    /* The real-world case behind this test: a model is routed (via the tier
+       default), but the provider's key never made it into this machine's key
+       store. "No model configured" sent the user looking for a model that was
+       already assigned. */
+    await harness.services.settings.setVaultSection('providers', [
+      {
+        id: 'cloud-1',
+        label: 'OpenRouter',
+        kind: 'openai-compatible',
+        baseUrl: 'https://openrouter.ai/api/v1',
+        hasKey: false,
+        local: false,
+        enabled: true,
+        models: ['anthropic/claude-opus'],
+        createdAt: '2026-08-10T12:00:00.000Z',
+      },
+    ]);
+    await harness.services.settings.setVaultSection('routing', {
+      tasks: {},
+      defaults: { strong: { providerId: 'cloud-1', model: 'anthropic/claude-opus' } },
+    });
+
+    await expect(
+      harness.call('condense:run', { unit: 'project', slug: PROJECT_SLUG }),
+    ).rejects.toMatchObject({
+      code: 'llm-unavailable',
+      message: expect.stringContaining('OpenRouter'),
+      detail: { reason: 'no-key', task: 'condense-project', provider: 'OpenRouter' },
+    });
+    expect(harness.queue.list()).toEqual([]);
+  });
+
+  it('says the provider is switched off when the routed provider is disabled', async () => {
+    await routeCondenseTo(harness, 'condense-project', projectSections());
+    const [provider] = harness.services.settings.vault()?.providers ?? [];
+    if (!provider) throw new Error('kein Provider');
+    await harness.services.settings.setVaultSection('providers', [{ ...provider, enabled: false }]);
+
+    await expect(
+      harness.call('condense:run', { unit: 'project', slug: PROJECT_SLUG }),
+    ).rejects.toMatchObject({
+      code: 'llm-unavailable',
+      detail: { reason: 'provider-disabled', task: 'condense-project', provider: 'Lokal' },
+    });
   });
 
   it('accepts a project proposal over an existing artifact and leaves an undo copy', async () => {

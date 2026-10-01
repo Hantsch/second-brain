@@ -251,7 +251,7 @@ describe('Services: fehlgeschlagener Index-Nachlauf (D4)', () => {
     expect(allPaths).toContain('inbox/second.md');
   });
 
-  it('a pending failure from a closed vault does not leak into the next vault\'s refresh', async () => {
+  it("a pending failure from a closed vault does not leak into the next vault's refresh", async () => {
     refreshImpl = async () => {
       throw new Error('boom');
     };

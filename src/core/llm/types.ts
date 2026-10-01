@@ -79,11 +79,11 @@ export interface KeyStore {
 export type FetchLike = (url: string, init?: RequestInit) => Promise<Response>;
 
 const REASON_TEXT: Record<LlmUnavailable['reason'], string> = {
-  'no-route': 'Für diese Aufgabe ist kein Modell zugeordnet.',
-  'provider-disabled': 'Der zugeordnete Provider ist abgeschaltet.',
-  'no-key': 'Für den zugeordneten Provider fehlt der Schlüssel.',
-  unreachable: 'Der zugeordnete Provider war nicht erreichbar.',
-  error: 'Der Provider hat die Anfrage abgelehnt.',
+  'no-route': 'Für diese Aufgabe ist kein Modell zugeordnet',
+  'provider-disabled': 'Der zugeordnete Provider ist abgeschaltet',
+  'no-key': 'Für den zugeordneten Provider fehlt der Schlüssel',
+  unreachable: 'Der zugeordnete Provider war nicht erreichbar',
+  error: 'Der Provider hat die Anfrage abgelehnt',
 };
 
 /**
@@ -94,7 +94,9 @@ export class LlmUnavailableError extends Error {
   readonly info: LlmUnavailable;
 
   constructor(info: LlmUnavailable) {
-    super(info.detail ? `${REASON_TEXT[info.reason]} ${info.detail}` : REASON_TEXT[info.reason]);
+    const provider = info.provider ? ` (${info.provider})` : '';
+    const text = `${REASON_TEXT[info.reason]}${provider}.`;
+    super(info.detail ? `${text} ${info.detail}` : text);
     this.name = 'LlmUnavailableError';
     this.info = info;
   }

@@ -136,6 +136,36 @@ describe('RoutingGateway: Auflösung', () => {
     await expect(gateway.complete(ask)).rejects.toMatchObject({ info: { reason: 'no-key' } });
   });
 
+  it('nennt über unavailable() den Grund samt Provider statt nur false', () => {
+    const route: Routing = {
+      tasks: { 'query-answer': { providerId: 'cloud', model: 'gpt-4o' } },
+      defaults: {},
+    };
+    const noKey = harness({ routing: route, keys: new MemoryKeyStore() }).gateway;
+    expect(noKey.unavailable('query-answer')).toEqual({
+      reason: 'no-key',
+      task: 'query-answer',
+      provider: 'Cloud',
+    });
+    const off = harness({ routing: route, providers: [providerConfig({ enabled: false })] });
+    expect(off.gateway.unavailable('query-answer')).toMatchObject({
+      reason: 'provider-disabled',
+      provider: 'Cloud',
+    });
+    const none = harness({ routing: { tasks: {}, defaults: {} } }).gateway;
+    expect(none.unavailable('query-answer')).toEqual({ reason: 'no-route', task: 'query-answer' });
+    expect(harness({ routing: route }).gateway.unavailable('query-answer')).toBeNull();
+  });
+
+  it('nennt den Provider auch in der Fehlermeldung', () => {
+    const error = new LlmUnavailableError({
+      reason: 'no-key',
+      task: 'query-answer',
+      provider: 'OpenRouter',
+    });
+    expect(error.message).toBe('Für den zugeordneten Provider fehlt der Schlüssel (OpenRouter).');
+  });
+
   it('verlangt für lokale Provider keinen Schlüssel', () => {
     const { gateway } = harness({
       routing: {

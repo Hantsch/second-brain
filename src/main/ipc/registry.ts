@@ -14,7 +14,7 @@ import { toIpcError } from './errors';
    doesn't exist yet" refusal: every channel from `IPC_CHANNELS` is real
    (test: "no channel is a placeholder"). Such a helper would be the
    shortest path back to that state. */
-export { fail, IpcFailure, noVault, toIpcError } from './errors';
+export { fail, IpcFailure, llmUnavailable, noVault, toIpcError } from './errors';
 
 export type IpcHandler<K extends IpcChannel> = (
   request: IpcRequest<K>,

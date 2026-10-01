@@ -102,6 +102,16 @@ export class RoutingGateway implements LlmGateway {
     return this.routeFor(task) !== null;
   }
 
+  /**
+   * Why `isAvailable(task)` is false — or `null` when it is true. A bare
+   * boolean made every caller report "no model configured", even when a model
+   * was routed and only its provider's key was missing.
+   */
+  unavailable(task: TaskKind): LlmUnavailable | null {
+    const resolved = this.resolve(task);
+    return 'error' in resolved ? resolved.error : null;
+  }
+
   async complete(req: CompletionRequest): Promise<CompletionResult> {
     return this.run(req);
   }
@@ -132,10 +142,14 @@ export class RoutingGateway implements LlmGateway {
         },
       };
     }
-    if (!config.enabled) return { error: { reason: 'provider-disabled', task } };
+    if (!config.enabled) {
+      return { error: { reason: 'provider-disabled', task, provider: config.label } };
+    }
 
     const key = this.keys.get(config.id);
-    if (needsApiKey(config) && !key) return { error: { reason: 'no-key', task } };
+    if (needsApiKey(config) && !key) {
+      return { error: { reason: 'no-key', task, provider: config.label } };
+    }
 
     return { ref, config, key };
   }

@@ -80,9 +80,17 @@ body {
   -webkit-app-region: no-drag;
 }
 
+/* Three rows, the middle one for `RunStrip`, which only exists while a run is
+   going. The filling element is pinned to row 3 so it keeps the `1fr` either
+   way: with only two rows, a mounted strip took the `1fr` itself and grew to
+   fill the window, pushing the screen into an implicit row below it. */
 .sb-app {
   display: grid;
-  grid-template-rows: var(--sb-titlebar-h) 1fr;
+  grid-template-rows: var(--sb-titlebar-h) auto 1fr;
   height: 100%;
   background: var(--surface-page);
+}
+.sb-app > .sb-body,
+.sb-app > .sb-content {
+  grid-row: 3;
 }

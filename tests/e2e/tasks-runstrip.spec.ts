@@ -34,6 +34,22 @@ test('a maintenance run shows the same progress in the run strip and on the task
     await expect(page.getByRole('heading', { name: 'Running' })).toBeVisible();
   });
 
+  await test.step('the strip stays one line and the screen keeps the window', async () => {
+    /* Regression: `.sb-app` had two grid rows, so a mounted strip took the
+       `1fr` row, grew to most of the window and pushed the screen below it. */
+    const strip = await page.locator('.sb-runstrip').boundingBox();
+    const body = await page.locator('.sb-body').boundingBox();
+    // A string, not a function: tsconfig.node.json has no DOM library.
+    const windowHeight = (await page.evaluate('window.innerHeight')) as number;
+    expect(strip).not.toBeNull();
+    expect(body).not.toBeNull();
+    if (strip === null || body === null) return;
+    expect(strip.height).toBeLessThan(120);
+    // Sub-pixel layout under display scaling: equal to the pixel, not to the bit.
+    expect(body.y).toBeCloseTo(strip.y + strip.height, 0);
+    expect(body.y + body.height).toBeCloseTo(windowHeight, 0);
+  });
+
   const runStripBar = page.getByRole('progressbar', { name: 'Check running' });
   const taskRowBar = page.locator('.sb-trow-track[role="progressbar"]');
 

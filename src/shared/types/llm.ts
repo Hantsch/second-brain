@@ -161,6 +161,8 @@ export interface CompletionResult {
 export interface LlmUnavailable {
   reason: 'no-route' | 'provider-disabled' | 'no-key' | 'unreachable' | 'error';
   task: TaskKind;
+  /** Label of the provider the route points at, when the provider is the cause. */
+  provider?: string;
   detail?: string;
 }
 

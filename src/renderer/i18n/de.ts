@@ -115,6 +115,18 @@ export const de = {
   'error.about.conflict':
     '„{subject}“ wurde zwischenzeitlich geändert. Nichts wurde überschrieben.',
   'error.about.llm-unavailable': 'Für „{subject}“ ist kein Sprachmodell erreichbar.',
+  'error.code.llm-unavailable.no-route':
+    'Der Aufgabe „{task}“ ist kein Modell zugeordnet. Ordne unter Einstellungen → Modelle eines zu.',
+  'error.code.llm-unavailable.no-key':
+    'Für {provider} ist kein API-Schlüssel hinterlegt. Trag ihn unter Einstellungen → Modelle ein.',
+  'error.code.llm-unavailable.provider-disabled':
+    'Der Provider {provider} ist abgeschaltet. Schalte ihn unter Einstellungen → Modelle ein.',
+  'error.about.llm-unavailable.no-route':
+    '„{subject}“ lässt sich nicht verarbeiten: Der Aufgabe „{task}“ ist kein Modell zugeordnet. Ordne unter Einstellungen → Modelle eines zu.',
+  'error.about.llm-unavailable.no-key':
+    '„{subject}“ lässt sich nicht verarbeiten: Für {provider} ist kein API-Schlüssel hinterlegt. Trag ihn unter Einstellungen → Modelle ein.',
+  'error.about.llm-unavailable.provider-disabled':
+    '„{subject}“ lässt sich nicht verarbeiten: Der Provider {provider} ist abgeschaltet. Schalte ihn unter Einstellungen → Modelle ein.',
   'error.about.invalid': '„{subject}“ passt nicht.',
   'error.about.io': '„{subject}“ ließ sich nicht öffnen — der Ordner ist nicht beschreibbar.',
   'error.about.cancelled': '„{subject}“ wurde abgebrochen.',

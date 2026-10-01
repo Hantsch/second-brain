@@ -20,7 +20,7 @@ import {
 } from '@core/llm';
 import type { FakeProviderOptions, KeyStore as CoreKeyStore, ProviderFactory } from '@core/llm';
 import type { LlmGateway } from '@core/llm';
-import type { ProviderConfig, RecommendationSet, TaskKind } from '@shared/types';
+import type { LlmUnavailable, ProviderConfig, RecommendationSet, TaskKind } from '@shared/types';
 import type { LlmBridge } from './contracts';
 import { scanCapacityVerdict } from './ipc/machine-scan';
 import { ensureLlamaRunning } from './ipc/runtime/llamacpp-autostart';
@@ -114,14 +114,26 @@ function registryOf(services: Services): ProviderRegistry {
  * call then reports `llm-unavailable` instead of silently doing nothing.
  */
 export function createGateway(services: Services): LlmGateway {
+  return withAutoStart(routingGatewayOf(services), services);
+}
+
+function routingGatewayOf(services: Services): RoutingGateway {
   const settings = services.settings.vault();
-  const gateway = new RoutingGateway({
+  return new RoutingGateway({
     routing: settings?.routing ?? { tasks: {}, defaults: {} },
     providers: providersOf(services),
     keys: coreKeys(services.keys),
     createProvider: createGatewayProviderFactory(),
   });
-  return withAutoStart(gateway, services);
+}
+
+/**
+ * Why `task` cannot run right now — no route, a disabled provider, a missing
+ * key — or `null` when it can. Same resolution as `createGateway`, so the
+ * reason a handler reports is the reason the call would actually fail with.
+ */
+export function llmUnavailableReason(services: Services, task: TaskKind): LlmUnavailable | null {
+  return routingGatewayOf(services).unavailable(task);
 }
 
 /**

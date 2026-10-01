@@ -15,7 +15,7 @@ import { Button } from '../atoms/Button';
 import { Card } from '../atoms/Card';
 import { Icon } from '../atoms/Icon';
 import { useT } from '../i18n';
-import { decodeIpcError } from '../lib/ipc-error';
+import { decodeIpcError, llmUnavailableCause } from '../lib/ipc-error';
 
 export interface ErrorStateProps {
   /** Anything an IPC call can throw. */
@@ -53,10 +53,17 @@ export function ErrorState({
     box.current?.scrollIntoView({ block: 'nearest' });
   }, [scrollIntoView, failure.code, failure.message]);
 
+  /* A missing model has three different fixes — assign one, enter a key,
+     switch the provider on. One generic sentence for all three sent the user
+     looking for a model that was already assigned. */
+  const cause = llmUnavailableCause(failure);
+  const key = cause === null ? failure.code : `${failure.code}.${cause.reason}`;
+  const values: Record<string, string> =
+    cause === null ? {} : { task: t(`task.${cause.task}.label`), provider: cause.provider };
   const sentence =
     subject === undefined || subject.length === 0
-      ? t(`error.code.${failure.code}`)
-      : t(`error.about.${failure.code}`, { subject });
+      ? t(`error.code.${key}`, values)
+      : t(`error.about.${key}`, { ...values, subject });
 
   return (
     <div ref={box}>
