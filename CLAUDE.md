@@ -196,3 +196,10 @@ declined during `/tech-rules:setup`: this project already has equivalent functio
 different names — `scripts/start.mjs` strips `ELECTRON_RUN_AS_NODE` before starting Electron, and
 `src/main/settings.ts` + `src/main/fs-json.ts` (`readJson`, `writeJsonAtomic`) already do atomic,
 versioned JSON persistence. Keep declining both templates on future setup runs.
+
+`/ui-verify` deviation: flows are Playwright specs (`tests/e2e/*.spec.ts`, run by `npm run
+test:e2e`), not `scripts/flows/<name>.mjs` + `flow`/`flows` runners. The reason is that the suite
+already existed in that form, and Playwright gives the split the skill asks for. `npx playwright
+test <file>` is the per-story run (`e2e-story`), and the full suite is the sprint gate. Each spec
+file gets its own app and a freshly seeded throwaway vault (`fixtures/app.ts`, `specId`). The same
+`scripts/lib/app-harness.mjs` launches both the specs and `shot`/`a11y`.

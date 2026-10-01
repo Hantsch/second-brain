@@ -10,10 +10,10 @@
  * this file only proves the menu shape and the quick-capture action; a later
  * deliverable appends its own tests below without touching these. */
 
-import { expect, test } from './fixtures/app';
+import { E2E_HOTKEY_CHORD, expect, test } from './fixtures/app';
 import { clickTrayItem, closeMainWindow, mainWindowState } from './fixtures/tray';
 
-test.use({ specId: 'tray' });
+test.use({ specId: 'tray', hotkey: true });
 
 test('the tray menu offers open Gaston, quick capture and quit', async ({ app }) => {
   let items: { id: string | undefined; label: string }[] = [];
@@ -61,8 +61,9 @@ test('the quick-capture menu item opens the quick-capture window', async ({ app 
    quitting it. Order matters from here on: the tests share one app, and the
    last one quits it. */
 
-/** The seeded vault's quick-capture chord (`scripts/seed/internal.mjs`). */
-const QUICK_CAPTURE_CHORD = 'Control+Shift+Space';
+/** The chord the fixture pins for a `hotkey: true` spec — not the seeded default,
+   which the developer's own Gaston usually holds while the suite runs. */
+const QUICK_CAPTURE_CHORD = E2E_HOTKEY_CHORD;
 
 test('closing the window keeps Gaston running in the tray, and the tray brings it back', async ({
   app,

@@ -7,6 +7,7 @@ import { defineHandlers } from './registry';
 import { cancelClose, confirmClose } from '../close-guard';
 import { showMainWindow } from '../show-main-window';
 import type { Services } from '../services';
+import { OFFSCREEN } from '../window-shared';
 
 function target(services: Services): BrowserWindow | null {
   return BrowserWindow.getFocusedWindow() ?? services.mainWindow();
@@ -21,6 +22,9 @@ export function windowHandlers(services: Services): HandlerMap {
     'window:toggleMaximize': () => {
       const window = target(services);
       if (!window) return { maximized: false };
+      /* A verification run's window lives left of every display; maximizing
+         would pull it onto one, in front of the developer. */
+      if (OFFSCREEN) return { maximized: window.isMaximized() };
       if (window.isMaximized()) window.unmaximize();
       else window.maximize();
       return { maximized: window.isMaximized() };

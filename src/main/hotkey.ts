@@ -6,6 +6,7 @@ import { globalShortcut } from 'electron';
 import { defaultVaultSettings } from './settings-defaults';
 import { showQuickCapture } from './quick-capture';
 import type { Services } from './services';
+import { HARNESS } from './window-shared';
 
 let registered: string | null = null;
 
@@ -39,6 +40,11 @@ function tryRegister(services: Services, shortcut: string): boolean {
  * Returns true if the current combination is active.
  */
 export function syncQuickCaptureHotkey(services: Services): boolean {
+  /* A verification run must not claim a system-wide key while the developer
+     types — nor, with their own Gaston holding it, raise a "hotkey busy" toast
+     that ends up in the screenshots. A spec about the hotkey opts back in
+     (`SB_E2E_HOTKEY=1`) on a chord of its own. */
+  if (HARNESS && process.env['SB_E2E_HOTKEY'] !== '1') return false;
   const wanted = configuredShortcut(services);
   if (registered === wanted) return true;
   if (registered) {

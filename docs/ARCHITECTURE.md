@@ -165,6 +165,13 @@ there, unchanged by the tray's existence.
 window: the tray, `activate`, `window:show`, a second app start, and a reminder
 notification click all call it instead of each keeping its own copy.
 
+Every `BrowserWindow` takes its renderer preferences and the verification-run
+flags from `src/main/window-shared.ts`. Under `SB_UI_HARNESS=1` (set by
+`scripts/lib/app-harness.mjs` for e2e, shot and a11y runs) every window sits left
+of all displays, is unfocusable, and is shown with `showInactive()`. In that mode
+reminders send no notification and no global hotkey is registered. Without the
+variable nothing changes.
+
 ## State in the renderer
 
 - **TanStack Query** for everything that comes over IPC. One hook per channel in

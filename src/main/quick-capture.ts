@@ -4,8 +4,15 @@
 
 import { BrowserWindow, screen } from 'electron';
 import { attachNavigationGuards } from './navigation';
-import { loadPage, preloadPath } from './renderer-entry';
+import { loadPage } from './renderer-entry';
 import type { Services } from './services';
+import {
+  OFFSCREEN,
+  harnessWindowOptions,
+  offscreenPosition,
+  rendererWebPreferences,
+  revealWindow,
+} from './window-shared';
 
 const SIZE = { width: 560, height: 220 } as const;
 const BACKGROUND = '#0A0F16';
@@ -23,6 +30,9 @@ export function quickCaptureWindow(): BrowserWindow | null {
 }
 
 function centeredOnCursor(): { x: number; y: number } {
+  /* A verification run keeps it off the desktop like every other window — an
+     always-on-top window on screen would cover whatever the developer is doing. */
+  if (OFFSCREEN) return offscreenPosition(SIZE.width);
   const cursor = screen.getCursorScreenPoint();
   const area = screen.getDisplayNearestPoint(cursor).workArea;
   return {
@@ -46,18 +56,13 @@ function create(services: Services): BrowserWindow {
     skipTaskbar: true,
     alwaysOnTop: true,
     title: 'Schnell erfassen',
-    webPreferences: {
-      preload: preloadPath(),
-      contextIsolation: true,
-      sandbox: true,
-      nodeIntegration: false,
-      spellcheck: false,
-    },
+    ...harnessWindowOptions(),
+    webPreferences: rendererWebPreferences(),
   });
 
   created.setAlwaysOnTop(true, 'floating');
   attachNavigationGuards(created);
-  created.once('ready-to-show', () => created.show());
+  created.once('ready-to-show', () => revealWindow(created));
   created.on('blur', () => {
     if (closeOnBlur) hideQuickCapture();
   });
@@ -90,8 +95,7 @@ export function showQuickCapture(services: Services): BrowserWindow {
   if (existing) {
     const position = centeredOnCursor();
     existing.setPosition(position.x, position.y);
-    existing.show();
-    existing.focus();
+    revealWindow(existing);
     services.sendEvent('event:capture-focus', {});
     return existing;
   }

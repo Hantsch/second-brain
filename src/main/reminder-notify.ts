@@ -29,6 +29,7 @@ import {
 import { dueBody, dueSummary } from './messages';
 import type { Services } from './services';
 import { showMainWindow } from './show-main-window';
+import { HARNESS } from './window-shared';
 
 /** Check interval: once per hour. */
 export const CHECK_INTERVAL_MS = 60 * 60 * 1000;
@@ -59,7 +60,9 @@ export interface Notifier {
 export function electronNotifier(): Notifier {
   return {
     show({ title, body, onClick }: NotifyInput): void {
-      if (!Notification.isSupported()) return;
+      /* A verification run's seeded vault has overdue reminders by design; its
+         toast would land on the developer's desktop. */
+      if (HARNESS || !Notification.isSupported()) return;
       const notification = new Notification({ title, body });
       notification.on('click', onClick);
       notification.show();

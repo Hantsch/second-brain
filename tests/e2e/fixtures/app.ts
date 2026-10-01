@@ -167,7 +167,17 @@ export interface AppOptions {
    * keeps the window visible for every spec that doesn't specifically test the
    * start-minimized path. */
   startMinimized: boolean;
+  /** Registers the global quick-capture hotkey (`SB_E2E_HOTKEY=1`), on
+   * `E2E_HOTKEY_CHORD` rather than the seeded default. `false` (the default)
+   * leaves the hotkey unregistered, like every verification run: a run must not
+   * claim a system-wide key while the developer types, and the default chord is
+   * usually held by the developer's own Gaston anyway. */
+  hotkey: boolean;
 }
+
+/** The chord a `hotkey: true` spec registers — deliberately not one a real
+ * install (or anything else on the machine) is likely to hold. */
+export const E2E_HOTKEY_CHORD = 'Control+Alt+Shift+F9';
 
 export interface AppFixtures {
   /** Root of the throwaway run: vault and userData live below it. */
@@ -193,6 +203,19 @@ function pinUiLanguage(vault: string, language: 'de' | 'en'): string {
   settings.languages = { ...settings.languages, ui: language };
   writeFileSync(file, `${JSON.stringify(settings, null, 2)}\n`, 'utf8');
   return vault;
+}
+
+/** Points the throwaway vault's quick-capture shortcut at `E2E_HOTKEY_CHORD`. */
+function pinHotkey(vault: string): void {
+  const file = join(vault, '.secondbrain', 'settings.json');
+  const settings = JSON.parse(readFileSync(file, 'utf8')) as { capture?: Record<string, unknown> };
+  settings.capture = { ...settings.capture, quickCaptureShortcut: E2E_HOTKEY_CHORD };
+  writeFileSync(
+    file,
+    `${JSON.stringify(settings, null, 2)}
+`,
+    'utf8',
+  );
 }
 
 /** Id/model of the one provider `pinFakeProvider` writes — shared so callers that assert
@@ -282,6 +305,8 @@ export const test = base.extend<
 
   startMinimized: [false, { scope: 'worker', option: true }],
 
+  hotkey: [false, { scope: 'worker', option: true }],
+
   specIdMatchesFile: [
     async ({ specId }, use, testInfo) => {
       const file = basename(testInfo.file).replace(/\.spec\.ts$/, '');
@@ -334,10 +359,12 @@ export const test = base.extend<
         fetchFixture,
         closeToTray,
         startMinimized,
+        hotkey,
       },
       use,
     ) => {
       if (fakeProvider) pinFakeProvider(vaultPath);
+      if (hotkey) pinHotkey(vaultPath);
       const userDataDir = prepareUserData(join(tempRoot, 'userdata'), {
         vault: vaultPath,
         uiLanguage: 'en',
@@ -351,6 +378,7 @@ export const test = base.extend<
            `SB_E2E_*` vars below, since every spec that touches the `app` fixture is a
            candidate for exercising tray behaviour, not just the ones that opt in. */
         SB_E2E_TRAY: '1',
+        ...(hotkey ? { SB_E2E_HOTKEY: '1' } : {}),
         ...(stageDelayMs > 0 ? { SB_E2E_STAGE_DELAY_MS: String(stageDelayMs) } : {}),
         ...(ingestDelayMs > 0 ? { SB_E2E_INGEST_DELAY_MS: String(ingestDelayMs) } : {}),
         ...(tasksFixture ? { SB_E2E_TASKS_FIXTURE: '1' } : {}),

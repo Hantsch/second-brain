@@ -8,8 +8,16 @@ import { appIconPath } from './app-icon';
 import { clampBounds } from './bounds';
 import { attachNavigationGuards } from './navigation';
 import { WINDOW_MIN } from './settings-defaults';
-import { isDev, loadPage, preloadPath } from './renderer-entry';
+import { isDev, loadPage } from './renderer-entry';
 import type { Services } from './services';
+import {
+  HARNESS,
+  OFFSCREEN,
+  harnessWindowOptions,
+  offscreenPosition,
+  rendererWebPreferences,
+  revealWindow,
+} from './window-shared';
 
 /** Seitenhintergrund aus den Gaston-Tokens — verhindert das weiße Aufblitzen. */
 const BACKGROUND = '#0A0F16';
@@ -43,10 +51,18 @@ export function createMainWindow(
   const saved = services.settings.app().window;
   const bounds = clampBounds(saved, workAreas(), WINDOW_MIN);
 
+  /* Offscreen (verification run) the saved position is skipped: it would put
+     the window back onto a display. */
+  const position = OFFSCREEN
+    ? offscreenPosition(bounds.width)
+    : bounds.x !== undefined && bounds.y !== undefined
+      ? { x: bounds.x, y: bounds.y }
+      : {};
+
   const window = new BrowserWindow({
     width: bounds.width,
     height: bounds.height,
-    ...(bounds.x !== undefined && bounds.y !== undefined ? { x: bounds.x, y: bounds.y } : {}),
+    ...position,
     minWidth: WINDOW_MIN.width,
     minHeight: WINDOW_MIN.height,
     show: false,
@@ -55,14 +71,8 @@ export function createMainWindow(
     icon: appIconPath(services.settings.app().customization.appIcon),
     title: APP_NAME,
     autoHideMenuBar: true,
-    webPreferences: {
-      preload: preloadPath(),
-      contextIsolation: true,
-      sandbox: true,
-      nodeIntegration: false,
-      webviewTag: false,
-      spellcheck: false,
-    },
+    ...harnessWindowOptions(),
+    webPreferences: rendererWebPreferences(),
   });
 
   /* Whether the window has ever actually been shown — flips once, on the real
@@ -80,9 +90,11 @@ export function createMainWindow(
     const startMinimized = services.settings.app().startMinimized;
     if (shouldStartHidden(startMinimized, options.canStartHidden ?? false)) return;
     /* `maximize()` shows a hidden window as a side effect, so it may only run on
-       the path that shows it anyway — a hidden start drops the maximized state. */
-    if (saved.maximized) window.maximize();
-    window.show();
+       the path that shows it anyway — a hidden start drops the maximized state.
+       Offscreen it is skipped too: maximizing would pull the window onto a display. */
+    if (saved.maximized && !OFFSCREEN) window.maximize();
+    if (HARNESS) revealWindow(window);
+    else window.show();
   });
 
   attachBoundsPersistence(window, services, saved.maximized ?? false, () => becameVisible);

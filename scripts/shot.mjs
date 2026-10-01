@@ -644,8 +644,8 @@ async function shootOverlays(session, shooter, log, skipped) {
     ]);
     await captureWindow.waitForLoadState('domcontentloaded');
     /* Das Fenster erscheint auf dem Bildschirm des Mauszeigers — für
-       vergleichbare Aufnahmen gehört es auf den Hauptbildschirm. */
-    await session.moveSecondaryToPrimary(560, 220);
+       vergleichbare Aufnahmen bekommt es eine feste Größe und Lage. */
+    await session.placeSecondary(560, 220);
     /* Sichtbar wird es erst bei `ready-to-show`. Vorher liefert `screenshot`
        nichts und lief in die 30-s-Zeitüberschreitung — deshalb wird hier auf die
        Sichtbarkeit gewartet, nicht auf eine geratene halbe Sekunde. */

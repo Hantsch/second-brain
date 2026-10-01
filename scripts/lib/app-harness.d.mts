@@ -51,7 +51,7 @@ export interface AppSession {
   page: Page;
   logs: LogSink;
   mainWindowId: number | undefined;
-  moveSecondaryToPrimary(
+  placeSecondary(
     width: number,
     height: number,
   ): Promise<{ x: number; y: number; width: number; height: number } | null>;

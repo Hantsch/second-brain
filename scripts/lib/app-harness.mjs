@@ -8,7 +8,12 @@
    - Der Vault kommt über `SB_VAULT`; der Hauptprozess zieht die Variable der
      Vault-Historie vor, `SB_DEMO=1` schaltet `app:info.demo`. Zusätzlich läuft
      jeder Lauf in einem eigenen `--user-data-dir` (mit passendem `lastVault`),
-     damit die echte Installation des Nutzers unberührt bleibt. */
+     damit die echte Installation des Nutzers unberührt bleibt.
+
+   A run stays off the desktop and out of the keyboard focus: `SB_UI_HARNESS=1`
+   makes the main process place every window left of all displays, unfocusable
+   and painted via `showInactive()` (src/main/window-shared.ts). Set
+   `SB_UI_VISIBLE=1` to watch a run on screen while debugging. */
 
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
@@ -179,6 +184,11 @@ const KEY_ENV_PATTERN =
  * `extraEnv` is merged in last, e.g. to set `SB_E2E_STAGE_DELAY_MS` for a single
  * spec (066, D5) without widening what every other spec's app process sees.
  */
+/** Debugging opt-out: the windows of this run appear on screen (still unfocusable). */
+const OFFSCREEN = process.env.SB_UI_VISIBLE !== '1';
+/** Mirrors `OFFSCREEN_MARGIN` in src/main/window-shared.ts. */
+const OFFSCREEN_MARGIN = 100;
+
 export async function launchApp({
   userDataDir,
   vault,
@@ -193,6 +203,7 @@ export async function launchApp({
       if (KEY_ENV_PATTERN.test(name)) delete env[name];
     }
   }
+  env.SB_UI_HARNESS = '1';
   if (vault) {
     env.SB_VAULT = vault;
     env.SB_DEMO = '1';
@@ -223,10 +234,14 @@ export async function launchApp({
   watchPage(page, logs, 'renderer');
   await page.waitForLoadState('domcontentloaded');
 
-  /* Die Id des Hauptfensters jetzt merken: später kommen weitere Fenster dazu
-     (Schnell-Erfassen), und `getAllWindows()[0]` wäre dann nicht mehr eindeutig. */
+  /* Das Hauptfenster an seiner Seite erkennen, nicht an der Reihenfolge: später
+     kommen weitere Fenster dazu (Schnell-Erfassen), und `getAllWindows()[0]` ist
+     dann das zuletzt erzeugte. */
   const mainWindowId = await app.evaluate(
-    ({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.id,
+    ({ BrowserWindow }) =>
+      BrowserWindow.getAllWindows().find((window) =>
+        /\/index\.html(?:[?#]|$)/.test(window.webContents.getURL()),
+      )?.id,
   );
 
   /* Prüfen, dass Electron unser userData wirklich benutzt — sonst hätte die App
@@ -248,37 +263,72 @@ export async function launchApp({
     logs,
     mainWindowId,
     /**
-     * Schiebt ein Nebenfenster (Schnell-Erfassen) auf den Hauptbildschirm und
-     * setzt seine Größe neu.
+     * Gibt einem Nebenfenster (Schnell-Erfassen) eine feste Größe und legt es
+     * neben das Hauptfenster — außerhalb aller Bildschirme, oder mit
+     * `SB_UI_VISIBLE=1` mittig auf den Hauptbildschirm.
      *
-     * Nötig, weil das Fenster dort erscheint, wo der Mauszeiger steht: auf einem
-     * zweiten Bildschirm mit anderer Skalierung rechnet Windows die Fenstergröße
-     * um, und die Aufnahme wäre bei jedem Lauf anders groß.
+     * Nötig, weil das Fenster sonst dort erscheint, wo der Mauszeiger steht: auf
+     * einem Bildschirm mit anderer Skalierung rechnet Windows die Größe um, und
+     * die Aufnahme wäre bei jedem Lauf anders groß.
      */
-    moveSecondaryToPrimary: (width, height) =>
+    placeSecondary: (width, height) =>
       app.evaluate(
         ({ BrowserWindow, screen }, size) => {
           const other = BrowserWindow.getAllWindows().find((window) => window.id !== size.mainId);
           if (!other) return null;
+          const left = Math.min(...screen.getAllDisplays().map((display) => display.bounds.x));
           const area = screen.getPrimaryDisplay().workArea;
           other.setBounds({
-            x: Math.round(area.x + (area.width - size.width) / 2),
-            y: Math.round(area.y + (area.height - size.height) / 3),
+            x: size.offscreen
+              ? left - size.width - size.margin
+              : Math.round(area.x + (area.width - size.width) / 2),
+            y: size.offscreen ? 0 : Math.round(area.y + (area.height - size.height) / 3),
             width: size.width,
             height: size.height,
           });
+          /* Offscreen on a mixed-DPI desktop the window comes out wider than
+             asked; placed by the requested width it would reach back onto a display. */
+          if (size.offscreen) other.setPosition(left - other.getSize()[0] - size.margin, 0);
           return other.getBounds();
         },
-        { width, height, mainId: mainWindowId },
+        { width, height, mainId: mainWindowId, offscreen: OFFSCREEN, margin: OFFSCREEN_MARGIN },
       ),
-    /** Setzt die Inhaltsfläche des Hauptfensters auf genau diese Größe. */
+    /**
+     * Setzt die Inhaltsfläche des Hauptfensters auf genau diese Größe — ohne es
+     * auf einen Bildschirm zu holen: die Lage außerhalb wird aus der neuen Breite
+     * neu berechnet, nie per `center()`.
+     *
+     * Auf einem Windows-Desktop mit gemischter Skalierung kommt ein rahmenloses
+     * Fenster außerhalb der Bildschirme größer heraus als verlangt (gemessen:
+     * +16×+8 bei 940×620). Dann wird um die gemessene Abweichung nachgesteuert;
+     * die Mindestgröße darf erst wieder greifen, wenn die Verschiebung gelandet
+     * ist, sonst klemmt sie sofort zurück.
+     */
     resize: (width, height) =>
       app.evaluate(
-        ({ BrowserWindow }, size) => {
+        async ({ BrowserWindow, screen }, size) => {
           const main = BrowserWindow.fromId(size.id);
-          main?.setContentSize(size.width, size.height);
+          if (!main) return;
+          const place = () => {
+            if (!size.offscreen) return;
+            const left = Math.min(...screen.getAllDisplays().map((display) => display.bounds.x));
+            main.setPosition(left - main.getSize()[0] - size.margin, 0);
+          };
+          main.setContentSize(size.width, size.height);
+          place();
+          const [actualWidth, actualHeight] = main.getContentSize();
+          if (actualWidth === size.width && actualHeight === size.height) return;
+          const [minWidth, minHeight] = main.getMinimumSize();
+          main.setMinimumSize(1, 1);
+          main.setContentSize(
+            size.width - (actualWidth - size.width),
+            size.height - (actualHeight - size.height),
+          );
+          place();
+          await new Promise((resolve) => setTimeout(resolve, 200));
+          main.setMinimumSize(minWidth, minHeight);
         },
-        { width, height, id: mainWindowId },
+        { width, height, id: mainWindowId, offscreen: OFFSCREEN, margin: OFFSCREEN_MARGIN },
       ),
     close: async () => {
       try {

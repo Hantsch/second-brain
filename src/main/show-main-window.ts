@@ -8,6 +8,7 @@
    missing `show()` in any one copy a door that silently does nothing. */
 
 import type { Services } from './services';
+import { revealWindow } from './window-shared';
 
 export function showMainWindow(services: Services): void {
   /* `mainWindow()` already filters out a destroyed window, so no further
@@ -15,6 +16,5 @@ export function showMainWindow(services: Services): void {
   const window = services.mainWindow();
   if (!window) return;
   if (window.isMinimized()) window.restore();
-  window.show();
-  window.focus();
+  revealWindow(window);
 }

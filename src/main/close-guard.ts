@@ -26,6 +26,7 @@ import { app } from 'electron';
 import type { BrowserWindow } from 'electron';
 import { getWorkQueue } from './work-queue';
 import type { Services } from './services';
+import { revealWindow } from './window-shared';
 
 /**
  * How long the renderer gets to answer `event:close-requested` before the
@@ -149,8 +150,7 @@ function guard(services: Services, event: VetoableEvent, proceed: () => void): b
      already guarantees this window is not destroyed, so restoring/showing it
      here is safe without another `isDestroyed()` check. */
   if (window.isMinimized()) window.restore();
-  window.show();
-  window.focus();
+  revealWindow(window);
 
   /* A second attempt while the prompt is still up (× pressed twice, Alt+F4 on
      top of it) is vetoed just as well — but must not ask again or restart the

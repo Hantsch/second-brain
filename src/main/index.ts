@@ -26,6 +26,7 @@ import type { Services } from './services';
 import type { GardenerAutorun } from './gardener-autorun';
 import type { ReminderNotifier } from './reminder-notify';
 import type { Tray } from 'electron';
+import { applyHarnessSwitches } from './window-shared';
 
 let reminderNotifier: ReminderNotifier | null = null;
 let gardenerAutorun: GardenerAutorun | null = null;
@@ -45,6 +46,7 @@ const hasSingleInstanceLock = app.requestSingleInstanceLock();
 if (!hasSingleInstanceLock) app.quit();
 
 app.setAppUserModelId(APP_ID);
+applyHarnessSwitches();
 
 async function bootstrap(): Promise<Services> {
   const userDataDir = app.getPath('userData');
