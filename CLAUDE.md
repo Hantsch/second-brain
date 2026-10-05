@@ -171,7 +171,7 @@ Neighbor repos this project deliberately draws from:
 - `../yougrab` — YouTube pipeline (yt-dlp + fallback provider, transcript preparation)
 - `../claude-control` — reading Claude Code sessions from `~/.claude/projects`
 
-<!-- tech-rules:managed:start 2.2.0 -->
+<!-- tech-rules:managed:start 2.3.0 -->
 
 ## House rules
 
@@ -181,7 +181,7 @@ no plugin needed. Installed and updated with `/tech-rules:setup` (plugin `tech-r
 | Read before                                      | Skill                                    |
 | ------------------------------------------------ | ---------------------------------------- |
 | any code change                                  | `/karpathy`                              |
-| touching `src/renderer/`                         | `/frontend-guidelines`, `/design-tokens` |
+| touching `src/renderer/`                         | `/renderer-guidelines`, `/design-tokens` |
 | main / preload / renderer, IPC, `webPreferences` | `/electron-arch`, `/typed-ipc`           |
 | screenshotting or verifying the UI               | `/ui-verify`                             |
 

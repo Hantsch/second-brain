@@ -1,12 +1,16 @@
 {
-  "tech-rules-version": "2.2.0",
-  "groups": ["all", "react", "electron"],
+  "tech-rules-version": "2.3.0",
+  "groups": [
+    "all",
+    "react",
+    "electron"
+  ],
   "files": {
-    ".claude/skills/karpathy/SKILL.md": "9fa41c3d00e29aebcfb0fb70b0bb35e31cb90ecf",
-    ".claude/skills/design-tokens/SKILL.md": "743279c493acb4161426fe0a1b0a431b1b4b062d",
-    ".claude/skills/frontend-guidelines/SKILL.md": "618e8a6218cc305bda58eb28ac521c173151cd1a",
-    ".claude/skills/electron-arch/SKILL.md": "2766eb09d0c34f992c70103053b99fb52db2617b",
-    ".claude/skills/typed-ipc/SKILL.md": "ae11430fcc4dd40468089ee9b696942c17ffdb7c",
-    ".claude/skills/ui-verify/SKILL.md": "0e1389829efb42e0beb7fabfe25ccebc12ace517"
+    ".claude/skills/karpathy/SKILL.md": "31461247fc12bbbf42449eed959bef40d92baf6e",
+    ".claude/skills/design-tokens/SKILL.md": "3e300a8f3649d91b197fc938b4640b1b541c32ff",
+    ".claude/skills/electron-arch/SKILL.md": "1be484cb4f9be287cf94b14144c1dd2a4187b2a2",
+    ".claude/skills/typed-ipc/SKILL.md": "31c0e4d1aebccfa77780c41e7a25bc9073c6c1e5",
+    ".claude/skills/ui-verify/SKILL.md": "c69b73f5b7a3de9aee2ad8677f87308c31ee4212",
+    ".claude/skills/renderer-guidelines/SKILL.md": "aa98bb7818f49d64270eeb8682bcea22d31ff4b5"
   }
 }
