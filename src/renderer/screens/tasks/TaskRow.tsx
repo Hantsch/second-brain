@@ -24,6 +24,7 @@ import { Icon } from '../../atoms/Icon';
 import { ErrorState } from '../../components/ErrorState';
 import { useT } from '../../i18n';
 import { formatDuration } from '../../lib/format';
+import { useTaskModelLabel } from '../../lib/queries/llm';
 import { taskResultRoute } from '../../lib/task-result-route';
 import { formatElapsed } from '../../lib/useElapsed';
 import {
@@ -79,6 +80,9 @@ export function TaskRow({ task, cancel, remove, retry }: TaskRowProps) {
   const t = useT();
   const navigate = useNavigate();
   const kindLabel = taskKindLabel(task.kind, t);
+  /* Only a running row names its model — a queued one may still be re-routed
+     before its turn, and a finished one ran on whatever was routed then. */
+  const model = useTaskModelLabel(task.state === 'running' ? task.llmTask : undefined);
 
   if (task.state === 'running') {
     const readOnly = isMaintenanceTaskRow(task);
@@ -91,6 +95,9 @@ export function TaskRow({ task, cancel, remove, retry }: TaskRowProps) {
           <span className="sb-trow-subject">{task.subject.label}</span>
           <span className="sb-trow-elapsed sb-mono">{elapsedOf(task)}</span>
         </div>
+        {model !== null ? (
+          <div className="sb-trow-model sb-mono">{t('tasks.row.model', { model })}</div>
+        ) : null}
         <div className="sb-trow-progress">
           <span
             className="sb-trow-track"

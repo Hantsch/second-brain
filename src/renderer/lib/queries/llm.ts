@@ -81,6 +81,22 @@ export function useTaskRouted(task: TaskKind): boolean | undefined {
 }
 
 /**
+ * "Provider · model" a task routes to right now, or `null` when it has no task
+ * or no route. Same chain as `resolveRoute`, so it names what the gateway will
+ * pick — read at render time, so a routing change shows on the next tick.
+ */
+export function useTaskModelLabel(task: TaskKind | undefined): string | null {
+  const routing = useRouting();
+  const tasks = useTasks();
+  const providers = useProviders();
+  if (task === undefined || !routing.data || !tasks.data) return null;
+  const route = resolveRoute(routing.data, tasks.data, task);
+  if (route === null) return null;
+  const provider = (providers.data ?? []).find((entry) => entry.id === route.ref.providerId);
+  return `${provider?.label ?? route.ref.providerId} · ${route.ref.model}`;
+}
+
+/**
  * Is a local runtime already running on this machine? Only queried when
  * `enabled` — the request goes over the network (localhost) and therefore
  * doesn't belong in every screen.

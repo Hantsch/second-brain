@@ -30,6 +30,7 @@ export const deTasks = {
 
   'tasks.waiting.position': 'Platz {position} in der Warteschlange',
   'tasks.row.progress': 'Fortschritt für {subject}',
+  'tasks.row.model': 'Modell: {model}',
 
   'tasks.action.stop': 'Stoppen',
   'tasks.action.remove': 'Entfernen',

@@ -403,7 +403,12 @@ export function journalHandlers(services: Services): HandlerMap {
       const lane: WorkLane = gateway.isAvailable('extract-tasks') ? 'model' : 'free';
       const ref = date;
       const task = getWorkQueue(services).enqueue(
-        { kind: 'close-day', lane, subject: { label: date, ref } },
+        {
+          kind: 'close-day',
+          lane,
+          subject: { label: date, ref },
+          ...(lane === 'model' ? { llmTask: 'extract-tasks' as const } : {}),
+        },
         /* `taskId` is THIS run's own task id, handed in directly by
            `WorkRegistry.start` (`core/work/registry.ts`) — not a variable
            captured once after the first `enqueue()` returns. A retry reuses

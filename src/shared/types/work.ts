@@ -9,6 +9,7 @@
 
 import type { GardenerRunProgress } from './gardener';
 import type { IngestJob } from './knowledge';
+import type { TaskKind } from './llm';
 
 /** What kind of long-running work this task performs. */
 export type WorkTaskKind = 'condense' | 'close-day' | 'gardener' | 'ingest' | 'interview-plan';
@@ -88,6 +89,13 @@ export interface WorkTask {
    * exercise this generic retry path in e2e).
    */
   retryable: boolean;
+  /**
+   * The LLM task this work routes through, so the Tasks screen can name the
+   * model it is running on. Set by the producer (it knows; `kind` alone does
+   * not — `condense` is area or project); absent for work that never calls a
+   * model, or whose task changes mid-run (the gardener: see `tasks-view.ts`).
+   */
+  llmTask?: TaskKind;
 }
 
 export type WorkTaskDetail = IngestJob | GardenerRunProgress;

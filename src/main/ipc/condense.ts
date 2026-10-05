@@ -111,6 +111,7 @@ export function condenseHandlers(services: Services): HandlerMap {
         {
           kind: 'condense',
           lane: 'model',
+          llmTask: target.task,
           /* Plain content, no "Verdichtung:" prefix — the tasks screen renders
              the kind itself (`TaskRow`), so a prefix here would say it twice. */
           subject: { label: target.project?.title ?? target.slug, ref },

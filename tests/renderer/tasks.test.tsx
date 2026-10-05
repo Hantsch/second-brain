@@ -133,6 +133,39 @@ describe('Aufgaben', () => {
     expect(document.querySelector('.gs-spin')).toBeNull();
   });
 
+  it('nennt bei einer laufenden Aufgabe das Modell, auf das ihr LLM-Task routet — und sonst keines', async () => {
+    const routed = task({
+      id: 'run-model',
+      state: 'running',
+      progress: 0.3,
+      startedAt: NOW,
+      llmTask: 'condense-area',
+    });
+    const unrouted = task({
+      id: 'run-plain',
+      state: 'running',
+      progress: 0.3,
+      startedAt: NOW,
+      subject: { label: 'Ohne Modell', ref: null },
+    });
+    const queued = task({ id: 'wait-model', state: 'queued', llmTask: 'condense-area' });
+
+    installSbMock({
+      'work:list': () => [routed, unrouted, queued],
+      'llm:routing': () => ({
+        tasks: { 'condense-area': { providerId: 'p1', model: 'qwen3-coder' } },
+        defaults: {},
+      }),
+      'llm:tasks': () => [{ kind: 'condense-area', suggested: 'balanced' }],
+      'llm:providers': () => [{ id: 'p1', label: 'Ollama' }],
+    });
+    wrap(<TasksScreen />);
+
+    await waitFor(() => expect(screen.getByText('Modell: Ollama · qwen3-coder')).toBeTruthy());
+    // One line only: the running row without a task and the queued row name none.
+    expect(screen.getAllByText(/^Modell:/)).toHaveLength(1);
+  });
+
   it('zeigt jede Gruppe unter ihrer eigenen Ueberschrift mit dem passenden Inhalt (AC3)', async () => {
     freezeTime();
     const running = task({

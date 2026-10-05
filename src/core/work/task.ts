@@ -13,6 +13,7 @@ import type {
   WorkTaskDetail,
   WorkTaskKind,
   WorkTaskSubject,
+  TaskKind,
 } from '@shared/types';
 
 /** States in which a task is neither running nor waiting to run. */
@@ -31,6 +32,8 @@ export interface EnqueueTaskInput {
   subject: WorkTaskSubject;
   /** Kind-specific snapshot, e.g. an `IngestJob` for an import task — see `WorkTask.detail`. */
   detail?: WorkTaskDetail;
+  /** The LLM task this work routes through — see `WorkTask.llmTask`. */
+  llmTask?: TaskKind;
 }
 
 /** Short form of a subject label — one line, no line breaks. */
@@ -67,6 +70,7 @@ export function createTask(id: string, input: EnqueueTaskInput, queuedAt: string
     hasResult: false,
     detail: input.detail ?? null,
     retryable: true,
+    ...(input.llmTask === undefined ? {} : { llmTask: input.llmTask }),
   };
 }
 

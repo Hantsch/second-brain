@@ -178,7 +178,7 @@ export const enGarden = {
   'garden.card.noFix': 'Nothing here can be put right on its own. The ways out are below.',
   'garden.card.dismiss': 'This is not a problem',
   'garden.card.dismissed': 'Not a problem. The result no longer counts against the health score.',
-  'garden.card.handled': 'I dealt with it in the files',
+  'garden.card.handled': 'Done, check again',
   'garden.card.recheckGone': 'Checked again: the result is gone.',
   'garden.card.recheckStill':
     'Checked again: the result is still there. Nothing about it changed in the files.',

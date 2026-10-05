@@ -25,6 +25,7 @@ export const enTasks = {
 
   'tasks.waiting.position': 'Queue position {position}',
   'tasks.row.progress': 'Progress for {subject}',
+  'tasks.row.model': 'Model: {model}',
 
   'tasks.action.stop': 'Stop',
   'tasks.action.remove': 'Remove',

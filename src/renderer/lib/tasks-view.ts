@@ -19,7 +19,7 @@
    `RunStrip` calls it too, rather than each side keeping its own copy of the
    same translation branch (072 review, finding 1). */
 
-import type { WorkTask, WorkTaskKind, WorkTaskState } from '@shared/types';
+import type { TaskKind, WorkTask, WorkTaskKind, WorkTaskState } from '@shared/types';
 import type { GardenerProgress } from './gardener-progress';
 
 /** The shape of `useT()`'s return value, kept local rather than imported from
@@ -117,6 +117,16 @@ export function maintenanceLabel(progress: GardenerProgress, t: Translate): stri
 }
 
 /**
+ * The LLM task the run is on right now — only the two model stages call one;
+ * the per-check stages are plain index work, so they name no model.
+ */
+function maintenanceLlmTask(progress: GardenerProgress): TaskKind | null {
+  if (progress.stage === 'audit') return 'gardener-audit';
+  if (progress.stage === 'loose-ends') return 'journal-loose-ends';
+  return null;
+}
+
+/**
  * The maintenance run as a `WorkTask`-shaped row, so D4's screen can render
  * it through the same `TaskRow` a real task uses, with no special case for
  * "this one comes from gardener-progress, not the registry." `null` while no
@@ -127,7 +137,9 @@ export function maintenanceTaskRow(
   t: Translate,
 ): WorkTask | null {
   if (progress === null) return null;
+  const llmTask = maintenanceLlmTask(progress);
   return {
+    ...(llmTask === null ? {} : { llmTask }),
     id: MAINTENANCE_TASK_ID,
     kind: 'gardener',
     lane: 'model',

@@ -1078,9 +1078,7 @@ describe('Wege aus einem Befund', () => {
         'Von selbst richten lässt sich hier nichts. Die Wege daraus stehen darunter.',
       ),
     ).toBeTruthy();
-    expect(
-      within(card).getByRole('button', { name: 'Habe ich in den Dateien erledigt' }),
-    ).toBeTruthy();
+    expect(within(card).getByRole('button', { name: 'Erledigt, neu prüfen' })).toBeTruthy();
     expect(
       within(card).getByRole('button', { name: `Nicht jetzt: „${BROKEN.title}“` }),
     ).toBeTruthy();
@@ -1115,7 +1113,7 @@ describe('Wege aus einem Befund', () => {
 
     await userEvent.click(
       within(cardOf(BROKEN.title)).getByRole('button', {
-        name: 'Habe ich in den Dateien erledigt',
+        name: 'Erledigt, neu prüfen',
       }),
     );
 
@@ -1142,7 +1140,7 @@ describe('Wege aus einem Befund', () => {
 
     await userEvent.click(
       within(cardOf(BROKEN.title)).getByRole('button', {
-        name: 'Habe ich in den Dateien erledigt',
+        name: 'Erledigt, neu prüfen',
       }),
     );
 
@@ -1285,9 +1283,7 @@ describe('Der ganze Screen ohne Modell', () => {
 
     /* Die offene Karte mit allen ihren Wegen hinaus. */
     const card = screen.getByText(BROKEN.title).closest('.sb-finding') as HTMLElement;
-    expect(
-      within(card).getByRole('button', { name: 'Habe ich in den Dateien erledigt' }),
-    ).toBeTruthy();
+    expect(within(card).getByRole('button', { name: 'Erledigt, neu prüfen' })).toBeTruthy();
     expect(
       within(card).getByRole('button', { name: `Nicht jetzt: „${BROKEN.title}“` }),
     ).toBeTruthy();

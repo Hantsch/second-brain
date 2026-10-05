@@ -196,7 +196,7 @@ export const deGarden = {
     'Von selbst richten lässt sich hier nichts. Die Wege daraus stehen darunter.',
   'garden.card.dismiss': 'Ist kein Problem',
   'garden.card.dismissed': 'Kein Problem. Der Befund zählt nicht mehr gegen die Gesundheit.',
-  'garden.card.handled': 'Habe ich in den Dateien erledigt',
+  'garden.card.handled': 'Erledigt, neu prüfen',
   'garden.card.recheckGone': 'Neu geprüft: der Befund ist weg.',
   'garden.card.recheckStill':
     'Neu geprüft: der Befund steht noch. In den Dateien hat sich daran nichts geändert.',
