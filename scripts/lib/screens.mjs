@@ -18,6 +18,8 @@ import { REPO_ROOT } from './app-harness.mjs';
     (`notes-unfiled`), keine eigene Zeile hier. */
 export const SCREENS = [
   'dashboard',
+  /* The history of asked questions, directly under the dashboard. */
+  'chats',
   'projects',
   'notes',
   'journal',

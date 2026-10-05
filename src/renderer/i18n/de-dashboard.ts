@@ -103,7 +103,6 @@ export const deDashboard = {
   'tile.ask.label': 'Frage an Gaston',
   'tile.ask.placeholder': 'Was weiß ich über …?',
   'tile.ask.submit': 'Fragen',
-  'tile.ask.hint': 'Die Frage wandert mit in den Fragen-Screen.',
 
   'tile.recent.empty':
     'Noch keine Arbeitsspur. Wer eine Datei ändert, eine Sitzung fährt oder einen Tageseintrag schreibt, steht hier.',

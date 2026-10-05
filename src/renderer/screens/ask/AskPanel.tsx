@@ -66,6 +66,8 @@ export interface AskPrefill {
       question was asked (`lib/ask-scope.ts`), and removable in the composer. */
   project?: string | null;
   scope?: Scope | null;
+  /** Conversation to open on mount — how the chats screen continues one. */
+  threadId?: string | null;
 }
 
 /** What the surrounding chrome may trigger inside the panel. */
@@ -95,7 +97,7 @@ export function AskPanel({ prefill = {}, onControls, onEscape }: AskPanelProps) 
   const client = useQueryClient();
   const field = useRef<HTMLTextAreaElement>(null);
 
-  const [threadId, setThreadId] = useState<string | null>(null);
+  const [threadId, setThreadId] = useState<string | null>(prefill.threadId ?? null);
   /* A question coming from elsewhere (dashboard tile: `#/ask?q=…`) is only the
      field's initial value — nothing more. It gets submitted here, by the user:
      a URL that triggers a model call by itself would be an action without a handle. */

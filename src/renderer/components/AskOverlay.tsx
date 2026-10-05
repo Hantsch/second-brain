@@ -113,6 +113,7 @@ export function AskOverlay({ prefill, onClose }: AskOverlayProps) {
             module: prefill?.module ?? null,
             project: prefill?.project ?? null,
             scope: prefill?.scope ?? null,
+            threadId: prefill?.threadId ?? null,
           }}
           onControls={register}
           onEscape={onClose}

@@ -15,6 +15,7 @@ import { deProjects } from './de-projects';
 import { deScreens } from './de-screens';
 import { deSearch } from './de-search';
 import { deSettings } from './de-settings';
+import { deChats } from './de-chats';
 import { deTasks } from './de-tasks';
 import { deWiki } from './de-wiki';
 
@@ -44,6 +45,7 @@ export const de = {
 
   'rail.region': 'Hauptnavigation',
   'rail.dashboard': 'Dashboard',
+  'rail.chats': 'Chats',
   'rail.projects': 'Projekte',
   'rail.journal': 'Tagebuch',
   'rail.notes': 'Notizen',
@@ -250,6 +252,7 @@ export const de = {
   ...deProjects,
   ...deSearch,
   ...deSettings,
+  ...deChats,
   ...deTasks,
   ...deWiki,
 } as const;

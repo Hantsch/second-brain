@@ -94,7 +94,6 @@ export const enDashboard = {
   'tile.ask.label': 'Question to Gaston',
   'tile.ask.placeholder': 'What do I know about …?',
   'tile.ask.submit': 'Ask',
-  'tile.ask.hint': 'The question travels to the questions screen.',
 
   'tile.recent.empty':
     'No trace of work yet. Change a file, run a session or write a journal entry and it shows up here.',

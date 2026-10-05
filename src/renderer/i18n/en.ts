@@ -15,6 +15,7 @@ import { enProjects } from './en-projects';
 import { enScreens } from './en-screens';
 import { enSearch } from './en-search';
 import { enSettings } from './en-settings';
+import { enChats } from './en-chats';
 import { enTasks } from './en-tasks';
 import { enWiki } from './en-wiki';
 
@@ -44,6 +45,7 @@ export const en: Record<TranslationKey, string> = {
 
   'rail.region': 'Main navigation',
   'rail.dashboard': 'Dashboard',
+  'rail.chats': 'Chats',
   'rail.projects': 'Projects',
   'rail.journal': 'Journal',
   'rail.notes': 'Notes',
@@ -241,6 +243,7 @@ export const en: Record<TranslationKey, string> = {
   ...enProjects,
   ...enSearch,
   ...enSettings,
+  ...enChats,
   ...enTasks,
   ...enWiki,
 };

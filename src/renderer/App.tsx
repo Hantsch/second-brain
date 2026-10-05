@@ -14,6 +14,7 @@ import { backgroundImage } from './lib/customization-assets';
 import { qk } from './lib/queries/keys';
 import type { ShellOverlay } from './lib/shell-overlays';
 import { useShellOverlays } from './lib/shell-overlays';
+import { ChatsScreen } from './screens/chats/ChatsScreen';
 import { DashboardScreen } from './screens/dashboard/DashboardScreen';
 import { GardenScreen } from './screens/garden/GardenScreen';
 import { JournalScreen } from './screens/journal/JournalScreen';
@@ -162,6 +163,7 @@ export function App() {
       <Routes>
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<DashboardScreen />} />
+        <Route path="/chats" element={<ChatsScreen />} />
         <Route path="/inbox" element={<UnfiledRedirect />} />
         <Route path="/projects" element={<ProjectsScreen />} />
         {/* Nested under Projects on purpose: the rail entry stays lit through

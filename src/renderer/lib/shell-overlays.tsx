@@ -34,6 +34,8 @@ export interface AskPrefill {
   scope?: Scope | null;
   /** Ask straight away instead of waiting for the user to press enter. */
   submit?: boolean;
+  /** Continue an existing conversation instead of starting a new one. */
+  threadId?: string;
 }
 
 export type ShellOverlay = 'capture' | 'ask';
@@ -81,6 +83,7 @@ function withRouteScope(derived: AskRouteScope, prefill?: AskPrefill): AskPrefil
   if (prefill?.question !== undefined) merged.question = prefill.question;
   if (prefill?.scope !== undefined) merged.scope = prefill.scope;
   if (prefill?.submit !== undefined) merged.submit = prefill.submit;
+  if (prefill?.threadId !== undefined) merged.threadId = prefill.threadId;
   return merged;
 }
 

@@ -116,16 +116,17 @@ this order. The agent sessions are no rail entry of their own: they live under
 projects — `/projects/sessions` for all of them, `?p=<slug>&tab=sessions` for one
 project's — reachable from the dashboard tile and the command palette.
 
-| Screen      | Purpose                                                                  | Hotkey |
-| ----------- | ------------------------------------------------------------------------ | ------ |
-| `dashboard` | Movable modules: what happened, what's coming up, what's being waited on | `1`    |
-| `inbox`     | Dumps with a filing proposal: accept, edit, discard                      | `3`    |
-| `projects`  | List + detail: status, next step, todos, waiting-on, agent sessions      | `5`    |
-| `journal`   | Daily entry and coaching dialog                                          | `6`    |
-| `knowledge` | Knowledge modules (pages, graph) and the sources tab (ingest, progress)  | `7`    |
-| `tasks`     | The work queue: running, waiting and finished, plus the maintenance run  | —      |
-| `garden`    | Maintenance: findings, health, one-click fixes                           | `9`    |
-| `settings`  | Languages, provider/models, task routing, vault, behavior                | `0`    |
+| Screen      | Purpose                                                                         | Hotkey |
+| ----------- | ------------------------------------------------------------------------------- | ------ |
+| `dashboard` | Movable modules: what happened, what's coming up, what's being waited on        | `1`    |
+| `chats`     | History of asked questions: read a conversation, continue it in the ask overlay | —      |
+| `inbox`     | Dumps with a filing proposal: accept, edit, discard                             | `3`    |
+| `projects`  | List + detail: status, next step, todos, waiting-on, agent sessions             | `5`    |
+| `journal`   | Daily entry and coaching dialog                                                 | `6`    |
+| `knowledge` | Knowledge modules (pages, graph) and the sources tab (ingest, progress)         | `7`    |
+| `tasks`     | The work queue: running, waiting and finished, plus the maintenance run         | —      |
+| `garden`    | Maintenance: findings, health, one-click fixes                                  | `9`    |
+| `settings`  | Languages, provider/models, task routing, vault, behavior                       | `0`    |
 
 `2`, `4` and `8` are currently unassigned: sources became a tab under `knowledge`,
 capture and ask became overlays. The rail gets renumbered wholesale by the later

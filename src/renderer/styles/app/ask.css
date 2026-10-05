@@ -52,6 +52,23 @@
   line-height: var(--leading-relaxed);
 }
 
+/* The chats screen's header over a conversation: title left, one action right. */
+.sb-chats-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  max-width: 72ch;
+}
+.sb-chats-title {
+  min-width: 0;
+  font-size: var(--text-md);
+  color: var(--text-heading);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* ── Conversations ───────────────────────────────────────────────────────── */
 
 .sb-threads {

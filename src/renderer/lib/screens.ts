@@ -2,7 +2,15 @@
    Befehlspalette. Reihenfolge und Tasten stehen in docs/ARCHITECTURE.md. */
 
 export type ScreenId =
-  'dashboard' | 'projects' | 'notes' | 'journal' | 'knowledge' | 'tasks' | 'garden' | 'settings';
+  | 'dashboard'
+  | 'chats'
+  | 'projects'
+  | 'notes'
+  | 'journal'
+  | 'knowledge'
+  | 'tasks'
+  | 'garden'
+  | 'settings';
 
 export interface ScreenDef {
   id: ScreenId;
@@ -26,6 +34,16 @@ export const SCREENS: readonly ScreenDef[] = [
     icon: 'layout-dashboard',
     labelKey: 'rail.dashboard',
     hotkey: '1',
+    group: 'place',
+  },
+  {
+    /* The conversations you already had. Asking itself stays an overlay; this is
+       where its history becomes reachable. No digit hotkey: the digits 1–7 are
+       taken, and renumbering them for one entry would break muscle memory. */
+    id: 'chats',
+    path: '/chats',
+    icon: 'message-square',
+    labelKey: 'rail.chats',
     group: 'place',
   },
   {
