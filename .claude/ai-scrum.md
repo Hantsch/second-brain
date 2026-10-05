@@ -9,7 +9,7 @@
   the commands read both.
 -->
 
-ai-scrum-version: 4.4.0
+ai-scrum-version: 4.5.0
 project: Gaston
 
 ## Verify
@@ -43,6 +43,9 @@ e2e-cleanup: none
   revisit if a leftover Electron instance from a killed run ever blocks the next one (only
   one Electron instance can run at a time on this machine — shared tray icon and hotkey).
 -->
+
+test-support: tests/fakes/, tests/fixtures/ <!-- shared fixtures and fakes, pasted into every deliverable prompt by /build so agents reuse them -->
+e2e-quarantine: none <!-- no expected-failure list exists; /sprint's regression gate would write one here -->
 
 ## Conventions
 
