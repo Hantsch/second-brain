@@ -205,6 +205,18 @@ async function addScimMention(vault: TempVault, harness: Harness): Promise<strin
   return SCIM_MENTION;
 }
 
+const OVERVIEW = 'modules/identity-management/wiki/overview.md';
+
+/**
+ * Ein Modul ohne Overview: die einzige Lage, in der ein verwaister Befund keinen
+ * Fix bekommt und ein Mensch das Ziel waehlt (`checks/orphan.ts`). Mit Overview
+ * bietet der Check sie selbst als Ziel an.
+ */
+async function dropOverview(vault: TempVault, harness: Harness): Promise<void> {
+  await rm(vault.absolute(OVERVIEW));
+  await harness.services.requireIndex().refresh?.();
+}
+
 /**
  * Jede Markdown-Datei im Vault (nie `.secondbrain/`), als Pfad → sha256 ihres
  * Inhalts. Der Beweis für D6, dass „passt so", „nicht jetzt" und der Rückweg
@@ -652,14 +664,13 @@ describe('Pflege-Kanäle im Main', () => {
     expect(partial.complete).toBe(false);
     expect(fake.calls.length).toBe(0);
     const orphanBefore = findingOfKind(partial.findings, 'orphan');
-    expect(orphanBefore.paths[0]).toBe(SCIM);
-    expect(orphanBefore.fix).toBeNull();
+    expect(orphanBefore.paths).toEqual([SCIM, OVERVIEW]);
 
     /* Eine Änderung, die eine erneute Prüfung sichtbar verändern würde: die
-       verwaiste Seite bekommt eine Erwähnung, die ihr einen automatischen Fix
-       gäbe — sähe der fortgesetzte Lauf den `orphan`-Befund noch einmal, trüge
-       er diesen Fix. Steht er weiter mit `fix: null` da, hat die Prüfung nicht
-       noch einmal gelaufen. */
+       verwaiste Seite bekommt eine Erwähnung, die ihr Ziel von der Overview auf
+       diese Seite verschöbe — sähe der fortgesetzte Lauf den `orphan`-Befund noch
+       einmal, zeigte er auf die Erwähnung. Zeigt er weiter auf die Overview, hat
+       die Prüfung nicht noch einmal gelaufen. */
     await addScimMention(vault, harness);
     harness.sent.length = 0;
 
@@ -669,8 +680,7 @@ describe('Pflege-Kanäle im Main', () => {
     expect(fake.calls.length).toBe(2);
     expect(resumed.complete).not.toBe(false);
     const orphanAfter = findingOfKind(resumed.findings, 'orphan');
-    expect(orphanAfter.paths[0]).toBe(SCIM);
-    expect(orphanAfter.fix).toBeNull();
+    expect(orphanAfter.paths).toEqual([SCIM, OVERVIEW]);
 
     /* Der Fortschritt beginnt bei der Deutung, nicht bei den Prüfungen: der
        erste Schritt dieses Laufs liegt schon über 0%, weil die Prüfungen als
@@ -1181,6 +1191,7 @@ describe('Pflege-Kanäle im Main', () => {
   // ── Verwaiste Seite: Ziel wählen (016 D2) ───────────────────────────────────
 
   it('nennt Ziele für eine verwaiste Seite ohne automatischen Fix, ohne zu schreiben', async () => {
+    await dropOverview(vault, harness);
     const report = await harness.call('gardener:run', {});
     const orphan = findingOfKind(report.findings, 'orphan');
     expect(orphan.fix).toBeNull();
@@ -1190,11 +1201,10 @@ describe('Pflege-Kanäle im Main', () => {
     const result = await harness.call('gardener:orphanTargets', { findingId: orphan.id });
 
     expect(result.line).toBe('Bezug: [[scim]]');
-    /* Überblicksseite zuerst, der Rest alphabetisch nach Titel — die mittlere
-       Gruppe (Titel teilt ein Wort mit dem der verwaisten Seite) bleibt leer,
-       weil kein anderer Titel ein Wort mit "SCIM" teilt. */
+    /* Ohne Overview alphabetisch nach Titel — die mittlere Gruppe (Titel teilt
+       ein Wort mit dem der verwaisten Seite) bleibt leer, weil kein anderer
+       Titel ein Wort mit "SCIM" teilt. */
     expect(result.targets.map((target) => target.slug)).toEqual([
-      'overview',
       's-2026-08-04-token-lifetimes-blog',
       'oauth2',
       'token-lebensdauer',
@@ -1258,6 +1268,7 @@ describe('Pflege-Kanäle im Main', () => {
   // ── Verwaiste Seite: Ziel bestätigen (016 D3) ───────────────────────────────
 
   it('schreibt die Zeile aus der Vorschau in das gewählte Ziel — und dreht sie zurück', async () => {
+    await dropOverview(vault, harness);
     const report = await harness.call('gardener:run', {});
     const orphan = findingOfKind(report.findings, 'orphan');
     expect(orphan.paths[0]).toBe(SCIM);
@@ -1299,6 +1310,7 @@ describe('Pflege-Kanäle im Main', () => {
      eine menschliche Wahl behoben, ohne dass irgendein Schritt dazwischen ein
      Modell braucht oder fragt. */
   it('kommt vom Fund bis zum geschriebenen Verweis ganz ohne Modell aus', async () => {
+    await dropOverview(vault, harness);
     const report = await harness.call('gardener:run', { useLlm: true });
     expect(report.usedLlm).toBe(false);
     const orphan = findingOfKind(report.findings, 'orphan');
@@ -1320,6 +1332,7 @@ describe('Pflege-Kanäle im Main', () => {
      Main rechnet die erlaubte Menge neu, statt ihm zu glauben. Alles, was ein
      Angreifer wie ein Versehen nennen könnte — eine und dieselbe Absage. */
   it('weist jedes Ziel ab, das nicht in der neu gerechneten Auswahl steht', async () => {
+    await dropOverview(vault, harness);
     const report = await harness.call('gardener:run', {});
     const orphan = findingOfKind(report.findings, 'orphan');
 
@@ -1419,6 +1432,65 @@ describe('Pflege-Kanäle im Main', () => {
     expect((await vault.read(mention)) ?? '').toContain(orphan.fix?.preview ?? 'x');
   });
 
+  /* Ohne eindeutige Erwähnung ist die Overview das Ziel: ein Klick, keine Wahl. */
+  it('trägt eine verwaiste Seite ohne Erwähnung per applyFix in die Overview ein', async () => {
+    const report = await harness.call('gardener:run', {});
+    const orphan = findingOfKind(report.findings, 'orphan');
+    expect(orphan.paths).toEqual([SCIM, OVERVIEW]);
+    expect(orphan.fix?.action).toBe('add-links');
+    expect(orphan.fix?.preview).toMatch(/^- \[\[scim\]\] — /);
+
+    const result = await harness.call('gardener:applyFix', { finding: orphan });
+
+    expect(result.written).toEqual([OVERVIEW]);
+    expect(result.undoToken).toBeDefined();
+    const overview = (await vault.read(OVERVIEW)) ?? '';
+    expect(overview).toContain('## Seiten');
+    expect(overview).toContain(orphan.fix?.preview ?? 'x');
+    const done = await harness.call('gardener:run', {});
+    expect(done.findings.some((finding) => finding.id === orphan.id)).toBe(false);
+  });
+
+  it('trägt mehrere Waisen in einem Zug in die Overview ein — eine Marke macht alles rückgängig', async () => {
+    const second = 'modules/identity-management/wiki/concepts/zweite-waise.md';
+    await vault.write(
+      second,
+      '---\ntype: concept\ntitle: Zweite Waise\nmodule: identity-management\ncreated: 2026-05-01\nupdated: 2026-05-01\nreviewed: 2026-05-01\ntags: []\nlang: de\n---\n\nSteht für sich allein.\n',
+    );
+    await harness.services.requireIndex().refresh?.();
+    const report = await harness.call('gardener:run', {});
+    const orphans = report.findings.filter((finding) => finding.kind === 'orphan');
+    expect(orphans.length).toBeGreaterThanOrEqual(2);
+    const before = await vault.read(OVERVIEW);
+
+    const result = await harness.call('gardener:linkOrphans', {
+      findingIds: orphans.map((finding) => finding.id),
+    });
+
+    expect(result.written).toEqual([OVERVIEW]);
+    const overview = (await vault.read(OVERVIEW)) ?? '';
+    for (const orphan of orphans) expect(overview).toContain(orphan.fix?.preview ?? 'x');
+    const done = await harness.call('gardener:report', undefined);
+    expect(done?.findings.some((finding) => finding.kind === 'orphan')).toBe(false);
+
+    await harness.call('gardener:undoFix', { undoToken: result.undoToken as string });
+    expect(await vault.read(OVERVIEW)).toBe(before);
+  });
+
+  it('weist unbekannte und fremde Befunde beim Sammel-Eintrag ab', async () => {
+    const report = await harness.call('gardener:run', {});
+    await expect(
+      harness.call('gardener:linkOrphans', { findingIds: ['gibt-es-nicht'] }),
+    ).rejects.toMatchObject({ code: 'not-found' });
+    await expect(harness.call('gardener:linkOrphans', { findingIds: [] })).rejects.toMatchObject({
+      code: 'invalid',
+    });
+    const brokenLink = findingOfKind(report.findings, 'broken-link');
+    await expect(
+      harness.call('gardener:linkOrphans', { findingIds: [brokenLink.id] }),
+    ).rejects.toMatchObject({ code: 'invalid' });
+  });
+
   // ── Verwaiste Seite: Hash-Wache und ehrliches Scheitern (016 D4) ───────────
 
   /* Der Unterschied, der hier festgeschrieben wird, ist der ganze Punkt dieser
@@ -1435,6 +1507,7 @@ describe('Pflege-Kanäle im Main', () => {
      stilles Überschreiben — oder umgekehrt eine Absage, die nach Datenverlust
      klingt, obwohl nur die Vorschau veraltet war. */
   it('meldet einen Konflikt, wenn das Ziel zwischen Lesen und Schreiben von außen wächst', async () => {
+    await dropOverview(vault, harness);
     const report = await harness.call('gardener:run', {});
     const orphan = findingOfKind(report.findings, 'orphan');
     const target = 'modules/identity-management/wiki/entities/oauth2.md';
@@ -1499,6 +1572,7 @@ describe('Pflege-Kanäle im Main', () => {
   });
 
   it('weist ein Ziel als „nicht mehr wählbar" ab, nicht als Konflikt', async () => {
+    await dropOverview(vault, harness);
     const report = await harness.call('gardener:run', {});
     const orphan = findingOfKind(report.findings, 'orphan');
     const target = 'modules/identity-management/wiki/entities/oauth2.md';
@@ -1525,6 +1599,7 @@ describe('Pflege-Kanäle im Main', () => {
   });
 
   it('liest das gewählte Ziel frisch und hängt den Verweis unter eine Fremdänderung', async () => {
+    await dropOverview(vault, harness);
     const report = await harness.call('gardener:run', {});
     const orphan = findingOfKind(report.findings, 'orphan');
     const target = 'modules/identity-management/wiki/entities/oauth2.md';

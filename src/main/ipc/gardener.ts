@@ -20,7 +20,14 @@
      (`core/gardener/fixes.ts`). Afterward the finding is hidden rather than
      deleted — `gardener:undoFix` reverses both. */
 
-import { applyFix, discardPage, discardPlan, supersede, undoFix } from '@core/gardener';
+import {
+  applyFix,
+  discardPage,
+  discardPlan,
+  linkOrphansIntoOverview,
+  supersede,
+  undoFix,
+} from '@core/gardener';
 import { shiftDay } from '@core/overview';
 import type { HandlerMap } from './registry';
 import { defineHandlers, fail } from './registry';
@@ -200,6 +207,35 @@ export function gardenerHandlers(services: Services): HandlerMap {
         await settle(services, result.written, 'gardener');
         if (result.undoToken !== null)
           await pick.state.markFixed(pick.finding.id, result.undoToken);
+        wake(services);
+      }
+      return {
+        written: result.written,
+        ...(result.undoToken === null ? {} : { undoToken: result.undoToken }),
+      };
+    },
+
+    'gardener:linkOrphans': async ({ findingIds }) => {
+      if (!Array.isArray(findingIds) || findingIds.length === 0) {
+        throw fail('invalid', 'keine Befunde ausgewählt');
+      }
+      const state = await gardenerStateFor(services);
+      const open = (await gardenerReport(services, state))?.findings ?? [];
+      const picked = [...new Set(findingIds)].map((id) => {
+        const found = open.find((entry) => entry.id === id);
+        if (found === undefined) throw fail('not-found', 'diesen Befund gibt es nicht');
+        return found;
+      });
+      await assertActionable(services, ...new Set(picked.flatMap((entry) => entry.paths)));
+      const result = await linkOrphansIntoOverview(
+        { store: wikiStore(services), docLanguage: docLanguage(services) },
+        picked,
+      );
+      if (result.written.length > 0) {
+        await settle(services, result.written, 'gardener');
+        if (result.undoToken !== null) {
+          for (const entry of picked) await state.markFixed(entry.id, result.undoToken);
+        }
         wake(services);
       }
       return {

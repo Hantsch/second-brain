@@ -74,6 +74,7 @@ export type DiscardPageResult = IpcResponse<'gardener:discardPage'>;
 export type SupersedeResult = IpcResponse<'gardener:supersede'>;
 export type OrphanTargetsResult = IpcResponse<'gardener:orphanTargets'>;
 export type LinkOrphanResult = IpcResponse<'gardener:linkOrphan'>;
+export type LinkOrphansResult = IpcResponse<'gardener:linkOrphans'>;
 export type AnswerLooseEndResult = IpcResponse<'journal:answerLooseEnd'>;
 
 /** The last report. `null` means: there is none — not "all fine". */
@@ -152,6 +153,8 @@ export interface GardenerMutations {
    * the module counts are invalidated exactly as after `discardPage`.
    */
   linkOrphan: UseMutationResult<LinkOrphanResult, unknown, IpcRequest<'gardener:linkOrphan'>>;
+  /** Several orphans into their module's overview in one write, one undo. */
+  linkOrphans: UseMutationResult<LinkOrphansResult, unknown, IpcRequest<'gardener:linkOrphans'>>;
   /**
    * Answers a loose end (020 D5/D6). Unlike every other mutation here, the
    * write touches no persisted report state — `journal:answerLooseEnd` only
@@ -191,6 +194,11 @@ export function useGardenerMutations(): GardenerMutations {
     supersede: useMutation({ mutationFn: api.gardener.supersede, onSuccess: done, retry: false }),
     orphanTargets: useMutation({ mutationFn: api.gardener.orphanTargets, retry: false }),
     linkOrphan: useMutation({ mutationFn: api.gardener.linkOrphan, onSuccess: done, retry: false }),
+    linkOrphans: useMutation({
+      mutationFn: api.gardener.linkOrphans,
+      onSuccess: done,
+      retry: false,
+    }),
     answerLooseEnd: useMutation({
       mutationFn: (request: IpcRequest<'journal:answerLooseEnd'>) =>
         api.journal.answerLooseEnd(request),

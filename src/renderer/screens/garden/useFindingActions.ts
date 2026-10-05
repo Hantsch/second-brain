@@ -54,6 +54,8 @@ export interface FindingActions {
   supersedeDuplicate: (write: NearDuplicateSupersedeWrite) => void;
   discarded: (result: DiscardPageResult) => void;
   linkOrphan: (write: OrphanLinkWrite) => void;
+  /** Every given orphan into its module's overview — one write, one undo. */
+  linkOrphans: (findingIds: string[]) => void;
   /** The loose end's one way out (020 D5/D6): my own words, written into
       today's day. */
   answerLooseEnd: (finding: GardenerFinding, day: string, text: string) => void;
@@ -210,6 +212,18 @@ export function useFindingActions(
     );
   };
 
+  /* The "all into the overview" shortcut: the same entries the single cards
+     preview, written together — so it reads as one ordinary "fixed" outcome. */
+  const linkOrphans = (findingIds: string[]): void => {
+    mutations.linkOrphans.mutate(
+      { findingIds },
+      {
+        onSuccess: (result) =>
+          setOutcome({ kind: 'fixed', files: result.written, undoToken: result.undoToken ?? null }),
+      },
+    );
+  };
+
   /* Writes through 020 D5's channel. Success removes the finding from the
      cached report right away (`useGardenerMutations.answerLooseEnd`) — no
      fresh run, since answering never changes what a run would find. A stale
@@ -294,6 +308,7 @@ export function useFindingActions(
     supersedeDuplicate,
     discarded,
     linkOrphan,
+    linkOrphans,
     answerLooseEnd,
     undo,
   };

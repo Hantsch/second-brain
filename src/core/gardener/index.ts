@@ -86,6 +86,7 @@ export {
   type DiscardWriteInput,
 } from './discard-page';
 export { applyFix, type FixDeps, type FixResult } from './fixes';
+export { linkOrphansIntoOverview } from './fix-orphans';
 export { orphanTargets } from './orphan-targets';
 export {
   supersede,

@@ -31,6 +31,8 @@ export interface WikiPhrases {
   synthesis: string;
   decided: string;
   open: string;
+  /** Abschnitt von `wiki/overview.md`, in dem der Ingest neue Seiten verlinkt. */
+  pages: string;
   moduleIntro: string;
   moduleScope: string;
   /** Startzeile unter „Abgrenzung": eine Frage, die der Mensch beantwortet. */
@@ -70,6 +72,7 @@ const DE: WikiPhrases = {
   synthesis: 'Synthese',
   decided: 'Was entschieden ist',
   open: 'Was offen ist',
+  pages: 'Seiten',
   moduleIntro: 'Was in diesem Modul belegt ist und was noch offen ist.',
   moduleScope: 'Abgrenzung',
   moduleScopeEmpty: 'Noch nicht festgelegt: was gehört hier nicht hinein?',
@@ -102,6 +105,7 @@ const EN: WikiPhrases = {
   synthesis: 'Synthesis',
   decided: 'What is settled',
   open: 'What is open',
+  pages: 'Pages',
   moduleIntro: 'What is evidenced in this module and what is still open.',
   moduleScope: 'Scope',
   moduleScopeEmpty: 'Not decided yet: what does not belong here?',

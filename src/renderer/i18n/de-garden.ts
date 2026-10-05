@@ -259,6 +259,7 @@ export const deGarden = {
   'garden.orphan.pickAria': 'Zielseite wählen',
   'garden.orphan.noMatch': 'Keine Seite passt zu „{query}“.',
   'garden.orphan.confirm': 'Verweis in „{file}“ eintragen',
+  'garden.orphan.linkAll': 'Alle {count} in die Übersicht eintragen',
 
   // ── Verwerfen ─────────────────────────────────────────────────────────────
   'garden.discard.action': '„{file}“ verwerfen',

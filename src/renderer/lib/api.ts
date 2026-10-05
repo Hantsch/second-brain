@@ -257,6 +257,8 @@ export const api = {
     orphanTargets: (findingId: string) => call('gardener:orphanTargets', { findingId }),
     linkOrphan: (request: IpcRequest<'gardener:linkOrphan'>) =>
       call('gardener:linkOrphan', request),
+    linkOrphans: (request: IpcRequest<'gardener:linkOrphans'>) =>
+      call('gardener:linkOrphans', request),
   },
   work: {
     list: () => call('work:list'),

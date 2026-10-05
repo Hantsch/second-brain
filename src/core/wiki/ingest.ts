@@ -46,6 +46,7 @@ import { applySuggestions, sourceRef } from './apply-suggestions';
 import { upsertEntries, type WikiIndexEntry } from './index-md';
 import { appendLog } from './log-md';
 import { withModuleLock } from './module-lock';
+import { linkIntoOverview } from './overview-links';
 import { appendUnderSection, createPage, findSourcePageForRaw, pagePath, writePage } from './pages';
 import { isRawDigestedInto, markRawProtocol } from './raw-protocol';
 import { condenseSource, type CondenseResult } from './summarize';
@@ -295,10 +296,16 @@ async function finishDigestion(
   });
 
   const overviewUpdated = await updateOverview(deps, module, source.ref.slug, reply.overviewChange);
+  /* Jede neue Seite bekommt hier ihren ersten Verweis — sonst steht sie nur im
+     Katalog, und der zaehlt nicht. Erweiterte Seiten haben ihren schon. */
+  const overviewLinked = await linkIntoOverview(deps, module, [
+    source.ref,
+    ...applied.pages.filter((page) => page.action === 'create').map((page) => page.ref),
+  ]);
   const touched = [
     source.ref.path,
     ...applied.written,
-    ...(overviewUpdated ? [pagePath(module, 'overview', 'overview')] : []),
+    ...(overviewUpdated || overviewLinked ? [pagePath(module, 'overview', 'overview')] : []),
   ];
 
   const entries: WikiIndexEntry[] = [

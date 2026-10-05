@@ -1868,6 +1868,47 @@ describe('Beinahe-Dublette', () => {
   });
 });
 
+describe('Verwaiste Seiten: alle in die Übersicht', () => {
+  const entry = (id: string, slug: string) =>
+    finding({
+      id,
+      kind: 'orphan',
+      title: `Verwaiste Seite: ${slug}`,
+      paths: [`modules/${MODULE}/wiki/concepts/${slug}.md`, OVERVIEW_PATH],
+      fix: { action: 'add-links', label: 'Verweis eintragen', preview: `- [[${slug}]] — ${slug}` },
+    });
+  const twoOrphans: GardenerReport = {
+    ...ORPHAN_REPORT,
+    findings: [entry('f-o1', 'eins'), entry('f-o2', 'zwei')],
+  };
+
+  it('bietet den Sammel-Weg ab zwei Waisen an und schreibt mit einer Anfrage, die sich einmal zurücknehmen lässt', async () => {
+    installMock(
+      handlers(twoOrphans, {
+        'gardener:linkOrphans': () => ({ written: [OVERVIEW_PATH], undoToken: 'undo-all-1' }),
+      }),
+    );
+    wrap(<GardenScreen />);
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Alle 2 in die Übersicht eintragen' }),
+    );
+
+    expect(calls('gardener:linkOrphans')).toEqual([{ findingIds: ['f-o1', 'f-o2'] }]);
+    expect(await screen.findByText(`Geschrieben: ${OVERVIEW_PATH}`)).toBeTruthy();
+    await userEvent.click(screen.getByRole('button', { name: 'Rückgängig' }));
+    expect(calls('gardener:undoFix')).toEqual([{ undoToken: 'undo-all-1' }]);
+  });
+
+  it('zeigt den Sammel-Weg bei einer einzelnen Waise nicht', async () => {
+    installMock(handlers({ ...twoOrphans, findings: [entry('f-o1', 'eins')] }));
+    wrap(<GardenScreen />);
+
+    await screen.findByText('Verwaiste Seite: eins');
+    expect(screen.queryByRole('button', { name: /in die Übersicht eintragen/ })).toBeNull();
+  });
+});
+
 describe('Verwaiste Seite: Ziel wählen', () => {
   it('bietet die Modulübersicht als Ein-Klick-Weg und eine Auswahl für den Rest — nie nur "ist kein Problem"', async () => {
     installMock(handlers(ORPHAN_REPORT, { 'gardener:orphanTargets': () => ORPHAN_TARGETS_SMALL }));

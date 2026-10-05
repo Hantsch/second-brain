@@ -14,16 +14,18 @@
  * - **Source-Seiten, die eine andere Seite im Frontmatter als `sources` nennt.**
  *   Ein Beleg ist ein Verweis, auch wenn er nicht als Wikilink im Text steht.
  *
- * Der Fix schreibt einen Verweis **nur**, wenn es genau eine klar bestimmbare
- * Stelle gibt: eine einzige andere Seite, die den Namen der verwaisten Seite im
- * Text nennt, ohne sie zu verlinken. Bei null oder mehreren Stellen entscheidet
- * ein Mensch, und der Befund kommt ohne Fix.
+ * Der Fix schreibt den Verweis dorthin, wo er im Kontext steht: auf die eine
+ * andere Seite, die den Namen der verwaisten Seite im Text nennt, ohne sie zu
+ * verlinken. Bei null oder mehreren solchen Seiten ist die Overview des Moduls das
+ * Ziel — als Eintrag im Abschnitt „Seiten", wie ihn auch der Ingest setzt. Nur ein
+ * Modul ohne Overview laesst den Befund ohne Fix, dann waehlt ein Mensch.
  */
 
 import type { GardenerFinding, WikiPage } from '@shared/types';
 import { buildFinding, buildFix } from '../types';
 import type { Check, GardenerContext, GardenerModuleView } from '../types';
 import { contentWords } from '../similarity';
+import { overviewEntryLine } from '@core/wiki';
 import { relatedLine } from '../relations';
 import { WordIndex } from '../word-index';
 
@@ -84,8 +86,14 @@ export const orphanCheck: Check = {
         module.pages.map((page) => ({ path: page.path, body: byPath.get(page.path)?.body ?? '' })),
       );
 
+      const overview = module.pages.find((page) => page.type === 'overview') ?? null;
+
       for (const page of orphans) {
         const mention = singleMention(words, module, page);
+        /* Eine eindeutige Erwaehnung geht vor — dort steht der Verweis im Kontext.
+           Sonst die Overview: jedes Modul hat eine, und der Eintrag braucht keine
+           Entscheidung. Nur ohne Overview bleibt der Befund ohne Fix. */
+        const target = mention ?? overview;
         const text = ctx.labels.orphan(page.title);
         findings.push(
           buildFinding(ctx, {
@@ -93,15 +101,21 @@ export const orphanCheck: Check = {
             severity: 'info',
             title: text.title,
             detail: text.detail,
-            paths: mention === null ? [page.path] : [page.path, mention.path],
+            paths: target === null ? [page.path] : [page.path, target.path],
             module: module.slug,
             key: [page.path],
             /* Die Vorschau ist wortwoertlich die Zeile, die `applyFix` anhaengt —
-               und sie landet in `paths[1]`, der einzigen Seite, die den Namen nennt. */
+               und sie landet in `paths[1]`. */
             fix:
-              mention === null
+              target === null
                 ? null
-                : buildFix(ctx, 'add-links', relatedLine(page.slug, ctx.docLanguage)),
+                : buildFix(
+                    ctx,
+                    'add-links',
+                    mention === null
+                      ? overviewEntryLine(page)
+                      : relatedLine(page.slug, ctx.docLanguage),
+                  ),
           }),
         );
       }

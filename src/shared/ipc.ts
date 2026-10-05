@@ -1202,6 +1202,18 @@ export interface IpcRoutes {
     res: { written: string[]; undoToken?: string };
   };
   /**
+   * Enters several orphan pages into their module's overview in one go. Takes
+   * finding ids, never paths: main reads the findings from the current report
+   * and only accepts orphans whose own fix is the overview entry (`invalid`
+   * otherwise, `not-found` for an id the report doesn't know). Each entry is
+   * the finding's preview line verbatim. One `undoToken` takes back every
+   * overview this call wrote.
+   */
+  'gardener:linkOrphans': {
+    req: { findingIds: string[] };
+    res: { written: string[]; undoToken?: string };
+  };
+  /**
    * The current work queue, insertion order — the same list the last
    * `event:work-tasks` carried, for a screen that mounts mid-run (071, D3).
    */
@@ -1448,6 +1460,7 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'gardener:supersede',
   'gardener:orphanTargets',
   'gardener:linkOrphan',
+  'gardener:linkOrphans',
   'work:list',
   'tasks:cancel',
   'tasks:remove',

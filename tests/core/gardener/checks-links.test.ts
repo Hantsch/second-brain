@@ -52,12 +52,35 @@ describe('orphanCheck', () => {
     expect(findings).toHaveLength(1);
     expect(findings[0]?.paths[0]).toBe('modules/wissen/wiki/concepts/verwaist.md');
     expect(findings[0]?.title).toContain('Verwaiste Seite');
-    /* Keine Seite nennt den Namen im Text — also keine bestimmbare Stelle, also
-       kein Fix. Ein Fix, der raten müsste, wird nicht angeboten. */
+    /* Keine Seite nennt den Namen im Text — also ist die Overview das Ziel, und
+       die Vorschau ist der Eintrag, den sie bekommt. */
+    expect(findings[0]?.paths[1]).toBe('modules/wissen/wiki/overview.md');
+    expect(findings[0]?.fix).toEqual({
+      action: 'add-links',
+      label: 'Verweis eintragen',
+      preview: '- [[verwaist]] — Verwaiste Seite',
+    });
+  });
+
+  it('lässt den Befund ohne Fix, wenn das Modul keine Overview hat und niemand den Namen nennt', async () => {
+    const fixture = await moduleFixture('wissen', [
+      {
+        type: 'concept',
+        slug: 'verwaist',
+        title: 'Verwaiste Seite',
+        summary: 'Niemand verlinkt hierher',
+        body: 'Diese Seite steht für sich allein.',
+      },
+    ]);
+
+    const findings = orphanCheck.run(fixture.ctx({ settings: SETTINGS }));
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.paths).toEqual(['modules/wissen/wiki/concepts/verwaist.md']);
     expect(findings[0]?.fix).toBeNull();
   });
 
-  it('meldet eine verlinkte Seite in einem frischen Lauf nicht mehr — der Picker darf auf ein Ziel zeigen, das den Namen gar nicht nennt', async () => {
+  it('meldet eine mit dem Fix des Befunds verlinkte Seite in einem frischen Lauf nicht mehr', async () => {
     const fixture = await moduleFixture('wissen', [
       {
         type: 'concept',
@@ -78,21 +101,55 @@ describe('orphanCheck', () => {
 
     const before = orphanCheck.run(fixture.ctx({ settings: SETTINGS }));
     expect(before).toHaveLength(1);
-    expect(before[0]?.paths).toEqual([orphanPath]);
-    /* Niemand nennt „Verwaiste Seite" im Text — kein bestimmbarer Ort, also
-       kein automatischer Fix; ein Mensch muss ein Ziel wählen. */
-    expect(before[0]?.fix).toBeNull();
+    const [finding] = before;
+    if (finding === undefined) throw new Error('Kein Befund.');
 
-    /* Genau die Rechnung, die der Picker anstellt: `orphanTargets` ordnet die
-       Überblicksseite zuerst ein — sie erwähnt den Namen der verwaisten Seite
-       nirgends, ist aber ein gültiges Ziel. Darum geht es in dieser Story. */
+    await applyFix({ store: fixture.store, docLanguage: 'de', now: NOW_MS }, finding);
+    await fixture.refresh();
+
+    /* Ein frischer Kontext, ein frischer Lauf: nichts wurde versteckt oder
+       sondergestellt, der Graph selbst hat sich geändert. */
+    const after = orphanCheck.run(fixture.ctx({ settings: SETTINGS }));
+    expect(after.some((entry) => entry.paths[0] === orphanPath)).toBe(false);
+  });
+
+  it('meldet eine verlinkte Seite in einem Modul ohne Overview nicht mehr — der Picker darf auf ein Ziel zeigen, das den Namen gar nicht nennt', async () => {
+    const fixture = await moduleFixture('wissen', [
+      {
+        type: 'concept',
+        slug: 'verwaist',
+        title: 'Verwaiste Seite',
+        summary: 'Niemand verlinkt hierher',
+        body: 'Diese Seite steht für sich allein.',
+      },
+      {
+        type: 'concept',
+        slug: 'anderes',
+        title: 'Etwas Anderes',
+        summary: 'Hat nichts damit zu tun',
+        body: 'Ganz anderer Inhalt.',
+      },
+    ]);
+    const orphanPath = pagePathOf('wissen', { type: 'concept', slug: 'verwaist' });
+
+    const before = orphanCheck
+      .run(fixture.ctx({ settings: SETTINGS }))
+      .find((entry) => entry.paths[0] === orphanPath);
+    if (before === undefined) throw new Error('Kein Befund für die verwaiste Seite.');
+    /* Keine Overview und niemand nennt „Verwaiste Seite" im Text — kein
+       bestimmbarer Ort, also kein automatischer Fix; ein Mensch muss wählen. */
+    expect(before.paths).toEqual([orphanPath]);
+    expect(before.fix).toBeNull();
+
+    /* Genau die Rechnung, die der Picker anstellt: `orphanTargets` liefert die
+       Kandidaten und die Zeile, die geschrieben wird. */
     const pages = fixture.index.pages();
     const orphan = pages.find((page) => page.path === orphanPath);
     if (orphan === undefined) throw new Error(`Keine Wiki-Seite: ${orphanPath}`);
     const candidates = orphanTargets(pages, orphan, 'de');
     const target = candidates.targets[0]?.path;
     if (target === undefined) throw new Error('Kein Ziel für die verwaiste Seite.');
-    expect(target).toBe(pagePathOf('wissen', { type: 'overview', slug: 'overview' }));
+    expect(target).toBe(pagePathOf('wissen', { type: 'concept', slug: 'anderes' }));
 
     /* Derselbe Schreibvorgang wie `gardener:linkOrphan` (`src/main/ipc/gardener.ts`):
        `paths[0]` die verwaiste Seite, `paths[1]` das gewählte Ziel, die Vorschau
@@ -100,23 +157,21 @@ describe('orphanCheck', () => {
     await applyFix(
       { store: fixture.store, docLanguage: 'de', now: NOW_MS },
       {
-        id: before[0]?.id ?? 'orphan',
+        id: before.id,
         kind: 'orphan',
         severity: 'warn',
-        title: before[0]?.title ?? '',
+        title: before.title,
         detail: '',
         paths: [orphanPath, target],
         module: 'wissen',
-        foundAt: before[0]?.foundAt ?? new Date(NOW_MS).toISOString(),
+        foundAt: before.foundAt,
         fix: { action: 'add-links', label: 'Verweis eintragen', preview: candidates.line },
       },
     );
     await fixture.refresh();
 
-    /* Ein frischer Kontext, ein frischer Lauf: nichts wurde versteckt oder
-       sondergestellt, der Graph selbst hat sich geändert. */
     const after = orphanCheck.run(fixture.ctx({ settings: SETTINGS }));
-    expect(after.some((finding) => finding.paths[0] === orphanPath)).toBe(false);
+    expect(after.some((entry) => entry.paths[0] === orphanPath)).toBe(false);
   });
 
   it('meldet weder die Synthese noch eine nur im Frontmatter belegte Quelle', async () => {
@@ -163,7 +218,7 @@ describe('orphanCheck', () => {
     });
   });
 
-  it('bietet keinen Fix an, wenn zwei Seiten den Namen nennen', async () => {
+  it('nimmt die Overview als Ziel, wenn zwei Seiten den Namen nennen', async () => {
     const fixture = await moduleFixture('wissen', [
       {
         type: 'concept',
@@ -198,8 +253,11 @@ describe('orphanCheck', () => {
     const findings = orphanCheck.run(fixture.ctx({ settings: SETTINGS }));
 
     expect(findings).toHaveLength(1);
-    expect(findings[0]?.paths).toEqual(['modules/wissen/wiki/concepts/kanban.md']);
-    expect(findings[0]?.fix).toBeNull();
+    expect(findings[0]?.paths).toEqual([
+      'modules/wissen/wiki/concepts/kanban.md',
+      'modules/wissen/wiki/overview.md',
+    ]);
+    expect(findings[0]?.fix?.preview).toBe('- [[kanban]] — Kanban');
   });
 
   it('meldet ein Verdichtungs-Artefakt nicht als Waise, obwohl niemand darauf verlinkt (039, AC7)', async () => {

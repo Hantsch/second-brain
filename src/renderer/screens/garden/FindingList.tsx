@@ -53,6 +53,13 @@ export function hasCheckOnlyScope(filter: FindingFilterState): boolean {
   return filter.kind !== 'all' || filter.module !== 'all';
 }
 
+/** An orphan whose one-click fix enters it into the module overview (`checks/orphan.ts`). */
+function isOverviewEntry(finding: GardenerFinding): boolean {
+  return (
+    finding.fix?.action === 'add-links' && (finding.paths[1] ?? '').endsWith('/wiki/overview.md')
+  );
+}
+
 export interface FindingListProps {
   findings: readonly GardenerFinding[];
   /** Dismissed and still-snoozed findings (017 D4) — carried along instead of
@@ -76,6 +83,8 @@ export interface FindingListProps {
   onSupersedeDuplicate: (write: NearDuplicateSupersedeWrite) => void;
   onDiscarded: (result: DiscardPageResult) => void;
   onLinkOrphan: (write: OrphanLinkWrite) => void;
+  /** Every listed orphan whose fix is the overview entry, written as one. */
+  onLinkOrphans: (findingIds: string[]) => void;
   onAnswerLooseEnd: (finding: GardenerFinding, day: string, text: string) => void;
   /** The way back for a hidden finding — direct, no outcome strip involved. */
   onRestore: (finding: GardenerFinding, state: Exclude<HiddenState, null>) => void;
@@ -99,6 +108,7 @@ export function FindingList({
   onSupersedeDuplicate,
   onDiscarded,
   onLinkOrphan,
+  onLinkOrphans,
   onAnswerLooseEnd,
   onRestore,
 }: FindingListProps) {
@@ -248,19 +258,38 @@ export function FindingList({
           ) : null}
         </div>
       ) : (
-        otherGroups.map((group) => (
-          <section key={group.kind} className="sb-ggroup">
-            <h3 className="sb-ggroup-title">
-              {t(`garden.kind.${group.kind}`)}
-              <span className="sb-mono sb-ggroup-count">{group.findings.length}</span>
-            </h3>
-            <ul className="sb-glist">
-              {group.findings.map((finding) => (
-                <li key={finding.id}>{renderFinding(finding)}</li>
-              ))}
-            </ul>
-          </section>
-        ))
+        otherGroups.map((group) => {
+          const linkable =
+            group.kind === 'orphan'
+              ? group.findings.filter(
+                  (finding) => !hiddenById.has(finding.id) && isOverviewEntry(finding),
+                )
+              : [];
+          return (
+            <section key={group.kind} className="sb-ggroup">
+              <h3 className="sb-ggroup-title">
+                {t(`garden.kind.${group.kind}`)}
+                <span className="sb-mono sb-ggroup-count">{group.findings.length}</span>
+              </h3>
+              {linkable.length < 2 ? null : (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  icon="link"
+                  disabled={busyId !== null}
+                  onClick={() => onLinkOrphans(linkable.map((finding) => finding.id))}
+                >
+                  {t('garden.orphan.linkAll', { count: linkable.length })}
+                </Button>
+              )}
+              <ul className="sb-glist">
+                {group.findings.map((finding) => (
+                  <li key={finding.id}>{renderFinding(finding)}</li>
+                ))}
+              </ul>
+            </section>
+          );
+        })
       )}
 
       {looseEndVisible ? (

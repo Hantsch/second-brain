@@ -300,6 +300,20 @@ describe('ingestSource mit Modell', () => {
     expect(overview?.body).toContain('Tokens leben kurz: 15 Minuten Access');
   });
 
+  it('verlinkt Source-Seite und neue Seiten aus der Overview, erweiterte nicht', async () => {
+    const fixture = await wikiFixture();
+    const result = await ingest(fixture, setup().gateway);
+
+    const overview = await fixture.store.read(`modules/${MODULE}/wiki/overview.md`);
+    expect(overview?.body).toContain('## Seiten');
+    expect(overview?.body).toContain(`[[${SOURCE_SLUG}]]`);
+    expect(overview?.body).toContain('[[mandantentrennung]]');
+    expect(overview?.body).toContain('[[access-token-laufzeit]]');
+    // oauth2 wird nur ergaenzt und hat seinen Verweis schon.
+    expect(overview?.body).not.toContain('[[oauth2]] —');
+    expect(result.touchedPages).toContain(`modules/${MODULE}/wiki/overview.md`);
+  });
+
   it('verdichtet einen langen Text abschnittsweise und fuehrt ihn zusammen', async () => {
     const fixture = await wikiFixture();
     const { gateway, provider } = setup();
@@ -350,6 +364,15 @@ describe('ingestSource ohne Modell', () => {
     expect(doc?.body).toContain('Orbit Identity trennt Mandanten');
     expect(doc?.body).toContain('Noch nicht verdichtet — braucht ein Modell.');
     expect(doc?.body).toContain('## Rohquelle');
+  });
+
+  it('verlinkt die unverdichtete Source-Seite aus der Overview, damit sie keine Waise ist', async () => {
+    const fixture = await wikiFixture();
+
+    await ingest(fixture, emptyGateway());
+
+    const overview = await fixture.store.read(`modules/${MODULE}/wiki/overview.md`);
+    expect(overview?.body).toContain(`[[${SOURCE_SLUG}]]`);
   });
 
   it('nennt die Quelle im Katalog und in der Chronik', async () => {

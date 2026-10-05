@@ -240,6 +240,7 @@ export const enGarden = {
   'garden.orphan.pickAria': 'Choose the target page',
   'garden.orphan.noMatch': 'No page matches “{query}”.',
   'garden.orphan.confirm': 'Add the reference to “{file}”',
+  'garden.orphan.linkAll': 'Add all {count} to the overview',
 
   // ── Discard ───────────────────────────────────────────────────────────────
   'garden.discard.action': 'Discard “{file}”',

@@ -57,6 +57,7 @@ export {
   type WikiLogKind,
 } from './log-md';
 export { withModuleLock } from './module-lock';
+export { linkIntoOverview, overviewEntryLine } from './overview-links';
 export {
   MAX_WRITE_ATTEMPTS,
   writeTextWithRetry,

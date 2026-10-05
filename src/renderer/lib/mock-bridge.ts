@@ -828,6 +828,7 @@ const RESPONSES: MockResponses = {
   }),
   /* The confirm step (016 D3): `add-links` writes exactly one file. */
   'gardener:linkOrphan': () => ({ written: [fx.wikiPage.path], undoToken: 'demo-undo' }),
+  'gardener:linkOrphans': () => ({ written: [fx.wikiPage.path], undoToken: 'demo-undo' }),
   /* No work in flight in the demo/screenshot vault (071, D3) — an empty queue
      is the honest state, the same as `gardener:report` returning `null`. */
   'work:list': () => [
