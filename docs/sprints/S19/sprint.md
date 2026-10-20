@@ -1,7 +1,7 @@
 ---
 sprint: S19
-status: planned # planned | in-progress | done
-branch: # set by /sprint
+status: in-progress # planned | in-progress | done
+branch: sprint/S19 # set by /sprint
 milestone: M19 — Gaston ships and updates itself
 ---
 
