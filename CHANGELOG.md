@@ -5,6 +5,10 @@ All notable changes to Gaston are recorded here. The format follows
 
 ## Unreleased
 
+<!-- Add changes as '- ...' bullets under '### Added' / '### Changed' / '### Fixed' / '### Removed' / '### Security'. -->
+
+## 0.2.0 — 2026-10-20
+
 ### Added
 
 - Capture: dump a thought, get a filing proposal with visible reasoning, accept it, and undo it
