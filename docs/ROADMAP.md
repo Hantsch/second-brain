@@ -1086,6 +1086,24 @@ Gaps/notes:
   lines even after 061 split `forward.ts` out of it. Same class of gap as M17's `ingest.ts`
   split candidates — worth one future split-only pass across all of them.
 
+### M19 — Gaston ships and updates itself — planned
+
+Gaston can be packaged but not released: no tag, no GitHub release, no changelog, nothing an
+installed copy could update from. Modelled on `../q2-launcher`'s stories 096–099, Windows only.
+Cut 2026-10-19.
+
+- **A release ships from a changelog (076).** `## Unreleased` gates the run; a push to `main`
+  publishes NSIS installer, portable exe and `latest.yml`.
+- **Gaston notices and offers an update (077, 078).** Once a day, quietly; download and restart
+  only when the user says so, never under a running task. The portable build opens the release
+  page instead.
+- **About tells me what changed (079).** Notes of the running and the pending version.
+
+Sprints:
+
+- [sprints/S19/sprint.md](sprints/S19/sprint.md) — Gaston ships and updates itself (076, 077,
+  078, 079), `planned`
+
 ---
 
 ## Open / unprioritised
