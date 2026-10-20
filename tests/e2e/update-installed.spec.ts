@@ -89,46 +89,59 @@ test('no control while up to date; the control appears once an update is availab
 }) => {
   const { page } = app;
   await stopStartupRun(page);
-  await checkNow(page);
-  await expect(page.locator('.sb-rail')).toBeVisible();
-  await expect(page.locator(CONTROL)).toHaveCount(0);
-
-  writeUpdateFixture(fixture('99.1.0'));
-  await checkNow(page);
-  await expect(page.locator(CONTROL)).toBeVisible();
+  await test.step('up to date: no control', async () => {
+    await checkNow(page);
+    await expect(page.locator('.sb-rail')).toBeVisible();
+    await expect(page.locator(CONTROL)).toHaveCount(0);
+  });
+  await test.step('an update is available: the control appears', async () => {
+    writeUpdateFixture(fixture('99.1.0'));
+    await checkNow(page);
+    await expect(page.locator(CONTROL)).toBeVisible();
+  });
 });
 
 test('the control names the version and links to what changed', async ({ app }) => {
   const { page } = app;
-  await expect(page.locator(CONTROL)).toContainText('99.1.0');
-  await openDialog(page);
-  await page.getByRole('button', { name: 'What changed' }).click();
-  await expect.poll(() => page.url().split('#')[1] ?? '').toBe('/settings?tab=about');
-  await expect(page.getByRole('dialog')).toBeHidden();
+  await test.step('the control names the version', async () => {
+    await expect(page.locator(CONTROL)).toContainText('99.1.0');
+  });
+  await test.step('what changed leads to About and closes the dialog', async () => {
+    await openDialog(page);
+    await page.getByRole('button', { name: 'What changed' }).click();
+    await expect.poll(() => page.url().split('#')[1] ?? '').toBe('/settings?tab=about');
+    await expect(page.getByRole('dialog')).toBeHidden();
+  });
 });
 
 test('the download shows progress and Gaston stays usable', async ({ app, writeUpdateFixture }) => {
   const { page } = app;
-  writeUpdateFixture(fixture('99.2.0', { ticks: 10, tickMs: 500 }));
-  await checkNow(page);
-  await download(page);
-  const bar = dialogOf(page).getByRole('progressbar', { name: 'Downloading update' });
-  await expect(bar).toBeVisible();
-  const sample = async (): Promise<number> => Number(await bar.getAttribute('aria-valuenow'));
-  await expect.poll(sample).toBeGreaterThanOrEqual(0);
-  const first = await sample();
-  await expect.poll(sample, { timeout: 4000 }).toBeGreaterThan(first);
-  await closeDialog(page);
+  await test.step('the download shows advancing progress', async () => {
+    writeUpdateFixture(fixture('99.2.0', { ticks: 10, tickMs: 500 }));
+    await checkNow(page);
+    await download(page);
+    const bar = dialogOf(page).getByRole('progressbar', { name: 'Downloading update' });
+    await expect(bar).toBeVisible();
+    const sample = async (): Promise<number> => Number(await bar.getAttribute('aria-valuenow'));
+    await expect.poll(sample).toBeGreaterThanOrEqual(0);
+    const first = await sample();
+    await expect.poll(sample, { timeout: 4000 }).toBeGreaterThan(first);
+    await closeDialog(page);
+  });
 
-  await page.locator('.sb-rail a[href="#/tasks"]').click();
-  await expect.poll(() => page.url().split('#')[1] ?? '').toBe('/tasks');
-  await expect(page.getByRole('heading', { name: 'Tasks', level: 1 })).toBeVisible();
-  await page.locator('.sb-rail a[href="#/journal"]').click();
-  await expect.poll(() => page.url().split('#')[1] ?? '').toContain('/journal');
+  await test.step('Gaston stays usable while it downloads', async () => {
+    await page.locator('.sb-rail a[href="#/tasks"]').click();
+    await expect.poll(() => page.url().split('#')[1] ?? '').toBe('/tasks');
+    await expect(page.getByRole('heading', { name: 'Tasks', level: 1 })).toBeVisible();
+    await page.locator('.sb-rail a[href="#/journal"]').click();
+    await expect.poll(() => page.url().split('#')[1] ?? '').toContain('/journal');
+  });
 
-  await openDialog(page);
-  await expect(dialogOf(page).getByRole('button', { name: INSTALL })).toBeVisible();
-  await closeDialog(page);
+  await test.step('the finished download offers the install', async () => {
+    await openDialog(page);
+    await expect(dialogOf(page).getByRole('button', { name: INSTALL })).toBeVisible();
+    await closeDialog(page);
+  });
 });
 
 test('a running download can be cancelled and installs nothing', async ({
@@ -136,19 +149,23 @@ test('a running download can be cancelled and installs nothing', async ({
   writeUpdateFixture,
 }) => {
   const { page } = app;
-  writeUpdateFixture(fixture('99.3.0', { ticks: 20, tickMs: 500 }));
-  await checkNow(page);
-  await download(page);
-  await expect(
-    dialogOf(page).getByRole('progressbar', { name: 'Downloading update' }),
-  ).toBeVisible();
-  await page.getByRole('dialog').getByRole('button', { name: 'Cancel', exact: true }).click();
-  await expect(dialogOf(page).getByRole('button', { name: 'Download update' })).toBeVisible();
-  await expect(dialogOf(page).getByRole('progressbar', { name: 'Downloading update' })).toHaveCount(
-    0,
-  );
-  expect(await installCalls(app.app)).toEqual([]);
-  await closeDialog(page);
+  await test.step('a download is running', async () => {
+    writeUpdateFixture(fixture('99.3.0', { ticks: 20, tickMs: 500 }));
+    await checkNow(page);
+    await download(page);
+    await expect(
+      dialogOf(page).getByRole('progressbar', { name: 'Downloading update' }),
+    ).toBeVisible();
+  });
+  await test.step('cancelling stops it and installs nothing', async () => {
+    await page.getByRole('dialog').getByRole('button', { name: 'Cancel', exact: true }).click();
+    await expect(dialogOf(page).getByRole('button', { name: 'Download update' })).toBeVisible();
+    await expect(
+      dialogOf(page).getByRole('progressbar', { name: 'Downloading update' }),
+    ).toHaveCount(0);
+    expect(await installCalls(app.app)).toEqual([]);
+    await closeDialog(page);
+  });
 });
 
 test('a finished download installs nothing until the second confirmation', async ({
@@ -156,16 +173,19 @@ test('a finished download installs nothing until the second confirmation', async
   writeUpdateFixture,
 }) => {
   const { page } = app;
-  writeUpdateFixture(fixture('99.4.0'));
-  await checkNow(page);
-  await download(page);
   const install = dialogOf(page).getByRole('button', { name: INSTALL });
-  await expect(install).toBeVisible();
-  expect(await installCalls(app.app)).toEqual([]);
-
-  await install.click();
-  await expect.poll(async () => (await installCalls(app.app)).length).toBe(1);
-  await closeDialog(page);
+  await test.step('a finished download installs nothing by itself', async () => {
+    writeUpdateFixture(fixture('99.4.0'));
+    await checkNow(page);
+    await download(page);
+    await expect(install).toBeVisible();
+    expect(await installCalls(app.app)).toEqual([]);
+  });
+  await test.step('the second confirmation installs', async () => {
+    await install.click();
+    await expect.poll(async () => (await installCalls(app.app)).length).toBe(1);
+    await closeDialog(page);
+  });
 });
 
 test('install is refused while a task runs or an LLM response streams', async ({
@@ -173,10 +193,12 @@ test('install is refused while a task runs or an LLM response streams', async ({
   writeUpdateFixture,
 }) => {
   const { page } = app;
-  writeUpdateFixture(fixture('99.5.0'));
-  await checkNow(page);
-  await download(page);
-  await expect(dialogOf(page).getByRole('button', { name: INSTALL })).toBeVisible();
+  await test.step('a downloaded update is ready to install', async () => {
+    writeUpdateFixture(fixture('99.5.0'));
+    await checkNow(page);
+    await download(page);
+    await expect(dialogOf(page).getByRole('button', { name: INSTALL })).toBeVisible();
+  });
   const before = (await installCalls(app.app)).length;
   const refusal = (): Promise<{ ok: boolean; error?: string }> =>
     page.evaluate("window.sb.invoke('update:installAndRestart')") as Promise<{
@@ -225,25 +247,29 @@ test('install is refused while a task runs or an LLM response streams', async ({
 
 test('a failed download says why and stays offerable', async ({ app, writeUpdateFixture }) => {
   const { page } = app;
-  writeUpdateFixture(fixture('99.6.0', { ticks: 1, tickMs: 50, outcome: 'offline' }));
-  await checkNow(page);
-  await download(page);
-  await expect(dialogOf(page).getByTestId('update-reason')).toHaveText(
-    'The download failed: no connection.',
-  );
-  await expect(dialogOf(page).getByRole('button', { name: 'Download update' })).toBeEnabled();
-
-  writeUpdateFixture(fixture('99.6.0', { ticks: 1, tickMs: 50, outcome: 'checksum' }));
-  await dialogOf(page).getByRole('button', { name: 'Download update' }).click();
-  await expect(dialogOf(page).getByTestId('update-reason')).toHaveText(
-    'The download was discarded: the checksum does not match.',
-  );
-
-  writeUpdateFixture(fixture('99.6.0', { ticks: 1, tickMs: 50, outcome: 'ok' }));
-  await dialogOf(page).getByRole('button', { name: 'Download update' }).click();
-  await expect(dialogOf(page).getByRole('button', { name: INSTALL })).toBeVisible();
-  await expect(dialogOf(page).getByTestId('update-reason')).toHaveCount(0);
-  await closeDialog(page);
+  await test.step('offline: the reason is shown and the download stays offerable', async () => {
+    writeUpdateFixture(fixture('99.6.0', { ticks: 1, tickMs: 50, outcome: 'offline' }));
+    await checkNow(page);
+    await download(page);
+    await expect(dialogOf(page).getByTestId('update-reason')).toHaveText(
+      'The download failed: no connection.',
+    );
+    await expect(dialogOf(page).getByRole('button', { name: 'Download update' })).toBeEnabled();
+  });
+  await test.step('checksum mismatch: the download is discarded', async () => {
+    writeUpdateFixture(fixture('99.6.0', { ticks: 1, tickMs: 50, outcome: 'checksum' }));
+    await dialogOf(page).getByRole('button', { name: 'Download update' }).click();
+    await expect(dialogOf(page).getByTestId('update-reason')).toHaveText(
+      'The download was discarded: the checksum does not match.',
+    );
+  });
+  await test.step('retry succeeds and the reason clears', async () => {
+    writeUpdateFixture(fixture('99.6.0', { ticks: 1, tickMs: 50, outcome: 'ok' }));
+    await dialogOf(page).getByRole('button', { name: 'Download update' }).click();
+    await expect(dialogOf(page).getByRole('button', { name: INSTALL })).toBeVisible();
+    await expect(dialogOf(page).getByTestId('update-reason')).toHaveCount(0);
+    await closeDialog(page);
+  });
 });
 
 test('once the running version is the latest, the control is gone', async ({
@@ -251,27 +277,34 @@ test('once the running version is the latest, the control is gone', async ({
   writeUpdateFixture,
 }) => {
   const { page } = app;
-  writeUpdateFixture(fixture('99.7.0'));
-  await checkNow(page);
-  await expect(page.locator(CONTROL)).toBeVisible();
-
-  const running = await app.app.evaluate(({ app: electronApp }) => electronApp.getVersion());
-  writeUpdateFixture(fixture(running));
-  await checkNow(page);
-  await expect(page.locator(CONTROL)).toHaveCount(0);
+  await test.step('a newer version shows the control', async () => {
+    writeUpdateFixture(fixture('99.7.0'));
+    await checkNow(page);
+    await expect(page.locator(CONTROL)).toBeVisible();
+  });
+  await test.step('the running version as latest removes it', async () => {
+    const running = await app.app.evaluate(({ app: electronApp }) => electronApp.getVersion());
+    writeUpdateFixture(fixture(running));
+    await checkNow(page);
+    await expect(page.locator(CONTROL)).toHaveCount(0);
+  });
 });
 
 test('dismissing hides the prompt for the session', async ({ app, writeUpdateFixture }) => {
   const { page } = app;
-  writeUpdateFixture(fixture('99.8.0'));
-  await checkNow(page);
-  const installsBefore = (await installCalls(app.app)).length;
-  await openDialog(page);
-  await page.getByRole('dialog').getByRole('button', { name: 'Not now', exact: true }).click();
-  await expect(page.locator(CONTROL)).toHaveCount(0);
-
-  await page.reload();
-  await expect(page.locator('.sb-rail')).toBeVisible();
-  await expect(page.locator(CONTROL)).toHaveCount(0);
-  expect(await installCalls(app.app)).toHaveLength(installsBefore);
+  let installsBefore = 0;
+  await test.step('not now hides the control', async () => {
+    writeUpdateFixture(fixture('99.8.0'));
+    await checkNow(page);
+    installsBefore = (await installCalls(app.app)).length;
+    await openDialog(page);
+    await page.getByRole('dialog').getByRole('button', { name: 'Not now', exact: true }).click();
+    await expect(page.locator(CONTROL)).toHaveCount(0);
+  });
+  await test.step('it stays hidden after a reload and installs nothing', async () => {
+    await page.reload();
+    await expect(page.locator('.sb-rail')).toBeVisible();
+    await expect(page.locator(CONTROL)).toHaveCount(0);
+    expect(await installCalls(app.app)).toHaveLength(installsBefore);
+  });
 });
