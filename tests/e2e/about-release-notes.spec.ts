@@ -66,46 +66,60 @@ async function openAbout(page: Page, text: string): Promise<void> {
 test('about shows the running version’s notes', async ({ app }) => {
   const { page } = app;
   const version = await runningVersion(app.app);
-  await openAbout(page, withNotes(version));
-  await expect(page.getByRole('heading', { name: `What's new in ${version}` })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Added' })).toBeVisible();
-  await expect(page.getByText('Quieter update flow')).toBeVisible();
-  await expect(page.getByText('<img src=x onerror=alert(1)>')).toBeVisible();
-  await expect(page.locator(NOTES).locator('img')).toHaveCount(0);
-  await expect(page.getByText('Something old')).toHaveCount(0);
+  await test.step('open About with the fixture changelog', async () => {
+    await openAbout(page, withNotes(version));
+  });
+  await test.step('the running version’s notes are shown', async () => {
+    await expect(page.getByRole('heading', { name: `What's new in ${version}` })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Added' })).toBeVisible();
+    await expect(page.getByText('Quieter update flow')).toBeVisible();
+  });
+  await test.step('markup is shown as text and older notes are left out', async () => {
+    await expect(page.getByText('<img src=x onerror=alert(1)>')).toBeVisible();
+    await expect(page.locator(NOTES).locator('img')).toHaveCount(0);
+    await expect(page.getByText('Something old')).toHaveCount(0);
+  });
 });
 
 test('about without notes shows an empty state', async ({ app }) => {
   const { page } = app;
-  await openAbout(page, WITHOUT_NOTES);
-  await expect(page.getByText('No release notes for this version')).toBeVisible();
-  await expect(page.locator(NOTES)).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Full changelog' })).toBeVisible();
+  await test.step('open About with a changelog lacking this version', async () => {
+    await openAbout(page, WITHOUT_NOTES);
+  });
+  await test.step('an empty state replaces the notes', async () => {
+    await expect(page.getByText('No release notes for this version')).toBeVisible();
+    await expect(page.locator(NOTES)).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Full changelog' })).toBeVisible();
+  });
 });
 
 test('about links open in the system browser', async ({ app }) => {
   const { page } = app;
-  await openAbout(page, withNotes(await runningVersion(app.app)));
-  await evaluateMain(app.app, ({ shell }) => {
-    const g = globalThis as unknown as { __opened: string[] };
-    g.__opened = [];
-    shell.openExternal = (url: string) => {
-      g.__opened.push(url);
-      return Promise.resolve();
-    };
+  await test.step('open About and stub the system browser', async () => {
+    await openAbout(page, withNotes(await runningVersion(app.app)));
+    await evaluateMain(app.app, ({ shell }) => {
+      const g = globalThis as unknown as { __opened: string[] };
+      g.__opened = [];
+      shell.openExternal = (url: string) => {
+        g.__opened.push(url);
+        return Promise.resolve();
+      };
+    });
   });
   const windows = app.app.windows().length;
-  await page.getByRole('button', { name: 'Project page' }).click();
-  await page.getByRole('button', { name: 'Full changelog' }).click();
-  await expect
-    .poll(() =>
-      evaluateMain(app.app, () => (globalThis as unknown as { __opened: string[] }).__opened),
-    )
-    .toEqual([
-      'https://github.com/Hantsch/second-brain',
-      'https://github.com/Hantsch/second-brain/blob/main/CHANGELOG.md',
-    ]);
-  expect(app.app.windows().length).toBe(windows);
+  await test.step('both links open in the system browser, not a new window', async () => {
+    await page.getByRole('button', { name: 'Project page' }).click();
+    await page.getByRole('button', { name: 'Full changelog' }).click();
+    await expect
+      .poll(() =>
+        evaluateMain(app.app, () => (globalThis as unknown as { __opened: string[] }).__opened),
+      )
+      .toEqual([
+        'https://github.com/Hantsch/second-brain',
+        'https://github.com/Hantsch/second-brain/blob/main/CHANGELOG.md',
+      ]);
+    expect(app.app.windows().length).toBe(windows);
+  });
 });
 
 test('about shows a pending update next to the update action', async ({
@@ -113,15 +127,19 @@ test('about shows a pending update next to the update action', async ({
   writeUpdateFixture,
 }) => {
   const { page } = app;
-  writeUpdateFixture(fixture('99.1.0'));
-  await page.evaluate("window.sb.invoke('update:check')");
-  await openAbout(page, withNotes(await runningVersion(app.app)));
+  await test.step('an update is pending and About is open', async () => {
+    writeUpdateFixture(fixture('99.1.0'));
+    await page.evaluate("window.sb.invoke('update:check')");
+    await openAbout(page, withNotes(await runningVersion(app.app)));
+  });
   const block = page.getByTestId('about-pending-update');
-  await expect(block).toBeVisible();
-  await expect(block.getByTestId('about-pending-version')).toHaveText('99.1.0');
-  await expect(block.getByText('Not yet installed')).toBeVisible();
-  await expect(block.getByText('Pending fixture feature')).toBeVisible();
-  await expect(block.getByRole('button', { name: 'Download update' })).toBeVisible();
+  await test.step('the pending block shows version, notes and the update action', async () => {
+    await expect(block).toBeVisible();
+    await expect(block.getByTestId('about-pending-version')).toHaveText('99.1.0');
+    await expect(block.getByText('Not yet installed')).toBeVisible();
+    await expect(block.getByText('Pending fixture feature')).toBeVisible();
+    await expect(block.getByRole('button', { name: 'Download update' })).toBeVisible();
+  });
 });
 
 test('about checks for updates on demand and shows the outcome', async ({
@@ -129,9 +147,13 @@ test('about checks for updates on demand and shows the outcome', async ({
   writeUpdateFixture,
 }) => {
   const { page } = app;
-  writeUpdateFixture(fixture(null));
-  await openAbout(page, withNotes(await runningVersion(app.app)));
-  await page.getByRole('button', { name: 'Check now' }).click();
-  await expect(page.getByTestId('about-update-outcome')).toContainText('up to date');
-  await expect(page.getByTestId('about-pending-update')).toHaveCount(0);
+  await test.step('open About with no update available', async () => {
+    writeUpdateFixture(fixture(null));
+    await openAbout(page, withNotes(await runningVersion(app.app)));
+  });
+  await test.step('a manual check reports up to date', async () => {
+    await page.getByRole('button', { name: 'Check now' }).click();
+    await expect(page.getByTestId('about-update-outcome')).toContainText('up to date');
+    await expect(page.getByTestId('about-pending-update')).toHaveCount(0);
+  });
 });
