@@ -4,12 +4,12 @@ Branch `sprint/S19` (not merged; the merge into `dev` is the user's decision).
 
 ## Overview
 
-| Story | Status | Commit |
-| ----- | ------ | ------ |
-| 076 A release ships from a changelog | done | `b402629` release from CHANGELOG.md — plan/runner scripts, nsis+portable, workflow |
-| 077 Gaston notices a new version | done | `b58ccac` daily quiet update check — state, store, IPC, About updates panel |
-| 078 I update when I choose to | done | `c12eea7` download, cancel, guarded restart, title-bar control |
-| 079 About tells me what changed | done | `e3d65fb` running + pending release notes, check row, links |
+| Story                                | Status | Commit                                                                             |
+| ------------------------------------ | ------ | ---------------------------------------------------------------------------------- |
+| 076 A release ships from a changelog | done   | `b402629` release from CHANGELOG.md — plan/runner scripts, nsis+portable, workflow |
+| 077 Gaston notices a new version     | done   | `b58ccac` daily quiet update check — state, store, IPC, About updates panel        |
+| 078 I update when I choose to        | done   | `c12eea7` download, cancel, guarded restart, title-bar control                     |
+| 079 About tells me what changed      | done   | `e3d65fb` running + pending release notes, check row, links                        |
 
 ## Implemented stories
 
@@ -53,12 +53,12 @@ Criteria covered below the real surface: 076's workflow itself is covered by a w
 
 ## Tier record
 
-| Story | Ds | hard | review | cycles | agents | build min |
-| ----- | -- | ---- | ------ | ------ | ------ | --------- |
-| 076 | 6 | 1 | default | 1 | 8 | 16 |
-| 077 | 5 | 1 | default | 1 | 9 | 20 |
-| 078 | 6 | 1 | default | 1 | 11 | 33 |
-| 079 | 4 | 0 | default | 2 | 9 | 24 |
-| **Total** | 21 | 3 | default ×4 | 5 | 37 | 93 |
+| Story     | Ds  | hard | review     | cycles | agents | build min |
+| --------- | --- | ---- | ---------- | ------ | ------ | --------- |
+| 076       | 6   | 1    | default    | 1      | 8      | 16        |
+| 077       | 5   | 1    | default    | 1      | 9      | 20        |
+| 078       | 6   | 1    | default    | 1      | 11     | 33        |
+| 079       | 4   | 0    | default    | 2      | 9      | 24        |
+| **Total** | 21  | 3    | default ×4 | 5      | 37     | 93        |
 
 No second-stage review ran, so it found nothing the default missed. Refine took 4.5 min; the gate agent ~6.5 min.
