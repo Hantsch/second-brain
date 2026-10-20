@@ -278,3 +278,4 @@ second roadmap.
   module that is actually named — reviewed PASS with no fix cycle.
 - 076 — A release ships from a changelog · S19 · `npm run release` promotes CHANGELOG.md Unreleased, builds NSIS + portable and publishes via CI workflow (dry run local).
 - 077 — Gaston notices a new version · S19 · once-a-day quiet update check with persisted state, IPC and an About updates panel
+- 078 — I update when I choose to · S19 · title-bar update control: download with progress, cancel, guarded second-confirm restart, portable opens release page

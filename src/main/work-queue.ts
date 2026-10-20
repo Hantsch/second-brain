@@ -34,3 +34,10 @@ export function getWorkQueue(services: Services): WorkRegistry {
 export function resetWorkQueue(): void {
   instance = null;
 }
+
+/** Whether any task is mid-run; a queued one has computed nothing yet, so it is not counted. */
+export function hasRunningTask(services: Services): boolean {
+  return getWorkQueue(services)
+    .list()
+    .some((task) => task.state === 'running');
+}

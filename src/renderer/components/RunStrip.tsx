@@ -18,6 +18,7 @@
 
 import { useLocation } from 'react-router-dom';
 import { Button } from '../atoms/Button';
+import { ProgressBar } from '../atoms/ProgressBar';
 import { ErrorState } from './ErrorState';
 import { useT } from '../i18n';
 import { useGardenerCancel, useGardenerProgress, useGardenerRun } from '../lib/queries/gardener';
@@ -145,16 +146,12 @@ export function RunStrip() {
           </span>
         ) : null}
       </div>
-      <span
+      <ProgressBar
         className="sb-runstrip-track"
-        role="progressbar"
-        aria-label={t('garden.run.running')}
-        aria-valuenow={percent}
-        aria-valuemin={0}
-        aria-valuemax={100}
-      >
-        <span className="sb-runstrip-fill" style={{ width: `${percent}%` }} />
-      </span>
+        fillClassName="sb-runstrip-fill"
+        label={t('garden.run.running')}
+        value={percent}
+      />
       <Button
         variant="secondary"
         size="sm"

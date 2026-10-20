@@ -28,8 +28,10 @@ import { ensureStructure, isVault } from './vault-layout';
 import { getWorkQueue } from './work-queue';
 import { getTaskResults } from './task-results';
 import { isDemoVault } from './demo';
+import { createUpdateBackend } from './update/backend';
 import { createUpdateChecker, detectDistribution } from './update/checker';
-import { updateFixtureFor } from './update/e2e-fixture';
+import { restartBlocker } from './update/restart-blocker';
+import { updateFileFixtureFor, updateFixtureFor } from './update/e2e-fixture';
 import { createUpdateService } from './update/service';
 import type { UpdateService } from './update/service';
 
@@ -87,12 +89,14 @@ export class Services {
      many tests that only need settings or the vault never provide. */
   updates(): UpdateService {
     if (this.updateService) return this.updateService;
-    const fixture = updateFixtureFor();
+    const currentVersion = app.getVersion();
+    const file = updateFileFixtureFor(currentVersion);
+    const fixture = file?.check ?? updateFixtureFor();
     const checker = createUpdateChecker();
     this.updateService = createUpdateService({
       dir: this.userDataDir,
-      currentVersion: app.getVersion(),
-      distribution: detectDistribution(process.env),
+      currentVersion,
+      distribution: file?.distribution ?? detectDistribution(process.env),
       check: fixture ?? (() => checker.check()),
       isSupported: () => {
         if (fixture) return { supported: true, disabledReason: null };
@@ -101,6 +105,9 @@ export class Services {
         return { supported: true, disabledReason: null };
       },
       onStateChange: (state) => this.sendEvent('event:update', state),
+      // The fixture forbids the network, so with it active nothing real may download.
+      backend: file?.backend ?? (fixture ? undefined : createUpdateBackend()),
+      restartBlocker: () => restartBlocker(this),
     });
     return this.updateService;
   }

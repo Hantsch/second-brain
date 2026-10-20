@@ -8,6 +8,7 @@ import { useT } from '../i18n';
 import { api } from '../lib/api';
 import { ICON_ASSETS } from '../lib/customization-assets';
 import { SearchTrigger } from './SearchTrigger';
+import { UpdateControl } from './update/UpdateControl';
 
 export interface TitleBarProps {
   /** Context to the right of the name, e.g. the open vault. */
@@ -53,6 +54,7 @@ export function TitleBar({
           <SearchTrigger onOpen={onSearch} />
         </div>
       ) : null}
+      <UpdateControl />
       {/* Capture is the app's reason for existing — it belongs one click away
           on every screen, right next to the way into the palette. */}
       {onCapture ? (

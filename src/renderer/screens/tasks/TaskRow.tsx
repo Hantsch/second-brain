@@ -21,6 +21,7 @@ import type { WorkTask, WorkTaskState } from '@shared/types';
 import { Badge } from '../../atoms/Badge';
 import { Button } from '../../atoms/Button';
 import { Icon } from '../../atoms/Icon';
+import { ProgressBar } from '../../atoms/ProgressBar';
 import { ErrorState } from '../../components/ErrorState';
 import { useT } from '../../i18n';
 import { formatDuration } from '../../lib/format';
@@ -99,16 +100,12 @@ export function TaskRow({ task, cancel, remove, retry }: TaskRowProps) {
           <div className="sb-trow-model sb-mono">{t('tasks.row.model', { model })}</div>
         ) : null}
         <div className="sb-trow-progress">
-          <span
+          <ProgressBar
             className="sb-trow-track"
-            role="progressbar"
-            aria-label={t('tasks.row.progress', { subject: task.subject.label })}
-            aria-valuenow={percent}
-            aria-valuemin={0}
-            aria-valuemax={100}
-          >
-            <span className="sb-trow-fill" style={{ width: `${percent}%` }} />
-          </span>
+            fillClassName="sb-trow-fill"
+            label={t('tasks.row.progress', { subject: task.subject.label })}
+            value={percent}
+          />
           <span className="sb-mono sb-trow-percent">{percent} %</span>
         </div>
         {readOnly ? null : (

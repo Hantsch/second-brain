@@ -8,14 +8,38 @@
    The 24 h window is measured from `lastSuccessAt` alone, and only a successful
    check writes it, so a failed check can never close the window. For the same
    reason a failure keeps the last known offer: an update found yesterday still
-   shows after an offline start today. */
+   shows after an offline start today.
 
-import type { UpdateDistribution, UpdateOffer, UpdateState, UpdateStatus } from '@shared/types';
+   Downloading and installing are staged on top of that and live only in memory:
+   a failed or cancelled download changes nothing on disk, so the offer stays
+   offerable. The install never cancels anything — it reads the injected restart
+   blocker and refuses while work is in flight. */
+
+import type {
+  UpdateActionErrorKey,
+  UpdateActionResult,
+  UpdateDistribution,
+  UpdateDownloadErrorKey,
+  UpdateProgress,
+  UpdateState,
+} from '@shared/types';
+import type { DownloadOutcome, UpdateBackend } from './backend';
+import { UNAVAILABLE_UPDATE_BACKEND } from './backend';
 import type { UpdateCheckResult } from './checker';
+import { RELEASE_TAG_URL_PREFIX } from './checker';
+import type { RestartBlocker } from './restart-blocker';
+import {
+  BLOCKER_ERRORS,
+  NOTHING_KNOWN,
+  deriveStatus,
+  derivePhase,
+  isWindowOpen,
+  offerOf,
+} from './state';
+import type { Known } from './state';
 import { loadUpdateRecord, saveUpdateRecord } from './store';
-import type { UpdateRecord } from './store';
 
-export const UPDATE_CHECK_WINDOW_MS = 24 * 60 * 60 * 1000;
+export { UPDATE_CHECK_WINDOW_MS } from './state';
 const DEFAULT_TIMEOUT_MS = 20_000;
 const DEFAULT_STARTUP_DELAY_MS = 3_000;
 
@@ -35,6 +59,10 @@ export interface UpdateServiceOptions {
   isSupported: () => UpdateSupport;
   timeoutMs?: number;
   onStateChange?: (state: UpdateState) => void;
+  /** Omitted means nothing can be downloaded, so nothing can be installed either. */
+  backend?: UpdateBackend;
+  /** Read right before installing; only ever read, never used to stop the work it reports. */
+  restartBlocker?: () => RestartBlocker | null;
 }
 
 export interface UpdateService {
@@ -44,37 +72,23 @@ export interface UpdateService {
   /** Returns at once; the single automatic attempt of this process runs after `delayMs`. */
   scheduleStartupCheck(delayMs?: number): void;
   stop(): void;
+  /** Only from `available`; resolves once the download finished, failed or was cancelled. */
+  startDownload(): Promise<UpdateActionResult>;
+  /** Resolves once the running download has settled back in `available`. */
+  cancelDownload(): Promise<UpdateActionResult>;
+  installAndRestart(): Promise<UpdateActionResult>;
+  dismiss(): Promise<UpdateActionResult>;
 }
 
-type Known = Pick<UpdateRecord, 'update' | 'error' | 'lastCheckedAt' | 'lastSuccessAt'>;
-
-const NOTHING_KNOWN: Known = {
-  update: null,
-  error: null,
-  lastCheckedAt: null,
-  lastSuccessAt: null,
-};
-
-function deriveStatus(known: Known): UpdateStatus {
-  if (known.error !== null) return 'error';
-  if (known.update !== null) return 'available';
-  if (known.lastSuccessAt !== null) return 'up-to-date';
-  return 'idle';
-}
-
-/** An unparseable or future timestamp (a clock corrected backwards) cannot be trusted to keep the window shut. */
-function isWindowOpen(lastSuccessAt: string | null, nowMs: number): boolean {
-  if (lastSuccessAt === null) return true;
-  const last = Date.parse(lastSuccessAt);
-  if (Number.isNaN(last)) return true;
-  const elapsed = nowMs - last;
-  return elapsed < 0 || elapsed >= UPDATE_CHECK_WINDOW_MS;
-}
-
-function offerOf(result: UpdateCheckResult): UpdateOffer | null {
-  if (result.kind !== 'available') return null;
-  return { version: result.version, notes: result.notes, releasedAt: result.releasedAt };
-}
+type Stage =
+  | {
+      kind: 'downloading';
+      version: string;
+      progress: UpdateProgress;
+      controller: AbortController;
+      settled: Promise<UpdateActionResult>;
+    }
+  | { kind: 'downloaded'; version: string };
 
 export function createUpdateService(options: UpdateServiceOptions): UpdateService {
   const now = options.now ?? ((): Date => new Date());
@@ -87,17 +101,39 @@ export function createUpdateService(options: UpdateServiceOptions): UpdateServic
   let startupScheduled = false;
   let startupTimer: ReturnType<typeof setTimeout> | undefined;
   let lastPublished = '';
+  const backend = options.backend ?? UNAVAILABLE_UPDATE_BACKEND;
+  const restartBlocker = options.restartBlocker ?? ((): RestartBlocker | null => null);
+  let stage: Stage | null = null;
+  let downloadError: UpdateDownloadErrorKey | null = null;
+  let downloadErrorVersion: string | null = null;
+  let dismissed = false;
+
+  // A staged update must never install itself on an ordinary quit.
+  backend.autoInstallOnAppQuit = false;
 
   function compose(): UpdateState {
     const { supported, disabledReason } = options.isSupported();
+    const status = checking ? 'checking' : deriveStatus(known);
+    const offer = known.update;
+    // A stage belongs to one version; a later check offering another one supersedes it.
+    const staged = stage !== null && offer?.version === stage.version ? stage : null;
     return {
-      status: checking ? 'checking' : deriveStatus(known),
+      phase: derivePhase(status, staged?.kind ?? null),
+      status,
       supported,
       disabledReason: supported ? null : disabledReason,
       distribution: options.distribution,
       currentVersion: options.currentVersion,
       ...known,
+      progress: staged?.kind === 'downloading' ? staged.progress : null,
+      dismissed,
+      downloadError,
+      releaseUrl: offer === null ? null : `${RELEASE_TAG_URL_PREFIX}${offer.version}`,
     };
+  }
+
+  function refuse(error: UpdateActionErrorKey): UpdateActionResult {
+    return { ok: false, error, state: publish() };
   }
 
   function publish(): UpdateState {
@@ -155,6 +191,11 @@ export function createUpdateService(options: UpdateServiceOptions): UpdateServic
         result.kind === 'failed'
           ? { ...known, error: result.reason, lastCheckedAt: at }
           : { update: offerOf(result), error: null, lastCheckedAt: at, lastSuccessAt: at };
+      // A download reason describes one version; once a check offers another (or none) it is stale.
+      if (result.kind !== 'failed' && known.update?.version !== downloadErrorVersion) {
+        downloadError = null;
+        downloadErrorVersion = null;
+      }
       await saveUpdateRecord(options.dir, {
         version: 1,
         checkedWith: options.currentVersion,
@@ -200,5 +241,90 @@ export function createUpdateService(options: UpdateServiceOptions): UpdateServic
     startupTimer = undefined;
   }
 
-  return { getState, check, scheduleStartupCheck, stop };
+  function settleDownload(
+    current: Extract<Stage, { kind: 'downloading' }>,
+    outcome: DownloadOutcome,
+  ): UpdateActionResult {
+    const cancelled = current.controller.signal.aborted;
+    if (outcome.kind === 'done' && !cancelled) {
+      stage = { kind: 'downloaded', version: current.version };
+      backend.autoInstallOnAppQuit = false;
+      return { ok: true, state: publish() };
+    }
+    stage = null;
+    downloadErrorVersion = current.version;
+    downloadError = `update.error.download.${cancelled || outcome.kind === 'done' ? 'cancelled' : outcome.reason}`;
+    return refuse(downloadError);
+  }
+
+  /* Deliberately not a work-queue task: it holds no vault state, and the
+     restart guard must not count the very download it is about to install. */
+  async function startDownload(): Promise<UpdateActionResult> {
+    if (options.isSupported().supported) await ensureRestored();
+    if (options.distribution === 'portable') return refuse('update.error.notInstallable');
+    const version = known.update?.version;
+    if (version === undefined || compose().phase !== 'available') {
+      return refuse('update.error.notAvailable');
+    }
+    backend.autoInstallOnAppQuit = false;
+    downloadError = null;
+    const controller = new AbortController();
+    const current: Extract<Stage, { kind: 'downloading' }> = {
+      kind: 'downloading',
+      version,
+      progress: { ratio: null, bytesDone: 0, bytesTotal: null },
+      controller,
+      settled: Promise.resolve({ ok: true, state: compose() }),
+    };
+    stage = current;
+    publish();
+    current.settled = Promise.resolve()
+      .then(() =>
+        backend.download(controller.signal, (progress) => {
+          if (stage !== current || controller.signal.aborted) return;
+          current.progress = progress;
+          publish();
+        }),
+      )
+      .catch((): DownloadOutcome => ({ kind: 'failed', reason: 'unknown' }))
+      .then((outcome) => settleDownload(current, outcome));
+    return current.settled;
+  }
+
+  async function cancelDownload(): Promise<UpdateActionResult> {
+    const running = stage;
+    if (running?.kind !== 'downloading') return { ok: true, state: compose() };
+    running.controller.abort();
+    await running.settled;
+    return { ok: true, state: compose() };
+  }
+
+  async function installAndRestart(): Promise<UpdateActionResult> {
+    if (compose().phase !== 'downloaded') return refuse('update.error.notReady');
+    const blocker = restartBlocker();
+    if (blocker !== null) return refuse(BLOCKER_ERRORS[blocker]);
+    try {
+      backend.quitAndInstall();
+    } catch (error) {
+      console.warn('[update] quitAndInstall failed:', error);
+      return refuse('update.error.installFailed');
+    }
+    return { ok: true, state: compose() };
+  }
+
+  async function dismiss(): Promise<UpdateActionResult> {
+    dismissed = true;
+    return { ok: true, state: publish() };
+  }
+
+  return {
+    getState,
+    check,
+    scheduleStartupCheck,
+    stop,
+    startDownload,
+    cancelDownload,
+    installAndRestart,
+    dismiss,
+  };
 }

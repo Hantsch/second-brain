@@ -309,5 +309,9 @@ export const api = {
   update: {
     state: () => call('update:state'),
     check: () => call('update:check'),
+    download: () => call('update:download'),
+    cancelDownload: () => call('update:cancelDownload'),
+    installAndRestart: () => call('update:installAndRestart'),
+    dismiss: () => call('update:dismiss'),
   },
 } as const;

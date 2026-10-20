@@ -1,7 +1,7 @@
 ---
 id: 078
 title: I update when I choose to
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-10-19
 ---
 
@@ -26,24 +26,24 @@ Reference: `../q2-launcher` story 098 (`src/main/services/update/service.ts`, `P
 
 ## Acceptance Criteria
 
-- [ ] **AC1** — When [[077]]'s state says an update is available, an update control appears in the
+- [x] **AC1** — When [[077]]'s state says an update is available, an update control appears in the
       app shell; when no update is available it is not there at all.
-- [ ] **AC2** — The control names the available version before the user commits to anything, and
+- [x] **AC2** — The control names the available version before the user commits to anything, and
       offers a way to see what changed ([[079]]'s notes).
-- [ ] **AC3** — On the installed build, starting the update downloads the release with visible
+- [x] **AC3** — On the installed build, starting the update downloads the release with visible
       progress, and Gaston stays fully usable while it downloads.
-- [ ] **AC4** — A running download can be cancelled; the installed app stays untouched.
-- [ ] **AC5** — Nothing is installed and nothing restarts until the user confirms a second time,
+- [x] **AC4** — A running download can be cancelled; the installed app stays untouched.
+- [x] **AC5** — Nothing is installed and nothing restarts until the user confirms a second time,
       after the download has finished.
-- [ ] **AC6** — Dismissing the update leaves Gaston running unchanged and does not show the prompt
+- [x] **AC6** — Dismissing the update leaves Gaston running unchanged and does not show the prompt
       again in the same session; the update stays reachable from About ([[079]]).
-- [ ] **AC7** — Install-and-restart is refused, with a readable reason, while a queued task is
+- [x] **AC7** — Install-and-restart is refused, with a readable reason, while a queued task is
       running or an LLM response is streaming — it does not abort either.
-- [ ] **AC8** — A failed download (offline, checksum mismatch) leaves the installed app untouched
+- [x] **AC8** — A failed download (offline, checksum mismatch) leaves the installed app untouched
       and says why, with the update still offerable afterwards.
-- [ ] **AC9** — On the portable build the control does not download anything; it opens the
+- [x] **AC9** — On the portable build the control does not download anything; it opens the
       release's page in the system browser through the existing `shell:openExternal` path.
-- [ ] **AC10** — After a successful restart Gaston runs the new version and the update control is
+- [x] **AC10** — After a successful restart Gaston runs the new version and the update control is
       gone (automated half; the real restart is manual residue).
 
 ## Open Questions
@@ -227,7 +227,7 @@ tickMs, outcome: 'ok' | 'offline' | 'checksum' } }`, **re-read on every check an
   in `src/renderer/lib/api.ts` (+ `src/renderer/lib/mock-bridge.ts` entries); state via 077's
   renderer hook. New `src/renderer/i18n/de-update.ts` / `en-update.ts` (`update.*`, incl. every
   `update.error.*` key from D2; German with „…“), registered in `de.ts` / `en.ts`. Tokens and
-  atoms only, sentence case, one accent. Test: `tests/renderer/update-control.test.tsx` › "no
+  atoms only, sentence case, one accent. Test: `tests/renderer/update-control.test.tsx` › "renders no
   control when idle or dismissed", › "the control names the version", › "one primary action per
   phase", › "a refusal shows its reason", › "portable opens the release page and downloads
   nothing", › "every update.error key has a translation in both languages".
@@ -251,7 +251,7 @@ tickMs, outcome: 'ok' | 'offline' | 'checksum' } }`, **re-read on every check an
 ## Acceptance Tests
 
 - AC1 → e2e `tests/e2e/update-installed.spec.ts` › "no control while up to date; the control
-  appears once an update is available" (D6); unit `tests/renderer/update-control.test.tsx` › "no
+  appears once an update is available" (D6); unit `tests/renderer/update-control.test.tsx` › "renders no
   control when idle or dismissed" (D5).
 - AC2 → e2e `tests/e2e/update-installed.spec.ts` › "the control names the version and links to
   what changed" (D6); unit `tests/renderer/update-control.test.tsx` › "the control names the
@@ -279,8 +279,8 @@ tickMs, outcome: 'ok' | 'offline' | 'checksum' } }`, **re-read on every check an
   (D2).
 - AC9 → e2e `tests/e2e/update-portable.spec.ts` › "the portable build opens the release page and
   downloads nothing" (D6); unit `tests/main/update-actions.test.ts` › "download is refused on the
-  portable build" (D2), `tests/renderer/update-control.test.tsx` › "portable opens the release
-  page and downloads nothing" (D5).
+  portable build" (D2), `tests/renderer/update-control.test.tsx` › "opens the release
+  page for a portable build and downloads nothing" (D5).
 - AC10 → e2e `tests/e2e/update-installed.spec.ts` › "once the running version is the latest, the
   control is gone" (D6) — fixture rewritten to the running version, manual check via 077's channel,
   control absent. **manual residue:** that the restart really relaunches into the new build needs a
@@ -288,3 +288,29 @@ tickMs, outcome: 'ok' | 'offline' | 'checksum' } }`, **re-read on every check an
   unpackaged build every test drives — walked once by hand against 076's first release.
 
 ## Done
+
+Staged update actions behind an authoritative restart guard: `phase`-derived state, download with
+progress, cancel, install-and-restart (second confirmation), session-only dismiss; a title-bar
+`UpdateControl` + reusable `UpdateAction` (Dialog), shared `ProgressBar` atom, file-mode
+`SB_E2E_UPDATE_FIXTURE` with a fake backend, and two Playwright specs.
+
+Commit: `078: update on your terms — download, cancel, guarded restart, title-bar control`
+
+Verification (narrow gate, run twice: before and after the review fix): format:check, lint,
+typecheck, build green; `npx vitest run --changed HEAD` green (255 files, 3483 tests);
+`npx playwright test` update-installed, update-portable, update-check, update-check-disabled
+green (14/14). Full regression gate is the sprint's. AC1-AC10 each walked to a named test that ran
+and passed (AC1/AC9 renderer test names corrected above). manual residue: AC10 real relaunch.
+Review: stage 1 PASS with findings; fixed (stale ARCHITECTURE section, stale `downloadError`,
+install-rejection key, AC3 progress-advance assertion, dismiss test order-dependence).
+
+Decisions: close-guard switched to `hasRunningTask` and its test mock gained that export (assertions
+unchanged); `isAnyLlmStreaming` uses a per-id count (shared ids across stream instances);
+extended 077's `SB_E2E_UPDATE_FIXTURE` with a JSON-file mode instead of a second seam; extra error
+keys `update.error.notAvailable` / `installFailed`; `update:download` resolves when the download
+ends. Known gaps: electron-updater begins installing before `app.quit()` fires, so a task
+starting in that one tick is vetoed by close-guard mid-install; the download re-check may fetch a
+newer version than announced (commented in `backend.ts`); `service.ts` is ~320 lines; three other
+hand-rolled progress bars remain; `startDownload` stage race not covered beyond the unit test.
+
+tiers: D 6 / hard 1 · review default · cycles 1 · agents 11

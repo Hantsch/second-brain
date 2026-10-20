@@ -51,6 +51,7 @@ vi.mock('electron', () => ({ app: electron.app, BrowserWindow: class {} }));
    mock is the one place a test controls the answer. */
 vi.mock('../../src/main/work-queue', () => ({
   getWorkQueue: () => ({ list: () => queue.tasks }),
+  hasRunningTask: () => queue.tasks.some((task) => task.state === 'running'),
 }));
 
 const { CONFIRM_TIMEOUT_MS, attachCloseGuard, cancelClose, confirmClose } =

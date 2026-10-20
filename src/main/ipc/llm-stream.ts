@@ -65,6 +65,17 @@ export interface LlmStreams {
   abort: (messageId: string) => void;
 }
 
+/* Chat and journal each own a private `llmStreams()` instance, so "is any
+   response streaming" can't be answered from one instance's `running` map.
+   A count per id (not a bare Set) keeps two instances that happen to use the
+   same id from clearing each other's entry. */
+const activeStreams = new Map<string, number>();
+
+/** True while any turn on any instance has begun and not yet ended. */
+export function isAnyLlmStreaming(): boolean {
+  return activeStreams.size > 0;
+}
+
 export function llmStreams(services: Services): LlmStreams {
   /** Running responses per message id — `*:abort` reaches in here. */
   const running = new Map<string, AbortController>();
@@ -72,6 +83,7 @@ export function llmStreams(services: Services): LlmStreams {
   const begin = (threadId: string, messageId: string): StreamRun => {
     const controller = new AbortController();
     running.set(messageId, controller);
+    activeStreams.set(messageId, (activeStreams.get(messageId) ?? 0) + 1);
     let ended = false;
 
     const send: StreamSink = (delta, done, extra = {}) => {
@@ -89,6 +101,11 @@ export function llmStreams(services: Services): LlmStreams {
         if (ended) return;
         ended = true;
         running.delete(messageId);
+        /* `ended` makes this one-shot per run, so every begin is matched by
+           exactly one decrement on every end path (success, error, abort). */
+        const left = (activeStreams.get(messageId) ?? 1) - 1;
+        if (left > 0) activeStreams.set(messageId, left);
+        else activeStreams.delete(messageId);
         send(text, true, extra);
       },
     };

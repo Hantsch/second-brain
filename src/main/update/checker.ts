@@ -5,6 +5,9 @@ import type { UpdateDistribution, UpdateFailure, UpdateOffer } from '../../share
 
 export const UPDATE_FEED = { provider: 'github', owner: 'Hantsch', repo: 'second-brain' } as const;
 
+/** Append `v<version>` for the release page of one version. */
+export const RELEASE_TAG_URL_PREFIX = `https://github.com/${UPDATE_FEED.owner}/${UPDATE_FEED.repo}/releases/tag/v`;
+
 export type UpdateCheckResult =
   | { kind: 'up-to-date' }
   | ({ kind: 'available' } & UpdateOffer)
@@ -82,7 +85,7 @@ function joinNotes(raw: ReleaseNotes): string {
   return raw.map((entry) => entry.note ?? '').join('\n\n');
 }
 
-function classifyError(error: unknown): UpdateFailure {
+export function classifyError(error: unknown): UpdateFailure {
   const info = (typeof error === 'object' && error !== null ? error : {}) as {
     statusCode?: unknown;
     code?: unknown;
@@ -95,6 +98,30 @@ function classifyError(error: unknown): UpdateFailure {
   return 'unknown';
 }
 
+/**
+ * One export of `electron-updater`. Check and download share the `autoUpdater`
+ * singleton on purpose: a download needs the update info its check left behind.
+ */
+export async function importUpdaterExport(
+  name: 'autoUpdater' | 'CancellationToken',
+): Promise<unknown> {
+  const mod = (await import('electron-updater')) as unknown as Record<string, unknown> & {
+    default?: Record<string, unknown>;
+  };
+  // `autoUpdater` is a lazy getter that a packaged bundle only exposes on `default`.
+  const value = mod[name] ?? mod.default?.[name];
+  if (value === undefined) throw new Error(`electron-updater exposed no ${name}`);
+  return value;
+}
+
+/** Nothing downloads or installs on its own: every step is the user's explicit action. */
+export function configureAutoUpdater(updater: AutoUpdaterLike): void {
+  updater.autoDownload = false;
+  updater.autoInstallOnAppQuit = false;
+  updater.allowPrerelease = false;
+  updater.setFeedURL({ ...UPDATE_FEED });
+}
+
 export function createUpdateChecker(
   options: { autoUpdater?: AutoUpdaterLike } = {},
 ): UpdateChecker {
@@ -103,19 +130,9 @@ export function createUpdateChecker(
 
   async function resolve(): Promise<AutoUpdaterLike> {
     if (loaded !== undefined) return loaded;
-    let updater = options.autoUpdater;
-    if (updater === undefined) {
-      const mod = await import('electron-updater');
-      // `autoUpdater` is a lazy getter that a packaged bundle only exposes on `default`.
-      updater = (mod.autoUpdater ??
-        (mod as { default?: { autoUpdater?: unknown } }).default?.autoUpdater) as
-        AutoUpdaterLike | undefined;
-      if (updater === undefined) throw new Error('electron-updater exposed no autoUpdater');
-    }
-    updater.autoDownload = false;
-    updater.autoInstallOnAppQuit = false;
-    updater.allowPrerelease = false;
-    updater.setFeedURL({ ...UPDATE_FEED });
+    const updater =
+      options.autoUpdater ?? ((await importUpdaterExport('autoUpdater')) as AutoUpdaterLike);
+    configureAutoUpdater(updater);
     loaded = updater;
     return updater;
   }

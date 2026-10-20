@@ -86,6 +86,7 @@ import type {
   WorkTask,
   WriteResult,
   SourceDetail,
+  UpdateActionResult,
   UpdateState,
 } from './types';
 
@@ -1310,6 +1311,14 @@ export interface IpcRoutes {
   'update:state': { req: void; res: UpdateState };
   /** A manual check (ignores the 24 h window); resolves with the resulting state. */
   'update:check': { req: void; res: UpdateState };
+  /** Downloads the offered update; resolves once it finished, failed or was cancelled. */
+  'update:download': { req: void; res: UpdateActionResult };
+  /** Stops the running download; resolves once it is back in `available`. */
+  'update:cancelDownload': { req: void; res: UpdateActionResult };
+  /** Refused while a task runs or an LLM streams; never cancels either. */
+  'update:installAndRestart': { req: void; res: UpdateActionResult };
+  /** Hides the offer for this process only. */
+  'update:dismiss': { req: void; res: UpdateActionResult };
 }
 
 export type IpcChannel = keyof IpcRoutes;
@@ -1494,6 +1503,10 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'app:info',
   'update:state',
   'update:check',
+  'update:download',
+  'update:cancelDownload',
+  'update:installAndRestart',
+  'update:dismiss',
 ];
 
 /** Events that main sends to the renderer. */

@@ -24,7 +24,7 @@
 
 import { app } from 'electron';
 import type { BrowserWindow } from 'electron';
-import { getWorkQueue } from './work-queue';
+import { hasRunningTask } from './work-queue';
 import type { Services } from './services';
 import { revealWindow } from './window-shared';
 
@@ -127,12 +127,7 @@ function guard(services: Services, event: VetoableEvent, proceed: () => void): b
   /* A queued task is dropped silently on close: nothing has been computed for
      it yet, and the registry's own shutdown handling clears the queue anyway
      (see `work-queue.ts`), so only a `running` task needs a veto of its own. */
-  if (
-    !getWorkQueue(services)
-      .list()
-      .some((task) => task.state === 'running')
-  )
-    return false;
+  if (!hasRunningTask(services)) return false;
   /* Nobody left to ask. Vetoing here would stall the shutdown for the length of
      the timer and then do it anyway, because the confirm can never arrive — the
      window that would show the prompt is gone. This is also the normal path of

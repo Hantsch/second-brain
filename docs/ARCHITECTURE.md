@@ -175,14 +175,30 @@ variable nothing changes.
 
 ## Update check
 
-`src/main/update/` answers "is there a newer Gaston": `checker.ts` is the only
-module that talks to `electron-updater`, `service.ts` (`createUpdateService`) owns
-the `UpdateState` and the 24 h window, and `store.ts` remembers the last check in
+`src/main/update/` answers "is there a newer Gaston" and stages the install.
+Only `checker.ts` and `backend.ts` talk to `electron-updater` (`backend.ts` loads
+it through `checker.importUpdaterExport`). `service.ts` (`createUpdateService`)
+owns the `UpdateState` and the 24 h window, `state.ts` holds its pure derivations
+(phase, window, blocker error keys), and `store.ts` remembers the last check in
 `userData`. `Services.updates()` in `src/main/services.ts` builds it; it is
-unsupported when unpackaged or in the demo vault (`src/main/demo.ts`). The IPC
-area is `src/main/ipc/update.ts`: `update:state`, `update:check` and the
-`event:update` push. `SB_E2E_UPDATE_FIXTURE` (`src/main/update/e2e-fixture.ts`)
-scripts the check outcome for e2e runs; unset, it changes nothing.
+unsupported when unpackaged or in the demo vault (`src/main/demo.ts`).
+
+The IPC area is `src/main/ipc/update.ts`: `update:state`, `update:check`,
+`update:download`, `update:cancelDownload`, `update:installAndRestart`,
+`update:dismiss` and the `event:update` push. Besides `status`, the state carries
+`phase` (idle, available, downloading, downloaded), `progress`, `dismissed`,
+`downloadError` and `releaseUrl`. A failed or cancelled download changes nothing
+on disk; the offer stays offerable.
+
+`backend.ts` is the `UpdateBackend` behind download and install.
+`autoInstallOnAppQuit` is forced to `false`, so a downloaded update never installs
+on an ordinary quit. `restart-blocker.ts` guards the install: while a work-queue
+task runs or an LLM response is streaming, `update:installAndRestart` refuses with
+an error key and nothing is cancelled.
+
+`SB_E2E_UPDATE_FIXTURE` (`src/main/update/e2e-fixture.ts`) is the path of a JSON
+file that scripts the check and download outcomes for e2e runs; unset, it changes
+nothing.
 
 ## State in the renderer
 

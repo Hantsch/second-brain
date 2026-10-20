@@ -29,6 +29,7 @@ import { basename, dirname, isAbsolute, join, resolve as resolvePath } from 'nod
 import { fileURLToPath } from 'node:url';
 import { expect, test as base } from '@playwright/test';
 import type { Page } from '@playwright/test';
+import type { UpdateFileFixture } from '../../../src/main/update/e2e-fixture';
 import type { AppSession } from '../../../scripts/lib/app-harness.mjs';
 import {
   ensureBuild,
@@ -159,8 +160,10 @@ export interface AppOptions {
   /** Passed through as `SB_E2E_UPDATE_FIXTURE`: comma-separated update-check outcomes
    * (offline|http|up-to-date|available), consumed one per check, the last repeating. It
    * also makes checks supported in the unpackaged e2e app. `undefined` (the default) sets
-   * no env var, so the app reports that checks are off in this build. */
-  updateFixture: string | undefined;
+   * no env var, so the app reports that checks are off in this build. An object scripts the
+   * whole check/download/install flow instead: it is written to a JSON file whose path is the
+   * env value, and `writeUpdateFixture` rewrites it between steps. */
+  updateFixture: string | UpdateFileFixture | undefined;
   /** Passed through to `prepareUserData` as `closeToTray` (058, D1): whether closing the
    * main window sends the app to the tray instead of quitting. `true` (the default)
    * matches the app-level default in `settings-defaults.ts`, so every spec but the ones
@@ -191,7 +194,11 @@ export interface AppFixtures {
   vaultPath: string;
   /** The running app: window, log, close. */
   app: AppSession;
+  /** Rewrites the file-mode update fixture; the app re-reads it on its next check or download. */
+  writeUpdateFixture: (next: UpdateFileFixture) => void;
 }
+
+const UPDATE_FIXTURE_FILE = 'update-fixture.json';
 
 /**
  * The open vault's `languages.ui` beats the app-level `uiLanguage`
@@ -290,6 +297,13 @@ function writeFetchFixtureManifest(tempRoot: string, manifest: FetchFixtureManif
   return file;
 }
 
+/** Writes the file-mode update fixture and returns its path (the env var's value). */
+function writeUpdateFixtureFile(tempRoot: string, fixture: UpdateFileFixture): string {
+  const file = join(tempRoot, UPDATE_FIXTURE_FILE);
+  writeFileSync(file, JSON.stringify(fixture), 'utf8');
+  return file;
+}
+
 export const test = base.extend<
   { specIdMatchesFile: void; noNetworkCalls: void },
   AppOptions & AppFixtures
@@ -307,6 +321,13 @@ export const test = base.extend<
   fetchFixture: [undefined, { scope: 'worker', option: true }],
 
   updateFixture: [undefined, { scope: 'worker', option: true }],
+
+  writeUpdateFixture: [
+    async ({ tempRoot }, use) => {
+      await use((next) => void writeUpdateFixtureFile(tempRoot, next));
+    },
+    { scope: 'worker' },
+  ],
 
   closeToTray: [true, { scope: 'worker', option: true }],
 
@@ -396,7 +417,14 @@ export const test = base.extend<
         ...(fetchFixture
           ? { SB_E2E_FETCH_FIXTURE: writeFetchFixtureManifest(tempRoot, fetchFixture) }
           : {}),
-        ...(updateFixture ? { SB_E2E_UPDATE_FIXTURE: updateFixture } : {}),
+        ...(updateFixture
+          ? {
+              SB_E2E_UPDATE_FIXTURE:
+                typeof updateFixture === 'string'
+                  ? updateFixture
+                  : writeUpdateFixtureFile(tempRoot, updateFixture),
+            }
+          : {}),
       };
       const session = await launchApp({
         userDataDir,

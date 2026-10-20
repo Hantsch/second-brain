@@ -909,9 +909,22 @@ const RESPONSES: MockResponses = {
   'app:info': () => fx.appInfo,
   'update:state': () => MOCK_UPDATE_STATE,
   'update:check': () => MOCK_UPDATE_STATE,
+  'update:download': () => ({
+    ok: false,
+    error: 'update.error.notAvailable',
+    state: MOCK_UPDATE_STATE,
+  }),
+  'update:cancelDownload': () => ({ ok: true, state: MOCK_UPDATE_STATE }),
+  'update:installAndRestart': () => ({
+    ok: false,
+    error: 'update.error.notReady',
+    state: MOCK_UPDATE_STATE,
+  }),
+  'update:dismiss': () => ({ ok: true, state: MOCK_UPDATE_STATE }),
 };
 
 const MOCK_UPDATE_STATE: IpcResponse<'update:state'> = {
+  phase: 'idle',
   status: 'up-to-date',
   supported: true,
   disabledReason: null,
@@ -921,6 +934,10 @@ const MOCK_UPDATE_STATE: IpcResponse<'update:state'> = {
   error: null,
   lastCheckedAt: null,
   lastSuccessAt: null,
+  progress: null,
+  dismissed: false,
+  downloadError: null,
+  releaseUrl: null,
 };
 
 export const mockBridge: SbBridge = {

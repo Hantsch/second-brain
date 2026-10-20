@@ -37,3 +37,6 @@ All notable changes to Gaston are recorded here. The format follows
   from this changelog.
 - Updates: Gaston checks for a new version once a day, quietly, and installs it only when you
   ask. About shows what changed.
+- Update button: when a new version exists, one calm button in the title bar offers it. Download
+  it, cancel if you like, and Gaston restarts into it only after a second click — never in the
+  middle of a running task or a streaming answer.

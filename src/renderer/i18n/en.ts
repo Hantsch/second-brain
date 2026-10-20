@@ -17,6 +17,7 @@ import { enSearch } from './en-search';
 import { enSettings } from './en-settings';
 import { enChats } from './en-chats';
 import { enTasks } from './en-tasks';
+import { enUpdate } from './en-update';
 import { enWiki } from './en-wiki';
 
 export const en: Record<TranslationKey, string> = {
@@ -245,5 +246,6 @@ export const en: Record<TranslationKey, string> = {
   ...enSettings,
   ...enChats,
   ...enTasks,
+  ...enUpdate,
   ...enWiki,
 };

@@ -36,3 +36,21 @@
 - 2026-10-20 07:53 · 077 · review 1 · started
 - 2026-10-20 07:54 · 077 · review 1 · done
 - 2026-10-20 07:54 · 077 · story · done
+- 2026-10-20 07:54:27 · 078 · build · started
+- 2026-10-20 07:54 · 078 · D1 restart blocker · started
+- 2026-10-20 07:56 · 078 · D1 restart blocker · done
+- 2026-10-20 07:57 · 078 · D2 staged update actions · started
+- 2026-10-20 08:03 · 078 · D2 staged update actions · done
+- 2026-10-20 08:03 · 078 · D3 update fixture + D4 ProgressBar atom (parallel) · started
+- 2026-10-20 08:07 · 078 · D3 update fixture + D4 ProgressBar atom (parallel) · done
+- 2026-10-20 08:07 · 078 · D5 title-bar update control · started
+- 2026-10-20 08:10 · 078 · D5 title-bar update control · done
+- 2026-10-20 08:10 · 078 · D6 e2e proof · started
+- 2026-10-20 08:18 · 078 · D6 e2e proof · done
+- 2026-10-20 08:18 · 078 · verify · started
+- 2026-10-20 08:21 · 078 · verify · done
+- 2026-10-20 08:21 · 078 · review 1 · started
+- 2026-10-20 08:24 · 078 · review 1 · done
+- 2026-10-20 08:24 · 078 · verify · started
+- 2026-10-20 08:26 · 078 · verify · done
+- 2026-10-20 08:26 · 078 · story · done

@@ -17,6 +17,7 @@ import { deSearch } from './de-search';
 import { deSettings } from './de-settings';
 import { deChats } from './de-chats';
 import { deTasks } from './de-tasks';
+import { deUpdate } from './de-update';
 import { deWiki } from './de-wiki';
 
 export const de = {
@@ -254,6 +255,7 @@ export const de = {
   ...deSettings,
   ...deChats,
   ...deTasks,
+  ...deUpdate,
   ...deWiki,
 } as const;
 
