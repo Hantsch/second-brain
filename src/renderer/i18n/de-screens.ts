@@ -1,11 +1,12 @@
-/* Deutsche Oberflächentexte, Teil 2: die Screens, das Onboarding und das
-   Schnell-Erfassen-Fenster.
+/* German UI texts, part 2: the screens, onboarding, and the quick-capture
+   window.
 
-   Zwei Sorten Text pro Screen, die nie vermischt werden dürfen:
-   - `empty.*` gilt nur, wenn die Abfrage geladen hat UND nichts gefunden wurde.
-     Leer heißt leer.
-   - `pending.*` gilt, solange die Ansicht noch gebaut wird. Diese Texte treffen
-     keine Aussage über den Vault; die Zahl daneben kommt aus dem Index. */
+   Two kinds of text per screen that must never be mixed up:
+   - `empty.*` applies only once the query has loaded AND nothing was found.
+     Empty means empty.
+   - `pending.*` applies while the view is still being built. These texts
+     make no claim about the vault; the number next to them comes from the
+     index. */
 
 export const deScreens = {
   'screen.dashboard.overline': 'Überblick',
@@ -29,6 +30,8 @@ export const deScreens = {
   'stats.todos': 'Todos',
   'stats.pages': 'Wiki-Seiten',
   'stats.words': 'Wörter',
+  'stats.oversized':
+    '{count} Dateien sind größer als 2 MB und werden nur mit ihrem Namen indiziert.',
 
   'screen.capture.overline': 'Reindumpen',
   'screen.capture.title': 'Erfassen',
@@ -42,7 +45,6 @@ export const deScreens = {
   'capture.hint': 'speichert',
   'capture.hintEscape': 'verlässt das Feld',
   'capture.hintPalette': 'springt in die Befehlspalette',
-  'capture.window': 'Im eigenen Fenster',
   'capture.count': '{chars} Zeichen · {words} Wörter',
   'capture.scope': 'Bereich',
   'capture.scopeOpen': 'Offen lassen',
@@ -55,8 +57,10 @@ export const deScreens = {
   'capture.classified': 'Vorschlag steht — in der Inbox',
   'capture.toProposal': 'In der Inbox ansehen',
 
-  'screen.inbox.overline': 'Einordnen',
-  'screen.inbox.title': 'Inbox',
+  /* Kein Kopfpaar mehr: die Inbox ist kein eigener Screen, sondern der Filter
+     „nicht abgelegt“ auf Notizen (Story 006). Den einen `ScreenHeader` dieses
+     Screens stellt `NotesScreen`; der Leerzustand unten gehört weiter der
+     Arbeitsfläche (`UnfiledWorkspace`). */
   'screen.inbox.empty.title': 'Die Inbox ist leer',
   'screen.inbox.empty.body':
     'Erfasste Gedanken liegen hier, bis sie ein Ziel haben. Zu jedem Dump schlägt die App eine Ablage vor und sagt, warum.',
@@ -76,13 +80,14 @@ export const deScreens = {
   'inbox.proposal.confidence': 'Zuversicht {percent} %',
   'inbox.proposal.changed': 'Ziel von dir gewählt.',
   'inbox.proposal.heuristic': 'Ohne Modell eingeordnet — Regeln statt Verstehen.',
+  'inbox.proposal.section': 'Landet unter',
   'inbox.proposal.exact': 'Das wird geschrieben',
-  /* „Bleibt in der Inbox" schreibt nichts. Die Beschriftung muss das sagen,
+  /* „Bleibt in der Inbox“ schreibt nichts. Die Beschriftung muss das sagen,
      sonst behauptet das Feld einen Schreibvorgang, den es nicht gibt. */
   'inbox.proposal.nothing': 'Nichts wird geschrieben — der Dump bleibt liegen',
   'inbox.proposal.todos': 'Erkannte Todos',
   'inbox.proposal.waiting': 'Warte auf',
-  'inbox.proposal.dueOf': 'Frist für „{text}"',
+  'inbox.proposal.dueOf': 'Frist für „{text}“',
   'inbox.proposal.due': 'Frist',
   'inbox.proposal.dueToday': 'heute',
   'inbox.proposal.dueTomorrow': 'morgen',
@@ -94,7 +99,7 @@ export const deScreens = {
   'inbox.action.file': 'Ablegen',
   'inbox.action.fileHint': 'legt ab',
   'inbox.action.other': 'Anderes Ziel',
-  /* Was der Knopf tut, wenn das Ziel „Bleibt in der Inbox" ist: nichts
+  /* Was der Knopf tut, wenn das Ziel „Bleibt in der Inbox“ ist: nichts
      schreiben, den Dump als bewusst behalten markieren. */
   'inbox.action.leave': 'Liegen lassen',
   'inbox.action.leaveHint': 'lässt liegen',
@@ -134,7 +139,7 @@ export const deScreens = {
 
   'screen.ask.overline': 'Nachschlagen',
   'screen.ask.title': 'Fragen',
-  'screen.ask.empty.title': 'Frag dein zweites Hirn',
+  'screen.ask.empty.title': 'Frag Gaston',
   'screen.ask.empty.body':
     'Antworten kommen ausschließlich aus deinen eigenen Notizen, mit Zitat und Dateipfad. Gibt es keinen Beleg, sagt die App das.',
   'screen.ask.empty.action': 'Quelle aufnehmen',
@@ -143,12 +148,15 @@ export const deScreens = {
   'ask.field.hintSend': 'fragt',
   'ask.field.hintBreak': 'macht einen Umbruch',
   'ask.field.hintEscape': 'verlässt das Feld',
+  'ask.field.hintNoSubmit': 'Abgelegt wird nur über den Knopf',
   'ask.action.send': 'Frage stellen',
   'ask.action.cancel': 'Abbrechen',
   'ask.action.new': 'Neue Frage',
   'ask.filter.scope': 'Bereich',
   'ask.filter.module': 'Modul',
   'ask.filter.all': 'alles',
+  'ask.filter.project': 'Projekt',
+  'ask.filter.clear': 'Filter entfernen',
 
   'ask.turn.question': 'Frage',
   'ask.turn.answer': 'Antwort',
@@ -168,21 +176,22 @@ export const deScreens = {
   'ask.citation.openPath': 'Datei öffnen: {path}',
   'ask.citation.of': 'Beleg {index} — {path}',
   'ask.citation.context': 'Die Stelle im Kontext',
-  'ask.citation.openFile': 'Datei öffnen',
+  'ask.citation.openInApp': 'In der App öffnen',
+  'ask.citation.openExternal': 'Extern öffnen',
   'ask.citation.moved':
     'Diese Stelle steht so nicht mehr in der Datei — sie wurde inzwischen geändert.',
 
   'ask.examples.title': 'Fang hiermit an',
   'ask.example.module': 'Was weiß ich über {title}?',
-  'ask.example.project': 'Woran habe ich bei „{title}" zuletzt gearbeitet?',
+  'ask.example.project': 'Woran habe ich bei „{title}“ zuletzt gearbeitet?',
   'ask.example.waiting': 'Worauf warte ich bei {who}?',
 
   'ask.threads.title': 'Gespräche',
   'ask.threads.search': 'Im Verlauf suchen',
   'ask.threads.empty': 'Noch kein Gespräch. Die erste Frage legt eines an.',
   'ask.threads.noMatch': 'Kein Gespräch passt dazu.',
-  'ask.threads.open': 'Gespräch „{title}" öffnen',
-  'ask.threads.delete': 'Gespräch „{title}" löschen',
+  'ask.threads.open': 'Gespräch „{title}“ öffnen',
+  'ask.threads.delete': 'Gespräch „{title}“ löschen',
   'ask.threads.deleteTitle': 'Gespräch löschen?',
   'ask.threads.deleteBody':
     'Der Verlauf wandert in den Papierkorb des Vaults. Abgelegte Wiki-Seiten bleiben.',
@@ -198,7 +207,7 @@ export const deScreens = {
   'ask.fileBack.newModulePlaceholder': 'Identity management',
   'ask.fileBack.pageTitle': 'Titel der Seite',
   'ask.fileBack.preview':
-    'Geschrieben wird eine neue Konzept-Seite im Modul „{module}", dazu ein Eintrag im Katalog und in der Chronik. {count} Belege kommen mit.',
+    'Geschrieben wird eine neue Konzept-Seite im Modul „{module}“, dazu ein Eintrag im Katalog und in der Chronik. {count} Belege kommen mit.',
   'ask.fileBack.confirm': 'Ablegen',
   'ask.fileBack.done': 'Abgelegt in',
 
@@ -218,7 +227,7 @@ export const deScreens = {
   'projects.deadline': 'Frist {date}',
   'projects.waiting': 'Warte auf {who}',
 
-  'screen.journal.overline': 'Tag und Gespräch',
+  'screen.journal.overline': 'Ein Tag, ein Eintrag',
   'screen.journal.title': 'Tagebuch',
   'screen.journal.empty.title': 'Noch kein Tageseintrag im Vault',
   'screen.journal.empty.body':
@@ -226,27 +235,43 @@ export const deScreens = {
   'screen.journal.empty.action': 'Tag beginnen',
   /* Die Texte des Screens selbst liegen in `de-journal.ts`. */
 
-  'screen.modules.overline': 'Wissen',
-  'screen.modules.title': 'Module',
-  'screen.modules.empty.title': 'Noch kein Wissens-Modul im Vault',
-  'screen.modules.empty.body':
+  'screen.notes.overline': 'Eigenständige Gedanken',
+  'screen.notes.title': 'Notizen',
+  'screen.notes.empty.title': 'Noch keine Notiz im Vault',
+  'screen.notes.empty.body':
+    'Eine Notiz ist ein Gedanke, der für sich steht — ohne Bereich, ohne Projekt. Schreib den ersten, ein Bereich entsteht dabei automatisch.',
+  'screen.notes.empty.action': 'Erste Notiz schreiben',
+  /* Die Texte des Screens selbst liegen in `de-notes.ts`. */
+
+  'screen.knowledge.overline': 'Module und Quellen',
+  'screen.knowledge.title': 'Wissen',
+  'screen.knowledge.empty.title': 'Noch kein Wissens-Modul im Vault',
+  'screen.knowledge.empty.body':
     'Ein Modul ist ein kleines Wiki: Quellen, Begriffe und Zusammenhänge zu einem Thema, jede Aussage mit Beleg.',
-  'screen.modules.empty.action': 'Modul anlegen',
+  'screen.knowledge.empty.action': 'Modul anlegen',
   'screen.sources.overline': 'Aufnehmen',
   'screen.sources.title': 'Quellen',
   'screen.sources.empty.title': 'Noch keine Rohquelle im Vault',
   'screen.sources.empty.body':
     'Videos, Dateien und Webseiten landen unveränderlich in raw/ und werden von dort zu Wiki-Seiten verdichtet.',
   'screen.sources.empty.action': 'Quelle aufnehmen',
-  'screen.garden.overline': 'Gegen das Verrotten',
+  'screen.garden.overline': 'Wissen gesund halten',
   'screen.garden.title': 'Pflege',
-  'screen.garden.empty.title': 'Noch kein Pflegelauf',
+  'screen.garden.empty.title': 'Noch keine Prüfung',
   'screen.garden.empty.body':
-    'Der Pflegelauf findet verwaiste Seiten, kaputte Links, unverdichtete Quellen und Projekte ohne nächsten Schritt.',
-  'screen.garden.empty.action': 'Pflegelauf starten',
+    'Die Prüfung findet verwaiste Seiten, kaputte Links, unverdichtete Quellen und Projekte ohne nächsten Schritt.',
+  'screen.garden.empty.action': 'Prüfung starten',
 
-  /* Nicht „Verhalten": das ist einer der Tabs — als Überzeile gelesen sähe der
-     Screen aus, als wäre dieser Tab offen. */
+  /* The screen's own texts (switch, empty and off states) live in
+     `de-agents.ts` — the header pair sits here, like every other screen.
+     The view hangs under Projects since story 008, so the header says where
+     you are: "Projekte · Agent-Sitzungen". The key names stay `screen.agents.*`
+     — only the rail entry went, the family kept its name. */
+  'screen.agents.overline': 'Projekte',
+  'screen.agents.title': 'Agent-Sitzungen',
+
+  /* Not "Behavior": that's one of the tabs — read as an overline, the screen
+     would look as if that tab were already open. */
   'screen.settings.overline': 'Einrichten',
   'screen.settings.title': 'Einstellungen',
   'screen.settings.empty.title': 'Einstellungen folgen',
@@ -259,6 +284,11 @@ export const deScreens = {
   'settings.vault': 'Vault',
   'settings.vaultOpen': 'Anderen Vault öffnen',
 
+  'onboarding.language.label': 'Sprache',
+  'onboarding.language.de': 'Deutsch',
+  'onboarding.language.en': 'English',
+  'onboarding.language.hint': 'Gilt für Oberfläche, Dokumente und Gespräche.',
+  'onboarding.language.advanced': 'Erweitert',
   'onboarding.overline': 'Erster Schritt',
   'onboarding.title': 'Willkommen',
   'onboarding.what.title': 'Was ist ein Vault?',
@@ -271,11 +301,13 @@ export const deScreens = {
   'onboarding.create': 'Ordner wählen und anlegen',
   'onboarding.createCancel': 'Abbrechen',
   'onboarding.nameLabel': 'Name des neuen Vaults',
-  'onboarding.namePlaceholder': 'Zweites Hirn',
+  'onboarding.namePlaceholder': 'Mein Wissen',
   'onboarding.nameHint':
     'Der Name steht später in der Titelzeile. Den Ordner wählst du im nächsten Schritt — er sollte leer sein, die Struktur legt die App an.',
   'onboarding.recent': 'Zuletzt geöffnet',
   'onboarding.missing': 'nicht gefunden',
+  'onboarding.noModel.body':
+    'Es ist noch kein Modell eingerichtet. Gaston funktioniert auch ohne eines vollständig — ein Modell lässt sich später einrichten, sobald ein Vault offen ist, in den Einstellungen.',
 
   'quickCapture.title': 'Schnell erfassen',
   'quickCapture.placeholder': 'Was ist dir durch den Kopf gegangen?',

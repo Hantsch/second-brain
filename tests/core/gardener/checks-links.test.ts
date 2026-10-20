@@ -4,9 +4,20 @@
    Modulgrenze, Katalog als Ziel). */
 
 import { describe, expect, it } from 'vitest';
-import { brokenLinkCheck, orphanCheck } from '@core/gardener';
+import { applyFix, brokenLinkCheck, orphanCheck, orphanTargets } from '@core/gardener';
+import { condensedAreaPath, condensedProjectPath } from '@core/condense/paths';
+import { projectPath } from '@core/vault/paths';
+import { serialize } from '@core/vault/frontmatter';
+import { NOW_MS, day } from '../../helpers/time';
 import { DEMO } from './demo-vault';
-import { SETTINGS, demoFixture, gardenerFixture, moduleFiles, moduleFixture } from './fixtures';
+import {
+  SETTINGS,
+  demoFixture,
+  gardenerFixture,
+  moduleFiles,
+  moduleFixture,
+  pagePathOf,
+} from './fixtures';
 
 const SOURCE_SLUG = 's-2026-07-01-vortrag';
 
@@ -41,9 +52,126 @@ describe('orphanCheck', () => {
     expect(findings).toHaveLength(1);
     expect(findings[0]?.paths[0]).toBe('modules/wissen/wiki/concepts/verwaist.md');
     expect(findings[0]?.title).toContain('Verwaiste Seite');
-    /* Keine Seite nennt den Namen im Text — also keine bestimmbare Stelle, also
-       kein Fix. Ein Fix, der raten müsste, wird nicht angeboten. */
+    /* Keine Seite nennt den Namen im Text — also ist die Overview das Ziel, und
+       die Vorschau ist der Eintrag, den sie bekommt. */
+    expect(findings[0]?.paths[1]).toBe('modules/wissen/wiki/overview.md');
+    expect(findings[0]?.fix).toEqual({
+      action: 'add-links',
+      label: 'Verweis eintragen',
+      preview: '- [[verwaist]] — Verwaiste Seite',
+    });
+  });
+
+  it('lässt den Befund ohne Fix, wenn das Modul keine Overview hat und niemand den Namen nennt', async () => {
+    const fixture = await moduleFixture('wissen', [
+      {
+        type: 'concept',
+        slug: 'verwaist',
+        title: 'Verwaiste Seite',
+        summary: 'Niemand verlinkt hierher',
+        body: 'Diese Seite steht für sich allein.',
+      },
+    ]);
+
+    const findings = orphanCheck.run(fixture.ctx({ settings: SETTINGS }));
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.paths).toEqual(['modules/wissen/wiki/concepts/verwaist.md']);
     expect(findings[0]?.fix).toBeNull();
+  });
+
+  it('meldet eine mit dem Fix des Befunds verlinkte Seite in einem frischen Lauf nicht mehr', async () => {
+    const fixture = await moduleFixture('wissen', [
+      {
+        type: 'concept',
+        slug: 'verwaist',
+        title: 'Verwaiste Seite',
+        summary: 'Niemand verlinkt hierher',
+        body: 'Diese Seite steht für sich allein.',
+      },
+      {
+        type: 'overview',
+        slug: 'overview',
+        title: 'Synthese',
+        summary: 'Der rote Faden',
+        body: 'Der Faden führt über nichts Verwandtes.',
+      },
+    ]);
+    const orphanPath = pagePathOf('wissen', { type: 'concept', slug: 'verwaist' });
+
+    const before = orphanCheck.run(fixture.ctx({ settings: SETTINGS }));
+    expect(before).toHaveLength(1);
+    const [finding] = before;
+    if (finding === undefined) throw new Error('Kein Befund.');
+
+    await applyFix({ store: fixture.store, docLanguage: 'de', now: NOW_MS }, finding);
+    await fixture.refresh();
+
+    /* Ein frischer Kontext, ein frischer Lauf: nichts wurde versteckt oder
+       sondergestellt, der Graph selbst hat sich geändert. */
+    const after = orphanCheck.run(fixture.ctx({ settings: SETTINGS }));
+    expect(after.some((entry) => entry.paths[0] === orphanPath)).toBe(false);
+  });
+
+  it('meldet eine verlinkte Seite in einem Modul ohne Overview nicht mehr — der Picker darf auf ein Ziel zeigen, das den Namen gar nicht nennt', async () => {
+    const fixture = await moduleFixture('wissen', [
+      {
+        type: 'concept',
+        slug: 'verwaist',
+        title: 'Verwaiste Seite',
+        summary: 'Niemand verlinkt hierher',
+        body: 'Diese Seite steht für sich allein.',
+      },
+      {
+        type: 'concept',
+        slug: 'anderes',
+        title: 'Etwas Anderes',
+        summary: 'Hat nichts damit zu tun',
+        body: 'Ganz anderer Inhalt.',
+      },
+    ]);
+    const orphanPath = pagePathOf('wissen', { type: 'concept', slug: 'verwaist' });
+
+    const before = orphanCheck
+      .run(fixture.ctx({ settings: SETTINGS }))
+      .find((entry) => entry.paths[0] === orphanPath);
+    if (before === undefined) throw new Error('Kein Befund für die verwaiste Seite.');
+    /* Keine Overview und niemand nennt „Verwaiste Seite" im Text — kein
+       bestimmbarer Ort, also kein automatischer Fix; ein Mensch muss wählen. */
+    expect(before.paths).toEqual([orphanPath]);
+    expect(before.fix).toBeNull();
+
+    /* Genau die Rechnung, die der Picker anstellt: `orphanTargets` liefert die
+       Kandidaten und die Zeile, die geschrieben wird. */
+    const pages = fixture.index.pages();
+    const orphan = pages.find((page) => page.path === orphanPath);
+    if (orphan === undefined) throw new Error(`Keine Wiki-Seite: ${orphanPath}`);
+    const candidates = orphanTargets(pages, orphan, 'de');
+    const target = candidates.targets[0]?.path;
+    if (target === undefined) throw new Error('Kein Ziel für die verwaiste Seite.');
+    expect(target).toBe(pagePathOf('wissen', { type: 'concept', slug: 'anderes' }));
+
+    /* Derselbe Schreibvorgang wie `gardener:linkOrphan` (`src/main/ipc/gardener.ts`):
+       `paths[0]` die verwaiste Seite, `paths[1]` das gewählte Ziel, die Vorschau
+       aus derselben Berechnung, die die Kandidaten geliefert hat. */
+    await applyFix(
+      { store: fixture.store, docLanguage: 'de', now: NOW_MS },
+      {
+        id: before.id,
+        kind: 'orphan',
+        severity: 'warn',
+        title: before.title,
+        detail: '',
+        paths: [orphanPath, target],
+        module: 'wissen',
+        foundAt: before.foundAt,
+        fix: { action: 'add-links', label: 'Verweis eintragen', preview: candidates.line },
+      },
+    );
+    await fixture.refresh();
+
+    const after = orphanCheck.run(fixture.ctx({ settings: SETTINGS }));
+    expect(after.some((entry) => entry.paths[0] === orphanPath)).toBe(false);
   });
 
   it('meldet weder die Synthese noch eine nur im Frontmatter belegte Quelle', async () => {
@@ -90,7 +218,7 @@ describe('orphanCheck', () => {
     });
   });
 
-  it('bietet keinen Fix an, wenn zwei Seiten den Namen nennen', async () => {
+  it('nimmt die Overview als Ziel, wenn zwei Seiten den Namen nennen', async () => {
     const fixture = await moduleFixture('wissen', [
       {
         type: 'concept',
@@ -125,8 +253,115 @@ describe('orphanCheck', () => {
     const findings = orphanCheck.run(fixture.ctx({ settings: SETTINGS }));
 
     expect(findings).toHaveLength(1);
-    expect(findings[0]?.paths).toEqual(['modules/wissen/wiki/concepts/kanban.md']);
-    expect(findings[0]?.fix).toBeNull();
+    expect(findings[0]?.paths).toEqual([
+      'modules/wissen/wiki/concepts/kanban.md',
+      'modules/wissen/wiki/overview.md',
+    ]);
+    expect(findings[0]?.fix?.preview).toBe('- [[kanban]] — Kanban');
+  });
+
+  it('meldet ein Verdichtungs-Artefakt nicht als Waise, obwohl niemand darauf verlinkt (039, AC7)', async () => {
+    // Nichts verlinkt je auf `areas/<slug>.condensed.md` — das ist der normale
+    // Zustand eines Artefakts. `orphanCheck` läuft aber ausschliesslich über
+    // `ctx.modules[].pages`, und dorthin gelangt das Artefakt nie: `isWikiPage()`
+    // (core/index/pages.ts) verlangt `modules/*/wiki/**`, ein Area-Pfad passt nie.
+    const areaSlug = 'gesundheit';
+    const artifactPath = condensedAreaPath(areaSlug);
+    const files = {
+      ...moduleFiles('wissen', [
+        {
+          type: 'concept',
+          slug: 'verwaist',
+          title: 'Andere Waise',
+          summary: 'Zeigt, dass echte Waisen weiter erkannt werden',
+          body: 'Diese Seite steht für sich allein.',
+        },
+      ]),
+      [`areas/${areaSlug}.md`]: serialize(
+        { type: 'area', title: 'Gesundheit', created: day(-30), updated: day(0), tags: [] },
+        'Laufen, schlafen, weniger Kaffee.\n',
+      ),
+      [artifactPath]: serialize(
+        {
+          type: 'condensed',
+          title: 'Gesundheit — verdichtet',
+          condensed_at: '2026-08-01T09:00:00+02:00',
+          sources: [`areas/${areaSlug}.md`],
+          source_hashes: {},
+          created: day(-1),
+          updated: day(0),
+          tags: [],
+        },
+        'Laufen, schlafen und weniger Kaffee bleiben die drei Hebel.\n',
+      ),
+    };
+    const fixture = await gardenerFixture(files);
+
+    const findings = orphanCheck.run(fixture.ctx({ settings: SETTINGS }));
+
+    // Die echte Waise im Modul wird weiterhin gemeldet — die Abwesenheit des
+    // Artefakts ist keine stille Unterdrueckung aller Befunde.
+    expect(findings.some((finding) => finding.paths[0] === artifactPath)).toBe(false);
+    expect(findings.some((finding) => finding.paths[0] === `areas/${areaSlug}.md`)).toBe(false);
+    expect(
+      findings.some((finding) => finding.paths[0] === 'modules/wissen/wiki/concepts/verwaist.md'),
+    ).toBe(true);
+  });
+
+  it('meldet ein Projekt-Verdichtungs-Artefakt ebenfalls nicht als Waise (046, D3)', async () => {
+    // Dieselbe Begruendung wie beim Area-Artefakt oben: `orphanCheck` laeuft
+    // ausschliesslich ueber `ctx.modules[].pages`, und `isWikiPage()` (`pages.ts`)
+    // verlangt `modules/*/wiki/**` — ein Projektpfad passt da nie hinein.
+    const scope = 'work';
+    const slug = 'nyota';
+    const projPath = projectPath(scope, slug);
+    const artifactPath = condensedProjectPath(scope, slug);
+    const files = {
+      ...moduleFiles('wissen', [
+        {
+          type: 'concept',
+          slug: 'verwaist',
+          title: 'Andere Waise',
+          summary: 'Zeigt, dass echte Waisen weiter erkannt werden',
+          body: 'Diese Seite steht für sich allein.',
+        },
+      ]),
+      [projPath]: serialize(
+        {
+          type: 'project',
+          title: 'Nyota',
+          slug,
+          scope,
+          status: 'active',
+          created: day(-30),
+          updated: day(0),
+          tags: [],
+        },
+        'Wieder aufgenommen, Kamera laeuft.\n',
+      ),
+      [artifactPath]: serialize(
+        {
+          type: 'condensed',
+          title: 'Nyota — verdichtet',
+          condensed_at: '2026-08-01T09:00:00+02:00',
+          sources: [projPath],
+          source_hashes: {},
+          created: day(-1),
+          updated: day(0),
+          tags: [],
+        },
+        'Das Rollenkonzept liegt bei Stefan.\n',
+      ),
+    };
+    const fixture = await gardenerFixture(files);
+
+    const findings = orphanCheck.run(fixture.ctx({ settings: SETTINGS }));
+
+    expect(findings.some((finding) => finding.paths[0] === artifactPath)).toBe(false);
+    expect(findings.some((finding) => finding.paths[0] === projPath)).toBe(false);
+    expect(
+      findings.some((finding) => finding.paths[0] === 'modules/wissen/wiki/concepts/verwaist.md'),
+    ).toBe(true);
   });
 });
 

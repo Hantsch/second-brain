@@ -4,7 +4,7 @@
    Die Slugs der Quellseiten kommen herein, damit jede Aussage ihren Beleg
    als Wikilink tragen kann. */
 
-export function methodikPages({ vergleich, werkstatt, video }) {
+export function methodikPages({ vergleich, werkstatt, video, video2 }) {
   return [
     // ── Entitäten ────────────────────────────────────────────────────────
     {
@@ -99,13 +99,14 @@ Ohne Transkript gibt es kein Zitat mit Zeitmarke — und damit keine Aussage, di
       title: 'Wissensverfall',
       summary: 'Drei Verfallsformen: verwaist, veraltet, doppelt',
       tags: ['pflege'],
-      sources: [video, werkstatt],
+      sources: [video, video2, werkstatt],
       created: -9,
       updated: -9,
       reviewed: -9,
       body: `Eine Sammlung verfällt in drei Formen: verwaiste Seiten, auf die niemand
 verlinkt; veraltete Aussagen, die niemand nachgeprüft hat; doppelte Seiten zum
-selben Begriff (source: [[${video}]]).
+selben Begriff — wie diese Quelle selbst, versehentlich zweimal aufgenommen
+(source: [[${video}]], [[${video2}]]).
 
 Der Verfall ist kein Werkzeugproblem: er entsteht, weil Aufnehmen billiger ist
 als Pflegen (source: [[${werkstatt}]]). Das Gegenmittel ist ein wiederkehrender

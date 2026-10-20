@@ -1,10 +1,11 @@
-/* Provider anlegen oder ändern — in zwei Schritten: Vorlage wählen, Rest
-   ausfüllen. Die Vorlagen kommen aus `core/llm/presets`, also aus dem Kern; die
-   Adresse und die Art stehen damit schon, ausgefüllt werden muss höchstens der
-   Schlüssel.
+/* Adding or editing a provider — in two steps: pick a preset, fill in the
+   rest. The presets come from `core/llm/presets`, so from the core; the
+   address and kind are already fixed by that, at most the key needs to be
+   filled in.
 
-   Gespeichert wird immer mit Test: ein Zugang, der nicht antwortet, ist kein
-   Zugang. Das Ergebnis steht im Dialog, nicht in einem Toast, der wegfliegt. */
+   Saving always includes a test: a connection that doesn't answer is not a
+   connection. The result appears in the dialog, not in a toast that flies
+   away. */
 
 import { useState } from 'react';
 import type { ProviderConfig, ProviderPreset } from '@shared/types';
@@ -17,7 +18,7 @@ import { decodeIpcError } from '../../lib/ipc-error';
 
 export interface ProviderDialogProps {
   presets: readonly ProviderPreset[];
-  /** Gesetzt heißt: diesen Provider bearbeiten. Sonst einen neuen anlegen. */
+  /** Set means: edit this provider. Otherwise, create a new one. */
   provider?: ProviderConfig | null;
   onClose: () => void;
   submit: (input: {
@@ -36,7 +37,7 @@ interface Draft {
   kind: ProviderConfig['kind'];
   local: boolean;
   apiKey: string;
-  /** Nur bei „bearbeiten": ob schon ein Schlüssel liegt. */
+  /** Only when editing: whether a key is already stored. */
   hasKey: boolean;
 }
 
@@ -106,7 +107,7 @@ export function ProviderDialog({
 
   const title = provider ? t('provider.dialog.editTitle') : t('provider.dialog.addTitle');
 
-  /* Schritt 1: nur beim Anlegen — beim Bearbeiten steht die Vorlage längst fest. */
+  /* Step 1: only when creating — when editing, the preset is already fixed. */
   if (!draft) {
     return (
       <Dialog open title={title} onClose={onClose} closeLabel={t('common.close')} size="md">

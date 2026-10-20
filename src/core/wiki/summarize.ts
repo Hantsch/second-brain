@@ -14,6 +14,7 @@ import type { DocLanguage, ModelRef } from '@shared/types';
 import {
   LlmUnavailableError,
   isAbortError,
+  mergeSummariesClampedChars,
   mergeSummariesPrompt,
   summarizeSourcePrompt,
   type KnownPageHint,
@@ -50,6 +51,13 @@ export interface CondenseResult {
   model: ModelRef | null;
   /** Wie viele Teilstuecke verdichtet wurden. 1 = ein Aufruf, kein Zusammenfuehren. */
   parts: number;
+  /**
+   * Zeichen, die der Zusammenfuehrungs-Clamp (`mergeSummariesClampedChars`)
+   * tatsaechlich abgeschnitten hat, bevor die Teilverdichtungen ans Modell
+   * gingen. 0 ausserhalb des Zusammenfuehrens — nur eine lange Quelle mit
+   * mehreren Teilstuecken durchlaeuft diesen Schritt ueberhaupt (Story 050, D6).
+   */
+  clampedChars: number;
 }
 
 /** Frontmatter und Titelzeile aus einer Modellantwort entfernen — das schreibt die App. */
@@ -71,7 +79,13 @@ export async function condenseSource(
   deps: WikiDeps,
   input: CondenseInput,
 ): Promise<CondenseResult> {
-  const empty: CondenseResult = { markdown: null, usedLlm: false, model: null, parts: 0 };
+  const empty: CondenseResult = {
+    markdown: null,
+    usedLlm: false,
+    model: null,
+    parts: 0,
+    clampedChars: 0,
+  };
   const chunks = splitForSummary(input.text);
   if (chunks.length === 0) return empty;
   if (!deps.gateway.isAvailable('summarize-source')) return { ...empty, parts: chunks.length };
@@ -88,6 +102,21 @@ export async function condenseSource(
     ...(input.known === undefined ? {} : { known: input.known }),
   };
 
+  /*
+   * Ein Bruchteil je verdichtetem Stueck, gedeckelt bei 0.9: der letzte Zehntel
+   * bleibt dem Schreib-Tick nach der Verdichtung vorbehalten (`ingest.ts`), damit
+   * der Balken nach dem letzten Stueck noch einmal sichtbar weiterwandert, statt
+   * schon hier auf den Endwert zu springen (Story 050, D7).
+   */
+  const chunkProgress = (done: number): number => (done / chunks.length) * 0.9;
+
+  /**
+   * Der Tick, der den Zusammenfuehrungs-Aufruf einleitet — zwischen dem letzten
+   * Stueck-Tick (hoechstens 0.9) und dem Endwert `1`, den `ingestSource` erst
+   * nach dem Schreiben setzt.
+   */
+  const MERGE_PROGRESS = 0.95;
+
   try {
     if (chunks.length === 1) {
       const result = await deps.gateway.complete({
@@ -96,7 +125,14 @@ export async function condenseSource(
         temperature: 0,
         ...(deps.signal === undefined ? {} : { signal: deps.signal }),
       });
-      return { markdown: cleanMarkdown(result.text), usedLlm: true, model: result.model, parts: 1 };
+      deps.onProgress?.(chunkProgress(1));
+      return {
+        markdown: cleanMarkdown(result.text),
+        usedLlm: true,
+        model: result.model,
+        parts: 1,
+        clampedChars: 0,
+      };
     }
 
     const parts: string[] = [];
@@ -115,7 +151,18 @@ export async function condenseSource(
         ...(deps.signal === undefined ? {} : { signal: deps.signal }),
       });
       parts.push(cleanMarkdown(result.text));
+      deps.onProgress?.(chunkProgress(index + 1));
     }
+    /*
+     * Ohne diesen Tick faellt der Balken zwischen dem letzten Stueck-Tick (0.9)
+     * und dem Ende der Zusammenfuehrung fuer die gesamte Dauer dieses (oft
+     * groessten) Modellaufrufs auf einen sichtbar stillen Wert zurueck — genau
+     * das Symptom, das AC5 (Story 050, D7) ausschliesst. `MERGE_PROGRESS` liegt
+     * bewusst zwischen dem letzten Stueck-Tick und dem Endwert `1`, den
+     * `ingestSource` nach dem Schreiben setzt, und markiert damit "jetzt wird
+     * zusammengefuehrt" als eigenen, unterscheidbaren Schritt.
+     */
+    deps.onProgress?.(MERGE_PROGRESS);
     const merged = await deps.gateway.complete({
       task: 'summarize-source',
       messages: mergeSummariesPrompt({ ...base, parts }, language),
@@ -127,6 +174,7 @@ export async function condenseSource(
       usedLlm: true,
       model: merged.model,
       parts: chunks.length,
+      clampedChars: mergeSummariesClampedChars(parts),
     };
   } catch (error) {
     if (isAbortError(error)) throw error;

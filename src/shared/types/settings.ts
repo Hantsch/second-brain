@@ -1,80 +1,118 @@
-/* Einstellungen. Zwei Ebenen, bewusst getrennt:
-   - App-Settings liegen in userData (maschinengebunden: Fenster, Vault-Historie, Schlüssel)
-   - Vault-Settings liegen in `<vault>/.secondbrain/settings.json` (reisen mit dem Vault) */
+/* Settings. Two levels, deliberately separated:
+   - App settings live in userData (machine-bound: window, vault history, keys)
+   - Vault settings live in `<vault>/.secondbrain/settings.json` (travel with the vault) */
 
 import type { CoachMode } from './domain';
-import type { ProviderConfig, Routing } from './llm';
+import type { LlamaOverrides, ProviderConfig, Routing } from './llm';
 import type { DashboardLayout } from './overview';
 
 export type UiLanguage = 'de' | 'en';
 
-/** Sprache, in der Dokumente im Vault geschrieben werden. */
+/** Language documents in the vault are written in. */
 export type DocLanguage = 'de' | 'en';
 
 export type ThemeMode = 'dark' | 'light' | 'system';
 
+export const APP_BACKGROUNDS = [
+  'none',
+  'thought-catcher',
+  'knowledge-constellation',
+  'pocket-vault',
+  'thread-of-return',
+  'knowledge-garden',
+] as const;
+
+export type AppBackground = (typeof APP_BACKGROUNDS)[number];
+
+export const APP_ICONS = [
+  'knowledge-garden',
+  'neural-core',
+  'circuit-cortex',
+  'brain-chip',
+  'vault-brain',
+] as const;
+
+export type AppIcon = (typeof APP_ICONS)[number];
+
+export interface CustomizationSettings {
+  background: AppBackground;
+  appIcon: AppIcon;
+}
+
 export interface LanguageSettings {
-  /** Sprache der Oberfläche. */
+  /** Language of the UI. */
   ui: UiLanguage;
-  /** Sprache, in der das LLM Notizen, Wiki-Seiten und Zusammenfassungen schreibt. */
+  /** Language the LLM writes notes, wiki pages, and summaries in. */
   documents: DocLanguage;
-  /** Sprache, in der geantwortet wird (Chat, Coaching). */
+  /** Language responses are given in (chat, coaching). */
   conversation: UiLanguage;
-  /** Fremdsprachige Quellen beim Verdichten in die Dokumentsprache übersetzen. */
+  /** Translate foreign-language sources into the document language while condensing. */
   translateSources: boolean;
 }
 
 /*
- * Es gab hier eine Schwelle, ab der ein Ablage-Vorschlag ohne Rückfrage
- * ausgeführt worden wäre. Sie ist weg: Guardrail 2 lässt sie nicht zu (nichts
- * wird geschrieben, was niemand bestätigt hat), also konnte sie niemand lesen —
- * und ein Schieber in den Einstellungen, den niemand liest, ist eine Behauptung.
+ * There used to be a threshold above which a filing suggestion would be
+ * carried out without asking. It's gone: guardrail 2 doesn't allow it
+ * (nothing gets written that nobody confirmed), so nobody could ever read
+ * it — and a slider in settings that nobody reads is a false claim.
  */
 export interface CaptureSettings {
-  /** Globaler Hotkey für das Schnell-Erfassen-Fenster. */
+  /** Global hotkey for the quick-capture window. */
   quickCaptureShortcut: string;
-  /** Dumps nach dem Speichern sofort vom LLM einordnen lassen. */
+  /** Have the LLM classify dumps immediately after saving. */
   autoClassify: boolean;
-  /** Nach dem Speichern das Fenster schließen. */
+  /** Close the window after saving. */
   closeAfterCapture: boolean;
 }
 
 export interface OverviewSettings {
-  /** Ab wie vielen Tagen ohne Spur ein Projekt als stagnierend gilt. */
+  /** After how many days without activity a project counts as stagnant. */
   staleAfterDays: number;
-  /** Wie viele Tage im Voraus Deadlines auftauchen. */
+  /** How many days ahead deadlines show up. */
   deadlineHorizonDays: number;
-  /** Warte-auf ohne Frist nach so vielen Tagen anmahnen. */
+  /** Nudge about waiting-on entries without a due date after this many days. */
   waitingNudgeDays: number;
-  /** Claude-Sessions als Arbeitsspur mitlesen. */
+  /** Read Claude sessions in as part of the work trace. */
   useClaudeSessions: boolean;
-  /** Wurzel der Claude-Projekte; leer = `~/.claude/projects`. */
+  /** Root of the Claude projects; empty = `~/.claude/projects`. */
   claudeProjectsDir: string;
-  /** Windows-Benachrichtigungen für fällige Erinnerungen. */
+  /** Read Codex sessions in as part of the work trace. */
+  useCodexSessions: boolean;
+  /** Root of the Codex sessions; empty = `~/.codex/sessions`. */
+  codexSessionsDir: string;
+  /** Windows notifications for due reminders. */
   notifications: boolean;
+  /**
+   * Agent projects the user dismissed from the all-sessions list.
+   * Key format is `<agent kind>:<project key>`, e.g. `claude:-home-me-repo`.
+   */
+  dismissedAgentProjects: string[];
+  /** Show the per-project "Sessions" tab even for projects without a linked agent project. */
+  showEmptySessionsTab: boolean;
 }
 
 /*
- * Auch hier standen zwei Schalter zu viel (`askMood`, `extractFacts`). Der
- * Tagesabschluss schlägt vor, was im Text steht, und der Mensch hakt an — es gibt
- * nichts vorab abzuschalten, ohne ihm einen Vorschlag zu verschweigen, den er
- * ohnehin ablehnen kann. Niemand hat sie gelesen; jetzt gibt es sie nicht mehr.
+ * Here too there were two switches too many (`askMood`, `extractFacts`).
+ * The day close-out suggests what's in the text, and the human checks it
+ * off — there's nothing to disable up front without withholding a
+ * suggestion the human could just as easily reject anyway. Nobody read
+ * them; now they no longer exist.
  */
 export interface JournalSettings {
-  /** Grundhaltung des Coachs — die Vorgabe des Segments auf dem Tagebuch-Screen. */
+  /** The coach's base stance — the default for the segmented control on the journal screen. */
   mode: CoachMode;
 }
 
 export interface GardenerSettings {
-  /** Pflegelauf beim Öffnen des Vaults automatisch starten. */
+  /** Start a maintenance run automatically when the vault opens. */
   runOnOpen: boolean;
-  /** Seiten, die länger als das nicht überprüft wurden, gelten als angestaubt. */
+  /** Pages that haven't been reviewed for longer than this count as stale. */
   reviewAfterDays: number;
-  /** Deutet ein LLM die Befunde (Widersprüche, fehlende Seiten)? */
+  /** Does an LLM interpret the findings (contradictions, missing pages)? */
   useLlm: boolean;
 }
 
-/** Was mit dem Vault reist. */
+/** What travels with the vault. */
 export interface VaultSettings {
   version: number;
   languages: LanguageSettings;
@@ -82,11 +120,11 @@ export interface VaultSettings {
   overview: OverviewSettings;
   journal: JournalSettings;
   gardener: GardenerSettings;
-  /** Provider ohne Schlüssel — die Schlüssel bleiben auf der Maschine. */
+  /** Providers without keys — the keys stay on the machine. */
   providers: ProviderConfig[];
   routing: Routing;
   dashboard: DashboardLayout;
-  /** Zusätzliche Tags, die bei der Einordnung bevorzugt werden. */
+  /** Additional tags preferred during filing. */
   preferredTags: string[];
 }
 
@@ -98,25 +136,60 @@ export interface WindowBounds {
   maximized?: boolean;
 }
 
-/** Was an der Maschine hängt. */
+/** What's tied to the machine. */
 export interface AppSettings {
   version: number;
-  /** Zuletzt geöffneter Vault. */
+  /** Most recently opened vault. */
   lastVault: string | null;
-  /** Verlauf für die Vault-Auswahl. */
+  /** History for the vault picker. */
   recentVaults: string[];
   theme: ThemeMode;
-  /** UI-Sprache, bevor ein Vault geöffnet ist. */
+  customization: CustomizationSettings;
+  /** UI language before a vault is opened. */
   uiLanguage: UiLanguage;
+  /** Seed for `languages.documents` / `.conversation` / `.translateSources` the
+      first time a vault is opened or created (`SettingsService.openVault`) —
+      chosen on the onboarding screen's "advanced" disclosure, before any vault
+      exists to carry `LanguageSettings` itself. Ignored once a vault has its
+      own settings file. */
+  newVaultLanguages: Pick<LanguageSettings, 'documents' | 'conversation' | 'translateSources'>;
   window: WindowBounds;
-  /** Beim Start minimiert in den Tray. */
+  /** Start minimized to the tray. */
   startMinimized: boolean;
-  /** Onboarding schon durchlaufen. */
+  /** Closing the window sends the app to the tray instead of quitting. */
+  closeToTray: boolean;
+  /** Onboarding already completed. */
   onboarded: boolean;
+  /** What's tied to this machine specifically, not to the app installation
+      in general (028) — kept as its own object so more machine-local facts
+      have somewhere to go without growing the flat `AppSettings` shape. */
+  machine: {
+    /** Manually entered VRAM figure in MB, or `null` when nothing was
+        entered — detection on Windows can't read a card's real VRAM above
+        4 GB (32-bit `AdapterRAM`, see 019a's Done section), so the user can
+        fill it in by hand. Never written into the vault: this travels with
+        the machine, not with the vault. */
+    vramOverrideMb: number | null;
+    /** Percentage of this machine's RAM/VRAM the app may plan model
+        recommendations against (029) — the user's way of reserving headroom
+        for everything else running on the machine. Not written into the
+        vault: this travels with the machine, like `vramOverrideMb`. */
+    resourceBudgetPercent: number;
+    /** Whether the llama.cpp engine starts only on a button press, or on the
+        first task that needs it while it is installed-but-stopped (034,
+        Decisions Q2). Default `'manual'` — the app never starts a process
+        the user didn't ask for. Machine-local, like the two fields above. */
+    llamaAutoStart: 'manual' | 'on-demand';
+    /** Hand-entered overrides for the llama.cpp start plan (034, Decisions
+        Q1), behind the card's "advanced" disclosure — `null` fields derive
+        as usual. Machine-local: a GPU-layer count tuned for this box has no
+        business travelling with the vault to another one. */
+    llamaOverrides: LlamaOverrides;
+  };
 }
 
 export interface SettingsSnapshot {
   app: AppSettings;
-  /** null, solange kein Vault offen ist. */
+  /** null while no vault is open. */
   vault: VaultSettings | null;
 }

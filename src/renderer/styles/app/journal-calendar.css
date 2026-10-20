@@ -1,0 +1,198 @@
+/* The journal's month calendar (010, D1) — a compact date picker meant to
+   live in the narrow side column next to the day list (`.sb-journal-side`,
+   200–240 px, see `journal.css`). Deliberately not `.gs-table`: that
+   component's padding (`--space-3`/`--space-4` per cell) is sized for data
+   tables, not a seven-column grid that has to fit in ~220 px — this grid
+   gets its own, much tighter rules instead. */
+
+.sb-monthcal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.sb-monthcal-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+/* "Today" takes the space the two arrows leave; the collapse toggle is
+   pushed to the far edge so it never gets mistaken for a third month step. */
+.sb-monthcal-toolbar .gs-btn:nth-child(2) {
+  flex: 1;
+  justify-content: center;
+}
+.sb-monthcal-toggle {
+  margin-left: auto;
+}
+
+.sb-monthcal-grid {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-family: var(--font-sans);
+}
+.sb-monthcal-grid caption {
+  caption-side: top;
+  text-align: left;
+  padding-bottom: var(--space-1);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  color: var(--text-muted);
+}
+.sb-monthcal-grid th {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-regular);
+  color: var(--text-faint);
+  text-align: center;
+  padding-bottom: var(--space-1);
+}
+.sb-monthcal-grid td {
+  padding: 1px;
+  text-align: center;
+}
+/* Out-of-month filler (`cell.padding` in MonthCalendar.tsx): no button, no
+   text — an empty cell reads as "nothing here" without inventing a day that
+   isn't in this month. No declarations of its own; the class exists only as
+   a marker `td` so `.sb-monthcal-grid td` above still applies to it. */
+
+/* One button per in-month day. Square-ish and tight by necessity: seven of
+   these have to share the same ~220 px row that `--sb-hit` (32px) was not
+   written for — the trade-off is a deliberately smaller hit target than the
+   rest of the app, bounded by the side column's own width budget. */
+.sb-monthcal-day {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  width: 100%;
+  aspect-ratio: 1;
+  min-height: 26px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.sb-monthcal-day:hover {
+  background: var(--surface-raised);
+}
+.sb-monthcal-day:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+.sb-monthcal-daynum {
+  font-size: var(--text-2xs);
+  color: var(--text-body);
+}
+/* "Today" is a line, the same convention `.sb-dayrow--today` uses in the day
+   list — a mark of place, not a fill. */
+.sb-monthcal-day--today .sb-monthcal-daynum {
+  color: var(--accent);
+  font-weight: var(--weight-semibold);
+}
+/* Selected is a surface — kept visually distinct from "today" on purpose:
+   the two answer different questions and must stay tellable apart even when
+   they land on the same day. */
+.sb-monthcal-day--selected {
+  background: var(--surface-raised);
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+}
+.sb-monthcal-day--selected .sb-monthcal-daynum {
+  color: var(--text-heading);
+}
+/* Today *and* selected — the common default-view case. The surface/border
+   above still marks "selected", but the number keeps today's accent instead
+   of falling back to `--text-heading`: both cues have to survive at once, or
+   the busiest cell in the grid would be the one where "today" silently
+   disappears. */
+.sb-monthcal-day--today.sb-monthcal-day--selected .sb-monthcal-daynum {
+  color: var(--accent);
+}
+/* Future, no file yet: legible as "not yet", not clickable, not styled like
+   the other days — but never `display: none`, the date still has to read. */
+.sb-monthcal-day--disabled {
+  cursor: default;
+}
+.sb-monthcal-day--disabled:hover {
+  background: none;
+}
+.sb-monthcal-day--disabled .sb-monthcal-daynum {
+  color: var(--text-disabled);
+}
+
+.sb-monthcal-markers {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 6px;
+}
+/* A day with a file but no mood: a plain, faint dot — legible without
+   hovering, and clearly a notch quieter than `.sb-moodmark` at any level so
+   the two never compete for the same reading. */
+.sb-monthcal-entrymark {
+  width: 4px;
+  height: 4px;
+  border-radius: var(--radius-full);
+  background: var(--text-faint);
+}
+/* `.sb-moodmark` itself (level dot, `data-level="1".."5"`) is shared with
+   `journal.css` — reused as-is here, no calendar-specific override. */
+
+/* 010/D4 — a day that is over and left open (`closed: null`). Square, not
+   round: the shape itself is the cue, so the marker still reads under a
+   color-vision deficiency and not just by its (amber) color. Sits next to
+   the mood/entry dot, never replacing it — a cell can show at most one of
+   (mood, entry) plus this one. */
+.sb-monthcal-unfinished {
+  width: 4px;
+  height: 4px;
+  border-radius: 1px;
+  background: var(--warning);
+}
+
+/* 070/D4 — a future mention names this day (`cell.upcoming`), whether or not
+   it has a file yet. A triangle, not the unfinished marker's square: the two
+   answer different questions (a day left open vs. a day something elsewhere
+   points at) and must stay tellable apart by shape alone, not just by color —
+   same "no color-only status" rule `.sb-monthcal-unfinished` above follows.
+   Deliberately not `--accent`: the grid already spends its one teal point on
+   "today" (`.sb-monthcal-day--today`), and a second accent-colored mark on
+   the same grid would compete with it instead of reading as a distinct,
+   quieter signal — the same register `.sb-monthcal-entrymark` uses. Built
+   from a border triangle rather than an image so it stays a flat token color
+   with no extra asset. */
+.sb-monthcal-upcoming {
+  width: 0;
+  height: 0;
+  border-left: 3px solid transparent;
+  border-right: 3px solid transparent;
+  border-bottom: 4px solid var(--text-muted);
+}
+
+/* The grid's key hint (010/D3), in the same quiet register as
+   `.sb-journal-keys` under the day list (`journal.css`) — never an accent:
+   this screen's one teal point is the stream, not a hint. */
+.sb-monthcal-keys {
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+}
+
+/* In the narrow window the side column becomes a full-width row (see
+   `journal.css`'s `@media (max-width: 1200px)` block) — the grid then has
+   much more than 220 px to work with. `aspect-ratio: 1` scales *with* that
+   extra width, so a naive "give it more room" reading is exactly backwards:
+   at typical narrow widths (roughly 1152 px, minus the two columns' padding)
+   each of the 7 cells lands well over 140 px wide, and the fixed six-row
+   grid (`GRID_ROWS`) blows past 800 px tall — enough to push the rest of the
+   day (mood/energy, composer, save) out of scroll reach, the same failure
+   `.sb-daylist`'s `max-height: 108px` below exists to avoid for the day
+   list. The fix here is the mirror image: drop the aspect ratio and give the
+   cell a fixed height instead, so it can no longer grow with the column. */
+@media (max-width: 1200px) {
+  .sb-monthcal-day {
+    aspect-ratio: auto;
+    height: var(--sb-hit);
+    min-height: var(--sb-hit);
+  }
+}

@@ -1,14 +1,16 @@
-/* Alles, was `/chat/completions` spricht: OpenAI, OpenRouter, Ollama, LM Studio,
-   vLLM, llama.cpp. Kein SDK — nur `fetch`, injizierbar.
+/* Everything that speaks `/chat/completions`: OpenAI, OpenRouter, Ollama, LM
+   Studio, vLLM, llama.cpp. No SDK — just `fetch`, injectable.
 
-   Streaming läuft über SSE (`data:`-Zeilen bis `[DONE]`), strukturierte Ausgabe
-   über `response_format: json_schema` mit Prompt-Fallback für Runtimes, die das
-   nicht kennen. */
+   Streaming runs over SSE (`data:` lines until `[DONE]`), structured output
+   over `response_format: json_schema` with a prompt fallback for runtimes
+   that don't know it. */
 
 import type { ProviderProbe, Usage } from '@shared/types';
 import { normalizeJsonText } from '../json';
 import { describeError, joinUrl, request, requestJson, type HttpContext } from '../http';
+import { isOpenRouterBaseUrl } from '../openrouter-host';
 import { sanitize } from '../redact';
+import { taskDefinition } from '../tasks';
 import {
   SCHEMA_NAME,
   meansSchemaUnsupported,
@@ -28,9 +30,9 @@ export interface OpenAiCompatibleConfig {
   baseUrl: string;
   apiKey?: string | null;
   fetchImpl?: FetchLike;
-  /** Zusatz-Header, etwa `HTTP-Referer`/`X-Title` für OpenRouter. */
+  /** Extra headers, e.g. `HTTP-Referer`/`X-Title` for OpenRouter. */
   headers?: Record<string, string>;
-  /** 'auto' probiert `json_schema` einmal aus, 'prompt' nimmt direkt den Fallback. */
+  /** 'auto' tries `json_schema` once, 'prompt' goes straight to the fallback. */
   schemaSupport?: SchemaSupport;
 }
 
@@ -146,9 +148,9 @@ export class OpenAiCompatibleProvider implements LlmProvider {
   }
 
   /**
-   * Versucht den nativen Schema-Weg und weicht bei einer Ablehnung auf den
-   * Prompt-Fallback aus. Die Entscheidung wird gemerkt, damit nicht jeder
-   * Aufruf denselben Fehlschlag bezahlt.
+   * Tries the native schema path and falls back to the prompt fallback on
+   * rejection. The decision is remembered so not every call pays for the
+   * same failure.
    */
   private async withSchemaFallback(
     call: ProviderCall,
@@ -191,7 +193,36 @@ export class OpenAiCompatibleProvider implements LlmProvider {
         json_schema: { name: SCHEMA_NAME, schema: call.schema },
       };
     }
+    // Deliberately outside the `useNative` branch: the schema fallback rebuilds
+    // the body for a second attempt, and that attempt must carry the same
+    // constraint. A retry that quietly drops it would be the worst outcome —
+    // the call succeeds and the guarantee is gone.
+    if (this.enforcesNoTraining(call)) {
+      body.provider = { data_collection: 'deny' };
+    }
     return body;
+  }
+
+  /**
+   * Does this call need OpenRouter's per-request no-training constraint?
+   *
+   * Both halves have to be true, and each `false` means the body stays exactly
+   * as it was before this rule existed:
+   * - **OpenRouter base URL** — `provider` is OpenRouter's routing object. OpenAI,
+   *   Ollama, LM Studio and vLLM don't know the field; sending it there would
+   *   risk a rejected request for no gain. A local runtime trains on nothing
+   *   anyway, and its base URL never matches this host check.
+   * - **Sensitive task** (`classify-dump`, `extract-tasks`, `journal-chat`) — those
+   *   carry personal content (guardrail 6). For the rest, narrowing the routing
+   *   pool would only cost availability and money without protecting anything.
+   *
+   * When no endpoint can satisfy the constraint, OpenRouter answers with an HTTP
+   * error, which `request`/`requestJson` raise as `LlmHttpError`. That refusal is
+   * the intended outcome and propagates: there is no path here that repeats the
+   * call without the constraint.
+   */
+  private enforcesNoTraining(call: ProviderCall): boolean {
+    return isOpenRouterBaseUrl(this.config.baseUrl) && taskDefinition(call.task).sensitive;
   }
 
   private finish(call: ProviderCall, text: string, usage: Usage | undefined): ProviderResult {
@@ -228,13 +259,13 @@ function parseChunk(data: string): ChatResponse | null {
   try {
     return JSON.parse(data) as ChatResponse;
   } catch {
-    // Ein halber Chunk ist kein Fehler: der Dekoder liefert nur vollständige Ereignisse,
-    // aber manche Runtimes schicken Kommentar- oder Keep-alive-Zeilen als data.
+    // A half chunk isn't an error: the decoder only delivers complete events,
+    // but some runtimes send comment or keep-alive lines as data.
     return null;
   }
 }
 
-/** Manche Runtimes liefern `content` als Array von Teilen statt als String. */
+/** Some runtimes deliver `content` as an array of parts instead of a string. */
 function contentOf(content: unknown): string {
   if (typeof content === 'string') return content;
   if (Array.isArray(content)) {

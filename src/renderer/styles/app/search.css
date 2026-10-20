@@ -1,0 +1,118 @@
+/* The full search result view (059, D5). Filter chips reuse `.sb-chip` from
+   ask.css; the result rows mirror `.sb-pageitem` from modules.css, with the
+   one addition that view never needed — a second, secondary action button
+   per row that must never trigger the row's own open. */
+
+.sb-searchfilters {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.sb-searchfilters-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.sb-searchresults {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.sb-searchresult {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-card);
+}
+/* The one accent per screen belongs here — the focal point of keyboard
+   roving — never to the snippet's own matched-term marks below. */
+.sb-searchresult[data-active='true'] {
+  border-color: var(--accent-soft-border);
+  background: var(--accent-soft);
+}
+
+.sb-searchresult-main {
+  all: unset;
+  box-sizing: border-box;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  cursor: pointer;
+}
+.sb-searchresult-main:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+.sb-searchresult-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.sb-searchresult-title {
+  font-size: var(--text-sm);
+  color: var(--text-heading);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sb-searchresult-type {
+  flex-shrink: 0;
+  color: var(--text-faint);
+}
+.sb-searchresult-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  color: var(--text-faint);
+  font-size: var(--text-2xs);
+}
+.sb-searchresult-snippet {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+/* Matched terms: bold, never the accent — see the header comment. */
+.sb-snippet-mark {
+  color: var(--text-heading);
+  font-weight: 600;
+}
+
+.sb-searchresult-external {
+  all: unset;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  align-self: center;
+  margin-right: var(--space-3);
+  min-width: var(--sb-hit);
+  min-height: var(--sb-hit);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.sb-searchresult-external:hover {
+  background: var(--surface-raised);
+  color: var(--text-body);
+}
+.sb-searchresult-external:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+.sb-search-foot {
+  display: flex;
+  justify-content: center;
+  padding-top: var(--space-2);
+}

@@ -11,6 +11,7 @@ import {
   taskDefinition,
 } from '@core/llm';
 import { MODEL_TIERS } from '@shared/types';
+import { createEmptyGateway } from '../../fakes/llm';
 
 describe('Aufgabenkatalog', () => {
   it('deckt jede Aufgabe genau einmal ab', () => {
@@ -32,8 +33,23 @@ describe('Aufgabenkatalog', () => {
     }
   });
 
+  it('hat für jede Aufgabe plausible typische Tokenzahlen', () => {
+    for (const task of TASK_DEFINITIONS) {
+      expect(task.typicalTokens).toBeDefined();
+      expect(task.typicalTokens.in).toBeGreaterThan(0);
+      expect(task.typicalTokens.out).toBeGreaterThan(0);
+    }
+  });
+
   it('markiert genau die persönlichen Aufgaben als sensibel', () => {
-    expect(sensitiveTasks().sort()).toEqual(['classify-dump', 'extract-tasks', 'journal-chat']);
+    expect(sensitiveTasks().sort()).toEqual([
+      'classify-dump',
+      'condense-area',
+      'condense-project',
+      'extract-tasks',
+      'journal-chat',
+      'journal-loose-ends',
+    ]);
   });
 
   it('markiert genau die Gesprächsaufgaben als streamend', () => {
@@ -51,8 +67,11 @@ describe('Aufgabenkatalog', () => {
         .sort(),
     ).toEqual([
       'classify-dump',
+      'condense-area',
+      'condense-project',
       'extract-tasks',
       'gardener-audit',
+      'journal-loose-ends',
       'project-status',
       'query-rerank',
       'title-tags',
@@ -62,6 +81,50 @@ describe('Aufgabenkatalog', () => {
   it('liefert Definition und Klasse zu einer Aufgabe', () => {
     expect(taskDefinition('title-tags').suggested).toBe('cheap');
     expect(suggestedTier('gardener-audit')).toBe('strong');
+  });
+
+  it('empfiehlt für die losen Enden ein ausgewogenes, lokal empfohlenes Modell', () => {
+    const task = taskDefinition('journal-loose-ends');
+    expect(task.suggested).toBe('balanced');
+    expect(task.sensitive).toBe(true);
+    expect(task.structured).toBe(true);
+  });
+
+  it('setzt minLocalParamsB nur für title-tags und query-rerank auf 1', () => {
+    expect(
+      TASK_DEFINITIONS.filter((task) => task.minLocalParamsB === 1)
+        .map((task) => task.kind)
+        .sort(),
+    ).toEqual(['query-rerank', 'title-tags']);
+    for (const task of TASK_DEFINITIONS) {
+      if (task.kind === 'title-tags' || task.kind === 'query-rerank') continue;
+      expect(task.minLocalParamsB).toBeUndefined();
+    }
+  });
+
+  it('empfiehlt für das Verdichten eines Bereichs ein starkes, lokal empfohlenes Modell', () => {
+    const task = taskDefinition('condense-area');
+    expect(task.suggested).toBe('strong');
+    expect(task.sensitive).toBe(true);
+    expect(task.structured).toBe(true);
+    expect(task.streams).toBe(false);
+  });
+
+  it('ist ohne Route für condense-area nicht verfügbar', () => {
+    expect(createEmptyGateway().isAvailable('condense-area')).toBe(false);
+  });
+
+  it('empfiehlt für das Verdichten eines Projekts ein starkes, lokal empfohlenes Modell', () => {
+    const task = taskDefinition('condense-project');
+    expect(task.suggested).toBe('strong');
+    expect(task.sensitive).toBe(true);
+    expect(task.structured).toBe(true);
+    expect(task.streams).toBe(false);
+    expect(task.typicalTokens).toEqual({ in: 8000, out: 1200 });
+  });
+
+  it('ist ohne Route für condense-project nicht verfügbar', () => {
+    expect(createEmptyGateway().isAvailable('condense-project')).toBe(false);
   });
 
   it('wirft bei einer unbekannten Aufgabe', () => {

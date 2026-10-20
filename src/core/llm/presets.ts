@@ -1,10 +1,10 @@
-/* Vorlagen, mit denen ein Provider in zwei Klicks steht. `hint` ist ein
-   i18n-Key; der deutsche Text steht als Kommentar daneben, damit
-   `src/renderer/i18n/de.ts` ihn übernehmen kann, ohne dass der Kern Texte kennt. */
+/* Presets that get a provider set up in two clicks. `hint` is an i18n key;
+   the German text sits next to it as a comment, so `src/renderer/i18n/de.ts`
+   can adopt it verbatim without the core knowing any UI text. */
 
 import type { ProviderPreset } from '@shared/types';
 
-/** Kennung der Vorlage „beliebige OpenAI-kompatible URL". */
+/** ID of the "any OpenAI-compatible URL" preset. */
 export const CUSTOM_PRESET_ID = 'custom-openai';
 
 export const PROVIDER_PRESETS: readonly ProviderPreset[] = [
@@ -16,8 +16,20 @@ export const PROVIDER_PRESETS: readonly ProviderPreset[] = [
     needsKey: false,
     local: true,
     canListModels: true,
-    // „Läuft auf dieser Maschine. Kein Schlüssel nötig, erste Wahl für Tagebuch und Dumps."
+    // "Runs on this machine. No key needed, first choice for journal and dumps."
     hint: 'llm.preset.ollama.hint',
+  },
+  {
+    id: 'llamacpp',
+    label: 'llama.cpp',
+    kind: 'openai-compatible',
+    baseUrl: 'http://127.0.0.1:8080/v1',
+    needsKey: false,
+    local: true,
+    canListModels: true,
+    // "Runs on this machine. Control over GPU offload and context — the
+    //  choice for weak hardware where Ollama decides them for you."
+    hint: 'llm.preset.llamacpp.hint',
   },
   {
     id: 'lmstudio',
@@ -27,7 +39,7 @@ export const PROVIDER_PRESETS: readonly ProviderPreset[] = [
     needsKey: false,
     local: true,
     canListModels: true,
-    // „Lokaler Server von LM Studio. Das geladene Modell muss dort aktiv sein."
+    // "Local server from LM Studio. The loaded model must be active there."
     hint: 'llm.preset.lmstudio.hint',
   },
   {
@@ -38,7 +50,7 @@ export const PROVIDER_PRESETS: readonly ProviderPreset[] = [
     needsKey: true,
     local: false,
     canListModels: true,
-    // „Cloud. Schlüssel bleibt verschlüsselt auf dieser Maschine, Inhalte verlassen sie."
+    // "Cloud. The key stays encrypted on this machine, the content leaves it."
     hint: 'llm.preset.openai.hint',
   },
   {
@@ -49,7 +61,7 @@ export const PROVIDER_PRESETS: readonly ProviderPreset[] = [
     needsKey: true,
     local: false,
     canListModels: true,
-    // „Ein Schlüssel für viele Modelle. Gut, um Modelle zu vergleichen."
+    // "One key for many models. Good for comparing models."
     hint: 'llm.preset.openrouter.hint',
   },
   {
@@ -60,7 +72,7 @@ export const PROVIDER_PRESETS: readonly ProviderPreset[] = [
     needsKey: true,
     local: false,
     canListModels: true,
-    // „Claude-Modelle über die Messages-API. Stark beim Verdichten und Verknüpfen."
+    // "Claude models via the Messages API. Strong at condensing and linking."
     hint: 'llm.preset.anthropic.hint',
   },
   {
@@ -71,19 +83,19 @@ export const PROVIDER_PRESETS: readonly ProviderPreset[] = [
     needsKey: false,
     local: false,
     canListModels: true,
-    // „Für vLLM, llama.cpp, Azure oder jeden anderen Dienst mit /chat/completions."
+    // "For vLLM, llama.cpp, Azure, or any other service with /chat/completions."
     hint: 'llm.preset.custom-openai.hint',
   },
 ];
 
-/** Vorlage zu einer Kennung, oder null. */
+/** Preset for an ID, or null. */
 export function findPreset(id: string): ProviderPreset | null {
   return PROVIDER_PRESETS.find((preset) => preset.id === id) ?? null;
 }
 
 /**
- * Braucht dieser Zugang einen Schlüssel? Lokale Runtimes nicht, Cloud immer.
- * Wird an zwei Stellen gebraucht (Registry und Gateway) und darf nicht auseinanderlaufen.
+ * Does this connection need a key? Local runtimes never, cloud always.
+ * Needed in two places (registry and gateway) and must not drift apart.
  */
 export function needsApiKey(provider: { kind: ProviderPreset['kind']; local: boolean }): boolean {
   if (provider.kind === 'fake') return false;

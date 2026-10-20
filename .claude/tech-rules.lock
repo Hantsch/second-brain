@@ -1,0 +1,16 @@
+{
+  "tech-rules-version": "2.3.0",
+  "groups": [
+    "all",
+    "react",
+    "electron"
+  ],
+  "files": {
+    ".claude/skills/karpathy/SKILL.md": "31461247fc12bbbf42449eed959bef40d92baf6e",
+    ".claude/skills/design-tokens/SKILL.md": "3e300a8f3649d91b197fc938b4640b1b541c32ff",
+    ".claude/skills/electron-arch/SKILL.md": "1be484cb4f9be287cf94b14144c1dd2a4187b2a2",
+    ".claude/skills/typed-ipc/SKILL.md": "31c0e4d1aebccfa77780c41e7a25bc9073c6c1e5",
+    ".claude/skills/ui-verify/SKILL.md": "c69b73f5b7a3de9aee2ad8677f87308c31ee4212",
+    ".claude/skills/renderer-guidelines/SKILL.md": "aa98bb7818f49d64270eeb8682bcea22d31ff4b5"
+  }
+}

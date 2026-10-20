@@ -1,8 +1,8 @@
-/* Gegenstück zu `src/preload/ipc-error-wire.ts`.
+/* Counterpart to `src/preload/ipc-error-wire.ts`.
 
-   Über die contextBridge übersteht ein Fehlerobjekt nur seine Message. Der
-   `IpcError` reist deshalb als JSON darin — hier wird er wieder ausgepackt.
-   Beide Seiten müssen dasselbe Präfix benutzen. */
+   Across the contextBridge, an error object only survives as its message.
+   The `IpcError` therefore travels as JSON inside it — here it gets
+   unpacked again. Both sides must use the same prefix. */
 
 import type { IpcError } from '@shared/ipc';
 
@@ -17,6 +17,7 @@ const CODES: readonly IpcError['code'][] = [
   'io',
   'cancelled',
   'unknown',
+  'too-large',
 ];
 
 export function isIpcError(value: unknown): value is IpcError {
@@ -29,12 +30,12 @@ export function isIpcError(value: unknown): value is IpcError {
   );
 }
 
-/** Baut den Fehler, den die Mock-Brücke wirft — gleiche Form wie aus dem Preload. */
+/** Builds the error that the mock bridge throws — same shape as from the preload. */
 export function encodeIpcError(error: IpcError): Error {
   return new Error(`${IPC_ERROR_PREFIX}${JSON.stringify(error)}`);
 }
 
-/** Macht aus allem, was ein Aufruf werfen kann, einen `IpcError`. */
+/** Turns anything a call can throw into an `IpcError`. */
 export function decodeIpcError(error: unknown): IpcError {
   if (isIpcError(error)) return error;
   const message = error instanceof Error ? error.message : String(error);
@@ -44,8 +45,30 @@ export function decodeIpcError(error: unknown): IpcError {
       const parsed: unknown = JSON.parse(message.slice(start + IPC_ERROR_PREFIX.length));
       if (isIpcError(parsed)) return parsed;
     } catch {
-      /* Kaputtes JSON behandeln wir wie einen unbekannten Fehler. */
+      /* We treat broken JSON like an unknown error. */
     }
   }
   return { code: 'unknown', message: 'unerwarteter Fehler' };
+}
+
+/** The `llm-unavailable` causes that get their own sentence — each one names a different fix. */
+const LLM_REASONS: readonly string[] = ['no-route', 'no-key', 'provider-disabled'];
+
+/**
+ * The cause behind an `llm-unavailable` error, when main sent one along
+ * (`LlmUnavailable` in `detail`). `null` for every other error and for a
+ * cause without its own sentence — those keep the generic wording.
+ */
+export function llmUnavailableCause(
+  error: IpcError,
+): { reason: string; task: string; provider: string } | null {
+  if (error.code !== 'llm-unavailable') return null;
+  if (typeof error.detail !== 'object' || error.detail === null) return null;
+  const detail = error.detail as { reason?: unknown; task?: unknown; provider?: unknown };
+  if (typeof detail.reason !== 'string' || !LLM_REASONS.includes(detail.reason)) return null;
+  if (typeof detail.task !== 'string') return null;
+  const provider = typeof detail.provider === 'string' ? detail.provider : '';
+  // Without a provider name the key and disabled sentences would have a hole in them.
+  if (detail.reason !== 'no-route' && provider.length === 0) return null;
+  return { reason: detail.reason, task: detail.task, provider };
 }

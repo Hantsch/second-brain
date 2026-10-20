@@ -1,10 +1,11 @@
 /**
  * Der Rueckweg einer Ablage.
  *
- * Eine Ablage beruehrt mehrere Dateien; der Papierkorb kennt nur den Dump. Damit
- * `undoToken` trotzdem **alles** zurueckdreht, liegt neben der Papierkorb-Kopie
- * ein Protokoll der Teilschritte: `.secondbrain/trash/<token>/filing.json`. Es
+ * Eine Ablage beruehrt mehrere Dateien; ein Papierkorb-Eintrag kennt nur eine.
+ * Damit `undoToken` trotzdem **alles** zurueckdreht, liegt unter der Marke ein
+ * Protokoll der Teilschritte: `.secondbrain/trash/<token>/filing.json`. Es
  * ueberlebt einen Neustart der App und verschwindet mit dem Papierkorb-Ordner.
+ * Zu einer Marke muss dabei nicht zwingend eine Kopie gehoeren (`trashed`).
  *
  * Eine Regel gilt ueber allem: kein Rueckweg schreibt eine Nutzerzeile um. Hat
  * jemand den angehaengten Block inzwischen bearbeitet, bleibt er stehen.
@@ -46,11 +47,6 @@ export interface FilingJournal {
 /** Wo das Protokoll liegt: neben der Papierkorb-Kopie des Dumps. */
 export function filingJournalPath(token: string): string {
   return joinVaultPath(trashDir(), token, 'filing.json');
-}
-
-/** Wohin der Dump beim Ablegen wandert. */
-export function trashCopyPath(token: string, path: string): string {
-  return joinVaultPath(trashDir(), token, path);
 }
 
 function isStep(value: unknown): value is Step {
@@ -121,10 +117,11 @@ export async function revertStep(store: UndoStore, step: Step): Promise<void> {
  * `capture:discard`) bleibt es beim Wiederherstellen der Datei — die Marke
  * funktioniert in beiden Faellen.
  *
- * `trashed: false` (nur bei „Liegen lassen", `keepDump`) heisst: zu dieser
- * Marke gibt es keine Papierkorb-Kopie. `store.undo(token)` wuerde dort mit
- * „nicht gefunden" scheitern — es gibt nichts zu holen, also wird es gar nicht
- * erst versucht.
+ * `trashed: false` heisst: zu dieser Marke gibt es keine Papierkorb-Kopie —
+ * so bei „Liegen lassen" (`keepDump`) und beim Ablegen, das den Dump als Beleg
+ * liegen laesst (`applyProposal`). `store.undo(token)` wuerde dort mit „nicht
+ * gefunden" scheitern; es gibt nichts zu holen, also wird es gar nicht erst
+ * versucht. Der Dump kommt dann ueber `dumpStatus` weiter unten zurecht.
  */
 export async function undoFiling(store: UndoStore, token: string): Promise<string[]> {
   const journal = parseJournal(await store.readText(filingJournalPath(token)));
@@ -141,18 +138,26 @@ export async function undoFiling(store: UndoStore, token: string): Promise<strin
     for (const path of await store.undo(token)) note(path);
   }
 
-  // Der Dump lag mit `status: filed` im Papierkorb. Zurueck in der Inbox muss er
-  // wieder den Status tragen, mit dem er dort lag — sonst verschwindet er aus
-  // jeder Liste, die auf offene Dumps schaut.
+  // Der abgelegte Dump trug `status: filed` samt Beleg-Feldern. Wird die Ablage
+  // zurueckgedreht, muss er wieder den Status tragen, mit dem er vorher dalag —
+  // sonst verschwindet er aus jeder Liste, die auf offene Dumps schaut — und der
+  // Beleg muss weg, denn er zeigte auf eine Ablage, die es nicht mehr gibt.
+  // `null` heisst „ausdruecklich nicht gesetzt": der Merge kann Felder nur setzen,
+  // nicht entfernen (`frontmatter.ts`).
   const status = journal?.dumpStatus ?? null;
   if (journal !== null && status !== null) {
     const restored = await store.read(journal.dumpPath);
     if (restored !== null) {
       await store.write({
         path: journal.dumpPath,
-        frontmatter: { status },
+        frontmatter: { status, filed_into: null, filed_at: null },
         expectedHash: restored.hash,
       });
+      /* Ohne diese Zeile fehlte der Dump in `touched`: liegt er nicht im Papierkorb
+         (`trashed: false`), nennt ihn kein anderer Zweig — der Aufrufer wuerde den
+         Index fuer die eine Datei nicht nachziehen, obwohl das Rueckgaengig
+         gelungen ist. */
+      note(journal.dumpPath);
     }
   }
   return touched;

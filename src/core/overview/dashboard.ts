@@ -11,7 +11,7 @@
  */
 
 import type {
-  ClaudeSession,
+  AgentWorkSession,
   DashboardData,
   JournalDay,
   Project,
@@ -173,7 +173,7 @@ export function moodTrend(days: readonly JournalDay[], today: string, span: numb
  */
 export function dashboardData(
   index: OverviewIndex,
-  sessions: readonly ClaudeSession[],
+  sessions: readonly AgentWorkSession[],
   settings: OverviewLimits | undefined,
   today: DateLike,
   snoozes?: ReadonlyMap<string, string>,

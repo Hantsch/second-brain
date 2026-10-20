@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseTodos, scopeFor, todoId } from '@core/index/todos';
+import { areaOfPath, parseTodos, scopeFor, todoId } from '@core/index/todos';
 import { toIndexedDoc } from '@core/index/build';
 import type { VaultStat } from '@core/vault/types';
 import { NYOTA_PROJECT, TODAY } from './fixtures';
@@ -90,6 +90,20 @@ describe('parseTodos: Marker aus VAULT-FORMAT.md', () => {
   });
 });
 
+describe('areaOfPath: nur direkte Kinder von areas/ zaehlen', () => {
+  it('liest den Slug aus einer Bereichsdatei', () => {
+    expect(areaOfPath('areas/gesundheit.md')).toBe('gesundheit');
+  });
+
+  it('bleibt bei verschachtelten Pfaden ehrlich leer — Areas sind flach', () => {
+    expect(areaOfPath('areas/nested/x.md')).toBeNull();
+  });
+
+  it('ist null fuer alles, was kein Bereich ist', () => {
+    expect(areaOfPath('projects/work/x/project.md')).toBeNull();
+  });
+});
+
 describe('todoId: stabil gegen Zeile, Abhaken und Prioritaet', () => {
   it('bleibt gleich, wenn die Zeile umzieht', () => {
     const before = parseTodos(['- [ ] Rollen-Mapping dokumentieren'].join('\n'), {
@@ -163,5 +177,13 @@ describe('scopeFor: Pfad → Frontmatter → Tag → privat', () => {
     );
     expect(todos.map((todo) => todo.scope)).toEqual(['private', 'work']);
     expect(todos[1]?.text).toBe('Arbeitsplatz höher stellen');
+  });
+
+  it('traegt den Bereichs-Slug mit, statt eines Projekts', () => {
+    const todos = parseTodos('- [ ] Zahnarzttermin holen #privat', {
+      path: 'areas/gesundheit.md',
+      today: TODAY,
+    });
+    expect(todos[0]).toMatchObject({ area: 'gesundheit', project: null, scope: 'private' });
   });
 });

@@ -105,6 +105,15 @@ describe('queryAnswerPrompt', () => {
     expect(systemOf(queryAnswerPrompt(input, 'de'))).toContain(NO_EVIDENCE_MARKER);
   });
 
+  it('the no-evidence marker follows the reply language', () => {
+    const enReply = systemOf(queryAnswerPrompt(input, 'de', 'en'));
+    expect(enReply).toContain('Nothing in the vault covers that.');
+    expect(enReply).not.toContain('Dazu steht nichts im Vault.');
+
+    const deReply = systemOf(queryAnswerPrompt(input, 'en', 'de'));
+    expect(deReply).toContain('Dazu steht nichts im Vault.');
+  });
+
   it('trennt Dokumentsprache und Antwortsprache', () => {
     const system = systemOf(queryAnswerPrompt(input, 'en', 'de'));
     expect(system).toContain('Antworte dem Nutzer auf Deutsch');
@@ -138,17 +147,13 @@ describe('queryAnswerPrompt', () => {
 describe('journalChatPrompt', () => {
   const base = { message: 'Der Sprint fühlt sich unmöglich an.', date: '2026-08-10' };
 
-  it('verbietet im Modus listen jeden Ratschlag', () => {
-    const system = systemOf(journalChatPrompt({ ...base, mode: 'listen' }, 'de'));
-    expect(system).toContain('nur zuhören');
-    expect(system).toContain('Gib keine Ratschläge');
-    expect(system).not.toContain('Vorschläge sind klein');
-  });
+  /* `listen` hat seit 011 keinen Prompt mehr — die Haltung fragt kein Modell
+     (`tests/core/journal/coach.test.ts`), und der Typ lässt sie hier nicht zu. */
 
   it('fordert im Modus tips konkrete Vorschläge', () => {
     const system = systemOf(journalChatPrompt({ ...base, mode: 'tips' }, 'de'));
     expect(system).toContain('konkret helfen');
-    expect(system).not.toContain('Gib keine Ratschläge');
+    expect(system).not.toContain('Datum des Eintrags');
   });
 
   it('verlangt im Modus analyze Belege über Daten', () => {
@@ -160,28 +165,28 @@ describe('journalChatPrompt', () => {
       },
       'de',
     );
-    expect(systemOf(turns)).toContain('Muster');
+    expect(systemOf(turns)).toContain('was sich wiederholt');
     expect(systemOf(turns)).toContain('Datum des Eintrags');
     expect(lastUserOf(turns)).toContain('2026-08-03');
   });
 
-  it('unterscheidet die drei Haltungen deutlich', () => {
-    const stances = (['listen', 'tips', 'analyze'] as const).map((mode) =>
+  it('unterscheidet die beiden Haltungen deutlich', () => {
+    const stances = (['tips', 'analyze'] as const).map((mode) =>
       systemOf(journalChatPrompt({ ...base, mode }, 'de')),
     );
-    expect(new Set(stances).size).toBe(3);
+    expect(new Set(stances).size).toBe(2);
   });
 
   it('nimmt frühere Tage nur im Modus analyze mit', () => {
     const turns = journalChatPrompt(
-      { ...base, mode: 'listen', earlierDays: [{ date: '2026-08-03', excerpt: 'egal' }] },
+      { ...base, mode: 'tips', earlierDays: [{ date: '2026-08-03', excerpt: 'egal' }] },
       'de',
     );
     expect(lastUserOf(turns)).not.toContain('2026-08-03');
   });
 
   it('trennt Dokumentsprache und Antwortsprache', () => {
-    const system = systemOf(journalChatPrompt({ ...base, mode: 'listen' }, 'de', 'en'));
+    const system = systemOf(journalChatPrompt({ ...base, mode: 'tips' }, 'de', 'en'));
     expect(system).toContain('Antworte dem Nutzer auf Englisch');
     expect(system).toContain('auf Deutsch');
   });

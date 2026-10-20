@@ -1,18 +1,26 @@
-/* Wohin ein Befundpfad führt.
+/* Where a finding's path leads.
 
-   Ein Befund nennt Dateien; der Screen soll sie öffnen können, ohne zu raten.
-   Für die vier Orte, an denen die App selbst eine Ansicht hat, führt der Klick
-   dorthin — für alles andere gibt es den Weg über das Betriebssystem, und der
-   Knopf heißt dann auch so.
+   A finding names files; the screen should be able to open them without
+   guessing. For the four places where the app itself has a view, the click
+   leads there — for everything else there's the path through the operating
+   system, and the button is named accordingly.
 
-   Katalog und Chronik (`wiki/index.md`, `wiki/log.md`) sind keine Wiki-Seiten
-   (VAULT-FORMAT.md: sie tragen kein Frontmatter). Die Seitenansicht würde sie
-   nicht laden; die Chronik hat einen eigenen Reiter, der Katalog gar keine
-   Ansicht — also Datei. */
+   The general "which route does this vault path belong to" question is
+   `homeOf` (`lib/doc-home.ts`) — garden only adds its own local
+   readings on top: a finding lists the plain area path first even when the
+   condensed artifact is what's due, `inbox/` reads as unfiled, and `raw/` as
+   a source, none of which are true of a path in general.
+
+   The catalog and the log (`wiki/index.md`, `wiki/log.md`) are not wiki pages
+   (VAULT-FORMAT.md: they carry no frontmatter). The page view wouldn't load
+   them; the log has its own tab, the catalog has no view at all — so it's a
+   file. */
+
+import { homeOf } from '../../lib/doc-home';
 
 export interface RouteTarget {
   kind: 'route';
-  /** Adresse im HashRouter, inklusive Suchteil. */
+  /** Address in the HashRouter, including the query part. */
   to: string;
 }
 
@@ -23,35 +31,39 @@ export interface FileTarget {
 
 export type PathTarget = RouteTarget | FileTarget;
 
-const WIKI_PAGE = /^modules\/([^/]+)\/wiki\/(sources|entities|concepts)\/[^/]+\.md$/;
-const WIKI_OVERVIEW = /^modules\/([^/]+)\/wiki\/overview\.md$/;
-const WIKI_LOG = /^modules\/([^/]+)\/wiki\/log\.md$/;
-const PROJECT = /^projects\/(?:work|private)\/([^/]+)\/project\.md$/;
+/* Mirrors `areaSlugFromCondensedPath` (`@core/condense/paths.ts`), plus the plain
+   area file itself: a `condensation-due` finding lists the area path first
+   (`areas/<slug>.md`), not the condensed sibling, and `FindingCard` opens
+   `paths[0]` — so both spellings have to land on the same route. `homeOf`
+   only sends the condensed spelling to the condensed tab; garden overrides
+   the plain one here to match. */
+const AREA = /^areas\/([^/]+?)(?:\.condensed)?\.md$/;
 
-/** Der Ort, an dem dieser Pfad in der App sichtbar ist — sonst die Datei selbst. */
+/** The place where this path is visible in the app — otherwise the file itself. */
 export function targetFor(path: string): PathTarget {
-  const page = WIKI_PAGE.exec(path) ?? WIKI_OVERVIEW.exec(path);
-  if (page !== null) {
-    const module = page[1] ?? '';
+  const area = AREA.exec(path);
+  if (area !== null) {
     return {
       kind: 'route',
-      to: `/modules?m=${encodeURIComponent(module)}&p=${encodeURIComponent(path)}`,
+      to: `/notes?a=${encodeURIComponent(area[1] ?? '')}&tab=condensed`,
     };
   }
-  const log = WIKI_LOG.exec(path);
-  if (log !== null) {
-    return { kind: 'route', to: `/modules?m=${encodeURIComponent(log[1] ?? '')}&tab=log` };
+  if (path.startsWith('inbox/')) return { kind: 'route', to: '/notes?filter=unfiled' };
+  if (path.startsWith('raw/')) return { kind: 'route', to: '/knowledge?tab=sources' };
+  /* `homeOf` also recognizes journal days and, for everything else, the
+     generic reader (`/read?path=…`) — neither of those had a garden view
+     before this refactor, and garden's own behaviour must not change because
+     the shared helper grew a case garden never had. Only the two screens
+     garden always understood (knowledge, projects) are taken as routes; a
+     `home` outside that whitelist falls to the file it always was. */
+  const home = homeOf(path);
+  if (home.startsWith('/knowledge?') || home.startsWith('/projects?')) {
+    return { kind: 'route', to: home };
   }
-  const project = PROJECT.exec(path);
-  if (project !== null) {
-    return { kind: 'route', to: `/projects?p=${encodeURIComponent(project[1] ?? '')}` };
-  }
-  if (path.startsWith('inbox/')) return { kind: 'route', to: '/inbox' };
-  if (path.startsWith('raw/')) return { kind: 'route', to: '/sources' };
   return { kind: 'file', path };
 }
 
-/** Der Dateiname ohne Ordner — für Vorschauen und Meldungen. */
+/** The file name without the folder — for previews and messages. */
 export function leafOf(path: string): string {
   return path.split('/').pop() ?? path;
 }

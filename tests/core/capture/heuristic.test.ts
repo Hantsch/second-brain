@@ -88,11 +88,21 @@ describe('heuristicProposal — realistische Dumps', () => {
   });
 
   it('führt einen Link zum Modul, weil daraus eine Quelle wird', () => {
-    const proposal = propose('Guter Artikel über Token-Lebensdauern: https://example.com/tokens');
+    const proposal = propose(
+      'Guter Artikel fürs Identitätsmanagement über Token-Lebensdauern: https://example.com/tokens',
+    );
 
     expect(proposal.primary.target).toBe('module');
     expect(proposal.primary.path).toBe(`modules/${MODULE_SLUG}/module.md`);
     expect(proposal.reason).toContain('example.com');
+  });
+
+  it('lässt einen Link liegen, wenn das einzige Modul nicht genannt ist', () => {
+    const proposal = propose('Guter Artikel über Token-Lebensdauern: https://example.com/tokens');
+
+    expect(proposal.primary.target).toBe('inbox');
+    expect(proposal.primary.path).toBe(DUMP_PATH);
+    expect(proposal.reason).toContain('kein Modul');
   });
 
   it('lässt einen Link liegen, wenn es kein Modul gibt', () => {

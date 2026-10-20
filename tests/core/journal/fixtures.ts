@@ -10,8 +10,8 @@
  */
 
 import { IndexService } from '@core/index/service';
-import { journalTitle } from '@core/journal';
-import type { CloseDayDeps, CoachDeps } from '@core/journal';
+import { formatAnswer, journalTitle } from '@core/journal';
+import type { CloseDayDeps, CoachDeps, LooseEndDay } from '@core/journal';
 import type { LlmGateway } from '@core/llm';
 import { MemoryVaultStore } from '@core/vault/memory-store';
 import { fixtureVaultFiles } from '../../fixtures';
@@ -31,8 +31,15 @@ export interface JournalEntryInput {
   people?: readonly string[];
   projects?: readonly string[];
   tags?: readonly string[];
-  /** Roher Rumpf unter „## Gespräch". */
+  /** Roher Rumpf unter „## Gespräch" (legacy). */
   dialogue?: string;
+  /**
+   * App-Antworten, die (011) in den Strom unter „## Tag" gehören, nach der
+   * Prosa aus `tag`. Jede wird als der Blockquote-Block geschrieben, den
+   * `stream.ts#appendAnswer` auch schreiben würde — ohne den bestehenden
+   * `dialogue`-Aufrufer anzurühren, ist das rein additiv.
+   */
+  answers?: { text: string; at: string }[];
 }
 
 /** Pfad eines Tageseintrags, wie VAULT-FORMAT.md ihn vorsieht. */
@@ -60,10 +67,31 @@ export function journalFile(date: string, tag: string, entry: JournalEntryInput 
     tag.trim(),
     '',
   ];
+  for (const answer of entry.answers ?? []) {
+    lines.push(formatAnswer(answer.text, answer.at, 'de'), '');
+  }
   if (entry.dialogue !== undefined) {
     lines.push('## Gespräch', '', entry.dialogue.trim(), '');
   }
   return `${lines.join('\n')}`;
+}
+
+/**
+ * 1-based file line of the first body line, as `IndexedDoc.bodyLine` reports it
+ * for a day file `journalFile()` writes.
+ */
+export const LOOSE_END_BODY_LINE = 8;
+
+/**
+ * A day as the announcement rules read it (`findLooseEnds`,
+ * `findUpcomingMentions`): date, path, body. Only the two fields those rules
+ * touch, so a test does not have to fake a whole `JournalDay`.
+ */
+export function looseEndDay(date: string, ...lines: string[]): LooseEndDay {
+  return {
+    day: { date, path: journalPathOf(date) },
+    doc: { body: ['## Tag', '', ...lines, ''].join('\n'), bodyLine: LOOSE_END_BODY_LINE },
+  };
 }
 
 export interface JournalFixture {

@@ -1,45 +1,45 @@
-/* `wiki/log.md` lesbar machen.
+/* Make `wiki/log.md` readable.
 
-   Das Format steht in docs/MODULE-SCHEMA.md und ist bewusst greppbar:
+   The format lives in docs/MODULE-SCHEMA.md and is deliberately greppable:
 
      ## [2026-08-10] ingest | Auth0 RBAC Guide
      - summary: wiki/sources/s-2026-08-10-auth0-rbac-guide.md
-     - touched: [[auth0]], [[rollenbasierte-zugriffskontrolle]], index.md
-     - notes: widerspricht [[altes-rollenkonzept]] bei der Vererbung
+     - touched: [[auth0]], [[role-based-access-control]], index.md
+     - notes: contradicts [[old-role-concept]] regarding inheritance
 
-   Warum hier und nicht im Kern: der Renderer importiert `src/core/**` nicht (die
-   eine Richtung der Architektur), und einen eigenen IPC-Kanal nur zum Anzeigen
-   der Chronik wäre eine Erweiterung des Vertrags. Die Feldnamen sind Datenformat,
-   nicht Oberfläche — deshalb bleiben sie englisch, übersetzt wird ihre
-   Beschriftung. */
+   Why here and not in the core: the renderer never imports `src/core/**`
+   (the architecture's one-way rule), and a dedicated IPC channel just to
+   display the chronicle would be an extension of the contract. The field
+   names are data format, not UI — that's why they stay in English; only
+   their label gets translated. */
 
-/** Die drei Anlässe, die ein Modul protokolliert. */
+/** The three occasions a module logs. */
 export type LogKind = 'ingest' | 'query' | 'lint';
 
 export interface LogEntry {
   day: string;
   kind: LogKind;
   title: string | null;
-  /** `- key: value` in der Reihenfolge der Datei. */
+  /** `- key: value` in the order they appear in the file. */
   fields: { key: string; value: string }[];
 }
 
 const HEADING = /^##\s*\[(\d{4}-\d{2}-\d{2})\]\s*(ingest|query|lint)\s*(?:\|\s*(.*))?$/;
 const FIELD = /^-\s*([a-z][a-z ]*):\s*(.*)$/i;
 
-/** Ein Stück einer Feldzeile: Text oder ein Verweis. */
+/** A piece of a field line: text or a reference. */
 export interface LogPart {
   text: string;
-  /** Gesetzt, wenn das Stück ein Wikilink ist. */
+  /** Set when the piece is a wikilink. */
   target: string | null;
 }
 
 const WIKILINK = /\[\[([^\]|\n]+?)(?:\|([^\]\n]*))?\]\]/g;
 
 /**
- * Eine Feldzeile in Text und Verweise zerlegen. Auch `notes` trägt Wikilinks
- * („widerspricht [[altes-token-konzept]]") — sie als rohe Klammern stehen zu
- * lassen wäre eine halbe Aufbereitung.
+ * Split a field line into text and references. Even `notes` carries
+ * wikilinks ("contradicts [[old-token-concept]]") — leaving them as raw
+ * brackets would be only half-processed.
  */
 export function partsOf(value: string): LogPart[] {
   const parts: LogPart[] = [];
@@ -56,7 +56,7 @@ export function partsOf(value: string): LogPart[] {
   return parts;
 }
 
-/** Wikilinks und Pfade einer Feldzeile, in der Reihenfolge des Auftretens. */
+/** Wikilinks and paths of a field line, in order of appearance. */
 export function refsOf(value: string): { target: string; wiki: boolean }[] {
   return value
     .split(',')
@@ -69,9 +69,9 @@ export function refsOf(value: string): { target: string; wiki: boolean }[] {
 }
 
 /**
- * Die Einträge, jüngster zuerst. Ein Block, den niemand versteht, wird
- * übersprungen statt geraten — von Hand geschriebene Zeilen bleiben in der Datei,
- * auch wenn die Anzeige sie nicht kennt.
+ * The entries, most recent first. A block nobody understands is skipped
+ * rather than guessed at — hand-written lines stay in the file even if the
+ * display doesn't recognize them.
  */
 export function parseLog(content: string | null, limit = 30): LogEntry[] {
   const entries: LogEntry[] = [];
@@ -107,7 +107,7 @@ export function parseLog(content: string | null, limit = 30): LogEntry[] {
   return entries.slice(0, Math.max(0, limit));
 }
 
-/** Beschriftung eines Feldes; unbekannte Felder behalten ihren Namen. */
+/** Label for a field; unknown fields keep their name. */
 export function fieldLabelKey(key: string): string {
   if (key === 'summary') return 'log.summary';
   if (key === 'touched') return 'log.touched';
@@ -118,7 +118,7 @@ export function fieldLabelKey(key: string): string {
   return key;
 }
 
-/** Felder, deren Wert aus Verweisen besteht. */
+/** Fields whose value consists of references. */
 export function isRefField(key: string): boolean {
   return key === 'touched' || key === 'answered from';
 }

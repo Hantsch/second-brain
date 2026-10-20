@@ -1,8 +1,8 @@
-/* Der Vorschlag für Status und nächsten Schritt — als Karte, nie als Tat.
+/* The suggestion for status and next step — as a card, never as an act.
 
-   Die Karte zeigt, was geschrieben würde, und die Begründung dazu. Erst ein
-   Klick auf „Übernehmen" schreibt; „Nur den Schritt" schreibt bewusst weniger.
-   Verworfen wird ohne Folgen (Guardrail 2). */
+   The card shows what would be written, along with the reasoning behind
+   it. Only a click on "Accept" writes; "Only the step" deliberately writes
+   less. Rejecting it has no consequences (guardrail 2). */
 
 import { Button } from '../../atoms/Button';
 import { Card } from '../../atoms/Card';
@@ -13,10 +13,10 @@ import type { StatusSuggestion } from '../../lib/queries/projects';
 
 export interface SuggestionCardProps {
   suggestion: StatusSuggestion;
-  /** Der Status, der jetzt in der Datei steht. */
+  /** The status that's currently in the file. */
   current: ProjectStatus;
   busy?: boolean;
-  /** `both` schreibt Status und Schritt, `step` nur den Schritt. */
+  /** `both` writes status and step, `step` writes only the step. */
   onAccept: (what: 'both' | 'step') => void;
   onReject: () => void;
 }
@@ -44,9 +44,9 @@ export function SuggestionCard({
           </p>
         ) : null}
         <p className="sb-suggest-reason">{suggestion.reason}</p>
-        {/* Kam der Vorschlag aus Regeln statt aus dem Modell, steht es hier —
-            auch dann, wenn ein Modell geroutet ist und ausgefallen ist. Sonst
-            behauptete die Karte eine Deutung, die nicht stattgefunden hat. */}
+        {/* If the suggestion came from rules instead of the model, it says
+            so here — including when a model is routed but failed. Otherwise
+            the card would claim an interpretation that never happened. */}
         {suggestion.heuristic === true ? (
           <p className="sb-suggest-reason">{t('project.suggest.heuristic')}</p>
         ) : null}
@@ -54,9 +54,9 @@ export function SuggestionCard({
           <Icon name="info" size={13} />
           {t('project.suggest.notice')}
         </p>
-        {/* Sekundär, obwohl es hier zu entscheiden gibt: das eine Teal des
-            Screens gehört „Neues Projekt" im Kopf. Der Rahmen der Karte führt
-            das Auge, nicht ein zweiter Akzent. */}
+        {/* Secondary, even though there's a decision to make here: the
+            screen's one teal belongs to "New project" in the header. The
+            card's border guides the eye, not a second accent. */}
         <div className="sb-suggest-actions">
           {changesStatus ? (
             <Button

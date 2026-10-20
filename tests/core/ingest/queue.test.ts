@@ -2,9 +2,20 @@
    `awaiting-llm`, wenn die Rohquelle liegt, aber kein Modell verdichten kann. */
 
 import { describe, expect, it, vi } from 'vitest';
-import { IngestQueue, type IngestOutcome, type SourceIngestor } from '@core/ingest';
+import {
+  createFileIngestor,
+  IngestError,
+  IngestQueue,
+  type CondenseInput,
+  type IngestContext,
+  type IngestOutcome,
+  type SourceIngestor,
+} from '@core/ingest';
+import { WikiError } from '@core/wiki';
 import type { IngestJob } from '@shared/types';
-import { memoryStore } from './fakes';
+import { fakeFileSystem, memoryStore } from './fakes';
+import { NOW_MS } from '../../helpers/time';
+import { makeImageOnlyPdf, makeTextPdf } from '../../fixtures/pdf/make-pdf';
 
 /** Ein Ingestor, der nichts holt, sondern nur meldet, dass er lief. */
 function fakeIngestor(
@@ -233,6 +244,95 @@ describe('IngestQueue', () => {
     expect(runs).toBe(1);
   });
 
+  /** Ein Protokoll, wie es unter der Rohquelle liegt — noch unverdichtet. */
+  async function writeLog(store: ReturnType<typeof memoryStore>, path: string): Promise<void> {
+    await store.writeText(
+      `${path}/.ingest.json`,
+      JSON.stringify({
+        kind: 'text',
+        origin: 'paste',
+        ingestedAt: '2026-08-10T14:32:00+02:00',
+        title: 'quelle',
+        sourcePage: null,
+        modules: [],
+        provenance: { content: 'paste' },
+      }),
+    );
+  }
+
+  const RAW_PATH = 'raw/files/2026-08-10-quelle';
+
+  const existingOutcome: IngestOutcome = {
+    kind: 'text',
+    rawPath: RAW_PATH,
+    title: 'quelle',
+    text: 'Inhalt der Quelle.',
+    origin: 'paste',
+    provenance: { content: 'paste' },
+    notes: [],
+  };
+
+  it('verdichtet dieselbe Rohquelle nicht zweimal parallel', async () => {
+    const gate = deferred();
+    let runs = 0;
+    const store = memoryStore();
+    await writeLog(store, RAW_PATH);
+    const queue = new IngestQueue({
+      store,
+      ingestors: [fakeIngestor()],
+      condense: async () => {
+        runs += 1;
+        await gate.promise;
+        return { pages: ['modules/m/wiki/sources/s-1.md'], sourcePage: 's-1', modules: ['m'] };
+      },
+      llmAvailable: () => true,
+      concurrency: () => 2,
+    });
+
+    const first = queue.addExisting({ kind: 'text', input: 'paste', module: 'm' }, existingOutcome);
+    const second = queue.addExisting(
+      { kind: 'text', input: 'paste', module: 'm' },
+      existingOutcome,
+    );
+
+    await vi.waitFor(() => expect(queue.job(second.id)?.stage).toBe('duplicate'));
+    /* Der zweite Auftrag ist kein Fehler — er sagt, dass es nichts zu tun gibt. */
+    expect(queue.job(second.id)?.message).toBe('already-condensed');
+    expect(queue.job(second.id)?.duplicateOf).toBe(RAW_PATH);
+
+    gate.resolve();
+    await vi.waitFor(() => expect(queue.job(first.id)?.stage).toBe('done'));
+    /* Ein Lauf, eine Source-Seite — obwohl zwei Auftraege in der Schlange standen. */
+    expect(runs).toBe(1);
+  });
+
+  it('verdichtet eine schon verdichtete Rohquelle beim Wiederholen nicht erneut', async () => {
+    let runs = 0;
+    const store = memoryStore();
+    await writeLog(store, RAW_PATH);
+    const queue = new IngestQueue({
+      store,
+      ingestors: [fakeIngestor()],
+      condense: async () => {
+        runs += 1;
+        return { pages: ['modules/m/wiki/sources/s-1.md'], sourcePage: 's-1', modules: ['m'] };
+      },
+      llmAvailable: () => true,
+    });
+
+    const job = queue.addExisting({ kind: 'text', input: 'paste', module: 'm' }, existingOutcome);
+    await vi.waitFor(() => expect(queue.job(job.id)?.stage).toBe('done'));
+
+    queue.retry(job.id);
+
+    /* Das Protokoll trägt die Source-Seite — ein zweiter Lauf legte eine zweite an. */
+    await vi.waitFor(() => expect(queue.job(job.id)?.stage).toBe('duplicate'));
+    expect(runs).toBe(1);
+  });
+
+  /* 051, D1: eine leere Quelle endet als `no-content` — der Hinweis der Quelle
+     bleibt der Grund, nur die Stufe ist nicht mehr `awaiting-llm`. Ein ungelesenes
+     PDF wartet auf kein Modell; es enthaelt einfach nichts. */
   it('meldet ohne Text den Hinweis der Quelle statt einer Verdichtung', async () => {
     const queue = new IngestQueue({
       store: memoryStore(),
@@ -258,8 +358,196 @@ describe('IngestQueue', () => {
     });
 
     const job = queue.add({ kind: 'file', input: 'C:/handbuch.pdf' });
-    await vi.waitFor(() => expect(queue.job(job.id)?.stage).toBe('awaiting-llm'));
+    await vi.waitFor(() => expect(queue.job(job.id)?.stage).toBe('no-content'));
     expect(queue.job(job.id)?.message).toBe('pdf-not-read');
+  });
+
+  /** Ein Video, dessen Metadaten liegen, dessen Transcript aber fehlt. */
+  function transcriptlessIngestor(): SourceIngestor {
+    return {
+      kind: 'youtube',
+      canHandle: () => true,
+      async ingest(): Promise<IngestOutcome> {
+        return {
+          kind: 'youtube',
+          rawPath: 'raw/youtube/xOFkpf9KgKg',
+          title: 'Ein Video ohne Untertitel',
+          text: '',
+          origin: 'https://www.youtube.com/watch?v=xOFkpf9KgKg',
+          provenance: { metadata: 'yt-dlp' },
+          notes: [{ code: 'partial-metadata' }, { code: 'no-transcript' }],
+        };
+      },
+    };
+  }
+
+  it('endet eine Quelle ohne Text als no-content, nicht als awaiting-llm', async () => {
+    let condensed = 0;
+    const queue = new IngestQueue({
+      store: memoryStore(),
+      ingestors: [transcriptlessIngestor()],
+      condense: async () => {
+        condensed += 1;
+        return { pages: ['modules/m/wiki/sources/s-1.md'], sourcePage: 's-1', modules: ['m'] };
+      },
+      llmAvailable: () => true,
+    });
+
+    const job = queue.add({
+      kind: 'youtube',
+      input: 'https://www.youtube.com/watch?v=xOFkpf9KgKg',
+    });
+    await vi.waitFor(() => expect(queue.job(job.id)?.stage).toBe('no-content'));
+
+    const done = queue.job(job.id);
+    /* Der Grund ist maschinenlesbar und benennt das fehlende Transcript — nicht
+       den beilaeufigen Hinweis auf die Metadaten. */
+    expect(done?.message).toBe('no-transcript');
+    expect(done?.stage).not.toBe('awaiting-llm');
+    expect(done?.error).toBeNull();
+    expect(done?.progress).toBe(1);
+    expect(done?.finishedAt).not.toBeNull();
+    /* Die Rohquelle liegt, aber kein Modell hat einen Platzhalter verdichtet. */
+    expect(done?.rawPath).toBe('raw/youtube/xOFkpf9KgKg');
+    expect(done?.touchedPages).toEqual([]);
+    expect(condensed).toBe(0);
+  });
+
+  it('gewinnt no-content gegen ein fehlendes Modell', async () => {
+    const queue = new IngestQueue({
+      store: memoryStore(),
+      ingestors: [transcriptlessIngestor()],
+      condense: async () => ({ pages: ['modules/m/wiki/sources/s-1.md'] }),
+      llmAvailable: () => false,
+    });
+
+    const job = queue.add({
+      kind: 'youtube',
+      input: 'https://www.youtube.com/watch?v=xOFkpf9KgKg',
+    });
+    await vi.waitFor(() => expect(queue.job(job.id)?.stage).toBe('no-content'));
+
+    /* Ein Modell wuerde diese Quelle auch nicht vollstaendiger machen: die
+       Warteansage waere unehrlich. */
+    expect(queue.job(job.id)?.stage).not.toBe('awaiting-llm');
+    expect(queue.job(job.id)?.message).toBe('no-transcript');
+  });
+
+  it('nennt ohne jeden Hinweis den allgemeinen Grund no-content', async () => {
+    const queue = new IngestQueue({
+      store: memoryStore(),
+      ingestors: [fakeIngestor({ text: '   ' })],
+      condense: async () => ({ pages: [] }),
+      llmAvailable: () => true,
+    });
+
+    const job = queue.add({ kind: 'text', input: 'nur Leerzeichen' });
+    await vi.waitFor(() => expect(queue.job(job.id)?.stage).toBe('no-content'));
+    expect(queue.job(job.id)?.message).toBe('no-content');
+  });
+
+  /* 064, D3: the URL case joins 051's terminal shape — no second mechanism. A
+     fetched page that converts to almost nothing arrives here with `text: ''` and
+     the note `no-content`, so the same branch names the reason on `job.message`. */
+  function hollowPageIngestor(notes: IngestOutcome['notes']): SourceIngestor {
+    return {
+      kind: 'url',
+      canHandle: () => true,
+      async ingest(): Promise<IngestOutcome> {
+        return {
+          kind: 'url',
+          rawPath: 'raw/web/2026-09-03-consent-wall.md',
+          title: 'Zustimmung erforderlich',
+          // Die Rohdatei liegt trotzdem; nur der zu verdichtende Text ist leer.
+          text: '',
+          origin: 'https://example.com/article',
+          provenance: { content: 'fetch' },
+          notes: [...notes],
+        };
+      },
+    };
+  }
+
+  it('an empty extraction ends with the reason no-content, not as no model configured', async () => {
+    let condensed = 0;
+    const queue = new IngestQueue({
+      store: memoryStore(),
+      ingestors: [hollowPageIngestor([{ code: 'no-content' }])],
+      condense: async () => {
+        condensed += 1;
+        return { pages: ['modules/m/wiki/sources/s-1.md'], sourcePage: 's-1', modules: ['m'] };
+      },
+      llmAvailable: () => true,
+    });
+
+    const job = queue.add({ kind: 'url', input: 'https://example.com/article' });
+    await vi.waitFor(() => expect(queue.job(job.id)?.stage).toBe('no-content'));
+
+    const done = queue.job(job.id);
+    /* Der Grund steht am Auftrag — genau das unterscheidet die hohle Seite von
+       „kein Modell eingerichtet", wo `message` null bleibt. */
+    expect(done?.message).toBe('no-content');
+    expect(done?.stage).not.toBe('awaiting-llm');
+    expect(done?.error).toBeNull();
+    expect(done?.progress).toBe(1);
+    expect(done?.finishedAt).not.toBeNull();
+    expect(done?.rawPath).toBe('raw/web/2026-09-03-consent-wall.md');
+    /* Keine Wiki-Seite: eine hohle Seite wird nicht verdichtet und damit auch
+       nicht zitierbar. */
+    expect(condensed).toBe(0);
+    expect(done?.touchedPages).toEqual([]);
+  });
+
+  it('names the emptiness, not the truncation, when a cut page yields nothing', async () => {
+    const queue = new IngestQueue({
+      store: memoryStore(),
+      // Eine 5-MB-Seite wird abgeschnitten und liefert danach trotzdem nichts.
+      ingestors: [hollowPageIngestor([{ code: 'content-truncated' }, { code: 'no-content' }])],
+      condense: async () => ({ pages: [] }),
+      llmAvailable: () => true,
+    });
+
+    const job = queue.add({ kind: 'url', input: 'https://example.com/shell' });
+    await vi.waitFor(() => expect(queue.job(job.id)?.stage).toBe('no-content'));
+
+    /* „Abgeschnitten" erklaert die Leere nicht: eine abgeschnittene Seite ist
+       normalerweise verdichtbar. Der Grund ist, dass nichts herauskam. */
+    expect(queue.job(job.id)?.message).toBe('no-content');
+  });
+
+  it('keeps a substantial page without a model at awaiting-llm with no reason', async () => {
+    const queue = new IngestQueue({
+      store: memoryStore(),
+      ingestors: [fakeIngestor()],
+      llmAvailable: () => false,
+    });
+
+    const job = queue.add({ kind: 'text', input: 'genug Inhalt' });
+    await vi.waitFor(() => expect(queue.job(job.id)?.stage).toBe('awaiting-llm'));
+
+    /* Kein Grund am Auftrag heisst genau eines: es fehlt das Modell, nicht der
+       Inhalt. Die Oberflaeche darf die beiden Faelle nie verwechseln. */
+    expect(queue.job(job.id)?.message).toBeNull();
+    expect(queue.job(job.id)?.stage).not.toBe('no-content');
+  });
+
+  it('keeps an unreachable host in error, not in no-content', async () => {
+    const queue = new IngestQueue({
+      store: memoryStore(),
+      ingestors: [
+        fakeIngestor({ fail: new IngestError('io', 'Die Adresse ist nicht erreichbar.') }),
+      ],
+      condense: async () => ({ pages: [] }),
+      llmAvailable: () => true,
+    });
+
+    const job = queue.add({ kind: 'url', input: 'https://nirgendwo.invalid/x' });
+    await vi.waitFor(() => expect(queue.job(job.id)?.stage).toBe('error'));
+
+    const done = queue.job(job.id);
+    expect(done?.error).toBe('io');
+    expect(done?.message).toBe('Die Adresse ist nicht erreichbar.');
+    expect(done?.stage).not.toBe('no-content');
   });
 
   it('raeumt abgeschlossene Auftraege auf Wunsch weg', async () => {
@@ -268,6 +556,128 @@ describe('IngestQueue', () => {
     await vi.waitFor(() => expect(queue.job(job.id)?.stage).toBe('awaiting-llm'));
     queue.clearFinished();
     expect(queue.jobs()).toEqual([]);
+  });
+
+  /* D8 (050): jeder Fehler mit `code` traegt ihn weiter — nicht nur `IngestError`.
+     `WikiError` steht hier stellvertretend fuer 051/064's kuenftige Fehlertypen;
+     `describeFailure` liest `code` strukturell, ohne diese Klasse zu kennen. */
+  it('scheitert eine Verdichtung mit WikiError conflict, traegt der Auftrag den Code und die Nachricht', async () => {
+    const queue = new IngestQueue({
+      store: memoryStore(),
+      ingestors: [fakeIngestor()],
+      condense: async () => {
+        throw new WikiError('conflict', 'Die Seite wurde zwischenzeitlich geaendert.');
+      },
+      llmAvailable: () => true,
+    });
+
+    const job = queue.add({ kind: 'text', input: 'kollidiert' });
+    await vi.waitFor(() => expect(queue.job(job.id)?.stage).toBe('error'));
+
+    expect(queue.job(job.id)?.error).toBe('conflict');
+    expect(queue.job(job.id)?.message).toBe('Die Seite wurde zwischenzeitlich geaendert.');
+  });
+
+  /* D8 (050), Nachbesserung: ein roher `errno` — hier fingiert, wie ihn eine
+     ungewrappte `FsVaultStore`-Operation werfen wuerde (`ENOSPC`, `EACCES`, ...) —
+     ist kein Code, fuer den `error.code.*` einen Satz hat. Statt ihn ungeprueft
+     als Auftragscode zu tragen (und die Oberflaeche dann den rohen, unuebersetzten
+     Key rendern zu lassen), faellt er auf `unknown` zurueck — wie vor D8. */
+  it('scheitert eine Verdichtung mit einem rohen Betriebssystem-Fehlercode, faellt der Auftrag auf unknown zurueck', async () => {
+    const fsError = new Error('ENOSPC: no space left on device') as Error & { code: string };
+    fsError.code = 'ENOSPC';
+    const queue = new IngestQueue({
+      store: memoryStore(),
+      ingestors: [fakeIngestor()],
+      condense: async () => {
+        throw fsError;
+      },
+      llmAvailable: () => true,
+    });
+
+    const job = queue.add({ kind: 'text', input: 'plattenfehler' });
+    await vi.waitFor(() => expect(queue.job(job.id)?.stage).toBe('error'));
+
+    expect(queue.job(job.id)?.error).toBe('unknown');
+    expect(queue.job(job.id)?.message).toBe('ENOSPC: no space left on device');
+  });
+
+  it('bleibt ohne Modell bei awaiting-llm — der generalisierte Fehlerpfad greift nicht', async () => {
+    const queue = new IngestQueue({
+      store: memoryStore(),
+      ingestors: [fakeIngestor()],
+      condense: async () => ({ pages: ['modules/m/wiki/sources/s-1.md'] }),
+      llmAvailable: () => false,
+    });
+
+    const job = queue.add({ kind: 'text', input: 'ohne Modell' });
+    await vi.waitFor(() => expect(queue.job(job.id)?.stage).toBe('awaiting-llm'));
+
+    expect(queue.job(job.id)?.stage).not.toBe('error');
+    expect(queue.job(job.id)?.error).toBeNull();
+  });
+
+  /* D3 (060): der Datei-Ingestor liest PDFs jetzt wirklich — die Queue muss die
+     beiden neuen Ausgaenge (keine Textebene, verdichtbarer Text) genauso ehrlich
+     behandeln wie die schon bestehenden `no-content`/`awaiting-llm`-Faelle. */
+  function pdfContext(bytesByPath: Record<string, Uint8Array>): IngestContext {
+    const fs = fakeFileSystem();
+    for (const [path, bytes] of Object.entries(bytesByPath)) fs.put(path, bytes);
+    return { store: memoryStore(), fs, now: new Date(NOW_MS) };
+  }
+
+  it('a scanned PDF ends no-content with its own reason, not awaiting-llm', async () => {
+    const path = 'C:/quellen/Scan.pdf';
+    const ctx = pdfContext({ [path]: makeImageOnlyPdf() });
+    const queue = new IngestQueue({
+      store: ctx.store,
+      ingestors: [createFileIngestor()],
+      environment: () => ({ fs: ctx.fs }),
+      condense: async () => ({ pages: [] }),
+      llmAvailable: () => false,
+    });
+
+    const job = queue.add({ kind: 'file', input: path });
+    await vi.waitFor(() => expect(queue.job(job.id)?.stage).toBe('no-content'));
+    expect(queue.job(job.id)?.message).toBe('pdf-no-text-layer');
+  });
+
+  it('a text PDF is condensed like any text source', async () => {
+    const path = 'C:/quellen/Handbuch.pdf';
+    const ctx = pdfContext({ [path]: makeTextPdf(['Seite eins.', 'Seite zwei.']) });
+    const condense = vi.fn(async (_input: CondenseInput) => ({
+      pages: ['modules/m/wiki/sources/s-1.md'],
+    }));
+    const queue = new IngestQueue({
+      store: ctx.store,
+      ingestors: [createFileIngestor()],
+      environment: () => ({ fs: ctx.fs }),
+      condense,
+      llmAvailable: () => true,
+    });
+
+    const job = queue.add({ kind: 'file', input: path });
+    await vi.waitFor(() => expect(queue.job(job.id)?.stage).toBe('done'));
+    expect(condense).toHaveBeenCalledTimes(1);
+    const [call] = condense.mock.calls[0] ?? [];
+    expect(call?.outcome.text.length ?? 0).toBeGreaterThan(0);
+  });
+
+  it('an oversized PDF ends the job in error with code too-large', async () => {
+    const path = 'C:/quellen/Riesig.pdf';
+    const oversized = new TextEncoder().encode('%PDF-1.7 '.repeat(600_000));
+    const ctx = pdfContext({ [path]: oversized });
+    const queue = new IngestQueue({
+      store: ctx.store,
+      ingestors: [createFileIngestor()],
+      environment: () => ({ fs: ctx.fs }),
+      condense: async () => ({ pages: [] }),
+      llmAvailable: () => true,
+    });
+
+    const job = queue.add({ kind: 'file', input: path });
+    await vi.waitFor(() => expect(queue.job(job.id)?.stage).toBe('error'));
+    expect(queue.job(job.id)?.error).toBe('too-large');
   });
 
   it('meldet einen unbekannten Auftrag ehrlich', () => {

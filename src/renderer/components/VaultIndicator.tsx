@@ -1,5 +1,5 @@
-/* Vault-Status am Fuß der Rail: Name, Dokumentzahl, Index-Anzeige.
-   Klickbar — führt in die Vault-Einstellungen bzw. ins Onboarding. */
+/* Vault status at the foot of the rail: name, document count, index indicator.
+   Clickable — leads to the vault settings or to onboarding. */
 
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -14,6 +14,7 @@ function indexLabel(
   status: VaultStatus,
 ): string {
   if (status.indexing) return t('vault.indexing');
+  if (status.indexRefreshFailedAt !== null) return t('vault.indexFailed');
   if (status.indexedAt) return t('vault.indexed');
   return t('vault.noIndex');
 }
@@ -36,9 +37,9 @@ export function VaultIndicator() {
       <span className="sb-vault-meta">
         {open && status ? (
           <>
-            {/* Der Punkt ist der Index-Indikator; seine Bedeutung steht im Label. */}
+            {/* The dot is the index indicator; its meaning is in the label. */}
             <span
-              className={`sb-dot ${status.indexing ? 'sb-dot--busy' : status.indexedAt ? 'sb-dot--ok' : ''}`}
+              className={`sb-dot ${status.indexing ? 'sb-dot--busy' : status.indexRefreshFailedAt !== null ? 'sb-dot--warn' : status.indexedAt ? 'sb-dot--ok' : ''}`}
               role="img"
               aria-label={indexLabel(t, status)}
             />

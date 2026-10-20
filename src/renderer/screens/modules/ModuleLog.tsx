@@ -1,9 +1,9 @@
-/* Die Chronik eines Moduls, lesbar aufbereitet: Datum, Art, Titel, berührte
-   Seiten als Verweise.
+/* A module's chronicle, rendered readably: date, kind, title, touched pages
+   as references.
 
-   `wiki/log.md` ist append-only und wird hier nur gelesen. Was die Anzeige nicht
-   versteht, bleibt in der Datei — deshalb steht unter der Liste der Weg, sie im
-   Editor zu öffnen. */
+   `wiki/log.md` is append-only and only read here. What the display doesn't
+   understand stays in the file — that's why the way to open it in the editor
+   is shown below the list. */
 
 import type { VaultDoc } from '@shared/types';
 import { Button } from '../../atoms/Button';
@@ -11,18 +11,18 @@ import { ErrorState } from '../../components/ErrorState';
 import { Skeleton } from '../../components/Skeleton';
 import { useT } from '../../i18n';
 import { api } from '../../lib/api';
+import { WikiRef } from '../../components/WikiRef';
 import { fieldLabelKey, isRefField, parseLog, partsOf, refsOf } from './log';
-import { WikiRef } from './WikiRef';
 
 export interface ModuleLogProps {
-  /** Die Chronik als Dokument; `null`, wenn es sie nicht gibt. */
+  /** The chronicle as a document; `null` if it doesn't exist. */
   doc: VaultDoc | null | undefined;
   pending: boolean;
   error: unknown;
   onRetry: () => void;
-  /** Ein Verweis wurde geklickt. */
+  /** A reference was clicked. */
   onOpenTarget: (target: string) => void;
-  /** Gibt es diese Seite? */
+  /** Does this page exist? */
   exists: (target: string) => boolean;
 }
 

@@ -1,46 +1,47 @@
-/* Markdown zu React — die **eine** Fassung im Renderer.
+/* Markdown to React — the **one** version in the renderer.
 
-   Zwei Screens zeigen Markdown, und sie zeigten es vorher auf zwei Wegen: die
-   Antwort im Fragen-Screen über `innerHTML` plus Sanitizer, die Wiki-Seite über
-   den Lexer. Geblieben ist der Lexer:
+   Two screens display markdown, and they used to do it two different ways:
+   the answer in the ask screen via `innerHTML` plus a sanitizer, the wiki
+   page via the lexer. The lexer is what remained:
 
-   - **Kein `innerHTML`.** Geparst wird mit `marked` (schon im Bestand), gerendert
-     wird zu React-Elementen. Damit gibt es keine Stelle, an der Fremdtext — aus
-     einer Vault-Datei oder aus einem Sprachmodell — zu Markup werden kann, und
-     keinen Bedarf an einem Sanitizer.
-   - **Verweise entscheidet der Aufrufer.** `[[ziel]]` wird im Wiki ein Knopf in
-     dieselbe Ansicht, in einer Antwort eine Belegmarke; ein roher Vault-Pfad
-     (`modules/x/wiki/y.md:12`) wird dort klickbar, hier nicht. Beides über
-     `MarkdownRefs` — der Renderer selbst weiß von Belegen nichts.
+   - **No `innerHTML`.** Parsing goes through `marked` (already in the
+     dependency tree), rendering produces React elements. That way there is no
+     place where foreign text — from a vault file or from a language model —
+     can turn into markup, and no need for a sanitizer.
+   - **The caller decides on references.** `[[target]]` becomes a button into
+     the same view in the wiki, a citation marker in an answer; a raw vault
+     path (`modules/x/wiki/y.md:12`) is clickable there, not here. Both go
+     through `MarkdownRefs` — the renderer itself knows nothing about
+     citations.
 
-   Was `marked` nicht kennt (rohes HTML, Sonderformen), erscheint als Text.
-   Verloren geht nichts: die Datei bleibt im Original lesbar. */
+   Whatever `marked` doesn't recognize (raw HTML, unusual forms) appears as
+   text. Nothing is lost: the file remains readable in its original form. */
 
 import type { ReactNode } from 'react';
 import { lexer } from 'marked';
 import type { Token, Tokens } from 'marked';
 
 /**
- * Ein Verweis im Fließtext: `[[ziel|text]]` oder ein roher Vault-Pfad mit
- * optionaler Zeilennummer. Gibt eine Funktion `null` zurück, bleibt die Stelle
- * Text — ein Link ins Nichts ist schlimmer als keiner.
+ * A reference in running text: `[[target|text]]` or a raw vault path with an
+ * optional line number. If a function returns `null`, the spot stays as
+ * text — a link to nowhere is worse than no link.
  */
 export interface MarkdownRefs {
   wikilink(target: string, label: string, key: string): ReactNode | null;
   path?(path: string, line: string | null, key: string): ReactNode | null;
 }
 
-/** Überschriften beginnen bei h2 — h1 ist der Titel des Screens. */
+/** Headings start at h2 — h1 is the title of the screen. */
 const HEADING_OFFSET = 1;
 
 /**
- * `[[ziel|text]]` oder ein Vault-Pfad (`a/b.md`, optional `:12`). Der Pfad nicht
- * nach `(` oder `[`, damit ein Markdown-Link nicht zerschnitten wird.
+ * `[[target|text]]` or a vault path (`a/b.md`, optionally `:12`). The path
+ * must not follow `(` or `[`, so a markdown link doesn't get cut apart.
  */
 const REF =
   /\[\[([^\]|\n]+?)(?:\|([^\]\n]*))?\]\]|(?<![\w/[(])((?:[\w.@-]+\/)+[\w.@-]+\.md)(?::(\d+))?/g;
 
-/** Fließtext mit Verweisen. Alles, was kein Verweis ist, bleibt Text. */
+/** Running text with references. Anything that isn't a reference stays text. */
 function withRefs(refs: MarkdownRefs, text: string, key: string): ReactNode[] {
   const parts: ReactNode[] = [];
   let last = 0;
@@ -80,7 +81,7 @@ function inline(
       return <del key={own}>{inline(refs, (token as Tokens.Del).tokens, own)}</del>;
     }
     if (token.type === 'codespan') {
-      /* In `code` bleibt Text Text — auch ein `[[ziel]]`. */
+      /* Inside `code`, text stays text — even a `[[target]]`. */
       return (
         <code key={own} className="sb-md-code">
           {(token as Tokens.Codespan).text}
@@ -90,8 +91,9 @@ function inline(
     if (token.type === 'br') return <br key={own} />;
     if (token.type === 'link') {
       const anchor = token as Tokens.Link;
-      /* Ziele im Vault sind relative Pfade — die gehören nicht in den Browser.
-         Sie stehen als Text da; geöffnet wird über die Seitenliste. */
+      /* Targets inside the vault are relative paths — those don't belong in
+         the browser. They appear as plain text; opening happens via the page
+         list. */
       const external = /^[a-z][a-z0-9+.-]*:/i.test(anchor.href);
       if (!external) return <span key={own}>{inline(refs, anchor.tokens, own)}</span>;
       return (
@@ -115,19 +117,25 @@ function listItems(
   refs: MarkdownRefs,
   items: readonly Tokens.ListItem[],
   key: string,
+  headingOffset: number,
 ): ReactNode[] {
   return items.map((item, at) => (
     <li key={`${key}-${at}`} className={item.task ? 'sb-md-task' : undefined}>
       {item.task ? (
         <span className="sb-md-box sb-mono">{item.checked === true ? '[x]' : '[ ]'}</span>
       ) : null}
-      {blocks(refs, item.tokens, `${key}-${at}`)}
+      {blocks(refs, item.tokens, `${key}-${at}`, headingOffset)}
     </li>
   ));
 }
 
-function heading(refs: MarkdownRefs, token: Tokens.Heading, key: string): ReactNode {
-  const level = Math.min(6, Math.max(2, token.depth + HEADING_OFFSET));
+function heading(
+  refs: MarkdownRefs,
+  token: Tokens.Heading,
+  key: string,
+  offset: number,
+): ReactNode {
+  const level = Math.min(6, Math.max(2, token.depth + offset));
   const Tag = `h${level}` as 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
   return (
     <Tag key={key} className="sb-md-heading">
@@ -136,7 +144,7 @@ function heading(refs: MarkdownRefs, token: Tokens.Heading, key: string): ReactN
   );
 }
 
-/** Tabellen kommen aus Metadaten-Blöcken der Rohquellen — schlicht, aber lesbar. */
+/** Tables come from metadata blocks of the raw sources — plain, but readable. */
 function table(refs: MarkdownRefs, token: Tokens.Table, key: string): ReactNode {
   return (
     <table key={key} className="gs-table sb-md-table">
@@ -162,13 +170,18 @@ function table(refs: MarkdownRefs, token: Tokens.Table, key: string): ReactNode 
   );
 }
 
-function blocks(refs: MarkdownRefs, tokens: readonly Token[], key: string): ReactNode[] {
+function blocks(
+  refs: MarkdownRefs,
+  tokens: readonly Token[],
+  key: string,
+  headingOffset: number,
+): ReactNode[] {
   const out: ReactNode[] = [];
   tokens.forEach((token, at) => {
     const own = `${key}-${at}`;
     if (token.type === 'space' || token.type === 'def') return;
     if (token.type === 'heading') {
-      out.push(heading(refs, token as Tokens.Heading, own));
+      out.push(heading(refs, token as Tokens.Heading, own, headingOffset));
       return;
     }
     if (token.type === 'hr') {
@@ -186,14 +199,14 @@ function blocks(refs: MarkdownRefs, tokens: readonly Token[], key: string): Reac
     if (token.type === 'blockquote') {
       out.push(
         <blockquote key={own} className="sb-md-quote">
-          {blocks(refs, (token as Tokens.Blockquote).tokens, own)}
+          {blocks(refs, (token as Tokens.Blockquote).tokens, own, headingOffset)}
         </blockquote>,
       );
       return;
     }
     if (token.type === 'list') {
       const list = token as Tokens.List;
-      const items = listItems(refs, list.items, own);
+      const items = listItems(refs, list.items, own, headingOffset);
       out.push(
         list.ordered ? (
           <ol key={own} className="sb-md-list">
@@ -222,7 +235,7 @@ function blocks(refs: MarkdownRefs, tokens: readonly Token[], key: string): Reac
       );
       return;
     }
-    /* Unbekannt (rohes HTML, Sonderformen): als Text, nie als Markup. */
+    /* Unknown (raw HTML, unusual forms): as text, never as markup. */
     out.push(
       <p key={own} className="sb-md-p sb-md-raw">
         {(token as Tokens.Generic).raw}
@@ -232,21 +245,33 @@ function blocks(refs: MarkdownRefs, tokens: readonly Token[], key: string): Reac
   return out;
 }
 
-/** Markdown als React-Knoten. Leerer Text ergibt eine leere Liste. */
-export function renderMarkdown(text: string, refs: MarkdownRefs): ReactNode[] {
+/**
+ * Markdown as React nodes. Empty text yields an empty list.
+ *
+ * `headingOffset` defaults to the screen-level assumption ("h1 is the
+ * screen's own title, so markdown headings start at h2"). A caller that
+ * nests this inside something that already carries its own heading — a
+ * `Panel`'s `<h2>` title, for instance — passes a larger offset so the
+ * content's headings continue the outline instead of jumping past it.
+ */
+export function renderMarkdown(
+  text: string,
+  refs: MarkdownRefs,
+  headingOffset: number = HEADING_OFFSET,
+): ReactNode[] {
   const source = (text ?? '').trim();
   if (source.length === 0) return [];
-  return blocks(refs, lexer(source), 'b');
+  return blocks(refs, lexer(source), 'b', headingOffset);
 }
 
 /**
- * Vault-Syntax aus einem kurzen Ausschnitt lesbar machen — für Vorschauen
- * (Zitate im Fragen-Screen, Listenzeilen), die keine Struktur zeigen, nur
- * Fließtext. Kein Rendering, nur Text: `[[ziel|text]]` wird zu `text` (sonst
- * `ziel`), führende Marker (`#`, `-`, `>`, `1.`) fallen weg, eine angehängte
- * `(source: …)` verschwindet. Derselbe `REF`, mit dem der Renderer oben
- * Wikilinks erkennt — ein zweites Muster hier zu pflegen wäre der Fehler, der
- * beim nächsten Syntaxwechsel eines vergisst.
+ * Make vault syntax readable from a short excerpt — for previews (citations
+ * in the ask screen, list rows) that show no structure, just running text.
+ * No rendering, text only: `[[target|text]]` becomes `text` (otherwise
+ * `target`), leading markers (`#`, `-`, `>`, `1.`) are dropped, a trailing
+ * `(source: …)` disappears. The same `REF` the renderer above uses to
+ * recognize wikilinks — maintaining a second pattern here would be the
+ * mistake of forgetting to update one of them on the next syntax change.
  */
 export function plainExcerpt(text: string): string {
   const withoutSource = (text ?? '').replace(/\s*\(source:[^)]*\)\s*$/i, '');

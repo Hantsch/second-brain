@@ -27,6 +27,7 @@ import { countWords } from './cues';
 import type { Harvest } from './pipeline';
 import { renderProseTranscript, renderTimestampedTranscript } from './transcript';
 import { watchUrl } from './video-url';
+import { sourceFingerprint } from '../fingerprint';
 
 export const YOUTUBE_FILES = {
   metadataMd: 'metadata.md',
@@ -43,6 +44,20 @@ export interface TranscriptInfo {
   provider: string | null;
   wordCount: number | null;
   cueCount: number | null;
+}
+
+/**
+ * Ob `.ingest.json` ein Transcript als verfuegbar vermerkt hat. `log.transcript`
+ * kommt aus JSON (typisiert als `unknown`), darum die vorsichtige Pruefung statt
+ * einer Annahme ueber die Form.
+ */
+export function isTranscriptAvailable(transcript: unknown): boolean {
+  return (
+    typeof transcript === 'object' &&
+    transcript !== null &&
+    'available' in transcript &&
+    (transcript as Record<'available', unknown>).available === true
+  );
 }
 
 export interface WriteYoutubeOptions {
@@ -234,6 +249,10 @@ export async function writeYoutubeSource(
       metadata: harvest.providers[0] ?? 'unbekannt',
       ...(transcript.provider === null ? {} : { transcript: transcript.provider }),
     },
+    fingerprint: sourceFingerprint(
+      'youtube',
+      harvest.metadata.url ?? watchUrl(harvest.metadata.videoId ?? ''),
+    ),
     notes,
     providers: harvest.providers,
     transcript,
@@ -241,5 +260,5 @@ export async function writeYoutubeSource(
   });
   files.push('.ingest.json');
 
-  return { dir, files, transcript, text: prose, title };
+  return { dir, files, transcript, text: cues.length > 0 ? prose : '', title };
 }

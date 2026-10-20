@@ -8,20 +8,26 @@
  * (`classify`) legt spaeter denselben `FilingProposal` vor; ausgefuehrt wird er
  * dann durch genau diese Funktion, damit es nur einen Schreibpfad gibt.
  *
- * Format: docs/VAULT-FORMAT.md — angehaengte Dumps landen unter „Notizen", jeder
- * mit seinem Datum als Unterueberschrift. Der Dump selbst wandert danach in den
- * Papierkorb; die Marke von dort ist der Rueckweg.
+ * Format: docs/VAULT-FORMAT.md — angehaengte Dumps landen im Notizen-Abschnitt,
+ * jeder mit seinem Datum als Unterueberschrift. Wie der Abschnitt heisst,
+ * entscheidet die Zieldatei, die hier gerade gelesen wurde, und erst danach die
+ * Dokumentsprache (`resolveSection` in `sections.ts`). Der Dump selbst wandert
+ * danach in den Papierkorb; die Marke von dort ist der Rueckweg.
  */
 
-import type { FilingProposal, FilingResult, VaultDoc, WriteResult } from '@shared/types';
+import type {
+  DocLanguage,
+  FilingProposal,
+  FilingResult,
+  VaultDoc,
+  WriteResult,
+} from '@shared/types';
 import { isoDay } from '@core/vault/paths';
 import type { DateLike } from '@core/vault/paths';
+import { resolveSection } from './sections';
 
 /** Ziele, die ohne Modell und ohne neue Datei auskommen. */
 const APPENDABLE = new Set(['project', 'area', 'journal']);
-
-/** Abschnitt, unter dem ein eingeordneter Dump landet, wenn keiner genannt ist. */
-const DEFAULT_SECTION = 'Notizen';
 
 /** Was das Einordnen am Store braucht — bewusst schmal. */
 export interface FilingStore {
@@ -71,6 +77,12 @@ export interface FilingOutcome {
 export interface FilingOptions {
   /** Das „jetzt" fuer die Unterueberschrift. Tests geben eine feste Zeit. */
   now?: DateLike;
+  /**
+   * Sprache, in der ein **fehlender** Abschnitt angelegt wird. Hat die Zieldatei
+   * schon einen, gewinnt ihre Ueberschrift — die Sprache entscheidet nur, wo die
+   * Datei nichts zu sagen hat.
+   */
+  docLanguage?: DocLanguage;
 }
 
 /** Der Block, wie er in der Zieldatei steht: Datum als Unterueberschrift, dann der Text. */
@@ -104,7 +116,12 @@ export async function applyFiling(
   if (target === null) throw new FilingError('not-found', `Zieldatei fehlt: ${action.path}`);
 
   const block = filingBlock(action.content, options.now);
-  await store.append(action.path, action.section ?? DEFAULT_SECTION, block, {
+  /* Der Abschnitt wird hier neu bestimmt, nicht aus dem Vorschlag uebernommen:
+     dessen Ueberschrift stammt aus dem Index und kann aelter sein als die Datei,
+     die gerade gelesen wurde. Ein „Notes" gegen ein bestehendes „## Notizen"
+     waere ein zweiter Abschnitt fuer dieselbe Sache. */
+  const section = resolveSection(target.body, action, 'notes', options.docLanguage);
+  await store.append(action.path, section, block, {
     expectedHash: target.hash,
   });
 

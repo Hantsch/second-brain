@@ -4,6 +4,7 @@
 
 import { join } from 'node:path';
 import { CLAUDE_DIR } from './claude.mjs';
+import { CODEX_DIR } from './codex.mjs';
 
 const STRUCTURE_DIRS = [
   'inbox',
@@ -25,7 +26,7 @@ const STRUCTURE_DIRS = [
 ];
 
 /** Startanordnung des Dashboards, gleiche Reihenfolge wie die App-Defaults
-    (`DEFAULT_DASHBOARD_TILES` in src/shared/types/overview.ts) — samt der acht
+    (`DEFAULT_DASHBOARD_TILES` in src/shared/types/overview.ts) — samt der neun
     Module, die ausgeblendet starten. */
 const DASHBOARD_TILES = [
   { id: 'deadlines', size: 'md' },
@@ -33,6 +34,7 @@ const DASHBOARD_TILES = [
   { id: 'recent-work', size: 'xl' },
   { id: 'todos-work', size: 'md' },
   { id: 'gardener', size: 'sm' },
+  { id: 'upcoming-mentions', size: 'sm' },
   { id: 'todos-private', size: 'md', hidden: true },
   { id: 'active-projects', size: 'xl', hidden: true },
   { id: 'inbox', size: 'sm', hidden: true },
@@ -41,17 +43,20 @@ const DASHBOARD_TILES = [
   { id: 'claude-sessions', size: 'md', hidden: true },
   { id: 'quick-capture', size: 'md', hidden: true },
   { id: 'ask', size: 'md', hidden: true },
+  { id: 'loose-ends', size: 'sm', hidden: true },
 ];
 
 export const VAULT_NAME = 'Demo-Vault';
 
 /**
- * Die Verlaufsablage des Demo-Vaults, absolut. `claudeProjectsDir` nimmt nur
- * absolute Pfade — und ohne diesen Eintrag läse der Demo-Lauf das echte
- * `~/.claude/projects` (siehe Kopf von scripts/seed/claude.mjs).
+ * Die Verlaufsablage eines CLI-Verlaufs im Demo-Vault, absolut. Sowohl
+ * `claudeProjectsDir` als auch `codexSessionsDir` nehmen nur absolute Pfade —
+ * und ohne diesen Eintrag läse der Demo-Lauf den echten `~/.claude/projects`
+ * bzw. `~/.codex/sessions` (siehe Kopf von scripts/seed/claude.mjs und
+ * scripts/seed/codex.mjs).
  */
-function claudeDirOf(seeder) {
-  return join(seeder.root, CLAUDE_DIR).replace(/\\/g, '/');
+function absoluteDirOf(seeder, dir) {
+  return join(seeder.root, dir).replace(/\\/g, '/');
 }
 
 export function seedInternal(seeder, clock) {
@@ -79,7 +84,9 @@ export function seedInternal(seeder, clock) {
       deadlineHorizonDays: 14,
       waitingNudgeDays: 5,
       useClaudeSessions: true,
-      claudeProjectsDir: claudeDirOf(seeder),
+      claudeProjectsDir: absoluteDirOf(seeder, CLAUDE_DIR),
+      useCodexSessions: true,
+      codexSessionsDir: absoluteDirOf(seeder, CODEX_DIR),
       notifications: true,
     },
     journal: { mode: 'tips' },

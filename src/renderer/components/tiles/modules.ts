@@ -1,17 +1,17 @@
-/* Was ein Dashboard-Modul über sich weiß: Name, Zweck, Symbol.
+/* What a dashboard module knows about itself: name, purpose, icon.
 
-   Eine Tabelle, zwei Verwender — die Kachel nimmt den Namen als Titel, die
-   Auswahl nimmt Namen und Zweck. `Record<DashboardModuleId, …>` erzwingt, dass
-   ein neues Modul hier auftauchen muss; sonst übersetzt es niemand. */
+   One table, two consumers — the tile takes the name as its title, the
+   catalog takes name and purpose. `Record<DashboardModuleId, …>` forces a new
+   module to show up here; otherwise nothing translates it. */
 
 import type { DashboardModuleId } from '@shared/types';
 
 export interface ModuleMeta {
-  /** i18n-Key des Namens — zugleich der Titel der Kachel. */
+  /** i18n key of the name — also the tile's title. */
   nameKey: string;
-  /** i18n-Key des einen Satzes, der sagt, wofür das Modul gut ist. */
+  /** i18n key of the one sentence that says what the module is good for. */
   purposeKey: string;
-  /** Kebab-case-Name für das Icon-Atom. */
+  /** Kebab-case name for the icon atom. */
   icon: string;
 }
 
@@ -72,5 +72,15 @@ export const MODULE_META: Record<DashboardModuleId, ModuleMeta> = {
     nameKey: 'module.gardener.name',
     purposeKey: 'module.gardener.purpose',
     icon: 'sprout',
+  },
+  'loose-ends': {
+    nameKey: 'module.loose-ends.name',
+    purposeKey: 'module.loose-ends.purpose',
+    icon: 'link',
+  },
+  'upcoming-mentions': {
+    nameKey: 'module.upcoming-mentions.name',
+    purposeKey: 'module.upcoming-mentions.purpose',
+    icon: 'eye',
   },
 };

@@ -10,6 +10,7 @@ import {
   createUrlIngestor,
   freeRawPath,
   isoStamp,
+  loadExistingOutcome,
   logPathFor,
   patchIngestLog,
   readIngestLog,
@@ -88,6 +89,46 @@ describe('patchIngestLog', () => {
   it('liest ein kaputtes Protokoll als null', async () => {
     const store = memoryStore({ 'raw/files/x/.ingest.json': '{ kaputt' });
     expect(await readIngestLog(store, 'raw/files/x')).toBeNull();
+  });
+});
+
+describe('loadExistingOutcome fuer YouTube', () => {
+  it('liest leeren Text, wenn das Protokoll kein Transcript vermerkt', async () => {
+    const store = memoryStore();
+    const dir = 'raw/youtube/xOFkpf9KgKg';
+    await store.writeText(`${dir}/transcript.md`, '# Video\n\n_Kein Transcript verfuegbar._\n');
+    await writeIngestLog(store, dir, {
+      kind: 'youtube',
+      origin: 'https://www.youtube.com/watch?v=xOFkpf9KgKg',
+      ingestedAt: '2026-08-10T14:32:00+02:00',
+      title: 'Ein Video ohne Transcript',
+      sourcePage: null,
+      modules: [],
+      provenance: { metadata: 'youtubei.js' },
+      transcript: { available: false },
+    });
+
+    const outcome = await loadExistingOutcome(store, dir);
+    expect(outcome.text).toBe('');
+  });
+
+  it('liest das Transcript, wenn das Protokoll es als verfuegbar vermerkt', async () => {
+    const store = memoryStore();
+    const dir = 'raw/youtube/xOFkpf9KgKg';
+    await store.writeText(`${dir}/transcript.md`, '# Video\n\nEcht vorhandener Text.\n');
+    await writeIngestLog(store, dir, {
+      kind: 'youtube',
+      origin: 'https://www.youtube.com/watch?v=xOFkpf9KgKg',
+      ingestedAt: '2026-08-10T14:32:00+02:00',
+      title: 'Ein Video mit Transcript',
+      sourcePage: null,
+      modules: [],
+      provenance: { metadata: 'yt-dlp', transcript: 'yt-dlp' },
+      transcript: { available: true },
+    });
+
+    const outcome = await loadExistingOutcome(store, dir);
+    expect(outcome.text).toContain('Echt vorhandener Text.');
   });
 });
 

@@ -1,12 +1,13 @@
-/* „Als Wiki-Seite ablegen" — der Weg, auf dem gute Fragen das Wissen füttern.
+/* "File as wiki page" — the path by which good questions feed back into the
+   knowledge base.
 
-   Ohne diesen Schritt verschwindet jede Erkundung im Verlauf (docs/MODULE-SCHEMA.md,
-   Ablauf „Query"). Deshalb ist er sichtbar und dauert drei Handgriffe: Modul
-   wählen oder neu anlegen, Titel prüfen, ablegen.
+   Without this step, every exploration disappears into the history
+   (docs/MODULE-SCHEMA.md, "query" flow). So it's made visible and takes three
+   steps: pick or create a knowledge module, check the title, file it.
 
-   Der Dialog sagt vorher, was geschrieben wird — in Worten, nicht als Pfad: das
-   Dateiformat gehört dem Kern, der Renderer baut keine Vault-Pfade. Danach steht
-   der echte Pfad da, mit „Öffnen". */
+   The dialog states beforehand what will be written — in words, not as a
+   path: the file format belongs to the core, the renderer never builds vault
+   paths. Afterward, the real path is shown, with an "open" action. */
 
 import { useState } from 'react';
 import type { ChatMessage, KnowledgeModule, WriteResult } from '@shared/types';
@@ -17,10 +18,10 @@ import { Radio } from '../../atoms/Radio';
 import { ErrorState } from '../../components/ErrorState';
 import { useT } from '../../i18n';
 
-/** So lang darf ein Titelvorschlag werden. */
+/** This is the max length a suggested title may have. */
 const MAX_TITLE = 70;
 
-/** Titelvorschlag aus der Frage: ohne Fragezeichen, gekürzt, sonst unverändert. */
+/** Suggested title from the question: no question mark, truncated, otherwise unchanged. */
 export function titleFromQuestion(question: string): string {
   const text = question
     .replace(/\s+/g, ' ')
@@ -33,13 +34,13 @@ export function titleFromQuestion(question: string): string {
 }
 
 export interface FileBackDialogProps {
-  /** Die Antwort, die abgelegt wird. `null` schließt den Dialog. */
+  /** The answer being filed. `null` closes the dialog. */
   message: ChatMessage | null;
   question: string;
   modules: readonly KnowledgeModule[];
   busy: boolean;
   error: unknown;
-  /** Ergebnis nach dem Schreiben — dann steht der Pfad da. */
+  /** Result after writing — once set, the path is shown. */
   result: WriteResult | null;
   onSubmit: (input: { module: string; title: string }) => void;
   onOpen: (path: string) => void;

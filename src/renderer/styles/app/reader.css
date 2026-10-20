@@ -1,0 +1,19 @@
+/* The generic reading view (story 059, D4): reuses `sb-pageview`/`sb-facts`/
+   `sb-wikilink` from modules.css almost entirely — this file only adds the
+   one thing that screen never needed, the "all fields" disclosure. */
+
+.sb-reader-allfields {
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-subtle);
+}
+.sb-reader-allfields summary {
+  display: flex;
+  align-items: center;
+  min-height: var(--sb-hit);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+.sb-reader-allfields .sb-facts {
+  margin-top: var(--space-3);
+}

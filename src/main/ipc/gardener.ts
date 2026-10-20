@@ -1,50 +1,52 @@
-/* Pflege: der letzte Bericht, ein neuer Lauf, „passt so" und die Ein-Klick-Fixes.
+/* Maintenance: the latest report, a new run, "looks fine" and the one-click
+   fixes.
 
-   Gerechnet wird in `@core/gardener`, verdrahtet in `gardener-deps.ts`, gemerkt
-   in `.secondbrain/gardener.json` (`gardener-state.ts`). Der Kanal selbst hält
-   vier Zusagen ein:
+   Computed in `@core/gardener`, wired up in `gardener-deps.ts`, persisted in
+   `.secondbrain/gardener.json` (`gardener-state.ts`). The channel itself keeps
+   four promises:
 
-   - **`gardener:report` prüft nicht.** Er liest den letzten Lauf. Gibt es keinen,
-     ist die Antwort `null` — der Screen sagt dann „noch nicht geprüft" statt eine
-     Gesundheit zu erfinden.
-   - **`gardener:run` ist abbrechbar und meldet Fortschritt.** Ein Lauf je Vault;
-     ein zweiter Aufruf während eines Laufs ist ein Fehler, kein zweiter Lauf.
-     `useLlm` entscheidet der Aufrufer, sonst die Einstellung — ein Lauf, der
-     unbemerkt ein Modell fragt, wäre eine Überraschung mit Kosten.
-   - **„Passt so" ist eine Entscheidung über eine Sache, nicht über einen Lauf.**
-     Sie wird persistiert, überlebt jeden weiteren Lauf, und `gardener:undismiss`
-     nimmt sie zurück.
-   - **Ein Fix schreibt nur, was er ankündigt.** Der Kern liest die Datei beim
-     Klick frisch, prüft die Voraussetzung neu und schreibt mit dem gerade
-     gelesenen Hash (`core/gardener/fixes.ts`). Danach wird der Befund
-     ausgeblendet statt gelöscht — `gardener:undoFix` dreht beides zurück. */
+   - **`gardener:report` does not check anything.** It reads the last run. If
+     there is none, the answer is `null` — the screen then says "not checked
+     yet" instead of inventing a health status.
+   - **`gardener:run` is cancellable and reports progress.** One run per vault;
+     a second call during a run is an error, not a second run. The caller
+     decides `useLlm`, otherwise the setting does — a run that quietly queries
+     a model would be a surprise with a cost.
+   - **"Looks fine" is a decision about one thing, not about a run.** It's
+     persisted, survives every further run, and `gardener:undismiss` reverses
+     it.
+   - **A fix writes only what it announces.** The core reads the file fresh on
+     click, re-checks the precondition, and writes with the hash just read
+     (`core/gardener/fixes.ts`). Afterward the finding is hidden rather than
+     deleted — `gardener:undoFix` reverses both. */
 
-import { applyFix, undoFix } from '@core/gardener';
-import type { GardenerFinding } from '@shared/types';
+import {
+  applyFix,
+  discardPage,
+  discardPlan,
+  linkOrphansIntoOverview,
+  supersede,
+  undoFix,
+} from '@core/gardener';
+import { shiftDay } from '@core/overview';
 import type { HandlerMap } from './registry';
 import { defineHandlers, fail } from './registry';
-import { gardenerStateFor, runWithProgress } from './gardener-deps';
-import { docLanguage, settle, wikiStore } from './wiki-bridge';
+import { assertActionable, findingOf, linkOrphan, orphanPick } from './gardener-actions';
+import { gardenerReport, gardenerStateFor, gardenerToday } from './gardener-deps';
+import { runGardener } from './gardener-run';
+import { docLanguage, settle, wikiIndex, wikiStore } from './wiki-bridge';
+import { cancelGardenerRun } from '../gardener-run-state';
 import { GARDENER_STATE_FILE } from '../gardener-state';
+import { getWorkQueue } from '../work-queue';
 import type { Services } from '../services';
+import type { GardenerRunProgress } from '@shared/types';
 
-/* Ein Lauf je Prozess. Mehr braucht es nicht: es gibt einen offenen Vault, und
-   zwei gleichzeitige Läufe über denselben Bestand ergeben denselben Bericht
-   zweimal — mit doppelten Kosten, wenn ein Modell beteiligt ist. */
-let running: AbortController | null = null;
+/** Snoozing for longer than a year means: forgetting. That's not snoozing.
+    Mirrors `MAX_SNOOZE_DAYS` in `ipc/reminders.ts` — the same bound, for the
+    same reason, on a different kind of thing being put away. */
+const MAX_SNOOZE_DAYS = 365;
 
-/** Bricht einen laufenden Pflegelauf ab — beim Schließen des Vaults und beim Beenden. */
-export function cancelGardenerRun(): void {
-  running?.abort();
-  running = null;
-}
-
-/** Läuft gerade ein Pflegelauf? */
-export function gardenerRunning(): boolean {
-  return running !== null;
-}
-
-/** Der Bericht hat sich geändert: dieselbe Weckung wie bei den Erinnerungen. */
+/** The report has changed: same wake-up as with the reminders. */
 function wake(services: Services): void {
   services.sendEvent('event:vault-changed', {
     paths: [GARDENER_STATE_FILE],
@@ -52,59 +54,41 @@ function wake(services: Services): void {
   });
 }
 
-function findingOf(value: unknown): GardenerFinding {
-  if (value === null || typeof value !== 'object') throw fail('invalid', 'kein Befund');
-  const finding = value as GardenerFinding;
-  if (typeof finding.id !== 'string' || !Array.isArray(finding.paths)) {
-    throw fail('invalid', 'kein Befund');
-  }
-  return finding;
-}
-
 export function gardenerHandlers(services: Services): HandlerMap {
   return defineHandlers({
-    'gardener:report': async () => (await gardenerStateFor(services)).present(),
+    'gardener:report': async () => gardenerReport(services),
 
-    'gardener:run': async ({ useLlm }) => {
-      if (running !== null) throw fail('invalid', 'es läuft schon ein Pflegelauf');
-      /* Die Marke wird **vor** dem ersten `await` gesetzt: sonst kämen zwei
-         Aufrufe aus demselben Tastendruck beide durch und schrieben denselben
-         Bericht zweimal. */
-      const controller = new AbortController();
-      running = controller;
-      try {
-        const state = await gardenerStateFor(services);
-        const run = await runWithProgress(services, {
-          ...(useLlm === undefined ? {} : { useLlm }),
-          signal: controller.signal,
-          onProgress: (progress) => services.sendEvent('event:gardener-progress', progress),
-        });
-        await state.save(run);
-        const report = state.present();
-        if (report === null) throw fail('io', 'der Bericht ließ sich nicht ablegen');
-        return report;
-      } finally {
-        running = null;
-        /* Auch ein abgebrochener Lauf endet sichtbar: sonst dreht die Anzeige
-           weiter, obwohl niemand mehr rechnet. */
-        services.sendEvent('event:gardener-progress', {
-          phase: 'done',
-          check: null,
-          done: 0,
-          total: 0,
-          running: false,
-        });
-      }
+    /* A thin read of the one place that knows whether a run is going — now
+       the work queue every long-running task is listed in (074, D2), so the
+       maintenance screen and the Tasks screen cannot disagree about it. */
+    'gardener:runStatus': () => {
+      const task = getWorkQueue(services)
+        .list()
+        .find((entry) => entry.kind === 'gardener' && entry.state === 'running');
+      /* `detail` on a running `'gardener'` task is always the
+         `GardenerRunProgress` that `gardener-run-state.ts`'s `publish()` wrote
+         onto it — the narrowing is safe because only the gardener producer
+         ever sets `detail` on a task of this kind. */
+      return (task?.detail as GardenerRunProgress | undefined) ?? null;
     },
 
+    /* The run flow itself (slot claim, resume/scope inheritance, cancel
+       reason, save, report) lives in `gardener-run.ts` (027, D5) — this
+       channel file only wires the request through. */
+    'gardener:run': async (request) => runGardener(services, request),
+
     'gardener:cancel': () => {
-      cancelGardenerRun();
+      /* A stop the user asked for — the only reason that leaves something
+         behind (021b, D2). The one on closing the vault and on quitting
+         (`main/index.ts`) says `'shutdown'` and keeps nothing. */
+      cancelGardenerRun('user');
     },
 
     'gardener:dismiss': async ({ id }) => {
       const state = await gardenerStateFor(services);
-      /* Einen Befund auszublenden, den kein Lauf kennt, wäre ein Knopf, der
-         Erfolg meldet und nichts tut — dieselbe Haltung wie `reminders:snooze`. */
+      /* Hiding a finding that no run knows about would be a button that
+         reports success and does nothing — the same stance as
+         `reminders:snooze`. */
       if (!(await state.dismiss(id))) throw fail('not-found', 'diesen Befund gibt es nicht');
       wake(services);
     },
@@ -117,6 +101,33 @@ export function gardenerHandlers(services: Services): HandlerMap {
       wake(services);
     },
 
+    /* Mirrors `reminders:snooze`: the same bound, the same day arithmetic, the
+       same stance on an unknown id — a button that reports success and does
+       nothing would be worse than a missing one. */
+    'gardener:snooze': async ({ id, days }) => {
+      const count = Math.trunc(Number(days));
+      if (!Number.isFinite(count) || count < 1 || count > MAX_SNOOZE_DAYS) {
+        throw fail('invalid', `days: erwartet 1 bis ${MAX_SNOOZE_DAYS}`);
+      }
+      const today = gardenerToday();
+      const state = await gardenerStateFor(services);
+      if (!(await state.snooze(id, shiftDay(today, count)))) {
+        throw fail('not-found', 'diesen Befund gibt es nicht');
+      }
+      wake(services);
+    },
+
+    /* The reverse path — mirrors `reminders:unsnooze`. Setting a snooze to
+       "today" wouldn't be one: it only nags again once it has expired. So the
+       entry is removed instead; without one, there's nothing to undo. */
+    'gardener:unsnooze': async ({ id }) => {
+      const state = await gardenerStateFor(services);
+      if (!(await state.unsnooze(id))) {
+        throw fail('not-found', 'dieser Befund ruht nicht');
+      }
+      wake(services);
+    },
+
     'gardener:applyFix': async ({ finding }) => {
       const checked = findingOf(finding);
       const state = await gardenerStateFor(services);
@@ -125,8 +136,8 @@ export function gardenerHandlers(services: Services): HandlerMap {
         checked,
       );
       if (result.written.length > 0) {
-        /* Erst der Index, dann der Zustand: `present()` rechnet die Gesundheit
-           neu, und der Weckruf danach lässt den Screen beides frisch holen. */
+        /* Index first, then state: `present()` recomputes the health status,
+           and the wake-up call after it lets the screen fetch both fresh. */
         await settle(services, result.written, 'gardener');
         if (result.undoToken !== null) await state.markFixed(checked.id, result.undoToken);
         wake(services);
@@ -145,6 +156,92 @@ export function gardenerHandlers(services: Services): HandlerMap {
       if (result.restored.length > 0) await settle(services, result.restored, 'gardener');
       wake(services);
       return result;
+    },
+
+    'gardener:discardPlan': async ({ path, keep }) => {
+      await assertActionable(services, path);
+      return discardPlan(
+        { store: wikiStore(services), index: wikiIndex(services) },
+        { path, ...(keep === undefined ? {} : { keep }) },
+      );
+    },
+
+    'gardener:discardPage': async ({ path, keep, expectedHash }) => {
+      await assertActionable(services, path);
+      const result = await discardPage(
+        {
+          store: wikiStore(services),
+          index: wikiIndex(services),
+          docLanguage: docLanguage(services),
+        },
+        {
+          path,
+          ...(keep === undefined ? {} : { keep }),
+          ...(expectedHash === undefined ? {} : { expectedHash }),
+        },
+      );
+      /* Both the content changes and the deleted page belong in the same
+         settle: only then does the module the page belonged to recompute
+         with the page actually gone. */
+      await settle(services, [...result.written, result.discarded], 'gardener');
+      return result;
+    },
+
+    'gardener:supersede': async ({ newerPath, olderPath, expectedHash }) => {
+      await assertActionable(services, newerPath, olderPath);
+      const result = await supersede(
+        { store: wikiStore(services), docLanguage: docLanguage(services) },
+        { newerPath, olderPath, ...(expectedHash === undefined ? {} : { expectedHash }) },
+      );
+      await settle(services, [result.written], 'gardener');
+      return result;
+    },
+
+    'gardener:orphanTargets': async ({ findingId }) =>
+      (await orphanPick(services, findingId)).candidates,
+
+    'gardener:linkOrphan': async ({ findingId, target }) => {
+      const pick = await orphanPick(services, findingId);
+      const result = await linkOrphan(services, pick, target);
+      if (result.written.length > 0) {
+        await settle(services, result.written, 'gardener');
+        if (result.undoToken !== null)
+          await pick.state.markFixed(pick.finding.id, result.undoToken);
+        wake(services);
+      }
+      return {
+        written: result.written,
+        ...(result.undoToken === null ? {} : { undoToken: result.undoToken }),
+      };
+    },
+
+    'gardener:linkOrphans': async ({ findingIds }) => {
+      if (!Array.isArray(findingIds) || findingIds.length === 0) {
+        throw fail('invalid', 'keine Befunde ausgewählt');
+      }
+      const state = await gardenerStateFor(services);
+      const open = (await gardenerReport(services, state))?.findings ?? [];
+      const picked = [...new Set(findingIds)].map((id) => {
+        const found = open.find((entry) => entry.id === id);
+        if (found === undefined) throw fail('not-found', 'diesen Befund gibt es nicht');
+        return found;
+      });
+      await assertActionable(services, ...new Set(picked.flatMap((entry) => entry.paths)));
+      const result = await linkOrphansIntoOverview(
+        { store: wikiStore(services), docLanguage: docLanguage(services) },
+        picked,
+      );
+      if (result.written.length > 0) {
+        await settle(services, result.written, 'gardener');
+        if (result.undoToken !== null) {
+          for (const entry of picked) await state.markFixed(entry.id, result.undoToken);
+        }
+        wake(services);
+      }
+      return {
+        written: result.written,
+        ...(result.undoToken === null ? {} : { undoToken: result.undoToken }),
+      };
     },
   });
 }

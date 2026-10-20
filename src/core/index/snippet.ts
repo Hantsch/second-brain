@@ -1,27 +1,27 @@
 /**
- * Snippets: die Textstelle, die einen Treffer belegt.
+ * Snippets: the passage of text that substantiates a hit.
  *
- * Regeln, die aus der Bedienbarkeit folgen:
- * - hoechstens ~240 Zeichen, an Wortgrenzen geschnitten, mit '…' wo gekuerzt wurde,
- * - der Treffer moeglichst mittig und mit `**` markiert,
- * - das Fenster liegt dort, wo die meisten Treffer beieinanderstehen.
+ * Rules that follow from usability:
+ * - at most ~240 characters, cut at word boundaries, with '…' where truncated,
+ * - the hit centered as much as possible and marked with `**`,
+ * - the window sits where the most hits cluster together.
  *
- * Gesucht wird auf dem Text in **Originalschreibung**: nur so bleiben die
- * Fundstellen dort, wo sie hingehoeren. Umlaute treffen in beiden Schreibweisen,
- * damit 'Rueckmeldung' auch 'Rückmeldung' markiert.
+ * Search runs on the text in **original spelling**: only this way do the
+ * hits stay where they belong. Umlauts match both spellings, so
+ * 'Rueckmeldung' also marks 'Rückmeldung'.
  */
 
 import { collapse, escapeRegExp } from './text';
 import { SNIPPET_CHARS } from './types';
 
-/** Ein Fund im Anzeigetext. */
+/** A hit in the display text. */
 interface Range {
   start: number;
   end: number;
 }
 
-/* Reihenfolge wichtig: jede Regel laeuft genau einmal, keine greift in die Ausgabe
-   einer anderen. */
+/* Order matters: each rule runs exactly once, none reaches into another
+   one's output. */
 const UMLAUT_CLASSES: [RegExp, string][] = [
   [/ae|ä/g, '(?:ae|ä)'],
   [/oe|ö/g, '(?:oe|ö)'],
@@ -29,10 +29,10 @@ const UMLAUT_CLASSES: [RegExp, string][] = [
   [/ss|ß/g, '(?:ss|ß)'],
 ];
 
-/** Hoechstzahl an Funden je Begriff — begrenzt die Arbeit bei langen Texten. */
+/** Maximum number of hits per term — bounds the work on long texts. */
 const MAX_HITS_PER_TERM = 20;
 
-/** Suchmuster eines Begriffs: Gross-/Kleinschreibung und Umlautform sind gleich. */
+/** Search pattern for a term: case and umlaut spelling don't matter. */
 export function termPattern(term: string): RegExp {
   let source = escapeRegExp(term.toLowerCase());
   for (const [pattern, replacement] of UMLAUT_CLASSES)
@@ -41,39 +41,39 @@ export function termPattern(term: string): RegExp {
 }
 
 /**
- * Anzeigeform eines Rumpfs: eine Zeile Fliesstext, ohne Markdown-Syntax.
+ * Display form of a body: one line of flowing text, without markdown syntax.
  *
- * Der Ausschnitt wird gelesen, nicht gerendert — Backticks, Listenstriche und
- * `[[wikilinks]]` waeren darin ein Leck aus der Datenschicht. Belege stehen laut
- * VAULT-FORMAT.md als `(source: [[s-...]])` im Text: Herkunft, keine Prosa, also
- * fallen sie hier weg. Die Reihenfolge ist Absicht — zuerst zeilenweise Marker,
- * dann Inline-Auszeichnung.
+ * The excerpt is read, not rendered — backticks, list dashes, and
+ * `[[wikilinks]]` would be a leak from the data layer in there. Per
+ * VAULT-FORMAT.md, citations appear in the text as `(source: [[s-...]])`:
+ * provenance, not prose, so they're stripped here. The order is
+ * intentional — line-level markers first, then inline markup.
  */
 export function displayText(body: string): string {
   const text = (body ?? '')
-    // Zeilenanfaenge: Ueberschrift, Zitat, Liste, Aufzaehlung, Checkbox.
+    // Line starts: heading, quote, list, enumeration, checkbox.
     .replace(/^ {0,3}#{1,6}\s+/gm, '')
     .replace(/^ {0,3}>\s?/gm, '')
     .replace(/^ {0,3}(?:[-*+]|\d+[.)])\s+(?:\[[ xX]\]\s*)?/gm, '')
-    // Zaunzeilen ganz weg, der Code dazwischen bleibt lesbarer Text.
+    // Fence lines removed entirely, the code between them stays readable text.
     .replace(/^ {0,3}(?:`{3,}|~{3,}).*$/gm, '')
     .replace(/`+/g, '')
-    // Belegklammern, danach die Wikilinks, die ausserhalb davon stehen.
+    // Source parentheses, then the wikilinks that sit outside of them.
     .replace(/\(\s*source:[^)]*\)/gi, '')
     .replace(/\[\[([^\]|\n]+?)(?:\|([^\]\n]*))?\]\]/g, (_match, target: string, label?: string) =>
       wikilinkText(target, label),
     )
-    // Markdown-Links: der Text zaehlt, das Ziel ist kein Fliesstext.
+    // Markdown links: the text counts, the target isn't flowing text.
     .replace(/\[([^\]\n]*)\]\([^)\s]*[^)]*\)/g, '$1')
-    // Fettung: sie kollidiert mit der Markierung, die makeSnippet selbst setzt.
+    // Bold markup: it collides with the marking that makeSnippet itself applies.
     .replace(/\*\*/g, '')
-    // Was von Tabellen und Trennlinien uebrig bleibt.
+    // What's left over from tables and dividers.
     .replace(/^ {0,3}(?:[-*_]\s*){3,}$/gm, '')
     .replace(/\|/g, ' ');
   return collapse(text);
 }
 
-/** Anzeigetext eines Wikilinks: `[[a|b]]` → 'b', `[[modul/a]]` → 'a'. */
+/** Display text of a wikilink: `[[a|b]]` → 'b', `[[modul/a]]` → 'a'. */
 function wikilinkText(target: string, label?: string): string {
   const shown = (label ?? '').trim();
   if (shown.length > 0) return shown;
@@ -95,7 +95,7 @@ function findRanges(text: string, terms: readonly string[]): Range[] {
     }
   }
   ranges.sort((a, b) => (a.start === b.start ? b.end - a.end : a.start - b.start));
-  // Ueberlappungen zusammenfassen, sonst schachteln sich die '**' ineinander.
+  // Merge overlaps, otherwise the '**' markers would nest into each other.
   const merged: Range[] = [];
   for (const range of ranges) {
     const last = merged[merged.length - 1];
@@ -108,7 +108,7 @@ function findRanges(text: string, terms: readonly string[]): Range[] {
   return merged;
 }
 
-/** Das Fenster mit den meisten Funden; bei Gleichstand das frueheste. */
+/** The window with the most hits; the earliest one on a tie. */
 function bestWindow(ranges: readonly Range[], maxChars: number, length: number): Range {
   let bestIndex = 0;
   let bestCount = 0;
@@ -140,7 +140,7 @@ function bestWindow(ranges: readonly Range[], maxChars: number, length: number):
   return { start, end };
 }
 
-/** Fensterraender auf Wortgrenzen schieben, damit kein Wort zerrissen wird. */
+/** Snap the window edges to word boundaries so no word gets torn apart. */
 function snapToWords(text: string, window: Range): Range {
   let { start, end } = window;
   if (start > 0) {
@@ -157,7 +157,7 @@ function snapToWords(text: string, window: Range): Range {
 function mark(text: string, ranges: readonly Range[], window: Range): string {
   let result = text.slice(window.start, window.end);
   const inside = ranges.filter((range) => range.start >= window.start && range.end <= window.end);
-  // Von hinten nach vorn einsetzen, damit die Positionen davor gueltig bleiben.
+  // Insert back to front, so the positions before them stay valid.
   for (let index = inside.length - 1; index >= 0; index -= 1) {
     const range = inside[index];
     if (range === undefined) continue;
@@ -168,7 +168,7 @@ function mark(text: string, ranges: readonly Range[], window: Range): string {
   return result;
 }
 
-/** Textanfang, wenn es keine Fundstelle zu zeigen gibt. */
+/** Start of the text, when there's no hit location to show. */
 function head(text: string, maxChars: number): string {
   if (text.length <= maxChars) return text;
   const cut = text.slice(0, maxChars);
@@ -178,8 +178,9 @@ function head(text: string, maxChars: number): string {
 }
 
 /**
- * Snippet zu einem Rumpf. Ohne Fundstelle (leere Anfrage, Treffer nur im Titel)
- * kommt der Textanfang zurueck — nie eine leere Zeichenkette und nie ein Fehler.
+ * Snippet for a body. Without a hit location (empty query, hit only in the
+ * title), the start of the text comes back — never an empty string and
+ * never an error.
  */
 export function makeSnippet(
   body: string,

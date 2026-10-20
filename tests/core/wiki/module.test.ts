@@ -7,6 +7,7 @@
 
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { IndexService } from '@core/index/service';
 import {
   MODULE_SCHEMA_TEMPLATE,
   agentsPath,
@@ -19,7 +20,15 @@ import { MemoryVaultStore } from '@core/vault/memory-store';
 import { NOW_MS, TODAY } from '../../helpers/time';
 import { MODULE, wikiFixture } from './fixtures';
 
-const SCHEMA_DOC = readFileSync(new URL('../../../docs/MODULE-SCHEMA.md', import.meta.url), 'utf8');
+const SCHEMA_DOC_RAW = readFileSync(
+  new URL('../../../docs/MODULE-SCHEMA.md', import.meta.url),
+  'utf8',
+);
+// docs/MODULE-SCHEMA.md carries a leading HTML-comment banner naming the code as
+// authoritative (see src/core/wiki/agents-md.ts). That banner is repo-only — it must not
+// leak into a user's vault — so strip exactly one leading `<!-- ... -->` comment (and the
+// blank line(s) after it) before comparing byte-for-byte against the template body.
+const SCHEMA_DOC = SCHEMA_DOC_RAW.replace(/^<!--[\s\S]*?-->\n+/, '');
 
 function emptyStore(): MemoryVaultStore {
   return new MemoryVaultStore({ now: new Date(NOW_MS) });
@@ -87,7 +96,7 @@ describe('createModule', () => {
       { title: 'Identity', description: 'Erste Fassung.' },
       { now: NOW_MS },
     );
-    const before = store.snapshot();
+    const before = store.allFiles();
 
     const again = await createModule(
       store,
@@ -97,7 +106,7 @@ describe('createModule', () => {
 
     expect(again.created).toEqual([]);
     expect(again.module.description).toBe('Erste Fassung.');
-    expect(store.snapshot()).toEqual(before);
+    expect(store.allFiles()).toEqual(before);
   });
 
   it('legt fehlende Dateien eines von Hand gebauten Moduls nach', async () => {
@@ -149,6 +158,48 @@ describe('AGENTS.md', () => {
     // Driftet die Kopie, faellt dieser Test — nicht der Nutzer, der den Vault liest.
     expect(MODULE_SCHEMA_TEMPLATE).toBe(SCHEMA_DOC);
   });
+
+  it('laesst ein von Hand bearbeitetes AGENTS.md unberuehrt', async () => {
+    // Guardrail 2: ein Schema-Text ist Inhalt, nicht abgeleiteter Index — ein
+    // zweiter createModule-Aufruf darf ihn nicht durch die Vorlage ersetzen.
+    const store = emptyStore();
+    const first = await createModule(store, { title: 'Identity' }, { now: NOW_MS });
+    const path = agentsPath(first.slug);
+    const handEdited = '# Identity (angepasst)\n\nEigene Notizen des Nutzers.\n';
+    await store.writeText(path, handEdited);
+
+    const again = await createModule(store, { title: 'Identity' }, { now: NOW_MS });
+
+    expect(await store.readText(path)).toBe(handEdited);
+    expect(again.created).not.toContain(path);
+  });
+
+  it('schreibt in einem englischsprachigen Vault nur die Titelzeile englisch', async () => {
+    const store = emptyStore();
+    const result = await createModule(
+      store,
+      { title: 'Prompt patterns' },
+      { now: NOW_MS, docLanguage: 'en' },
+    );
+    const path = agentsPath(result.slug);
+
+    const agents = await store.readText(path);
+    expect(agents).toContain('# Knowledge module: Prompt patterns');
+    // Der Schema-Rumpf bleibt der eine feste deutsche Text (Entscheidung Sprint 023).
+    expect(agents).toContain('## Widersprüche');
+
+    const index = await IndexService.open(store, {
+      persistence: null,
+      now: () => new Date(NOW_MS),
+    });
+    const module = listModules(index).find((entry) => entry.slug === result.slug);
+    expect(module?.title).toBe('Prompt patterns');
+
+    // AGENTS.md liegt ausserhalb von modules/<slug>/wiki/ — der Seitengraph und
+    // damit auch der Pflegelauf (kaputte Links) duerfen es nicht als Seite sehen.
+    expect(index.pages().some((page) => page.path === path)).toBe(false);
+    expect(index.index().brokenLinks.some((link) => link.path === path)).toBe(false);
+  });
 });
 
 describe('listModules', () => {
@@ -167,7 +218,7 @@ describe('listModules', () => {
   it('meldet ein frisches Modul ohne Ingest ehrlich mit null', async () => {
     const store = emptyStore();
     await createModule(store, { title: 'Frisch' }, { now: NOW_MS });
-    const fixture = await wikiFixture(store.snapshot());
+    const fixture = await wikiFixture(store.allFiles());
 
     const module = listModules(fixture.index).find((entry) => entry.slug === 'frisch');
     expect(module?.lastIngest).toBeNull();

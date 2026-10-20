@@ -1,9 +1,9 @@
-/* Projekte: zwei Spalten, Liste und Detail. Farben, Abstände und Radien
-   ausschließlich aus den Gaston-Tokens.
+/* Projects: two columns, list and detail. Colors, spacing, and radii
+   exclusively from the Gaston tokens.
 
-   Wie bei der Inbox füllt der Screen den Inhaltsbereich genau und gescrollt wird
-   in den Spalten — sonst liegt die Aktionsleiste des Details auf 1152×720 unter
-   dem Fensterrand. */
+   As with the inbox, the screen fills the content area exactly and
+   scrolling happens within the columns — otherwise the detail's action bar
+   would sit below the window edge at 1152x720. */
 
 .sb-projects {
   display: grid;
@@ -13,14 +13,14 @@
   flex: 1 1 auto;
   min-height: 0;
 }
-/* Im engen Fenster untereinander: zwei Spalten würden beide unlesbar. */
+/* Stacked in a narrow window: two columns would make both unreadable. */
 @media (max-width: 1000px) {
   .sb-projects {
     grid-template-columns: minmax(0, 1fr);
   }
 }
 
-/* ── Liste ──────────────────────────────────────────────────────────────── */
+/* ── List ───────────────────────────────────────────────────────────────── */
 
 .sb-plist {
   display: flex;
@@ -40,7 +40,9 @@
   padding: var(--space-2);
   font-family: var(--font-mono);
   font-size: var(--text-2xs);
-  color: var(--text-disabled);
+  /* Like every other key hint (`.sb-journal-keys`, `.sb-capture-keys`): it is
+     information, not a disabled control — `--text-disabled` failed contrast. */
+  color: var(--text-faint);
   line-height: var(--leading-snug);
 }
 
@@ -75,6 +77,20 @@
   gap: var(--space-1);
   min-width: 0;
 }
+/* Wraps the row button and the star as a genuine flex sibling — not an
+   overlay, so the star never sits on top of the title/count text. Nesting a
+   button inside a button would be invalid HTML and would swallow the row's
+   click, hence the sibling. */
+.sb-projectitem-wrap {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+.sb-projectitem-wrap .sb-projectitem {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+}
 .sb-projectitem {
   all: unset;
   box-sizing: border-box;
@@ -94,7 +110,7 @@
 .sb-projectitem:focus-visible {
   box-shadow: var(--focus-ring);
 }
-/* Die Auswahl ist eine Fläche, kein zweites Teal: der Akzent gehört dem Knopf. */
+/* The selection is a surface, not a second teal: the accent belongs to the button. */
 .sb-projectitem--active {
   background: var(--surface-raised);
   border-color: var(--border-strong);
@@ -131,8 +147,8 @@
   text-transform: uppercase;
   letter-spacing: var(--tracking-caps);
 }
-/* Der Bereich als Mono-Overline, wie die Gruppen der Todo-Kacheln — kein zweiter
-   Farbakzent, nur eine Kante, die Arbeit und Privat auseinanderhält. */
+/* The scope as a mono overline, like the groups in the todo tiles — no
+   second color accent, just an edge that separates work from private. */
 .sb-projectitem-scope {
   padding-right: var(--space-2);
   border-right: 1px solid var(--border-subtle);
@@ -142,12 +158,45 @@
   color: var(--text-muted);
 }
 
-/* Die Überschrift eines Bereichs in der Liste. */
-.sb-pgroup-title {
-  list-style: none;
-  padding: var(--space-1) var(--space-3) 0;
+/* The star: hidden until hovered/focused unless it's already set — fifteen
+   empty stars shouldn't compete with the data, but a set one stays visible
+   and a keyboard user tabbing onto it still sees it. No colour accent: teal
+   belongs to the selection on this screen and amber already means stale, so
+   outline = not starred, filled at text colour = starred. */
+.sb-projectitem-star {
+  all: unset;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  align-self: flex-start;
+  margin-top: var(--space-2);
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  color: var(--text-faint);
+  cursor: pointer;
+  opacity: 0;
+}
+.sb-projectitem-wrap:hover .sb-projectitem-star,
+.sb-projectitem-star:focus-visible {
+  opacity: 1;
+}
+.sb-projectitem-star:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+.sb-projectitem-star--on {
+  opacity: 1;
+  color: var(--text-heading);
+}
+.sb-projectitem-star--on svg {
+  fill: currentColor;
+}
+
+/* The "last worked on" marker — a quiet chip in the meta row, same visual
+   family as `.sb-projectitem-scope`: mono, small, muted, no accent. */
+.sb-projectitem-latest {
   font-family: var(--font-mono);
-  font-size: var(--text-2xs);
   text-transform: uppercase;
   letter-spacing: var(--tracking-caps);
   color: var(--text-faint);
@@ -165,9 +214,9 @@
   color: var(--warning);
 }
 
-/* Der Statuspunkt ist der geteilte `.sb-dot` aus shell.css — hier kommt nur der
-   Ton dazu, den es dort noch nicht gab. Farbe ist ohnehin Beiwerk: das Wort
-   steht daneben. */
+/* The status dot is the shared `.sb-dot` from shell.css — only the tone that
+   didn't exist there yet is added here. Color is decoration anyway: the
+   word stands right next to it. */
 .sb-dot--warn {
   background: var(--warning);
 }
@@ -213,6 +262,31 @@
   color: var(--text-heading);
   min-width: 0;
 }
+/* Same idea as `.sb-projectitem-star` in the list — outline off, filled at
+   text colour on, no accent — but always visible: the detail star sits next
+   to the title, not in a row competing with fourteen others, so the list's
+   hover-only-visibility rule (`opacity: 0` by default) doesn't apply. */
+.sb-phead-star {
+  all: unset;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  color: var(--text-faint);
+  cursor: pointer;
+}
+.sb-phead-star:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+.sb-phead-star--on {
+  color: var(--text-heading);
+}
+.sb-phead-star--on svg {
+  fill: currentColor;
+}
 .sb-phead-facts {
   display: flex;
   align-items: flex-end;
@@ -230,6 +304,18 @@
 .sb-phead-none {
   color: var(--text-disabled);
 }
+.sb-phead-status {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+/* Quiet meta line under the status control — who set it, and when. The
+   fallback ("origin not recorded") is just as quiet; it's an honest gap,
+   not a warning. */
+.sb-phead-provenance {
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+}
 
 .sb-statuspick {
   display: flex;
@@ -245,12 +331,12 @@
   color: var(--success);
 }
 
-/* ── Nächster Schritt: die eine große Zeile ─────────────────────────────── */
+/* ── Next step: the one large line ───────────────────────────────────────── */
 
-/* Die wichtigste Zeile des Screens darf nicht aussehen wie die zweitwichtigste:
-   eigene Fläche, eigene Kante. Die 2 px in `--accent` sind der Fokuspunkt dieses
-   Screens — keine zweite primäre Aktion, sondern die Stelle, an der der Blick
-   landen soll. */
+/* The most important line of the screen must not look like the second most
+   important one: its own surface, its own edge. The 2px in `--accent` is
+   this screen's focal point — not a second primary action, but the spot
+   where the eye is meant to land. */
 .sb-nextstep {
   display: flex;
   flex-direction: column;
@@ -284,8 +370,8 @@
 .sb-nextstep-line:focus-visible {
   box-shadow: var(--focus-ring);
 }
-/* Der Stift ist der einzige Hinweis, dass die Zeile ein Feld ist — auf
-   `--text-disabled` (2,4:1) war er praktisch unsichtbar. */
+/* The pencil is the only hint that the line is a field — at
+   `--text-disabled` (2.4:1) it was practically invisible. */
 .sb-nextstep-pen {
   color: var(--text-muted);
   flex-shrink: 0;
@@ -313,8 +399,8 @@
   min-height: 1em;
   color: var(--success);
 }
-/* Fremde Änderung an genau dieser Zeile, während das Feld offen ist. Warnfarbe,
-   kein zweites Teal: die Meldung ist kein Fokuspunkt, sondern eine Aussage. */
+/* An external change to exactly this line while the field is open. Warning
+   color, not a second teal: the notice is not a focal point but a statement. */
 .sb-nextstep-external {
   display: flex;
   flex-direction: column;
@@ -335,7 +421,27 @@
   flex-wrap: wrap;
 }
 
-/* ── Vorschlag ──────────────────────────────────────────────────────────── */
+/* Quiet meta line under the value — who set it, and when. Same weight as
+   `.sb-phead-provenance`, the analogous line under the status. */
+.sb-nextstep-provenance {
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+}
+/* The stale marker is a passive note, not an actionable notice like
+   `.sb-nextstep-external` — no border/background box, just the badge and an
+   explaining line stacked underneath it. */
+.sb-nextstep-stale {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+.sb-nextstep-stale-text {
+  font-size: var(--text-sm);
+  color: var(--text-body);
+}
+
+/* ── Suggestion ─────────────────────────────────────────────────────────── */
 
 .sb-suggest {
   border-color: var(--accent-soft-border);
@@ -375,7 +481,7 @@
   padding-top: var(--space-2);
 }
 
-/* ── Warte auf ──────────────────────────────────────────────────────────── */
+/* ── Waiting-on ─────────────────────────────────────────────────────────── */
 
 .sb-waitlist {
   list-style: none;
@@ -425,6 +531,50 @@
   flex-wrap: wrap;
 }
 
+.sb-waitcompose {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+}
+.sb-waitcompose-fields {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.sb-waitcompose-who {
+  flex: 1 1 12rem;
+  min-width: 10rem;
+}
+.sb-waitcompose-what {
+  flex: 2 1 16rem;
+  min-width: 12rem;
+}
+.sb-waitcompose-foot {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+.sb-waitcompose-date {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+}
+.sb-waitcompose-dateinput {
+  width: auto;
+}
+.sb-waitcompose-hint {
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+}
+
 /* ── Todos ──────────────────────────────────────────────────────────────── */
 
 .sb-todolist {
@@ -440,6 +590,7 @@
   width: 100%;
 }
 .sb-todorow {
+  position: relative;
   display: flex;
   align-items: flex-start;
   gap: var(--space-3);
@@ -447,16 +598,46 @@
   border-radius: var(--radius-md);
   min-width: 0;
 }
+.sb-todorow--drop-before::before,
+.sb-todorow--drop-after::after {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  left: var(--space-2);
+  right: var(--space-2);
+  height: 2px;
+  border-radius: var(--radius-full);
+  background: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  pointer-events: none;
+}
+.sb-todorow--drop-before::before {
+  top: -1px;
+}
+.sb-todorow--drop-after::after {
+  bottom: -1px;
+}
 .sb-todorow:hover {
   background: var(--surface-raised);
 }
 .sb-todorow--active {
   background: var(--surface-raised);
 }
-/* Die häufigste Aktion der App braucht die größte Sorgfalt: das Kästchen bleibt
-   16 px, die Trefferfläche ist 32 × 32. Die negativen Ränder lassen das Kästchen
-   dort stehen, wo es vorher stand, und die Fläche wächst nach außen — bis in die
-   Innenkante der Zeile. */
+.sb-todorow--dragging {
+  opacity: 0.45;
+}
+.sb-todorow-drag {
+  flex-shrink: 0;
+  margin: -6px 0 -6px calc(-1 * var(--space-2));
+  cursor: grab;
+}
+.sb-todorow-drag:active {
+  cursor: grabbing;
+}
+/* The app's most frequent action needs the greatest care: the checkbox
+   stays 16px, the hit area is 32x32. The negative margins keep the checkbox
+   where it stood before, and the hit area grows outward — up to the inner
+   edge of the row. */
 .sb-todorow-box {
   display: grid;
   place-items: center;
@@ -495,8 +676,20 @@
   color: var(--text-faint);
 }
 .sb-todorow-prio {
-  font-family: var(--font-mono);
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  height: 20px;
+  flex-shrink: 0;
+}
+.sb-todorow-prio--high {
   color: var(--danger);
+}
+.sb-todorow-prio--medium {
+  color: var(--text-muted);
+}
+.sb-todorow-prio--low {
+  color: var(--text-faint);
 }
 .sb-todorow-wait,
 .sb-todorow-project {
@@ -522,11 +715,46 @@
   font-size: var(--text-2xs);
   color: var(--text-faint);
 }
+.sb-priority-toggle {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+}
+.sb-priority-choice {
+  min-width: 4.75rem;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+}
+.sb-priority-choice--high[aria-pressed='true'] {
+  color: var(--danger);
+}
+.sb-priority-choice--medium[aria-pressed='true'] {
+  color: var(--text-muted);
+}
+.sb-priority-choice--low[aria-pressed='true'] {
+  color: var(--text-faint);
+}
+.sb-todoedit {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+}
+.sb-todoedit-fields {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
 
-/* ── Fristen-Chip ───────────────────────────────────────────────────────── */
+/* ── Deadline chip ──────────────────────────────────────────────────────── */
 
-/* Eigener Name, nicht `sb-chip`: das sind die Filter-Chips des Fragen-Screens,
-   und die sind Knöpfe. Zwei Dinge mit einem Namen wären zwei Fehler. */
+/* Its own name, not `sb-chip`: those are the filter chips of the ask
+   screen, and those are buttons. Two things with one name would be two bugs. */
 .sb-deadline {
   display: inline-flex;
   align-items: center;
@@ -556,7 +784,33 @@
   color: var(--warning);
 }
 
-/* ── Alle Todos ─────────────────────────────────────────────────────────── */
+/* ── Notes ──────────────────────────────────────────────────────────────── */
+
+.sb-notecompose-project {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.sb-notecompose-project-field {
+  resize: vertical;
+  min-height: 4.5em;
+}
+.sb-notecompose-project-foot {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+.sb-notecompose-project-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+}
+
+/* ── All todos ──────────────────────────────────────────────────────────── */
 
 .sb-alltodos {
   display: flex;
@@ -595,7 +849,7 @@
   color: var(--warning);
 }
 
-/* ── Arbeitsspur ────────────────────────────────────────────────────────── */
+/* ── Work trail ─────────────────────────────────────────────────────────── */
 
 .sb-trace {
   display: flex;
@@ -623,7 +877,7 @@
   gap: var(--space-1);
 }
 
-/* ── Neues Projekt ──────────────────────────────────────────────────────── */
+/* ── New project ────────────────────────────────────────────────────────── */
 
 .sb-newproject {
   display: flex;

@@ -56,6 +56,8 @@ export {
   todoLine,
   type ProposalDraft,
 } from './actions';
+export { resolveSection, sectionFor } from './sections';
+export { verifyFilingAction, type VerifyActionOptions } from './verify-action';
 export {
   MAX_CONFIDENCE,
   heuristicDraft,
@@ -83,6 +85,7 @@ export {
 } from './tasks';
 export {
   addDays,
+  dayLabel,
   findDates,
   germanDay,
   isCalendarDay,

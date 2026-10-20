@@ -1,24 +1,25 @@
-/* Eine Wiki-Seite lesbar machen: Markdown zu React, Wikilinks als Knöpfe.
+/* Make a wiki page readable: Markdown to React, wikilinks as buttons.
 
-   Gerendert wird über `components/markdown-render.tsx` — dieselbe Fassung wie die
-   Antwort im Fragen-Screen. Hier steht nur, was ein Wikilink auf einer Wiki-Seite
-   bedeutet: `[[slug]]` führt nicht ins Web, sondern in dieselbe Ansicht. Ein Ziel,
-   das es nicht gibt, wird als fehlend ausgezeichnet statt still als Text
-   durchzurutschen — daraus lebt der Pflegelauf, und der Leser sieht sofort, dass
-   da eine Seite fehlt.
+   Rendering goes through `components/markdown-render.tsx` — the same
+   implementation as the answer in the ask screen. What's defined here is
+   only what a wikilink means on a wiki page: `[[slug]]` doesn't lead onto
+   the web, it leads into the same view. A target that doesn't exist is
+   marked as missing instead of silently slipping through as plain text —
+   the gardener run depends on that, and the reader sees immediately that a
+   page is missing.
 
-   Rohe Pfade bleiben hier Text: eine Wiki-Seite verweist über Wikilinks, und ein
-   Pfad im Fließtext ist meist der Weg zur Rohquelle unter `raw/`. */
+   Raw paths stay text here: a wiki page links via wikilinks, and a path in
+   running text is usually the way to the raw source under `raw/`. */
 
 import { useT } from '../../i18n';
 import { renderMarkdown } from '../../components/markdown-render';
-import { WikiRef } from './WikiRef';
+import { WikiRef } from '../../components/WikiRef';
 
 export interface PageBodyProps {
   body: string;
-  /** Gibt es diese Zielseite? Entscheidet über „fehlt". */
+  /** Does this target page exist? Decides "missing". */
   exists: (target: string) => boolean;
-  /** Klick auf einen Wikilink. */
+  /** Click on a wikilink. */
   onOpen: (target: string) => void;
 }
 

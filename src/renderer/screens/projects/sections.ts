@@ -1,23 +1,28 @@
-/* Einen Abschnitt aus einem Markdown-Rumpf holen.
+/* Get a section from a Markdown body.
 
-   Die Überschriften einer Projektdatei sind Format, nicht Oberfläche: sie heißen
-   in docs/VAULT-FORMAT.md „Stand", „Todos" und „Notizen", unabhängig von der
-   Sprache der Oberfläche. Deshalb stehen sie hier als Konstanten und nicht als
-   Übersetzung.
+   The headings of a project file are format, not UI: docs/VAULT-FORMAT.md
+   calls them "Stand", "Todos", and "Notizen", independent of the UI language.
+   That's why they appear here as constants and not as a translation.
 
-   Der Renderer bekommt den Rumpf über `projects:get` und zerlegt ihn selbst — er
-   fasst keine Datei an und kennt den Kern nicht. */
+   The renderer gets the body via `projects:get` and parses it itself — it
+   never touches a file and doesn't know the core. */
 
 export const SECTION_STATE = 'Stand';
 export const SECTION_TODOS = 'Todos';
 export const SECTION_NOTES = 'Notizen';
 
+/** The other spelling of the notes heading — see `notesSectionOf` below. */
+const SECTION_NOTES_EN = 'Notes';
+
+/** The other spellings of the state heading — see `stateSectionOf` below. */
+const SECTION_STATE_ALIASES = [SECTION_STATE, 'Status', 'State'];
+
 const HEADING = /^(#{2,6})\s+(.+?)\s*$/;
 const FENCE = /^ {0,3}(?:`{3,}|~{3,})/;
 
 /**
- * Der Text unter `## <heading>` bis zur nächsten Überschrift derselben Ebene.
- * Zeilen in Code-Zäunen zählen nicht als Überschrift — dort steht ein Beispiel.
+ * The text under `## <heading>` up to the next heading of the same level.
+ * Lines inside code fences don't count as a heading — that's example content.
  */
 export function sectionOf(body: string, heading: string): string {
   const wanted = heading.trim().toLowerCase();
@@ -44,7 +49,65 @@ export function sectionOf(body: string, heading: string): string {
   return out.join('\n').trim();
 }
 
-/** Wie viele datierte Einträge (`### …`) ein Abschnitt trägt. */
+/** Line index of the first heading whose text matches `heading`, or `null` if absent. */
+function firstHeadingLine(body: string, heading: string): number | null {
+  const wanted = heading.trim().toLowerCase();
+  let inFence = false;
+  const lines = body.split('\n');
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index] ?? '';
+    if (FENCE.test(line)) {
+      inFence = !inFence;
+      continue;
+    }
+    if (inFence) continue;
+    const match = HEADING.exec(line);
+    if (match !== null && (match[2] ?? '').trim().toLowerCase() === wanted) return index;
+  }
+  return null;
+}
+
+/**
+ * The notes section under whichever spelling of the heading — "Notizen" or
+ * "Notes" (docs/VAULT-FORMAT.md) — appears FIRST in the file. This has to be
+ * the same rule `headingFor` in `src/core/vault/sections.ts` uses for the
+ * write path (via `projectNotesHeading` in `src/core/projects/sections.ts`):
+ * read and write must agree on which heading is "the" notes section, or a
+ * note written under one spelling could sit under a heading the panel never
+ * looks at (a file carrying both), or the panel could quietly pick a
+ * different one than the write path chose the moment there's a real
+ * ambiguity. The renderer can't import core (CLAUDE.md, guardrail 5), so
+ * this re-implements "first match wins" as plain parsing over the body
+ * already in hand, rather than "Notizen wins whenever it's non-empty".
+ */
+export function notesSectionOf(body: string): string {
+  const de = firstHeadingLine(body, SECTION_NOTES);
+  const en = firstHeadingLine(body, SECTION_NOTES_EN);
+  if (de === null && en === null) return '';
+  const heading = en === null || (de !== null && de <= en) ? SECTION_NOTES : SECTION_NOTES_EN;
+  return sectionOf(body, heading);
+}
+
+/**
+ * The state section under whichever spelling of the heading — "Stand",
+ * "Status" or "State" (`core/vault/section-names.ts`'s `state` aliases) —
+ * appears FIRST in the file. Same reasoning as `notesSectionOf` above: a
+ * project written under `en` carries `## Status`, and a project migrated
+ * from `de` may carry `## State`; matching only "Stand" would show this
+ * panel empty even though the file has content.
+ */
+export function stateSectionOf(body: string): string {
+  let winner: { heading: string; line: number } | null = null;
+  for (const heading of SECTION_STATE_ALIASES) {
+    const line = firstHeadingLine(body, heading);
+    if (line !== null && (winner === null || line < winner.line)) {
+      winner = { heading, line };
+    }
+  }
+  return winner === null ? '' : sectionOf(body, winner.heading);
+}
+
+/** How many dated entries (`### …`) a section holds. */
 export function datedEntries(section: string): number {
   let count = 0;
   let inFence = false;

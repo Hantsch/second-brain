@@ -36,6 +36,7 @@ import type { IndexedDoc } from '@core/index/types';
 import { excerpt, extractSections } from '@core/vault/doc';
 import { isoDay } from '@core/vault/paths';
 import type { DateLike } from '@core/vault/paths';
+import { sectionKindOf } from '@core/vault/section-names';
 import { limits } from './types';
 import type { OverviewIndex, OverviewLimits } from './types';
 
@@ -48,9 +49,6 @@ const CONTEXT_CHARS = 400;
 /** Hoechstlaenge der Antwortfelder. */
 const MAX_NEXT_STEP = 200;
 const MAX_REASON = 300;
-
-/** Abschnitt, in dem der Wiedereinstiegspunkt steht. */
-const STATE_SECTIONS = new Set(['stand', 'state']);
 
 export interface ProjectStatusSuggestion {
   status: ProjectStatus;
@@ -106,28 +104,58 @@ function ageOf(project: Project, today: string): number {
   return days === null ? project.ageDays : Math.max(0, days);
 }
 
-/** Der Abschnitt „Stand" — der Wiedereinstiegspunkt in Prosa. */
-function stateSection(body: string): string {
+/**
+ * Der Abschnitt „Stand" — der Wiedereinstiegspunkt in Prosa; ohne ihn der ganze
+ * Rumpf. Exportiert, weil die Verdichtung eines Projekts (044, D16) denselben
+ * Abschnitt liest und eine zweite Fassung auseinanderlaufen wuerde, sobald
+ * `sectionKindOf` einen Alias dazulernt.
+ */
+export function stateSection(body: string): string {
   for (const [heading, text] of extractSections(body)) {
-    if (STATE_SECTIONS.has(heading.trim().toLowerCase())) return text.trim();
+    if (sectionKindOf(heading) === 'state') return text.trim();
   }
   return body.trim();
 }
 
-/** Tageseintraege, die dieses Projekt nennen — per Frontmatter oder im Text. */
-function mentions(docs: readonly IndexedDoc[], project: Project): ProjectStatusMention[] {
+/** Was der Treffer-Test von einem Projekt braucht. `Project` erfuellt das strukturell. */
+export interface MentionableProject {
+  slug: string;
+  title: string;
+}
+
+/**
+ * Der Test „nennt dieser Tageseintrag dieses Projekt": der Slug steht in der
+ * `projects:`-Liste des Frontmatters, oder der Titel steht im Text (erst ab vier
+ * Zeichen — kuerzere treffen zu viel). Nur Tageseintraege kommen in Frage.
+ *
+ * Eine Fabrik, damit die gefalteten Vergleichsformen einmal pro Projekt
+ * entstehen und nicht einmal pro Dokument. Exportiert, weil die Verdichtung
+ * eines Projekts (044, D15) **denselben** Test braucht, aber mit eigenem Fenster
+ * und ohne die Grenzen unten: `mentions()` liefert drei Eintraege à 400 Zeichen
+ * fuer den Statusvorschlag, die Verdichtung braucht die vollen Texte. Ein
+ * zweiter Test wuerde stillschweigend andere Tage finden.
+ */
+export function projectMentionTest(project: MentionableProject): (doc: IndexedDoc) => boolean {
   const needleSlug = fold(project.slug);
   const needleTitle = fold(project.title);
-  const found: { date: string; text: string }[] = [];
-  for (const doc of docs) {
-    if (doc.docType !== 'journal') continue;
+  return (doc) => {
+    if (doc.docType !== 'journal') return false;
     const listed = Array.isArray(doc.frontmatter['projects'])
       ? (doc.frontmatter['projects'] as unknown[]).some(
           (entry) => typeof entry === 'string' && fold(entry) === needleSlug,
         )
       : false;
-    const inText = needleTitle.length > 3 && fold(doc.body).includes(needleTitle);
-    if (!listed && !inText) continue;
+    if (listed) return true;
+    return needleTitle.length > 3 && fold(doc.body).includes(needleTitle);
+  };
+}
+
+/** Tageseintraege, die dieses Projekt nennen — per Frontmatter oder im Text. */
+function mentions(docs: readonly IndexedDoc[], project: Project): ProjectStatusMention[] {
+  const isMention = projectMentionTest(project);
+  const found: { date: string; text: string }[] = [];
+  for (const doc of docs) {
+    if (!isMention(doc)) continue;
     const date =
       typeof doc.frontmatter['date'] === 'string' ? doc.frontmatter['date'] : doc.updated;
     found.push({ date, text: excerpt(doc.body, CONTEXT_CHARS) });

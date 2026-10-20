@@ -5,8 +5,15 @@ import { NOW, TODAY, day, indexFrom, journalDoc, projectDoc, session, stamp } fr
 
 const LIMITS = { staleAfterDays: 14, deadlineHorizonDays: 14, waitingNudgeDays: 5 };
 
+/** Ein Projektrumpf mit Stand-Abschnitt unter dieser Ueberschrift, dann Todos. */
+function todoBodyUnder(heading: string, ...lines: string[]): string {
+  return [`## ${heading}`, '', 'Der Testmandant wartet.', '', '## Todos', '', ...lines, ''].join(
+    '\n',
+  );
+}
+
 function todoBody(...lines: string[]): string {
-  return ['## Stand', '', 'Der Testmandant wartet.', '', '## Todos', '', ...lines, ''].join('\n');
+  return todoBodyUnder('Stand', ...lines);
 }
 
 const WAITING = indexFrom([
@@ -158,8 +165,41 @@ describe('suggestProjectStatus mit Modell', () => {
     expect(sent).toContain('Rollen-Mapping dokumentieren');
     expect(sent).toContain('Stefan war krank');
     expect(sent).toContain('Rollen-Mapping begonnen');
+    expect(sent).toContain('Der Testmandant wartet.');
     expect(call?.schema).not.toBeNull();
   });
+
+  /* „Status" ist die englische Ueberschrift, „State" die aeltere Schreibweise, die
+     die Leseseite vor der gemeinsamen Tabelle schon akzeptierte. Beide muessen
+     denselben Wiedereinstiegspunkt in den Prompt bringen wie „## Stand". */
+  it.each(['Status', 'State'])(
+    'liest den Wiedereinstiegspunkt genauso unter „## %s"',
+    async (heading) => {
+      const { gateway, provider } = createFakeGateway({
+        replies: {
+          'project-status': JSON.stringify({
+            status: 'waiting',
+            nextStep: 'Bei Stefan nachfassen',
+            reason: 'Stefan antwortet seit dem 2. August nicht.',
+          }),
+        },
+      });
+      const index = indexFrom([
+        projectDoc({
+          slug: 'nyota',
+          title: 'Nyota Auth0 Migration',
+          waitingOn: [{ who: 'Stefan', what: 'Freigabe', since: day(-8) }],
+          body: todoBodyUnder(heading, '- [ ] Rollen-Mapping dokumentieren'),
+        }),
+      ]);
+
+      await suggestProjectStatus({ index, gateway, today: TODAY, settings: LIMITS }, 'nyota');
+
+      const call = provider.lastCall('project-status');
+      const sent = call?.messages.map((message) => message.content).join('\n') ?? '';
+      expect(sent).toContain('Der Testmandant wartet.');
+    },
+  );
 
   it('verwirft einen Status, den es nicht gibt, und behaelt die Heuristik', async () => {
     const { gateway } = createFakeGateway({

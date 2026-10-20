@@ -132,8 +132,18 @@ export function prompt(text: string, options: TurnOptions): ClaudeRecord {
   };
 }
 
-/** Eine Modellantwort, optional mit Werkzeugaufruf auf eine Datei. */
-export function assistant(text: string, options: TurnOptions & { file?: string }): ClaudeRecord {
+/** Zusaetzliche, optionale Felder eines Assistant-Turns fuer die D6-Fakten. */
+interface AssistantExtras {
+  /** Werkzeugaufruf auf eine Datei. */
+  file?: string;
+  model?: string;
+  usage?: Record<string, unknown>;
+  /** Traegt einen `Task`-Werkzeugaufruf mit diesem `subagent_type`. */
+  subagentType?: string;
+}
+
+/** Eine Modellantwort, optional mit Werkzeugaufruf, Modell, Token-Verbrauch und Subagent. */
+export function assistant(text: string, options: TurnOptions & AssistantExtras): ClaudeRecord {
   const content: Record<string, unknown>[] = [{ type: 'text', text }];
   if (options.file !== undefined) {
     content.push({
@@ -143,6 +153,17 @@ export function assistant(text: string, options: TurnOptions & { file?: string }
       input: { file_path: options.file },
     });
   }
+  if (options.subagentType !== undefined) {
+    content.push({
+      type: 'tool_use',
+      id: `task-${options.at}`,
+      name: 'Task',
+      input: { subagent_type: options.subagentType },
+    });
+  }
+  const message: Record<string, unknown> = { role: 'assistant', content };
+  if (options.model !== undefined) message.model = options.model;
+  if (options.usage !== undefined) message.usage = options.usage;
   return {
     type: 'assistant',
     uuid: `a-${options.at}`,
@@ -150,7 +171,7 @@ export function assistant(text: string, options: TurnOptions & { file?: string }
     timestamp: options.at,
     cwd: options.cwd ?? SB_CWD,
     gitBranch: options.branch ?? 'main',
-    message: { role: 'assistant', content: content as never },
+    message: message as never,
   };
 }
 

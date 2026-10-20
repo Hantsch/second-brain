@@ -14,7 +14,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { IpcChannel, IpcRequest, IpcResponse } from '@shared/ipc';
 import type { DumpItem, FilingProposal, SettingsSnapshot, TaskDefinition } from '@shared/types';
-import { CaptureScreen } from '@renderer/screens/capture/CaptureScreen';
+import { CapturePanel } from '@renderer/screens/capture/CapturePanel';
 import type { SbBridge } from '@renderer/lib/bridge';
 import { setLanguage } from '@renderer/i18n';
 
@@ -33,6 +33,7 @@ const TASKS: TaskDefinition[] = [
     labelKey: 'task.classify-dump.label',
     hintKey: 'task.classify-dump.hint',
     suggested: 'cheap',
+    typicalTokens: { in: 600, out: 120 },
     sensitive: false,
     streams: false,
     structured: true,
@@ -94,6 +95,8 @@ function dumpFor(request: IpcRequest<'capture:dump'>): DumpItem {
     wordCount: request.text.split(/\s+/).length,
     tags: request.tags ?? [],
     scope: request.scope ?? null,
+    filedInto: null,
+    filedAt: null,
   };
 }
 
@@ -104,10 +107,19 @@ function snapshot(autoClassify: boolean): SettingsSnapshot {
       lastVault: 'C:/vaults/demo',
       recentVaults: [],
       theme: 'dark',
+      customization: { background: 'none', appIcon: 'knowledge-garden' },
       uiLanguage: 'de',
+      newVaultLanguages: { documents: 'de', conversation: 'de', translateSources: true },
       window: { width: 1440, height: 900 },
       startMinimized: false,
+      closeToTray: true,
       onboarded: true,
+      machine: {
+        vramOverrideMb: null,
+        resourceBudgetPercent: 80,
+        llamaAutoStart: 'manual',
+        llamaOverrides: { gpuLayers: null, contextTokens: null },
+      },
     },
     vault: {
       version: 1,
@@ -123,7 +135,11 @@ function snapshot(autoClassify: boolean): SettingsSnapshot {
         waitingNudgeDays: 5,
         useClaudeSessions: true,
         claudeProjectsDir: '',
+        useCodexSessions: true,
+        codexSessionsDir: '',
         notifications: true,
+        dismissedAgentProjects: [],
+        showEmptySessionsTab: false,
       },
       journal: { mode: 'tips' },
       gardener: { runOnOpen: true, reviewAfterDays: 120, useLlm: true },
@@ -149,7 +165,7 @@ function renderCapture(extra: Handlers = {}, autoClassify = true): Mock {
   render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
-        <CaptureScreen />
+        <CapturePanel />
       </MemoryRouter>
     </QueryClientProvider>,
   );

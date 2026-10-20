@@ -1,0 +1,49 @@
+- 2026-09-02 11:58 · 040 · D1 one runtime list of all document types · started
+- 2026-09-02 12:00 · 040 · D1 one runtime list of all document types · done
+- 2026-09-02 12:00 · 040 · D2 EVIDENCE_EXCLUDED_TYPES list · started
+- 2026-09-02 12:02 · 040 · D2 EVIDENCE_EXCLUDED_TYPES list · done
+- 2026-09-02 12:02 · 040 · D3 answer path never retrieves condensed · started
+- 2026-09-02 12:39 · 040 · D3 answer path never retrieves condensed · done
+- 2026-09-02 12:39 · 040 · D4 file-back guard against condensed citations · started
+- 2026-09-02 12:42 · 040 · D4 file-back guard against condensed citations · done
+- 2026-09-02 12:42 · 040 · D5 condensed tab not-evidence hint · started
+- 2026-09-02 12:44 · 040 · D5 condensed tab not-evidence hint · done
+- 2026-09-02 13:08 · 040 · story closed (verify green, review PASS after 1 fix cycle, live smoke confirmed) · done
+- 2026-09-02 13:09 · 042 · D1 the progress store, outside React · started
+- 2026-09-02 13:19 · 042 · D1 the progress store, outside React · done
+- 2026-09-02 13:19 · 042 · D2 seed on vault-ready, still no polling · started
+- 2026-09-02 13:28 · 042 · D2 seed on vault-ready, still no polling · done
+- 2026-09-02 13:28 · 042 · D3 RunStrip in the shell, neutral tokens · started
+- 2026-09-02 13:45 · 042 · D3 RunStrip in the shell, neutral tokens · done
+- 2026-09-02 13:45 · 042 · D4 stop and continue on the strip · started
+- 2026-09-02 13:56 · 042 · D4 stop and continue on the strip · done
+- 2026-09-02 13:56 · 042 · D5 retire the rail indicator · started
+- 2026-09-02 14:02 · 042 · D5 retire the rail indicator · done
+- 2026-09-02 14:02 · 042 · D6 main-process close and quit guard · started
+- 2026-09-02 14:10 · 042 · D6 main-process close and quit guard · done
+- 2026-09-02 14:10 · 042 · D7 the warning dialog · started
+- 2026-09-02 14:25 · 042 · D7 the warning dialog · done
+- 2026-09-02 14:25 · 042 · D8 regression tests and the named cause · started
+- 2026-09-02 14:09 · 042 · D8 regression tests and the named cause · done
+- 2026-09-02 15:17 · 042 · story built, verify green, review PASS after 2 fix cycles, live smoke partial (needs a configured model for full manual acceptance) — status left in-progress · done
+- 2026-09-02 15:19 · 043 · D1 condense:delete contract, handler, index settle · started
+- 2026-09-02 15:32 · 043 · D1 condense:delete contract, handler, index settle · done
+- 2026-09-02 15:32 · 043 · D2 delete button, confirmation dialog, i18n · started
+- 2026-09-02 15:44 · 043 · D2 delete button, confirmation dialog, i18n · done
+- 2026-09-02 15:44 · 043 · D3 acceptance surface: screenshot and test plan · started
+- 2026-09-02 15:48 · 043 · D3 acceptance surface: screenshot and test plan · done
+- 2026-09-02 16:11 · 043 · story built, verify green, review PASS with 2 findings fixed (delete-conflict message, empty-state test coverage), live smoke partial (dialog screenshot only, full flow not driven live) — status left in-progress · done
+- 2026-09-02 16:13 · 041 · baseline (lint/typecheck/test/build) · started
+- 2026-09-02 16:16 · 041 · baseline (lint clean, typecheck clean, 244 files/3404 tests passed, build ok) · done
+- 2026-09-02 16:16 · 041 · D1 one rule, carve-outs resolved · started
+- 2026-09-02 16:17 · 041 · D1 one rule, carve-outs resolved · done
+- 2026-09-02 16:28 · 041 · D2 working tree becomes LF, format:check green · done
+- 2026-09-02 16:29 · 041 · D3 eol-normalization guard test · started
+- 2026-09-02 16:32 · 041 · D3 eol-normalization guard test · done
+- 2026-09-02 16:32 · 041 · D4 decision written in CLAUDE.md/README/ai-scrum.md · started
+- 2026-09-02 16:36 · 041 · D4 decision written in CLAUDE.md/README/ai-scrum.md · done
+- 2026-09-02 16:36 · 041 · D5 gate proven end to end (verify + handoff) · started
+- 2026-09-02 16:44 · 041 · D5 plan-gap fix: handoff.mjs shell-quoting bug (unrelated pre-existing, blocks AC3) · started
+- 2026-09-02 16:53 · 041 · D5 plan-gap fix (handoff.mjs shell quoting) · done
+- 2026-09-02 16:53 · 041 · D5 gate proven end to end (verify + handoff) · done
+- 2026-09-02 17:11 · 041 · story closed (verify green incl. format:check, handoff completed, review PASS, status done, moved to done/) · done

@@ -10,6 +10,8 @@
  * Vertrauen, als ein uebersehenes einbringt.
  */
 
+import type { DocLanguage } from '@shared/types';
+import { IMPERATIVE_START_EN, MOOD_WORDS_EN, TASK_PREFIX_EN, TASK_WORDS_EN } from './lexicon-en';
 import { MOOD_WORDS, NOT_A_NAME, NOT_A_VERB, REPORT_WORDS, TASK_WORDS } from './lexicon';
 import { hasMatch, matchAll } from './words';
 
@@ -75,7 +77,7 @@ export function sentences(text: string): Sentence[] {
 const INFINITIVE_END = /(?<![\p{L}])(\p{Ll}{2,}(?:en|ern|eln))\s*[.!]?$/u;
 
 /** Vorsilben, die vor der eigentlichen Aufgabe stehen. */
-const TASK_PREFIX =
+const TASK_PREFIX_DE =
   /^(?:todo|to-do|aufgabe)\s*[:-]\s*|^(?:ich|wir)\s+(?:muss|m(?:ü|ue)ssen|sollte|sollten)\s+(?:noch\s+|unbedingt\s+)?|^nicht\s+vergessen\s*[:,-]?\s*|^noch\s+/i;
 
 /** Mindestlaenge eines Satzes, der ueber seinen Infinitiv zur Aufgabe wird. */
@@ -99,21 +101,33 @@ function looksLikeInfinitive(text: string): boolean {
  * Ein Listenpunkt gilt als Aufgabe: eine Liste in einem Dump ist fast immer eine
  * Liste von Dingen, die zu tun sind. Ein Gefuehlssatz nie — auch nicht als
  * Listenpunkt.
+ *
+ * `languages` bestimmt, welche Sprachtabellen mitlaufen. Deutsch bleibt der
+ * Standard; Englisch (Absichtsphrasen, Imperativ am Satzanfang) laeuft nur, wenn
+ * 'en' explizit dabei ist — das Englische kennt keinen Infinitiv am Satzende,
+ * darum gibt es dafuer keine Entsprechung.
  */
-export function isTask(sentence: Sentence): boolean {
+export function isTask(sentence: Sentence, languages: readonly DocLanguage[] = ['de']): boolean {
   if (sentence.checked) return false;
-  if (hasMatch(MOOD_WORDS, sentence.text)) return false;
+  if (languages.includes('de') && hasMatch(MOOD_WORDS, sentence.text)) return false;
+  if (languages.includes('en') && hasMatch(MOOD_WORDS_EN, sentence.text)) return false;
   if (sentence.listItem) return true;
-  if (hasMatch(TASK_WORDS, sentence.text)) return true;
+  if (languages.includes('de') && hasMatch(TASK_WORDS, sentence.text)) return true;
+  if (languages.includes('en') && hasMatch(TASK_WORDS_EN, sentence.text)) return true;
+  if (languages.includes('en') && IMPERATIVE_START_EN.test(sentence.text)) return true;
+  if (!languages.includes('de')) return false;
   return looksLikeInfinitive(sentence.text) && !hasMatch(REPORT_WORDS, sentence.text);
 }
 
-/** Aufgabentext aufraeumen: Vorsilbe weg, Satzpunkt weg, erster Buchstabe gross. */
-export function taskText(text: string): string {
-  const trimmed = text
-    .replace(TASK_PREFIX, '')
-    .replace(/\s*[.;]+\s*$/, '')
-    .trim();
+/**
+ * Aufgabentext aufraeumen: Vorsilbe weg, Satzpunkt weg, erster Buchstabe gross.
+ * Deutsche und englische Vorsilben werden je nach `languages` entfernt.
+ */
+export function taskText(text: string, languages: readonly DocLanguage[] = ['de']): string {
+  let stripped = text;
+  if (languages.includes('de')) stripped = stripped.replace(TASK_PREFIX_DE, '');
+  if (languages.includes('en')) stripped = stripped.replace(TASK_PREFIX_EN, '');
+  const trimmed = stripped.replace(/\s*[.;]+\s*$/, '').trim();
   if (trimmed.length === 0) return text.trim();
   return `${trimmed.slice(0, 1).toUpperCase()}${trimmed.slice(1)}`;
 }

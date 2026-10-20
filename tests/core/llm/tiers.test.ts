@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { classifyModelTier, parameterBillions } from '@core/llm';
+import {
+  cheapSizeBand,
+  classifyModelTier,
+  MIN_LOCAL_PARAMS_B_BY_TIER,
+  parameterBillions,
+} from '@core/llm';
 import type { ModelTier } from '@shared/types';
 
 /* Die Heuristik steuert Vorschläge — sie muss bei echten Modellnamen plausibel
@@ -49,6 +54,26 @@ describe('classifyModelTier', () => {
     // Teilzeichenketten würden hier falsch greifen — deshalb wird nach Wörtern getrennt.
     expect(classifyModelTier('gemini-2.5-pro')).toBe('balanced');
     expect(classifyModelTier('minimax-m2')).toBe('balanced');
+  });
+});
+
+describe('cheapSizeBand', () => {
+  it('liegt an den Grenzen 2 / 2.1 / 4 / 4.1 / 8 in der richtigen Bande', () => {
+    expect(cheapSizeBand(2)).toBe('tiny');
+    expect(cheapSizeBand(2.1)).toBe('small');
+    expect(cheapSizeBand(4)).toBe('small');
+    expect(cheapSizeBand(4.1)).toBe('mid');
+    expect(cheapSizeBand(8)).toBe('mid');
+  });
+
+  it('ordnet 1.2B und 8B unterschiedlichen Banden zu', () => {
+    expect(cheapSizeBand(1.2)).not.toBe(cheapSizeBand(8));
+  });
+});
+
+describe('MIN_LOCAL_PARAMS_B_BY_TIER', () => {
+  it('hat genau drei Leistungsklassen mit den erwarteten Werten', () => {
+    expect(MIN_LOCAL_PARAMS_B_BY_TIER).toEqual({ cheap: 3, balanced: 7, strong: 13 });
   });
 });
 

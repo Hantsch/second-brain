@@ -1,13 +1,13 @@
-/* Leerzustand. Erklärt, was hier erscheinen wird, und nennt die Aktion, die es
-   füllt — nie ein leerer Kasten, nie „keine Daten".
+/* Empty state. Explains what will appear here, and names the action that
+   fills it — never an empty box, never "no data".
 
-   Er darf ausschließlich erscheinen, wenn die zugehörige Abfrage geladen hat und
-   nichts gefunden wurde: „leer" ist eine Aussage über den Vault, und die darf nie
-   dastehen, weil ein Bereich fehlt. (Es fehlt keiner mehr — jeder Screen der Rail
-   ist gebaut.)
+   It may only appear once the corresponding query has loaded and found
+   nothing: "empty" is a statement about the vault, and it must never appear
+   just because a section is missing. (None are missing anymore — every
+   screen in the rail is built.)
 
-   Das Icon-Kachelchen bleibt neutral: das einzige Teal des Screens gehört dem
-   Primärknopf. */
+   The icon tile stays neutral: the screen's one teal belongs to the primary
+   button. */
 
 import { Button } from '../atoms/Button';
 import { Card } from '../atoms/Card';
@@ -20,7 +20,7 @@ export interface EmptyStateAction {
 }
 
 export interface EmptyStateProps {
-  /** Kebab-case-Name für das Icon-Atom. */
+  /** Kebab-case name for the icon atom. */
   icon?: string;
   title: string;
   body: string;

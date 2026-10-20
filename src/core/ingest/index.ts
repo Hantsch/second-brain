@@ -46,6 +46,9 @@ export {
   type IngestLogRecord,
 } from './raw';
 
+export { legacyFingerprint, logFingerprint, sourceFingerprint } from './fingerprint';
+export { loadExistingOutcome } from './existing';
+
 export {
   compact,
   escapeTableCell,
@@ -78,6 +81,7 @@ export {
 } from './file';
 export {
   FETCH_TIMEOUT_MS,
+  FETCH_USER_AGENT,
   MAX_BYTES,
   createUrlIngestor,
   fetchPage,
@@ -185,10 +189,17 @@ export {
 } from './youtube/metadata';
 export {
   YOUTUBE_FILES,
+  isTranscriptAvailable,
   renderMetadataMarkdown,
   writeYoutubeSource,
   type TranscriptInfo,
 } from './youtube/writer';
+export {
+  RESOURCE_REPORT_SCHEMA,
+  analyzeYoutubeResources,
+  youtubeResourceFallback,
+  type AnalyzeYoutubeResourcesOptions,
+} from './youtube/resources';
 
 // ── Alle Ingestoren auf einmal ─────────────────────────────────────────────────
 

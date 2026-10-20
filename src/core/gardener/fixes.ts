@@ -78,7 +78,7 @@ export interface FixResult {
  * volle Inhalt: aus ihm entsteht der Hash fuer den Schreibvorgang und der Stand,
  * auf den ein Rueckweg zurueckfaellt.
  */
-interface Current {
+export interface Current {
   path: string;
   raw: string;
   frontmatter: Record<string, unknown>;
@@ -86,20 +86,20 @@ interface Current {
 }
 
 /** Eine Aenderung: derselbe Pfad, davor und danach. */
-interface Change {
+export interface Change {
   path: string;
   before: string;
   next: string;
 }
 
-async function readCurrent(store: WikiStore, path: string): Promise<Current> {
+export async function readCurrent(store: WikiStore, path: string): Promise<Current> {
   const raw = await store.readText(path);
   if (raw === null) throw new GardenerError('not-found', `Datei fehlt: ${path}`);
   const parsed = parse(raw);
   return { path, raw, frontmatter: parsed.frontmatter, body: parsed.body };
 }
 
-function refOf(current: Current): PageRef {
+export function refOf(current: Current): PageRef {
   const ref = pageRefOf(current.path, current.frontmatter);
   if (ref === null) throw new GardenerError('invalid', `Keine Wiki-Seite: ${current.path}`);
   return ref;
@@ -112,7 +112,7 @@ function pathAt(finding: GardenerFinding, at: number): string {
 }
 
 /** Die Zeile aus der Vorschau — geprueft, aber nicht umformuliert. */
-function previewLine(finding: GardenerFinding, mustMention: string): string {
+export function previewLine(finding: GardenerFinding, mustMention: string): string {
   const preview = finding.fix?.preview ?? '';
   const line = preview.trim();
   if (line.length === 0 || line.includes('\n') || line.length > MAX_LINE_CHARS) {
@@ -129,7 +129,7 @@ function previewLine(finding: GardenerFinding, mustMention: string): string {
  * **vor** dem Schreiben: es traegt den Hash des kuenftigen Inhalts, und ein
  * Protokoll ohne passenden Hash bewirkt beim Zurueckdrehen nichts.
  */
-async function commit(
+export async function commit(
   deps: FixDeps,
   finding: GardenerFinding,
   changes: readonly Change[],
@@ -260,9 +260,13 @@ async function addLinks(deps: FixDeps, finding: GardenerFinding): Promise<FixRes
     throw new GardenerError('invalid', 'Die Seite verlinkt das Ziel schon.');
   }
 
+  /* Die Overview fuehrt ihre Verweise als Liste im Abschnitt „Seiten" — dort
+     schreibt auch der Ingest hin. Jede andere Seite bekommt die Zeile als Absatz. */
   const body = contradiction
     ? appendUnderSection(target.body, phrases(language).contradictions, line)
-    : appendParagraph(target.body, line, phrases(language).contradictions);
+    : targetRef.type === 'overview'
+      ? appendUnderSection(target.body, phrases(language).pages, line)
+      : appendParagraph(target.body, line, phrases(language).contradictions);
   const next = composeContent(target.path, target.raw, {
     path: target.path,
     frontmatter: { updated: isoDay(deps.now ?? new Date()) },

@@ -7,7 +7,7 @@
      verglichen: kein Byte darf sich ändern, solange niemand bestätigt hat. */
 
 import { describe, expect, it } from 'vitest';
-import { GERMAN_CLOSE_LABELS, closeDay, heuristicMood } from '@core/journal';
+import { GERMAN_CLOSE_LABELS, closeDay, formatAnswer, heuristicMood } from '@core/journal';
 import { emptyGateway, gatewayWithReplies } from '../../helpers/llm';
 import { DAY_PATH, journalFile, journalFixture, journalPathOf } from './fixtures';
 
@@ -58,6 +58,9 @@ describe('closeDay', () => {
 
     expect(suggestion?.frontmatter.people).toEqual(['Jonas', 'Miriam']);
     expect(suggestion?.frontmatter.projects).toEqual(['kundenportal-relaunch']);
+    /* Bereiche werden nie geraten — ohne Modell bleibt die Liste leer, auch wenn
+       ein Bereichsname im Text vorkäme. */
+    expect(suggestion?.frontmatter.areas).toEqual([]);
     expect(suggestion?.frontmatter.mood).toBe(2);
     expect(suggestion?.frontmatter.energy).toBe(2);
   });
@@ -84,11 +87,11 @@ describe('closeDay', () => {
 
   it('schreibt nichts — kein Byte im Vault ändert sich', async () => {
     const fixture = await fixtureWithEntry();
-    const before = fixture.store.snapshot();
+    const before = fixture.store.allFiles();
 
     await closeDay(fixture.closeDeps(emptyGateway()), DATE);
 
-    expect(fixture.store.snapshot()).toEqual(before);
+    expect(fixture.store.allFiles()).toEqual(before);
   });
 
   it('begründet den Vorschlag mit Zahlen und sagt, dass kein Modell beteiligt war', async () => {
@@ -126,12 +129,28 @@ describe('closeDay', () => {
     expect(suggestion?.frontmatter.people).toEqual([]);
   });
 
+  it('liest eine eingebettete Antwort im Tag-Abschnitt nicht mit (011: Strom statt Gespräch)', async () => {
+    /* Analog zu 'liest den Gesprächsabschnitt nicht mit' oben, aber im neuen
+       Format: die Antwort steht nicht mehr in einem eigenen Abschnitt, sondern
+       als Blockzitat mitten in "Tag". Todo-artige Sprache darin darf trotzdem
+       nicht als Vorschlag der Nutzerin erscheinen. */
+    const answer = formatAnswer('Du solltest morgen die Rechnung an Svenja schicken.', '21:05');
+    const tag = ['Ruhiger Tag.', '', answer].join('\n');
+    const fixture = await journalFixture({ files: { [PATH]: journalFile(DATE, tag) } });
+
+    const suggestion = await closeDay(fixture.closeDeps(emptyGateway()), DATE);
+
+    expect(suggestion?.proposal.todos).toEqual([]);
+    expect(suggestion?.frontmatter.people).toEqual([]);
+  });
+
   it('nimmt die Felder des Modells, prüft sie aber gegen Text und Bestand', async () => {
     const fixture = await fixtureWithEntry();
     const { gateway } = gatewayWithReplies({
       'extract-tasks': JSON.stringify({
         people: ['Miriam', 'Kerstin'],
         projects: ['kundenportal-relaunch', 'erfundenes-projekt'],
+        areas: ['gesundheit', 'erfundener-bereich'],
         mood: 2,
         energy: 1,
         tags: ['#Stress', 'abnahme'],
@@ -144,6 +163,9 @@ describe('closeDay', () => {
     expect(suggestion?.frontmatter.people).not.toContain('Kerstin');
     expect(suggestion?.frontmatter.people).toContain('Miriam');
     expect(suggestion?.frontmatter.projects).toEqual(['kundenportal-relaunch']);
+    /* 'gesundheit' gibt es im Bestand, 'erfundener-bereich' nicht: nur der
+       bekannte Slug bleibt übrig. */
+    expect(suggestion?.frontmatter.areas).toEqual(['gesundheit']);
     expect(suggestion?.frontmatter.energy).toBe(1);
     expect(suggestion?.frontmatter.tags).toContain('stress');
     expect(suggestion?.heuristic).toBe(false);
@@ -169,6 +191,22 @@ describe('closeDay', () => {
     expect(suggestion?.proposal.todos).toEqual([]);
     expect(suggestion?.proposal.reason).toContain('nichts');
     expect(suggestion?.proposal.primary.content).toBe('');
+  });
+
+  it('behält Stimmung und Energie aus der Datei, wenn der Text an diesem Tag nichts hergibt', async () => {
+    const fixture = await journalFixture({
+      files: {
+        [PATH]: journalFile(DATE, 'Freier Abend in der Werkstatt, nichts notiert.', {
+          mood: 4,
+          energy: 3,
+        }),
+      },
+    });
+
+    const suggestion = await closeDay(fixture.closeDeps(emptyGateway()), DATE);
+
+    expect(suggestion?.frontmatter.mood).toBe(4);
+    expect(suggestion?.frontmatter.energy).toBe(3);
   });
 
   it('arbeitet auch am Tageseintrag des Fixture-Vaults, ohne ihn anzufassen', async () => {

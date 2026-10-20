@@ -30,6 +30,9 @@ function session(patch: Partial<ClaudeSession> = {}): ClaudeSession {
     firstPrompt: 'Terraform-State migrieren',
     summary: null,
     files: [],
+    model: null,
+    subagents: null,
+    contextTokens: null,
     ...patch,
   };
 }
@@ -140,6 +143,19 @@ describe('linkSessions insgesamt', () => {
       source: 'claude-session',
     });
     expect(touches.size).toBe(1);
+  });
+
+  it('touches carry the given source', () => {
+    const touches = sessionTouches([session()], [NYOTA], { source: 'codex-session' });
+    expect(touches.get(NYOTA.slug)).toEqual({
+      at: '2026-08-10T09:00:00.000Z',
+      source: 'codex-session',
+    });
+  });
+
+  it('defaults touches to claude-session when no source is given', () => {
+    const touches = sessionTouches([session()], [NYOTA]);
+    expect(touches.get(NYOTA.slug)?.source).toBe('claude-session');
   });
 
   it('nennt die nicht zuordenbaren Sitzungen, statt sie zu verschweigen', () => {

@@ -1,6 +1,6 @@
 /* Ein Modul von innen: Seiten, Graph, Quellen, Chronik.
 
-   Der Zustand steht in der Adresse (`#/modules?m=<slug>&p=<pfad>&tab=graph`).
+   Der Zustand steht in der Adresse (`#/knowledge?m=<slug>&p=<pfad>&tab=graph`).
    Damit ist jede Seite verlinkbar — aus dem Graphen, aus der Chronik, aus einem
    Beleg —, und der Rückweg des Browsers funktioniert.
 
@@ -8,7 +8,8 @@
    Moduls: gibt es das Ziel, wird es geöffnet; gibt es es nicht, war es schon in
    der Anzeige als fehlend markiert und der Klick tut nichts. */
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { KnowledgeModule, WikiPage, WikiPageType } from '@shared/types';
 import { Badge } from '../../atoms/Badge';
 import { Button } from '../../atoms/Button';
@@ -27,9 +28,11 @@ import {
   useModulePages,
   useModuleSources,
 } from '../../lib/queries/modules';
+import { ModuleActions } from './ModuleActions';
 import { ModuleLog } from './ModuleLog';
 import { PageView } from './PageView';
 import { SourceRow } from '../sources/SourceRow';
+import { SourceDetailDialog } from '../sources/SourceDetailDialog';
 
 export const MODULE_TABS = ['pages', 'graph', 'sources', 'log'] as const;
 
@@ -50,6 +53,10 @@ export interface ModuleDetailProps {
   onTab: (tab: ModuleTab) => void;
   onPage: (path: string | null) => void;
   onBack: () => void;
+  /** Runs after a confirmed rename (063, D5), with the module's slug afterwards. */
+  onRenamed: (newSlug: string) => void;
+  /** Runs after a confirmed delete (063, D6) — the module no longer exists. */
+  onDeleted: () => void;
 }
 
 /** Kennung einer Seite im Graphen und in `outbound`/`inbound`: `modul/slug`. */
@@ -68,13 +75,24 @@ function countOf(pages: readonly WikiPage[], type: WikiPageType): number {
   return pages.filter((entry) => entry.type === type).length;
 }
 
-export function ModuleDetail({ module, tab, page, onTab, onPage, onBack }: ModuleDetailProps) {
+export function ModuleDetail({
+  module,
+  tab,
+  page,
+  onTab,
+  onPage,
+  onBack,
+  onRenamed,
+  onDeleted,
+}: ModuleDetailProps) {
   const t = useT();
   const language = useLanguage();
+  const navigate = useNavigate();
   const pages = useModulePages(module.slug);
   const graph = useModuleGraph(tab === 'graph' ? module.slug : null);
   const sources = useModuleSources(tab === 'sources' ? module.slug : null);
   const log = useModuleLog(tab === 'log' ? module.slug : null);
+  const [selectedSource, setSelectedSource] = useState<string | null>(null);
   /* Eine stabile Liste: sonst rechnet jeder Rendervorgang Graph-Kennungen neu. */
   const known = useMemo(() => pages.data ?? [], [pages.data]);
   const current = useModulePage(page);
@@ -100,6 +118,13 @@ export function ModuleDetail({ module, tab, page, onTab, onPage, onBack }: Modul
     if (path !== null) onPage(path);
   };
 
+  /* The shortest way from "a source is missing here" to the workbench:
+     `into` preseeds the target module there. No state of its own — the
+     address carries it. */
+  const takeInSource = (): void => {
+    void navigate(`/knowledge?tab=sources&into=${encodeURIComponent(module.slug)}`);
+  };
+
   const items = MODULE_TABS.map((id) => ({
     id,
     label: t(`modules.tab.${id}`),
@@ -110,9 +135,12 @@ export function ModuleDetail({ module, tab, page, onTab, onPage, onBack }: Modul
   return (
     <div className="sb-moduledetail">
       <div className="sb-moduledetail-head">
-        <Button variant="ghost" size="sm" icon="chevron-left" onClick={onBack}>
-          {t('modules.back')}
-        </Button>
+        <div className="sb-moduledetail-headrow">
+          <Button variant="ghost" size="sm" icon="chevron-left" onClick={onBack}>
+            {t('modules.back')}
+          </Button>
+          <ModuleActions module={module} onRenamed={onRenamed} onDeleted={onDeleted} />
+        </div>
         {/* Der Modultitel steht im Kopf des Screens — hier wäre er ein Echo. */}
         <div className="sb-moduledetail-title">
           <p className="sb-empty-body">
@@ -213,19 +241,29 @@ export function ModuleDetail({ module, tab, page, onTab, onPage, onBack }: Modul
           <ErrorState error={sources.error} onRetry={() => void sources.refetch()} />
         ) : sources.isPending || sources.data === undefined ? (
           <Skeleton lines={3} height={40} />
-        ) : sources.data.length === 0 ? (
-          <p className="sb-panel-empty">{t('modules.sourcesTab.empty')}</p>
         ) : (
-          <ul className="sb-rows">
-            {sources.data.map((source) => (
-              <SourceRow
-                key={source.path}
-                source={source}
-                onOpen={(path) => void api.shell.showInFolder(path).catch(() => undefined)}
-                onOpenPage={openTarget}
-              />
-            ))}
-          </ul>
+          <div className="sb-modulesources">
+            {sources.data.length === 0 ? (
+              <p className="sb-panel-empty">{t('modules.sourcesTab.empty')}</p>
+            ) : (
+              <ul className="sb-rows">
+                {sources.data.map((source) => (
+                  <SourceRow
+                    key={source.path}
+                    source={source}
+                    onOpen={setSelectedSource}
+                    onOpenPage={openTarget}
+                  />
+                ))}
+              </ul>
+            )}
+            {/* Visible in both states — most urgently in the empty one.
+                Secondary: the teal belongs to the source rows here and to
+                "take in" over there, not to this shortcut. */}
+            <Button variant="secondary" icon="download" onClick={takeInSource}>
+              {t('modules.sourcesTab.ingest')}
+            </Button>
+          </div>
         )
       ) : null}
 
@@ -239,6 +277,16 @@ export function ModuleDetail({ module, tab, page, onTab, onPage, onBack }: Modul
           exists={exists}
         />
       ) : null}
+
+      <SourceDetailDialog
+        key={selectedSource ?? 'closed'}
+        path={selectedSource}
+        modules={[module]}
+        jobs={[]}
+        onClose={() => setSelectedSource(null)}
+        onOpenRaw={(path) => void api.shell.showInFolder(path).catch(() => undefined)}
+        onOpenPage={(sourcePage) => openTarget(sourcePage)}
+      />
     </div>
   );
 }

@@ -31,7 +31,8 @@ export interface AnswerFeedProps {
   active: { messageId: string; index: number } | null;
   onCitation: (messageId: string, index: number) => void;
   onOpenPath: (path: string) => void;
-  onFileBack: (message: Message) => void;
+  /** Without it no message offers filing back — a read-only view of a conversation. */
+  onFileBack?: (message: Message) => void;
 }
 
 /** Die Frage, die zu dieser Antwort führte — die letzte Nutzerzeile davor. */
@@ -70,7 +71,10 @@ export function AnswerFeed({
            ins Wissen zu schreiben — deshalb gibt es den Knopf dann nicht. */
         const passages = message.model === undefined && (message.citations?.length ?? 0) > 0;
         const fileable =
-          message.role === 'assistant' && !passages && message.content.trim().length > 0;
+          onFileBack !== undefined &&
+          message.role === 'assistant' &&
+          !passages &&
+          message.content.trim().length > 0;
         return (
           <ChatMessage
             key={message.id}
@@ -80,7 +84,7 @@ export function AnswerFeed({
             activeCitation={active?.messageId === message.id ? active.index : null}
             onCitation={(index) => onCitation(message.id, index)}
             onOpenPath={onOpenPath}
-            {...(fileable ? { onFileBack: () => onFileBack(message) } : {})}
+            {...(fileable ? { onFileBack: () => onFileBack?.(message) } : {})}
           />
         );
       })}

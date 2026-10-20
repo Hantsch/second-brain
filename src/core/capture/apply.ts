@@ -8,14 +8,22 @@
  * - **Kein halber Zustand.** Scheitert ein Schritt in der Mitte, wird alles
  *   Geschriebene zurueckgedreht und der Fehler gemeldet.
  * - **Ein Rueckweg fuer alles.** Der `undoToken` dreht jeden Teilschritt zurueck,
- *   nicht nur den Dump; das Protokoll dazu liegt neben der Papierkorb-Kopie
- *   (`undo.ts`).
+ *   nicht nur den Dump; das Protokoll dazu liegt unter der Marke im
+ *   Papierkorb-Ordner (`undo.ts`).
  *
- * Format: docs/VAULT-FORMAT.md. Neue Projektdateien tragen die Abschnitte Stand,
- * Todos und Notizen; angehaengte Dumps stehen unter „Notizen" mit ihrem Datum.
+ * Der abgelegte Dump **bleibt liegen**: er traegt `status: filed` samt `filed_into`
+ * und `filed_at` und wird damit zum Beleg, wohin sein Inhalt gewandert ist. Es gibt
+ * dafuer weder eine Papierkorb-Kopie noch eine Loeschung — `movedTo` ist immer `null`.
+ *
+ * Format: docs/VAULT-FORMAT.md. Neue Projektdateien tragen die drei Abschnitte
+ * Stand, Todos und Notizen — in der Dokumentsprache, also `Status`/`Todos`/`Notes`
+ * fuer einen englischen Vault. Angehaengte Dumps stehen im Notizen-Abschnitt mit
+ * ihrem Datum; welche Ueberschrift das ist, entscheidet die Zieldatei selbst
+ * (`resolveSection`), nicht die Vorschau im Vorschlag.
  */
 
 import type {
+  DocLanguage,
   FilingAction,
   FilingProposal,
   FilingResult,
@@ -24,9 +32,12 @@ import type {
 } from '@shared/types';
 import { isoDay } from '@core/vault/paths';
 import type { DateLike } from '@core/vault/paths';
-import { SECTION_NOTES, SECTION_STATE, SECTION_TODOS } from './actions';
+import { sectionNameFor } from '@core/vault/section-names';
+import type { SectionKind } from '@core/vault/section-names';
+import { createUndoToken } from '@core/vault/trash';
 import { FilingError } from './filing';
-import { revertStep, trashCopyPath, writeJournal } from './undo';
+import { resolveSection } from './sections';
+import { revertStep, writeJournal } from './undo';
 import type { FilingJournal, Step, UndoStore } from './undo';
 
 /** Was das Ausfuehren am Store braucht. `VaultStore` erfuellt es strukturell. */
@@ -42,6 +53,11 @@ export interface ApplyOptions {
    * einer fremden Aenderung einen Konflikt statt eines Ueberschreibens.
    */
   expectedHashes?: Readonly<Record<string, string>>;
+  /**
+   * Sprache, in der **fehlende** Abschnitte und neue Projektdateien beschriftet
+   * werden. Hat eine Zieldatei den Abschnitt schon, gewinnt ihre Ueberschrift.
+   */
+  docLanguage?: DocLanguage;
 }
 
 /** Slug eines Projekts aus seinem Pfad — der Pfad ist die Wahrheit, nicht der Titel. */
@@ -64,9 +80,12 @@ function projectFrontmatter(
     slug,
     scope: proposal.scope,
     status: 'active',
+    status_set: { at: today, by: 'filing' },
     priority: 3,
     started: today,
-    ...(firstTodo === undefined ? {} : { next_step: firstTodo.text }),
+    ...(firstTodo === undefined
+      ? {}
+      : { next_step: firstTodo.text, next_step_set: { at: today, by: 'filing' } }),
     tags: proposal.tags,
     modules: [],
     repos: [],
@@ -76,16 +95,20 @@ function projectFrontmatter(
   };
 }
 
-/** Rumpf einer neuen Projektdatei: die drei Abschnitte, die jedes Projekt hat. */
-function projectBody(state: string): string {
+/**
+ * Rumpf einer neuen Projektdatei: die drei Abschnitte, die jedes Projekt hat, in
+ * der Dokumentsprache. Hier gibt es nichts neu zu bestimmen — die Datei entsteht
+ * gerade, sie kann noch keine Ueberschrift mitbringen, die gewinnen koennte.
+ */
+function projectBody(state: string, docLanguage: DocLanguage): string {
   return [
-    `## ${SECTION_STATE}`,
+    `## ${sectionNameFor('state', docLanguage)}`,
     '',
     state.trim(),
     '',
-    `## ${SECTION_TODOS}`,
+    `## ${sectionNameFor('todos', docLanguage)}`,
     '',
-    `## ${SECTION_NOTES}`,
+    `## ${sectionNameFor('notes', docLanguage)}`,
     '',
   ].join('\n');
 }
@@ -141,12 +164,22 @@ class Run {
     if (!this.written.includes(path)) this.written.push(path);
   }
 
-  /** Einen Block unter einem Abschnitt anhaengen. */
-  async append(action: FilingAction, section: string): Promise<void> {
+  /**
+   * Einen Block anhaengen. Die Ueberschrift wird **hier** bestimmt, aus dem Rumpf,
+   * der gerade gelesen wurde: der Abschnitt im Vorschlag ist eine Vorschau aus dem
+   * Index, und ein „Notes" gegen ein bestehendes „## Notizen" waere ein zweiter
+   * Abschnitt fuer dieselbe Sache. `kind` ist die Vorgabe, wenn die Aktion selbst
+   * keinen Abschnitt nennt.
+   *
+   * Fuer den Rueckweg aendert das nichts: das Protokoll haelt den Block, nicht die
+   * Ueberschrift — `removeBlock` findet ihn im ganzen Rumpf wieder.
+   */
+  async append(action: FilingAction, kind: SectionKind): Promise<void> {
     const block = action.content.replace(/\r\n/g, '\n').trim();
     if (block.length === 0) return;
     const doc = await this.store.read(action.path);
     if (doc === null) throw new FilingError('not-found', `Zieldatei fehlt: ${action.path}`);
+    const section = resolveSection(doc.body, action, kind, this.options.docLanguage);
     await this.store.append(action.path, section, block, {
       expectedHash: this.hashFor(action.path, doc.hash),
     });
@@ -193,33 +226,40 @@ class Run {
   }
 }
 
-/** Der Abschnitt, unter dem eine Aktion landet. */
-function sectionOf(action: FilingAction, fallback: string): string {
-  const section = action.section?.trim();
-  return section === undefined || section.length === 0 ? fallback : section;
-}
-
-/** Der Status, den der Dump vor der Ablage trug. */
-function previousStatus(value: unknown): string | null {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+/**
+ * Der Status, den der Dump vor der Ablage trug — der Wert, auf den ein Rueckgaengig
+ * ihn zurueckstellt.
+ *
+ * Trug er keinen, ist die Antwort `raw`: genau das leitet jeder Leser aus einem
+ * Dump ohne `status` ab (`index/dumps.ts`). Die Ablage schreibt das Feld ohnehin,
+ * und `null` hiesse fuer den Rueckweg „nichts zurueckzustellen" — der Dump bliebe
+ * mit `status: filed` liegen, obwohl seine Ablage gerade zurueckgenommen wurde.
+ */
+function previousStatus(value: unknown): string {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : 'raw';
 }
 
 /**
  * Den Hauptvorschlag ausfuehren. `inbox` schreibt keine Zieldatei: der Dump bleibt
  * liegen und wird nur als bewusst behalten markiert.
  */
-async function applyPrimary(run: Run, proposal: FilingProposal, today: string): Promise<void> {
+async function applyPrimary(
+  run: Run,
+  proposal: FilingProposal,
+  today: string,
+  docLanguage: DocLanguage,
+): Promise<void> {
   const action = proposal.primary;
   if (action.target === 'inbox') return;
   if (action.target === 'new-project') {
     await run.create(
       action.path,
       projectFrontmatter(proposal, projectSlugOf(action.path), today),
-      projectBody(action.content),
+      projectBody(action.content, docLanguage),
     );
     return;
   }
-  await run.append(action, sectionOf(action, SECTION_NOTES));
+  await run.append(action, 'notes');
 }
 
 /**
@@ -239,16 +279,28 @@ export async function applyProposal(
 
   const run = new Run(store, options);
   try {
-    await applyPrimary(run, proposal, today);
+    await applyPrimary(run, proposal, today, options.docLanguage ?? 'de');
+
+    /* Ein echtes Ziel (nicht `inbox`), das trotzdem nichts geschrieben hat: der
+       Vorschlagstext war leer oder nur Leerraum — `Run.append` haengt einen
+       leeren Block gar nicht erst an. Ohne diese Pruefung liefe der Code unten
+       weiter und schriebe `status: filed` samt `filed_into` auf eine Zieldatei,
+       die nichts empfangen hat: ein Beleg, der lügt, und ein Widerspruch zum
+       `written`, das dann leer bliebe. Kein stiller Erfolg also, sondern ein
+       Fehler — die Oberflaeche zeigt ihn, statt eine Ablage zu bestaetigen, die
+       nie stattfand. */
+    if (!keepsDump && run.written.length === 0) {
+      throw new FilingError('invalid', 'Nichts zum Ablegen: der Text ist leer.');
+    }
+
     /* Bleibt der Dump liegen, wird **nichts** geschrieben — auch kein Todo-Block
-       in einer fremden Projektdatei. Es gaebe dafuer keinen Rueckweg: der
-       `undoToken` entsteht erst mit der Papierkorb-Kopie des Dumps, und die gibt
-       es hier nicht. Ein Schreibvorgang ohne Rueckweg ist keiner, den die
-       Oberflaeche „Liegen lassen" nennen darf. */
+       in einer fremden Projektdatei. Es gaebe dafuer keinen Rueckweg: dieser Zweig
+       schreibt kein Protokoll und gibt keine Marke zurueck. Ein Schreibvorgang ohne
+       Rueckweg ist keiner, den die Oberflaeche „Liegen lassen" nennen darf. */
     if (!keepsDump) {
       for (const extra of proposal.extras) {
         if (extra.target === 'inbox') continue;
-        await run.append(extra, sectionOf(extra, SECTION_TODOS));
+        await run.append(extra, 'todos');
       }
       // Bei `new-project` steht `waiting_on` schon im frisch geschriebenen Frontmatter.
       if (proposal.primary.target !== 'new-project') {
@@ -256,9 +308,12 @@ export async function applyProposal(
       }
     }
 
+    /* Der Beleg: wohin der Inhalt ging und an welchem Tag. Nur beim Ablegen — ein
+       liegen gelassener Dump wurde nirgends abgelegt und traegt die Felder nicht. */
+    const filedFields = keepsDump ? {} : { filed_into: proposal.primary.path, filed_at: today };
     await store.write({
       path: proposal.dumpPath,
-      frontmatter: { status: keepsDump ? 'kept' : 'filed' },
+      frontmatter: { status: keepsDump ? 'kept' : 'filed', ...filedFields },
       expectedHash: dumpHash,
     });
     if (keepsDump) {
@@ -270,20 +325,25 @@ export async function applyProposal(
       };
     }
 
-    const removed = await store.delete(proposal.dumpPath);
+    /* Die Marke entsteht hier selbst, nicht aus einer Loeschung: der Dump bleibt als
+       Beleg liegen, es gibt also keine Papierkorb-Kopie, die eine Marke stiften
+       koennte. Das Protokoll traegt sie trotzdem — und `trashed: false` sagt dem
+       Rueckweg, dass er im Papierkorb nichts zu suchen hat. */
+    const token = createUndoToken();
     const journal: FilingJournal = {
       version: 1,
       dumpPath: proposal.dumpPath,
       dumpStatus: previousStatus(dump.frontmatter['status']),
+      trashed: false,
       steps: run.steps,
     };
-    await writeJournal(store, removed.undoToken, journal);
+    await writeJournal(store, token, journal);
 
     return {
       dumpPath: proposal.dumpPath,
       written: [...run.written],
-      movedTo: trashCopyPath(removed.undoToken, proposal.dumpPath),
-      undoToken: removed.undoToken,
+      movedTo: null,
+      undoToken: token,
     };
   } catch (error) {
     await run.rollback();

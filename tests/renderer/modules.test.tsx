@@ -11,7 +11,7 @@
  */
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import axe from 'axe-core';
@@ -43,6 +43,14 @@ function installMock(handlers: Handlers): Mock {
   });
   window.sb = { invoke, on: () => () => undefined, off: () => undefined } as unknown as SbBridge;
   return { calls };
+}
+
+/* Die Adresse ist der Zustand — also wird sie hier auch gelesen. Ohne diese
+   Sonde prüft ein Reiter-Test nur, was auf dem Schirm steht, nicht was im Link
+   landet, den morgen jemand verschickt. */
+function Address() {
+  const location = useLocation();
+  return <span data-testid="address">{location.search}</span>;
 }
 
 async function expectNoViolations(container: HTMLElement): Promise<void> {
@@ -152,6 +160,7 @@ function renderScreen(extra: Handlers = {}, at = `/modules?m=${MODULE}&p=${OAUTH
       docCount: 12,
       indexedAt: NOW,
       indexing: false,
+      indexRefreshFailedAt: null,
     }),
     'modules:list': () => [knowledgeModule],
     'modules:pages': () => PAGES,
@@ -160,6 +169,8 @@ function renderScreen(extra: Handlers = {}, at = `/modules?m=${MODULE}&p=${OAUTH
       return found === undefined ? null : { page: found, doc: doc(path) };
     },
     'modules:sources': () => [],
+    'ingest:jobs': () => [],
+    'ingest:ytdlpStatus': () => ({ available: false, path: null, version: null }),
     'modules:graph': () => ({
       nodes: PAGES.map((entry) => ({
         id: `${entry.module}/${entry.slug}`,
@@ -176,13 +187,14 @@ function renderScreen(extra: Handlers = {}, at = `/modules?m=${MODULE}&p=${OAUTH
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[at]}>
         <ModulesScreen />
+        <Address />
       </MemoryRouter>
     </QueryClientProvider>,
   );
   /* Der Client kommt mit zurück: eine externe Änderung erreicht den Renderer über
      `event:vault-changed` → Invalidierung. Das Ereignis selbst hängt in `App`; hier
      wird derselbe Weg von Hand gegangen. */
-  return { sb, container, client };
+  return { sb, container, client, address: () => screen.getByTestId('address').textContent };
 }
 
 beforeEach(() => {
@@ -200,7 +212,7 @@ describe('Module: Übersicht', () => {
 
     expect(await screen.findByText('Identitätsmanagement')).toBeTruthy();
     expect(screen.getByText('1 Quellen · 2 Entitäten · 1 Konzepte')).toBeTruthy();
-    expect(screen.getByText('2 Pflege-Befunde')).toBeTruthy();
+    expect(screen.getByText('2 Befunde aus der Pflege')).toBeTruthy();
   });
 
   it('erklärt im Dialog in einem Satz, was ein Modul ist', async () => {
@@ -234,6 +246,176 @@ describe('Module: Übersicht', () => {
         description: 'Methodik.',
       }),
     );
+  });
+});
+
+describe('Wissen: die Reiter des Screens', () => {
+  /* `tab` heißt zweierlei — mit `m` der Reiter des Moduls, ohne `m` der des
+     Screens. `sources` ist in beiden Sätzen ein gültiger Wert; wer den falschen
+     Satz liest, öffnet still die falsche Ansicht. Deshalb prüfen diese Tests
+     nicht nur den Schirm, sondern auch die Adresse. */
+
+  it('schaltet auf die Quellen-Werkbank und schreibt den Reiter in die Adresse', async () => {
+    const { address } = renderScreen({}, '/modules');
+    await screen.findByText('Identitätsmanagement');
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Quellen' }));
+
+    expect(await screen.findByLabelText('URL, YouTube-Link oder Text')).toBeTruthy();
+    expect(address()).toBe('?tab=sources');
+
+    /* Und zurück: der Standardreiter steht nicht in der Adresse. */
+    await userEvent.click(screen.getByRole('tab', { name: 'Module' }));
+    expect(await screen.findByText('1 Quellen · 2 Entitäten · 1 Konzepte')).toBeTruthy();
+    expect(address()).toBe('');
+  });
+
+  it('zeigt bei ?tab=sources die volle Werkbank, nicht nur einen Ausschnitt', async () => {
+    renderScreen({}, '/modules?tab=sources');
+
+    expect(await screen.findByLabelText('URL, YouTube-Link oder Text')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Aufnehmen' })).toBeTruthy();
+    expect(screen.getByLabelText('Zielmodul')).toBeTruthy();
+    /* Der Bestand kommt aus einer eigenen Abfrage — leer heißt hier: die vier
+       Wege herein stehen da, nicht bloß ein Ladebalken. */
+    expect(await screen.findByText('Vier Wege herein')).toBeTruthy();
+  });
+
+  it('zeigt die Werkbank auch in einem Vault ganz ohne Modul', async () => {
+    /* Der frische Vault ist genau der Fall, in dem jemand hierher kommt: der
+       Leerzustand gehört dem Modul-Reiter, nicht dem Screen — sonst wäre der
+       Weg zu, über den das erste Modul überhaupt Inhalt bekommt. */
+    renderScreen({ 'modules:list': () => [] }, '/modules?tab=sources');
+
+    expect(await screen.findByLabelText('URL, YouTube-Link oder Text')).toBeTruthy();
+    expect(screen.queryByText('Noch kein Wissens-Modul im Vault')).toBeNull();
+
+    /* Auf dem Modul-Reiter daneben steht er sehr wohl. */
+    await userEvent.click(screen.getByRole('tab', { name: 'Module' }));
+    expect(await screen.findByText('Noch kein Wissens-Modul im Vault')).toBeTruthy();
+  });
+
+  it('führt ?m=…&tab=log&p=… weiterhin in die Chronik des Moduls', async () => {
+    const { address } = renderScreen({}, `/modules?m=${MODULE}&tab=log&p=${OAUTH}`);
+
+    expect(await screen.findByText('Quelle aufgenommen')).toBeTruthy();
+    /* Über einem Modul steht kein Screen-Reiter: die Reiter hier sind seine. */
+    expect(screen.queryByRole('tab', { name: 'Module' })).toBeNull();
+    expect(screen.getByRole('tab', { name: 'Protokoll' })).toBeTruthy();
+    expect(address()).toBe(`?m=${MODULE}&tab=log&p=${OAUTH}`);
+  });
+
+  it('lässt keinen Reiter in den falschen Namensraum durchschlagen', async () => {
+    const { address } = renderScreen({}, `/modules?m=${MODULE}&tab=log`);
+    await screen.findByText('Quelle aufgenommen');
+
+    /* `log` ist kein Reiter des Screens — beim Verlassen des Moduls fällt er weg. */
+    await userEvent.click(screen.getByRole('button', { name: 'Alle Module' }));
+    expect(await screen.findByRole('tab', { name: 'Module' })).toBeTruthy();
+    expect(address()).toBe('');
+
+    /* Und umgekehrt: `sources` des Screens landet nicht in der Adresse eines
+       Moduls — dort hieße es „Quellen dieses Moduls". */
+    await userEvent.click(screen.getByRole('tab', { name: 'Quellen' }));
+    expect(address()).toBe('?tab=sources');
+    await userEvent.click(screen.getByRole('tab', { name: 'Module' }));
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Modul Identitätsmanagement öffnen' }),
+    );
+    expect(address()).toBe(`?m=${MODULE}`);
+  });
+});
+
+describe('Wissen: Zielmodul vorbelegen', () => {
+  /* `into` ist ein Startwert, kein Zustand: es setzt den Zielmodul-Wähler der
+     Werkbank vor. Deshalb wird hier immer beides geprüft — was im Wähler steht
+     und was in der Adresse landet. */
+
+  const targetModule = () => screen.getByLabelText<HTMLSelectElement>('Zielmodul');
+
+  it('belegt den Zielmodul-Wähler aus ?into= vor', async () => {
+    renderScreen({}, `/modules?tab=sources&into=${MODULE}`);
+
+    await screen.findByLabelText('URL, YouTube-Link oder Text');
+    expect(targetModule().value).toBe(MODULE);
+  });
+
+  it('bleibt ohne ?into= auf „Später einordnen"', async () => {
+    renderScreen({}, '/modules?tab=sources');
+
+    await screen.findByLabelText('URL, YouTube-Link oder Text');
+    expect(targetModule().value).toBe('');
+  });
+
+  it('erfindet kein Ziel, wenn ?into= kein Modul benennt', async () => {
+    /* Gelöscht oder vertippt: der Wähler fällt auf „Später einordnen" zurück,
+       statt eine Quelle in ein Modul zu schreiben, das es nicht gibt. */
+    renderScreen({}, '/modules?tab=sources&into=geloeschtes-modul');
+
+    await screen.findByLabelText('URL, YouTube-Link oder Text');
+    expect(targetModule().value).toBe('');
+  });
+
+  it('zeigt die Werkbank auch mit ?into=, während der Index noch gebaut wird', async () => {
+    /* Solange `indexing` läuft, ist die Modulliste abgeschaltet — sie kommt nie
+       an. Würde der Startwert darauf warten, stünde statt der Werkbank ein
+       Skelett, das auf nichts wartet: ausgerechnet im frischen Vault, für den
+       man den Quellen-Reiter überhaupt öffnet. */
+    renderScreen(
+      {
+        'vault:status': () => ({
+          root: 'C:/vaults/demo',
+          name: 'Demo',
+          ready: false,
+          docCount: 0,
+          indexedAt: null,
+          indexing: true,
+          indexRefreshFailedAt: null,
+        }),
+      },
+      `/modules?tab=sources&into=${MODULE}`,
+    );
+
+    expect(await screen.findByLabelText('URL, YouTube-Link oder Text')).toBeTruthy();
+    /* Ohne Liste ist kein Ziel prüfbar — „Später einordnen" statt einer
+       Behauptung über ein Modul, das noch niemand gelesen hat. */
+    expect(targetModule().value).toBe('');
+  });
+
+  it('führt vom Quellen-Reiter eines Moduls mit einem Klick in die vorbelegte Werkbank', async () => {
+    const { address } = renderScreen({}, `/modules?m=${MODULE}&tab=sources`);
+
+    /* Der Leerzustand ist genau der Moment, in dem man eine Quelle will. */
+    expect(
+      await screen.findByText(/Für dieses Modul ist noch keine Rohquelle verdichtet/),
+    ).toBeTruthy();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Quelle in dieses Modul aufnehmen' }));
+
+    expect(await screen.findByLabelText('URL, YouTube-Link oder Text')).toBeTruthy();
+    expect(address()).toBe(`?tab=sources&into=${MODULE}`);
+    expect(targetModule().value).toBe(MODULE);
+  });
+
+  it('trägt ?into= nur auf dem Quellen-Reiter mit', async () => {
+    const { address } = renderScreen({}, `/modules?tab=sources&into=${MODULE}`);
+    await screen.findByLabelText('URL, YouTube-Link oder Text');
+
+    /* Auf dem Reiter selbst bleibt der Startwert stehen. */
+    await userEvent.click(screen.getByRole('tab', { name: 'Quellen' }));
+    expect(address()).toBe(`?tab=sources&into=${MODULE}`);
+
+    /* Daneben nicht: für die Modulliste heißt „into" nichts. */
+    await userEvent.click(screen.getByRole('tab', { name: 'Module' }));
+    expect(await screen.findByText('1 Quellen · 2 Entitäten · 1 Konzepte')).toBeTruthy();
+    expect(address()).toBe('');
+
+    /* Und in der Adresse eines Moduls taucht es nie auf — dort läse es sich
+       als „Quellen dieses Moduls" und meinte etwas anderes. */
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Modul Identitätsmanagement öffnen' }),
+    );
+    expect(address()).toBe(`?m=${MODULE}`);
   });
 });
 

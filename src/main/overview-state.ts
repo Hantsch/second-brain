@@ -1,40 +1,40 @@
-/* Ruhezeiten der Erinnerungen und schon gemeldete Fälligkeiten.
-   Beides liegt in `<vault>/.secondbrain/overview.json` — nicht in den
-   Vault-Einstellungen.
+/* Snooze periods for reminders and already-announced due dates.
+   Both live in `<vault>/.secondbrain/overview.json` — not in the
+   vault settings.
 
-   Warum nicht in `settings.json`:
-   - Einstellungen sind **Konfiguration**: eine überschaubare Menge Felder, die
-     der Nutzer selbst setzt, über Defaults gemergt und im Verhalten-Tab
-     sichtbar. Eine wachsende Karte gehashter Erinnerungs-IDs ist keine
-     Einstellung, sondern Bedienzustand.
-   - `deepMerge` kann nichts entfernen: abgelaufene Ruhezeiten würden für immer
-     in der Datei stehen. Hier wird beim Laden aufgeräumt.
-   - `.secondbrain/` ist laut VAULT-FORMAT.md ableitbar und darf gelöscht werden.
-     Genau das trifft zu: fehlt die Datei, mahnt eben alles wieder — es ist
-     nichts verloren. Eine gelöschte `settings.json` dagegen kostet Konfiguration.
-   - Der Zustand reist trotzdem mit dem Vault: wer ihn auf einen anderen Rechner
-     kopiert, nimmt seine Ruhezeiten mit. Deshalb nicht in `userData`.
+   Why not in `settings.json`:
+   - Settings are **configuration**: a manageable set of fields the user sets
+     themselves, merged over defaults, visible in the behavior tab. A growing
+     map of hashed reminder IDs isn't a setting, it's operational state.
+   - `deepMerge` can't remove anything: expired snoozes would stay in the file
+     forever. This is where cleanup happens on load.
+   - `.secondbrain/` is derivable per VAULT-FORMAT.md and may be deleted.
+     That's exactly the case here: if the file is missing, everything just
+     nags again — nothing is lost. A deleted `settings.json`, by contrast,
+     costs real configuration.
+   - The state still travels with the vault: whoever copies it to another
+     machine takes their snoozes along. That's why it's not in `userData`.
 
-   Geschrieben wird atomar über `fs-json` — dieselbe Mechanik wie bei den
-   Einstellungen, nicht über den `VaultStore`: das ist keine Notiz mit
-   Frontmatter, sondern Buchhaltung der App. */
+   Written atomically via `fs-json` — the same mechanism as the settings, not
+   via the `VaultStore`: this isn't a note with frontmatter, it's the app's
+   bookkeeping. */
 
 import { join } from 'node:path';
 import { readJson, writeJsonAtomic } from './fs-json';
 
-/** Vault-relativer Ort. Steht auch in docs/VAULT-FORMAT.md. */
+/** Vault-relative location. Also documented in docs/VAULT-FORMAT.md. */
 export const OVERVIEW_STATE_FILE = '.secondbrain/overview.json';
 
 export const OVERVIEW_STATE_VERSION = 1;
 
-/** So lange bleibt eine Meldung in der Buchhaltung, bevor sie aufgeräumt wird. */
+/** How long an announcement stays in the bookkeeping before it's cleaned up. */
 const ANNOUNCE_KEEP_DAYS = 7;
 
 interface StoredOverviewState {
   version: number;
-  /** Erinnerungs-ID → Kalendertag, ab dem sie wieder mahnt (ISO). */
+  /** Reminder ID → calendar day from which it nags again (ISO). */
   snoozes: Record<string, string>;
-  /** Erinnerungs-ID → Kalendertag, an dem sie gemeldet wurde (ISO). */
+  /** Reminder ID → calendar day on which it was announced (ISO). */
   announced: Record<string, string>;
 }
 
@@ -42,7 +42,7 @@ function empty(): StoredOverviewState {
   return { version: OVERVIEW_STATE_VERSION, snoozes: {}, announced: {} };
 }
 
-/** Nur Einträge, die wie `YYYY-MM-DD` aussehen — alles andere ist kein Tag. */
+/** Only entries that look like `YYYY-MM-DD` — anything else isn't a day. */
 function readDays(value: unknown): Record<string, string> {
   if (typeof value !== 'object' || value === null) return {};
   const out: Record<string, string> = {};
@@ -59,8 +59,8 @@ function shiftDay(day: string, offset: number): string {
 }
 
 /**
- * Der Zustand eines geöffneten Vaults. Eine Instanz je Vault-Wurzel; wer sie
- * über `overviewState()` holt, bekommt immer dieselbe.
+ * The state of an open vault. One instance per vault root; whoever fetches it
+ * via `overviewState()` always gets the same one.
  */
 export class OverviewState {
   private data: StoredOverviewState;
@@ -77,9 +77,9 @@ export class OverviewState {
   }
 
   /**
-   * Lädt den Zustand und räumt dabei auf: abgelaufene Ruhezeiten und alte
-   * Meldungen fallen heraus. Fehlt oder taugt die Datei nicht, ist der Zustand
-   * leer — mahnen ist der ehrliche Vorgabefall.
+   * Loads the state and cleans up as it goes: expired snoozes and old
+   * announcements fall away. If the file is missing or unusable, the state is
+   * empty — nagging is the honest default case.
    */
   static async load(root: string, today: string): Promise<OverviewState> {
     const stored = await readJson<Partial<StoredOverviewState>>(
@@ -97,29 +97,29 @@ export class OverviewState {
     return state;
   }
 
-  /** Ruhezeiten als Karte, wie `core/overview/reminders` sie erwartet. */
+  /** Snoozes as a map, the way `core/overview/reminders` expects them. */
   snoozes(): ReadonlyMap<string, string> {
     return new Map(Object.entries(this.data.snoozes));
   }
 
-  /** Bis wann diese Erinnerung ruht, oder `null`. */
+  /** Until when this reminder is snoozed, or `null`. */
   snoozedUntil(id: string): string | null {
     return this.data.snoozes[id] ?? null;
   }
 
-  /** Stellt eine Erinnerung ruhig: `until` ist der Tag, ab dem sie wieder mahnt. */
+  /** Snoozes a reminder: `until` is the day from which it nags again. */
   async snooze(id: string, until: string): Promise<void> {
     this.data.snoozes[id] = until;
-    /* Ruhig gestellt heißt auch: heute nicht mehr melden. */
+    /* Snoozed also means: don't announce it again today. */
     delete this.data.announced[id];
     await this.save();
   }
 
   /**
-   * Hebt die Ruhe auf: der Eintrag fällt weg, die Erinnerung mahnt wieder. Der
-   * Rückweg zu `snooze` — ein Datum auf „heute" zu setzen wäre keiner, weil
-   * `prune` es beim nächsten Laden ohnehin entfernt und die Erinnerung bis dahin
-   * ruhig bliebe.
+   * Lifts the snooze: the entry drops out, the reminder nags again. The
+   * reverse of `snooze` — setting a date to "today" wouldn't be one, because
+   * `prune` would remove it on the next load anyway, and the reminder would
+   * stay snoozed until then.
    */
   async unsnooze(id: string): Promise<void> {
     if (this.data.snoozes[id] === undefined) return;
@@ -127,24 +127,24 @@ export class OverviewState {
     await this.save();
   }
 
-  /** An welchem Tag wurde diese Erinnerung gemeldet? */
+  /** On which day was this reminder announced? */
   announcedOn(id: string): string | null {
     return this.data.announced[id] ?? null;
   }
 
-  /** Welche dieser Erinnerungen wurden an diesem Tag noch nicht gemeldet? */
+  /** Which of these reminders haven't been announced on this day yet? */
   unannounced(ids: readonly string[], today: string): string[] {
     return ids.filter((id) => this.data.announced[id] !== today);
   }
 
-  /** Schreibt die Meldung fort. Ohne IDs wird nichts geschrieben. */
+  /** Records the announcement. Nothing is written without IDs. */
   async markAnnounced(ids: readonly string[], today: string): Promise<void> {
     if (ids.length === 0) return;
     for (const id of ids) this.data.announced[id] = today;
     await this.save();
   }
 
-  /** Abgelaufene Ruhezeiten und alte Meldungen entfernen. */
+  /** Remove expired snoozes and old announcements. */
   prune(today: string): boolean {
     const keepFrom = shiftDay(today, -ANNOUNCE_KEEP_DAYS);
     let changed = false;
@@ -166,11 +166,11 @@ export class OverviewState {
   }
 }
 
-/* Eine Instanz je Vault. Der Vault wechselt selten; die Karte bleibt klein und
-   wird beim Wechsel geleert, damit kein fremder Zustand hängen bleibt. */
+/* One instance per vault. The vault changes rarely; the map stays small and
+   is cleared on a switch so no foreign state lingers. */
 const loaded = new Map<string, Promise<OverviewState>>();
 
-/** Der Zustand dieses Vaults. Beim ersten Aufruf wird die Datei gelesen. */
+/** This vault's state. The file is read on the first call. */
 export function overviewState(root: string, today: string): Promise<OverviewState> {
   const known = loaded.get(root);
   if (known !== undefined) return known;
@@ -180,7 +180,7 @@ export function overviewState(root: string, today: string): Promise<OverviewStat
   return pending;
 }
 
-/** Vergisst den geladenen Zustand — für Tests und beim Schließen des Vaults. */
+/** Forgets the loaded state — for tests and when closing the vault. */
 export function forgetOverviewState(): void {
   loaded.clear();
 }

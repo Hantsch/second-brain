@@ -8,7 +8,36 @@ const own = {
   'settings.tab.languages': 'Sprachen',
   'settings.tab.models': 'Modelle',
   'settings.tab.behavior': 'Verhalten',
+  'settings.tab.customization': 'Anpassung',
   'settings.tab.about': 'Info',
+
+  'settings.customization.background.title': 'Hintergrund',
+  'settings.customization.background.note':
+    'Das Motiv bleibt zentral und sehr dezent hinter den Inhalten. Die Auswahl wirkt sofort.',
+  'settings.customization.background.none': 'Keiner',
+  'settings.customization.background.none.preview': 'Kein Bild',
+  'settings.customization.background.thought-catcher': 'Gedankenfänger',
+  'settings.customization.background.knowledge-constellation': 'Wissenskonstellation',
+  'settings.customization.background.pocket-vault': 'Taschen-Vault',
+  'settings.customization.background.thread-of-return': 'Faden der Rückkehr',
+  'settings.customization.background.knowledge-garden': 'Wissensgarten',
+  'settings.customization.icon.title': 'App-Symbol',
+  'settings.customization.icon.note':
+    'Das zugeschnittene Symbol erscheint in der Titelzeile und im Betriebssystem.',
+  'settings.customization.icon.knowledge-garden': 'Wissensgarten',
+  'settings.customization.icon.neural-core': 'Neuronaler Kern',
+  'settings.customization.icon.circuit-cortex': 'Schaltkreis-Kortex',
+  'settings.customization.icon.brain-chip': 'Gehirn-Chip',
+  'settings.customization.icon.vault-brain': 'Vault-Gehirn',
+
+  'settings.customization.tray.title': 'Infobereich',
+  'settings.customization.tray.closeToTray.label':
+    'Beim Schließen des Fensters im Infobereich weiterlaufen',
+  'settings.customization.tray.closeToTray.hint':
+    'Das Schließen des Fensters lässt Gaston im Infobereich weiterlaufen — die Tastenkombination, Erinnerungen und das Schnell-Erfassen bleiben aktiv.',
+  'settings.customization.tray.startMinimized.label': 'Im Infobereich starten',
+  'settings.customization.tray.startMinimized.hint':
+    'Gaston startet versteckt im Infobereich, statt das Fenster zu öffnen.',
 
   'settings.vault.about':
     'Ein Vault ist ein gewöhnlicher Ordner mit Markdown-Dateien. Er ist portabel: kopiere ihn auf einen USB-Stick oder eine externe Platte, dort funktioniert er vollständig weiter.',
@@ -18,6 +47,7 @@ const own = {
   'settings.vault.indexState': 'Indexstand',
   'settings.vault.indexReady': 'aktuell',
   'settings.vault.indexBuilding': 'wird gebaut',
+  'settings.vault.indexFailed': 'Update fehlgeschlagen — Index neu bauen',
   'settings.vault.indexMissing': 'kein Index',
   'settings.vault.indexAt': 'Letzter Indexlauf',
   'settings.vault.indexNever': 'noch nie',
@@ -38,7 +68,7 @@ const own = {
     'Drei Einstellungen, die nichts miteinander zu tun haben müssen: die Oberfläche darf deutsch sein, während die Notizen englisch entstehen.',
   'settings.lang.ui.label': 'Oberfläche',
   'settings.lang.ui.hint': 'Sprache der Knöpfe, Titel und Meldungen. Wirkt sofort, ohne Neustart.',
-  'settings.lang.ui.example': 'Beispiel: der Bereich heißt „Erfassen" statt „Capture".',
+  'settings.lang.ui.example': 'Beispiel: der Bereich heißt „Erfassen“ statt „Capture“.',
   'settings.lang.documents.label': 'Dokumentsprache',
   'settings.lang.documents.hint':
     'In dieser Sprache schreibt das Modell Notizen, Wiki-Seiten und Zusammenfassungen in den Vault.',
@@ -54,6 +84,24 @@ const own = {
     'Aus einer englischen Quelle entsteht dann eine Seite in der Dokumentsprache. Zitate bleiben im Original.',
   'settings.lang.de': 'Deutsch',
   'settings.lang.en': 'English',
+
+  'settings.lang.migration.title': 'Alte Sprachüberschriften',
+  'settings.lang.migration.warningOne': '1 Datei trägt noch Überschriften in {language}.',
+  'settings.lang.migration.warning': '{count} Dateien tragen noch Überschriften in {language}.',
+  'settings.lang.migration.action': 'Überschriften umstellen',
+  'settings.lang.migration.dialog.title': 'Überschriften umstellen',
+  'settings.lang.migration.dialog.intro':
+    'Jede betroffene Datei bekommt ihre Abschnittsüberschriften in der aktuellen Dokumentsprache. Der übrige Inhalt bleibt unverändert.',
+  'settings.lang.migration.dialog.countOne': '1 Datei wird umgestellt.',
+  'settings.lang.migration.dialog.count': '{count} Dateien werden umgestellt.',
+  'settings.lang.migration.dialog.confirm': 'Jetzt umstellen',
+  'settings.lang.migration.result.noneMigrated': 'Keine Datei musste geändert werden.',
+  'settings.lang.migration.result.migratedOne': '1 Datei umgestellt.',
+  'settings.lang.migration.result.migrated': '{count} Dateien umgestellt.',
+  'settings.lang.migration.result.conflictsOne':
+    '1 Datei hat sich seit der Planung geändert und wurde übersprungen.',
+  'settings.lang.migration.result.conflicts':
+    '{count} Dateien haben sich seit der Planung geändert und wurden übersprungen.',
 
   'settings.behavior.capture': 'Erfassen',
   'settings.behavior.hotkey.label': 'Tastenkombination für das Schnell-Erfassen',
@@ -82,6 +130,11 @@ const own = {
     'Arbeitsspuren der CLI zählen als Fortschritt des Projekts, dessen Repo dort liegt.',
   'settings.behavior.claude.dir.label': 'Ordner der Claude-Projekte',
   'settings.behavior.claude.dir.hint': 'Leer lassen für ~/.claude/projects.',
+  'settings.behavior.codex.label': 'Codex-CLI-Sessions mitlesen',
+  'settings.behavior.codex.hint':
+    'Arbeitsspuren der CLI zählen als Fortschritt des Projekts, dessen Repo dort liegt.',
+  'settings.behavior.codex.dir.label': 'Ordner der Codex-Sessions',
+  'settings.behavior.codex.dir.hint': 'Leer lassen für ~/.codex/sessions.',
   'settings.behavior.notifications.label': 'Benachrichtigungen für fällige Erinnerungen',
   'settings.behavior.notifications.hint': 'Meldet Fristen, auch wenn das Fenster geschlossen ist.',
   'settings.behavior.journal': 'Tagebuch',
@@ -91,21 +144,22 @@ const own = {
   'settings.behavior.coach.tips': 'Tipps geben',
   'settings.behavior.coach.tips.hint': 'Zuhören und danach konkrete Vorschläge machen.',
   'settings.behavior.coach.analyze': 'Analysieren',
-  'settings.behavior.coach.analyze.hint': 'Im Licht früherer Einträge Muster zeigen.',
+  'settings.behavior.coach.analyze.hint': 'Verstehen helfen und stützen, mit echten Einträgen.',
   'settings.behavior.coach.where':
     'Gilt als Vorgabe. Im Tagebuch lässt sich die Haltung pro Runde mit Strg+1 bis Strg+3 wechseln.',
   'settings.behavior.gardener': 'Pflege',
-  'settings.behavior.runOnOpen.label': 'Pflegelauf beim Öffnen des Vaults',
+  'settings.behavior.runOnOpen.label': 'Beim Öffnen des Vaults automatisch prüfen',
   'settings.behavior.runOnOpen.hint':
     'Findet verwaiste Seiten, kaputte Links und liegengebliebene Dumps.',
   'settings.behavior.review.label': 'Eine Seite gilt als angestaubt nach',
   'settings.behavior.review.hint':
-    'Tage seit dem letzten „reviewed" im Frontmatter. Die Pflege nennt die Seite dann, sie ändert sie nicht.',
+    'Tage seit dem letzten „reviewed“ im Frontmatter. Die Prüfung nennt die Seite dann, sie ändert sie nicht.',
   'settings.behavior.gardenerLlm.label': 'Befunde von einem Modell deuten lassen',
   'settings.behavior.gardenerLlm.hint':
-    'Zusätzlich zu den Prüfungen: Widersprüche zwischen Seiten, Beinahe-Dubletten, Begriffe ohne Seite. Ohne Route bleibt der Lauf deterministisch und kostet nichts.',
+    'Zusätzlich zu den Prüfungen: Widersprüche zwischen Seiten, Beinahe-Dubletten, Begriffe ohne Seite. Ohne Route bleibt die Prüfung deterministisch und kostet nichts.',
 
   'settings.about.title': 'Über diese App',
+  'settings.about.app': 'App',
   'settings.about.version': 'Version',
   'settings.about.electron': 'Electron',
   'settings.about.platform': 'Plattform',
@@ -117,6 +171,37 @@ const own = {
   'settings.about.format.body':
     'Das verbindliche Dateiformat steht in docs/VAULT-FORMAT.md im Projektordner: Frontmatter, Ordnerbaum, Wikilinks. Was dort nicht steht, schreibt die App nicht.',
   'settings.about.format.open': 'Vault-README öffnen',
+  'settings.about.notes.title': 'Neu in {version}',
+  'settings.about.notes.loading': 'Versionshinweise werden geladen …',
+  'settings.about.notes.empty.title': 'Keine Versionshinweise für diese Version',
+  'settings.about.notes.empty.body':
+    'Das Changelog enthält keinen Eintrag zu dieser Version. Das vollständige Changelog ist unten verlinkt.',
+  'settings.about.links.project': 'Projektseite',
+  'settings.about.links.changelog': 'Vollständiges Changelog',
+  'settings.about.updates.title': 'Updates',
+  'settings.about.updates.status.idle': 'Noch nicht geprüft.',
+  'settings.about.updates.status.checking': 'Suche nach einer neuen Version …',
+  'settings.about.updates.status.upToDate': 'Gaston ist auf dem neuesten Stand.',
+  'settings.about.updates.status.available': 'Version {version} ist verfügbar.',
+  'settings.about.updates.status.error': 'Prüfung fehlgeschlagen: {reason}',
+  'settings.about.updates.status.disabled.unpackaged':
+    'Update-Prüfung ist in diesem Build aus: Er ist kein verpacktes Release.',
+  'settings.about.updates.status.disabled.demo':
+    'Update-Prüfung ist in diesem Build aus: Er läuft auf einem Beispiel-Vault.',
+  'settings.about.updates.error.network': 'Der Release-Server war nicht erreichbar.',
+  'settings.about.updates.error.http': 'Der Release-Server hat mit einem Fehler geantwortet.',
+  'settings.about.updates.error.feed': 'Der Release-Feed ließ sich nicht lesen.',
+  'settings.about.updates.error.timeout': 'Der Release-Server hat nicht rechtzeitig geantwortet.',
+  'settings.about.updates.error.unknown': 'Unbekannter Fehler.',
+  'settings.about.updates.lastChecked': 'Zuletzt geprüft',
+  'settings.about.updates.distribution': 'Verteilung',
+  'settings.about.updates.distribution.installed': 'Installiert',
+  'settings.about.updates.distribution.portable': 'Portable Build',
+  'settings.about.updates.check': 'Jetzt prüfen',
+  'settings.about.updates.checking': 'Prüfe …',
+  'settings.about.update.never': 'Nie geprüft',
+  'settings.about.update.pending.title': 'Wartendes Update',
+  'settings.about.update.pending.badge': 'Noch nicht installiert',
 } as const;
 
 export const deSettings = { ...own, ...deSettingsModels } as const;

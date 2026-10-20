@@ -24,10 +24,16 @@ import {
   useUnsnoozeReminder,
 } from '../../lib/queries/dashboard';
 import { pushToast } from '../../lib/toast';
+import { OverdueMark } from '../OverdueMark';
 import { SnoozeMenu } from '../SnoozeMenu';
 import { TileFrame } from '../TileFrame';
 
 const LIMIT = 4;
+
+/** A wait is late once its own deadline has passed. */
+function isLate(entry: { due?: string }, now: Date): boolean {
+  return entry.due !== undefined && dayDiff(now, new Date(`${entry.due}T00:00:00`)) < 0;
+}
 
 /**
  * Die Erinnerung hinter einem Warte-auf, wenn es eine gibt. Verglichen werden
@@ -61,20 +67,27 @@ export function WaitingOnTile() {
   const now = new Date();
 
   const entries = [...(data?.waitingOn ?? [])].sort((a, b) => {
-    const dueA = a.due ?? null;
-    const dueB = b.due ?? null;
-    const lateA = dueA !== null && dayDiff(now, new Date(`${dueA}T00:00:00`)) < 0;
-    const lateB = dueB !== null && dayDiff(now, new Date(`${dueB}T00:00:00`)) < 0;
+    const lateA = isLate(a, now);
+    const lateB = isLate(b, now);
     if (lateA !== lateB) return lateA ? -1 : 1;
     return a.since < b.since ? -1 : a.since > b.since ? 1 : 0;
   });
   const rows = entries.slice(0, LIMIT);
 
+  const total = entries.length;
+  /* What actually nags in this tile: a deadline that has passed, or a wait
+     long enough that the core raised a reminder. Counted across all entries,
+     not just the visible rows — same as `total`. */
+  const overdue = entries.filter(
+    (entry) => isLate(entry, now) || reminderFor(entry, reminders.data ?? []) !== null,
+  ).length;
+
   return (
     <TileFrame
       id="waiting-on"
       title={t('module.waiting-on.name')}
-      count={entries.length > 0 ? entries.length : null}
+      count={total > 0 ? total : null}
+      overdue={overdue}
       pending={isPending}
       error={error}
       onRetry={() => void refetch()}
@@ -83,14 +96,14 @@ export function WaitingOnTile() {
     >
       <ul className="sb-lines">
         {rows.map((entry, index) => {
-          const late =
-            entry.due !== undefined && dayDiff(now, new Date(`${entry.due}T00:00:00`)) < 0;
+          const late = isLate(entry, now);
           const nagging = reminderFor(entry, reminders.data ?? []);
           return (
             <li key={`${entry.project}-${entry.who}-${index}`} className="sb-line">
+              {late || nagging !== null ? <OverdueMark /> : null}
               <button
                 type="button"
-                className="sb-line-open"
+                className={`sb-line-open${late || nagging !== null ? ' sb-line-open--overdue' : ''}`}
                 onClick={() => void navigate(`/projects?p=${encodeURIComponent(entry.project)}`)}
               >
                 {entry.who}

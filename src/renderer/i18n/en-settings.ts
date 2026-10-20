@@ -9,7 +9,36 @@ const own = {
   'settings.tab.languages': 'Languages',
   'settings.tab.models': 'Models',
   'settings.tab.behavior': 'Behaviour',
+  'settings.tab.customization': 'Customization',
   'settings.tab.about': 'About',
+
+  'settings.customization.background.title': 'Background',
+  'settings.customization.background.note':
+    'The artwork stays centred and very subtle behind the content. Changes apply immediately.',
+  'settings.customization.background.none': 'None',
+  'settings.customization.background.none.preview': 'No image',
+  'settings.customization.background.thought-catcher': 'Thought catcher',
+  'settings.customization.background.knowledge-constellation': 'Knowledge constellation',
+  'settings.customization.background.pocket-vault': 'Pocket vault',
+  'settings.customization.background.thread-of-return': 'Thread of return',
+  'settings.customization.background.knowledge-garden': 'Knowledge garden',
+  'settings.customization.icon.title': 'App icon',
+  'settings.customization.icon.note':
+    'The cropped icon appears in the title bar and in the operating system.',
+  'settings.customization.icon.knowledge-garden': 'Knowledge garden',
+  'settings.customization.icon.neural-core': 'Neural core',
+  'settings.customization.icon.circuit-cortex': 'Circuit cortex',
+  'settings.customization.icon.brain-chip': 'Brain chip',
+  'settings.customization.icon.vault-brain': 'Vault brain',
+
+  'settings.customization.tray.title': 'Tray',
+  'settings.customization.tray.closeToTray.label':
+    'Keep running in the tray when the window closes',
+  'settings.customization.tray.closeToTray.hint':
+    'Closing the window leaves Gaston running in the tray — the hotkey, reminders and quick capture keep working.',
+  'settings.customization.tray.startMinimized.label': 'Start in the tray',
+  'settings.customization.tray.startMinimized.hint':
+    'Gaston starts hidden in the tray instead of opening the window.',
 
   'settings.vault.about':
     'A vault is an ordinary folder of markdown files. It is portable: copy it to a USB stick or an external drive and it keeps working there in full.',
@@ -19,6 +48,7 @@ const own = {
   'settings.vault.indexState': 'Index state',
   'settings.vault.indexReady': 'up to date',
   'settings.vault.indexBuilding': 'building',
+  'settings.vault.indexFailed': 'update failed — rebuild the index',
   'settings.vault.indexMissing': 'no index',
   'settings.vault.indexAt': 'Last index run',
   'settings.vault.indexNever': 'never',
@@ -55,6 +85,24 @@ const own = {
   'settings.lang.de': 'Deutsch',
   'settings.lang.en': 'English',
 
+  'settings.lang.migration.title': 'Old-language headings',
+  'settings.lang.migration.warningOne': '1 file still carries headings in {language}.',
+  'settings.lang.migration.warning': '{count} files still carry headings in {language}.',
+  'settings.lang.migration.action': 'Migrate headings',
+  'settings.lang.migration.dialog.title': 'Migrate headings',
+  'settings.lang.migration.dialog.intro':
+    'Every affected file gets its section headings in the current document language. The rest of the content stays unchanged.',
+  'settings.lang.migration.dialog.countOne': '1 file will be migrated.',
+  'settings.lang.migration.dialog.count': '{count} files will be migrated.',
+  'settings.lang.migration.dialog.confirm': 'Migrate now',
+  'settings.lang.migration.result.noneMigrated': 'No file needed a change.',
+  'settings.lang.migration.result.migratedOne': '1 file migrated.',
+  'settings.lang.migration.result.migrated': '{count} files migrated.',
+  'settings.lang.migration.result.conflictsOne':
+    '1 file changed since the plan was made and was skipped.',
+  'settings.lang.migration.result.conflicts':
+    '{count} files changed since the plan was made and were skipped.',
+
   'settings.behavior.capture': 'Capturing',
   'settings.behavior.hotkey.label': 'Shortcut for quick capture',
   'settings.behavior.hotkey.hint':
@@ -82,6 +130,11 @@ const own = {
     'CLI work traces count as progress on the project whose repo lives there.',
   'settings.behavior.claude.dir.label': 'Folder of the Claude projects',
   'settings.behavior.claude.dir.hint': 'Leave empty for ~/.claude/projects.',
+  'settings.behavior.codex.label': 'Read Codex CLI sessions',
+  'settings.behavior.codex.hint':
+    'CLI work traces count as progress on the project whose repo lives there.',
+  'settings.behavior.codex.dir.label': 'Folder of the Codex sessions',
+  'settings.behavior.codex.dir.hint': 'Leave empty for ~/.codex/sessions.',
   'settings.behavior.notifications.label': 'Notifications for due reminders',
   'settings.behavior.notifications.hint': 'Reports deadlines even when the window is closed.',
   'settings.behavior.journal': 'Journal',
@@ -91,21 +144,22 @@ const own = {
   'settings.behavior.coach.tips': 'Give tips',
   'settings.behavior.coach.tips.hint': 'Listen, then make concrete suggestions.',
   'settings.behavior.coach.analyze': 'Analyse',
-  'settings.behavior.coach.analyze.hint': 'Show patterns in the light of earlier entries.',
+  'settings.behavior.coach.analyze.hint': 'Help understand and support, with real entries.',
   'settings.behavior.coach.where':
     'This is the default. In the journal the attitude switches per round with Ctrl+1 to Ctrl+3.',
-  'settings.behavior.gardener': 'Gardening',
-  'settings.behavior.runOnOpen.label': 'Run the gardening pass when the vault opens',
+  'settings.behavior.gardener': 'Care',
+  'settings.behavior.runOnOpen.label': 'Check automatically when the vault opens',
   'settings.behavior.runOnOpen.hint':
     'Finds orphaned pages, broken links and dumps left lying around.',
   'settings.behavior.review.label': 'A page counts as stale after',
   'settings.behavior.review.hint':
-    'Days since the last "reviewed" in the frontmatter. Gardening names the page, it does not change it.',
-  'settings.behavior.gardenerLlm.label': 'Let a model interpret the findings',
+    'Days since the last "reviewed" in the frontmatter. The check flags the page, it does not change it.',
+  'settings.behavior.gardenerLlm.label': 'Let a model interpret the results',
   'settings.behavior.gardenerLlm.hint':
-    'On top of the checks: contradictions between pages, near duplicates, terms without a page. Without a route the pass stays deterministic and costs nothing.',
+    'On top of the checks: contradictions between pages, near duplicates, terms without a page. Without a route the check stays deterministic and costs nothing.',
 
   'settings.about.title': 'About this app',
+  'settings.about.app': 'App',
   'settings.about.version': 'Version',
   'settings.about.electron': 'Electron',
   'settings.about.platform': 'Platform',
@@ -117,6 +171,37 @@ const own = {
   'settings.about.format.body':
     'The binding file format is documented in docs/VAULT-FORMAT.md in the project folder: frontmatter, folder tree, wikilinks. What is not written there, the app does not write.',
   'settings.about.format.open': 'Open the vault README',
+  'settings.about.notes.title': "What's new in {version}",
+  'settings.about.notes.loading': 'Loading release notes …',
+  'settings.about.notes.empty.title': 'No release notes for this version',
+  'settings.about.notes.empty.body':
+    'The changelog has no entry for this version. The full changelog is linked below.',
+  'settings.about.links.project': 'Project page',
+  'settings.about.links.changelog': 'Full changelog',
+  'settings.about.updates.title': 'Updates',
+  'settings.about.updates.status.idle': 'Not checked yet.',
+  'settings.about.updates.status.checking': 'Checking for a new version …',
+  'settings.about.updates.status.upToDate': 'Gaston is up to date.',
+  'settings.about.updates.status.available': 'Version {version} is available.',
+  'settings.about.updates.status.error': 'Check failed: {reason}',
+  'settings.about.updates.status.disabled.unpackaged':
+    'Update checks are off in this build: it is not a packaged release.',
+  'settings.about.updates.status.disabled.demo':
+    'Update checks are off in this build: it runs on a sample vault.',
+  'settings.about.updates.error.network': 'The release server could not be reached.',
+  'settings.about.updates.error.http': 'The release server answered with an error.',
+  'settings.about.updates.error.feed': 'The release feed could not be read.',
+  'settings.about.updates.error.timeout': 'The release server did not answer in time.',
+  'settings.about.updates.error.unknown': 'Unknown error.',
+  'settings.about.updates.lastChecked': 'Last checked',
+  'settings.about.updates.distribution': 'Distribution',
+  'settings.about.updates.distribution.installed': 'Installed',
+  'settings.about.updates.distribution.portable': 'Portable build',
+  'settings.about.updates.check': 'Check now',
+  'settings.about.updates.checking': 'Checking …',
+  'settings.about.update.never': 'Never checked',
+  'settings.about.update.pending.title': 'Update waiting',
+  'settings.about.update.pending.badge': 'Not yet installed',
 };
 
 export const enSettings: Record<SettingsKey, string> = { ...own, ...enSettingsModels };

@@ -74,6 +74,8 @@ const dumped = {
   wordCount: 1,
   tags: [],
   scope: null,
+  filedInto: null,
+  filedAt: null,
 };
 
 beforeEach(() => {

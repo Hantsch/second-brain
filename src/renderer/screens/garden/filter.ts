@@ -1,29 +1,67 @@
-/* Die Ordnung der Befundliste: filtern, gruppieren, zählen.
+/* The ordering of the findings list: filter, group, count.
 
-   Reine Funktionen ohne React — so ist prüfbar, dass die Zählungen zu der Liste
-   passen, die daneben steht. Die Reihenfolge der Gruppen ist die Reihenfolge des
-   Berichts (der Kern sortiert schwerste zuerst, siehe
-   `core/gardener/report.ts#sortFindings`): eine zweite Sortierung hier wäre eine
-   zweite Wahrheit.
+   Pure functions without React — that way it's testable that the counts match
+   the list shown next to them. The order of the groups is the order of the
+   report (the core sorts most severe first, see
+   `core/gardener/report.ts#sortFindings`): a second sort here would be a
+   second truth.
 
-   Die Zählungen der Auswahllisten werden **vor** dem jeweiligen Filter gerechnet:
-   „Art: Verwaiste Seiten (3)" muss sagen, wie viele es gibt, nicht wie viele nach
-   der eigenen Auswahl übrig sind — sonst steht überall (0), sobald etwas anderes
-   gewählt ist. */
+   The counts in the selection lists are computed **before** their own filter
+   is applied: "Kind: orphaned pages (3)" has to say how many there are, not
+   how many remain after its own selection — otherwise everything would show
+   (0) as soon as something else is selected. */
 
-import type { FindingSeverity, GardenerFinding, GardenerFindingKind } from '@shared/types';
+import type {
+  FindingSeverity,
+  GardenerFinding,
+  GardenerFindingKind,
+  GardenerHiddenFinding,
+} from '@shared/types';
+
+/** Open findings, one hidden state, or open and hidden together. */
+export type FindingStateFilter = 'open' | 'dismissed' | 'snoozed' | 'all';
 
 export interface FindingFilterState {
   kind: GardenerFindingKind | 'all';
-  /** Modul-Slug, `'none'` für Befunde ohne Modul, `'all'` für alle. */
+  /** Module slug, `'none'` for findings without a module, `'all'` for all. */
   module: string | 'all' | 'none';
   severity: FindingSeverity | 'all';
+  state: FindingStateFilter;
 }
 
-export const ALL_FILTERS: FindingFilterState = { kind: 'all', module: 'all', severity: 'all' };
+export const ALL_FILTERS: FindingFilterState = {
+  kind: 'all',
+  module: 'all',
+  severity: 'all',
+  state: 'open',
+};
 
 export function isFiltered(filter: FindingFilterState): boolean {
-  return filter.kind !== 'all' || filter.module !== 'all' || filter.severity !== 'all';
+  return (
+    filter.kind !== 'all' ||
+    filter.module !== 'all' ||
+    filter.severity !== 'all' ||
+    filter.state !== 'open'
+  );
+}
+
+/**
+ * Which pool the state axis selects from — open findings, the hidden ones in
+ * one state, or open and every hidden finding together ("all"). A plain list
+ * of `GardenerFinding`, so it drops straight into `applyFilter`/`groupByKind`;
+ * the hidden reason (state, `until`) lives in the report's `hidden` array and
+ * a caller that needs it looks the finding's id up there.
+ */
+export function poolForState(
+  findings: readonly GardenerFinding[],
+  hidden: readonly GardenerHiddenFinding[],
+  state: FindingStateFilter,
+): GardenerFinding[] {
+  if (state === 'open') return [...findings];
+  const hiddenFindings = hidden
+    .filter((entry) => state === 'all' || entry.state === state)
+    .map((entry) => entry.finding);
+  return state === 'all' ? [...findings, ...hiddenFindings] : hiddenFindings;
 }
 
 function matchesKind(finding: GardenerFinding, filter: FindingFilterState): boolean {
@@ -57,7 +95,7 @@ export interface FindingGroup {
   findings: GardenerFinding[];
 }
 
-/** Nach Art gruppiert, in der Reihenfolge des ersten Vorkommens im Bericht. */
+/** Grouped by kind, in the order of first appearance in the report. */
 export function groupByKind(findings: readonly GardenerFinding[]): FindingGroup[] {
   const groups: FindingGroup[] = [];
   for (const finding of findings) {
@@ -68,7 +106,7 @@ export function groupByKind(findings: readonly GardenerFinding[]): FindingGroup[
   return groups;
 }
 
-/** Wie oft kommt jede Art vor — ohne den Art-Filter selbst. */
+/** How often each kind occurs — without applying the kind filter itself. */
 export function kindCounts(
   findings: readonly GardenerFinding[],
   filter: FindingFilterState,
@@ -80,7 +118,7 @@ export function kindCounts(
   return counts;
 }
 
-/** Wie oft kommt jedes Modul vor — ohne den Modul-Filter selbst. */
+/** How often each module occurs — without applying the module filter itself. */
 export function moduleCounts(
   findings: readonly GardenerFinding[],
   filter: FindingFilterState,
@@ -93,7 +131,7 @@ export function moduleCounts(
   return counts;
 }
 
-/** Wie oft kommt jede Schwere vor — ohne den Schwere-Filter selbst. */
+/** How often each severity occurs — without applying the severity filter itself. */
 export function severityCounts(
   findings: readonly GardenerFinding[],
   filter: FindingFilterState,
@@ -102,5 +140,34 @@ export function severityCounts(
   for (const finding of applyFilter(findings, { ...filter, severity: 'all' })) {
     counts.set(finding.severity, (counts.get(finding.severity) ?? 0) + 1);
   }
+  return counts;
+}
+
+/**
+ * How many findings each state value would show — kind/module/severity
+ * applied, the state axis itself ignored, exactly like the other counts.
+ * Unlike them, the state axis switches between two different lists (`findings`
+ * and `hidden`) rather than filtering one, so it does its own counting instead
+ * of going through `applyFilter` with `state` reset.
+ */
+export function stateCounts(
+  findings: readonly GardenerFinding[],
+  hidden: readonly GardenerHiddenFinding[],
+  filter: FindingFilterState,
+): Map<FindingStateFilter, number> {
+  const open = applyFilter(findings, filter).length;
+  const dismissed = applyFilter(
+    hidden.filter((entry) => entry.state === 'dismissed').map((entry) => entry.finding),
+    filter,
+  ).length;
+  const snoozed = applyFilter(
+    hidden.filter((entry) => entry.state === 'snoozed').map((entry) => entry.finding),
+    filter,
+  ).length;
+  const counts = new Map<FindingStateFilter, number>();
+  counts.set('open', open);
+  counts.set('dismissed', dismissed);
+  counts.set('snoozed', snoozed);
+  counts.set('all', open + dismissed + snoozed);
   return counts;
 }

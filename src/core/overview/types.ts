@@ -11,15 +11,21 @@
  */
 
 import type { OverviewSettings, Project, RawSource, Todo } from '@shared/types';
-import type { IndexedDoc } from '@core/index/types';
+import type { VaultIndex } from '@core/index/types';
 
 /** Was der Ueberblick am Index benutzt. */
 export interface OverviewIndex {
   projects(): readonly Project[];
   todos(): readonly Todo[];
   sources(): readonly RawSource[];
-  /** Der abgeleitete Zustand; Journal, Dumps und Bereiche stehen in den Dokumenten. */
-  index(): { docs: readonly IndexedDoc[] };
+  /**
+   * Der abgeleitete Zustand. Der volle `VaultIndex`, nicht nur `docs` — seit
+   * 056 D2 braucht `reminders()` auch `.todos` fuer `looseEndsDerived`, dessen
+   * Zwischenspeicher an der Objekt-Identitaet dieses Rueckgabewerts haengt: ein
+   * `IndexService`, das bei unveraendertem Bestand dasselbe Objekt zurueckgibt,
+   * ist die Voraussetzung dafuer, dass zwei Aufrufe sich einen Lauf teilen.
+   */
+  index(): VaultIndex;
 }
 
 /**

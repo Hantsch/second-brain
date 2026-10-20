@@ -1,9 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { buildIndex, deriveIndex, docTypeFromPath, toIndexedDoc } from '@core/index/build';
+import {
+  buildIndex,
+  deriveIndex,
+  deriveIndexIncremental,
+  docTypeFromPath,
+  toIndexedDoc,
+} from '@core/index/build';
 import { SearchEngine } from '@core/index/search';
+import type { IndexedDoc } from '@core/index/types';
+import { YIELD_EVERY } from '@core/index/yield';
 import { MemoryVaultStore } from '@core/vault/memory-store';
 import type { VaultStat } from '@core/vault/types';
-import { CountingStore, NYOTA_PROJECT, TODAY, vaultFiles, vaultStore } from './fixtures';
+import { ALL_DOC_TYPES } from '@shared/types';
+import { CountingStore, NYOTA_PROJECT, TODAY, makeDoc, vaultFiles, vaultStore } from './fixtures';
 
 const NOTE = (title: string, body: string): string =>
   ['---', 'type: note', `title: ${title}`, '---', '', body, ''].join('\n');
@@ -81,6 +90,33 @@ describe('buildIndex: Durchlauf', () => {
     expect(seen[0]).toEqual([0, total]);
     expect(seen[seen.length - 1]).toEqual([total, total]);
     expect(seen.every(([done, count]) => done <= count && count === total)).toBe(true);
+  });
+});
+
+describe('buildIndex: Groessengrenze', () => {
+  it('an oversized file is indexed by name only and never read', async () => {
+    const store = smallStore();
+    const big = 'x'.repeat(2 * 1024 * 1024 + 1);
+    await store.write({ path: 'areas/big.md', body: big });
+    store.reads.length = 0;
+
+    const index = await buildIndex(store);
+
+    expect(store.markdownReads()).not.toContain('areas/big.md');
+    expect(store.markdownReads().sort()).toEqual(['areas/a.md', 'areas/b.md', 'inbox/c.md']);
+
+    const doc = index.byPath.get('areas/big.md');
+    expect(doc).toMatchObject({
+      docType: 'area',
+      body: '',
+      text: '',
+      words: 0,
+      hash: '',
+      frontmatter: {},
+      oversized: true,
+    });
+    expect(doc?.title.length).toBeGreaterThan(0);
+    expect(index.docs).toHaveLength(4);
   });
 });
 
@@ -162,6 +198,44 @@ describe('toIndexedDoc', () => {
     expect(doc.body.trim()).toBe('Rumpf.');
     expect(doc.bodyLine).toBe(4);
   });
+
+  it('uebernimmt type: condensed aus dem Frontmatter unverändert', () => {
+    const content = ['---', 'type: condensed', 'title: Verdichtet', '---', '', 'Rumpf.'].join('\n');
+    const doc = toIndexedDoc(stat.path, content, stat);
+    expect(doc.docType).toBe('condensed');
+  });
+
+  it('faellt bei unbekanntem type auf docTypeFromPath zurueck', () => {
+    const content = ['---', 'type: unbekannt', 'title: X', '---', '', 'Rumpf.'].join('\n');
+    const doc = toIndexedDoc(stat.path, content, stat);
+    expect(doc.docType).toBe(docTypeFromPath(stat.path));
+    expect(doc.docType).toBe('note');
+  });
+});
+
+describe('ALL_DOC_TYPES', () => {
+  it('enthaelt genau die Mitglieder von DocType', () => {
+    // Hardcodiert statt aus dem Typ abgeleitet: TS-Unions sind zur Laufzeit nicht
+    // einsehbar. Dieser Laufzeit-Test ist nur eine zusaetzliche Regressionspruefung —
+    // die eigentliche Exhaustivitaet wird durch den Typ-Level-Check direkt neben
+    // `ALL_DOC_TYPES` in vault.ts erzwungen: wird `DocType` erweitert, ohne
+    // `ALL_DOC_TYPES` zu pflegen, schlaegt dort schon `tsc` fehl, bevor dieser Test
+    // ueberhaupt laeuft.
+    const expected = [
+      'dump',
+      'note',
+      'project',
+      'area',
+      'condensed',
+      'journal',
+      'source',
+      'entity',
+      'concept',
+      'overview',
+      'raw',
+    ];
+    expect([...ALL_DOC_TYPES].sort()).toEqual([...expected].sort());
+  });
 });
 
 describe('docTypeFromPath', () => {
@@ -175,7 +249,49 @@ describe('docTypeFromPath', () => {
     expect(docTypeFromPath('modules/m/wiki/entities/x.md')).toBe('entity');
     expect(docTypeFromPath('modules/m/wiki/concepts/x.md')).toBe('concept');
     expect(docTypeFromPath('modules/m/wiki/overview.md')).toBe('overview');
-    expect(docTypeFromPath('raw/youtube/abc/transcript.md')).toBe('note');
+    expect(docTypeFromPath('raw/youtube/abc/transcript.md')).toBe('raw');
+  });
+
+  it('erkennt beide Verdichtungs-Artefakte am Pfad, auch ohne Frontmatter (046, D3)', () => {
+    // Der Fallback greift nur, wenn kein `type:` deklariert ist — genau der Fall,
+    // den 037/044 als Ausnahme neben `area`/`project` dokumentieren.
+    expect(docTypeFromPath('areas/gesundheit.condensed.md')).toBe('condensed');
+    expect(docTypeFromPath('projects/work/nyota/condensed.md')).toBe('condensed');
+    // Eine gewoehnliche Projektdatei bleibt `project`, keine falsche Uebernahme.
+    expect(docTypeFromPath('projects/work/nyota/project.md')).toBe('project');
+  });
+
+  it('a raw transcript indexes as raw, not note', async () => {
+    const store = smallStore();
+    const content = [
+      '---',
+      'doc_type: transcript',
+      'title: Transkript',
+      '---',
+      '',
+      'Ein Second Brain verrottet, wenn niemand es pflegt.',
+      '',
+    ].join('\n');
+    await store.writeText('raw/youtube/abc123/transcript.md', content);
+    const before = await store.readText('raw/youtube/abc123/transcript.md');
+
+    const index = await buildIndex(store, { now: TODAY });
+
+    expect(index.byPath.get('raw/youtube/abc123/transcript.md')?.docType).toBe('raw');
+    const after = await store.readText('raw/youtube/abc123/transcript.md');
+    expect(after).toBe(before);
+  });
+
+  it('a note outside raw keeps type note', async () => {
+    const store = smallStore();
+    const content = ['---', 'title: Gewoehnliche Notiz', '---', '', 'Text ohne Typ.', ''].join(
+      '\n',
+    );
+    await store.writeText('projects/work/x/notes/ohne-typ.md', content);
+
+    const index = await buildIndex(store, { now: TODAY });
+
+    expect(index.byPath.get('projects/work/x/notes/ohne-typ.md')?.docType).toBe('note');
   });
 });
 
@@ -191,6 +307,78 @@ describe('deriveIndex', () => {
     const index = deriveIndex([doc], { now: '2026-08-14' });
     expect(index.todos.find((todo) => todo.due === '2026-08-15')?.dueInDays).toBe(1);
     expect(index.projects[0]?.ageDays).toBe(4);
+  });
+
+  it('liest keine Todos aus einem kondensierten Artefakt (story 044, review fix)', () => {
+    // A project's condensed.md sits inside projects/<scope>/<slug>/, so
+    // projectOfPath() resolves it to that project — a checkbox-looking line the
+    // model writes as prose (e.g. quoting an existing todo as evidence) must not
+    // become a second, phantom open todo of that project.
+    const stat: VaultStat = {
+      path: 'projects/work/nyota/condensed.md',
+      size: 0,
+      modified: '2026-08-10T09:00:00.000Z',
+      dir: false,
+    };
+    const content = [
+      '---',
+      'type: condensed',
+      'title: Nyota',
+      'condensed_at: 2026-08-10T09:00:00+02:00',
+      'sources: []',
+      '---',
+      '## State',
+      '',
+      '- [ ] Sieht aus wie ein Todo, ist aber zitierte Prosa.',
+      '',
+      'Aus: projects/work/nyota/project.md',
+    ].join('\n');
+    const doc = toIndexedDoc(stat.path, content, stat);
+    expect(doc.docType).toBe('condensed');
+    const index = deriveIndex([doc], { now: '2026-08-14' });
+    expect(index.todos).toEqual([]);
+  });
+});
+
+describe('deriveIndexIncremental', () => {
+  it('yields to the event loop between chunks on a large build', async () => {
+    const docs: IndexedDoc[] = [];
+    for (let i = 0; i < 1000; i += 1) {
+      docs.push(makeDoc({ path: `areas/n-${i}.md`, body: `Text ${i}` }));
+    }
+    let calls = 0;
+    await deriveIndexIncremental(docs, null, {
+      now: TODAY,
+      yieldControl: async () => {
+        calls += 1;
+      },
+    });
+    expect(calls).toBeGreaterThanOrEqual(Math.floor(1000 / YIELD_EVERY));
+  });
+
+  it("reuses an unchanged doc's todos instead of re-parsing, but refreshes dueInDays", async () => {
+    const stat: VaultStat = {
+      path: 'projects/work/nyota-auth0-migration/project.md',
+      size: NYOTA_PROJECT.length,
+      modified: '2026-08-10T09:00:00.000Z',
+      dir: false,
+    };
+    const doc = toIndexedDoc(stat.path, NYOTA_PROJECT, stat);
+    const previous = deriveIndex([doc], { now: '2026-08-10' });
+    // A marker a real parse run would never produce — proof that the todo was
+    // carried over from the previous index instead of parsed anew.
+    const target = previous.todos.find((todo) => todo.due === '2026-08-15');
+    expect(target).toBeDefined();
+    if (target !== undefined) target.text = 'MARKER-FROM-PREVIOUS-RUN';
+
+    const next = await deriveIndexIncremental([doc], previous, { now: '2026-08-14' });
+    const reused = next.todos.find((todo) => todo.due === '2026-08-15');
+    expect(reused?.text).toBe('MARKER-FROM-PREVIOUS-RUN');
+    // Reused, not the exact same object — a shallow copy so refreshing dueInDays
+    // below does not mutate the previous index's todo.
+    expect(reused).not.toBe(target);
+    expect(reused?.dueInDays).toBe(1);
+    expect(target?.dueInDays).not.toBe(1);
   });
 });
 

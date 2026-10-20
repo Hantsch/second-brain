@@ -1,13 +1,14 @@
-/* Von der Konfiguration zum sprechenden Provider. Die einzige Stelle, die weiß,
-   welche Klasse zu welcher `ProviderKind` gehört — Registry und Gateway teilen sie. */
+/* From configuration to a working provider. The only place that knows which
+   class belongs to which `ProviderKind` — the registry and the gateway share it. */
 
 import type { ProviderConfig } from '@shared/types';
+import { isOpenRouterBaseUrl } from './openrouter-host';
 import { AnthropicProvider } from './providers/anthropic';
 import { FakeProvider } from './providers/fake';
 import { OpenAiCompatibleProvider } from './providers/openai-compatible';
 import type { FetchLike, LlmProvider } from './types';
 
-/** Erzeugt einen Provider zu einer Konfiguration. Tests schieben hier einen Fake herein. */
+/** Creates a provider for a configuration. Tests inject a fake here. */
 export type ProviderFactory = (config: ProviderConfig, apiKey: string | null) => LlmProvider;
 
 export interface FactoryOptions {
@@ -30,13 +31,9 @@ export function createProviderFactory(options: FactoryOptions = {}): ProviderFac
         return new OpenAiCompatibleProvider({
           baseUrl: config.baseUrl,
           ...shared,
-          ...(isOpenRouter(config.baseUrl) ? { headers: { 'x-title': 'Second Brain' } } : {}),
+          // OpenRouter likes a title in the header, so calls stay attributable.
+          ...(isOpenRouterBaseUrl(config.baseUrl) ? { headers: { 'x-title': 'Gaston' } } : {}),
         });
     }
   };
-}
-
-/** OpenRouter mag einen Titel im Header, damit Aufrufe zuordenbar bleiben. */
-function isOpenRouter(baseUrl: string): boolean {
-  return baseUrl.includes('openrouter.ai');
 }

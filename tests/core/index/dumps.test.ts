@@ -3,7 +3,9 @@
    Frontmatter schweigt. */
 
 import { describe, expect, it } from 'vitest';
-import { deriveDumps, dumpId, toDumpItem } from '@core/index/dumps';
+import { deriveDumps, dumpFromDoc, dumpId, toDumpItem } from '@core/index/dumps';
+import { sha256 } from '@core/vault/hash';
+import type { BaseFrontmatter, VaultDoc } from '@shared/types';
 import { makeDoc, TODAY } from './fixtures';
 
 function dumpDoc(path: string, frontmatter: Record<string, unknown>, body = 'Ein Gedanke.') {
@@ -75,5 +77,99 @@ describe('deriveDumps', () => {
 
   it('macht aus dem Dateinamen eine stabile ID', () => {
     expect(dumpId('inbox/2026-08-10-1513-idee.md')).toBe('2026-08-10-1513-idee');
+  });
+});
+
+/* Ein abgelegter Dump bleibt als Beleg liegen. Was aus dem Frontmatter gelesen
+   wird, ist genau das, was die Ablage hineingeschrieben hat — nichts abgeleitet,
+   nichts erfunden. */
+describe('deriveDumps — Beleg einer Ablage', () => {
+  const FILED_INTO = 'projects/work/kundenportal-relaunch/project.md';
+
+  it('liest `filed_into` und `filed_at` aus dem Frontmatter', () => {
+    const doc = dumpDoc('inbox/2026-08-04-1220-ladezeiten.md', {
+      type: 'dump',
+      created: '2026-08-04T12:20:00+02:00',
+      status: 'filed',
+      filed_into: FILED_INTO,
+      filed_at: '2026-08-05',
+    });
+
+    const dump = toDumpItem(doc, { now: TODAY });
+
+    expect(dump.status).toBe('filed');
+    expect(dump.filedInto).toBe(FILED_INTO);
+    expect(dump.filedAt).toBe('2026-08-05');
+  });
+
+  it('meldet einen noch nicht abgelegten Dump ohne Beleg', () => {
+    const doc = dumpDoc('inbox/2026-08-10-1513-idee.md', { type: 'dump', status: 'raw' });
+    const dump = toDumpItem(doc, { now: TODAY });
+
+    expect(dump.filedInto).toBeNull();
+    expect(dump.filedAt).toBeNull();
+  });
+
+  it('trägt den Beleg auch durch die Liste', () => {
+    const docs = [
+      dumpDoc('inbox/a.md', {
+        type: 'dump',
+        created: '2026-08-08T17:48:00+02:00',
+        status: 'filed',
+        filed_into: FILED_INTO,
+        filed_at: '2026-08-09',
+      }),
+      dumpDoc('inbox/b.md', { type: 'dump', created: '2026-07-22T18:55:00+02:00' }),
+    ];
+
+    const dumps = deriveDumps(docs, { now: TODAY });
+
+    expect(dumps.map((dump) => [dump.filedInto, dump.filedAt])).toEqual([
+      [FILED_INTO, '2026-08-09'],
+      [null, null],
+    ]);
+  });
+});
+
+/* `dumpFromDoc` ist der Weg ohne Index — was gerade geschrieben wurde, muss sofort
+   zurueckkommen. Der Beleg darf dabei nicht verloren gehen. */
+describe('dumpFromDoc', () => {
+  function vaultDoc(fields: Record<string, unknown>, body = 'Ein Gedanke.'): VaultDoc {
+    const frontmatter: BaseFrontmatter = {
+      type: 'dump',
+      title: 'Ladezeiten',
+      created: '2026-08-04T12:20:00+02:00',
+      ...fields,
+    };
+    return {
+      path: 'inbox/2026-08-04-1220-ladezeiten.md',
+      frontmatter,
+      body,
+      hash: sha256(body),
+      modified: '2026-08-04T12:20:00.000Z',
+      size: body.length,
+    };
+  }
+
+  it('liest den Beleg einer Ablage mit', () => {
+    const dump = dumpFromDoc(
+      vaultDoc({
+        status: 'filed',
+        filed_into: 'projects/work/kundenportal-relaunch/project.md',
+        filed_at: '2026-08-05',
+      }),
+      { now: TODAY },
+    );
+
+    expect(dump.status).toBe('filed');
+    expect(dump.filedInto).toBe('projects/work/kundenportal-relaunch/project.md');
+    expect(dump.filedAt).toBe('2026-08-05');
+  });
+
+  it('lässt den Beleg leer, solange nichts abgelegt wurde', () => {
+    const dump = dumpFromDoc(vaultDoc({ status: 'raw' }), { now: TODAY });
+
+    expect(dump.filedInto).toBeNull();
+    expect(dump.filedAt).toBeNull();
   });
 });

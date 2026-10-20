@@ -1,9 +1,10 @@
-/* Überblick: Dashboard-Module, Erinnerungen, Claude-Sessions, Pflege-Befunde. */
+/* Overview: dashboard modules, reminders, Claude sessions, maintenance findings. */
 
 import type { Scope } from './vault';
 import type { Todo, WaitingOn } from './domain';
+import type { AgentKind } from './agents';
 
-/** Alle Bausteine, die auf dem Dashboard liegen können. */
+/** All building blocks that can live on the dashboard. */
 export type DashboardModuleId =
   | 'quick-capture'
   | 'ask'
@@ -17,12 +18,14 @@ export type DashboardModuleId =
   | 'journal-streak'
   | 'gardener'
   | 'claude-sessions'
-  | 'active-projects';
+  | 'active-projects'
+  | 'loose-ends'
+  | 'upcoming-mentions';
 
 /**
- * Dieselbe Menge zur Laufzeit. Main und Renderer brauchen sie beide: der Main
- * prüft damit eine hereinkommende Anordnung, der Renderer baut daraus die Auswahl
- * der Module. Die Reihenfolge ist die Vorgabe-Reihenfolge des Katalogs.
+ * The same set at runtime. Both main and renderer need it: main uses it to
+ * validate an incoming layout, the renderer builds the module picker from it.
+ * The order is the catalog's default order.
  */
 export const DASHBOARD_MODULES: readonly DashboardModuleId[] = [
   'quick-capture',
@@ -38,58 +41,61 @@ export const DASHBOARD_MODULES: readonly DashboardModuleId[] = [
   'journal-streak',
   'claude-sessions',
   'gardener',
+  'loose-ends',
+  'upcoming-mentions',
 ];
 
 export type ModuleSize = 'sm' | 'md' | 'lg' | 'xl';
 
-/** Von schmal nach breit — die Auswahl im Kartenmenü folgt dieser Reihenfolge. */
+/** From narrow to wide — the picker in the tile menu follows this order. */
 export const MODULE_SIZES: readonly ModuleSize[] = ['sm', 'md', 'lg', 'xl'];
 
 export interface DashboardTile {
   id: DashboardModuleId;
   size: ModuleSize;
-  /** Ausgeblendet, aber in der Auswahl vorhanden. */
+  /** Hidden, but present in the picker. */
   hidden?: boolean;
-  /** Modul-spezifische Einstellungen, z. B. Anzahl Zeilen. */
+  /** Module-specific settings, e.g. number of rows. */
   options?: Record<string, unknown>;
 }
 
 export interface DashboardLayout {
-  /** Reihenfolge = Position im Grid, von links oben nach rechts unten. */
+  /** Order = position in the grid, from top left to bottom right. */
   tiles: DashboardTile[];
   updated: string;
 }
 
 /**
- * Die Startanordnung: **Signal zuerst.** Sichtbar sind fünf Module: die drei
- * Fragen aus CLAUDE.md (was ansteht, worauf gewartet wird, woran zuletzt
- * gearbeitet wurde, die offenen Aufgaben der Arbeit) — und der Gesundheitswert
- * der Pflege. Sie steht hier und nicht in `main/settings-defaults`, weil auch der
- * Renderer sie braucht: „Anordnung zurücksetzen" muss dieselbe Reihenfolge
- * ergeben wie ein frischer Vault.
+ * The starting layout: **signal first.** Six modules are visible: the three
+ * questions from CLAUDE.md (what's due, what's being waited on, what was last
+ * worked on, the open todos of the work sphere), the maintenance health
+ * score, and upcoming mentions (070 D3) — a future announcement is a signal
+ * on the same footing as a deadline, not a thing to dig for. It lives here
+ * and not in `main/settings-defaults` because the renderer needs it too:
+ * "reset layout" must produce the same order as a fresh vault.
  *
- * Acht Module starten ausgeblendet, und zwar aus einem Grund: **Platz ist die
- * knappe Ressource.** Das Standardgitter muss auf 1152×720 unter zwei
- * Bildschirmen bleiben (geprüft in `scripts/shot.mjs`), sonst beantwortet der
- * Screen seine eine Frage erst nach dem Rollen. Zwei leere Eingabefelder
- * („Schnell erfassen", „Frage") auf der wertvollsten Fläche sind dafür der
- * schlechteste Tausch: beides ist einen Tastendruck entfernt
- * (`Ctrl+Shift+Space`, Ziffer 4) und steht als Knopf in der Kopfzeile.
+ * Nine modules start hidden, and for a reason: **space is the scarce
+ * resource.** The default grid must stay within 1152×720 across two screens
+ * (checked in `scripts/verify.mjs`), otherwise the screen only answers its one
+ * question after scrolling. Two empty input fields ("quick capture", "ask")
+ * on the most valuable real estate would be the worst trade for that: both
+ * are one keypress away (`Ctrl+Shift+Space`, digit 4) and sit as a button in
+ * the header.
  *
- * **„Pflege" ist sichtbar**, seit der Pflegelauf existiert: die Kachel zeigt den
- * Gesundheitswert und die zwei dringendsten Kategorien — und ohne Lauf sagt sie
- * „noch nicht geprüft" statt einer erfundenen Zahl. Kein anderes Modul trägt das
- * Signal „glaube ich meinem Archiv noch?".
+ * **"Maintenance" is visible** ever since the maintenance run exists: the
+ * tile shows the health score and the two most urgent categories — and
+ * without a run it says "not checked yet" instead of a made-up number. No
+ * other module carries the signal "can I still trust my archive?".
  *
- * Dafür startet **„Todos Privat" ausgeblendet**, und zwar nicht aus Geschmack:
- * bei 1152 px sind zwei Spalten, sechs sichtbare Module ergeben vier Reihen, und
- * vier Reihen reißen das Budget von zwei Bildschirmen. Von den fünf war dieses
- * das entbehrlichste — was privat eine Frist hat, steht ohnehin in „Steht an"
- * (die Erinnerungen kennen beide Bereiche), und die ganze Liste ist einen Haken
- * in der Auswahl bzw. einen Klick im Projekte-Screen entfernt.
+ * By contrast **"Todos private" starts hidden**, and not out of taste: at
+ * 1152 px there are two columns, six visible modules make four rows, and four
+ * rows blow the budget of two screens. Of the five candidates, this was the
+ * most dispensable — anything private with a deadline shows up in "Due"
+ * anyway (reminders cover both spheres), and the full list is one checkbox in
+ * the picker or one click in the projects screen away.
  *
- * Ausgeblendet heißt nicht weg: alle dreizehn stehen in der Auswahl („Module"),
- * mit einem Haken und der Wirkung sofort. Jedes Modul kommt genau einmal vor.
+ * Hidden doesn't mean gone: all fifteen appear in the picker ("modules"),
+ * with a checkbox and immediate effect. Each module appears exactly once.
  */
 export const DEFAULT_DASHBOARD_TILES: readonly DashboardTile[] = [
   { id: 'deadlines', size: 'md' },
@@ -97,6 +103,7 @@ export const DEFAULT_DASHBOARD_TILES: readonly DashboardTile[] = [
   { id: 'recent-work', size: 'xl' },
   { id: 'todos-work', size: 'md' },
   { id: 'gardener', size: 'sm' },
+  { id: 'upcoming-mentions', size: 'sm' },
   { id: 'todos-private', size: 'md', hidden: true },
   { id: 'active-projects', size: 'xl', hidden: true },
   { id: 'inbox', size: 'sm', hidden: true },
@@ -105,53 +112,80 @@ export const DEFAULT_DASHBOARD_TILES: readonly DashboardTile[] = [
   { id: 'claude-sessions', size: 'md', hidden: true },
   { id: 'quick-capture', size: 'md', hidden: true },
   { id: 'ask', size: 'md', hidden: true },
+  { id: 'loose-ends', size: 'sm', hidden: true },
 ];
 
-/** Was eine Erinnerung auslöst. */
-export type ReminderSource = 'todo-due' | 'project-deadline' | 'waiting-overdue' | 'stale-project';
+/** What triggers a reminder. */
+export type ReminderSource =
+  | 'todo-due'
+  | 'project-deadline'
+  | 'waiting-overdue'
+  | 'stale-project'
+  | 'loose-end'
+  | 'upcoming-mention';
 
-export type ReminderUrgency = 'overdue' | 'today' | 'soon' | 'upcoming';
+/**
+ * `open` is distinct from `overdue`: a loose end is an announcement whose day
+ * passed without a follow-up, not a deadline someone missed. Treating it as
+ * `overdue` would claim a broken promise that was never made.
+ */
+export type ReminderUrgency = 'overdue' | 'today' | 'soon' | 'upcoming' | 'open';
 
 export interface Reminder {
   id: string;
   source: ReminderSource;
   urgency: ReminderUrgency;
   title: string;
-  /** Wann es fällig ist bzw. war, ISO-Datum. */
+  /** When it's due (or was), ISO date. */
   date: string;
   daysOut: number;
   scope: Scope;
-  /** Datei, die dahinter steht. */
+  /** File it's backed by. */
   path: string;
   project: string | null;
   who: string | null;
 }
 
-/** Eine Claude-Code-Session, aus `~/.claude/projects` gelesen. */
+/** A Claude Code session, read from `~/.claude/projects`. */
 export interface ClaudeSession {
   id: string;
-  /** Arbeitsverzeichnis der Session. */
+  /** Working directory of the session. */
   cwd: string;
-  /** Kurzer Projektname aus dem Pfad. */
+  /** Short project name derived from the path. */
   projectName: string;
-  /** Verknüpftes Vault-Projekt, wenn zuordenbar. */
+  /** Linked vault project, if one can be matched. */
   vaultProject: string | null;
   gitBranch: string | null;
   startedAt: string;
   lastActivity: string;
   messageCount: number;
-  /** Erste Nutzer-Nachricht, gekürzt — woran gearbeitet wurde. */
+  /** First user message, truncated — what was being worked on. */
   firstPrompt: string;
-  /** Zusammenfassung der Session, falls Claude eine geschrieben hat. */
+  /** Session summary, if Claude wrote one. */
   summary: string | null;
-  /** Vom Nutzer berührte Dateien, die häufigsten zuerst. */
+  /** Files touched by the user, most frequent first. */
   files: string[];
+  /** Model name from the most recent assistant record, or unknown. */
+  model: string | null;
+  /** Distinct subagent types invoked, first-seen order; `null` means none seen. */
+  subagents: string[] | null;
+  /** Approximate context size from the most recent assistant record's token usage. */
+  contextTokens: number | null;
 }
 
-/** Arbeit der letzten Tage, aus Dateiänderungen und Claude-Sessions gemischt. */
+/**
+ * A work session from either agent CLI, in the Claude shape. Codex sessions
+ * (`src/core/codex/`) travel as `ClaudeSession` with `agent: 'codex'`:
+ * `summary` carries the thread title, `firstPrompt` is always `''` (Codex
+ * doesn't record a separate first prompt), `files` is always `[]` (not
+ * tracked), and `subagents` is always `null` (Codex has no subagent concept).
+ */
+export type AgentWorkSession = ClaudeSession & { agent: AgentKind; projectKey: string };
+
+/** Work from recent days, mixed from file changes and Claude sessions. */
 export interface RecentWorkItem {
   at: string;
-  kind: 'file' | 'claude-session' | 'journal' | 'ingest';
+  kind: 'file' | 'claude-session' | 'codex-session' | 'journal' | 'ingest';
   title: string;
   detail: string;
   path: string | null;
@@ -159,88 +193,11 @@ export interface RecentWorkItem {
   scope: Scope | null;
 }
 
-/** Ein Befund des Pflegelaufs — das Gegenmittel gegen ein verrottendes Wiki. */
-export type GardenerFindingKind =
-  /** Seite, auf die niemand verlinkt. */
-  | 'orphan'
-  /** Wikilink, der ins Nichts zeigt. */
-  | 'broken-link'
-  /** Seite fehlt im `index.md` des Moduls oder steht dort falsch. */
-  | 'index-drift'
-  /** Seite ist alt und wurde nie überprüft. */
-  | 'stale-page'
-  /** Zwei Seiten behaupten Widersprüchliches. */
-  | 'contradiction'
-  /** Häufig genannter Begriff ohne eigene Seite. */
-  | 'missing-page'
-  /** Zwei Seiten sind fast dasselbe. */
-  | 'near-duplicate'
-  /** Dump liegt zu lange unsortiert in der Inbox. */
-  | 'unfiled-dump'
-  /** Quelle liegt in `raw/`, ist aber nie verdichtet worden. */
-  | 'unprocessed-source'
-  /** Projekt ohne nächsten Schritt. */
-  | 'project-without-next-step';
+/* Maintenance findings (`GardenerFinding`, `GardenerReport`, discard/supersede
+   plans and results) live in `./gardener` — the report/discard/supersede
+   shapes together pushed this file past the soft line limit. */
 
-export type FindingSeverity = 'info' | 'warn' | 'high';
-
-export interface GardenerFinding {
-  id: string;
-  kind: GardenerFindingKind;
-  severity: FindingSeverity;
-  title: string;
-  detail: string;
-  /** Betroffene Dateien. */
-  paths: string[];
-  module: string | null;
-  foundAt: string;
-  /** Vorschlag, den der Nutzer per Klick annehmen kann. */
-  fix: GardenerFix | null;
-  /** Vom Nutzer als „passt so" markiert — taucht nicht wieder auf. */
-  dismissed?: boolean;
-}
-
-export interface GardenerFix {
-  /** Was der Klick tut. */
-  action:
-    'add-to-index' | 'add-links' | 'mark-reviewed' | 'open-classify' | 'open-ingest' | 'merge';
-  label: string;
-  /** Vorschau der Änderung, wenn maschinell erzeugbar. */
-  preview: string | null;
-}
-
-/**
- * Woher der Gesundheitswert kommt. Eine Zahl ohne Begründung ist eine
- * Behauptung — mit dieser Aufschlüsselung kann der Screen sagen, **warum** der
- * Wert so ist. Die Punkte summieren sich auf `100 − health`.
- */
-export interface GardenerHealthContribution {
-  kind: GardenerFindingKind;
-  count: number;
-  /** Verlorene Punkte dieser Kategorie, gerundet. */
-  points: number;
-}
-
-export interface GardenerReport {
-  ranAt: string;
-  /** Wurde ein LLM benutzt, oder nur die deterministischen Checks? */
-  usedLlm: boolean;
-  findings: GardenerFinding[];
-  /** Gesundheitswert 0..100, aus Anzahl und Schwere der Befunde. */
-  health: number;
-  /**
-   * Gibt es überhaupt Bestand, auf den sich der Wert beziehen kann? `false`
-   * heißt: `health` ist unbekannt, nicht 0 — ein leerer Vault hat keine
-   * Gesundheit. Dieselbe Zusage wie `DashboardData.healthKnown`.
-   */
-  healthKnown?: boolean;
-  /** Beiträge je Kategorie, größter zuerst. */
-  healthContributions?: GardenerHealthContribution[];
-  /** Was der Nutzer als nächstes tun sollte, höchstens drei Sätze. */
-  advice: string[];
-}
-
-/** Alles, was das Dashboard in einem Rutsch braucht. */
+/** Everything the dashboard needs in one go. */
 export interface DashboardData {
   reminders: Reminder[];
   recentWork: RecentWorkItem[];
@@ -252,10 +209,10 @@ export interface DashboardData {
   health: number;
   findingCount: number;
   /**
-   * Liegt ein Pflegelauf vor? `false` heißt: `health` und `findingCount` sind
-   * unbekannt, nicht null — die Karte sagt „noch nicht geprüft" statt eine Zahl
-   * zu behaupten.
+   * Does a maintenance run exist? `false` means: `health` and `findingCount`
+   * are unknown, not null — the card says "not checked yet" instead of
+   * claiming a number.
    */
   healthKnown?: boolean;
-  sessions: ClaudeSession[];
+  sessions: AgentWorkSession[];
 }

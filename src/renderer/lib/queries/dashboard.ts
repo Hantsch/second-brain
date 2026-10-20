@@ -1,11 +1,11 @@
-/* Die Hooks des Dashboards: Inhalte, Erinnerungen, Sitzungen — und die
-   Anordnung, die sofort gespeichert wird.
+/* The dashboard's hooks: content, reminders, sessions — and the layout, which
+   is saved immediately.
 
-   Die Anordnung ist der einzige Schreibweg, der optimistisch läuft: verschieben
-   soll sich nicht wie ein Formular anfühlen. Der neue Zustand steht im Cache,
-   bevor der Hauptprozess geantwortet hat; scheitert das Speichern, kommt der
-   alte zurück und eine Meldung sagt es. Ein Gitter, das nach dem Neuladen anders
-   aussieht als vorher, wäre die schlimmere Variante. */
+   The layout is the only write path that runs optimistically: moving things
+   around shouldn't feel like a form. The new state sits in the cache before
+   the main process has responded; if saving fails, the old state comes back
+   and a message says so. A grid that looks different after a reload than it
+   did before would be the worse outcome. */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { UseMutationResult, UseQueryResult } from '@tanstack/react-query';
@@ -15,27 +15,28 @@ import type {
   DashboardLayout,
   OverviewSettings,
   Reminder,
+  SettingsSnapshot,
 } from '@shared/types';
 import { api } from '../api';
 import { pushToast } from '../toast';
 import { qk } from './keys';
 import { useVaultReady } from './data';
 
-/** Alles, was das Dashboard in einem Rutsch braucht. */
+/** Everything the dashboard needs in one go. */
 export function useDashboardData(): UseQueryResult<DashboardData> {
   const ready = useVaultReady();
   return useQuery({ queryKey: qk.dashboard.data(), queryFn: api.dashboard.data, enabled: ready });
 }
 
-/** Die Erinnerungen als eigene Abfrage — die Kopfzeile braucht sie sofort. */
+/** The reminders as a separate query — the header needs them right away. */
 export function useReminders(): UseQueryResult<Reminder[]> {
   const ready = useVaultReady();
   return useQuery({ queryKey: qk.reminders.list(), queryFn: api.reminders.list, enabled: ready });
 }
 
 /**
- * Die Sitzungen. Eigene Abfrage, weil die Kachel sie auch nach einer Zuordnung
- * neu holen muss, ohne das ganze Dashboard zu laden.
+ * The sessions. A separate query, because the tile also needs to refetch them
+ * after a link is made, without loading the whole dashboard.
  */
 export function useClaudeSessions(limit?: number): UseQueryResult<ClaudeSession[]> {
   const ready = useVaultReady();
@@ -46,7 +47,7 @@ export function useClaudeSessions(limit?: number): UseQueryResult<ClaudeSession[
   });
 }
 
-/** Die Anordnung. Sie liegt in den Vault-Einstellungen, nicht im Index. */
+/** The layout. It lives in the vault settings, not in the index. */
 export function useDashboardLayout(): UseQueryResult<DashboardLayout> {
   const ready = useVaultReady();
   return useQuery({
@@ -56,10 +57,35 @@ export function useDashboardLayout(): UseQueryResult<DashboardLayout> {
   });
 }
 
-/** Die Schwellen des Vaults — die Kacheln nennen sie in ihren Leerzuständen. */
+/** The vault's thresholds — the tiles cite them in their empty states. */
 export function useOverviewSettings(): OverviewSettings | undefined {
   const { data } = useQuery({ queryKey: qk.settings.snapshot(), queryFn: api.settings.get });
   return data?.vault?.overview;
+}
+
+/**
+ * Write a slice of the overview settings back through `settings:setVault`.
+ *
+ * Same shape as the mutation in `settings/BehaviorTab.tsx`: the main process
+ * validates and clamps, and its snapshot — not the value we sent — is what
+ * lands in the cache. There is no separate channel for a single preference;
+ * the settings file is the one place these live, which is also why they
+ * survive a restart.
+ *
+ * Caveat for array fields: `deepMerge` in the main process replaces arrays
+ * wholesale, so callers hand over the complete next array, never a delta.
+ */
+export function useSaveOverview(): UseMutationResult<
+  SettingsSnapshot,
+  unknown,
+  Partial<OverviewSettings>
+> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (overview: Partial<OverviewSettings>) => api.settings.setVault({ overview }),
+    onSuccess: (snapshot: SettingsSnapshot) =>
+      client.setQueryData(qk.settings.snapshot(), snapshot),
+  });
 }
 
 interface LayoutContext {
@@ -67,8 +93,8 @@ interface LayoutContext {
 }
 
 /**
- * Anordnung speichern. Optimistisch mit Rücknahme: `onMutate` setzt den neuen
- * Zustand, `onError` den alten — und sagt es.
+ * Save the layout. Optimistic with rollback: `onMutate` sets the new state,
+ * `onError` the old one — and reports it.
  */
 export function useSaveLayout(): UseMutationResult<
   DashboardLayout,
@@ -90,12 +116,12 @@ export function useSaveLayout(): UseMutationResult<
       }
       pushToast('error', 'dashboard.layout.saveFailed');
     },
-    /* Der Hauptprozess prüft die Anordnung; seine Fassung ist die gültige. */
+    /* The main process validates the layout; its version is the authoritative one. */
     onSuccess: (saved) => client.setQueryData(qk.dashboard.layout(), saved),
   });
 }
 
-/** Eine Erinnerung ruhig stellen. Danach sind Liste und Dashboard neu zu holen. */
+/** Snooze a reminder. Afterward, the list and dashboard need refetching. */
 export function useSnoozeReminder(): UseMutationResult<
   void,
   unknown,
@@ -112,8 +138,9 @@ export function useSnoozeReminder(): UseMutationResult<
 }
 
 /**
- * Die Ruhe aufheben — der Rückweg zu `useSnoozeReminder`. Ohne ihn wäre „ruhig
- * stellen" eine Aktion ohne Rückgängig; danach mahnt die Erinnerung sofort wieder.
+ * Cancel the snooze — the reverse path to `useSnoozeReminder`. Without it,
+ * snoozing would be an action with no undo; afterward the reminder starts
+ * nagging again right away.
  */
 export function useUnsnoozeReminder(): UseMutationResult<void, unknown, string> {
   const client = useQueryClient();
@@ -126,7 +153,7 @@ export function useUnsnoozeReminder(): UseMutationResult<void, unknown, string> 
   });
 }
 
-/** Eine Sitzung einem Projekt zuordnen — das schreibt in die Projektdatei. */
+/** Link a session to a project — this writes into the project file. */
 export function useLinkSession(): UseMutationResult<
   void,
   unknown,

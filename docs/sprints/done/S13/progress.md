@@ -1,0 +1,46 @@
+- 2026-09-03 15:24 · 047 · D1 the eight sections in the user's order · started
+- 2026-09-03 15:26 · 047 · D1 the eight sections in the user's order · done
+- 2026-09-03 15:26 · 047 · D2 the day's field is always the field · started
+- 2026-09-03 15:47 · 047 · D2 the day's field is always the field · done
+- 2026-09-03 15:47 · 047 · D3 one close action, both layouts · started
+- 2026-09-03 15:52 · 047 · D3 one close action, both layouts · done
+- 2026-09-03 15:52 · 047 · D4 interview, focus and the coach's label · started
+- 2026-09-03 15:56 · 047 · D4 interview, focus and the coach's label · done
+- 2026-09-03 15:56 · 047 · D5 the order and the single button are pinned by tests · started
+- 2026-09-03 16:07 · 047 · D5 the order and the single button are pinned by tests · done
+- 2026-09-03 16:02 · 047 · D6 screenshots · started
+- 2026-09-03 16:12 · 047 · D6 screenshots · done
+- 2026-09-03 16:35 · 047 · review-fix cycle 1 · started
+- 2026-09-03 16:50 · 047 · review-fix cycle 1 · done
+- 2026-09-03 17:05 · 047 · review-fix cycle 1 verification · blocked (opus 529 overload, 8 consecutive dispatch failures)
+- 2026-09-03 17:29 · 047 · review-fix cycle 2 · started
+- 2026-09-03 19:21 · 047 · review-fix cycle 2 verification (resume) · started
+- 2026-09-03 19:21 · 047 · full verify (format/lint/typecheck/test/build) · done, all green
+- 2026-09-03 19:27 · 047 · live smoke (seed+shot) · done, screenshots confirm order
+- 2026-09-03 19:27 · 047 · clean-agent review (story-review-hard) · PASS, no fixes needed
+- 2026-09-03 19:27 · 047 · Done section filled, status: done, moved to done/ · done
+- 2026-09-03 19:28 · 048 · D1 ChatComposer learns nothing submits · started
+- 2026-09-03 19:31 · 048 · D1 ChatComposer learns nothing submits · done
+- 2026-09-03 19:31 · 048 · D2 coach field files only on button · started
+- 2026-09-03 19:37 · 048 · D2 coach field files only on button · done
+- 2026-09-03 19:37 · 048 · D3 day text field only saves on button · started
+- 2026-09-03 19:42 · 048 · D3 day text field only saves on button · done
+- 2026-09-03 19:42 · 048 · D4 both fields visibly fields (tokens only) · started
+- 2026-09-03 19:44 · 048 · D4 both fields visibly fields (tokens only) · done
+- 2026-09-03 19:44 · 048 · D5 pinned keyboard reachability, ask untouched, a11y clean · started
+- 2026-09-03 19:50 · 048 · D5 pinned keyboard reachability, ask untouched, a11y clean · done
+- 2026-09-03 19:56 · 049 · D1 the header offers one action · started
+- 2026-09-03 19:59 · 049 · D1 the header offers one action · done
+- 2026-09-03 19:59 · 049 · D2 the close trigger appears only on an open day · started
+- 2026-09-03 20:01 · 049 · D2 the close trigger appears only on an open day · done
+- 2026-09-03 20:01 · 049 · D3 accepting the proposal closes the day · started
+- 2026-09-03 20:06 · 049 · D3 accepting the proposal closes the day · done
+- 2026-09-03 20:06 · 049 · D4 a day with no text is not a dead end · started
+- 2026-09-03 20:12 · 049 · D4 a day with no text is not a dead end · done
+- 2026-09-03 20:12 · 049 · D5 screenshots · started
+- 2026-09-03 20:14 · 049 · D5 screenshots · done
+- 2026-09-03 20:14 · 049 · full verify (format/lint/typecheck/test/build) · done, all green
+- 2026-09-03 20:15 · 049 · clean-agent review (story-review-hard) · PASS, 2 findings fixed (F1, F3), 1 documented (F2)
+- 2026-09-03 20:33 · 049 · review-fix verification (typecheck/lint/test/build re-run) · done, all green
+- 2026-09-03 20:33 · 049 · Done section filled, status: done, moved to done/ · done
+- 2026-09-03 20:37 · S13 · sprint review + testplan + roadmap · done

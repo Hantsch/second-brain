@@ -28,9 +28,12 @@ import type { ClaudeRecord } from './records';
 import {
   cleanPromptText,
   clip,
+  contextTokensOf,
   isPrompt,
   isSemantic,
+  modelOf,
   recordText,
+  subagentTypesOf,
   summaryOf,
   toolFilePaths,
 } from './records';
@@ -201,6 +204,21 @@ function shorten(path: string, cwd: string | null): string {
 }
 
 /**
+ * Distinkte `subagent_type`-Werte ueber alle gelesenen Records, zuerst gesehen
+ * zuerst. `null` heisst: keiner in den gelesenen Fenstern gesehen — nicht "0
+ * Subagenten" (gleiche Unterscheidung wie bei `AgentSessionSummary.subagents`).
+ */
+function subagentsSeen(records: readonly ClaudeRecord[]): string[] | null {
+  const seen: string[] = [];
+  for (const record of records) {
+    for (const type of subagentTypesOf(record)) {
+      if (!seen.includes(type)) seen.push(type);
+    }
+  }
+  return seen.length > 0 ? seen : null;
+}
+
+/**
  * Nachrichtenzahl. Deckten die Fenster die Datei ab, ist sie gezaehlt. Sonst wird
  * sie ueber die Nachrichtendichte des Endfensters geschaetzt — und niemals kleiner
  * als das, was tatsaechlich gesehen wurde.
@@ -258,5 +276,11 @@ function facts(
     records: all.length,
     skippedLines: exact ? head.chunk.skipped : head.chunk.skipped + tail.chunk.skipped,
     bytesRead: exact ? head.bytes : head.bytes + tail.bytes,
+    // Juengster Wert zuerst aus dem Endfenster, sonst aus dem Kopf — dieselbe
+    // "letzter Wert gewinnt" Regel wie bei gitBranch/lastActivity oben.
+    model: lastOf(tail.chunk.records, modelOf) ?? lastOf(head.chunk.records, modelOf),
+    subagents: subagentsSeen(all),
+    contextTokens:
+      lastOf(tail.chunk.records, contextTokensOf) ?? lastOf(head.chunk.records, contextTokensOf),
   };
 }

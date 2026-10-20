@@ -1,24 +1,30 @@
-/* Deutsche Oberflächentexte des Dashboards: die Zusammenfassung des Tages, das
-   Gitter mit seinen zwei Bedienwegen, die Auswahl der Module und die Kacheln.
+/* German UI text for the dashboard: the day's summary, the grid with its two
+   input methods, the module selection, and the tiles.
 
-   `module.<id>.name` ist zweimal derselbe Text und deshalb nur einmal da: er ist
-   der Titel der Kachel *und* ihr Name in der Auswahl. `module.<id>.purpose` ist
-   der eine Satz, der sagt, wofür das Modul gut ist.
+   `module.<id>.name` is the same text twice, so it's only here once: it's the
+   tile's title *and* its name in the selection. `module.<id>.purpose` is the
+   one sentence that says what the module is good for.
 
-   Flache Keys, sentence case, keine Emoji. `en-dashboard.ts` trägt denselben
-   Key-Satz — ein Test prüft das. */
+   Flat keys, sentence case, no emoji. `en-dashboard.ts` carries the same key
+   set — a test checks that. */
 
 export const deDashboard = {
-  // ── Zusammenfassung des Tages ─────────────────────────────────────────────
+  // ── Day summary ────────────────────────────────────────────────────────
   'dashboard.summary.label': 'Was heute drückt',
-  'dashboard.summary.overdue': '{count} überfällig',
   'dashboard.summary.today': '{count} heute fällig',
   'dashboard.summary.waitingOne': '1 Antwort ausstehend',
   'dashboard.summary.waitingMany': '{count} Antworten ausstehend',
-  'dashboard.summary.clear': 'Nichts ist überfällig, nichts ist heute fällig.',
-  'dashboard.summary.jump': 'Zu „{module}" springen',
+  'dashboard.summary.clear': 'Nichts ist heute fällig, niemand hält etwas auf.',
+  'dashboard.summary.jump': 'Zu „{module}“ springen',
 
-  // ── Das Gitter ───────────────────────────────────────────────────────────
+  // ── Der „nicht abgelegt“-Streifen (Story 006) ─────────────────────────────
+  /* Über dem Gitter, nicht Teil der Tageszusammenfassung — bei 0 fehlt er
+     ganz, statt „nichts unabgelegt“ zu behaupten. Ein Key genügt, wie bei
+     `notes.filter.unfiled`: „1 nicht abgelegt“ und „3 nicht abgelegt“ beugen
+     im Deutschen gleich. */
+  'dashboard.unfiled.strip': '{count} nicht abgelegt',
+
+  // ── The grid ───────────────────────────────────────────────────────────
   'dashboard.tiles.label': 'Module des Dashboards',
   'dashboard.tiles.empty':
     'Alle Module sind ausgeblendet. In der Auswahl steht, was hier stehen kann.',
@@ -40,11 +46,11 @@ export const deDashboard = {
   'dashboard.move.status': 'Verschieben',
   'dashboard.move.bar':
     '{title}, Position {position} von {total} · Pfeile verschieben · Enter legt ab · Esc bricht ab',
-  'dashboard.tile.hidden': '„{title}" ausgeblendet',
-  'dashboard.tile.hiddenWhere': 'Die Kachel steht weiter in der Auswahl unter „Module".',
+  'dashboard.tile.hidden': '„{title}“ ausgeblendet',
+  'dashboard.tile.hiddenWhere': 'Die Kachel steht weiter in der Auswahl unter „Module“.',
   'dashboard.layout.saveFailed': 'Die Anordnung ließ sich nicht speichern.',
 
-  // ── Auswahl der Module ───────────────────────────────────────────────────
+  // ── Module selection ───────────────────────────────────────────────────
   'dashboard.catalog.open': 'Module',
   'dashboard.catalog.title': 'Module des Dashboards',
   'dashboard.catalog.body':
@@ -52,11 +58,11 @@ export const deDashboard = {
   'dashboard.catalog.visible': '{count} von {total} sichtbar',
   'dashboard.catalog.reset': 'Anordnung zurücksetzen',
 
-  // ── Namen und Zweck der Module ───────────────────────────────────────────
+  // ── Module names and purpose ──────────────────────────────────────────────
   'module.quick-capture.name': 'Schnell erfassen',
   'module.quick-capture.purpose': 'Ein Feld für den Gedanken, der gerade kommt.',
   'module.ask.name': 'Frage',
-  'module.ask.purpose': 'Eine Frage an das Second Brain, beantwortet aus dem Vault.',
+  'module.ask.purpose': 'Eine Frage an Gaston, beantwortet aus dem Vault.',
   'module.recent-work.name': 'Zuletzt gearbeitet',
   'module.recent-work.purpose':
     'Dateiänderungen, Claude-Sessions, Tageseinträge und Quellen in einer Spur.',
@@ -77,42 +83,49 @@ export const deDashboard = {
   'module.stale-projects.purpose': 'Lange nicht angefasst und noch nicht abgeschlossen.',
   'module.journal-streak.name': 'Tagebuch-Serie',
   'module.journal-streak.purpose': 'Tage in Folge, letzter Eintrag, Stimmung der letzten Wochen.',
-  'module.claude-sessions.name': 'Claude-Sessions',
+  'module.claude-sessions.name': 'Agent-Sitzungen',
   'module.claude-sessions.purpose': 'Arbeitsspuren der Agenten-CLI, den Projekten zugeordnet.',
   'module.gardener.name': 'Pflege',
-  'module.gardener.purpose': 'Gesundheitswert und Befunde des letzten Pflegelaufs.',
+  'module.gardener.purpose': 'Gesundheit und Befunde der letzten Prüfung.',
+  'module.loose-ends.name': 'Lose Enden',
+  'module.loose-ends.purpose':
+    'Ankündigungen aus dem Tagebuch, deren Tag vorbei ist und die niemand aufgegriffen hat.',
+  'module.upcoming-mentions.name': 'Kommende Erwähnungen',
+  'module.upcoming-mentions.purpose': 'Ankündigungen aus dem Tagebuch, deren Tag noch bevorsteht.',
 
-  // ── Kacheln ──────────────────────────────────────────────────────────────
+  // ── Tiles ──────────────────────────────────────────────────────────────
   'tile.more': '{count} weitere',
+  'row.overdue': 'Überfällig',
+  'tile.overdue': '{count} überfällig',
   'tile.capture.label': 'Gedanke',
   'tile.capture.placeholder': 'Roh und unsortiert.',
   'tile.capture.hint': 'speichert in die Inbox',
-  'tile.ask.label': 'Frage an das Second Brain',
+  'tile.ask.label': 'Frage an Gaston',
   'tile.ask.placeholder': 'Was weiß ich über …?',
   'tile.ask.submit': 'Fragen',
-  'tile.ask.hint': 'Die Frage wandert mit in den Fragen-Screen.',
 
   'tile.recent.empty':
     'Noch keine Arbeitsspur. Wer eine Datei ändert, eine Sitzung fährt oder einen Tageseintrag schreibt, steht hier.',
 
   'tile.claude.empty': 'Keine Sitzung in den letzten Tagen.',
-  'tile.claude.off': 'Das Mitlesen der Claude-Sessions ist ausgeschaltet.',
+  'tile.claude.off': 'Das Mitlesen der Agent-Sitzungen ist ausgeschaltet.',
   'tile.claude.settings': 'Einschalten',
   'tile.claude.messages': '{count} Nachrichten',
   'tile.claude.unlinked': 'Ohne Projekt',
   'tile.claude.link': 'Projekt zuordnen',
-  'tile.claude.linkFor': 'Sitzung „{name}" einem Projekt zuordnen',
-  'tile.claude.linkHint': 'Der Pfad der Sitzung wandert in „repos" des Projekts.',
-  'tile.claude.linked': 'Zugeordnet. Der Pfad steht jetzt in „repos".',
-  'tile.claude.linkedTo': 'Sitzung „{name}" zugeordnet',
+  'tile.claude.linkFor': 'Sitzung „{name}“ einem Projekt zuordnen',
+  'tile.claude.linkHint': 'Der Pfad der Sitzung wandert in „repos“ des Projekts.',
+  'tile.claude.linked': 'Zugeordnet. Der Pfad steht jetzt in „repos“.',
+  'tile.claude.linkedTo': 'Sitzung „{name}“ zugeordnet',
   'tile.claude.linkSearch': 'Projekt suchen',
-  'tile.claude.linkNoMatch': 'Kein Projekt passt zu „{query}".',
+  'tile.claude.linkNoMatch': 'Kein Projekt passt zu „{query}“.',
+  'tile.claude.openBrowser': 'Alle Agent-Sitzungen öffnen',
 
   'tile.stale.empty': 'Kein Projekt liegt länger als die eingestellte Schwelle brach.',
   'tile.stale.days': 'seit {count} Tagen',
   'tile.active.empty':
-    'Kein laufendes Projekt. Ein Projekt auf „läuft" zu setzen, macht es hier sichtbar.',
-  'tile.project.open': 'Projekt „{title}" öffnen',
+    'Kein laufendes Projekt. Ein Projekt auf „läuft“ zu setzen, macht es hier sichtbar.',
+  'tile.project.open': 'Projekt „{title}“ öffnen',
   'tile.projects.all': 'Zu den Projekten',
 
   'tile.todos.emptyWork': 'Kein offenes Todo im Arbeitsbereich.',
@@ -129,14 +142,17 @@ export const deDashboard = {
   'tile.waiting.due': 'bis {date}',
   'tile.waiting.overdue': 'überfällig',
 
+  /* 022 D2: die Ankündigung selbst ist keine Frist — eigenes Label statt der
+     Fristsprache von "überfällig". */
+  'reminder.urgency.open': 'Angekündigt, offen',
   'tile.deadlines.empty': 'Keine Frist in den nächsten {days} Tagen.',
   'tile.deadlines.project': 'Projektfrist',
   'tile.deadlines.todo': 'Todo',
-  'tile.deadlines.snooze': '„{title}" ruhig stellen',
+  'tile.deadlines.snooze': '„{title}“ ruhig stellen',
 
-  /* Ruhig stellen heißt: bis zu einem Tag nicht mahnen. Deshalb steht in jeder
-     Auswahl der Tag, an dem wieder gemahnt wird — „für drei Tage" ist eine
-     Rechnung, die der Nutzer im Kopf machen müsste. */
+  /* Snoozing means: don't nag until a given day. That's why every choice
+     states the day the reminder returns — "for three days" is a calculation
+     the user would have to do in their head. */
   'reminder.snooze.title': 'Wieder erinnern',
   'reminder.snooze.today': 'Nicht mehr heute',
   'reminder.snooze.tomorrow': 'Bis morgen',
@@ -166,11 +182,33 @@ export const deDashboard = {
   'tile.journal.open': 'Zum Tagebuch',
 
   'tile.gardener.unknown':
-    'Noch nicht geprüft. Der Pflegelauf findet verwaiste Seiten, kaputte Links und liegengebliebene Dumps.',
+    'Noch nicht geprüft. Die Prüfung findet verwaiste Seiten, kaputte Links und liegengebliebene Dumps.',
   'tile.gardener.check': 'Jetzt prüfen',
   'tile.gardener.worst': 'Am schwersten',
   'tile.gardener.health': 'Gesundheit',
   'tile.gardener.findingsOne': '1 Befund',
   'tile.gardener.findingsMany': '{count} Befunde',
   'tile.gardener.open': 'Zur Pflege',
+  /* 021b D5: eine gestoppte Prüfung darf ihre unvollständige Befundzahl nicht
+     als aktuellen Zustand des Vaults verkaufen — deshalb hier Stand-Datum und
+     Stopp-Hinweis statt der üblichen Befundzahl. */
+  'tile.gardener.asOf': 'Stand {date}',
+  'tile.gardener.stopped': 'Letzte Prüfung gestoppt',
+
+  /* 022 D4: eine eigene Kachel für lose Enden — vormals fälschlich Teil von
+     "Warte auf". Die Zeile nennt sich selbst als Ankündigung ohne Ausgang,
+     nicht als Frist oder Wartefall. */
+  'tile.looseEnds.empty': 'Kein loses Ende. Jede Ankündigung im Tagebuch hat einen Ausgang.',
+  'tile.looseEnds.announced': 'Angekündigt am {date}',
+  'tile.looseEnds.for': 'für {date}',
+  'tile.looseEnds.snooze': '„{title}“ ruhig stellen',
+  'tile.looseEnds.open': 'Tageseintrag vom {date} öffnen',
+
+  /* 070 D3: die andere Haelfte desselben Fensters wie lose Enden — sichtbar,
+     bevor der Tag kommt, rein lesend (kein Ruhigstellen: es gibt noch nichts
+     zu beruhigen). */
+  'tile.upcomingMentions.empty': 'Keine kommende Erwähnung. Noch nichts angekündigt.',
+  'tile.upcomingMentions.announced': 'Angekündigt am {date}',
+  'tile.upcomingMentions.for': 'für {date}',
+  'tile.upcomingMentions.open': 'Tageseintrag vom {date} öffnen',
 } as const;

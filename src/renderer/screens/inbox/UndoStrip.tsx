@@ -1,13 +1,14 @@
-/* Die Bestätigung nach einer Aktion: was passiert ist, und der Weg zurück.
+/* The confirmation after an action: what happened, and the way back.
 
-   Sie steht bewusst im Screen und nicht als Meldung: eine Meldung verschwindet
-   nach sechs Sekunden und trägt keinen Knopf. „Keine Aktion ohne Rückgängig"
-   heißt, dass der Rückweg zehn Sekunden sichtbar dasteht.
+   It's deliberately placed in the screen and not as a toast: a toast
+   disappears after six seconds and carries no button. "No action without
+   undo" means the way back stays visible for ten seconds.
 
-   Die Zeile behauptet nur, was wirklich geschehen ist. „Abgelegt in" ohne Pfad
-   wäre ein abgebrochener Satz — und bei einem Dump, der bewusst liegen bleibt,
-   sogar eine Falschaussage. Deshalb entscheidet nicht die Absicht des Aufrufers,
-   sondern das Ergebnis: ohne geschriebene Datei gilt „bleibt liegen". */
+   The line only claims what actually happened. "Filed to" without a path
+   would be a broken sentence — and for a dump that's deliberately left
+   unfiled, even a false statement. That's why the caller's intent doesn't
+   decide, the result does: without a written file, it counts as "left
+   unfiled". */
 
 import { Button } from '../../atoms/Button';
 import { Icon } from '../../atoms/Icon';
@@ -15,11 +16,11 @@ import { useT } from '../../i18n';
 
 export interface UndoOffer {
   kind: 'filed' | 'discarded' | 'kept';
-  /** Geschriebene Dateien — bei „verworfen" und „bleibt liegen" keine. */
+  /** Files written — none for "discarded" and "left unfiled". */
   paths: readonly string[];
-  /** Ohne Marke gibt es nichts zurückzunehmen. Jede der drei Aktionen liefert
-      inzwischen eine — auch „bleibt liegen" (`capture:keep`) schreibt etwas
-      und ist damit rücknehmbar. */
+  /** Without a token there's nothing to undo. Each of the three actions now
+      supplies one — even "left unfiled" (`capture:keep`) writes something
+      and is therefore undoable. */
   undoToken: string | null;
 }
 
@@ -29,11 +30,11 @@ export interface UndoStripProps {
   onUndo: () => void;
 }
 
-/** Der Text, der zum Ergebnis passt — nicht der, den der Aufrufer meinte. */
+/** The text that matches the result — not the one the caller intended. */
 function textKey(offer: UndoOffer): string {
   if (offer.kind === 'discarded') return 'inbox.undo.discarded';
-  /* Kein Pfad heißt: es wurde keine Datei geschrieben. Dann ist der Dump
-     liegengeblieben, egal mit welchem Knopf. */
+  /* No path means: no file was written. Then the dump was left unfiled,
+     regardless of which button was pressed. */
   if (offer.kind === 'kept' || offer.paths.length === 0) return 'inbox.undo.kept';
   return 'inbox.undo.filed';
 }

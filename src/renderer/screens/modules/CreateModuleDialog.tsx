@@ -1,9 +1,10 @@
-/* Modul anlegen: zwei Felder und ein Satz, der erklärt, was ein Modul ist.
+/* Create a knowledge module: two fields and a sentence explaining what a
+   module is.
 
-   Der erklärende Satz steht im Dialog, nicht in einem Hilfetext daneben: wer hier
-   ankommt, entscheidet gerade, ob er ein Modul braucht. Darunter steht, was
-   tatsächlich auf die Platte geschrieben wird — kein Dialog, der etwas anlegt,
-   ohne zu sagen was. */
+   The explanatory sentence lives in the dialog itself, not in a help text next
+   to it: whoever lands here is deciding right now whether they need a module.
+   Below it is what actually gets written to disk — no dialog that creates
+   something without saying what. */
 
 import { useState } from 'react';
 import { Button } from '../../atoms/Button';

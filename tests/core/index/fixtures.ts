@@ -7,6 +7,7 @@
 
 import { MemoryVaultStore } from '@core/vault/memory-store';
 import { sha256 } from '@core/vault/hash';
+import { splitPassages } from '@core/index/passages';
 import type { IndexedDoc } from '@core/index/types';
 
 /** Der Tag, auf den sich alle Fristen in den Tests beziehen. */
@@ -118,6 +119,16 @@ const AREA = [
   '',
   '- [ ] Zahnarzttermin holen #privat',
   '- [ ] Arbeitsplatz höher stellen #work',
+  '',
+  '## Notizen',
+  '',
+  '### 2026-07-28',
+  '',
+  'Der Rücken meldet sich vor allem bei langen Sitzungen.',
+  '',
+  '### 2026-08-04',
+  '',
+  'Zwei Wochen Schlafprotokoll: vor Mitternacht ins Bett wirkt mehr.',
   '',
 ].join('\n');
 
@@ -308,6 +319,7 @@ export function makeDoc(partial: Partial<IndexedDoc> & { path: string }): Indexe
     size: body.length,
     words: body.split(/\s+/).filter((word) => word.length > 0).length,
     bodyLine: 1,
+    passages: splitPassages(body, partial.bodyLine ?? 1),
     frontmatter: {},
     module: null,
     scope: null,

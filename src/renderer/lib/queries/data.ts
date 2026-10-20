@@ -7,8 +7,9 @@
 
 import { useQuery } from '@tanstack/react-query';
 import type { UseQueryResult } from '@tanstack/react-query';
-import type { IndexStats } from '@shared/ipc';
+import type { IndexStats, IpcResponse } from '@shared/ipc';
 import type {
+  DocLanguage,
   DumpItem,
   JournalDay,
   KnowledgeModule,
@@ -24,6 +25,27 @@ import { qk } from './keys';
 /* Ab zwei Zeichen wird gesucht: bei einem Buchstaben trifft alles. Dieselbe
    Schwelle wie in der Befehlspalette. */
 export const MIN_QUERY = 2;
+
+/**
+ * The section-heading migration plan for one target document language (024,
+ * D7/D8). Queried whenever `LanguagesTab` is open — including after a
+ * reload — not only as a side effect of switching `languages.documents`: the
+ * decision behind the story is that an offer that disappears on reload would
+ * be a worse promise than none. `staleTime: 0` because the vault's files can
+ * change outside the app between visits.
+ */
+export function useSectionMigrationPlan(
+  to: DocLanguage,
+  enabled: boolean,
+): UseQueryResult<IpcResponse<'vault:sectionPlan'>> {
+  return useQuery({
+    queryKey: qk.vault.sectionPlan(to),
+    queryFn: () => api.vault.sectionPlan(to),
+    enabled,
+    retry: false,
+    staleTime: 0,
+  });
+}
 
 export function useVaultStatus(): UseQueryResult<VaultStatus> {
   return useQuery({ queryKey: qk.vault.status(), queryFn: api.vault.status });

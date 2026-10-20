@@ -23,6 +23,7 @@ const LIMIT = 5;
 const KIND_ICONS: Record<RecentWorkItem['kind'], string> = {
   file: 'file-text',
   'claude-session': 'workflow',
+  'codex-session': 'workflow',
   journal: 'notebook-pen',
   ingest: 'download',
 };

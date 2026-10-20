@@ -1,17 +1,17 @@
-/* Strukturierte Ausgabe hat zwei Wege: der Provider kann es nativ (OpenAI
-   `response_format`, Anthropic `tools`) — oder er kann es nicht. Dann wandert das
-   Schema in den System-Prompt und die Antwort wird tolerant gelesen.
+/* Structured output has two paths: the provider can do it natively (OpenAI
+   `response_format`, Anthropic `tools`) — or it can't. Then the schema
+   migrates into the system prompt and the response is read tolerantly.
 
-   Beide Wege liefern am Ende dasselbe: `text` ist gültiges, kompaktes JSON. */
+   Both paths deliver the same thing in the end: `text` is valid, compact JSON. */
 
 import type { ChatTurn } from '@shared/types';
 
-/** Name, unter dem das Schema bei beiden Provider-Arten angemeldet wird. */
+/** Name under which the schema is registered with both provider kinds. */
 export const SCHEMA_NAME = 'antwort';
 
 /**
- * Hängt die Schema-Anweisung an die System-Nachricht (oder legt eine an).
- * Bewusst knapp: lange Meta-Anweisungen verwirren kleine Modelle mehr, als sie helfen.
+ * Appends the schema instruction to the system message (or creates one).
+ * Deliberately terse: long meta-instructions confuse small models more than they help.
  */
 export function withSchemaInstruction(
   messages: readonly ChatTurn[],
@@ -33,12 +33,12 @@ export function withSchemaInstruction(
   return [{ role: 'system', content: instruction }, ...messages];
 }
 
-/** Ob der native Weg noch versucht werden darf. Nach einem Nein bleibt es beim Nein. */
+/** Whether the native path may still be tried. Once it's a no, it stays a no. */
 export type SchemaSupport = 'auto' | 'native' | 'prompt';
 
 /**
- * Status-Codes, die wir als „kennt `json_schema` bzw. `tools` nicht" deuten.
- * Alles andere ist ein echter Fehler und wird nicht durch den Fallback verdeckt.
+ * Status codes we interpret as "doesn't know `json_schema` or `tools`".
+ * Everything else is a genuine error and is not masked by the fallback.
  */
 export function meansSchemaUnsupported(status: number): boolean {
   return status === 400 || status === 404 || status === 415 || status === 422 || status === 501;

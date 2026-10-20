@@ -1,20 +1,20 @@
-/* Erkennen, was der Nutzer eingeworfen hat: YouTube, Webseite, Dateipfad, Text.
+/* Detecting what the user dropped in: YouTube, web page, file path, text.
 
-   Die Erkennung ist **sichtbar** — der Eingang sagt, was er verstanden hat, bevor
-   etwas passiert. Sie muss deshalb hier laufen, im Renderer, ohne einen Aufruf
-   in den Hauptprozess: die Antwort steht beim Tippen da, nicht danach.
+   The detection is **visible** — the inbox states what it understood before
+   anything happens. That's why it has to run here, in the renderer, without a
+   call into the main process: the answer appears while typing, not after.
 
-   Der Kern entscheidet dieselbe Frage noch einmal (`allIngestors()` in
-   Erkennungsreihenfolge). Diese Fassung ist die knappe Vorschau davon: sie prüft
-   nur die Form, nie das Netz. Was hier YouTube heißt, heißt es dort auch —
-   dieselben Wirtsnamen, dieselbe 11-stellige Kennung. */
+   The core decides the same question again (`allIngestors()` in detection
+   order). This version is the concise preview of that: it only checks the
+   shape, never the network. What's called YouTube here is called that there
+   too — same host names, same 11-character ID. */
 
 import type { IngestKind } from '@shared/types';
 
-/** Wirtsnamen, hinter denen ein YouTube-Video steckt. */
+/** Host names behind which a YouTube video may be hiding. */
 const YOUTUBE_HOSTS = ['youtube.com', 'youtube-nocookie.com', 'youtu.be'];
 
-/** Pfadanfänge, die eine Video-Kennung tragen. */
+/** Path prefixes that carry a video ID. */
 const YOUTUBE_PREFIXES = ['shorts', 'embed', 'live', 'v', 'e'];
 
 const VIDEO_ID = /^[A-Za-z0-9_-]{11}$/;
@@ -28,7 +28,7 @@ function hostMatches(hostname: string): boolean {
   return YOUTUBE_HOSTS.some((suffix) => host === suffix || host.endsWith(`.${suffix}`));
 }
 
-/** Steckt in der Eingabe ein YouTube-Video? Nur die Form, keine Abfrage. */
+/** Does the input contain a YouTube video? Only the shape, never a network query. */
 export function looksLikeYoutube(input: string): boolean {
   const raw = input.trim();
   if (raw.length === 0 || raw.includes('\n')) return false;
@@ -57,7 +57,7 @@ export function isHttpUrl(input: string): boolean {
   return /^https?:\/\/\S+$/i.test(raw);
 }
 
-/** Sieht die Eingabe wie ein Dateipfad aus (und nicht wie eine URL)? */
+/** Does the input look like a file path (and not like a URL)? */
 export function looksLikePath(input: string): boolean {
   const raw = input.trim();
   if (raw.length === 0 || raw.includes('\n')) return false;
@@ -66,9 +66,9 @@ export function looksLikePath(input: string): boolean {
 }
 
 /**
- * Was ist das? `null` heißt: noch nichts eingegeben — dann wird nichts behauptet.
- * Reihenfolge wie im Kern: YouTube vor URL (eine watch-URL ist beides), Datei vor
- * Text (ein Pfad ist auch Text).
+ * What is this? `null` means: nothing entered yet — in that case nothing is
+ * asserted. Order matches the core: YouTube before URL (a watch URL is both),
+ * file before text (a path is also text).
  */
 export function detectKind(input: string): IngestKind | null {
   const raw = input.trim();

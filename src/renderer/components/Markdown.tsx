@@ -6,8 +6,10 @@
    1. **Belegmarke.** Ein `[[pfad]]` (oder ein roher Pfad `a/b.md:12`) wird zu
       `[1]`, wenn es dazu einen geprüften Beleg gibt — das ist der Faden vom Satz
       zur Datei.
-   2. **Dateiverweis.** Gibt es keinen Beleg, bleibt der Pfad klickbar, aber ohne
-      Akzent: er behauptet nichts.
+   2. **Dateiverweis.** Gibt es keinen Beleg, bleibt der Pfad nur klickbar, wenn der
+      Aufrufer `onOpenPath` übergibt — sonst ist er reiner Text. Ein Modellsatz mit
+      Pfad, den niemand zum Öffnen anbietet, war die eine verbleibende
+      Klickfläche ohne Akzent; jetzt behauptet er nichts, wenn er nichts tut.
    3. **Nur Text.** Ein `[[begriff]]` ohne Pfad wird Text. Ein Link ins Nichts ist
       schlimmer als keiner.
 
@@ -44,6 +46,13 @@ export interface MarkdownProps {
   /** Klick auf einen Dateiverweis ohne Beleg. */
   onOpenPath?: (path: string) => void;
   className?: string;
+  /**
+   * Weitergereicht an `renderMarkdown` — nur für Aufrufer nötig, die diesen
+   * Text unter einer eigenen Überschrift zeigen (ein `Panel`-Titel etwa),
+   * damit eine „###" in der Datei die Gliederung fortsetzt statt sie zu
+   * überspringen.
+   */
+  headingOffset?: number;
 }
 
 export function Markdown({
@@ -52,6 +61,7 @@ export function Markdown({
   onCitation,
   onOpenPath,
   className = '',
+  headingOffset,
 }: MarkdownProps) {
   const t = useT();
 
@@ -72,6 +82,10 @@ export function Markdown({
           </button>
         );
       }
+      const shown = label.length > 0 ? label : leaf(target);
+      /* No handler, no click: an uncited path with nowhere to go was the one
+         mark that looked actionable but wasn't — it renders as plain text now. */
+      if (onOpenPath === undefined) return shown;
       return (
         <button
           key={key}
@@ -79,9 +93,9 @@ export function Markdown({
           className="sb-pathref"
           title={target}
           aria-label={t('ask.citation.openPath', { path: target })}
-          onClick={() => onOpenPath?.(target)}
+          onClick={() => onOpenPath(target)}
         >
-          {label.length > 0 ? label : leaf(target)}
+          {shown}
         </button>
       );
     };
@@ -97,8 +111,10 @@ export function Markdown({
       path: (path, line, key) =>
         reference(path, line === null ? leaf(path) : `${leaf(path)}:${line}`, key),
     };
-    return renderMarkdown(text, refs);
-  }, [text, citations, onCitation, onOpenPath, t]);
+    return headingOffset === undefined
+      ? renderMarkdown(text, refs)
+      : renderMarkdown(text, refs, headingOffset);
+  }, [text, citations, onCitation, onOpenPath, t, headingOffset]);
 
   return <div className={`sb-md sb-markdown ${className}`.trim()}>{nodes}</div>;
 }

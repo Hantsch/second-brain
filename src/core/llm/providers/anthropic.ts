@@ -1,11 +1,11 @@
-/* Anthropic Messages API, ohne SDK.
+/* Anthropic Messages API, without an SDK.
 
-   Drei Eigenheiten gegenüber OpenAI-kompatiblen Diensten:
-   - Authentifizierung über `x-api-key` plus `anthropic-version`.
-   - Der System-Prompt ist ein eigenes Feld, kein `messages`-Eintrag.
-   - Strukturierte Ausgabe läuft über ein Werkzeug mit `input_schema` und
-     erzwungenem `tool_choice`; kann der Dienst das nicht, greift derselbe
-     Prompt-Fallback wie beim OpenAI-Weg. */
+   Three peculiarities compared to OpenAI-compatible services:
+   - Authentication via `x-api-key` plus `anthropic-version`.
+   - The system prompt is its own field, not a `messages` entry.
+   - Structured output runs via a tool with `input_schema` and a forced
+     `tool_choice`; if the service can't do that, the same prompt fallback
+     as on the OpenAI path kicks in. */
 
 import type { ChatTurn, ProviderProbe, Usage } from '@shared/types';
 import { normalizeJsonText } from '../json';
@@ -26,10 +26,10 @@ import {
   type ProviderResult,
 } from '../types';
 
-/** Vertragsversion der Messages-API. Wird als Header mitgeschickt. */
+/** Contract version of the Messages API. Sent along as a header. */
 export const ANTHROPIC_VERSION = '2023-06-01';
 
-/** Ohne `max_tokens` lehnt die API ab — also ein vernünftiger Vorgabewert. */
+/** The API rejects requests without `max_tokens` — so a sensible default. */
 const DEFAULT_MAX_TOKENS = 4096;
 
 export interface AnthropicConfig {
@@ -107,7 +107,7 @@ export class AnthropicProvider implements LlmProvider {
         }
         if (parsed.type === 'content_block_delta') {
           const delta = parsed.delta;
-          // Text streamt als `text_delta`, ein Werkzeug-Aufruf als `input_json_delta`.
+          // Text streams as `text_delta`, a tool call as `input_json_delta`.
           const piece =
             typeof delta?.text === 'string'
               ? delta.text
@@ -120,7 +120,7 @@ export class AnthropicProvider implements LlmProvider {
           }
           return;
         }
-        // `message_start` bringt die Eingabe-Token, `message_delta` die Ausgabe-Token.
+        // `message_start` carries the input tokens, `message_delta` the output tokens.
         usage = mergeUsage(usage, usageOf(parsed.usage ?? parsed.message?.usage));
       });
       return this.finish(call, text, usage);
@@ -242,8 +242,8 @@ export class AnthropicProvider implements LlmProvider {
 }
 
 /**
- * Trennt System-Anweisungen von den Gesprächsrunden. Mehrere System-Turns werden
- * zusammengefasst, weil die API nur ein Feld dafür hat.
+ * Separates system instructions from the conversation turns. Multiple system
+ * turns are merged, because the API only has one field for it.
  */
 export function splitSystem(turns: readonly ChatTurn[]): {
   system: string;
@@ -259,7 +259,7 @@ export function splitSystem(turns: readonly ChatTurn[]): {
   return { system, messages };
 }
 
-/** Text aus den Content-Blöcken; ein `tool_use`-Block liefert sein `input` als JSON. */
+/** Text from the content blocks; a `tool_use` block delivers its `input` as JSON. */
 function textOf(content: ContentBlock[] | undefined): string {
   if (!content) return '';
   return content

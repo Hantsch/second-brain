@@ -14,8 +14,10 @@ import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { isAbsolute, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { compareFindings, checkVault } from './seed/check.mjs';
+import { checkSettingsGuard } from './seed/settings-guard.mjs';
 import { seedChats } from './seed/chats.mjs';
 import { seedClaudeSessions } from './seed/claude.mjs';
+import { seedCodexSessions } from './seed/codex.mjs';
 import { createClock, Seeder } from './seed/lib.mjs';
 import { seedInbox } from './seed/inbox.mjs';
 import { seedInternal, VAULT_NAME } from './seed/internal.mjs';
@@ -97,8 +99,10 @@ function formatSummary(seeder, findings) {
     `  unverdichtete Quelle   ${findings.unprocessedSources.join(', ')}`,
     `  liegengebliebener Dump ${findings.unfiledDumps.join(', ')}`,
     `  ohne nächsten Schritt  ${findings.withoutNextStep.join(', ')}`,
+    `  Verdichtung fällig     ${findings.condensationDue.join(', ')}`,
     '',
     `  Claude-Sitzungen  ${count('claudeSessions')}  (eigene Ablage, nicht das echte ~/.claude)`,
+    `  Codex-Sitzungen   ${count('codexSessions')}  (eigene Ablage, nicht das echte ~/.codex)`,
   ];
   return lines.join('\n');
 }
@@ -114,6 +118,8 @@ function main() {
   /* Vor den Projekten unerheblich, aber vor dem Start der App zwingend: ohne
      eigene Verlaufsablage liest der Demo-Lauf das echte `~/.claude`. */
   seedClaudeSessions(seeder, clock);
+  /* Dieselbe Begründung wie eben, für Codex: eigene Ablage statt `~/.codex`. */
+  seedCodexSessions(seeder, clock);
   seedProjects(seeder, clock);
   seedJournal(seeder, clock);
   writeModule(seeder, clock, identityModule(clock));
@@ -126,7 +132,11 @@ function main() {
 
   const report = checkVault(options.out, clock.date(0, '12:00'));
   const mismatches = compareFindings(report.findings);
-  const problems = [...report.problems, ...mismatches];
+  const settings = JSON.parse(
+    readFileSync(resolve(options.out, '.secondbrain/settings.json'), 'utf8'),
+  );
+  const settingsProblems = checkSettingsGuard(settings, options.out);
+  const problems = [...report.problems, ...mismatches, ...settingsProblems];
 
   if (!options.quiet) {
     console.log(formatSummary(seeder, report.findings));

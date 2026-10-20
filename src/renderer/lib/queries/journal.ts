@@ -1,29 +1,35 @@
-/* Die Hooks des Tagebuchs: ein Tag, seine Schreibwege, das Gespräch und der
-   Tagesabschluss.
+/* The journal's hooks: a day, its write paths, the conversation, and the day
+   close.
 
-   Drei Dinge, die man kennen muss:
+   Three things worth knowing:
 
-   - **Der Stream läuft nicht über TanStack Query.** `journal:coach` antwortet mit
-     einer Marke; die Stücke kommen als `event:llm-stream` in den Puffer aus
-     `lib/llm-stream.ts`. Erst der Schreibvorgang im Hauptprozess und das daraus
-     folgende `event:vault-changed` laden den Tag neu — dann steht die Runde als
-     Datei da, nicht als Zustand im Speicher.
-   - **Der Tagesabschluss ist eine Mutation, keine Query.** Er kostet einen
-     Modellaufruf; er läuft nur, wenn jemand darauf drückt.
-   - **Die Vertraulichkeitszeile kommt aus dem Routing**, nicht aus einer Vermutung:
-     `useCoachRoute` löst dieselbe Kette auf wie das Gateway im Kern und nennt den
-     Provider, an den das Gespräch wirklich geht. */
+   - **The stream does not run through TanStack Query.** `journal:coach`
+     responds with a token; the chunks arrive as `event:llm-stream` into the
+     buffer from `lib/llm-stream.ts`. Only the write in the main process and the
+     resulting `event:vault-changed` reload the day — only then does the round
+     exist as a file, not as in-memory state.
+   - **The day close is a mutation, not a query.** It costs a model call; it
+     only runs when someone triggers it.
+   - **The confidentiality line comes from routing**, not from a guess:
+     `useCoachRoute` resolves the same chain as the gateway in the core and
+     names the provider the conversation actually goes to. */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { QueryClient, UseMutationResult, UseQueryResult } from '@tanstack/react-query';
-import type { IpcRequest, JournalCloseSuggestion, JournalDayView, WriteRequest } from '@shared/ipc';
-import type { CoachMode, JournalDay, JournalSettings, WriteResult } from '@shared/types';
+import type {
+  IpcRequest,
+  JournalDayView,
+  JournalInterviewPlan,
+  JournalInterviewStep,
+  WriteRequest,
+} from '@shared/ipc';
+import type { CoachMode, JournalDay, JournalSettings, WorkTask, WriteResult } from '@shared/types';
 import { api } from '../api';
 import { qk } from './keys';
 import { useVaultReady } from './data';
 import { resolveRoute, useProviders, useRouting, useTasks } from './llm';
 
-/** Ein Tag mit seinen drei Abschnitten. `null` heißt: es gibt die Datei nicht. */
+/** A day with its three sections. `null` means the file doesn't exist. */
 export function useJournalDay(date: string | null): UseQueryResult<JournalDayView | null> {
   const ready = useVaultReady();
   return useQuery({
@@ -33,24 +39,24 @@ export function useJournalDay(date: string | null): UseQueryResult<JournalDayVie
   });
 }
 
-/** Die Tagebuch-Einstellungen des Vaults; `undefined`, solange unbekannt. */
+/** The vault's journal settings; `undefined` while unknown. */
 export function useJournalSettings(): JournalSettings | undefined {
   const { data } = useQuery({ queryKey: qk.settings.snapshot(), queryFn: api.settings.get });
   return data?.vault?.journal;
 }
 
 export interface CoachRoute {
-  /** Liegt für `journal-chat` ein Modell? `undefined` = noch unbekannt. */
+  /** Is a model configured for `journal-chat`? `undefined` = still unknown. */
   routed: boolean | undefined;
-  /** Name des Providers, an den das Gespräch geht. */
+  /** Name of the provider the conversation goes to. */
   provider: string | null;
-  /** Läuft dieser Provider auf diesem Rechner? */
+  /** Does this provider run on this machine? */
   local: boolean;
 }
 
 /**
- * Wohin das Gespräch geht. Dieselbe Kette wie `RoutingGateway.routeFor`: eigene
- * Route, sonst der Standard der Leistungsklasse.
+ * Where the conversation goes. Same chain as `RoutingGateway.routeFor`: its own
+ * route, otherwise the performance class's default.
  */
 export function useCoachRoute(): CoachRoute {
   const routing = useRouting();
@@ -63,8 +69,8 @@ export function useCoachRoute(): CoachRoute {
   return {
     routed: true,
     provider: provider?.label ?? route.ref.providerId,
-    /* Ohne bekannten Provider gilt „nicht lokal": eine Zusage über den eigenen
-       Rechner darf nicht auf einer Annahme stehen. */
+    /* Without a known provider, "not local" applies: a promise about the user's
+       own machine must never rest on an assumption. */
     local: provider?.local === true,
   };
 }
@@ -78,27 +84,49 @@ export interface JournalMutations {
   append: UseMutationResult<WriteResult, unknown, IpcRequest<'journal:append'>>;
   setDay: UseMutationResult<WriteResult, unknown, IpcRequest<'journal:setDay'>>;
   setMood: UseMutationResult<JournalDay, unknown, IpcRequest<'journal:setMood'>>;
+  /** The manual "mark as finished" / "reopen" switch (009, D3/D6) — a day-level
+      field patch exactly like `setMood`: no rewritten user line, so it carries
+      `expectedHash` only when the caller has one, and a stale hash surfaces as
+      `conflict` instead of silently overwriting. */
+  setClosed: UseMutationResult<JournalDay, unknown, IpcRequest<'journal:setClosed'>>;
   coach: UseMutationResult<
     { threadId: string; messageId: string },
     unknown,
     IpcRequest<'journal:coach'>
   >;
   abort: UseMutationResult<void, unknown, string>;
-  close: UseMutationResult<JournalCloseSuggestion | null, unknown, string>;
+  /** Queues the close-out and answers with its task, or `null` when there was
+      nothing to close (073, D6 — mirrors `condense:run`, D3). Fire-and-forget:
+      waiting for the task to settle and reading back the suggestion it stored
+      is `useTaskForSubject`'s job (`../hooks/use-task-for-subject`), not this
+      mutation's — that is what lets a screen read the run's outcome even
+      after navigating away and back, instead of losing it with the component
+      that triggered it. */
+  close: UseMutationResult<WorkTask | null, unknown, string>;
   applyClose: UseMutationResult<
     { written: string[]; undo: WriteRequest[] },
     unknown,
     IpcRequest<'journal:applyClose'>
   >;
-  /** Den Rückweg eines Tagesabschlusses ausführen — genau die Aufträge von dort. */
+  /** Discards a stored close-out suggestion (073 review finding 2) — marks it
+      in main the same way `applyClose`'s success already does, so a discard
+      survives a remount instead of only clearing the renderer's own buffer
+      (`lib/close-proposal.ts`). No `onSuccess` refresh: nothing about the
+      day's own view changes. */
+  discardClose: UseMutationResult<void, unknown, string>;
+  /** Run the undo path of a day close — exactly the write requests from there. */
   undo: UseMutationResult<void, unknown, readonly WriteRequest[]>;
+  /** One-time migration (011, D9): folds a legacy `## Conversation` into the
+      day stream. Hash-guarded exactly like `setDay` — a stale hash surfaces
+      as `conflict` instead of silently overwriting. */
+  foldDay: UseMutationResult<WriteResult, unknown, IpcRequest<'journal:foldDay'>>;
 }
 
 export function useJournalMutations(date: string): JournalMutations {
   const client = useQueryClient();
-  /* Der Hauptprozess meldet nach jedem Schreibvorgang `event:vault-changed`, was
-     zentral alles Betroffene invalidiert. Hier wird der offene Tag zusätzlich
-     sofort nachgeladen, damit die Ansicht nicht auf ein Ereignis wartet. */
+  /* The main process reports `event:vault-changed` after every write, which
+     centrally invalidates everything affected. Here the open day is additionally
+     reloaded right away, so the view doesn't wait on an event. */
   const done = (): void => refreshDay(client, date);
 
   return {
@@ -109,20 +137,110 @@ export function useJournalMutations(date: string): JournalMutations {
     }),
     setDay: useMutation({ mutationFn: api.journal.setDay, onSuccess: done }),
     setMood: useMutation({ mutationFn: api.journal.setMood, onSuccess: done }),
+    setClosed: useMutation({ mutationFn: api.journal.setClosed, onSuccess: done }),
     coach: useMutation({ mutationFn: api.journal.coach }),
     abort: useMutation({ mutationFn: api.journal.abort }),
-    close: useMutation({ mutationFn: api.journal.close }),
+    /* Fire-and-forget (073, D6): this hook's job ends the moment the queue has
+       accepted the run (or answered `null` — nothing to close). Waiting for
+       it, reading back the suggestion and surviving a navigation are all
+       `useTaskForSubject`'s. */
+    close: useMutation({ mutationFn: (date: string) => api.journal.close(date) }),
     applyClose: useMutation({ mutationFn: api.journal.applyClose, onSuccess: done }),
+    discardClose: useMutation({ mutationFn: api.journal.discardClose }),
     undo: useMutation({
       mutationFn: async (plan: readonly WriteRequest[]) => {
-        /* Der Reihe nach: die Aufträge kommen so, wie sie ausgeführt werden müssen,
-           und jeder trägt den Hash des Stands, den er zurückdreht. */
+        /* In order: the write requests arrive in the order they must be run, and
+           each carries the hash of the state it reverts. */
         for (const entry of plan) await api.vault.write(entry);
       },
+      onSuccess: done,
+    }),
+    foldDay: useMutation({
+      /* `api.journal.foldDay` takes positional args (date, expectedHash?), unlike
+         `setDay`/`applyClose` which take the request object directly — this
+         adapter is the only difference from the other mutations here. */
+      mutationFn: (request: IpcRequest<'journal:foldDay'>) =>
+        api.journal.foldDay(request.date, request.expectedHash),
       onSuccess: done,
     }),
   };
 }
 
-/** Die drei Haltungen in der Reihenfolge, in der sie im Segment stehen. */
+/**
+ * The interview's plan for one day (012): which of the five topics are still
+ * open, fetched once while the overlay (`InterviewDialog.tsx`) is open —
+ * mirrors `useJournalDay`'s `enabled` pattern. The dialog owns this read
+ * itself, so the caller only ever needs `open`/`date`/`onClose`.
+ *
+ * Later steps come from this same response, held in the overlay's own local
+ * state: a plan re-fetch after every answer would risk the model extending
+ * the five topics, which the story explicitly rules out.
+ */
+export function useInterviewPlan(
+  date: string,
+  open: boolean,
+): UseQueryResult<JournalInterviewPlan> {
+  const ready = useVaultReady();
+  return useQuery({
+    queryKey: qk.journal.interview(date),
+    queryFn: () => api.journal.interviewPlan(date),
+    enabled: ready && open,
+  });
+}
+
+export interface InterviewMutations {
+  answer: UseMutationResult<
+    { path: string; hash: string; at: string },
+    unknown,
+    { step: JournalInterviewStep; answer: string }
+  >;
+  /** The optional one-question follow-up on a just-answered backbone step.
+      Writes nothing itself, so unlike `answer` it never refreshes the day. */
+  followUp: UseMutationResult<
+    { question: string | null; noModel: boolean },
+    unknown,
+    { step: JournalInterviewStep; answer: string }
+  >;
+  /** The interview's loose-end question (020, D8): goes through D5's own
+      channel, not `interviewAnswer` — nothing about the question itself is
+      written, only the typed answer. */
+  answerLooseEnd: UseMutationResult<
+    { path: string; hash: string },
+    unknown,
+    { id: string; day: string; text: string; expectedHash?: string }
+  >;
+}
+
+export function useInterviewMutations(date: string): InterviewMutations {
+  const client = useQueryClient();
+  const done = (): void => refreshDay(client, date);
+
+  return {
+    answer: useMutation({
+      mutationFn: ({ step, answer }: { step: JournalInterviewStep; answer: string }) =>
+        api.journal.interviewAnswer(date, step, answer),
+      onSuccess: done,
+    }),
+    followUp: useMutation({
+      mutationFn: ({ step, answer }: { step: JournalInterviewStep; answer: string }) =>
+        api.journal.interviewFollowUp(date, step, answer),
+    }),
+    answerLooseEnd: useMutation({
+      mutationFn: ({
+        id,
+        day,
+        text,
+        expectedHash,
+      }: {
+        id: string;
+        day: string;
+        text: string;
+        expectedHash?: string;
+      }) => api.journal.answerLooseEnd({ id, day, text, expectedHash }),
+      onSuccess: done,
+    }),
+  };
+}
+
+/** The three stances, in the order they appear in the segment. */
 export const COACH_MODE_ORDER: readonly CoachMode[] = ['listen', 'tips', 'analyze'];

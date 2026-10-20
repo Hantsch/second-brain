@@ -21,6 +21,7 @@ import {
   useSnoozeReminder,
   useUnsnoozeReminder,
 } from '../../lib/queries/dashboard';
+import { OverdueMark } from '../OverdueMark';
 import { SnoozeMenu } from '../SnoozeMenu';
 import { TileFrame } from '../TileFrame';
 
@@ -28,10 +29,21 @@ const LIMIT = 5;
 
 const SOURCES: readonly Reminder['source'][] = ['project-deadline', 'todo-due'];
 
-/** Die Farbe folgt der Dringlichkeit; die Aussage steht im Text daneben. */
+/** Die Farbe folgt der Dringlichkeit; die Aussage steht im Text daneben.
+    Diese Kachel zeigt nur `project-deadline` und `todo-due` (siehe `SOURCES`)
+    — ein loses Ende (`open`) landet nie hier, `later` deckt es trotzdem
+    sicher ab, statt die Zuordnung non-exhaustiv zu lassen. */
 function tone(reminder: Reminder): 'overdue' | 'soon' | 'later' {
-  if (reminder.urgency === 'overdue') return 'overdue';
-  return reminder.urgency === 'today' ? 'soon' : 'later';
+  switch (reminder.urgency) {
+    case 'overdue':
+      return 'overdue';
+    case 'today':
+      return 'soon';
+    case 'soon':
+    case 'upcoming':
+    case 'open':
+      return 'later';
+  }
 }
 
 export function DeadlinesTile() {
@@ -45,12 +57,14 @@ export function DeadlinesTile() {
 
   const all = (data ?? []).filter((reminder) => SOURCES.includes(reminder.source));
   const rows = all.slice(0, LIMIT);
+  const overdue = all.filter((reminder) => reminder.urgency === 'overdue').length;
 
   return (
     <TileFrame
       id="deadlines"
       title={t('module.deadlines.name')}
       count={all.length > 0 ? all.length : null}
+      overdue={overdue}
       pending={isPending}
       error={error ?? snooze.error}
       onRetry={() => void refetch()}
@@ -67,9 +81,10 @@ export function DeadlinesTile() {
       <ul className="sb-lines">
         {rows.map((reminder) => (
           <li key={reminder.id} className="sb-line">
+            {reminder.urgency === 'overdue' ? <OverdueMark /> : null}
             <button
               type="button"
-              className="sb-line-open"
+              className={`sb-line-open${reminder.urgency === 'overdue' ? ' sb-line-open--overdue' : ''}`}
               title={reminder.title}
               onClick={() =>
                 void navigate(

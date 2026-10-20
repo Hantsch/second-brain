@@ -6,7 +6,7 @@
    morgen dasselbe. */
 
 import type {
-  ClaudeSession,
+  AgentWorkSession,
   DashboardData,
   DashboardLayout,
   DashboardModuleId,
@@ -45,8 +45,10 @@ export const projects: Project[] = [
     scope: 'work',
     status: 'active',
     priority: 2,
+    favorite: true,
     deadline: day(2),
     nextStep: 'Rückmeldung von Stefan einarbeiten',
+    nextStepStale: false,
     waitingOn: [{ who: 'Stefan', what: 'Freigabe des Rollenkonzepts', since: day(-6) }],
     tags: [],
     modules: [],
@@ -66,8 +68,10 @@ export const projects: Project[] = [
     scope: 'private',
     status: 'paused',
     priority: 4,
+    favorite: false,
     deadline: null,
     nextStep: null,
+    nextStepStale: false,
     waitingOn: [],
     tags: [],
     modules: [],
@@ -89,6 +93,7 @@ function todo(overrides: Partial<Todo> & Pick<Todo, 'id' | 'text' | 'scope'>): T
     line: 12,
     project: 'nyota-auth0-migration',
     projectTitle: 'Nyota Auth0 Migration',
+    area: null,
     due: null,
     waitingFor: null,
     neededBy: null,
@@ -130,7 +135,7 @@ const privateTodos: Todo[] = [
   }),
 ];
 
-export const sessions: ClaudeSession[] = [
+export const sessions: AgentWorkSession[] = [
   {
     id: 'session-1',
     cwd: 'C:/development/Kunde/Nyota-Auth0-Infrastructure',
@@ -143,6 +148,11 @@ export const sessions: ClaudeSession[] = [
     firstPrompt: 'Terraform-State auf den neuen Mandanten migrieren',
     summary: null,
     files: ['main.tf'],
+    model: null,
+    subagents: null,
+    contextTokens: null,
+    agent: 'claude',
+    projectKey: 'c:/development/kunde/nyota-auth0-infrastructure',
   },
   {
     id: 'session-2',
@@ -156,8 +166,33 @@ export const sessions: ClaudeSession[] = [
     firstPrompt: 'Kurz was ausprobiert',
     summary: null,
     files: [],
+    model: null,
+    subagents: null,
+    contextTokens: null,
+    agent: 'claude',
+    projectKey: 'c:/development/spielwiese',
   },
 ];
+
+/** A Codex session, sharing the shape with Claude's but tagged `agent: 'codex'`. */
+export const codexSession: AgentWorkSession = {
+  id: 'codex-session-1',
+  cwd: 'C:/development/Kunde/Nyota-Auth0-Infrastructure',
+  projectName: 'Nyota-Auth0-Infrastructure',
+  vaultProject: null,
+  gitBranch: null,
+  startedAt: stamp(-1, '11:00'),
+  lastActivity: stamp(-1, '11:30'),
+  messageCount: 6,
+  firstPrompt: '',
+  summary: 'Terraform-Drift geprüft',
+  files: [],
+  model: null,
+  subagents: null,
+  contextTokens: null,
+  agent: 'codex',
+  projectKey: 'c:/development/kunde/nyota-auth0-infrastructure',
+};
 
 export const reminders: Reminder[] = [
   {
@@ -226,7 +261,7 @@ export const dashboardFixture: DashboardData = {
       at: stamp(-1, '18:20'),
       kind: 'claude-session',
       title: 'Terraform-State migrieren',
-      detail: 'Session, 34 Nachrichten, Branch feature/rollen',
+      detail: 'Claude-Session, 34 Nachrichten, Branch feature/rollen',
       path: null,
       project: 'nyota-auth0-migration',
       scope: null,

@@ -1,6 +1,6 @@
-/* Index-Kanäle. Ohne offenen Vault sind die Kennzahlen null — der Renderer
-   zeigt dann einen ehrlichen Leerzustand, keinen Fehler. Der Neuaufbau meldet
-   seinen Fortschritt über `event:index-progress`. */
+/* Index channels. Without an open vault the metrics are null — the renderer
+   then shows an honest empty state, not an error. The rebuild reports its
+   progress via `event:index-progress`. */
 
 import { emptyStats } from '@core/index';
 import type { HandlerMap } from './registry';
@@ -22,6 +22,7 @@ export function indexHandlers(services: Services): HandlerMap {
         const stats = await index.rebuild((done, total) =>
           services.reportIndexProgress(done, total, true),
         );
+        services.clearIndexRefreshFailure();
         return stats;
       } finally {
         services.reportIndexProgress(0, 0, false);

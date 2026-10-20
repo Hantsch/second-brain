@@ -1,10 +1,20 @@
-/* 14 Tageseinträge über die letzten drei Wochen — mit Lücken, weil niemand
-   jeden Tag schreibt. Zwei Tage tragen einen Coaching-Dialog, einer ist der
-   stressige Tag, an dem alles zusammenkommt.
+/* 15 Tageseinträge über die letzten drei Wochen — mit Lücken, weil niemand
+   jeden Tag schreibt. Drei Tage tragen einen Coaching-Dialog: der stressige
+   Tag (offset -2) bleibt bewusst im alten, nicht mehr geschriebenen, aber
+   weiter lesbaren `## Gespräch`-Format (Legacy, 011) — genau er zeigt im
+   Screenshot am klarsten ein Gespräch, das sichtbar getrennt von der
+   Tagesprosa steht, und damit auch die "Gespräch in den Eintrag holen"-
+   Aktion. Offset -9 webt denselben Dialog direkt in `## Tag` ein, im neuen,
+   verschachtelten Stream-Format. Offset -6 ist das Interview (012): dieselbe
+   Blockquote-dann-Prosa-Form, aber mit den fünf echten Interview-Fragen aus
+   `src/core/journal/interview.ts#INTERVIEW_QUESTIONS.de` statt frei
+   formulierter Coaching-Sätze, und ohne einleitenden freien Absatz davor —
+   siehe `streamBlock` und den Kommentar an diesem Eintrag.
 
-   Aufbau nach docs/VAULT-FORMAT.md: `## Tag`, optional `## Gespräch`,
-   optional `## Fakten`. Personen sind erfunden, Projekte sind dieselben Slugs
-   wie unter `projects/`. */
+   Aufbau nach docs/VAULT-FORMAT.md: `## Tag` (mit optional eingewobenen
+   Antwort-Blöcken), optional die Legacy-Überschrift `## Gespräch`, optional
+   `## Fakten`. Personen sind erfunden, Projekte sind dieselben Slugs wie
+   unter `projects/`. */
 
 import { countTodos } from './projects.mjs';
 
@@ -54,6 +64,10 @@ Belege für Svenja auch noch liegen.
 
 Drei Baustellen, an keiner bin ich weitergekommen. Um 20 Uhr habe ich aufgehört und
 eine Liste gemacht, statt weiter zwischen den Fenstern zu springen.`,
+      /* Bleibt im alten `## Gespräch`-Format (011): der einzige seeded Tag,
+         der noch zeigt, wie ein Legacy-Tag aussieht und wie sich "Gespräch in
+         den Eintrag holen" verhält. */
+      legacyDialogue: true,
       dialogue: [
         {
           who: 'ich',
@@ -85,6 +99,21 @@ Ladezeiten der Angebotsliste.`,
       ],
     },
     {
+      /* 020 D9: offenes loses Ende — eine Ankündigung, die kein späterer Tag
+         aufgreift, damit die Gärtner-Prüfung im Demo-Vault einen echten Fund
+         zeigt. Andere Vorlage, anderes Thema als das Notar-Paar unten (-10/
+         -12), damit sich beide im Screenshot klar unterscheiden. */
+      offset: -3,
+      mood: 3,
+      energy: 3,
+      people: [],
+      projects: [],
+      tags: [],
+      time: '19:40',
+      tag: `Morgen habe ich einen Termin beim Zahnarzt, wegen der Krone, die seit Wochen
+wackelt. Sonst ein ruhiger Tag ohne besondere Vorkommnisse.`,
+    },
+    {
       offset: -4,
       mood: 3,
       energy: 4,
@@ -112,6 +141,44 @@ Danach eine Stunde Belege sortiert. 2025 ist zur Hälfte durch.`,
       facts: [`- [ ] Belege 2025 zu Ende sortieren @due:${day(-3)} !!`],
     },
     {
+      offset: -6,
+      mood: 3,
+      energy: 2,
+      people: ['Miriam'],
+      projects: ['kundenportal-relaunch', 'orbit-sso-migration'],
+      tags: [],
+      time: '19:20',
+      /* Kein `tag`: dieser Tag ist ein reines Interview (012, D7) — kein
+         freier Absatz davor, nur die beantworteten Fragen, damit der
+         Screenshot die Q&A-Form so klar wie möglich zeigt. Die Fragen sind
+         wortwörtlich aus `src/core/journal/interview.ts#INTERVIEW_QUESTIONS.de`
+         übernommen, nicht neu formuliert — sonst wäre der Tag nicht als
+         Interview erkennbar. */
+      dialogue: [
+        { who: 'brain', time: '19:00', text: 'Woran hast du heute gearbeitet?' },
+        {
+          who: 'ich',
+          time: '19:00',
+          text: `Vormittags weiter am Kundenportal, die Ladezeiten der Angebotsliste gemessen und
+einen ersten Verdacht gefunden. Nachmittags kurz in die SSO-Migration reingeschaut,
+aber ohne Fortschritt — der Testmandant von Halim ist immer noch nicht da.`,
+        },
+        { who: 'brain', time: '19:07', text: 'Mit wem hattest du heute zu tun?' },
+        {
+          who: 'ich',
+          time: '19:07',
+          text: 'Nur kurz mit Miriam telefoniert, wegen der Abnahme nächste Woche. Sonst war es ein stiller Tag.',
+        },
+        { who: 'brain', time: '19:14', text: 'Wie hat sich der Tag angefühlt?' },
+        {
+          who: 'ich',
+          time: '19:14',
+          text: `Ruhiger als die letzten, aber am Nachmittag spürbar müde. Kein Feuer, das gelöscht
+werden musste — einfach normale Arbeit.`,
+        },
+      ],
+    },
+    {
       offset: -7,
       mood: 4,
       energy: 4,
@@ -119,6 +186,10 @@ Danach eine Stunde Belege sortiert. 2025 ist zur Hälfte durch.`,
       projects: ['rechnungsautomatisierung'],
       tags: [],
       time: '17:30',
+      /* Als erledigt markiert (009, D8): der Tag ist inhaltlich fertig
+         beschrieben, gutes Beispiel für einen abgeschlossenen Tag im Filter
+         und im Screenshot. */
+      closed: true,
       tag: `Guter Tag. Die Fehlerbehandlung für unlesbare Belege läuft: unklare Fälle wandern in
 eine Prüfliste statt in eine falsche Buchung. Das war der letzte inhaltliche Punkt,
 jetzt fehlt nur die Dokumentation.`,
@@ -177,6 +248,20 @@ jede Aufräumaktion später.`,
       facts: [`- [ ] Übersichtsseite in second-brain-methodik verdichten @due:${day(4)} #wissen`],
     },
     {
+      /* 020 D9: beantwortetes loses Ende, zweite Hälfte — verlinkt den
+         Ankündigungstag (-12) und greift dessen Thema ("Notar") wieder auf,
+         damit `findLooseEnds` es als geschlossen erkennt. */
+      offset: -10,
+      mood: 3,
+      energy: 3,
+      people: [],
+      projects: [],
+      tags: [],
+      time: '20:05',
+      tag: `Beim Notar war alles in einer Viertelstunde erledigt, siehe [[${day(-12)}]]. Eine
+Sorge weniger.`,
+    },
+    {
       offset: -11,
       mood: 3,
       energy: 3,
@@ -189,6 +274,20 @@ die Rollen der Elternorganisation? Davon hängt ab, ob wir zwölf oder vierzig G
 anlegen. Im Modul steht dazu ein älterer Stand, der dem Whitepaper widerspricht.`,
     },
     {
+      /* 020 D9: beantwortetes loses Ende, erste Hälfte — Ankündigung, die
+         Tag -10 später aufgreift und verlinkt (siehe dort). Wörtlich dieselbe
+         Ankündigungsform wie im Unit-Test von `findLooseEnds` ("Morgen bin
+         ich beim Notar."), damit sie sicher als Fund erkannt wird. */
+      offset: -12,
+      mood: 3,
+      energy: 3,
+      people: [],
+      projects: [],
+      tags: [],
+      time: '08:30',
+      tag: `Morgen bin ich beim Notar. Sonst nichts Besonderes heute.`,
+    },
+    {
       offset: -13,
       mood: 4,
       energy: 3,
@@ -196,6 +295,9 @@ anlegen. Im Modul steht dazu ein älterer Stand, der dem Whitepaper widerspricht
       projects: ['hochbeet-bauen', 'podcast-werkstattfunk'],
       tags: [],
       time: '22:35',
+      /* Als erledigt markiert (009, D8): zweiter geschlossener Tag, damit
+         Filter und Rail-Badge im Demo-Vault etwas zu unterscheiden haben. */
+      closed: true,
       tag: `Abends Maße für das Hochbeet gerechnet und dabei über eine Podcast-Idee
 nachgedacht: eine halbe Stunde pro Folge, ein Handwerk, ein Gegenstand, der dabei
 entsteht. Als Idee angelegt, mehr nicht.`,
@@ -246,9 +348,41 @@ genau deshalb hier vermerkt, weil solche Abende in der Rückschau immer fehlen.`
       tag: `Svenja hat die Unterlagenliste geschickt, länger als erwartet. Italienisch fällt
 diesen Monat aus; das ist keine Niederlage, sondern eine Entscheidung. Lektion 7 wartet.`,
     },
+    /* D5 (010): zwei sparsame Einträge ~40 Tage zurück, weit vor dem
+       dichten Cluster oben — damit `journal/` Tage in mindestens zwei
+       verschiedenen Kalendermonaten enthält, egal an welchem Tag `npm run
+       seed` läuft, und Monatsblättern im Kalender im Demo-Vault vorführbar
+       ist ("die letzte Monatsblätterung"). Beide setzen frühere Stände
+       derselben Projekte, die weiter oben schon vorkommen. */
+    {
+      offset: -40,
+      mood: 4,
+      energy: 3,
+      people: ['Nico'],
+      projects: ['hochbeet-bauen'],
+      tags: [],
+      time: '19:30',
+      tag: `Erstes Mal mit Nico wirklich über das Hochbeet gesprochen, noch ohne Maße. Zwei
+Kästen, versetzt, damit die Tomaten den Salat nicht beschatten — mehr als eine Skizze
+auf der Rückseite eines Kassenzettels ist es noch nicht.`,
+    },
+    {
+      offset: -42,
+      mood: 3,
+      energy: 3,
+      people: [],
+      projects: ['rechnungsautomatisierung'],
+      tags: [],
+      time: '18:30',
+      tag: `Ersten Testlauf der Rechnungsautomatisierung gestartet, vierzig Belege aus dem
+letzten Quartal. Die Erkennung sitzt bei handschriftlichen Vermerken noch nicht, der
+Rest sieht vielversprechend aus.`,
+    },
   ];
 }
 
+/* Legacy-Rendering (weiter gelesen, nicht mehr geschrieben): jede Runde als
+   eigener Blockquote unter der eigenen Überschrift `## Gespräch`. */
 function dialogueBlock(entry) {
   const lines = [];
   for (const turn of entry.dialogue) {
@@ -263,12 +397,49 @@ function dialogueBlock(entry) {
   return lines.join('\n');
 }
 
+/* Neues Stream-Format (011): dieselben Runden, aber direkt in `## Tag`
+   eingewoben statt in einer eigenen `## Gespräch`-Sektion — eine `ich`-Runde
+   wird ein zusätzlicher Prosa-Absatz (kein Blockquote, kein Sprecher-Label,
+   genau wie meine eigenen Worte im neuen Format aussehen,
+   src/core/journal/stream.ts), eine `brain`-Runde derselbe Blockquote-Block,
+   den `formatTurn`/`formatAnswer` erzeugen. Absichtlich eine eigene Funktion
+   statt eine Erweiterung von `dialogueBlock`: die beiden Sektionen haben
+   unterschiedliche Form, kein gemeinsamer Code macht das klarer. */
+function streamBlock(entry) {
+  const lines = [];
+  for (const turn of entry.dialogue) {
+    if (turn.who === 'ich') {
+      lines.push(turn.text.trim(), '');
+      continue;
+    }
+    const quoted = turn.text
+      .trim()
+      .split('\n')
+      .map((line) => (line.trim().length === 0 ? '>' : `> ${line.trimEnd()}`))
+      .join('\n');
+    lines.push(`> **Gaston** — ${turn.time}`, quoted, '');
+  }
+  return lines.join('\n');
+}
+
 export function seedJournal(seeder, clock) {
   for (const entry of entries(clock)) {
     const date = clock.day(entry.offset);
-    const parts = ['## Tag', '', entry.tag.trim(), ''];
+    /* `tag` ist optional: der Interview-Tag (offset -6) hat keinen freien
+       Absatz, nur die beantworteten Fragen — genau das, was ein Tag zeigt,
+       dessen einziger Inhalt bislang ein Interview war (`recordAnswer`
+       schreibt nichts anderes vor dem ersten Fragen/Antworten-Paar). */
+    const parts = entry.tag ? ['## Tag', '', entry.tag.trim(), ''] : ['## Tag', ''];
     if (entry.dialogue) {
-      parts.push('## Gespräch', '', dialogueBlock(entry));
+      if (entry.legacyDialogue) {
+        parts.push('## Gespräch', '', dialogueBlock(entry));
+      } else {
+        parts.push(streamBlock(entry));
+      }
+      /* Ein Zähler für beide Formen: die Zusammenfassung
+         (scripts/seed-vault.mjs) meldet "Tage mit Coaching-Dialog" — das ist
+         unabhängig davon wahr, ob die Runden in einer eigenen `## Gespräch`-
+         Sektion oder eingewoben in `## Tag` stehen. */
       seeder.bump('journalDialogues');
     }
     if (entry.facts) {
@@ -287,6 +458,7 @@ export function seedJournal(seeder, clock) {
         projects: entry.projects,
         tags: entry.tags,
         lang: 'de',
+        closed: entry.closed ? date : undefined,
       },
       body,
       clock.date(entry.offset, entry.time),

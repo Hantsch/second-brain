@@ -1,0 +1,81 @@
+# S05 Progress
+
+- 2026-08-21 19:34 · 014 · D1 maintenance screen says Befund · started
+- 2026-08-21 19:37 · 014 · D1 maintenance screen says Befund · done
+- 2026-08-21 19:38 · 014 · D2 dashboard, module view, projects, settings, task label say Befund · started
+- 2026-08-21 19:42 · 014 · D2 dashboard, module view, projects, settings, task label say Befund · done
+- 2026-08-21 19:52 · 014 · review + live smoke + Done section · done
+- 2026-08-21 19:50 · 015 · D1 catalog line can be removed again · started
+- 2026-08-21 19:53 · 015 · D1 catalog line can be removed again · done
+- 2026-08-21 19:53 · 015 · D2 named relation silences the pair · started
+- 2026-08-21 19:56 · 015 · D2 named relation silences the pair · done
+- 2026-08-21 19:56 · 015 · D3 discarding says what it costs (proposal only) · started
+- 2026-08-21 20:04 · 015 · D3 discarding says what it costs (proposal only) · done
+- 2026-08-21 20:04 · 015 · D4 discarding a page, undoable · started
+- 2026-08-21 20:16 · 015 · D4 discarding a page, undoable · done
+- 2026-08-21 20:16 · 015 · D5 the newer page supersedes the older one · started
+- 2026-08-21 20:23 · 015 · D5 the newer page supersedes the older one · done
+- 2026-08-21 20:23 · 015 · D6 the three IPC channels · started
+- 2026-08-21 20:38 · 015 · D6 the three IPC channels · done
+- 2026-08-21 20:38 · 015 · D7 the shared discard this page action · started
+- 2026-08-21 20:47 · 015 · D7 the shared discard this page action · done
+- 2026-08-21 20:47 · 015 · D8 the near-duplicate card · started
+- 2026-08-21 20:59 · 015 · D8 the near-duplicate card · done
+- 2026-08-21 20:59 · 015 · D9 demo vault pair and tests · started
+- 2026-08-21 21:15 · 015 · D9 demo vault pair and tests · done
+- 2026-08-21 21:26 · 015 · review-fix cycle 1 (AC10 stale-run gap, card bug, format) · started
+- 2026-08-21 21:39 · 015 · review-fix cycle 1 (AC10 stale-run gap, card bug, format) · done
+- 2026-08-21 21:47 · 015 · live smoke (discard+undo) + review-fix + Done section · done
+- 2026-08-21 21:50 · 016 · D1 core: ranked, filtered target list · started
+- 2026-08-21 21:54 · 016 · D1 core: ranked, filtered target list · done
+- 2026-08-21 21:54 · 016 · D2 IPC + main: gardener:orphanTargets · started
+- 2026-08-21 22:02 · 016 · D2 IPC + main: gardener:orphanTargets · done
+- 2026-08-21 22:02 · 016 · D3 the write path: gardener:linkOrphan · started
+- 2026-08-21 22:10 · 016 · D3 the write path: gardener:linkOrphan · done
+- 2026-08-21 22:10 · 016 · D4 guardrail tests: hash guard and honest failure · started
+- 2026-08-21 22:23 · 016 · D4 guardrail tests: hash guard and honest failure · done
+- 2026-08-21 22:23 · 016 · D5 renderer: the orphan card, picker and preview · started
+- 2026-08-21 22:40 · 016 · D5 renderer: the orphan card, picker and preview · done
+- 2026-08-21 22:40 · 016 · D6 reuse 015's discard action on the orphan card · started
+- 2026-08-21 22:47 · 016 · D6 reuse 015's discard action on the orphan card · done
+- 2026-08-21 22:47 · 016 · D7 regression: the finding really goes away · started
+- 2026-08-21 22:53 · 016 · D7 regression: the finding really goes away · done
+- 2026-08-21 22:53 · 016 · D8 demo vault case and smoke test · started
+- 2026-08-21 23:05 · 016 · D8 the case exists in the demo vault, and the flow is smoked · done
+- 2026-08-21 23:20 · 016 · review-fix cycle 1 (misleading test comment) · done
+- 2026-08-21 23:20 · 016 · live smoke (pick/preview/confirm/undo, discard) + Done section · done
+- 2026-08-21 23:19 · 017 · D1 the state knows snoozed, hidden and how to forget · started
+- 2026-08-21 23:31 · 017 · D1 the state knows snoozed, hidden and how to forget · done
+- 2026-08-21 23:31 · 017 · D2 snooze and unsnooze have a channel · started
+- 2026-08-21 23:37 · 017 · D2 snooze and unsnooze have a channel · done
+- 2026-08-21 23:37 · 017 · D3 a card names its ways out; not now and handled in the files · started
+- 2026-08-21 23:51 · 017 · D3 a card names its ways out; not now and handled in the files · done
+- 2026-08-21 23:51 · 017 · D4 what I hid stays visible and reversible · started
+- 2026-08-22 00:08 · 017 · D4 what I hid stays visible and reversible · done
+- 2026-08-22 00:08 · 017 · D5 the health card says what it ignored · started
+- 2026-08-22 00:14 · 017 · D5 the health card says what it ignored · done
+- 2026-08-22 00:14 · 017 · D6 the guardrails are asserted, and the flow runs in the app · started
+- 2026-08-22 00:29 · 017 · D6 the guardrails are asserted, and the flow runs in the app · done
+- 2026-08-22 00:40 · 017 · review-fix cycle 1 (prettier F1, prune asymmetry F3) · started
+- 2026-08-22 00:49 · 017 · review-fix cycle 1 (prettier F1, prune asymmetry F3, exits.ts comments) · done
+- 2026-08-22 00:49 · 017 · verify green + live smoke (screenshots) + Done section, moved to done/ · done
+- 2026-08-22 00:50 · 020 · D1 the loose-end rule as a pure module · started
+- 2026-08-22 01:01 · 020 · D1 the loose-end rule as a pure module · done
+- 2026-08-22 01:02 · 020 · D2 a loose end is a finding of the maintenance run · started
+- 2026-08-22 01:08 · 020 · D2 a loose end is a finding of the maintenance run · done
+- 2026-08-22 01:08 · 020 · D3 detection is a sensitive task that recommends a local model · started
+- 2026-08-22 01:13 · 020 · D3 detection is a sensitive task that recommends a local model · done
+- 2026-08-22 01:13 · 020 · D4 the model finds what the heuristic misses, and invents nothing · started
+- 2026-08-22 01:29 · 020 · D4 the model finds what the heuristic misses, and invents nothing · done
+- 2026-08-22 01:26 · 020 · D5 answering a loose end writes my own words into today, hash-guarded · started
+- 2026-08-22 01:48 · 020 · D5 answering a loose end writes my own words into today, hash-guarded · done
+- 2026-08-22 01:38 · 020 · D6 the loose end has a card in the maintenance surface · started
+- 2026-08-22 02:04 · 020 · D6 the loose end has a card in the maintenance surface · done
+- 2026-08-22 02:06 · 020 · D7 the same loose ends reach me as reminders · started
+- 2026-08-22 02:06 · 020 · D7 the same loose ends reach me as reminders · done
+- 2026-08-22 02:06 · 020 · D8 the journal conversation may ask about a loose end · started
+- 2026-08-22 02:35 · 020 · D8 the journal conversation may ask about a loose end · done
+- 2026-08-22 02:35 · 020 · D9 the demo vault shows it · started
+- 2026-08-22 02:36 · 020 · D9 the demo vault shows it (+ fixed missing garden.advice.loose-end i18n key) · done
+- 2026-08-22 03:13 · 020 · review-fix cycle 1 (F1 model pass unwired, F2 answered-id leak, F3 hash guard unarmed, F4 model skips subtraction, F6 filtered empty state) · done
+- 2026-08-22 03:13 · 020 · verify green + live smoke (seed/shot) + Done section, moved to done/ · done

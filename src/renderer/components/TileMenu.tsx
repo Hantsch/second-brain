@@ -1,13 +1,13 @@
-/* Das Kartenmenü einer Kachel: Breite wählen, Kachel ausblenden.
+/* A tile's card menu: choose a width, hide the tile.
 
-   Vollständig mit der Tastatur bedienbar, weil ein Menü, das nur die Maus kennt,
-   die halbe Funktion versteckt: Enter oder Leertaste öffnet, die Pfeiltasten
-   wandern, Enter wählt, Esc schließt und gibt den Fokus an den Knopf zurück.
-   Beim Öffnen springt der Fokus auf den ersten Eintrag — sonst wüsste ein
-   Screenreader nicht, dass sich etwas geöffnet hat.
+   Fully operable with the keyboard, because a menu that only knows the
+   mouse hides half its function: Enter or space opens it, the arrow keys
+   move through it, Enter selects, Esc closes it and returns focus to the
+   button. On open, focus jumps to the first entry — otherwise a screen
+   reader wouldn't know that something opened.
 
-   Die Breiten sind `menuitemradio` mit `aria-checked`: eine Auswahl, von der
-   genau eine gilt. „Ausblenden" ist ein gewöhnlicher `menuitem` — eine Aktion. */
+   The widths are `menuitemradio` with `aria-checked`: a selection where
+   exactly one applies. "Hide" is an ordinary `menuitem` — an action. */
 
 import { useEffect, useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
@@ -19,7 +19,7 @@ import { useT } from '../i18n';
 
 export interface TileMenuProps {
   id: DashboardModuleId;
-  /** Titel der Kachel, bereits übersetzt — er steht im Namen des Knopfs. */
+  /** Title of the tile, already translated — it's part of the button's name. */
   title: string;
   size: ModuleSize;
   onResize: (id: DashboardModuleId, size: ModuleSize) => void;
@@ -32,8 +32,8 @@ export function TileMenu({ id, title, size, onResize, onHide }: TileMenuProps) {
   const box = useRef<HTMLDivElement>(null);
   const panel = useRef<HTMLDivElement>(null);
 
-  /* Der Knopf ist das erste Kind der Hülle — das Atom nimmt keine Referenz, und
-     eine Referenz durch das Atom zu ziehen wäre teurer als diese Zeile. */
+  /* The button is the first child of the wrapper — the atom doesn't accept
+     a ref, and threading one through the atom would cost more than this line. */
   const focusTrigger = (): void => {
     box.current?.querySelector<HTMLButtonElement>(':scope > button')?.focus();
   };
@@ -43,7 +43,8 @@ export function TileMenu({ id, title, size, onResize, onHide }: TileMenuProps) {
     if (backToTrigger) focusTrigger();
   };
 
-  /* Ein Menü ohne Fluchtweg gibt es nicht: Esc schließt, ein Klick daneben auch. */
+  /* There's no such thing as a menu without an escape route: Esc closes it,
+     and so does a click outside it. */
   useEffect(() => {
     if (!open) return undefined;
     const onDown = (event: globalThis.MouseEvent): void => {
@@ -53,7 +54,7 @@ export function TileMenu({ id, title, size, onResize, onHide }: TileMenuProps) {
     return () => window.removeEventListener('mousedown', onDown);
   }, [open]);
 
-  /* Der Fokus wandert mit: geöffnet heißt, der erste Eintrag ist dran. */
+  /* Focus moves along: opened means the first entry is up. */
   useEffect(() => {
     if (!open) return;
     panel.current?.querySelector<HTMLButtonElement>('[role^="menuitem"]')?.focus();
@@ -66,7 +67,7 @@ export function TileMenu({ id, title, size, onResize, onHide }: TileMenuProps) {
       return;
     }
     if (event.key === 'Tab') {
-      /* Weitertabben verlässt das Menü — dann ist es zu. */
+      /* Tabbing onward leaves the menu — then it's closed. */
       setOpen(false);
       return;
     }

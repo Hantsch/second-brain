@@ -1,0 +1,33 @@
+- 2026-09-07 13:03 · 068 · D1 reopenIfClosed core helper · started
+- 2026-09-07 13:04 · 068 · D1 reopenIfClosed core helper · done
+- 2026-09-07 13:05 · 068 · D2 wire reopen into every journal write path · started
+- 2026-09-07 13:13 · 068 · D2 wire reopen into every journal write path · done
+- 2026-09-07 13:13 · 068 · D3 i18n toast key + e2e spec · started
+- 2026-09-07 13:20 · 068 · D3 i18n toast key + e2e spec · done
+- 2026-09-07 13:34 · 069 · D1 verdict instead of boolean, scan extracted · started
+- 2026-09-07 13:40 · 069 · D1 verdict instead of boolean, scan extracted · done
+- 2026-09-07 13:40 · 069 · D2 day-scoped derivation · started
+- 2026-09-07 13:42 · 069 · D2 day-scoped derivation · done
+- 2026-09-07 13:42 · 069 · D3 wire it up: contract plus main · started
+- 2026-09-07 13:48 · 069 · D3 wire it up: contract plus main · done
+- 2026-09-07 13:48 · 069 · D4 renderer: resolved row plus acceptance flow · started
+- 2026-09-07 14:04 · 069 · D4 renderer: resolved row plus acceptance flow · done
+- 2026-09-07 14:17 · 070 · D1 forward scan, two windows · started
+- 2026-09-07 14:26 · 070 · D1 forward scan, two windows · done
+- 2026-09-07 14:26 · 070 · D2 upcoming mentions become reminders · started
+- 2026-09-07 14:28 · 070 · D2 upcoming mentions become reminders · done
+- 2026-09-07 14:28 · 070 · D3 dashboard tile · started
+- 2026-09-07 14:28 · 070 · D4 calendar badge · started
+- 2026-09-07 14:33 · 070 · D3 dashboard tile · done
+- 2026-09-07 14:33 · 070 · D4 calendar badge · done
+- 2026-09-07 14:33 · 070 · D5 e2e flow test · started
+- 2026-09-07 14:48 · 070 · D5 e2e flow test · done
+- 2026-09-07 14:55 · 070 · story done, moved to done/ · done
+- 2026-09-07 14:56 · 067 · D1 core verdict helper · started
+- 2026-09-07 14:58 · 067 · D1 core verdict helper · done
+- 2026-09-07 14:58 · 067 · D2 dead-end row way out · started
+- 2026-09-07 15:03 · 067 · D2 dead-end row way out · done
+- 2026-09-07 15:03 · 067 · D3 sensitivity warning manual table · started
+- 2026-09-07 15:10 · 067 · D3 sensitivity warning manual table · done
+- 2026-09-07 15:10 · 067 · D4 e2e reported journey · started
+- 2026-09-07 15:22 · 067 · D4 e2e reported journey · blocked (plan gap: harness never produces pick===null for condense-area)

@@ -11,7 +11,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { VAULT_SETTINGS_FILE } from '@shared/types';
-import type { VaultSettings } from '@shared/types';
+import type { AppSettings, VaultSettings } from '@shared/types';
 import type { IpcChannel, IpcRequest, IpcResponse } from '@shared/ipc';
 import { createTempVault } from '../helpers/vault';
 import type { TempVault } from '../helpers/vault';
@@ -77,6 +77,47 @@ describe('Einstellungs-Kanäle im Main', () => {
 
   const stored = async (): Promise<VaultSettings> =>
     JSON.parse(await readFile(join(vault.root, VAULT_SETTINGS_FILE), 'utf8')) as VaultSettings;
+  const storedApp = async (): Promise<AppSettings> =>
+    JSON.parse(await readFile(join(userDataDir, 'settings.json'), 'utf8')) as AppSettings;
+
+  it('speichert Hintergrund und App-Symbol in den Maschinen-Einstellungen', async () => {
+    const snapshot = await harness.call('settings:setApp', {
+      patch: {
+        customization: { background: 'thread-of-return', appIcon: 'circuit-cortex' },
+      },
+    });
+
+    expect(snapshot.app.customization).toEqual({
+      background: 'thread-of-return',
+      appIcon: 'circuit-cortex',
+    });
+    expect((await storedApp()).customization).toEqual(snapshot.app.customization);
+  });
+
+  it('weist unbekannte Anpassungen ab', async () => {
+    await expect(
+      harness.call('settings:setApp', {
+        patch: {
+          customization: { background: 'laut', appIcon: 'knowledge-garden' },
+        } as unknown as IpcRequest<'settings:setApp'>['patch'],
+      }),
+    ).rejects.toMatchObject({ code: 'invalid' });
+  });
+
+  it('settings:setApp stores a boolean closeToTray and refuses anything else', async () => {
+    const snapshot = await harness.call('settings:setApp', {
+      patch: { closeToTray: false },
+    });
+
+    expect(snapshot.app.closeToTray).toBe(false);
+    expect((await storedApp()).closeToTray).toBe(false);
+
+    await expect(
+      harness.call('settings:setApp', {
+        patch: { closeToTray: 'yes' } as unknown as IpcRequest<'settings:setApp'>['patch'],
+      }),
+    ).rejects.toMatchObject({ code: 'invalid' });
+  });
 
   it('mergt tief und lässt den Rest des Abschnitts stehen', async () => {
     const snapshot = await harness.call('settings:setVault', {
@@ -131,6 +172,83 @@ describe('Einstellungs-Kanäle im Main', () => {
     expect((await stored()).capture.autoClassify).toBe(false);
   });
 
+  it('merkt verworfene Agenten-Projekte und den Schalter für leere Sitzungs-Reiter', async () => {
+    /* Frisches Vault: beide Vorgaben sind der leise Zustand. */
+    const before = await harness.call('settings:get', undefined);
+    expect(before.vault?.overview.dismissedAgentProjects).toEqual([]);
+    expect(before.vault?.overview.showEmptySessionsTab).toBe(false);
+
+    const snapshot = await harness.call('settings:setVault', {
+      patch: {
+        overview: {
+          /* Leerraum, Dubletten und Leereinträge fallen weg — Groß-/Kleinschreibung nicht:
+             der Projektschlüssel kommt aus einem Pfad. */
+          dismissedAgentProjects: [
+            '  claude:-home-me-Repo  ',
+            'claude:-home-me-Repo',
+            '',
+            'codex:-home-me-other',
+          ],
+          showEmptySessionsTab: true,
+          erfunden: 1,
+        },
+      } as unknown as IpcRequest<'settings:setVault'>['patch'],
+    });
+
+    expect(snapshot.vault?.overview.dismissedAgentProjects).toEqual([
+      'claude:-home-me-Repo',
+      'codex:-home-me-other',
+    ]);
+    expect(snapshot.vault?.overview.showEmptySessionsTab).toBe(true);
+    const file = await readFile(join(vault.root, VAULT_SETTINGS_FILE), 'utf8');
+    expect(file).not.toContain('erfunden');
+  });
+
+  it('hält die verworfenen Agenten-Projekte über ein Neuladen des Vaults', async () => {
+    await harness.call('settings:setVault', {
+      patch: {
+        overview: { dismissedAgentProjects: ['claude:-home-me-repo'], showEmptySessionsTab: true },
+      },
+    });
+
+    await harness.services.closeVault();
+    await harness.services.openVault(vault.root);
+
+    const snapshot = await harness.call('settings:get', undefined);
+    expect(snapshot.vault?.overview.dismissedAgentProjects).toEqual(['claude:-home-me-repo']);
+    expect(snapshot.vault?.overview.showEmptySessionsTab).toBe(true);
+  });
+
+  it('weist falsche Typen für die beiden neuen Felder ab', async () => {
+    await expect(
+      harness.call('settings:setVault', {
+        patch: {
+          overview: { dismissedAgentProjects: 'claude:-home-me-repo' },
+        } as unknown as IpcRequest<'settings:setVault'>['patch'],
+      }),
+    ).rejects.toMatchObject({ code: 'invalid' });
+
+    await expect(
+      harness.call('settings:setVault', {
+        patch: {
+          overview: { dismissedAgentProjects: [42] },
+        } as unknown as IpcRequest<'settings:setVault'>['patch'],
+      }),
+    ).rejects.toMatchObject({ code: 'invalid' });
+
+    await expect(
+      harness.call('settings:setVault', {
+        patch: {
+          overview: { showEmptySessionsTab: 'ja' },
+        } as unknown as IpcRequest<'settings:setVault'>['patch'],
+      }),
+    ).rejects.toMatchObject({ code: 'invalid' });
+
+    const file = await stored();
+    expect(file.overview.dismissedAgentProjects).toEqual([]);
+    expect(file.overview.showEmptySessionsTab).toBe(false);
+  });
+
   it('setzt die drei Sprachen getrennt und merkt die UI-Sprache auch in der App', async () => {
     const snapshot = await harness.call('settings:setLanguages', {
       ui: 'en',
@@ -143,6 +261,34 @@ describe('Einstellungs-Kanäle im Main', () => {
     expect(snapshot.vault?.languages.conversation).toBe('en');
     /* Vor dem ersten Vault gilt die App-Sprache — deshalb wandert `ui` mit. */
     expect(snapshot.app.uiLanguage).toBe('en');
+  });
+
+  it('seedet die Sprachen eines frisch geöffneten Vaults aus den App-Einstellungen', async () => {
+    /* Was auf dem Onboarding-Screen gewählt wurde, bevor dieser zweite Vault
+       überhaupt existierte — kein eigenes `.secondbrain/settings.json` heißt
+       "zum ersten Mal geöffnet", und dann gilt dieser Seed statt des
+       hartcodierten 'de' aus `defaultVaultSettings()`. */
+    await harness.call('settings:setApp', {
+      patch: {
+        uiLanguage: 'en',
+        newVaultLanguages: { documents: 'de', conversation: 'en', translateSources: false },
+      },
+    });
+
+    const other = await createTempVault();
+    try {
+      await harness.services.openVault(other.root);
+      const snapshot = await harness.call('settings:get', undefined);
+      expect(snapshot.vault?.languages).toEqual({
+        ui: 'en',
+        documents: 'de',
+        conversation: 'en',
+        translateSources: false,
+      });
+    } finally {
+      await harness.services.closeVault();
+      await other.cleanup();
+    }
   });
 
   it('weist eine Sprache ab, die es nicht gibt', async () => {

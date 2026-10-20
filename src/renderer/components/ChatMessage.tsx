@@ -1,18 +1,18 @@
-/* Eine Runde im Gespräch: die Frage, dann die Antwort mit ihren Belegen.
+/* One turn in the conversation: the question, then the answer with its citations.
 
-   Vier Zustände, alle ausdrücklich — keiner davon wird kaschiert:
+   Four states, all explicit — none of them is glossed over:
 
-   - **Antwort mit Belegen.** Prosa, darunter die Belegliste. Die Marken `[1]` im
-     Text springen dorthin.
-   - **Antwort ohne Beleg.** „Dazu steht nichts im Vault." Keine Prosa, kein
-     Ratespiel (Guardrail 3).
-   - **Kein Modell.** Die Fundstellen selbst sind das Ergebnis, darüber eine
-     ehrliche Zeile und der Weg in die Modell-Einstellung. Formuliert wird nichts.
-   - **Läuft noch.** Eine ruhige Denk-Anzeige, danach der wachsende Text.
+   - **Answer with citations.** Prose, with the citation list below it. The
+     markers `[1]` in the text jump there.
+   - **Answer without evidence.** "There's nothing about that in the vault." No
+     prose, no guessing (guardrail 3).
+   - **No model.** The search results themselves are the result, with an honest
+     line above them and a link to the model setting. Nothing is composed.
+   - **Still running.** A calm thinking indicator, then the growing text.
 
-   Woran „kein Modell" erkennbar ist: eine Antwort, die ein Modell geschrieben hat,
-   trägt seinen Namen (`model`). Fehlt der und gibt es Fundstellen, dann hat die
-   App gesucht und nicht formuliert. */
+   How "no model" is recognized: an answer a model has written carries its name
+   (`model`). If that's missing and there are search results, the app searched
+   but didn't compose an answer. */
 
 import { useNavigate } from 'react-router-dom';
 import type { ChatMessage as Message } from '@shared/types';
@@ -24,22 +24,22 @@ import { useT } from '../i18n';
 
 export interface ChatMessageProps {
   message: Message;
-  /** Läuft der Stream noch? Dann wächst der Text und Belege gibt es noch nicht. */
+  /** Is the stream still running? Then the text keeps growing and there are no citations yet. */
   streaming?: boolean;
-  /** Vom Nutzer abgebrochen — der Text bleibt stehen, wird aber nicht behauptet. */
+  /** Cancelled by the user — the text stays as is but isn't asserted as final. */
   cancelled?: boolean;
-  /** Hervorgehobener Beleg, 1-basiert. */
+  /** Highlighted citation, 1-based. */
   activeCitation?: number | null;
   onCitation: (index: number) => void;
   onOpenPath: (path: string) => void;
-  /** Antwort als Wiki-Seite ablegen. Fehlt der Rückruf, gibt es den Knopf nicht. */
+  /** File the answer as a wiki page. If the callback is missing, the button doesn't appear. */
   onFileBack?: () => void;
-  /** Die Frage dieser Runde — ihre Wörter werden in den Zitaten markiert. */
+  /** This turn's question — its words get highlighted in the citations. */
   question?: string;
   /**
-   * Kein Modell im Spiel: die Fundstellen sind das Ergebnis. Entscheidet der
-   * Aufrufer, weil nur er weiß, ob ein Modell geantwortet hat — geraten würde hier
-   * für einen Moment das Falsche behauptet.
+   * No model involved: the search results are the result. Decided by the
+   * caller, since only it knows whether a model answered — guessing here would
+   * momentarily assert the wrong thing.
    */
   passages?: boolean;
 }
@@ -61,9 +61,9 @@ export function ChatMessage({
 
   if (message.role === 'user') {
     return (
-      /* Overline als Text, nicht als Ueberschrift: der Verlauf ist eine Folge von
-         Runden, keine Gliederung — und eine h3 unter der h1 des Screens waere ein
-         Sprung in der Ueberschriftenordnung. Benannt wird die Runde per Label. */
+      /* Overline as text, not as a heading: the history is a sequence of turns,
+         not an outline — and an h3 below the screen's h1 would be a jump in the
+         heading order. The turn is named via a label instead. */
       <article className="sb-turn sb-turn--user" aria-label={t('ask.turn.question')}>
         <span className="gs-overline">{t('ask.turn.question')}</span>
         <p className="sb-turn-question">{message.content}</p>
@@ -72,8 +72,8 @@ export function ChatMessage({
   }
 
   const empty = message.content.trim().length === 0;
-  /* Gesucht, nicht formuliert — der Antworttext des Kerns sagt dasselbe, aber die
-     Fundstellen darunter sind das, was der Nutzer braucht. */
+  /* Searched, not composed — the core's answer text says the same thing, but the
+     search results below it are what the user actually needs. */
   const passagesOnly = passages && !streaming && citations.length > 0;
   const noEvidence = !streaming && citations.length === 0 && message.unsupported === true;
 
@@ -93,9 +93,10 @@ export function ChatMessage({
       ) : null}
 
       {passagesOnly ? (
-        /* Der Weg zum Modell steht in der Zeile selbst: die Karte oben im Screen
-           sagt dasselbe, ist aber weggerollt, sobald das Gespräch länger wird.
-           Das Ziel ist der Modelle-Tab — wie in `LlmMissing`. */
+        /* The link to the model settings lives right in this line: the card at
+           the top of the screen says the same thing, but scrolls out of view
+           once the conversation gets longer. Target is the models tab — same as
+           in `LlmMissing`. */
         <p className="sb-turn-note">
           {t('ask.noModel')}{' '}
           <button
@@ -112,12 +113,10 @@ export function ChatMessage({
           <p className="sb-panel-empty">{t('ask.noEvidenceHint')}</p>
         </>
       ) : empty ? null : (
-        <Markdown
-          text={message.content}
-          citations={citations}
-          onCitation={onCitation}
-          onOpenPath={onOpenPath}
-        />
+        /* No `onOpenPath` here: an answer's uncited path stays plain text (D2,
+           057) — only the citation list below opens a file, since only those
+           entries are validated. */
+        <Markdown text={message.content} citations={citations} onCitation={onCitation} />
       )}
 
       {message.unsupported === true && citations.length > 0 ? (

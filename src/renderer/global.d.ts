@@ -3,6 +3,11 @@
 
 import type { SbBridge } from './lib/bridge';
 
+declare module '*.png' {
+  const source: string;
+  export default source;
+}
+
 declare global {
   interface Window {
     /** Fehlt im reinen Browser-Kontext — dann greift die Mock-Brücke. */

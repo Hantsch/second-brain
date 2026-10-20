@@ -1,12 +1,13 @@
-/* Die Tastenkombination fürs Schnell-Erfassen wird gedrückt, nicht getippt.
+/* The hotkey for quick capture is pressed, not typed.
 
-   Zwei Regeln, die aus der Sache kommen: eine globale Kombination braucht
-   mindestens einen Zusatz (sonst schluckt sie eine gewöhnliche Taste in jeder
-   anderen App), und `Esc` bricht ab, ohne etwas zu ändern.
+   Two rules follow from the nature of the thing: a global combination needs
+   at least one modifier (otherwise it would swallow an ordinary key in
+   every other app), and `Esc` cancels without changing anything.
 
-   Ob die Kombination frei ist, weiß nur der Hauptprozess. Er registriert sie neu,
-   sobald die Einstellung geschrieben ist, und meldet über `event:toast`, wenn
-   sie belegt war — deshalb steht hier keine eigene Prüfung. */
+   Only the main process knows whether the combination is free. It
+   re-registers it as soon as the setting is written, and reports via
+   `event:toast` if it was already taken — that's why there is no check of
+   its own here. */
 
 import { useEffect, useState } from 'react';
 import { Button } from '../../atoms/Button';
@@ -14,7 +15,7 @@ import { Kbd } from '../../atoms/Kbd';
 import { useT } from '../../i18n';
 
 export interface HotkeyRecorderProps {
-  /** Aktuelle Kombination in Electron-Schreibweise, etwa `Control+Shift+Space`. */
+  /** Current combination in Electron notation, e.g. `Control+Shift+Space`. */
   value: string;
   onCommit: (accelerator: string) => void;
 }
@@ -42,7 +43,7 @@ const NAMED_KEYS: Record<string, string> = {
   Equal: '=',
 };
 
-/** Physische Taste → Name, den Electrons `globalShortcut` versteht. */
+/** Physical key → name that Electron's `globalShortcut` understands. */
 function mainKey(code: string): string | null {
   if (/^Key[A-Z]$/.test(code)) return code.slice(3);
   if (/^Digit[0-9]$/.test(code)) return code.slice(5);

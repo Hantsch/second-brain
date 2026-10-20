@@ -1,18 +1,19 @@
-/* Ein Modul: Titel, Kennzahl, Inhalt, optional eine Fußnote.
-   Das Bauteil, aus dem Dashboard und Listen bestehen — damit alle Module
-   dieselbe Geometrie haben und ein Screen nicht aus Einzelstücken besteht. */
+/* A module: title, figure, content, optionally a footnote.
+   The building block that the dashboard and lists are made of — so every
+   module shares the same geometry and a screen isn't assembled from
+   one-off pieces. */
 
 import type { ReactNode } from 'react';
 import { Card } from '../atoms/Card';
 
 export interface PanelProps {
-  /** Titel des Moduls, bereits übersetzt. */
+  /** Title of the module, already translated. */
   title: string;
-  /** Kennzahl rechts im Kopf — Daten, deshalb Mono. Bereits übersetzt. */
+  /** Figure on the right of the header — data, hence mono. Already translated. */
   meta?: string;
-  /** Sekundäre Aktion im Kopf. Nie die primäre Aktion des Screens. */
+  /** Secondary action in the header. Never the screen's primary action. */
   action?: ReactNode;
-  /** Ruhige Fußnote, etwa eine Einschränkung. Bereits übersetzt. */
+  /** Quiet footnote, e.g. a caveat. Already translated. */
   note?: string;
   children: ReactNode;
 }

@@ -1,17 +1,19 @@
 /**
- * Die deutschen Wortlisten des Einordnens.
+ * The German word lists used for classification.
  *
- * Sie stehen bewusst an einer Stelle und ausgeschrieben: was die App als
- * „Arbeit", „privat", „Gefuehl" oder „Aufgabe" erkennt, soll nachlesbar und
- * erweiterbar sein, ohne Logik anzufassen. Jeder Eintrag darf bis zu drei
- * Endbuchstaben Beugung tragen ('Kunde' trifft 'Kunden').
+ * They deliberately live in one place, spelled out in full: what the app
+ * recognizes as "work", "private", "mood", or "task" should be readable and
+ * extendable without touching logic. Each entry may carry up to three
+ * trailing inflection letters ('Kunde' matches 'Kunden').
  *
- * Umlaute stehen doppelt (`m(?:ü|ue)de`), weil Nutzer beides schreiben.
+ * Umlauts are given both ways (`m(?:ü|ue)de`), because users write both.
  */
 
+import type { DocLanguage } from '@shared/types';
+import { MOOD_WORDS_EN, PRIVATE_WORDS_EN, WORK_WORDS_EN } from './lexicon-en';
 import { anyWordRegex, matchedWords, wordRegex } from './words';
 
-/** Wendungen, die einen Tagebucheintrag ankuendigen. */
+/** Phrasings that signal a journal entry. */
 export const MOOD_WORDS = wordRegex(
   'ich\\s+f(?:ü|ue)hle|f(?:ü|ue)hlt\\s+sich|stress|gestresst|m(?:ü|ue)de|ersch(?:ö|oe)pft|' +
     'zu\\s+viel|(?:ü|ue)berfordert|(?:ü|ue)berforderung|keine\\s+kraft|keine\\s+energie|' +
@@ -19,7 +21,7 @@ export const MOOD_WORDS = wordRegex(
     'kraftlos|schlecht\\s+geschlafen|kopf\\s+voll|unruhig|innerlich',
 );
 
-/** Woerter, die eine Absicht ankuendigen: ihr Vorkommen macht einen Satz zur Aufgabe. */
+/** Words that signal an intent: their presence turns a sentence into a task. */
 export const TASK_WORDS = wordRegex(
   'muss|m(?:ü|ue)ssen|musst|sollte|sollten|soll|todo|to-do|aufgabe|nicht\\s+vergessen|dringend|' +
     'erledigen|besorgen|kaufen|einkaufen|anrufen|schreiben|schicken|senden|nachfassen|nachhaken|' +
@@ -27,13 +29,13 @@ export const TASK_WORDS = wordRegex(
     'bestellen|abgeben|einreichen|vorbereiten|terminieren|erinnern|s(?:ä|ae)gen|anbringen',
 );
 
-/** Ein finites Hilfsverb macht aus einem Satz einen Bericht, keine Aufgabe. */
+/** A finite auxiliary verb turns a sentence into a report, not a task. */
 export const REPORT_WORDS = wordRegex(
   'bin|ist|sind|war|waren|habe|hat|haben|hatte|hatten|wurde|wurden|f(?:ü|ue)hle|f(?:ü|ue)hlt|' +
     'l(?:ä|ae)uft|lief|liegt|liegen|gibt|kam|kommt|blieb|klappte',
 );
 
-/** Woerter, die auf '-en' enden und trotzdem keine Verben sind. */
+/** Words that end in '-en' but are still not verbs. */
 export const NOT_A_VERB = new Set([
   'oben',
   'unten',
@@ -71,7 +73,7 @@ export const NOT_A_VERB = new Set([
   'notizen',
 ]);
 
-/** Gross geschriebene Woerter, die trotzdem kein Name sind — meist Satzanfaenge. */
+/** Capitalized words that are still not names — mostly sentence starters. */
 export const NOT_A_NAME = new Set([
   'das',
   'der',
@@ -166,18 +168,43 @@ const PRIVATE_STEMS = [
 const WORK_WORDS = anyWordRegex(WORK_STEMS);
 const PRIVATE_WORDS = anyWordRegex(PRIVATE_STEMS);
 
-/** Gefuehlsworte im Text, klein geschrieben. */
-export function moodSignals(text: string): string[] {
-  return matchedWords(MOOD_WORDS, text);
+function mergeUnique(lists: readonly (readonly string[])[]): string[] {
+  const seen = new Set<string>();
+  for (const list of lists) for (const word of list) seen.add(word);
+  return [...seen];
 }
 
-/** Was im Text fuer Arbeit und was fuer Privat spricht. */
+/** Mood words found in the text, lowercased — from every active document language. */
+export function moodSignals(text: string, languages: readonly DocLanguage[] = ['de']): string[] {
+  const lists: string[][] = [];
+  if (languages.includes('de')) lists.push(matchedWords(MOOD_WORDS, text));
+  if (languages.includes('en')) lists.push(matchedWords(MOOD_WORDS_EN, text));
+  return mergeUnique(lists);
+}
+
+/** What in the text speaks for work and what speaks for private. */
 export interface ScopeSignals {
   work: string[];
   private: string[];
 }
 
-/** Signalwoerter beider Seiten. Wer mehr hat, gewinnt — das entscheidet der Aufrufer. */
-export function scopeSignals(text: string): ScopeSignals {
-  return { work: matchedWords(WORK_WORDS, text), private: matchedWords(PRIVATE_WORDS, text) };
+/**
+ * Signal words for both sides, from every active document language. Whichever
+ * has more wins — the caller decides that.
+ */
+export function scopeSignals(
+  text: string,
+  languages: readonly DocLanguage[] = ['de'],
+): ScopeSignals {
+  const work: string[][] = [];
+  const priv: string[][] = [];
+  if (languages.includes('de')) {
+    work.push(matchedWords(WORK_WORDS, text));
+    priv.push(matchedWords(PRIVATE_WORDS, text));
+  }
+  if (languages.includes('en')) {
+    work.push(matchedWords(WORK_WORDS_EN, text));
+    priv.push(matchedWords(PRIVATE_WORDS_EN, text));
+  }
+  return { work: mergeUnique(work), private: mergeUnique(priv) };
 }

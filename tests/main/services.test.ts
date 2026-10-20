@@ -151,6 +151,7 @@ describe('Services: Vault, Index und Watcher', () => {
       docCount: 0,
       indexedAt: null,
       indexing: false,
+      indexRefreshFailedAt: null,
     });
     expect(services.index()).toBeNull();
     expect(services.store()).toBeNull();
@@ -163,6 +164,152 @@ describe('Services: Vault, Index und Watcher', () => {
       expect(services.status().ready).toBe(false);
     } finally {
       await rm(plain, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('Services: fehlgeschlagener Index-Nachlauf (D4)', () => {
+  let vault: TempVault;
+  let userDataDir: string;
+  let services: Awaited<ReturnType<typeof createContainer>>;
+  let refreshImpl: (paths?: readonly string[]) => Promise<void>;
+  let capturedOnChange: ((paths: string[], external: boolean) => void) | null = null;
+
+  beforeEach(async () => {
+    bus.sent = [];
+    vault = await createTempVault({ sample: true });
+    userDataDir = await mkdtemp(join(tmpdir(), 'sb-userdata-fail-'));
+    services = await createContainer(userDataDir);
+    capturedOnChange = null;
+
+    /* Default: refresh always succeeds. Individual tests swap `refreshImpl`
+       to inject a rejection without touching real files or a real index. */
+    refreshImpl = async () => undefined;
+
+    const fakeStats = () => ({
+      docs: 0,
+      todos: 0,
+      projects: 0,
+      modules: 0,
+      pages: 0,
+      words: 0,
+      builtAt: new Date().toISOString(),
+      durationMs: 0,
+      oversized: [] as string[],
+    });
+    services.attachIndex(() => ({
+      stats: async () => fakeStats(),
+      rebuild: async () => fakeStats(),
+      search: () => [],
+      refresh: async (paths?: readonly string[]) => refreshImpl(paths),
+      dispose: async () => undefined,
+    }));
+    services.attachWatcher((_root, onChange) => {
+      capturedOnChange = onChange;
+      return { dispose: async () => undefined };
+    });
+
+    await services.openVault(vault.root);
+    bus.sent = [];
+  });
+
+  afterEach(async () => {
+    await services.closeVault();
+    await vault.cleanup();
+    await rm(userDataDir, { recursive: true, force: true });
+  });
+
+  it('a failed refresh sends no vault-changed and marks the status', async () => {
+    refreshImpl = async () => {
+      throw new Error('boom');
+    };
+    expect(capturedOnChange).not.toBeNull();
+    capturedOnChange?.(['inbox/x.md'], true);
+    await until(() => services.status().indexRefreshFailedAt !== null);
+
+    expect(services.status().indexRefreshFailedAt).toEqual(expect.any(String));
+    expect(events('event:vault-changed')).toHaveLength(0);
+    const stati = events('event:vault-status') as VaultStatus[];
+    expect(stati.some((s) => s.indexRefreshFailedAt !== null)).toBe(true);
+  });
+
+  it('the next successful refresh clears the failure and reports every path', async () => {
+    refreshImpl = async () => {
+      throw new Error('boom');
+    };
+    capturedOnChange?.(['inbox/first.md'], true);
+    await until(() => services.status().indexRefreshFailedAt !== null);
+
+    refreshImpl = async () => undefined;
+    capturedOnChange?.(['inbox/second.md'], false);
+    await until(() => events('event:vault-changed').length > 0);
+
+    expect(services.status().indexRefreshFailedAt).toBeNull();
+    const changed = events('event:vault-changed') as { paths: string[]; external: boolean }[];
+    const allPaths = changed.flatMap((entry) => entry.paths);
+    expect(allPaths).toContain('inbox/first.md');
+    expect(allPaths).toContain('inbox/second.md');
+  });
+
+  it("a pending failure from a closed vault does not leak into the next vault's refresh", async () => {
+    refreshImpl = async () => {
+      throw new Error('boom');
+    };
+    capturedOnChange?.(['inbox/first-vault-only.md'], true);
+    await until(() => services.status().indexRefreshFailedAt !== null);
+
+    await services.closeVault();
+
+    const vault2 = await createTempVault({ sample: true });
+    try {
+      let capturedOnChange2: ((paths: string[], external: boolean) => void) | null = null;
+      refreshImpl = async () => undefined;
+      services.attachIndex(() => ({
+        stats: async () => ({
+          docs: 0,
+          todos: 0,
+          projects: 0,
+          modules: 0,
+          pages: 0,
+          words: 0,
+          builtAt: new Date().toISOString(),
+          durationMs: 0,
+          oversized: [] as string[],
+        }),
+        rebuild: async () => ({
+          docs: 0,
+          todos: 0,
+          projects: 0,
+          modules: 0,
+          pages: 0,
+          words: 0,
+          builtAt: new Date().toISOString(),
+          durationMs: 0,
+          oversized: [] as string[],
+        }),
+        search: () => [],
+        refresh: async (paths?: readonly string[]) => refreshImpl(paths),
+        dispose: async () => undefined,
+      }));
+      services.attachWatcher((_root, onChange) => {
+        capturedOnChange2 = onChange;
+        return { dispose: async () => undefined };
+      });
+
+      await services.openVault(vault2.root);
+      bus.sent = [];
+
+      const onChange2 = capturedOnChange2 as ((paths: string[], external: boolean) => void) | null;
+      expect(onChange2).not.toBeNull();
+      onChange2?.(['inbox/second-vault.md'], false);
+      await until(() => events('event:vault-changed').length > 0);
+
+      const changed = events('event:vault-changed') as { paths: string[]; external: boolean }[];
+      const allPaths = changed.flatMap((entry) => entry.paths);
+      expect(allPaths).not.toContain('inbox/first-vault-only.md');
+      expect(allPaths).toContain('inbox/second-vault.md');
+    } finally {
+      await vault2.cleanup();
     }
   });
 });

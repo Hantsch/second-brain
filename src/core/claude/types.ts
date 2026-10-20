@@ -126,6 +126,22 @@ export interface SessionFacts {
   skippedLines: number;
   /** Bytes, die fuer diese Fakten gelesen wurden. */
   bytesRead: number;
+  /** Modellname des juengsten gelesenen Assistant-Records, oder `null`. */
+  model: string | null;
+  /**
+   * Distinkte `subagent_type`-Werte aus `Task`-Werkzeugaufrufen, zuerst gesehen
+   * zuerst. `null` heisst „keiner in den gelesenen Fenstern gesehen" — bewusst
+   * kein leeres Array, das haette „gesehen und mit null Subagenten" bedeutet.
+   * Gleiche Unterscheidung wie bei `AgentSessionSummary.subagents`.
+   */
+  subagents: string[] | null;
+  /**
+   * Naeherung fuer die zuletzt belegte Kontextgroesse: Claude legt anders als
+   * Codex (`model_context_window`) keine eigene Kennzahl dafuer ab. Genommen
+   * wird die Token-Summe aus `usage` des juengsten Assistant-Records — siehe
+   * Kommentar bei `contextTokensOf` in `records.ts`.
+   */
+  contextTokens: number | null;
 }
 
 /** Leere Fakten — der ehrliche Zustand einer leeren oder unlesbaren Datei. */
@@ -144,5 +160,8 @@ export function emptyFacts(): SessionFacts {
     records: 0,
     skippedLines: 0,
     bytesRead: 0,
+    model: null,
+    subagents: null,
+    contextTokens: null,
   };
 }

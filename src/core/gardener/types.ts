@@ -18,6 +18,7 @@
  */
 
 import type {
+  Area,
   DocLanguage,
   DumpItem,
   FindingSeverity,
@@ -25,9 +26,11 @@ import type {
   GardenerFindingKind,
   GardenerFix,
   GardenerSettings,
+  JournalDay,
   OverviewSettings,
   Project,
   RawSource,
+  Todo,
   UiLanguage,
   WikiPage,
 } from '@shared/types';
@@ -41,6 +44,7 @@ export interface GardenerIndexData {
   byPath: ReadonlyMap<string, IndexedDoc>;
   /** Schon beim Indexlauf gefunden — der Gardener zaehlt sie nur aus. */
   brokenLinks: readonly BrokenLink[];
+  todos: readonly Todo[];
 }
 
 /**
@@ -53,6 +57,9 @@ export interface GardenerIndexView {
   projects(): readonly Project[];
   sources(): readonly RawSource[];
   dumps(): readonly DumpItem[];
+  journal(): readonly JournalDay[];
+  todos(): readonly Todo[];
+  areas(): readonly Area[];
 }
 
 /** Ein Modul mit seinen Seiten und seinem Katalog — einmal je Lauf gruppiert. */
@@ -147,6 +154,30 @@ export function findingId(kind: GardenerFindingKind, ...parts: readonly string[]
   return `${kind}:${sha256(parts.join('\n')).slice(0, 12)}`;
 }
 
+/**
+ * Die Art, die in einer Kennung steckt — der Teil vor dem ersten `:`. Damit
+ * laesst sich ueber einen gespeicherten Befund reden, von dem nur noch die
+ * Kennung da ist: eine abgelegte Entscheidung („passt so") ueberlebt den Lauf,
+ * der sie ausgeloest hat. Rueckgabe ist absichtlich `string` und keine
+ * Befundart: was in einer Datei steht, ist nicht typgeprueft.
+ */
+export function kindOf(id: string): string {
+  const cut = id.indexOf(':');
+  return cut < 0 ? id : id.slice(0, cut);
+}
+
+/**
+ * Befundarten, die ein Lauf **ohne Modell** nicht hervorbringen kann.
+ *
+ * Wer aus „der Lauf hat den Befund nicht wiedergefunden" schliessen will „die
+ * Sache ist erledigt", braucht diese Liste: nach diesen Arten hat ein Lauf ohne
+ * Modell nie gesucht, sein Schweigen sagt zu ihnen also nichts.
+ *
+ * Eine benannte Liste und kein Vergleich auf eine einzelne Art: die naechste
+ * modellgebundene Befundart haengt sich hier mit einer Zeile an.
+ */
+export const LLM_ONLY_KINDS: readonly GardenerFindingKind[] = ['contradiction', 'loose-end'];
+
 /** Ein Befund, wie die Checks ihn bauen. `id` und `foundAt` kommen von hier. */
 export interface FindingInput {
   kind: GardenerFindingKind;
@@ -160,7 +191,27 @@ export interface FindingInput {
   fix?: GardenerFix | null;
 }
 
+/**
+ * Die Hashes der genannten Dateien, wie der Index sie zum Laufzeitpunkt kennt —
+ * dieselbe Quelle, aus der die Checks rechnen (`IndexedDoc.hash`, sha256 des
+ * ganzen Dateiinhalts). Kein zweites Hash-Verfahren: wer spaeter fragt „ist die
+ * Datei seit dem Lauf bearbeitet worden?", vergleicht `store.hash(path)` damit.
+ *
+ * Pfade ohne Eintrag im Index (Verzeichnisse, Rohquellen ohne Datei) bekommen
+ * keinen Hash — dann ist die Frage unbeantwortbar und wird nicht beantwortet.
+ */
+function hashesOf(ctx: GardenerContext, paths: readonly string[]): Record<string, string> {
+  const { byPath } = ctx.index.index();
+  const hashes: Record<string, string> = {};
+  for (const path of paths) {
+    const hash = byPath.get(path)?.hash;
+    if (hash !== undefined && hash.length > 0) hashes[path] = hash;
+  }
+  return hashes;
+}
+
 export function buildFinding(ctx: GardenerContext, input: FindingInput): GardenerFinding {
+  const hashes = hashesOf(ctx, input.paths);
   return {
     id: findingId(input.kind, ...input.key),
     kind: input.kind,
@@ -170,6 +221,7 @@ export function buildFinding(ctx: GardenerContext, input: FindingInput): Gardene
     paths: [...input.paths],
     module: input.module,
     foundAt: ctx.ranAt,
+    ...(Object.keys(hashes).length > 0 ? { hashes } : {}),
     fix: input.fix ?? null,
   };
 }

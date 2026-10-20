@@ -41,6 +41,15 @@ export function nodeFileSystem(): IngestFileSystem {
       }
     },
 
+    async readBytes(path: string): Promise<Uint8Array | null> {
+      try {
+        return await readFile(path);
+      } catch (error) {
+        if (codeOf(error) === 'ENOENT' || codeOf(error) === 'EISDIR') return null;
+        throw error;
+      }
+    },
+
     async stat(path: string): Promise<IngestFileStat | null> {
       try {
         const info = await stat(path);

@@ -3,7 +3,7 @@
    passiert — keine Nutzerzeile verschwindet, keine Rubrik wird umbenannt. */
 
 import { describe, expect, it } from 'vitest';
-import { diffIndex, entryLine, parseIndex, upsertEntries } from '@core/wiki';
+import { diffIndex, entryLine, parseIndex, removeEntries, upsertEntries } from '@core/wiki';
 import type { WikiIndexEntry } from '@core/wiki';
 import { INDEX_PATH, wikiFixture } from './fixtures';
 
@@ -115,6 +115,35 @@ describe('upsertEntries', () => {
       language: 'en',
     });
     expect(next).toContain('## Entities');
+  });
+});
+
+describe('removeEntries', () => {
+  it('nimmt genau die Zeile des Slugs heraus, alles andere bleibt byte-identisch', () => {
+    const next = removeEntries(USER_CATALOG, ['token-lebensdauer']);
+
+    expect(next).not.toContain('[[token-lebensdauer]]');
+    const expected = USER_CATALOG.split('\n')
+      .filter((line) => !line.includes('[[token-lebensdauer]]'))
+      .join('\n');
+    expect(next).toBe(expected);
+  });
+
+  it('gibt den Inhalt unveraendert zurueck, wenn der Slug nicht vorkommt', () => {
+    expect(removeEntries(USER_CATALOG, ['nicht-vorhanden'])).toBe(USER_CATALOG);
+  });
+
+  it('laesst Ueberschriften und von Hand geschriebene Zeilen stehen', () => {
+    const next = removeEntries(USER_CATALOG, ['s-2026-08-04-token-lifetimes-blog']);
+
+    expect(next).toContain('# Katalog — Identitätsmanagement');
+    expect(next).toContain('Meine Ordnung: erst lesen, dann fragen.');
+    expect(next).toContain('## Quellen');
+    expect(next).toContain('## Begriffe');
+    expect(next).toContain('## Meine offenen Fragen');
+    expect(next).toContain('- Erben Unterorganisationen die Rollen? Beim Kunden nachfassen.');
+    expect(next).toContain('- [[token-lebensdauer]] — Aktueller Stand: 15 Minuten Access');
+    expect(next).not.toContain('[[s-2026-08-04-token-lifetimes-blog]]');
   });
 });
 

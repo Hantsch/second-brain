@@ -1,15 +1,16 @@
-/* Der Bearbeitungsstand eines Ablage-Vorschlags — die Rechnung dahinter, ohne
-   Ansicht.
+/* The editing state of a filing proposal — the logic behind it, without the
+   view.
 
-   Sie liegt getrennt von der Karte, weil der Stand beim Screen wohnt: Ctrl+Enter
-   kommt von außen und muss genau die Fassung ablegen, die zu sehen ist. Und weil
-   „was geht über den Kanal" ohne React prüfbar sein soll. */
+   It lives separately from the card because the state belongs to the screen:
+   Ctrl+Enter comes from outside and must file exactly the version that's
+   currently visible. Also because "what goes over the channel" should be
+   testable without React. */
 
 import { useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import type { FilingAction, FilingProposal, ProposedTodo, WaitingOn } from '@shared/types';
 
-/** Ein Todo mit der Frage, ob es mitkommt. */
+/** A todo along with whether it should be included. */
 export interface TodoEdit {
   todo: ProposedTodo;
   keep: boolean;
@@ -20,7 +21,7 @@ export interface WaitingEdit {
   keep: boolean;
 }
 
-/** Was der Nutzer am Vorschlag geändert hat, bevor er ihn bestätigt. */
+/** What the user changed about the proposal before confirming it. */
 export interface ProposalEdit {
   action: FilingAction;
   content: string;
@@ -37,18 +38,19 @@ function initialEdit(proposal: FilingProposal): ProposalEdit {
   };
 }
 
-/** Ein Vorschlag ist derselbe, solange Dump und Entstehungszeit dieselben sind. */
+/** A proposal is the same one as long as the dump and creation time match. */
 function editKey(proposal: FilingProposal): string {
   return `${proposal.dumpPath}@${proposal.createdAt}`;
 }
 
 /**
- * Der Bearbeitungsstand eines Vorschlags. Kommt ein anderer Vorschlag herein,
- * beginnt der Stand von vorn — ein Text aus dem vorigen Dump wäre ein Fehler.
+ * The editing state of a proposal. When a different proposal comes in, the
+ * state starts over — text from the previous dump would be a mistake.
  *
- * Der Stand wird abgeleitet, nicht nachgezogen: passt das Gemerkte nicht zum
- * Vorschlag, gilt wieder der Vorschlag. Das braucht keinen Effekt, der nach dem
- * Rendern korrigiert — und damit auch kein Bild, in dem der falsche Text steht.
+ * The state is derived, not tracked after the fact: if what's remembered
+ * doesn't match the proposal, the proposal wins again. That needs no effect
+ * correcting things after render — and therefore no frame where the wrong
+ * text is showing.
  */
 export function useProposalEdit(
   proposal: FilingProposal | undefined,
@@ -71,13 +73,13 @@ export function useProposalEdit(
   return [edit, setEdit];
 }
 
-/** Der bearbeitete Vorschlag, wie er über `capture:apply` geht. */
+/** The edited proposal, as it goes out over `capture:apply`. */
 export function applied(proposal: FilingProposal, edit: ProposalEdit): FilingProposal {
   return {
     ...proposal,
     primary: { ...edit.action, content: edit.content },
-    /* Die Neben-Schreibvorgänge leitet der Hauptprozess aus `todos` ab — nur er
-       weiß, wie eine Checkbox-Zeile aussieht. */
+    /* The secondary write operations are derived by the main process from
+       `todos` — only it knows what a checkbox line looks like. */
     extras: [],
     todos: edit.todos.filter((row) => row.keep).map((row) => row.todo),
     waitingOn: edit.waiting.filter((row) => row.keep).map((row) => row.entry),

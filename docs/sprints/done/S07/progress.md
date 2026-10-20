@@ -1,0 +1,88 @@
+- 2026-08-22 14:48 · 023 · D1 The doc is the text the app writes · started
+- 2026-08-22 14:52 · 023 · D1 The doc is the text the app writes · done
+- 2026-08-22 14:52 · 023 · D2 An existing module is not touched, English vault not broken · started
+- 2026-08-22 14:55 · 023 · D2 An existing module is not touched, English vault not broken · done
+- 2026-08-22 14:55 · 023 · D3 The decision is written down where the next reader looks · started
+- 2026-08-22 14:58 · 023 · D3 The decision is written down where the next reader looks · done
+- 2026-08-22 14:58 · 023 · D4 The gate is green · started
+- 2026-08-22 15:04 · 023 · D4 The gate is green · done
+- 2026-08-22 15:11 · 025 · D1 demo Codex sessions in the seed · started
+- 2026-08-22 15:14 · 025 · D1 demo Codex sessions in the seed · done
+- 2026-08-22 15:14 · 025 · D2 both CLIs pinned from one place · started
+- 2026-08-22 15:19 · 025 · D2 both CLIs pinned from one place · done
+- 2026-08-22 15:19 · 025 · D3 seed guard against outward-pointing settings · started
+- 2026-08-22 15:26 · 025 · D3 seed guard against outward-pointing settings · done
+- 2026-08-22 15:26 · 025 · D4 the guard is locked by a test · started
+- 2026-08-22 15:34 · 025 · D4 the guard is locked by a test · done
+- 2026-08-22 15:34 · 025 · D5 comments truthful and the run proven · started
+- 2026-08-22 15:41 · 025 · D5 comments truthful and the run proven · done
+- 2026-08-22 15:29 · 024 · D1 shared name table · started
+- 2026-08-22 15:32 · 024 · D1 shared name table · done
+- 2026-08-22 15:32 · 024 · D2 filing writes in document language · started
+- 2026-08-22 15:44 · 024 · D2 filing writes in document language · done
+- 2026-08-22 15:44 · 024 · D3 read side accepts English state heading · started
+- 2026-08-22 15:53 · 024 · D3 read side English state heading · done
+- 2026-08-22 15:53 · 024 · D4 proposal names its heading · done
+- 2026-08-22 15:53 · 024 · D6 migration engine · done
+- 2026-08-22 15:53 · 024 · D5 preview shows heading · started
+- 2026-08-22 15:53 · 024 · D7 migration channels · started
+- 2026-08-22 16:01 · 024 · D5 preview shows heading · done
+- 2026-08-22 16:01 · 024 · D7 migration channels · done
+- 2026-08-22 16:01 · 024 · D8 warning and migration offer · started
+- 2026-08-22 16:11 · 024 · D8 warning and migration offer · done
+- 2026-08-22 16:11 · 024 · D9 docs · started
+- 2026-08-22 16:13 · 024 · D9 docs · done
+- 2026-08-22 16:25 · 024 · review-fix cycle 1 (docLanguage not wired at capture:apply; state alias; umlaut folding; prettier) · started
+- 2026-08-22 16:29 · 024 · review-fix cycle 1 · done
+- 2026-08-22 17:33 · 024 · verify gate green (typecheck/lint/test/build), prettier confirmed pre-existing CRLF-only · done
+- 2026-08-22 17:33 · 024 · review-fix cycle 2 (confirmation pass) · started
+- 2026-08-22 17:53 · 024 · review-fix cycle 2 (missed sites: renderer state panel Stand-only match, todo:add hardcoded Fakten, projects:create hardcoded de headings; plus story-md prettier indent) · done
+- 2026-08-22 17:53 · 024 · review-fix cycle 3 (confirmation pass) · started
+- 2026-08-22 18:05 · 024 · review-fix cycle 3 (confirmation pass, verdict PASS) · done
+- 2026-08-22 18:05 · 024 · live smoke (seed + shot) · started
+- 2026-08-22 18:07 · 024 · live smoke (seed + shot + targeted _electron drive of proposal heading + migration card) · done
+- 2026-08-22 18:09 · 024 · Done section filled, ACs ticked, status done, moved to done/ + INDEX.md · done
+- 2026-08-22 18:11 · 026 · D1 rewrite German closers · started
+- 2026-08-22 18:13 · 026 · D1 rewrite German closers · done
+- 2026-08-22 18:13 · 026 · D2 clean en-journal.ts · started
+- 2026-08-22 18:15 · 026 · D2 clean en-journal.ts · done
+- 2026-08-22 18:15 · 026 · D3 write down convention + guard test · started
+- 2026-08-22 18:19 · 026 · D3 write down convention + guard test · done
+- 2026-08-22 18:19 · 026 · D4 LooseEndsTile unresolvable-day branch · started
+- 2026-08-22 18:19 · 026 · D5 journal/health dates use locale() · started
+- 2026-08-22 18:33 · 026 · D4 LooseEndsTile unresolvable-day branch · done
+- 2026-08-22 18:33 · 026 · D5 journal/health dates use locale() · done
+- 2026-08-22 18:33 · 026 · fallout fix: renderer test assertions with stale ASCII quote closer · started
+- 2026-08-22 18:43 · 026 · fallout fix: renderer test assertions with stale ASCII quote closer · done
+- 2026-08-22 18:43 · 026 · verify gate (typecheck/lint/build) · started
+- 2026-08-22 18:52 · 026 · verify gate (typecheck/lint/test/build) green; format:check pre-existing CRLF issue confirmed via scratch-copy diff, changed lines are prettier-clean · done
+- 2026-08-22 18:53 · 026 · code review (clean agent) · started
+- 2026-08-22 19:00 · 026 · code review (clean agent) · done (PASS, no findings)
+- 2026-08-22 19:00 · 026 · live smoke (seed + shot) · started
+- 2026-08-22 19:05 · 026 · live smoke (seed + shot + targeted _electron drive of Lose-Enden tile + Settings-Sprachen quote rendering) · done
+- 2026-08-22 19:12 · 026 · Done section filled, ACs ticked, status done, moved to done/ + INDEX.md · done
+- 2026-08-22 19:01 · 027 · D1 scope predicates and stored shapes to core · started
+- 2026-08-22 19:07 · 027 · D1 scope predicates and stored shapes to core · done
+- 2026-08-22 19:07 · 027 · D2 JSON reading to core · started
+- 2026-08-22 19:13 · 027 · D2 JSON reading to core · done
+- 2026-08-22 19:13 · 027 · D3 save-time merge and pruning to core (hard tier) · started
+- 2026-08-22 19:18 · 027 · D3 save-time merge and pruning to core (hard tier) · done
+- 2026-08-22 19:18 · 027 · D4 present() to core · started
+- 2026-08-22 19:21 · 027 · D4 present() to core · done
+- 2026-08-22 19:21 · 027 · D5 run flow out of the channel file · started
+- 2026-08-22 19:25 · 027 · D5 run flow out of the channel file · done
+- 2026-08-22 19:25 · 027 · D6 fix and orphan helpers out of the channel file · started
+- 2026-08-22 19:29 · 027 · D6 fix and orphan helpers out of the channel file · done
+- 2026-08-22 19:29 · 027 · D7 ownership written down · started
+- 2026-08-22 19:33 · 027 · D7 ownership written down · done
+- 2026-08-22 19:33 · 027 · verify gate (typecheck/lint/test/build) · started
+- 2026-08-22 19:33 · 027 · verify gate (typecheck/lint/test/build) green via D7's own verify run; format:check pre-existing CRLF issue confirmed, touched files prettier-clean · done
+- 2026-08-22 19:34 · 027 · code review (clean agent, hard tier) · started
+- 2026-08-22 19:34 · 027 · code review (clean agent, hard tier) · done (PASS with 1 blocking gate defect: ARCHITECTURE.md table padding broke format:check for real, not CRLF; fixed via prettier --write, re-verified clean)
+- 2026-08-22 19:42 · 027 · verify gate re-run post fix (lint/typecheck/test) green, format:check clean on touched files including ARCHITECTURE.md · done
+- 2026-08-22 19:42 · 027 · live smoke (seed + shot, drive maintenance screen) · started
+- 2026-08-22 20:20 · 027 · live smoke investigation: nav-away-and-back progress display bug found, isolated via direct gardener:runStatus query — backend (story 027's files) reports running:true correctly at the exact instant the bar is hidden; bug lives in untouched src/renderer/lib/queries/gardener.ts / RunBar.tsx, pre-existing and out of scope, not a story-027 regression · done
+- 2026-08-22 20:20 · 027 · live smoke retry: stop/continue/scope while staying on garden screen (avoiding the unrelated renderer bug) · started
+- 2026-08-22 20:47 · 027 · live smoke (all 5 flow steps confirmed: start/nav backend-correct, stop, continue, scope, close-vault-mid-run all PASS) · done
+- 2026-08-22 20:47 · 027 · Done section filled, ACs ticked, status done, moved to done/ + INDEX.md · started
+- 2026-08-22 20:52 · 027 · Done section filled, ACs ticked, status done, moved to done/ + INDEX.md · done

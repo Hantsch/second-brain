@@ -1,0 +1,45 @@
+- 2026-09-02 20:17 · 044 · D1 project artifact is a known vault file kind · started
+- 2026-09-02 20:19 · 044 · D1 project artifact is a known vault file kind · done
+- 2026-09-02 20:19 · 044 · D2 four project section headings in both languages · started
+- 2026-09-02 20:22 · 044 · D2 four project section headings in both languages · done
+- 2026-09-02 20:22 · 044 · D3 one artifact parser serves both levels · started
+- 2026-09-02 20:33 · 044 · D3 one artifact parser serves both levels · done
+- 2026-09-02 20:33 · 044 · D4 task kind condense-project routable and sensitive · started
+- 2026-09-02 20:37 · 044 · D4 task kind condense-project routable and sensitive · done
+- 2026-09-02 20:37 · 044 · D5 agent session citation form · started
+- 2026-09-02 20:41 · 044 · D5 agent session citation form · done
+- 2026-09-02 20:41 · 044 · D6 project input selection · started
+- 2026-09-02 20:52 · 044 · D6 project input selection · done
+- 2026-09-02 20:52 · 044 · D7 four-section prompt · started
+- 2026-09-02 20:56 · 044 · D7 four-section prompt · done
+- 2026-09-02 20:56 · 044 · D8 condenseProject run and write · started
+- 2026-09-02 21:14 · 044 · D8 condenseProject run and write · done
+- 2026-09-02 21:14 · 044 · story-level verify (build/test/lint/typecheck/format) · done
+- 2026-09-02 21:31 · 044 · story-review-hard (FAIL, 6 findings) · done
+- 2026-09-02 21:31 · 044 · review-fix cycle 1 (F1,F2,F5,F6 fixed; F3,F4 documented) · started
+- 2026-09-02 21:55 · 044 · review-fix cycle 2 (touchesByDir, session scope, clamp-counter, notice guard) · done
+- 2026-09-02 21:55 · 044 · final verify green (build/test/lint/typecheck; format clean on story files) · done
+- 2026-09-02 21:58 · 044 · live smoke (seed+shot) verified condense-project settings row · done
+- 2026-09-02 21:58 · 044 · Done section filled, ACs ticked, status: done, moved to done/, INDEX.md updated · done
+- 2026-09-02 21:59 · 045 · D1 unit discriminator: contract and client plumbing · started
+- 2026-09-02 22:07 · 045 · D1 unit discriminator: contract and client plumbing · done
+- 2026-09-02 22:07 · 045 · D2 main: project branch of every condense handler · started
+- 2026-09-02 22:07 · 045 · D2 main: project branch of every condense handler · done
+- 2026-09-02 22:23 · 045 · D3 extract level-agnostic condensed panel · started
+- 2026-09-02 22:23 · 045 · D3 extract level-agnostic condensed panel · done
+- 2026-09-02 22:30 · 045 · D4 the Project knowledge tab · started
+- 2026-09-02 22:30 · 045 · D4 the Project knowledge tab · done
+- 2026-09-02 22:43 · 045 · D5 acceptance surface: seed, screenshot, navigation doc · started
+- 2026-09-02 22:43 · 045 · D5 acceptance surface: seed, screenshot, navigation doc · done
+- 2026-09-02 23:15 · 045 · story complete: verify + review pass + docs filed · done
+- 2026-09-02 23:10 · 046 · D1 project arm of condensation-due check · started
+- 2026-09-02 23:24 · 046 · D1 project arm of condensation-due check · done
+- 2026-09-02 23:25 · 046 · D2 conformance tests · started
+- 2026-09-02 23:28 · 046 · D2 conformance tests · done
+- 2026-09-02 23:28 · 046 · D3 exemptions and normal-document behaviour · started
+- 2026-09-02 23:32 · 046 · D3 exemptions and normal-document behaviour · done
+- 2026-09-02 23:32 · 046 · D4 maintenance surface (renderer) · started
+- 2026-09-02 23:34 · 046 · D4 maintenance surface (renderer) · done
+- 2026-09-02 23:34 · 046 · D5 seed and live smoke · started
+- 2026-09-02 23:47 · 046 · D5 seed and live smoke · done
+- 2026-09-02 23:54 · 046 · story complete: verify + review pass + docs filed · done

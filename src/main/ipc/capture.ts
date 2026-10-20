@@ -1,20 +1,20 @@
-/* Erfassen und Einordnen — der Weg eines Gedanken durch die Shell.
+/* Capturing and filing — the path of a thought through the shell.
 
-   dump → (autoClassify) → classify → apply → undo. Entschieden und geschrieben
-   wird im Kern (`@core/capture`); hier steht der Ablauf: wer nach einem
-   Schreibvorgang den Index nachzieht, wer den Renderer weckt, und wo ein
-   fertiger Vorschlag liegt, bis ihn jemand abholt.
+   dump → (autoClassify) → classify → apply → undo. Deciding and writing
+   happen in the core (`@core/capture`); this file holds the flow: who
+   refreshes the index after a write, who wakes the renderer, and where a
+   finished proposal sits until someone picks it up.
 
-   Zwei Entscheidungen, die man im Code sonst nicht sieht:
-   - `classify` schreibt nichts. Ein Zwischenstatus `proposed` in der Datei wäre
-     eine zweite Wahrheit — und jeder Schreibvorgang weckt den Watcher, der die
-     Oberfläche neu laden lässt, die dann wieder einordnet. Stattdessen liegt der
-     Vorschlag im Speicher, gebunden an den Hash des Dumps: ändert der Nutzer die
-     Datei, fällt er weg.
-   - **Es gibt keine Schwelle für automatisches Ablegen.** Es gab eine
-     Einstellung dafür; sie hatte nie einen Leser und ist weg. Automatisch
-     ablegen hieße schreiben, ohne dass jemand bestätigt hat (Guardrail 2), und
-     ein Toast kann kein Rückgängig für einen Ablagevorgang anbieten. */
+   Two decisions that aren't otherwise visible in the code:
+   - `classify` writes nothing. An intermediate `proposed` status in the file
+     would be a second source of truth — and every write wakes the watcher,
+     which makes the UI reload, which classifies again. Instead the proposal
+     lives in memory, keyed to the dump's hash: if the user changes the file,
+     it falls away.
+   - **There is no threshold for automatic filing.** There used to be a
+     setting for it; it never had a reader and is gone. Filing automatically
+     would mean writing without anyone confirming (guardrail 2), and a toast
+     can't offer an undo for a filing action. */
 
 import {
   applyProposal,
@@ -34,10 +34,10 @@ import { createGateway } from '../llm-bridge';
 import type { Services } from '../services';
 import { hideQuickCapture, showQuickCapture } from '../quick-capture';
 
-/** So viele Vorschläge bleiben im Speicher. Mehr braucht keine Inbox. */
+/** This many proposals stay in memory. No inbox needs more. */
 const CACHE_LIMIT = 50;
 
-/** Nach jedem Schreibvorgang: Index nachziehen, dann den Renderer wecken. */
+/** After every write: refresh the index, then wake the renderer. */
 async function settle(services: Services, paths: readonly string[]): Promise<void> {
   const touched = [...new Set(paths)];
   const index = services.index();
@@ -46,37 +46,38 @@ async function settle(services: Services, paths: readonly string[]): Promise<voi
       await index.refresh(touched);
       await services.refreshIndexState();
     } catch (error) {
-      /* Der Index ist abgeleitet: sein Nachlauf darf einen gelungenen
-         Schreibvorgang nicht nachträglich zum Fehler machen. */
+      /* The index is derived: its refresh must not retroactively turn a
+         successful write into a failure. */
       console.warn('[capture] Index-Nachlauf fehlgeschlagen:', error);
     }
   }
   services.sendEvent('event:vault-changed', { paths: touched, external: false });
 }
 
-// ── Vorschläge im Speicher ───────────────────────────────────────────────────
+// ── Proposals in memory ───────────────────────────────────────────────────
 
-/** Ein Vorschlag, gebunden an den Hash des Dumps, aus dem er entstand. */
+/** A proposal, keyed to the hash of the dump it was derived from. */
 interface CachedProposal {
   hash: string;
   proposal: FilingProposal;
 }
 
 /**
- * Der Vorschlags-Speicher. Er kostet nichts und spart den zweiten Modellaufruf:
- * `autoClassify` legt hier ab, was die Inbox später abholt.
+ * The proposal store. It costs nothing and saves the second model call:
+ * `autoClassify` deposits here what the inbox picks up later.
  */
 class ProposalCache {
   private readonly entries = new Map<string, CachedProposal>();
-  /* Laufende Einordnungen je Dump. Der Hintergrundlauf und die Inbox fragen oft
-     gleichzeitig nach demselben Dump — das darf kein zweiter Modellaufruf sein. */
+  /* Classifications in flight, per dump. The background run and the inbox
+     often ask about the same dump at the same time — that must not become a
+     second model call. */
   private readonly pending = new Map<string, Promise<FilingProposal>>();
 
   forget(path: string): void {
     this.entries.delete(path);
   }
 
-  /** Vorschlag zu einem Dump — aus dem Speicher, sonst frisch eingeordnet. */
+  /** Proposal for a dump — from memory, otherwise freshly classified. */
   async resolve(services: Services, path: string): Promise<FilingProposal> {
     const store = captureStore(services);
     const doc = await store.read(path);
@@ -88,16 +89,17 @@ class ProposalCache {
 
     const index = captureIndex(services);
     const now = new Date();
+    const docLanguage = services.settings.vault()?.languages.documents ?? 'de';
     const work = classifyDump(
       {
         store,
         index,
         gateway: createGateway(services),
-        docLanguage: services.settings.vault()?.languages.documents ?? 'de',
+        docLanguage,
         now,
       },
       path,
-    ).then((proposal) => withAllTargets(proposal, index, doc.body, now));
+    ).then((proposal) => withAllTargets(proposal, index, doc.body, now, docLanguage));
 
     this.pending.set(path, work);
     try {
@@ -117,7 +119,7 @@ class ProposalCache {
   }
 }
 
-/** Nach dem Dump im Hintergrund einordnen. Ein Fehlschlag bleibt sichtbar. */
+/** Classify a dump in the background afterward. A failure remains visible. */
 function autoClassify(services: Services, cache: ProposalCache, path: string): void {
   if (services.settings.vault()?.capture.autoClassify !== true) return;
   void cache.resolve(services, path).catch(() => {
@@ -127,7 +129,7 @@ function autoClassify(services: Services, cache: ProposalCache, path: string): v
 
 // ── Inbox ────────────────────────────────────────────────────────────────────
 
-/** Bewusst Liegengebliebenes steht hinten; sonst gilt: neueste zuerst. */
+/** Deliberately left-unfiled items go last; otherwise: newest first. */
 function sortDumps(dumps: readonly DumpItem[]): DumpItem[] {
   const rank = (dump: DumpItem): number =>
     dump.status === 'raw' || dump.status === 'proposed' ? 0 : 1;
@@ -139,9 +141,9 @@ function sortDumps(dumps: readonly DumpItem[]): DumpItem[] {
 }
 
 /**
- * Die Inbox: was der Index kennt, plus was in `inbox/` liegt und dort noch nicht
- * angekommen ist. Ein gerade geschriebener Dump darf nicht erst auftauchen, wenn
- * der Watcher nachgezogen hat.
+ * The inbox: what the index knows, plus what sits in `inbox/` and hasn't
+ * arrived there yet. A dump that was just written must not appear only once
+ * the watcher has caught up.
  */
 async function readInbox(services: Services): Promise<DumpItem[]> {
   const store = captureStore(services);
@@ -158,7 +160,7 @@ async function readInbox(services: Services): Promise<DumpItem[]> {
   return sortDumps(found);
 }
 
-/** Die Projekte des Index — leer, wenn er sie nicht ableitet. */
+/** The index's projects — empty if it doesn't derive them. */
 function projectsOf(services: Services): readonly Project[] {
   const index = services.requireIndex();
   return typeof index.projects === 'function' ? index.projects() : [];
@@ -173,8 +175,8 @@ export function captureHandlers(services: Services): HandlerMap {
       else hideQuickCapture();
     },
 
-    /* Der Dump geht sofort auf die Platte. Eingeordnet wird danach, im
-       Hintergrund — der Gedanke darf auf kein Modell warten. */
+    /* The dump goes to disk immediately. Classification happens afterward,
+       in the background — the thought must not wait on any model. */
     'capture:dump': async ({ text, origin, tags, scope }) => {
       const dump = await writeDump(captureStore(services), {
         text,
@@ -192,8 +194,19 @@ export function captureHandlers(services: Services): HandlerMap {
     'capture:classify': ({ path }) => cache.resolve(services, path),
 
     'capture:apply': async ({ proposal }) => {
-      const prepared = normalize(proposal, projectsOf(services));
-      const result = await applyProposal(captureStore(services), prepared);
+      const docLanguage = services.settings.vault()?.languages.documents ?? 'de';
+      const prepared = normalize(
+        proposal,
+        projectsOf(services),
+        captureIndex(services),
+        new Date(),
+        docLanguage,
+      );
+      /* The same document language the proposal was normalized with has to reach
+         the write itself: `applyProposal` labels *missing* sections and new project
+         files, and without it every filing would fall back to German headings no
+         matter what `languages.documents` says. */
+      const result = await applyProposal(captureStore(services), prepared, { docLanguage });
       cache.forget(proposal.dumpPath);
       await settle(services, [...result.written, proposal.dumpPath]);
       return result;

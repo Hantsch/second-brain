@@ -1,55 +1,93 @@
-/* Vorschläge in die Form bringen, in der die Oberfläche mit ihnen arbeitet — und
-   zurück in die Form, in der der Kern sie ausführt.
+/* Bring proposals into the shape the UI works with — and back into the shape
+   the core executes.
 
-   Zwei Aufgaben, beide aus demselben Grund hier und nicht im Renderer: der
-   Renderer darf keine Vault-Pfade und keine Markdown-Zeilen bauen, sonst steht
-   das Dateiformat an zwei Stellen (docs/VAULT-FORMAT.md).
+   Two tasks, both living here rather than in the renderer for the same
+   reason: the renderer must never build vault paths or markdown lines, or
+   the file format would end up defined in two places (docs/VAULT-FORMAT.md).
 
-   1. `withAllTargets` hängt an den Vorschlag jedes erreichbare Ziel — offenes
-      Projekt, Bereich, Modul, Tageseintrag, „bleibt liegen" — mit fertigem Pfad
-      und fertigem Text. Damit ist „anderes Ziel" eine Auswahl, keine Eingabe.
-   2. `normalize` nimmt den bearbeiteten Vorschlag zurück und setzt die
-      Todo-Blöcke neu: der Nutzer entscheidet, *welche* Todos mit welcher Frist
-      mitkommen, wie eine Checkbox-Zeile aussieht, weiß nur der Kern.
+   1. `withAllTargets` attaches every reachable target to the proposal — open
+      project, area, module, journal entry, "stays put" — each with a
+      finished path and finished text. That makes "other target" a
+      selection, not an input.
+   2. `normalize` takes the edited proposal back and rebuilds the todo
+      blocks: the user decides *which* todos come along with what deadline;
+      only the core knows what a checkbox line looks like.
 
-   Gebaut wird beides mit den Helfern des Kerns (`filingAction`, `todoActions`) —
-   eine zweite Fassung davon wäre eine zweite Fassung des Dateiformats. */
+   Both are built with the core's helpers (`filingAction`, `todoActions`) —
+   a second implementation of this would be a second implementation of the
+   file format. */
 
 import {
   SECTION_DAY,
   SECTION_NOTES,
   buildFilingContext,
   filingAction,
+  resolveSection,
   todoActions,
+  verifyFilingAction,
 } from '@core/capture';
 import type { CaptureIndex } from '@core/capture';
-import { journalPath, modulePath } from '@core/vault/paths';
+import { isSafeVaultPath, journalPath, modulePath, toVaultPath } from '@core/vault/paths';
 import type { DateLike } from '@core/vault/paths';
-import type { FilingAction, FilingProposal, Project } from '@shared/types';
+import { VAULT_DIRS } from '@shared/types';
+import type { DocLanguage, FilingAction, FilingProposal, Project } from '@shared/types';
 import { fail } from './errors';
 
-/** So viele Ziele reichen zur freien Wahl; gesucht wird darin in der Oberfläche. */
+/** `inbox/` — the only place `applyProposal` may rewrite as the dump's frontmatter. */
+const INBOX_PREFIX = `${VAULT_DIRS.inbox}/`;
+
+/** A dump path is only trustworthy if it is a real vault path that actually lives in the inbox. */
+function isInboxPath(path: string): boolean {
+  return isSafeVaultPath(path) && toVaultPath(path).startsWith(INBOX_PREFIX);
+}
+
+/** This many targets are enough for free choice; the UI lets the user search within them. */
 const MAX_TARGETS = 48;
 
 /**
- * Der Vorschlag mit allen erreichbaren Zielen in `alternatives`. Die Reihenfolge
- * ist Absicht: was der Kern vorgeschlagen hat, steht vorn — danach die
- * thematisch nächsten Projekte, dann Module, Bereiche, Tageseintrag, Inbox.
+ * The heading this action would actually land under, read from the target's
+ * already-indexed body — no extra file read, because this is only the
+ * preview. `apply`/`filing` re-resolve against the freshly read file, which
+ * is why a stale index here is harmless (`sections.ts`).
+ *
+ * `inbox` names no section at all, so it passes through unchanged; the
+ * fallback kind handed to `resolveSection` never actually applies otherwise,
+ * because every other target already names one (`sectionFor` in
+ * `buildProposal`/`filingAction`).
+ */
+function withIndexedSection(
+  action: FilingAction,
+  index: CaptureIndex,
+  docLanguage: DocLanguage,
+): FilingAction {
+  if (action.section === null) return action;
+  const body = index.index().docs.find((doc) => doc.path === action.path)?.body;
+  if (body === undefined) return action;
+  return { ...action, section: resolveSection(body, action, 'notes', docLanguage) };
+}
+
+/**
+ * The proposal with all reachable targets in `alternatives`. The order is
+ * intentional: what the core suggested comes first — then the thematically
+ * closest projects, then modules, areas, journal entry, inbox.
  */
 export function withAllTargets(
   proposal: FilingProposal,
   index: CaptureIndex,
   text: string,
   now: DateLike,
+  docLanguage: DocLanguage = 'de',
 ): FilingProposal {
   const context = buildFilingContext(index, { now, text });
-  const seen = new Set([proposal.primary.path]);
+  const primary = withIndexedSection(proposal.primary, index, docLanguage);
+  const seen = new Set([primary.path]);
   const alternatives: FilingAction[] = [];
 
   const add = (action: FilingAction): void => {
-    if (seen.has(action.path) || alternatives.length >= MAX_TARGETS) return;
-    seen.add(action.path);
-    alternatives.push(action);
+    const resolved = withIndexedSection(action, index, docLanguage);
+    if (seen.has(resolved.path) || alternatives.length >= MAX_TARGETS) return;
+    seen.add(resolved.path);
+    alternatives.push(resolved);
   };
 
   for (const action of proposal.alternatives) add(action);
@@ -65,25 +103,63 @@ export function withAllTargets(
   add(filingAction('journal', journalPath(context.today), SECTION_DAY, text, now));
   add(filingAction('inbox', proposal.dumpPath, null, text, now));
 
-  return { ...proposal, alternatives };
+  return { ...proposal, primary, alternatives };
 }
 
 /**
- * Den Vorschlag nehmen, wie er aus der Oberfläche kommt — nur die Todo-Blöcke
- * werden neu gesetzt. Kommt kein Todo mit, gilt, was mitgeschickt wurde.
+ * Take the proposal as it comes from the UI and re-check everything that is a
+ * write address before `capture:apply` acts on it.
+ *
+ * `primary` is only ever a *selection* from targets the core itself built
+ * (`withAllTargets`) — but what arrives over IPC is plain data, so it is
+ * re-verified against a freshly built `FilingContext` exactly as
+ * `verifyFilingAction` documents. `dumpPath` gets the same scrutiny: it names
+ * the file whose frontmatter `applyProposal` rewrites, so a renderer that (by
+ * bug or tampering) sends a path outside `inbox/` must not reach the write.
+ *
+ * `extras` are never trusted from the renderer either — the same hole one
+ * field over as an unchecked `primary` — so they are always rebuilt from
+ * `todos` here, `[]` when none come along.
+ *
+ * The context is built without a similarity `text` and without the
+ * project/module caps `withAllTargets` uses for ranking: this call checks
+ * membership, not relevance, so a legitimate project must not fall out of a
+ * large vault's top N (`buildFilingContext`'s `maxProjects`/`maxModules`).
  */
-export function normalize(proposal: FilingProposal, projects: readonly Project[]): FilingProposal {
+export function normalize(
+  proposal: FilingProposal,
+  projects: readonly Project[],
+  index: CaptureIndex,
+  now: DateLike,
+  docLanguage: DocLanguage = 'de',
+): FilingProposal {
   if (typeof proposal?.dumpPath !== 'string' || proposal.dumpPath.length === 0) {
     throw fail('invalid', 'der Vorschlag nennt keinen Dump');
+  }
+  if (!isInboxPath(proposal.dumpPath)) {
+    throw fail('invalid', 'der Dump-Pfad liegt nicht in der Inbox');
   }
   if (proposal.primary === null || typeof proposal.primary !== 'object') {
     throw fail('invalid', 'der Vorschlag nennt kein Ziel');
   }
-  if (!Array.isArray(proposal.todos) || proposal.todos.length === 0) return proposal;
-  const extras = todoActions(
-    proposal.primary,
-    proposal.todos,
-    (slug) => projects.find((project) => project.slug === slug)?.path ?? null,
-  );
-  return { ...proposal, extras };
+
+  const context = buildFilingContext(index, { now, maxProjects: Infinity, maxModules: Infinity });
+  const verified = verifyFilingAction(proposal.primary, context, {
+    dumpPath: proposal.dumpPath,
+    createdAt: proposal.createdAt,
+    docLanguage,
+  });
+  if (typeof verified === 'string') throw fail('invalid', verified);
+
+  const todos = Array.isArray(proposal.todos) ? proposal.todos : [];
+  const extras =
+    todos.length === 0
+      ? []
+      : todoActions(
+          verified,
+          todos,
+          (slug) => projects.find((project) => project.slug === slug)?.path ?? null,
+          docLanguage,
+        );
+  return { ...proposal, primary: verified, extras };
 }

@@ -1,10 +1,10 @@
-/* Die Hooks des Erfassens: Dump schreiben, Vorschlag holen, ablegen, liegen
-   lassen, verwerfen, zurücknehmen.
+/* The hooks of capturing: write a dump, fetch a proposal, file it, leave it
+   unfiled, discard it, undo it.
 
-   Der Vorschlag wird bewusst verzögert geholt: wer mit j/k durch die Inbox
-   fährt, soll nicht für jede Bewegung ein Modell arbeiten lassen. Nach der
-   Verzögerung antwortet der Hauptprozess aus seinem Speicher, solange der Dump
-   unverändert ist — die Bewegung zurück kostet dann nichts. */
+   The proposal is fetched with a deliberate delay: someone moving through the
+   inbox with j/k shouldn't trigger a model run for every step. After the
+   delay, the main process answers from its cache as long as the dump is
+   unchanged — moving back then costs nothing. */
 
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -14,15 +14,15 @@ import type { CaptureSettings, DumpItem, FilingProposal, FilingResult } from '@s
 import { api } from '../api';
 import { qk } from './keys';
 
-/** So lange muss eine Auswahl stehen, bevor eingeordnet wird. */
+/** How long a selection must hold still before filing is proposed. */
 export const PROPOSAL_DELAY_MS = 250;
 
 /**
- * Verzögert einen Pfad; jede Änderung startet die Frist neu.
+ * Delays a path; every change restarts the timer.
  *
- * Die erste Auswahl wartet nicht: dass die Liste geladen hat, ist keine Bewegung
- * des Nutzers — der Vorschlag zum obersten Dump soll sofort kommen. Gewartet wird
- * erst, wenn jemand mit j/k weitergeht.
+ * The first selection doesn't wait: the list finishing its load isn't a move
+ * by the user — the proposal for the top dump should arrive immediately. The
+ * wait only kicks in once someone advances with j/k.
  */
 function useSettledPath(path: string | null, delayMs: number): string | null {
   const [settled, setSettled] = useState(path);
@@ -34,8 +34,8 @@ function useSettledPath(path: string | null, delayMs: number): string | null {
 }
 
 /**
- * Der Ablage-Vorschlag zu einem Dump. `null` heißt: gerade keiner ausgewählt —
- * dann wird nicht gefragt und nichts behauptet.
+ * The filing proposal for a dump. `null` means: none is currently selected —
+ * then no request is made and nothing is claimed.
  */
 export function useProposal(
   path: string | null,
@@ -46,22 +46,22 @@ export function useProposal(
     queryKey: qk.capture.proposal(path ?? ''),
     queryFn: () => api.capture.classify(path ?? ''),
     enabled: path !== null && settled === path,
-    /* Einordnen ist teuer und kann ohne Modell nicht besser werden: ein
-       Fehlschlag bleibt ein Fehlschlag, den der Nutzer selbst wiederholt. */
+    /* Classifying is expensive and can't get better without a model: a
+       failure stays a failure that the user retries themselves. */
     retry: false,
   });
 }
 
-/** Die Erfassen-Einstellungen des Vaults; `undefined`, solange unbekannt. */
+/** The vault's capture settings; `undefined` while unknown. */
 export function useCaptureSettings(): CaptureSettings | undefined {
   const { data } = useQuery({ queryKey: qk.settings.snapshot(), queryFn: api.settings.get });
   return data?.vault?.capture;
 }
 
-/* Die Ablage berührt Projektdateien, Todos und den Index. Der Hauptprozess
-   schickt danach `event:vault-changed`, was zentral alles Betroffene
-   invalidiert; hier wird nur die Inbox sofort nachgeladen, damit die Karte ohne
-   Umweg über ein Ereignis verschwindet. */
+/* Filing touches project files, todos and the index. The main process
+   afterward sends `event:vault-changed`, which centrally invalidates
+   everything affected; here only the inbox is reloaded immediately, so the
+   card disappears without the detour through an event. */
 function refreshInbox(client: QueryClient): void {
   void client.invalidateQueries({ queryKey: qk.capture.inbox() });
 }
@@ -87,8 +87,8 @@ export function useCaptureMutations(): CaptureMutations {
       mutationFn: api.capture.undo,
       onSuccess: () => {
         refreshInbox(client);
-        /* Der Rückweg holt den Dump zurück — sein Vorschlag von vorher ist
-           damit wieder gültig, aber neu zu holen. */
+        /* Undo brings the dump back — its earlier proposal is valid again,
+           but needs to be fetched anew. */
         void client.invalidateQueries({ queryKey: ['capture', 'proposal'] });
       },
     }),

@@ -1,0 +1,43 @@
+- 2026-08-23 10:05 · 028 · D1 Types, machine-local setting, shared validator · started
+- 2026-08-23 10:15 · 028 · D1 Types, machine-local setting, shared validator · done
+- 2026-08-23 10:16 · 028 · D2 Core merge of detected and entered facts · started
+- 2026-08-23 10:29 · 028 · D2 Core merge of detected and entered facts · done
+- 2026-08-23 10:35 · 028 · D3 Persist and apply in main · started
+- 2026-08-23 10:45 · 028 · D3 Persist and apply in main · done
+- 2026-08-23 10:47 · 028 · D4 Editable VRAM row in the machine card · started
+- 2026-08-23 11:44 · 028 · D4 Editable VRAM row in the machine card · done
+- 2026-08-23 11:55 · 028 · story done, moved to done/ · done
+- 2026-08-23 12:00 · 029 · D1 The setting, its default and a shared validator · started
+- 2026-08-23 12:03 · 029 · D1 The setting, its default and a shared validator · done
+- 2026-08-23 12:03 · 029 · D2 The budget inside the capacity math · started
+- 2026-08-23 12:06 · 029 · D2 The budget inside the capacity math · done
+- 2026-08-23 12:06 · 029 · D3 Persist and thread the budget through every verdict · started
+- 2026-08-23 12:14 · 029 · D3 Persist and thread the budget through every verdict · done
+- 2026-08-23 12:14 · 029 · D4 Budget control and honest planning figures on the machine card · started
+- 2026-08-23 12:26 · 029 · D4 Budget control and honest planning figures on the machine card · done
+- 2026-08-23 12:39 · 029 · story done, moved to done/ · done
+- 2026-08-23 12:41 · 030 · D1 One app identity, from package.json to the taskbar · started
+- 2026-08-23 12:44 · 030 · D1 One app identity, from package.json to the taskbar · done
+- 2026-08-23 12:45 · 030 · D2 Both catalogues stop saying "Second Brain" · started
+- 2026-08-23 12:48 · 030 · D2 Both catalogues stop saying "Second Brain" · done
+- 2026-08-23 12:48 · 030 · D3 The About tab names the app, and a test keeps it that way · started
+- 2026-08-23 12:51 · 030 · D3 The About tab names the app, and a test keeps it that way · done
+- 2026-08-23 12:51 · 030 · D4 The journal speaker is Gaston, and old days still work · started
+- 2026-08-23 13:02 · 030 · D4 The journal speaker is Gaston, and old days still work · done
+- 2026-08-23 13:02 · 030 · D5 Nothing we send out names another product · started
+- 2026-08-23 13:05 · 030 · D5 Nothing we send out names another product · done
+- 2026-08-23 13:05 · 030 · D6 The documentation says Gaston · started
+- 2026-08-23 13:08 · 030 · D6 The documentation says Gaston · done
+- 2026-08-23 13:09 · 030 · D7 Verified, and the vault is provably untouched · started
+- 2026-08-23 13:23 · 030 · D7 Verified, and the vault is provably untouched · done
+- 2026-08-23 13:23 · 030 · story done, moved to done/ · done
+- 2026-08-23 13:24 · 031 · D1 The content check, as a tested pure function · started
+- 2026-08-23 13:32 · 031 · D1 The content check, as a tested pure function · done
+- 2026-08-23 13:32 · 031 · D2 npm run handoff: one command, one ZIP · started
+- 2026-08-23 13:46 · 031 · D2 npm run handoff: one command, one ZIP · done
+- 2026-08-23 13:46 · 031 · D3 First start: language choice + no-model statement · started
+- 2026-08-23 13:54 · 031 · D3 First start: language choice + no-model statement · done
+- 2026-08-23 13:54 · 031 · D4 First start visible in the screenshot run · started
+- 2026-08-23 13:59 · 031 · D4 First start visible in the screenshot run · done
+- 2026-08-23 13:59 · 031 · D5 Documentation for sender and recipient · started
+- 2026-08-23 14:00 · 031 · D5 Documentation for sender and recipient · done

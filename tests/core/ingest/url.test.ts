@@ -8,6 +8,8 @@ import {
   htmlToArticle,
   isHttpUrl,
   titleFromUrl,
+  FETCH_USER_AGENT,
+  MAX_BYTES,
   type IngestContext,
 } from '@core/ingest';
 import { fakeFetch, ingestFixture, memoryStore } from './fakes';
@@ -100,11 +102,16 @@ describe('UrlIngestor', () => {
 
   it('nimmt reinen Text ohne HTML-Wandlung', async () => {
     const store = memoryStore();
+    // Lang genug, um ueber der no-content-Schwelle zu bleiben — dieser Test prueft
+    // die Text-Weitergabe ohne HTML-Wandlung, nicht die Laengenschwelle.
+    const body =
+      'Nur Text, keine Tags. '.repeat(10) + 'Das hier ist echter, langer Inhalt ohne Markup.';
     const outcome = await createUrlIngestor().ingest(
       'https://example.org/notizen.txt',
-      context(store, { body: 'Nur Text, keine Tags.', headers: { 'content-type': 'text/plain' } }),
+      context(store, { body, headers: { 'content-type': 'text/plain' } }),
     );
-    expect(outcome.text).toBe('Nur Text, keine Tags.');
+    expect(outcome.text).toBe(body);
+    expect(outcome.notes).toEqual([]);
     // Ohne Titel im Inhalt zaehlt die Endadresse — die Weiterleitung, nicht die Eingabe.
     expect(outcome.title).toBe('wissen verrottet');
   });
@@ -130,6 +137,71 @@ describe('UrlIngestor', () => {
   it('faellt auf die Adresse zurueck, wenn die Seite keinen Titel nennt', () => {
     expect(titleFromUrl('https://example.org/blog/mein-artikel.html')).toBe('mein artikel');
     expect(titleFromUrl('https://example.org')).toBe('example.org');
+  });
+
+  it('schickt einen User-Agent, der sich zu erkennen gibt', async () => {
+    const { fetchImpl, inits } = fakeFetch({ body: ingestFixture('article.html'), url: ADDRESS });
+    await createUrlIngestor().ingest(ADDRESS, {
+      store: memoryStore(),
+      now: new Date(NOW_MS),
+      fetchImpl,
+      module: 'second-brain-methodik',
+    });
+
+    const headers = inits[0]?.headers as Record<string, string> | undefined;
+    expect(headers?.['user-agent']).toBe(FETCH_USER_AGENT);
+  });
+
+  it('meldet eine Cookie-Wand als leeren Fund, behaelt aber den Beleg in der Rohdatei', async () => {
+    const store = memoryStore();
+    const consentWallHtml =
+      '<html><head><title>Zustimmung erforderlich</title></head>' +
+      '<body><p>Bitte akzeptiere Cookies, um fortzufahren.</p></body></html>';
+    const outcome = await createUrlIngestor().ingest(
+      ADDRESS,
+      context(store, { body: consentWallHtml }),
+    );
+
+    expect(outcome.text).toBe('');
+    expect(outcome.notes).toEqual(expect.arrayContaining([{ code: 'no-content' }]));
+
+    const raw = (await store.readText(outcome.rawPath)) ?? '';
+    expect(raw).toContain('Bitte akzeptiere Cookies, um fortzufahren.');
+  });
+
+  it('meldet eine leere SPA-Huelle als leeren Fund, behaelt aber den Beleg in der Rohdatei', async () => {
+    const store = memoryStore();
+    const spaShellHtml =
+      '<html><head><title>App</title></head><body><div id="root"></div></body></html>';
+    const outcome = await createUrlIngestor().ingest(
+      ADDRESS,
+      context(store, { body: spaShellHtml }),
+    );
+
+    expect(outcome.text).toBe('');
+    expect(outcome.notes).toEqual(expect.arrayContaining([{ code: 'no-content' }]));
+
+    const raw = (await store.readText(outcome.rawPath)) ?? '';
+    expect(raw).toContain('doc_type: web');
+  });
+
+  it('verdichtet eine abgeschnittene, aber substantielle Seite trotzdem', async () => {
+    const store = memoryStore();
+    // Deutlich ueber MAX_BYTES und deutlich ueber der 200-Zeichen-Schwelle: die
+    // Kappung darf die neue Leerfund-Pruefung nicht faelschlich ausloesen.
+    const segment = 'Substantieller Inhalt, der wiederholt wird. ';
+    const body = segment.repeat(Math.ceil((MAX_BYTES + 1000) / segment.length));
+    const outcome = await createUrlIngestor().ingest(
+      'https://example.org/notizen.txt',
+      context(store, { body, headers: { 'content-type': 'text/plain' } }),
+    );
+
+    expect(outcome.notes).toEqual(expect.arrayContaining([{ code: 'content-truncated' }]));
+    expect(outcome.notes).not.toEqual(expect.arrayContaining([{ code: 'no-content' }]));
+    expect(outcome.text.trim().length).toBeGreaterThan(0);
+
+    const raw = (await store.readText(outcome.rawPath)) ?? '';
+    expect(raw).toContain('Substantieller Inhalt');
   });
 
   it('bricht ab, wenn das Signal schon gesetzt ist', async () => {

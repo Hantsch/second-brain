@@ -59,6 +59,18 @@ function pageSlug(path) {
   return path.replace(/^.*\//, '').replace(/\.md$/, '');
 }
 
+/** `areas/<slug>.md` (not `.condensed.md`), keyed by slug. */
+function areaSlugOf(path) {
+  const match = /^areas\/([^/]+)\.md$/.exec(path);
+  return match ? match[1] : null;
+}
+
+/** `areas/<slug>.condensed.md`, keyed by slug. */
+function condensedSlugOf(path) {
+  const match = /^areas\/([^/]+)\.condensed\.md$/.exec(path);
+  return match ? match[1] : null;
+}
+
 export function checkVault(root, today = new Date()) {
   const files = walk(root);
   const problems = [];
@@ -66,6 +78,8 @@ export function checkVault(root, today = new Date()) {
   const dumps = [];
   const projects = [];
   const rawLogs = [];
+  const areas = new Map();
+  const condensed = new Map();
 
   for (const path of files) {
     const content = readFileSync(join(root, path), 'utf8');
@@ -96,6 +110,10 @@ export function checkVault(root, today = new Date()) {
     }
     if (fields?.type === 'dump') dumps.push({ path, fields });
     if (fields?.type === 'project') projects.push({ path, fields });
+    const areaSlug = areaSlugOf(path);
+    if (areaSlug && fields?.type === 'area') areas.set(areaSlug, { path, fields });
+    const condensedSlug = condensedSlugOf(path);
+    if (condensedSlug) condensed.set(condensedSlug, { path, fields });
   }
 
   /* Wikilinks: Katalog und Chronik zählen nicht als eingehende Verweise —
@@ -153,6 +171,21 @@ export function checkVault(root, today = new Date()) {
     .filter((project) => !project.fields.next_step)
     .map((project) => project.path);
 
+  /* Verdichtung fällig (Story 039): eine Area ohne Artefakt, oder ein Artefakt,
+     dessen `sources:`-Eintrag keinen passenden `source_hashes:`-Wert trägt —
+     „ein Quelleintrag ohne Hash gilt als geändert" (Decision, story 039). Kein
+     Nachbau des echten Inhaltshash-Vergleichs (dafür bräuchte es den Index),
+     nur dieselbe Frage, die der Gardener stellt: steht für jede Quelle ein Hash? */
+  const condensationDue = [...areas.entries()]
+    .filter(([slug]) => {
+      const artifact = condensed.get(slug);
+      if (!artifact) return true;
+      const sources = Array.isArray(artifact.fields.sources) ? artifact.fields.sources : [];
+      const hashes = artifact.fields.source_hashes ?? {};
+      return sources.some((source) => !(source in hashes));
+    })
+    .map(([, area]) => area.path);
+
   return {
     files,
     problems,
@@ -165,6 +198,7 @@ export function checkVault(root, today = new Date()) {
       unprocessedSources,
       unfiledDumps,
       withoutNextStep,
+      condensationDue,
     },
   };
 }
@@ -172,13 +206,25 @@ export function checkVault(root, today = new Date()) {
 /** Was der Seed absichtlich einbaut. Abweichungen sind Fehler, nicht Zufall. */
 export const EXPECTED_FINDINGS = {
   broken: 1,
-  orphans: 1,
+  /* Two, deliberately: `scim` (identity-management, exactly one unambiguous
+     mention — the regression case for the unchanged one-click fix) and
+     `notiz-communities-interview` (second-brain-methodik, zero mention
+     candidates — 016 D8's picker fixture). See the comment in
+     module-methodik.mjs for why the second one stays at zero candidates. */
+  orphans: 2,
   missingFromIndex: 1,
   stalePages: 1,
   contradictions: 2,
-  unprocessedSources: 1,
+  /* Two: `raw/web/<day>-digital-gardening-ueberblick.md` (never condensed) and
+     `raw/youtube/zQPz9x2LKrT` (Story 051: no transcript, `blocked:
+     'no-transcript'` — condensing it needs an explicit "digest from
+     description" click on the source screen, never a silent fallback). */
+  unprocessedSources: 2,
   unfiledDumps: 1,
   withoutNextStep: 1,
+  /* Story 039: `gesundheit` (Artefakt ohne `source_hashes`, gilt als geändert),
+     `kunden-und-team` und `finanzen` (Material, kein Artefakt). */
+  condensationDue: 3,
 };
 
 /** Vergleicht die gefundenen mit den erwarteten Befunden. */

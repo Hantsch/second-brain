@@ -1,9 +1,9 @@
-/* Schlüssel im Speicher. Für Tests und für den Fall, dass es keine
-   verschlüsselte Ablage gibt (dann sind die Schlüssel nach dem Beenden weg —
-   besser als sie im Klartext auf die Platte zu schreiben).
+/* Keys in memory. For tests, and for the case where there is no encrypted
+   storage available (then the keys are gone after quitting — better than
+   writing them to disk in plain text).
 
-   Die echte Ablage sitzt im Main (`safeStorage`) und implementiert dasselbe
-   Interface. */
+   The real storage lives in main (`safeStorage`) and implements the same
+   interface. */
 
 import type { KeyStore } from './types';
 

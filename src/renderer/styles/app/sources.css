@@ -1,13 +1,29 @@
-/* Quellen aufnehmen: Ablagefläche, Eingang, yt-dlp-Zeile, Aufträge.
-   Farben, Abstände und Radien ausschließlich aus den Gaston-Tokens.
-   Die Quellenzeile selbst benutzt `sb-row*` aus content.css — eine Quelle sieht
-   im Modul-Screen genauso aus wie hier. */
+/* Ingesting sources: drop zone, input, yt-dlp row, jobs.
+   Colors, spacing, and radii exclusively from the Gaston tokens.
+   The source row itself uses `sb-row*` from content.css — a source looks the
+   same in the module screen as it does here. */
 
-/* ── Quellen: Eingang ───────────────────────────────────────────────────── */
+/* ── Sources: input ─────────────────────────────────────────────────────── */
 
+/* The zone is the body of the sources tab, not a bare wrapper: it sits in the
+   screen column and stacks the panels itself, with the same gap the screen
+   column uses. Without that, the panels below the header would collapse
+   against each other.
+
+   It also has to reach the bottom of the window. As a flex item it would
+   otherwise end with its last panel, and a file dropped into the empty space
+   below — the obvious place to aim at in a fresh vault — would land nowhere.
+   Only a screen that actually carries a zone is stretched; every other screen
+   keeps its content height. */
+.sb-screen:has(> .sb-dropzone) {
+  min-height: 100%;
+}
 .sb-dropzone {
   position: relative;
-  min-height: 100%;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
 }
 .sb-dropzone-veil {
   position: absolute;
@@ -101,7 +117,7 @@
   color: var(--text-faint);
 }
 
-/* ── Quellen: Aufträge ──────────────────────────────────────────────────── */
+/* ── Sources: jobs ──────────────────────────────────────────────────────── */
 
 .sb-joblist {
   list-style: none;
@@ -187,4 +203,157 @@
 .sb-row-side {
   flex-shrink: 0;
   font-size: var(--text-xs);
+}
+.sb-row-condense {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.sb-row-condense .gs-field {
+  min-width: 0;
+}
+.sb-row-condense .gs-input {
+  width: 160px;
+  height: var(--control-h-sm);
+}
+
+/* ── Source detail ─────────────────────────────────────────────────────── */
+
+.sb-source-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  max-height: min(68vh, 720px);
+  overflow-y: auto;
+  padding-right: var(--space-1);
+}
+.sb-source-detail-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.sb-source-detail-section + .sb-source-detail-section {
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border-subtle);
+}
+.sb-source-detail-heading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.sb-source-detail-heading h3 {
+  margin-right: auto;
+  font-size: var(--text-base);
+}
+.sb-source-detail-facts {
+  display: grid;
+  grid-template-columns: minmax(100px, auto) minmax(0, 1fr);
+  gap: var(--space-2) var(--space-4);
+  margin: 0;
+  font-size: var(--text-sm);
+}
+.sb-source-detail-facts dt {
+  color: var(--text-faint);
+}
+.sb-source-detail-facts dd {
+  min-width: 0;
+  margin: 0;
+  color: var(--text-body);
+  overflow-wrap: anywhere;
+}
+.sb-source-detail-empty,
+.sb-source-detail-hint {
+  max-width: 72ch;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+}
+.sb-source-detail-hint {
+  color: var(--text-faint);
+  font-size: var(--text-xs);
+}
+.sb-resource-list,
+.sb-attachment-list,
+.sb-description-links ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.sb-resource-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.sb-resource-list > li {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+}
+.sb-resource-list p {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+}
+.sb-resource-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  width: 100%;
+}
+.sb-resource-title strong {
+  color: var(--text-heading);
+  font-size: var(--text-sm);
+}
+.sb-resource-link {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sb-description-links summary {
+  display: flex;
+  align-items: center;
+  min-height: var(--sb-hit);
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  cursor: pointer;
+}
+.sb-description-links li {
+  min-width: 0;
+}
+.sb-description-links .sb-textlink {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sb-attachment-list li + li {
+  border-top: 1px solid var(--border-subtle);
+}
+.sb-attachment-list .sb-row-button {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  min-height: var(--sb-hit);
+  padding: var(--space-2);
+  color: var(--text-body);
+}
+
+@media (max-width: 700px) {
+  .sb-source-detail-facts {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-1);
+  }
+  .sb-source-detail-facts dd + dt {
+    margin-top: var(--space-2);
+  }
 }

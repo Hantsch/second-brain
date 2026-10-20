@@ -10,7 +10,15 @@ import { askQuestion, fileBack, linkifyAnswer, parseIndex, parseLog } from '@cor
 import type { Citation } from '@shared/types';
 import { gatewayWithReplies } from '../../helpers/llm';
 import { NOW_MS, TODAY } from '../../helpers/time';
-import { INDEX_PATH, LOG_PATH, MODULE, TOKEN_PATH, wikiFixture } from './fixtures';
+import {
+  CONDENSED_PATH,
+  INDEX_PATH,
+  LOG_PATH,
+  MODULE,
+  TOKEN_PATH,
+  condensedAreaFiles,
+  wikiFixture,
+} from './fixtures';
 
 const SOURCE_PATH = `modules/${MODULE}/wiki/sources/s-2026-08-04-token-lifetimes-blog.md`;
 const PROJECT_PATH = 'projects/work/kundenportal-relaunch/project.md';
@@ -146,6 +154,51 @@ describe('fileBack', () => {
 
     expect(second.page.slug).toBe('wie-lange-leben-tokens-2');
     expect(await fixture.text(PAGE_PATH)).toContain('Access-Token leben 15 Minuten');
+  });
+
+  it('laesst ein verdichtetes Zitat weg, behaelt aber die uebrigen Belege', async () => {
+    const fixture = await wikiFixture(condensedAreaFiles());
+    const withCondensed: Citation[] = [
+      ...CITATIONS,
+      { path: CONDENSED_PATH, title: 'Gesundheit — verdichtet', quote: 'Pausen helfen', line: 1 },
+    ];
+
+    const result = await fileBack(fixture.deps(gatewayWithReplies({}).gateway), {
+      module: MODULE,
+      title: 'Wie lange leben Tokens ohne Verdichtung',
+      answer: ANSWER,
+      citations: withCondensed,
+      question: 'Wie lange leben Access-Token?',
+    });
+
+    const doc = await fixture.store.read(result.page.path);
+    expect(doc?.body).toContain('## Belege');
+    expect(doc?.body).not.toContain(CONDENSED_PATH);
+    expect(doc?.body).toContain(TOKEN_PATH);
+    expect((doc?.frontmatter as { sources?: string[] })?.sources).not.toContain(CONDENSED_PATH);
+
+    const log = await fixture.text(LOG_PATH);
+    const latest = parseLog(log)[0];
+    expect(latest?.fields['answered from']).not.toContain(CONDENSED_PATH);
+  });
+
+  it('schreibt die Seite ohne Beleg-Abschnitt, wenn alle Zitate verdichtet sind', async () => {
+    const fixture = await wikiFixture(condensedAreaFiles());
+    const onlyCondensed: Citation[] = [
+      { path: CONDENSED_PATH, title: 'Gesundheit — verdichtet', quote: 'Pausen helfen', line: 1 },
+    ];
+
+    const result = await fileBack(fixture.deps(gatewayWithReplies({}).gateway), {
+      module: MODULE,
+      title: 'Nur verdichtete Belege',
+      answer: 'Eine Antwort ohne verwertbaren Beleg.',
+      citations: onlyCondensed,
+    });
+
+    expect(result.write.created).toBe(true);
+    const doc = await fixture.store.read(result.page.path);
+    expect(doc?.body).not.toContain('## Belege');
+    expect((doc?.frontmatter as { sources?: string[] })?.sources).toEqual([]);
   });
 
   it('verweigert leere Eingaben und ein unbekanntes Modul', async () => {

@@ -1,12 +1,13 @@
-/* Die Belege einer Antwort — das Herzstück des Fragens.
+/* The citations of an answer — the heart of asking questions.
 
-   Eine Antwort ohne Beleg ist eine Behauptung. Deshalb steht unter jeder Antwort
-   diese Liste: Nummer, Titel, wortwörtlicher Ausschnitt, Dateipfad mit Zeile in
-   Mono. Die Nummer ist dieselbe wie die Marke `[1]` im Antworttext; ein Klick auf
-   die Marke springt hierher und hebt den Beleg hervor.
+   An answer without a citation is just a claim. That's why this list stands
+   under every answer: number, title, verbatim excerpt, file path with line in
+   mono. The number matches the marker `[1]` in the answer text; clicking the
+   marker jumps here and highlights the citation.
 
-   Markiert werden die Wörter der Frage im Zitat — dieselbe Hervorhebung wie in der
-   Volltextsuche. Ohne Modell ist diese Liste das Ergebnis, nicht die Zugabe. */
+   The words of the question are highlighted in the quote — the same
+   highlighting as in full-text search. Without a model, this list is the
+   result, not a bonus. */
 
 import type { ReactNode } from 'react';
 import type { Citation } from '@shared/types';
@@ -14,13 +15,13 @@ import { IconButton } from '../atoms/IconButton';
 import { useT } from '../i18n';
 import { plainExcerpt } from './markdown-render';
 
-/** Kürzeste Länge eines Wortes, das im Zitat markiert wird. */
+/** Shortest length of a word that gets highlighted in the quote. */
 const MIN_TERM = 4;
 
 /**
- * Wörter, die in jeder zweiten Frage stehen. Sie zu markieren macht aus dem Zitat
- * einen Flickenteppich und verdeckt, was wirklich getroffen hat — dieselbe
- * Überlegung wie bei den Titel-Stoppwörtern in `core/capture/mentions`.
+ * Words that show up in every other question. Highlighting them would turn
+ * the quote into a patchwork and obscure what actually matched — the same
+ * consideration as for the title stopwords in `core/capture/mentions`.
  */
 const STOPWORDS = new Set([
   'aber',
@@ -82,7 +83,7 @@ const STOPWORDS = new Set([
   'wurde',
 ]);
 
-/** Anker eines Belegs im DOM — die Belegmarke im Text springt hierhin. */
+/** A citation's anchor in the DOM — the citation marker in the text jumps here. */
 export function citationDomId(messageId: string, index: number): string {
   return `sb-cite-${messageId}-${index}`;
 }
@@ -91,7 +92,7 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-/** Die tragenden Wörter der Frage — sie werden im Zitat markiert. */
+/** The load-bearing words of the question — they get highlighted in the quote. */
 export function highlightTerms(question: string): string[] {
   return [
     ...new Set(
@@ -103,10 +104,10 @@ export function highlightTerms(question: string): string[] {
   ];
 }
 
-/** Zitat mit markierten Fundstellen. Nur Text — nichts Fremdes wird gerendert.
-    Vorher durch `plainExcerpt`: die Vorschau zeigt lesbaren Fließtext, nicht
-    rohes `##`, `- ` oder `[[…]]` — der wörtliche Text bleibt im Beleg-Panel
-    mit Zeilennummern stehen, wo er hingehört. */
+/** Quote with matches highlighted. Text only — nothing foreign is rendered.
+    Passed through `plainExcerpt` first: the preview shows readable prose, not
+    raw `##`, `- ` or `[[…]]` — the verbatim text stays in the citation panel
+    with line numbers, where it belongs. */
 function mark(quote: string, terms: readonly string[]): ReactNode[] {
   const clean = plainExcerpt(quote);
   if (terms.length === 0) return [clean];
@@ -123,16 +124,16 @@ function mark(quote: string, terms: readonly string[]): ReactNode[] {
 }
 
 export interface CitationListProps {
-  /** Nachricht, zu der die Belege gehören — sie bildet die Anker-Kennungen. */
+  /** Message the citations belong to — it forms the anchor ids. */
   messageId: string;
   citations: readonly Citation[];
-  /** Hervorgehobener Beleg, 1-basiert. */
+  /** Highlighted citation, 1-based. */
   active?: number | null;
-  /** Beleg im Kontext ansehen, 1-basiert. */
+  /** View citation in context, 1-based. */
   onSelect: (index: number) => void;
-  /** Datei im Editor öffnen. */
+  /** Open the cited file — in the app since 059 (`AskPanel` hands in `useOpenDoc`). */
   onOpen: (path: string) => void;
-  /** Frage, deren Wörter im Zitat markiert werden. */
+  /** Question whose words get highlighted in the quote. */
   question?: string;
 }
 
@@ -173,9 +174,9 @@ export function CitationList({
               </span>
             </button>
             <IconButton
-              icon="external-link"
+              icon="book-open"
               size="sm"
-              label={t('common.openInEditor')}
+              label={t('ask.citation.openInApp')}
               onClick={() => onOpen(citation.path)}
             />
           </li>

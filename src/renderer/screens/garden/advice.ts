@@ -1,28 +1,30 @@
-/* Höchstens drei Sätze: was als nächstes zu tun ist.
+/* At most three sentences: what to do next.
 
-   Zwei Quellen, klar getrennt:
+   Two sources, clearly separated:
 
-   - **Mit Modell** kommt der Rat aus dem Bericht (`report.advice`, im Kern hart
-     geprüft und auf drei Sätze begrenzt). Dann steht er da, wie er ist.
-   - **Ohne Modell ist `advice` leer** — der Kern deutet nicht ohne Modell. Statt
-     einer leeren Zeile leitet der Screen den Rat aus der Aufschlüsselung ab: die
-     drei Kategorien, die am meisten Punkte kosten, jede mit ihrem Satz. Und er
-     sagt, dass er das getan hat (`garden.advice.heuristic`) — genau wie
-     `projects:suggestStatus` mit `heuristic: true`.
+   - **With a model**, the advice comes from the report (`report.advice`,
+     strictly validated in the core and capped at three sentences). Then it's
+     shown as it is.
+   - **Without a model, `advice` is empty** — the core doesn't interpret
+     without a model. Instead of an empty line, the screen derives the advice
+     from the breakdown: the three categories that cost the most points, each
+     with its own sentence. And it says that it did this
+     (`garden.advice.heuristic`) — exactly like `projects:suggestStatus` with
+     `heuristic: true`.
 
-   Die Reihenfolge kommt aus `healthContributions` (der Kern sortiert nach
-   Punkten). Fehlt die Aufschlüsselung — ein Bericht aus einer früheren Fassung —,
-   wird aus den Befunden selbst gezählt, nicht geraten. */
+   The order comes from `healthContributions` (the core sorts by points). If
+   the breakdown is missing — a report from an earlier version — it's counted
+   from the findings themselves, not guessed. */
 
 import type { GardenerFinding, GardenerFindingKind, GardenerReport } from '@shared/types';
 import { t } from '../../i18n';
 
-/** So viele Sätze höchstens — dieselbe Grenze wie im Kern (`MAX_ADVICE`). */
+/** At most this many sentences — the same limit as in the core (`MAX_ADVICE`). */
 export const MAX_ADVICE = 3;
 
 export interface Advice {
   sentences: string[];
-  /** Ohne Modell abgeleitet? Dann sagt der Screen es. */
+  /** Derived without a model? Then the screen says so. */
   heuristic: boolean;
 }
 
@@ -36,7 +38,7 @@ function kindsByWeight(report: GardenerReport): GardenerFindingKind[] {
   return [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([kind]) => kind);
 }
 
-/** Der Rat zu diesem Bericht. Ohne Befunde gibt es nichts zu raten. */
+/** The advice for this report. Without findings, there's nothing to advise. */
 export function adviceFor(report: GardenerReport): Advice {
   if (report.advice.length > 0) {
     return { sentences: report.advice.slice(0, MAX_ADVICE), heuristic: false };
@@ -50,7 +52,7 @@ export function adviceFor(report: GardenerReport): Advice {
   };
 }
 
-/** Die Zahl der Befunde einer Art — für die Zeile neben dem Rat. */
+/** The number of findings of one kind — for the line next to the advice. */
 export function countOfKind(
   findings: readonly GardenerFinding[],
   kind: GardenerFindingKind,

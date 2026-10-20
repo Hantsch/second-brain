@@ -1,11 +1,11 @@
 /**
- * Reindumpen: Text → Datei in `inbox/`.
+ * Just dump it: text → file in `inbox/`.
  *
- * Der Schreibpfad ist absichtlich dumm. Er ordnet nichts ein, ruft kein Modell
- * und wartet auf nichts: der Gedanke muss weg sein, bevor er verloren geht.
- * Eingeordnet wird später, als Vorschlag, den der Nutzer bestätigt.
+ * The write path is deliberately dumb. It files nothing, calls no model, and
+ * waits on nothing: the thought has to be captured before it's lost. Filing
+ * happens later, as a proposal the user confirms.
  *
- * Format: docs/VAULT-FORMAT.md, Abschnitt „Dump".
+ * Format: docs/VAULT-FORMAT.md, section "Dump".
  */
 
 import type { CaptureOrigin, DumpItem, Scope, WriteResult } from '@shared/types';
@@ -15,23 +15,24 @@ import type { DateLike } from '@core/vault/paths';
 import { dumpId } from '@core/index/dumps';
 
 /**
- * Was der Schreibpfad am Store braucht — bewusst schmal. `VaultStore` erfüllt es
- * strukturell; die Shell reicht ihre eigene, ebenso schmale Sicht herein.
+ * What the write path needs from the store — deliberately narrow.
+ * `VaultStore` fulfills it structurally; the shell passes in its own,
+ * equally narrow view.
  */
 export interface DumpStore {
   exists(path: string): Promise<boolean>;
   create(path: string, frontmatter: Record<string, unknown>, body: string): Promise<WriteResult>;
 }
 
-/** Laenge des abgeleiteten Titels. Genug für eine Zeile in der Inbox. */
+/** Length of the derived title. Enough for one line in the inbox. */
 const TITLE_CHARS = 70;
 
-/** So viele Namensvarianten werden probiert, wenn die Minute schon belegt ist. */
+/** This many name variants are tried when the minute is already taken. */
 const MAX_ATTEMPTS = 50;
 
 /**
- * Platz, den die Unterscheidung im Namen braucht: '-2' bis '-50', im Notfall
- * '-<Millisekunden>' (13 Stellen plus Bindestrich).
+ * Room the disambiguation needs in the name: '-2' through '-50', or as a
+ * last resort '-<milliseconds>' (13 digits plus a hyphen).
  */
 const SUFFIX_ROOM = 14;
 
@@ -43,11 +44,11 @@ export interface DumpInput {
 }
 
 export interface DumpWriteOptions {
-  /** Das „jetzt" für Dateiname und `created`. Tests geben eine feste Zeit. */
+  /** The "now" for the filename and `created`. Tests supply a fixed time. */
   now?: DateLike;
 }
 
-/** Der Text ist leer, es gibt nichts abzulegen. */
+/** The text is empty, there is nothing to file. */
 export class EmptyDumpError extends Error {
   readonly code = 'invalid' as const;
 
@@ -58,8 +59,8 @@ export class EmptyDumpError extends Error {
 }
 
 /**
- * Titel eines Dumps: die erste inhaltliche Zeile, gekürzt. Ein Dump hat keinen
- * Titel — deshalb wird er abgeleitet und nicht erfunden.
+ * Title of a dump: the first content line, truncated. A dump has no title —
+ * that's why one is derived rather than invented.
  */
 export function dumpTitle(text: string, maxChars = TITLE_CHARS): string {
   const first = text
@@ -75,13 +76,14 @@ export function dumpTitle(text: string, maxChars = TITLE_CHARS): string {
 }
 
 /**
- * Freier Pfad in `inbox/`: bei Kollision wird '-2', '-3' … angehängt.
+ * Free path in `inbox/`: on collision, '-2', '-3', … gets appended.
  *
- * Der Namensteil wird für die Varianten **vorher** gekürzt. `inboxPath` slugifiziert
- * erneut und kappt dabei auf `MAX_SLUG_LENGTH` — bei einem langen Titel fiele die
- * angehängte Nummer genau dieser Kappung zum Opfer, jeder Versuch hieße wieder
- * gleich, und der zweite Dump derselben Minute käme als Konflikt zurück statt als
- * Datei. Ein Gedanke darf nicht daran scheitern, dass er lang anfängt.
+ * The name portion is truncated **beforehand** for the variants. `inboxPath`
+ * slugifies again and truncates to `MAX_SLUG_LENGTH` in the process — with a
+ * long title, the appended number would fall victim to exactly that
+ * truncation, every attempt would end up with the same name, and the second
+ * dump of the same minute would come back as a conflict instead of a file.
+ * A thought must not fail just because it starts out long.
  */
 async function freeInboxPath(store: DumpStore, at: DateLike, slug: string): Promise<string> {
   const first = inboxPath(at, slug);
@@ -96,8 +98,8 @@ async function freeInboxPath(store: DumpStore, at: DateLike, slug: string): Prom
 }
 
 /**
- * Schreibt den Dump und gibt ihn zurück, wie der Renderer ihn anzeigt.
- * Der Index zieht über den Watcher nach — hier wird nichts indiziert.
+ * Writes the dump and returns it in the shape the renderer displays.
+ * The index catches up via the watcher — nothing gets indexed here.
  */
 export async function writeDump(
   store: DumpStore,
@@ -140,5 +142,8 @@ export async function writeDump(
     wordCount: wordCount(text),
     tags,
     scope,
+    // A fresh dump is unfiled by definition — there is nothing to point at yet.
+    filedInto: null,
+    filedAt: null,
   };
 }

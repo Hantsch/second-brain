@@ -1,8 +1,9 @@
-/* Fixture-Daten für die Mock-Brücke. Ein kleiner, in sich stimmiger
-   Beispiel-Vault, damit die Oberfläche ohne Electron etwas zu zeigen hat.
-   Nur Ansichtsdaten — nichts hiervon berührt eine Datei. */
+/* Fixture data for the mock bridge. A small, internally consistent
+   example vault so the UI has something to show without Electron.
+   View data only — none of this touches a file. */
 
 import type {
+  Area,
   ChatThread,
   ClaudeSession,
   DumpItem,
@@ -19,7 +20,7 @@ import type {
   VaultStatus,
   WikiPage,
 } from '@shared/types';
-import type { AppInfo, IndexStats } from '@shared/ipc';
+import type { AppInfo, IndexStats, ReleaseNotes } from '@shared/ipc';
 
 export const NOW = '2026-08-10T14:32:00+02:00';
 export const TODAY = '2026-08-10';
@@ -31,6 +32,7 @@ export const vaultStatus: VaultStatus = {
   docCount: 42,
   indexedAt: NOW,
   indexing: false,
+  indexRefreshFailedAt: null,
 };
 
 export const indexStats: IndexStats = {
@@ -42,6 +44,7 @@ export const indexStats: IndexStats = {
   words: 18420,
   builtAt: NOW,
   durationMs: 640,
+  oversized: [],
 };
 
 export const appInfo: AppInfo = {
@@ -50,6 +53,11 @@ export const appInfo: AppInfo = {
   electron: '',
   userData: '',
   demo: true,
+};
+
+export const releaseNotes: ReleaseNotes = {
+  version: appInfo.version,
+  markdown: '### Added\n\n- Update notes in About.',
 };
 
 export const doc: VaultDoc = {
@@ -72,8 +80,10 @@ export const project: Project = {
   scope: 'work',
   status: 'waiting',
   priority: 2,
+  favorite: true,
   deadline: '2026-09-01',
   nextStep: 'Rückmeldung von Stefan zur Rollenzuordnung einarbeiten',
+  nextStepStale: false,
   waitingOn: [
     { who: 'Stefan', what: 'Freigabe des Rollenkonzepts', since: '2026-08-04', due: '2026-08-12' },
   ],
@@ -89,6 +99,33 @@ export const project: Project = {
   excerpt: 'Rollenkonzept liegt bei Stefan zur Freigabe.',
 };
 
+/* One area with two entries — enough for a list, a section and a move target.
+   `excerpt` is the preview here, exactly as `areas:list` delivers it; the full
+   text of an entry comes from `areas:notes`. */
+export const area: Area = {
+  path: 'areas/gesundheit.md',
+  slug: 'gesundheit',
+  title: 'Gesundheit',
+  scope: 'private',
+  hash: 'demo-hash',
+  noteCount: 2,
+  openTodoCount: 1,
+  notes: [
+    {
+      day: '2026-08-04',
+      heading: '2026-08-04',
+      line: 22,
+      excerpt: 'Zwei Wochen Schlafprotokoll: vor Mitternacht ins Bett zu gehen wirkt mehr.',
+    },
+    {
+      day: '2026-07-28',
+      heading: '2026-07-28',
+      line: 12,
+      excerpt: 'Kurze Pausen alle 45 Minuten haben mehr gebracht als jede neue Übung.',
+    },
+  ],
+};
+
 export const todo: Todo = {
   id: 'todo-1',
   text: 'Rollen-Mapping dokumentieren',
@@ -98,6 +135,7 @@ export const todo: Todo = {
   line: 24,
   project: project.slug,
   projectTitle: project.title,
+  area: null,
   due: '2026-08-15',
   waitingFor: null,
   neededBy: null,
@@ -120,6 +158,8 @@ export const dump: DumpItem = {
   wordCount: 12,
   tags: [],
   scope: 'work',
+  filedInto: null,
+  filedAt: null,
 };
 
 export const proposal: FilingProposal = {
@@ -148,11 +188,13 @@ export const journalDay: JournalDay = {
   path: `journal/2026/08/${TODAY}.md`,
   date: TODAY,
   title: 'Montag, 10. August 2026',
+  closed: null,
   mood: 3,
   energy: 2,
   people: ['Stefan'],
   projects: [project.slug],
   tags: [],
+  areas: [],
   excerpt: 'Vormittag mit dem Rollenkonzept verbracht.',
   wordCount: 180,
   turns: 2,
@@ -245,7 +287,7 @@ export const reminder: Reminder = {
   who: 'Stefan',
 };
 
-export const claudeSession: ClaudeSession = {
+export const claudeSession: ClaudeSession & { agent: 'claude'; projectKey: string } = {
   id: 'session-1',
   cwd: 'C:/development/Kunde/Nyota-Auth0-Infrastructure',
   projectName: 'Nyota-Auth0-Infrastructure',
@@ -257,12 +299,18 @@ export const claudeSession: ClaudeSession = {
   firstPrompt: 'Terraform-State auf den neuen Mandanten migrieren',
   summary: 'State migriert, Rollen noch offen.',
   files: ['main.tf', 'roles.tf'],
+  model: null,
+  subagents: null,
+  contextTokens: null,
+  agent: 'claude',
+  projectKey: 'c:/development/kunde/nyota-auth0-infrastructure',
 };
 
-/* Der Bericht der Attrappe trägt drei Arten von Befund, weil der Pflege-Screen
-   drei Wege zeigt: einen ohne Fix, einen mit geschriebener Zeile (samt Vorschau)
-   und einen Widerspruch mit seiner eigenen Darstellung. Ohne den dritten wäre der
-   wichtigste Befundtyp im Browser nie zu sehen. */
+/* The mock report carries three kinds of findings, because the maintenance
+   screen shows three paths: one without a fix, one with a written line
+   (including preview), and a contradiction with its own presentation.
+   Without the third, the most important finding type would never show
+   up in the browser. */
 export const gardenerReport: GardenerReport = {
   ranAt: NOW,
   usedLlm: false,

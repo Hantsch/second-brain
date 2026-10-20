@@ -10,12 +10,15 @@ import {
   createFileIngestor,
   createTextIngestor,
   handlingFor,
+  IngestError,
   looksLikePath,
+  MAX_TEXT_BYTES,
   titleForText,
   type IngestContext,
 } from '@core/ingest';
 import { fakeFileSystem, ingestFixture, memoryStore } from './fakes';
 import { NOW_MS } from '../../helpers/time';
+import { makeImageOnlyPdf, makeTextPdf } from '../../fixtures/pdf/make-pdf';
 
 function setup(files: Record<string, string>): {
   ctx: IngestContext;
@@ -92,7 +95,7 @@ describe('FileIngestor', () => {
     expect(source).not.toContain('Impressum');
   });
 
-  it('legt ein PDF ab, liest es aber nicht — und sagt das', async () => {
+  it('a damaged PDF is stored and noted as not read', async () => {
     const { ctx, store, fs } = setup({ 'C:/quellen/Handbuch Auth0.pdf': '%PDF-1.7 binaer' });
 
     const outcome = await createFileIngestor().ingest('C:/quellen/Handbuch Auth0.pdf', ctx);
@@ -110,6 +113,57 @@ describe('FileIngestor', () => {
       (await store.readText(`${outcome.rawPath}/.ingest.json`)) ?? '{}',
     );
     expect(record).toMatchObject({ provenance: { content: 'none' } });
+  });
+
+  it('reads a text PDF into source.md next to the original', async () => {
+    const { ctx, store, fs } = setup({});
+    fs.put('C:/quellen/Handbuch Auth0.pdf', makeTextPdf(['Seite eins.', 'Seite zwei.']));
+
+    const outcome = await createFileIngestor().ingest('C:/quellen/Handbuch Auth0.pdf', ctx);
+
+    expect(outcome.text).toContain('Seite eins.');
+    expect(outcome.text).toContain('Seite zwei.');
+    expect(outcome.notes).toEqual([]);
+    expect(outcome.provenance).toEqual({ content: 'file' });
+
+    const source = (await store.readText(`${outcome.rawPath}/source.md`)) ?? '';
+    expect(source).toContain('source_file:');
+    expect(source).toContain('Seite eins.');
+    expect(source).toContain('Seite zwei.');
+
+    expect(Object.keys(fs.copies())).toContain(
+      `${store.root}/raw/files/2026-08-10-handbuch-auth0/Handbuch-Auth0.pdf`,
+    );
+    const record: unknown = JSON.parse(
+      (await store.readText(`${outcome.rawPath}/.ingest.json`)) ?? '{}',
+    );
+    expect(record).toMatchObject({ provenance: { content: 'file' } });
+  });
+
+  it('a PDF without a text layer is stored and says so', async () => {
+    const { ctx, store, fs } = setup({});
+    fs.put('C:/quellen/Scan.pdf', makeImageOnlyPdf());
+
+    const outcome = await createFileIngestor().ingest('C:/quellen/Scan.pdf', ctx);
+
+    expect(outcome.notes).toEqual([{ code: 'pdf-no-text-layer', detail: 'Scan.pdf' }]);
+    expect(outcome.text).toBe('');
+    expect(Object.keys(fs.copies())).toContain(`${store.root}/raw/files/2026-08-10-scan/Scan.pdf`);
+    expect(await store.exists(`${outcome.rawPath}/source.md`)).toBe(false);
+  });
+
+  it('an oversized PDF fails before anything is written', async () => {
+    const { ctx, store, fs } = setup({});
+    fs.put('C:/quellen/Riesig.pdf', '%PDF-1.7 '.repeat(Math.ceil(MAX_TEXT_BYTES / 9) + 1));
+
+    await expect(createFileIngestor().ingest('C:/quellen/Riesig.pdf', ctx)).rejects.toMatchObject({
+      code: 'too-large',
+    });
+    await expect(createFileIngestor().ingest('C:/quellen/Riesig.pdf', ctx)).rejects.toBeInstanceOf(
+      IngestError,
+    );
+    expect(fs.copies()).toEqual({});
+    expect(await store.exists('raw/files')).toBe(false);
   });
 
   it('legt unbekannte Dateiarten ab, ohne sie zu deuten', async () => {

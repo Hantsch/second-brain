@@ -1,38 +1,37 @@
-/* Fehlerzustand. Die Formulierung kommt aus `IpcError.code`; die technische
-   Message steckt hinter „Details anzeigen", nie als roher Stacktrace.
+/* Error state. The wording comes from `IpcError.code`; the technical message
+   sits behind "Show details", never as a raw stack trace.
 
-   Drei Regeln aus ARCHITECTURE.md stecken in der Form: die Karte steht dort, wo
-   die auslösende Aktion war (das entscheidet der Aufrufer), sie bietet einen
-   Fluchtweg (`onRetry` führt dieselbe Aktion noch einmal aus), und sie nennt den
-   Gegenstand — „der Vault ‚kaputter-vault' ließ sich nicht öffnen" ist eine
-   Auskunft, „das hat nicht funktioniert" ein Rätsel.
+   Three rules from ARCHITECTURE.md are baked into the shape: the card sits
+   where the triggering action was (the caller decides that), it offers an
+   escape route (`onRetry` runs the same action again), and it names the
+   subject — "the vault 'broken-vault' couldn't be opened" is information,
+   "that didn't work" is a riddle.
 
-   `variant` entscheidet über das Teal: hat der Screen eine eigene primäre
-   Aktion, bleibt „Erneut versuchen" sekundär. Zwei Fokuspunkte auf einer Fläche
-   sind keiner. */
+   `variant` decides the teal: if the screen already has its own primary
+   action, "Retry" stays secondary. Two focal points on one surface are none. */
 
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '../atoms/Button';
 import { Card } from '../atoms/Card';
 import { Icon } from '../atoms/Icon';
 import { useT } from '../i18n';
-import { decodeIpcError } from '../lib/ipc-error';
+import { decodeIpcError, llmUnavailableCause } from '../lib/ipc-error';
 
 export interface ErrorStateProps {
-  /** Alles, was ein IPC-Aufruf werfen kann. */
+  /** Anything an IPC call can throw. */
   error: unknown;
   onRetry?: () => void;
   /**
-   * Worum es ging: Vaultname, Pfad, Titel. Bereits übersetzt bzw. ein Datum aus
-   * dem Vault — steht als Gegenstand im Satz.
+   * What it was about: vault name, path, title. Already translated, or a date
+   * from the vault — appears as the subject in the sentence.
    */
   subject?: string;
   /**
-   * `primary`: „Erneut versuchen" ist der Fokuspunkt der Fläche (Standard).
-   * `secondary`: der Screen hat schon einen — dann bleibt der Knopf ruhig.
+   * `primary`: "Retry" is the surface's focal point (default).
+   * `secondary`: the screen already has one — the button then stays calm.
    */
   variant?: 'primary' | 'secondary';
-  /** In den Sichtbereich rollen, sobald der Fehler erscheint. */
+  /** Scroll into view as soon as the error appears. */
   scrollIntoView?: boolean;
 }
 
@@ -48,16 +47,23 @@ export function ErrorState({
   const box = useRef<HTMLDivElement>(null);
   const failure = decodeIpcError(error);
 
-  /* Ein Fehler, den der Nutzer nicht sieht, ist ein stiller Fehler. */
+  /* An error the user doesn't see is a silent error. */
   useEffect(() => {
     if (!scrollIntoView) return;
     box.current?.scrollIntoView({ block: 'nearest' });
   }, [scrollIntoView, failure.code, failure.message]);
 
+  /* A missing model has three different fixes — assign one, enter a key,
+     switch the provider on. One generic sentence for all three sent the user
+     looking for a model that was already assigned. */
+  const cause = llmUnavailableCause(failure);
+  const key = cause === null ? failure.code : `${failure.code}.${cause.reason}`;
+  const values: Record<string, string> =
+    cause === null ? {} : { task: t(`task.${cause.task}.label`), provider: cause.provider };
   const sentence =
     subject === undefined || subject.length === 0
-      ? t(`error.code.${failure.code}`)
-      : t(`error.about.${failure.code}`, { subject });
+      ? t(`error.code.${key}`, values)
+      : t(`error.about.${key}`, { ...values, subject });
 
   return (
     <div ref={box}>

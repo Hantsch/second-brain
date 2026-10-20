@@ -45,6 +45,7 @@ function writeProject(seeder, clock, project) {
       scope: project.scope,
       status: project.status,
       priority: project.priority,
+      favorite: project.favorite,
       started: project.started,
       deadline: project.deadline,
       next_step: project.next_step,
@@ -84,6 +85,61 @@ function writeProject(seeder, clock, project) {
   }
 }
 
+/**
+ * Ein bestehendes verdichtetes Artefakt fürs Projekt `orbit-sso-migration`
+ * (Story 045, D5): dasselbe Muster wie die verdichtete Area weiter unten
+ * (`areas/gesundheit.condensed.md`, Story 038 D9), nur mit den vier
+ * Projekt-Abschnitten aus `src/core/condense/artifact.ts`
+ * (`PROJECT_SECTIONS`: Stand, Nächster Schritt, Wartet auf, Gelernt) statt den
+ * drei der Area, plus einer eigenen Direktive. Pfadform nach
+ * `src/core/condense/paths.ts` (`condensedProjectPath`):
+ * `projects/<scope>/<slug>/condensed.md`, hier als Literal aus demselben Grund
+ * wie dort — die Seed-Skripte importieren bewusst nicht aus `@core/*`. Lässt
+ * `ProjectKnowledgeTab.tsx` ohne Modell ein echtes Artefakt zeigen, nicht den
+ * Leerzustand.
+ */
+function seedCondensedProject(seeder, clock) {
+  seeder.doc(
+    'projects/work/orbit-sso-migration/condensed.md',
+    {
+      type: 'condensed',
+      title: 'Orbit SSO-Migration',
+      condensed_at: clock.at(-2, '16:30'),
+      sources: ['projects/work/orbit-sso-migration/project.md'],
+      lang: 'de',
+    },
+    `## Stand
+
+Die Migration steht still: das Rollenkonzept liegt seit zwölf Tagen bei Tobias, ohne
+seine Freigabe darf der Testmandant nicht angelegt werden. Terraform-Module,
+Gruppenabbildung und Abnahmefälle sind vorbereitet.
+Aus: projects/work/orbit-sso-migration/project.md
+
+## Nächster Schritt
+
+Nach der Freigabe des Rollenkonzepts den Testmandanten aufsetzen und die Gruppen
+importieren.
+Aus: projects/work/orbit-sso-migration/project.md
+
+## Wartet auf
+
+Tobias auf die Freigabe des Rollenkonzepts, seit zwölf Tagen überfällig. Halim auf den
+Zugang zum Testmandanten.
+Aus: projects/work/orbit-sso-migration/project.md
+
+## Gelernt
+
+Die Frage, ob Unterorganisationen die Rollen der Elternorganisation erben, entscheidet
+die Zahl der anzulegenden Gruppen — das war vorher nicht klar.
+Aus: projects/work/orbit-sso-migration/project.md
+
+## Direktiven
+
+Bei jedem Lauf explizit nennen, ob das Rollenkonzept inzwischen freigegeben ist.`,
+    clock.date(-2, '16:30'),
+  );
+}
+
 /** Zwei laufende Verantwortungen ohne Ende — der Scope steht im Frontmatter. */
 function seedAreas(seeder, clock) {
   const day = clock.day;
@@ -120,6 +176,48 @@ eine halbe Stunde mehr.`;
   seeder.bump('areas');
   countTodos(seeder, gesundheit);
 
+  /* Ein bestehendes verdichtetes Artefakt (Story 038, D9): die Area wurde schon
+     einmal kondensiert, und der Nutzer hat danach eine eigene Direktive
+     hinterlassen — genau der Zustand, den `AreaCondensedTab.tsx` ohne Modell
+     lesbar zeigen muss (Guardrail 1) und in dem eine Direktive schon steht,
+     bevor je wieder kondensiert wird. Pfadform nach
+     `src/core/condense/paths.ts` (`condensedAreaPath`): `areas/<slug>.condensed.md`,
+     hier als Literal, da die Seed-Skripte bewusst nicht aus `@core/*` importieren. */
+  seeder.doc(
+    'areas/gesundheit.condensed.md',
+    {
+      type: 'condensed',
+      title: 'Gesundheit',
+      condensed_at: clock.at(-2, '08:00'),
+      sources: ['areas/gesundheit.md'],
+      lang: 'de',
+    },
+    `## Stand
+
+Der Rücken hält sich, solange die kurzen Pausen alle 45 Minuten eingehalten werden;
+das Rückentraining läuft an drei Tagen die Woche. Beim Schlaf steht ein Zweiwochen-
+Protokoll mit im Schnitt 6 h 40 min.
+Aus: areas/gesundheit.md
+
+## Muster
+
+An den drei Trainingstagen fällt der Schlaf im Schnitt eine halbe Stunde länger aus
+als an den übrigen — Bewegung und Schlafdauer hängen sichtbar zusammen.
+Aus: areas/gesundheit.md
+
+## Offen
+
+Der Termin beim Physiotherapeuten steht noch aus. Ob sich das Muster aus Training
+und Schlaf über einen längeren Zeitraum hält, ist mit zwei Wochen Protokoll noch
+nicht gesichert.
+Aus: areas/gesundheit.md
+
+## Direktiven
+
+Keine offenen Finanz-Themen hier aufnehmen.`,
+    clock.date(-2, '08:00'),
+  );
+
   const team = `## Worum es geht
 
 Die laufende Arbeit an Beziehungen, die kein Projekt sind: Wochenrückblick an Miriam,
@@ -153,11 +251,39 @@ Sitzungs-Fallback im Kundenportal allein, ich schaue nur das Ergebnis an.`;
   );
   seeder.bump('areas');
   countTodos(seeder, team);
+
+  /* Eine dritte, gerade erst angelegte Fläche ohne eine einzige Notiz — sonst
+     zeigt keine Aufnahme, wie der Leerlauf einer aufgeklappten Sektion
+     aussieht (`notes.area.empty`). Bewusst ohne "Worum es geht": eine Fläche,
+     die noch nichts als ihre Todos trägt. */
+  const finanzen = `## Todos
+
+- [ ] Kontoauszüge der letzten drei Monate sortieren @due:${day(10)}
+
+## Notizen
+`;
+  seeder.doc(
+    'areas/finanzen.md',
+    {
+      type: 'area',
+      title: 'Finanzen',
+      scope: 'private',
+      created: day(-3),
+      updated: day(-3),
+      tags: [],
+      lang: 'de',
+    },
+    finanzen,
+    clock.date(-3, '19:40'),
+  );
+  seeder.bump('areas');
+  countTodos(seeder, finanzen);
 }
 
 export function seedProjects(seeder, clock) {
   for (const project of [...workProjects(clock), ...privateProjects(clock)]) {
     writeProject(seeder, clock, project);
   }
+  seedCondensedProject(seeder, clock);
   seedAreas(seeder, clock);
 }

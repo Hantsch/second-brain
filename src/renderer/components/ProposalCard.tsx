@@ -1,21 +1,22 @@
-/* Der Ablage-Vorschlag als Arbeitsfläche: Ziel, Begründung, Zuversicht — und
-   darunter genau der Text, der geschrieben wird, zum Ändern.
+/* The filing proposal as a workspace: target, reasoning, confidence — and
+   below that exactly the text that gets written, ready to edit.
 
-   Die KI schlägt vor, der Mensch bestätigt (Guardrail 2). Deshalb ist hier
-   nichts versteckt: das Ziel steht in Worten, die Begründung als Satz, die
-   Zuversicht als Zahl, und wenn kein Modell beteiligt war, sagt die Karte das
-   und zeigt den Weg zur Einstellung.
+   The AI proposes, the human confirms (guardrail 2). That's why nothing
+   here is hidden: the target is spelled out in words, the reasoning as a
+   sentence, the confidence as a number, and if no model was involved, the
+   card says so and shows the path to the setting.
 
-   Der Bearbeitungsstand liegt beim Screen (`useProposalEdit` in
-   `proposal-edit.ts`), damit Ctrl+Enter von außen dieselbe Fassung ablegt, die
-   hier zu sehen ist.
+   The edit state lives with the screen (`useProposalEdit` in
+   `proposal-edit.ts`), so Ctrl+Enter from outside files exactly the version
+   visible here.
 
-   Lautet das Ziel „Bleibt in der Inbox", wird nichts geschrieben — dann trägt
-   die Karte auch kein Textfeld.
+   If the target reads "Stays in the inbox", nothing gets written — then the
+   card carries no text field either.
 
-   Das Teal liegt immer auf der Aktion, die `Ctrl+Enter` ausführt. Vorher zeigte
-   der Knopf auf „Anderes Ziel" und die Taste auf „Liegen lassen": wer dem Auge
-   folgte, tat etwas anderes als wer der Tastatur folgte. */
+   The teal always sits on the action that `Ctrl+Enter` triggers. Before,
+   the button pointed at "Other target" while the key pointed at "Leave it":
+   whoever followed the eye did something different from whoever followed
+   the keyboard. */
 
 import { useId } from 'react';
 import type { Dispatch, RefObject, SetStateAction } from 'react';
@@ -33,12 +34,11 @@ import { targetLabel } from './TargetPicker';
 import type { TargetNames } from './TargetPicker';
 
 /**
- * Wohin ein Todo geht, wenn es ein eigenes Projekt nennt — sonst `null`.
+ * Where a todo goes if it names its own project — otherwise `null`.
  *
- * Der Hauptprozess legt ein Todo, das ein Projekt nennt, in dessen Datei und
- * nicht beim Hauptziel ab. Das ist ein Schreibvorgang in eine Datei, die der
- * Nutzer nicht gewählt hat; unsichtbar wäre er ein Verstoß gegen Guardrail 2.
- * Also steht er hier.
+ * The main process files a todo that names a project into that project's
+ * file, not at the main target. That's a write to a file the user didn't
+ * choose; left invisible, it would violate guardrail 2. So it's shown here.
  */
 function todoElsewhere(
   todo: ProposedTodo,
@@ -56,7 +56,7 @@ export interface ProposalCardProps {
   edit: ProposalEdit;
   onEdit: Dispatch<SetStateAction<ProposalEdit | null>>;
   names: TargetNames;
-  /** Liegt für das Einordnen ein Modell? `undefined` = noch unbekannt. */
+  /** Is a model routed for filing? `undefined` = still unknown. */
   modelRouted: boolean | undefined;
   busy: boolean;
   onFile: () => void;
@@ -83,10 +83,10 @@ export function ProposalCard({
   const textId = useId();
   const percent = Math.round(proposal.confidence * 100);
   const changed = edit.action.path !== proposal.primary.path;
-  /* „Bleibt in der Inbox" schreibt keine Datei. Dann ist „Ablegen" nicht der
-     Fokuspunkt der Karte — die Aktion, die der Vorschlag verlangt, ist „anderes
-     Ziel wählen". Der Knopf bleibt trotzdem da, aber sekundär und mit dem Namen
-     dessen, was er tut. */
+  /* "Stays in the inbox" writes no file. In that case "File" isn't the
+     card's focus point — the action the proposal calls for is "pick a
+     different target". The button stays regardless, but secondary and
+     named after what it actually does. */
   const stays = edit.action.target === 'inbox';
 
   const patch = (next: Partial<ProposalEdit>): void =>
@@ -100,6 +100,12 @@ export function ProposalCard({
         <p className="sb-proposal-reason">
           {changed ? t('inbox.proposal.changed') : proposal.reason}
         </p>
+        {edit.action.section !== null && edit.action.section.length > 0 ? (
+          <p className="sb-proposal-section">
+            {t('inbox.proposal.section')}{' '}
+            <span className="sb-mono sb-proposal-heading">{edit.action.section}</span>
+          </p>
+        ) : null}
         <p className="sb-proposal-confidence">
           <span className="sb-mono sb-proposal-value">
             {t('inbox.proposal.confidence', { percent })}
@@ -125,7 +131,7 @@ export function ProposalCard({
 
       <div className="sb-proposal-body">
         {stays ? (
-          /* Kein Feld, das einen Schreibvorgang verspricht, den es nicht gibt. */
+          /* No field that promises a write that doesn't happen. */
           <p className="sb-proposal-nothing">{t('inbox.proposal.nothing')}</p>
         ) : (
           <>
@@ -212,13 +218,13 @@ export function ProposalCard({
         ) : null}
       </div>
 
-      {/* Am unteren Rand der Spalte verankert: die Aktionen einer Karte, die
-          länger als das Fenster ist, dürfen nicht unter dem Rand liegen. */}
+      {/* Anchored at the bottom edge of the column: the actions of a card
+          that's taller than the window must not end up below the edge. */}
       <div className="sb-proposal-actions">
         {stays ? (
-          /* „Liegen lassen" schreibt `status: kept` über `capture:keep` — dem
-             einzigen Weg, der einen Rückweg kennt. `onFile` (`capture:apply`)
-             würde dasselbe Feld ohne Marke schreiben: ein Knopf ohne Rückgängig. */
+          /* "Leave it" writes `status: kept` via `capture:keep` — the only
+             path that has an undo. `onFile` (`capture:apply`) would write
+             the same field without a marker: a button with no undo. */
           <>
             <Button icon="clock" loading={busy} onClick={onKeep}>
               {t('inbox.action.leave')}

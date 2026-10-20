@@ -1,9 +1,11 @@
-/* Fehler, die über IPC gehen, tragen immer die Form `IpcError`.
-   Grundsatz: der Renderer formuliert aus dem `code`, nicht aus der Message.
-   Unbekannte Fehler bekommen deshalb eine feste, inhaltsfreie Message — kein
-   Stacktrace, kein Dateiinhalt, kein Schlüssel verlässt den Main-Prozess. */
+/* Errors that cross IPC always take the shape `IpcError`.
+   Principle: the renderer builds its wording from the `code`, not from the
+   message. Unknown errors therefore get a fixed, content-free message — no
+   stack trace, no file content, no key ever leaves the main process. */
 
+import { LlmUnavailableError } from '@core/llm';
 import type { IpcError } from '@shared/ipc';
+import type { LlmUnavailable } from '@shared/types';
 
 const CODES: readonly IpcError['code'][] = [
   'no-vault',
@@ -14,9 +16,10 @@ const CODES: readonly IpcError['code'][] = [
   'io',
   'cancelled',
   'unknown',
+  'too-large',
 ];
 
-/** Ein Fehler mit IPC-Code. Handler werfen ausschließlich diesen Typ. */
+/** An error with an IPC code. Handlers throw exclusively this type. */
 export class IpcFailure extends Error implements IpcError {
   readonly code: IpcError['code'];
   readonly detail?: unknown;
@@ -33,6 +36,16 @@ export function fail(code: IpcError['code'], message: string, detail?: unknown):
   return new IpcFailure(code, message, detail);
 }
 
+/**
+ * A task that cannot reach a model, with the exact reason in `detail` — the
+ * renderer turns `reason` and `provider` into a sentence that says what to fix,
+ * instead of one generic "no model" for every cause. The message is the core's
+ * own wording (`LlmUnavailableError`), so main and core never disagree.
+ */
+export function llmUnavailable(info: LlmUnavailable): IpcFailure {
+  return new IpcFailure('llm-unavailable', new LlmUnavailableError(info).message, info);
+}
+
 export function noVault(): IpcFailure {
   return new IpcFailure('no-vault', 'kein Vault geöffnet');
 }
@@ -43,7 +56,7 @@ function errnoToCode(code: string): IpcError['code'] | null {
   return null;
 }
 
-/** Übersetzt alles, was ein Handler wirft, in einen `IpcError`. */
+/** Translates whatever a handler throws into an `IpcError`. */
 export function toIpcError(error: unknown): IpcError {
   if (error instanceof IpcFailure) {
     return error.detail === undefined

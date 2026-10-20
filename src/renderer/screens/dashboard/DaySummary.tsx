@@ -1,13 +1,19 @@
-/* Eine Zeile, die den Tag zusammenfasst: „2 überfällig · 3 heute fällig ·
-   1 Antwort ausstehend".
+/* A line that summarizes the day: "3 due today - 1 reply pending".
 
-   Gezählt wird aus den Erinnerungen, nicht geschätzt. Jede Zahl ist ein Knopf,
-   der zu der Kachel springt, die die Sachen dahinter zeigt — und zwar nur dann,
-   wenn diese Kachel sichtbar ist. Ein Knopf, der ins Nichts führt, weil das Modul
-   ausgeblendet ist, wäre ein Knopf, der etwas behauptet.
+   Counted from the reminders, not estimated. Every number is a button that
+   jumps to the tile showing the items behind it — but only if that tile is
+   visible. A button that leads nowhere because the module is hidden would
+   be a button making a false claim.
 
-   Ist nichts überfällig und nichts heute fällig, steht genau das da. Eine leere
-   Zeile wäre keine Antwort. */
+   Overdue is deliberately NOT counted here. "Overdue" spans five reminder
+   sources (todo, project deadline, waiting-on, stalled project, loose end)
+   and no single tile shows all of them — so the number could never keep the
+   promise its jump target makes. Overdue now belongs to the tile that holds
+   the item: each one marks its own overdue rows and carries the count in its
+   header.
+
+   If nothing is due today and nobody is holding things up, that's exactly
+   what it says. An empty line would not be an answer. */
 
 import type { DashboardModuleId, Reminder } from '@shared/types';
 import { useT } from '../../i18n';
@@ -15,7 +21,7 @@ import { plural } from '../../lib/format';
 
 export interface DaySummaryProps {
   reminders: readonly Reminder[];
-  /** Welche Module stehen im Gitter? Nur dorthin wird gesprungen. */
+  /** Which modules are in the grid? Only those are jumped to. */
   visible: ReadonlySet<DashboardModuleId>;
   onJump: (id: DashboardModuleId) => void;
 }
@@ -24,30 +30,21 @@ interface Part {
   key: string;
   text: string;
   target: DashboardModuleId;
-  /** Der Ton der Nachricht — überfällig ist rot, nicht teal. */
-  tone: 'danger' | 'warning' | 'muted';
+  /** The tone of the message — due today is amber, the rest is calm. */
+  tone: 'warning' | 'muted';
 }
 
 export function DaySummary({ reminders, visible, onJump }: DaySummaryProps) {
   const t = useT();
-  const overdue = reminders.filter((reminder) => reminder.urgency === 'overdue');
   const today = reminders.filter((reminder) => reminder.urgency === 'today');
   const waiting = reminders.filter((reminder) => reminder.source === 'waiting-overdue');
 
-  /* Die Farbe kommt aus der Sache, nicht aus der Klickbarkeit: „überfällig" ist
-     `--danger`, „heute fällig" `--warning`, der Rest ruhig. Dieselbe Zuordnung wie
-     in der Kachel „Steht an" — eine Kopfzeile, die ihrer eigenen Kachel
-     widerspricht, ist schlimmer als keine. Dass man klicken kann, zeigt der
-     Unterstrich unter dem Zeiger und der Fokusring. */
+  /* The color comes from the fact itself, not from clickability: "due today"
+     is `--warning`, the rest is calm. Same mapping as in the "Upcoming" tile
+     — a headline that contradicts its own tile is worse than none at all.
+     That it's clickable is shown by the underline on hover and the focus
+     ring. */
   const parts: Part[] = [];
-  if (overdue.length > 0) {
-    parts.push({
-      key: 'overdue',
-      text: t('dashboard.summary.overdue', { count: overdue.length }),
-      target: 'deadlines',
-      tone: 'danger',
-    });
-  }
   if (today.length > 0) {
     parts.push({
       key: 'today',
@@ -65,9 +62,9 @@ export function DaySummary({ reminders, visible, onJump }: DaySummaryProps) {
     });
   }
 
-  /* Die Überschrift der Zeile steht als versteckter Text darin, nicht als
-     `aria-label`: ein Absatz ist ein generisches Element, und ein Name daran
-     wird von manchen Hilfsmitteln stillschweigend verworfen. */
+  /* The line's heading is included as hidden text, not as an `aria-label`:
+     a paragraph is a generic element, and a name attached to it is silently
+     dropped by some assistive technologies. */
   return (
     <p className="sb-daysummary">
       <span className="sb-visually-hidden">{`${t('dashboard.summary.label')}: `}</span>

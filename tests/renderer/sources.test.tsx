@@ -1,11 +1,13 @@
 // @vitest-environment jsdom
-/* Der Quellen-Screen: neue Quellen hineinbekommen.
+/* Der Quellen-Tab unter „Wissen": neue Quellen hineinbekommen.
  *
  * Drei Zusagen werden hier geprüft:
  * - Der Eingang **erkennt selbst**, was hereinkommt, sagt es sichtbar, und
  *   schickt genau diese Art an den Hauptprozess. Ein YouTube-Link, der als „url"
  *   losgeschickt wird, verliert das Transcript — das darf nicht passieren.
- * - Fortschritt kommt aus `event:ingest-progress` und steht in der Liste.
+ * - Fortschritt kommt über `event:work-tasks` herein (074, D6) — ein
+ *   `WorkTask` vom Kind `ingest` trägt den Auftrag als `detail` — und steht
+ *   in der Liste.
  * - `awaiting-llm` ist ein eigener, ehrlicher Zustand mit zwei Wegen, kein
  *   Fehler und kein halber Erfolg.
  */
@@ -17,8 +19,8 @@ import userEvent from '@testing-library/user-event';
 import axe from 'axe-core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { IpcChannel, IpcEventName, IpcEvents, IpcRequest, IpcResponse } from '@shared/ipc';
-import type { IngestJob, KnowledgeModule, RawSource } from '@shared/types';
-import { SourcesScreen } from '@renderer/screens/sources/SourcesScreen';
+import type { IngestJob, KnowledgeModule, RawSource, SourceDetail, WorkTask } from '@shared/types';
+import { SourcesTab } from '@renderer/screens/sources/SourcesTab';
 import { detectKind } from '@renderer/screens/sources/detect';
 import { setLanguage } from '@renderer/i18n';
 import type { SbBridge } from '@renderer/lib/bridge';
@@ -92,6 +94,7 @@ const condensed: RawSource = {
   origin: 'https://www.youtube.com/watch?v=xOFkpf9KgKg',
   bytes: 48210,
   modules: [MODULE],
+  blocked: null,
 };
 
 const raw: RawSource = {
@@ -103,7 +106,24 @@ const raw: RawSource = {
   origin: 'https://example.org/digital-gardening-ueberblick',
   bytes: 4210,
   modules: [],
+  blocked: null,
 };
+
+const blocked: RawSource = {
+  path: 'raw/youtube/no-transcript-1',
+  title: 'Stream ohne Untertitel',
+  kind: 'youtube',
+  ingestedAt: NOW,
+  sourcePage: null,
+  origin: 'https://www.youtube.com/watch?v=no-transcript-1',
+  bytes: 1024,
+  modules: [],
+  blocked: 'no-transcript',
+};
+
+function sourceDetail(source: RawSource, patch: Partial<SourceDetail> = {}): SourceDetail {
+  return { source, resourceReport: null, attachments: [], ...patch };
+}
 
 function job(patch: Partial<IngestJob> = {}): IngestJob {
   return {
@@ -124,6 +144,34 @@ function job(patch: Partial<IngestJob> = {}): IngestJob {
   };
 }
 
+/**
+ * A `WorkTask` shaped exactly like `ipc/ingest.ts`'s `mirror()` produces for a
+ * given job (074, D4/D6): `kind: 'ingest'`, `lane: 'import'`, `detail` set to
+ * the job itself. What the sources screen actually reads out of a `WorkTask`
+ * is `detail` — the rest of the fields exist only so this is a real `WorkTask`.
+ */
+function workTask(ingestJob: IngestJob, patch: Partial<WorkTask> = {}): WorkTask {
+  return {
+    id: ingestJob.id,
+    kind: 'ingest',
+    lane: 'import',
+    subject: { label: ingestJob.label, ref: ingestJob.rawPath },
+    state: ingestJob.stage === 'queued' ? 'queued' : 'running',
+    progress: ingestJob.progress,
+    message: ingestJob.message,
+    error: ingestJob.error,
+    hasResult: false,
+    queuePosition: null,
+    queuedAt: ingestJob.startedAt ?? NOW,
+    startedAt: ingestJob.startedAt,
+    finishedAt: ingestJob.finishedAt,
+    // Mirrors the real registry task (`WorkRegistry.startExternal`, 074 D4).
+    retryable: false,
+    ...patch,
+    detail: patch.detail ?? ingestJob,
+  };
+}
+
 function renderScreen(extra: Handlers = {}) {
   const sb = installMock({
     'vault:status': () => ({
@@ -133,6 +181,7 @@ function renderScreen(extra: Handlers = {}) {
       docCount: 12,
       indexedAt: NOW,
       indexing: false,
+      indexRefreshFailedAt: null,
     }),
     'modules:list': () => [knowledgeModule],
     'modules:sources': () => [condensed, raw],
@@ -144,8 +193,8 @@ function renderScreen(extra: Handlers = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const { container } = render(
     <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={['/sources']}>
-        <SourcesScreen />
+      <MemoryRouter initialEntries={['/knowledge?tab=sources']}>
+        <SourcesTab />
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -240,12 +289,13 @@ describe('Quellen: Eingang', () => {
 });
 
 describe('Quellen: Aufträge', () => {
-  it('zeigt den Fortschritt aus event:ingest-progress', async () => {
+  it('zeigt den Fortschritt aus event:work-tasks', async () => {
     const { sb } = renderScreen({ 'ingest:jobs': () => [job()] });
     await screen.findByText('Wird geholt');
     expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe('40');
 
-    sb.emit('event:ingest-progress', job({ stage: 'summarizing', progress: 0.85 }));
+    const updated = job({ stage: 'summarizing', progress: 0.85 });
+    sb.emit('event:work-tasks', [workTask(updated)]);
 
     expect(await screen.findByText('Wird verdichtet')).toBeTruthy();
     await waitFor(() =>
@@ -257,13 +307,51 @@ describe('Quellen: Aufträge', () => {
     const { sb } = renderScreen();
     await screen.findByLabelText('URL, YouTube-Link oder Text');
 
-    sb.emit(
-      'event:ingest-progress',
-      job({ id: 'job-2', kind: 'url', label: 'example.org', stage: 'writing-raw', progress: 0.8 }),
-    );
+    const arrived = job({
+      id: 'job-2',
+      kind: 'url',
+      label: 'example.org',
+      stage: 'writing-raw',
+      progress: 0.8,
+    });
+    sb.emit('event:work-tasks', [workTask(arrived)]);
 
     expect(await screen.findByText('example.org')).toBeTruthy();
     expect(screen.getByText('Rohquelle geschrieben')).toBeTruthy();
+  });
+
+  /* 074, D6: the mirrored list carries every kind of task, not only ingest —
+     the filter on `kind === 'ingest'` must not lose a real job update just
+     because an unrelated task (e.g. a condensation) rides along in the same
+     emission. */
+  it('übernimmt einen Fortschritt, auch wenn andere Auftragsarten in derselben Sendung mitkommen', async () => {
+    const { sb } = renderScreen({ 'ingest:jobs': () => [job()] });
+    await screen.findByText('Wird geholt');
+
+    const unrelated: WorkTask = {
+      id: 'condense-1',
+      kind: 'condense',
+      lane: 'model',
+      subject: { label: 'Bereich Wachstum', ref: null },
+      state: 'done',
+      progress: 1,
+      message: null,
+      error: null,
+      hasResult: false,
+      queuePosition: null,
+      queuedAt: NOW,
+      startedAt: NOW,
+      finishedAt: NOW,
+      detail: null,
+      retryable: true,
+    };
+    const updated = job({ stage: 'summarizing', progress: 0.85 });
+    sb.emit('event:work-tasks', [unrelated, workTask(updated)]);
+
+    expect(await screen.findByText('Wird verdichtet')).toBeTruthy();
+    await waitFor(() =>
+      expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe('85'),
+    );
   });
 
   it('behandelt „kein Modell" als eigenen Zustand mit zwei Wegen', async () => {
@@ -373,15 +461,210 @@ describe('Quellen: fallen lassen', () => {
 });
 
 describe('Quellen: Bestand', () => {
-  it('hebt unverdichtete Quellen hervor', async () => {
+  it('blendet erfolgreiche Quellen standardmäßig aus und zeigt sie per Toggle', async () => {
     renderScreen();
 
     const row = (await screen.findByText('Digital Gardening: ein Überblick')).closest('li');
     expect(row).not.toBeNull();
     expect(within(row as HTMLElement).getByText('Unverdichtet')).toBeTruthy();
-    /* Die verdichtete Quelle trägt die Marke nicht. */
-    const other = screen.getByText('Your AI second brain is slowly rotting').closest('li');
+    const toggle = screen.getByLabelText('Erfolgreiche ausblenden') as HTMLInputElement;
+    expect(toggle.checked).toBe(true);
+    expect(screen.queryByText('Your AI second brain is slowly rotting')).toBeNull();
+
+    await userEvent.click(toggle);
+
+    /* Die erfolgreiche Quelle ist wieder sichtbar und trägt die Warnmarke nicht. */
+    const other = (await screen.findByText('Your AI second brain is slowly rotting')).closest('li');
     expect(within(other as HTMLElement).queryByText('Unverdichtet')).toBeNull();
+  });
+
+  it('meldet, wenn keine Quelle Aufmerksamkeit braucht', async () => {
+    renderScreen({ 'modules:sources': () => [condensed] });
+
+    expect(
+      await screen.findByText(
+        'Keine Quelle braucht gerade Aufmerksamkeit. Alle aufgenommenen Quellen sind erfolgreich verdichtet.',
+      ),
+    ).toBeTruthy();
+  });
+
+  it('öffnet Details und stößt die Verdichtung einer alten Rohquelle an', async () => {
+    const { sb } = renderScreen({
+      'ingest:detail': ({ path }) => sourceDetail({ ...raw, path }),
+      'ingest:condense': ({ path, module }) =>
+        job({ kind: 'url', rawPath: path, module, stage: 'queued', progress: 0 }),
+    });
+
+    await userEvent.click(await screen.findByText('Digital Gardening: ein Überblick'));
+
+    const dialog = await screen.findByRole('dialog', { name: raw.title });
+    expect(within(dialog).getByText('Unverdichtet')).toBeTruthy();
+    await userEvent.selectOptions(within(dialog).getByLabelText('Zielmodul'), MODULE);
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Verdichten' }));
+
+    await waitFor(() =>
+      expect(sb.calls.find((call) => call.channel === 'ingest:condense')?.payload).toEqual({
+        path: raw.path,
+        module: MODULE,
+      }),
+    );
+  });
+
+  it('sperrt „Verdichten", solange der Auftrag zu dieser Quelle läuft', async () => {
+    const { sb } = renderScreen({
+      'ingest:jobs': () => [
+        job({
+          kind: 'url',
+          rawPath: raw.path,
+          module: MODULE,
+          stage: 'summarizing',
+          progress: 0.85,
+        }),
+      ],
+      'ingest:condense': ({ path, module }) =>
+        job({ kind: 'url', rawPath: path, module, stage: 'queued', progress: 0 }),
+    });
+
+    await screen.findByText('Digital Gardening: ein Überblick');
+    const button = await screen.findByRole('button', { name: 'Wird verdichtet' });
+
+    expect((button as HTMLButtonElement).disabled).toBe(true);
+    await userEvent.click(button);
+    expect(sb.calls.some((call) => call.channel === 'ingest:condense')).toBe(false);
+  });
+
+  it('sagt beim zweiten Verdichtungslauf, dass die Quelle schon verdichtet ist', async () => {
+    renderScreen({
+      'ingest:jobs': () => [
+        job({
+          stage: 'duplicate',
+          progress: 1,
+          message: 'already-condensed',
+          rawPath: condensed.path,
+          duplicateOf: condensed.path,
+          finishedAt: NOW,
+        }),
+      ],
+    });
+
+    expect(await screen.findByText('Quelle ist bereits verdichtet')).toBeTruthy();
+    expect(screen.getByText(/zweite Source-Seite/)).toBeTruthy();
+    /* Kein „Wiederholen": das versuchte genau den Lauf, der gerade gestoppt wurde. */
+    expect(screen.queryByRole('button', { name: 'Wiederholen' })).toBeNull();
+  });
+
+  it('verdichtet direkt aus der Liste, ohne die Details zu öffnen', async () => {
+    const { sb } = renderScreen({
+      'ingest:condense': ({ path, module }) =>
+        job({ kind: 'url', rawPath: path, module, stage: 'queued', progress: 0 }),
+    });
+
+    await screen.findByText('Digital Gardening: ein Überblick');
+    await userEvent.selectOptions(
+      screen.getByLabelText('Zielmodul für Digital Gardening: ein Überblick'),
+      MODULE,
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Verdichten' }));
+
+    await waitFor(() =>
+      expect(sb.calls.find((call) => call.channel === 'ingest:condense')?.payload).toEqual({
+        path: raw.path,
+        module: MODULE,
+      }),
+    );
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('zeigt den YouTube-Ressourcenreport und nimmt Dateien nachträglich an', async () => {
+    const report: SourceDetail = sourceDetail(condensed, {
+      resourceReport: {
+        generatedAt: NOW,
+        analyzedWithModel: true,
+        model: 'local/qwen',
+        resources: [
+          {
+            name: 'ComfyUI workflow',
+            mention: 'The complete workflow is linked below.',
+            location: 'video',
+            timestamp: '12:34',
+            links: [{ url: 'https://example.org/workflow.json', label: 'Workflow download' }],
+          },
+        ],
+        descriptionLinks: [
+          { url: 'https://example.org/workflow.json', label: 'Workflow download' },
+        ],
+      },
+    });
+    const { sb, container } = renderScreen({
+      'ingest:detail': () => report,
+      'ingest:attachFiles': () => ({
+        ...report,
+        attachments: [
+          {
+            name: 'workflow.json',
+            path: `${condensed.path}/sources/workflow.json`,
+            bytes: 2048,
+            directory: false,
+          },
+        ],
+      }),
+    });
+
+    await userEvent.click(await screen.findByLabelText('Erfolgreiche ausblenden'));
+    await userEvent.click(await screen.findByText(condensed.title));
+
+    expect(await screen.findByText('ComfyUI workflow')).toBeTruthy();
+    expect(screen.getByText('im Video bei 12:34')).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: 'Workflow download' })).toHaveLength(2);
+    await userEvent.click(screen.getByRole('button', { name: 'Dateien hinzufügen' }));
+    await waitFor(() =>
+      expect(sb.calls.find((call) => call.channel === 'ingest:attachFiles')?.payload).toEqual({
+        path: condensed.path,
+      }),
+    );
+    expect(await screen.findByText('workflow.json')).toBeTruthy();
+    await expectNoViolations(container);
+  });
+
+  it('zeigt bei einer blockierten Quelle den Grund und die Alternative', async () => {
+    const { sb } = renderScreen({
+      'modules:sources': () => [blocked],
+      'ingest:condense': ({ path, module, basis }) =>
+        job({
+          kind: 'youtube',
+          rawPath: path,
+          module,
+          message: basis ?? null,
+          stage: 'queued',
+          progress: 0,
+        }),
+    });
+
+    const row = (await screen.findByText(blocked.title)).closest('li');
+    expect(row).not.toBeNull();
+    expect(within(row as HTMLElement).getByText('Kein Transcript verfügbar')).toBeTruthy();
+
+    await userEvent.selectOptions(screen.getByLabelText(`Zielmodul für ${blocked.title}`), MODULE);
+    await userEvent.click(screen.getByRole('button', { name: 'Aus Beschreibung verdichten' }));
+
+    await waitFor(() =>
+      expect(sb.calls.find((call) => call.channel === 'ingest:condense')?.payload).toEqual({
+        path: blocked.path,
+        module: MODULE,
+        basis: 'metadata',
+      }),
+    );
+  });
+
+  it('lässt eine gewöhnliche unverdichtete Zeile unverändert', async () => {
+    renderScreen();
+
+    const row = (await screen.findByText(raw.title)).closest('li');
+    expect(row).not.toBeNull();
+    expect(within(row as HTMLElement).queryByText('Kein Transcript verfügbar')).toBeNull();
+    expect(
+      within(row as HTMLElement).queryByRole('button', { name: 'Aus Beschreibung verdichten' }),
+    ).toBeNull();
   });
 
   it('erklärt im Leerzustand die vier Quellenarten', async () => {

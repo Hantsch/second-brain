@@ -1,6 +1,23 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { findLooseEnds } from '@core/journal/loose-ends';
+import type * as LooseEnds from '@core/journal/loose-ends';
 import { reminders, urgencyFor } from '@core/overview';
-import { NOW, TODAY, day, indexFrom, projectDoc, stamp } from './fixtures';
+import { NOW, TODAY, day, indexFrom, journalDoc, projectDoc, stamp } from './fixtures';
+
+/* The real rule, wrapped in a spy — same pattern as
+   `tests/core/journal/loose-ends-derived.test.ts` — so the count shows how
+   often `reminders()` actually asked it, and the output is still the rule's
+   own. */
+vi.mock('@core/journal/loose-ends', async (importOriginal) => {
+  const actual = await importOriginal<typeof LooseEnds>();
+  return { ...actual, findLooseEnds: vi.fn(actual.findLooseEnds) };
+});
+
+const findLooseEndsSpy = vi.mocked(findLooseEnds);
+
+beforeEach(() => {
+  findLooseEndsSpy.mockClear();
+});
 
 const LIMITS = { staleAfterDays: 14, deadlineHorizonDays: 14, waitingNudgeDays: 5 };
 
@@ -156,6 +173,40 @@ describe('reminders — überfällige Warte-auf', () => {
     ]);
     expect(reminders(index, LIMITS, TODAY)).toEqual([]);
   });
+
+  it('mahnt eine composer-angelegte Zeile ohne `was` nach `waitingNudgeDays` — der Titel faellt auf den Namen zurueck', () => {
+    const index = indexFrom([
+      projectDoc({
+        slug: 'nyota',
+        waitingOn: [{ who: 'Neu', what: '', since: day(-6) }],
+      }),
+    ]);
+    const list = reminders(index, LIMITS, TODAY);
+    expect(list).toHaveLength(1);
+    expect(list[0]).toMatchObject({ source: 'waiting-overdue', title: 'Neu' });
+  });
+
+  it('mahnt eine composer-angelegte Zeile mit ueberfaelliger Frist', () => {
+    const index = indexFrom([
+      projectDoc({
+        slug: 'nyota',
+        waitingOn: [{ who: 'Neu', what: '', since: day(-8), due: day(-1) }],
+      }),
+    ]);
+    const list = reminders(index, LIMITS, TODAY);
+    expect(list).toHaveLength(1);
+    expect(list[0]).toMatchObject({ source: 'waiting-overdue', title: 'Neu', date: day(-1) });
+  });
+
+  it('ignoriert eine erledigte composer-angelegte Zeile', () => {
+    const index = indexFrom([
+      projectDoc({
+        slug: 'a',
+        waitingOn: [{ who: 'Neu', what: '', since: day(-30), resolved: true }],
+      }),
+    ]);
+    expect(reminders(index, LIMITS, TODAY)).toEqual([]);
+  });
 });
 
 describe('reminders — stagnierende Projekte', () => {
@@ -187,6 +238,138 @@ describe('reminders — stagnierende Projekte', () => {
     const docs = [projectDoc({ slug: 'liegt', updated: stamp(-10) })];
     expect(reminders(indexFrom(docs), LIMITS, TODAY)).toEqual([]);
     expect(reminders(indexFrom(docs), { ...LIMITS, staleAfterDays: 7 }, TODAY)).toHaveLength(1);
+  });
+});
+
+describe('reminders — lose Enden (020, D7)', () => {
+  /* Notar-Termin, angekündigt am day(-6) für day(-5) — beide vor TODAY, damit
+     der Tag als vorbei gilt (dieselbe Konstellation wie
+     `tests/core/gardener/checks-journal.test.ts`). */
+  const notary = () =>
+    journalDoc(-6, { body: ['## Tag', '', 'Morgen bin ich beim Notar.', ''].join('\n') });
+
+  it('meldet ein unbeantwortetes loses Ende einmal, mit Quelle `loose-end`', () => {
+    const index = indexFrom([notary()]);
+    const list = reminders(index, LIMITS, TODAY).filter((entry) => entry.source === 'loose-end');
+    expect(list).toHaveLength(1);
+    expect(list[0]).toMatchObject({
+      source: 'loose-end',
+      urgency: 'open',
+      date: day(-5),
+      scope: 'private',
+    });
+    // Der Titel nennt den Gegenstand — die Begründung, warum es mahnt.
+    expect(list[0]!.title.length).toBeGreaterThan(0);
+  });
+
+  it('mahnt nicht mit `overdue` — eine Ankündigung ist keine verpasste Frist (022 D2)', () => {
+    const index = indexFrom([notary()]);
+    const list = reminders(index, LIMITS, TODAY).filter((entry) => entry.source === 'loose-end');
+    expect(list[0]!.urgency).not.toBe('overdue');
+  });
+
+  it('mahnt nicht, wenn der Gegenstand schon ein Todo mit Frist ist — `findLooseEnds` zieht das selbst ab', () => {
+    const withTodo = indexFrom([
+      notary(),
+      projectDoc({
+        slug: 'privat',
+        scope: 'private',
+        body: todoBody(`- [ ] Notar Termin vorbereiten @due:${day(-1)}`),
+      }),
+    ]);
+    const list = reminders(withTodo, LIMITS, TODAY).filter((entry) => entry.source === 'loose-end');
+    expect(list).toEqual([]);
+  });
+
+  it('haelt dieselbe Kennung wie der Pflegelauf-Befund — `loose-end:` plus derselbe Hash', () => {
+    const index = indexFrom([notary()]);
+    const list = reminders(index, LIMITS, TODAY).filter((entry) => entry.source === 'loose-end');
+    expect(list[0]!.id).toMatch(/^loose-end:[0-9a-f]{12}$/);
+  });
+
+  it('laesst sich wie jede andere Erinnerung ruhig stellen', () => {
+    const index = indexFrom([notary()]);
+    const before = reminders(index, LIMITS, TODAY).find((entry) => entry.source === 'loose-end')!;
+
+    const ruht = reminders(index, LIMITS, TODAY, new Map([[before.id, day(2)]]));
+    expect(ruht.some((entry) => entry.id === before.id)).toBe(false);
+
+    const wiederDa = reminders(index, LIMITS, TODAY, new Map([[before.id, TODAY]]));
+    expect(wiederDa.some((entry) => entry.id === before.id)).toBe(true);
+  });
+
+  it('reminders derive loose ends once per index (056, D2)', () => {
+    const index = indexFrom([notary()]);
+
+    const first = reminders(index, LIMITS, TODAY);
+    const second = reminders(index, LIMITS, TODAY);
+
+    // Same index, same day: `looseEndsDerived` answers from its cache the
+    // second time — `findLooseEnds` itself runs only once.
+    expect(findLooseEndsSpy).toHaveBeenCalledTimes(1);
+    expect(second).toEqual(first);
+
+    const list = first.filter((entry) => entry.source === 'loose-end');
+    expect(list).toHaveLength(1);
+    expect(list[0]).toMatchObject({
+      source: 'loose-end',
+      urgency: 'open',
+      date: day(-5),
+      scope: 'private',
+    });
+  });
+});
+
+describe('reminders — kommende Erwähnungen (070, D2)', () => {
+  /* Angekündigt am day(-1) für day(0) — „morgen" von gestern aus gesehen ist
+     heute, die Konstellation, die `findUpcomingMentions` als Übergabe testet. */
+  const announced = () =>
+    journalDoc(-1, { body: ['## Tag', '', 'Morgen bin ich beim Notar.', ''].join('\n') });
+
+  it('zeigt eine kommende Erwähnung als `upcoming-mention`, mit dem Zieltag als Datum', () => {
+    const index = indexFrom([announced()]);
+    const list = reminders(index, LIMITS, TODAY).filter(
+      (entry) => entry.source === 'upcoming-mention',
+    );
+    expect(list).toHaveLength(1);
+    expect(list[0]).toMatchObject({
+      source: 'upcoming-mention',
+      urgency: 'upcoming',
+      date: day(0),
+    });
+  });
+
+  it('wird einen Tag nach dem Zieltag zum losen Ende, mit derselben Kennung', () => {
+    const index = indexFrom([announced()]);
+    const before = reminders(index, LIMITS, TODAY).find(
+      (entry) => entry.source === 'upcoming-mention',
+    )!;
+
+    const after = reminders(index, LIMITS, day(1)).find((entry) => entry.source === 'loose-end')!;
+
+    expect(after).toBeDefined();
+    expect(after.id).toBe(before.id);
+  });
+
+  it('erscheint nie an beiden Quellen gleichzeitig', () => {
+    const index = indexFrom([announced()]);
+
+    const heute = reminders(index, LIMITS, TODAY);
+    expect(heute.some((entry) => entry.source === 'upcoming-mention')).toBe(true);
+    expect(heute.some((entry) => entry.source === 'loose-end')).toBe(false);
+
+    const morgen = reminders(index, LIMITS, day(1));
+    expect(morgen.some((entry) => entry.source === 'loose-end')).toBe(true);
+    expect(morgen.some((entry) => entry.source === 'upcoming-mention')).toBe(false);
+  });
+
+  it('bleibt jenseits von `deadlineHorizonDays` ganz aus', () => {
+    const farAway = indexFrom([
+      journalDoc(0, { body: ['## Tag', '', `Am ${day(20)} ist der Notartermin.`, ''].join('\n') }),
+    ]);
+    expect(
+      reminders(farAway, LIMITS, TODAY).filter((entry) => entry.source === 'upcoming-mention'),
+    ).toEqual([]);
   });
 });
 

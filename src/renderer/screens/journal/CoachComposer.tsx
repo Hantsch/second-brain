@@ -1,30 +1,25 @@
-/* Das Feld, in dem der Tag entsteht: Vertraulichkeitszeile, Composer mit
- * Haltung — im breiten Fenster als ein Block am unteren Rand der Detailspalte
- * verankert (`position: sticky`, `styles/app/journal.css`), samt „Tag
- * abschließen" (`footerAction`) direkt daneben.
+/* The field where the day takes shape: privacy line, composer with stance —
+ * the day's last section, in normal flow at the end of the detail column
+ * (`styles/app/journal.css`).
  *
- * Ein eigener Baustein statt ein Teil von `CoachPanel`, aus genau einem Grund:
- * `position: sticky` klebt nur innerhalb der Box, die dieses Element umgibt
- * (seines nächsten block-bildenden Vorfahren) — nicht am ganzen Rollbereich.
- * Als Nachfahre von `.sb-coach` wäre dieser Rahmen nur der schmale Rest des
- * Gesprächsabschnitts gewesen, tief unten auf der Seite, ohne Spielraum nach
- * oben. Als direkter Nachfahre von `.sb-dayentry` (siehe `DayEntry.tsx`) ist
- * der Rahmen die ganze Detailspalte — das Feld erreicht so den unteren Rand
- * des Fensters, ohne dass jemand scrollen muss.
+ * A separate component instead of part of `CoachPanel`, and a direct child of
+ * `.sb-dayentry` (see `DayEntry.tsx`): that way the frame spans the whole
+ * detail column and reads as the day's own footer, rather than as the narrow
+ * remainder of the talk section. It used to be `position: sticky` as well,
+ * which is where that placement originally came from; 047/D3 removed the
+ * sticky, since its only job was keeping "close the day" above the window
+ * edge and that button has left this frame. Nothing is pinned any more.
  *
- * Im engen Fenster (≤ 1200 px) trägt der Tag eigene Reiter „Tag" und
- * „Gespräch" (siehe `DayEntry.tsx`, `styles/app/journal.css`): dort lebt
- * dieser Baustein allein im Reiter „Gespräch", ohne `footerAction` — „Tag
- * abschließen" steht dort stattdessen neben den Fakten im Reiter „Tag"
- * (`JournalScreen.tsx` entscheidet anhand der Fensterbreite, wohin der eine
- * Knopf geht; verdoppelt wird er nirgends). Das Kleben braucht der Composer
- * dort ohnehin nicht mehr: sein Reiter zeigt nichts außer dem Verlauf über
- * ihm, und er ist als letztes, nicht wachsendes Element seiner eigenen,
- * begrenzten Spalte ohnehin immer im Fenster.
+ * "Close the day" no longer has a copy here (047, D3): it renders exactly
+ * once, next to the facts in `DayEntry.tsx`, regardless of window width.
+ *
+ * The field only files on the button (048, D2): Enter breaks the line like
+ * in any editor, and Shift+Enter no longer files it either — no keypress
+ * does. That used to be Shift+Enter's job; the hint now names the button
+ * instead of a key, since a hint promising a key that submits nothing would
+ * be worse than none.
  */
 
-import type { RefObject } from 'react';
-import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { CoachMode } from '@shared/types';
 import { Icon } from '../../atoms/Icon';
@@ -33,7 +28,7 @@ import { CoachModeSwitch } from '../../components/CoachModeSwitch';
 import { useT } from '../../i18n';
 import type { CoachRoute } from '../../lib/queries/journal';
 
-/** Der Weg in die Routing-Einstellung — dieselbe Adresse wie in `LlmMissing`. */
+/** The path to the routing setting — the same address as in `LlmMissing`. */
 const ROUTING_ROUTE = '/settings?tab=models';
 
 export interface CoachComposerProps {
@@ -45,15 +40,6 @@ export interface CoachComposerProps {
   mode: CoachMode;
   onMode: (mode: CoachMode) => void;
   route: CoachRoute;
-  fieldRef?: RefObject<HTMLTextAreaElement | null>;
-  /** „Tag abschließen" — nur im breiten Fenster (`JournalScreen.tsx` reicht sie
-      dort und nur dort durch): sie steht neben dem Sendeknopf, damit beide
-      Aktionen, die den Tag betreffen, gemeinsam am unteren Rand der
-      Detailspalte stehen und nie unter den sichtbaren Rand rutschen
-      (dasselbe Anker-Muster wie die Aktionsleiste der Inbox). Im engen
-      Fenster steht derselbe Knopf stattdessen bei den Fakten im Reiter „Tag"
-      (`DayEntry.tsx`) — hier bleibt die Stelle dann leer. */
-  footerAction?: ReactNode;
 }
 
 export function CoachComposer({
@@ -65,17 +51,15 @@ export function CoachComposer({
   mode,
   onMode,
   route,
-  fieldRef,
-  footerAction,
 }: CoachComposerProps) {
   const t = useT();
   const navigate = useNavigate();
 
   return (
     <div className="sb-journal-footer">
-      {/* Eine Tatsache in einer Zeile, direkt über dem Feld. Solange die
-          Route unbekannt ist, steht hier nichts: eine Zusage über
-          Vertraulichkeit darf nicht auf einer Annahme stehen. */}
+      {/* A fact in one line, right above the field. As long as the route is
+          unknown, nothing is shown here: a promise about privacy must not
+          rest on an assumption. */}
       {route.routed === undefined ? null : (
         <p className="sb-privacy">
           <Icon name={route.local ? 'sprout' : 'globe'} size={13} />
@@ -114,22 +98,31 @@ export function CoachComposer({
         onCancel={onCancel}
         busy={busy}
         fieldId="sb-journal-field"
-        fieldRef={fieldRef}
+        /* A journal entry is written text, not a one-line question: Enter
+           breaks the line like in any editor, and no Enter combination files
+           it either (048, D2) — only the button does. */
+        submitKey="none"
+        /* No `fieldRef` here: 047/D4 moved the screen's one focus target to
+           the day's own field (`DayText`), which is where a fresh day and a
+           closed interview dialog put the cursor now. */
         texts={{
           label: t('journal.field.label'),
           placeholder: t('journal.field.placeholder'),
-          hintSend: t('journal.field.hintSend'),
-          send: t('journal.send'),
+          /* The stance choice *is* the request (011, D8): listen only ever
+             files what's written, so its label stays the plain "say it" it
+             always was; tips/analyse ask a model, and the button says so.
+             The hint names the same button, so it states what actually
+             happens rather than promising a key. */
+          hintNoSubmit: t('journal.field.hintNoSubmit', {
+            button: mode === 'listen' ? t('journal.send') : t('journal.sendAsk'),
+          }),
+          send: mode === 'listen' ? t('journal.send') : t('journal.sendAsk'),
           cancel: t('common.cancel'),
         }}
-        /* Die Haltung sitzt in der Fußzeile des Feldes: man muss wissen, mit
-           wem man spricht, während man tippt. */
+        /* The stance sits in the field's footer: you need to know who
+           you're talking to while you type. */
         extra={<CoachModeSwitch value={mode} onChange={onMode} disabled={busy} />}
       />
-
-      {footerAction === undefined ? null : (
-        <div className="sb-journal-footer-close">{footerAction}</div>
-      )}
     </div>
   );
 }

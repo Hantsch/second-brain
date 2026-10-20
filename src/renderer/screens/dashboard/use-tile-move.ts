@@ -1,28 +1,28 @@
-/* Das Verschieben der Kacheln — der ganze Zustand an einem Ort, ohne Markup.
+/* Moving tiles — all the state in one place, without markup.
 
-   Zwei Wege, ein Zustand:
-   - **Zeigergerät**: `pointerdown` auf dem Griff, `pointermove` am Fenster (der
-     Zeiger verlässt die Kachel sofort), `pointerup` legt ab. Die gezogene Kachel
-     ist im Rendering `position: fixed` und folgt dem Zeiger; die Zielstelle ist
-     eine Lücke. Weil die Kachel nicht im Raster liegt, springt sie nicht, wenn
-     die Lücke wandert.
-   - **Tastatur**: Leertaste/Enter hebt an, Pfeiltasten verschieben, Enter legt
-     ab, Esc stellt die Reihenfolge von vor dem Anheben wieder her. Links und
-     rechts ist ein Schritt, oben und unten sind so viele, wie in der Reihe
-     stehen (`verticalStep`) — sonst schöbe `ArrowDown` seitwärts.
+   Two paths, one state:
+   - **Pointer device**: `pointerdown` on the handle, `pointermove` on the
+     window (the pointer leaves the tile immediately), `pointerup` drops it.
+     The dragged tile is rendered `position: fixed` and follows the
+     pointer; the target spot is a gap. Because the tile no longer sits in
+     the grid, it doesn't jump when the gap moves.
+   - **Keyboard**: space/Enter lifts it, arrow keys move it, Enter drops it,
+     Esc restores the order from before the lift. Left and right are one
+     step, up and down are as many as stand in the row (`verticalStep`) —
+     otherwise `ArrowDown` would push sideways.
 
-   Der angehobene Zustand ist ein Modus, und ein Modus braucht einen Fluchtweg,
-   der überall gilt: `Esc` hängt am Fenster, nicht am Griff. Verlässt der Fokus
-   den Griff (Tab, ein Klick woanders), ist der Zug abgebrochen — eine Vorschau,
-   die stehen bleibt, während niemand sie mehr bedienen kann, behauptet eine
-   Anordnung, die es nicht gibt. Und ein Zug mit der Maus beendet den
-   Tastaturmodus, statt blockiert zu werden.
+   The lifted state is a mode, and a mode needs an escape route that works
+   everywhere: `Esc` is bound to the window, not the handle. If focus leaves
+   the handle (Tab, a click elsewhere), the move is cancelled — a preview
+   that stays on screen while nobody can operate it anymore would claim an
+   arrangement that doesn't exist. And a drag with the mouse ends keyboard
+   mode instead of being blocked by it.
 
-   Gespeichert wird beim Ablegen — nicht bei jeder Bewegung. Bis dahin gilt die
-   Vorschau; danach gilt, was der Hauptprozess bestätigt.
+   Saving happens on drop — not on every movement. Until then the preview
+   applies; afterward, whatever the main process confirms applies.
 
-   Angesagt wird jeder Schritt: ohne `aria-live` wäre das Verschieben per Tastatur
-   stumm, und ein stummer Modus ist kein Modus. */
+   Every step is announced: without `aria-live`, moving via keyboard would
+   be silent, and a silent mode is no mode at all. */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { KeyboardEvent, PointerEvent } from 'react';
@@ -42,33 +42,33 @@ import {
   visibleTiles,
 } from './layout';
 
-/** Was während des Ziehens gilt. */
+/** What applies while dragging. */
 export interface DragState {
   id: DashboardModuleId;
-  /** Abstand Zeiger → linke obere Ecke beim Anfassen; hält die Kachel am Zeiger. */
+  /** Distance pointer -> top-left corner at grab time; keeps the tile at the pointer. */
   offsetX: number;
   offsetY: number;
   width: number;
   height: number;
   x: number;
   y: number;
-  /** Zielposition, gezählt in der Liste ohne die gezogene Kachel. */
+  /** Target position, counted in the list without the dragged tile. */
   over: number;
 }
 
 export interface TileMove {
-  /** Die Anordnung, die gerade gilt: Vorschau, sonst die gespeicherte. */
+  /** The arrangement that currently applies: preview, otherwise the saved one. */
   effective: DashboardLayout;
   visible: DashboardTile[];
   drag: DragState | null;
   lifted: DashboardModuleId | null;
   announcement: string;
-  /** Sichtbare Leiste, solange eine Kachel angehoben ist; sonst `null`. */
+  /** Visible bar as long as a tile is lifted; `null` otherwise. */
   moveBar: string | null;
   controls: TileControls;
-  /** Meldet das Element einer Kachel — für Trefferprüfung und Sprünge. */
+  /** Registers a tile's element — for hit testing and jumps. */
   registerTile: (id: DashboardModuleId, element: HTMLLIElement | null) => void;
-  /** Holt eine Kachel in den Blick und den Fokus auf ihren Griff. */
+  /** Brings a tile into view and focuses its handle. */
   jumpTo: (id: DashboardModuleId) => void;
   sizeOf: (id: DashboardModuleId) => ModuleSize;
 }
@@ -118,15 +118,15 @@ export function useTileMove(
   }, []);
 
   const jumpTo = useCallback((id: DashboardModuleId): void => {
-    /* Optional gerufen: eine Umgebung ohne Layout (jsdom) kennt `scrollIntoView`
-       nicht — der Fokus ist der Teil, auf den es ankommt. */
+    /* Called optionally: an environment without layout (jsdom) doesn't
+       know `scrollIntoView` — the focus is the part that actually matters. */
     tiles.current.get(id)?.scrollIntoView?.({ block: 'nearest' });
     handles.current.get(id)?.focus();
   }, []);
 
-  // ── Zeigergerät ───────────────────────────────────────────────────────────
+  // ── Pointer device ────────────────────────────────────────────────────────
 
-  /** Die Rechtecke der übrigen Kacheln — Grundlage der Zielposition. */
+  /** The rectangles of the remaining tiles — basis for the target position. */
   const rectsWithout = useCallback(
     (id: DashboardModuleId) => {
       const rects: { top: number; bottom: number; left: number; width: number }[] = [];
@@ -143,9 +143,9 @@ export function useTileMove(
   );
 
   /**
-   * Den Tastaturmodus beenden und die Vorschau zurücknehmen. `announce` sagt es
-   * an; nur beim Übergang in einen Mauszug bleibt es still, weil der Zug selbst
-   * die Aussage ist.
+   * End keyboard mode and revert the preview. `announce` reports it; only
+   * when transitioning into a mouse drag does it stay silent, because the
+   * drag itself is the statement.
    */
   const cancelLift = useCallback(
     (id: DashboardModuleId, speak: boolean): void => {
@@ -167,9 +167,9 @@ export function useTileMove(
   const onGrabPointer = useCallback(
     (id: DashboardModuleId, event: PointerEvent<HTMLElement>): void => {
       if (event.button !== 0) return;
-      /* Ein Mauszug bei angehobener Kachel blockiert nicht, er übernimmt: der
-         Tastaturmodus endet, die Vorschau geht zurück, der Zug beginnt. Gezählt
-         wird deshalb in der Anordnung, die danach gilt. */
+      /* A mouse drag while a tile is lifted doesn't block, it takes over:
+         keyboard mode ends, the preview reverts, the drag begins. That's
+         why counting happens in the arrangement that applies afterward. */
       const base = lifted === null ? effective : (beforeLift.current ?? layout);
       if (lifted !== null) cancelLift(lifted, false);
       const element = tiles.current.get(id);
@@ -187,15 +187,15 @@ export function useTileMove(
       };
       dragRef.current = started;
       setDrag(started);
-      /* Kein Textmarkieren beim Ziehen — und der Griff behält den Fokus. */
+      /* No text selection while dragging — and the handle keeps focus. */
       event.preventDefault();
     },
     [cancelLift, effective, layout, lifted],
   );
 
-  /* Nur an- und abgemeldet, wenn ein Zug beginnt oder endet — nicht bei jeder
-     Zeigerbewegung. Der laufende Zustand steht in `dragRef`, nicht im Zustand,
-     genau deshalb. */
+  /* Only subscribed and unsubscribed when a drag starts or ends — not on
+     every pointer movement. That's exactly why the running state lives in
+     `dragRef`, not in React state. */
   const dragging = drag !== null;
   useEffect(() => {
     if (!dragging) return undefined;
@@ -243,7 +243,7 @@ export function useTileMove(
     };
   }, [announce, commit, dragging, effective, rectsWithout]);
 
-  // ── Tastatur ──────────────────────────────────────────────────────────────
+  // ── Keyboard ──────────────────────────────────────────────────────────────
 
   const onGrabKey = useCallback(
     (id: DashboardModuleId, event: KeyboardEvent<HTMLElement>): void => {
@@ -270,8 +270,8 @@ export function useTileMove(
         return;
       }
       if (lifted !== id) return;
-      /* Tab verlässt den Griff — dann endet der Modus, statt als Vorschau ohne
-         Bedienung stehen zu bleiben. Nicht abgefangen: der Fokus soll wandern. */
+      /* Tab leaves the handle — then the mode ends instead of staying as a
+         preview nobody can operate. Not intercepted: focus is meant to move on. */
       if (key === 'Tab') {
         cancelLift(id, true);
         return;
@@ -296,8 +296,9 @@ export function useTileMove(
     [announce, cancelLift, commit, effective, lifted, total],
   );
 
-  /* Esc gilt überall, solange etwas angehoben ist: der Handler am Griff greift
-     nicht mehr, sobald der Fokus woanders steht — und genau dann braucht man ihn. */
+  /* Esc applies everywhere as long as something is lifted: the handler on
+     the handle no longer fires once focus is elsewhere — and that's
+     exactly when it's needed. */
   useEffect(() => {
     if (lifted === null) return undefined;
     const onKey = (event: globalThis.KeyboardEvent): void => {
@@ -310,9 +311,10 @@ export function useTileMove(
   }, [cancelLift, lifted]);
 
   /**
-   * Der Fokus verlässt den Griff (Klick woanders, Tab) — der Zug ist zu Ende.
-   * Geprüft wird im nächsten Takt, weil das Neuordnen der Liste den Griff kurz
-   * aus dem Baum nimmt: dabei blinkt der Fokus, ohne dass jemand etwas bedient.
+   * Focus leaves the handle (click elsewhere, Tab) — the drag is over.
+   * Checked on the next tick, because reordering the list briefly removes
+   * the handle from the tree: focus flickers during that, without anyone
+   * actually operating anything.
    */
   const onGrabBlur = useCallback(
     (id: DashboardModuleId): void => {
@@ -333,8 +335,8 @@ export function useTileMove(
     onGrabKey,
     onGrabBlur,
     onResize: (id, size) => commit(resizeTile(effective, id, size)),
-    /* Ausblenden ist eine Aktion mit Rückweg: die Meldung sagt, was verschwand,
-       und nimmt es auf Wunsch zurück — genau die Anordnung von vorher. */
+    /* Hiding is an action with a way back: the toast says what disappeared,
+       and undoes it on request — exactly the arrangement from before. */
     onHide: (id) => {
       const before = effective;
       commit(setTileHidden(before, id, true));
@@ -351,8 +353,9 @@ export function useTileMove(
     },
   };
 
-  /* Dieselbe Zeichenkette wie die Ansage, nur sichtbar: ein Modus, den nur der
-     Screenreader erfährt, ist für die Mehrheit der Tastaturnutzer nicht da. */
+  /* The same string as the announcement, only visible: a mode that only
+     the screen reader learns about doesn't exist for the majority of
+     keyboard users. */
   const moveBar =
     lifted === null
       ? null

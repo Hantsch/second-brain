@@ -11,6 +11,8 @@
  */
 
 import { fold } from '@core/index/text';
+import type { DocLanguage } from '@shared/types';
+import { englishHits } from './date-phrases-en';
 import { LEFT_EDGE, RIGHT_EDGE, matchAll, wordRegex } from './words';
 
 const DAY_MS = 86_400_000;
@@ -51,17 +53,19 @@ function diffDays(from: string, to: string): number {
 }
 
 /** Kalendertag aus Zahlen; `null`, wenn es den Tag nicht gibt (31.02.). */
-function plainDay(year: number, month: number, day: number): string | null {
+export function plainDay(year: number, month: number, day: number): string | null {
   if (month < 1 || month > 12 || day < 1 || day > 31) return null;
   const iso = isoFrom(Date.UTC(year, month - 1, day));
   return iso.endsWith(`-${pad(month)}-${pad(day)}`) ? iso : null;
 }
 
-function nextWeekday(today: string, target: number): string {
+/** Naechster Wochentag `target` (1 = Montag ... 7 = Sonntag), heute eingeschlossen. */
+export function nextWeekday(today: string, target: number): string {
   return addDays(today, (target - weekdayOf(today) + 7) % 7);
 }
 
-function nextMonday(today: string): string {
+/** Montag der Folgewoche — 'naechste Woche' meint nie den laufenden Montag. */
+export function nextMonday(today: string): string {
   const delta = (1 - weekdayOf(today) + 7) % 7;
   return addDays(today, delta === 0 ? 7 : delta);
 }
@@ -74,7 +78,8 @@ function mondayOfIsoWeek(year: number, week: number): string | null {
   return isoFrom(firstMonday + (week - 1) * 7 * DAY_MS);
 }
 
-function endOfMonth(today: string): string {
+/** Letzter Kalendertag des laufenden Monats. */
+export function endOfMonth(today: string): string {
   const year = Number(today.slice(0, 4));
   const month = Number(today.slice(5, 7));
   return isoFrom(Date.UTC(month === 12 ? year + 1 : year, month === 12 ? 0 : month, 1) - DAY_MS);
@@ -86,6 +91,12 @@ export interface DateHit {
   iso: string;
   /** Wortwoertlich, was im Text stand — Futter fuer die Begruendung. */
   label: string;
+  /**
+   * Wo `label` im Text beginnt (0-basiert). Wer wissen muss, *worum* es an dieser
+   * Stelle geht — nicht nur an welchem Tag —, braucht den Satzteil um das Label
+   * herum, und dafuer die Position.
+   */
+  at: number;
 }
 
 const WEEKDAYS: readonly [string, number][] = [
@@ -135,15 +146,16 @@ const PHRASES: readonly [RegExp, (today: string) => string][] = [
   [wordRegex('Monatsende|Ende\\s+des\\s+Monats'), (today) => endOfMonth(today)],
 ];
 
-interface RawHit extends DateHit {
-  at: number;
-}
-
 /**
  * Jahr zu einem Datum ohne Jahresangabe. Ein Dump plant nach vorn: liegt der Tag
  * mehr als ein halbes Jahr zurueck, ist das naechste Jahr gemeint.
  */
-function resolveYear(day: number, month: number, raw: string | undefined, today: string): number {
+export function resolveYear(
+  day: number,
+  month: number,
+  raw: string | undefined,
+  today: string,
+): number {
   if (raw !== undefined && raw.length === 4) return Number(raw);
   if (raw !== undefined && raw.length === 2) return 2000 + Number(raw);
   const year = Number(today.slice(0, 4));
@@ -152,8 +164,8 @@ function resolveYear(day: number, month: number, raw: string | undefined, today:
   return diffDays(candidate, today) > 183 ? year + 1 : year;
 }
 
-function numericHits(text: string, today: string): RawHit[] {
-  const hits: RawHit[] = [];
+function numericHits(text: string, today: string): DateHit[] {
+  const hits: DateHit[] = [];
   for (const match of matchAll(NUMERIC_DATE, text)) {
     const day = Number(match.groups[0]);
     const month = Number(match.groups[1]);
@@ -163,8 +175,8 @@ function numericHits(text: string, today: string): RawHit[] {
   return hits;
 }
 
-function namedHits(text: string, today: string): RawHit[] {
-  const hits: RawHit[] = [];
+function namedHits(text: string, today: string): DateHit[] {
+  const hits: DateHit[] = [];
   for (const match of matchAll(MONTH_DATE, text)) {
     const day = Number(match.groups[0]);
     const month = MONTH_KEYS.indexOf(fold(match.groups[1] ?? '')) + 1;
@@ -180,11 +192,51 @@ function namedHits(text: string, today: string): RawHit[] {
 }
 
 /**
- * Alle Datumsangaben in Textreihenfolge, jeder Kalendertag nur einmal.
- * `today` ist die Grundlage jeder relativen Angabe.
+ * Verwirft Treffer, deren Spanne vollstaendig in einer laengeren Spanne liegt —
+ * 'morgen' in 'uebermorgen'/'day after tomorrow' darf nicht zusaetzlich zaehlen.
  */
-export function findDates(text: string, today: string): DateHit[] {
-  const raw: RawHit[] = [...numericHits(text, today), ...namedHits(text, today)];
+function dropContainedHits(hits: readonly DateHit[]): DateHit[] {
+  return hits.filter((hit, index) => {
+    const end = hit.at + hit.label.length;
+    return !hits.some((other, otherIndex) => {
+      if (otherIndex === index || other.label.length <= hit.label.length) return false;
+      const otherEnd = other.at + other.label.length;
+      return other.at <= hit.at && otherEnd >= end;
+    });
+  });
+}
+
+/**
+ * Alle Datumsangaben in Textreihenfolge, jeder Kalendertag nur einmal.
+ * `today` ist die Grundlage jeder relativen Angabe. `languages` steuert, welche
+ * Sprachtabellen zusaetzlich zu den sprachneutralen Formaten (ISO, '15.08.',
+ * 'KW 34') mitlaufen — ohne 'en' bleibt englischer Freitext unangetastet.
+ */
+export function findDates(
+  text: string,
+  today: string,
+  languages: readonly DocLanguage[] = ['de'],
+): DateHit[] {
+  const raw: DateHit[] = [];
+
+  if (languages.includes('de')) {
+    raw.push(...numericHits(text, today), ...namedHits(text, today));
+    for (const match of matchAll(IN_DAYS, text)) {
+      raw.push({
+        at: match.at,
+        iso: addDays(today, Number(match.groups[0])),
+        label: match.text.trim(),
+      });
+    }
+    for (const [pattern, resolve] of PHRASES) {
+      for (const match of matchAll(pattern, text)) {
+        raw.push({ at: match.at, iso: resolve(today), label: match.text });
+      }
+    }
+  }
+  if (languages.includes('en')) {
+    raw.push(...englishHits(text, today));
+  }
 
   for (const match of matchAll(ISO_DATE, text)) {
     const iso = plainDay(Number(match.groups[0]), Number(match.groups[1]), Number(match.groups[2]));
@@ -194,26 +246,15 @@ export function findDates(text: string, today: string): DateHit[] {
     const iso = mondayOfIsoWeek(Number(today.slice(0, 4)), Number(match.groups[0]));
     if (iso !== null) raw.push({ at: match.at, iso, label: match.text.trim() });
   }
-  for (const match of matchAll(IN_DAYS, text)) {
-    raw.push({
-      at: match.at,
-      iso: addDays(today, Number(match.groups[0])),
-      label: match.text.trim(),
-    });
-  }
-  for (const [pattern, resolve] of PHRASES) {
-    for (const match of matchAll(pattern, text)) {
-      raw.push({ at: match.at, iso: resolve(today), label: match.text });
-    }
-  }
 
   raw.sort((a, b) => a.at - b.at);
+  const withoutOverlap = dropContainedHits(raw);
   const seen = new Set<string>();
   const hits: DateHit[] = [];
-  for (const hit of raw) {
+  for (const hit of withoutOverlap) {
     if (seen.has(hit.iso)) continue;
     seen.add(hit.iso);
-    hits.push({ iso: hit.iso, label: hit.label });
+    hits.push(hit);
   }
   return hits;
 }
@@ -228,6 +269,11 @@ export function germanDay(iso: string, today: string): string {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
   if (match === null) return iso;
   return `${match[3]}.${match[2]}.${match[1] === today.slice(0, 4) ? '' : match[1]}`;
+}
+
+/** Datumsanzeige in der Dokumentsprache: deutsch als '15.08.', englisch als ISO. */
+export function dayLabel(iso: string, today: string, language: DocLanguage): string {
+  return language === 'de' ? germanDay(iso, today) : iso;
 }
 
 /** Ist das ein Kalendertag 'YYYY-MM-DD'? Grundlage jeder Pruefung von Modellausgaben. */

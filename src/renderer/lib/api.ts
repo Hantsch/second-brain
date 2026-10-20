@@ -3,7 +3,7 @@
    immer als `IpcCallError` zurück, also in `IpcError`-Form. */
 
 import type { IpcChannel, IpcError, IpcRequest, IpcResponse } from '@shared/ipc';
-import type { DocLanguage, UiLanguage } from '@shared/types';
+import type { AgentKind, DocLanguage, UiLanguage } from '@shared/types';
 import { bridge } from './bridge';
 import { decodeIpcError } from './ipc-error';
 
@@ -43,6 +43,9 @@ export const api = {
     write: (request: IpcRequest<'vault:write'>) => call('vault:write', request),
     remove: (path: string) => call('vault:delete', { path }),
     tree: (dir?: string) => call('vault:tree', dir === undefined ? {} : { dir }),
+    sectionPlan: (to: DocLanguage) => call('vault:sectionPlan', { to }),
+    sectionMigrate: (request: IpcRequest<'vault:sectionMigrate'>) =>
+      call('vault:sectionMigrate', request),
   },
   index: {
     stats: () => call('index:stats'),
@@ -51,6 +54,8 @@ export const api = {
   search: {
     query: (text: string, options: Omit<IpcRequest<'search:query'>, 'text'> = {}) =>
       call('search:query', { text, ...options }),
+    resolveLinks: (from: string, targets: string[]) =>
+      call('search:resolveLinks', { from, targets }),
   },
   capture: {
     dump: (request: IpcRequest<'capture:dump'>) => call('capture:dump', request),
@@ -69,6 +74,10 @@ export const api = {
     create: (request: IpcRequest<'projects:create'>) => call('projects:create', request),
     patch: (request: IpcRequest<'projects:patch'>) => call('projects:patch', request),
     append: (request: IpcRequest<'projects:append'>) => call('projects:append', request),
+    createNote: (request: IpcRequest<'projects:createNote'>) =>
+      call('projects:createNote', request),
+    removeNote: (request: IpcRequest<'projects:removeNote'>) =>
+      call('projects:removeNote', request),
     suggestStatus: (slug: string) => call('projects:suggestStatus', { slug }),
     resolveWaiting: (slug: string, index: number) =>
       call('projects:resolveWaiting', { slug, index }),
@@ -78,6 +87,26 @@ export const api = {
     toggle: (id: string) => call('todos:toggle', { id }),
     create: (request: IpcRequest<'todos:create'>) => call('todos:create', request),
     update: (request: IpcRequest<'todos:update'>) => call('todos:update', request),
+    reorder: (request: IpcRequest<'todos:reorder'>) => call('todos:reorder', request),
+  },
+  areas: {
+    list: () => call('areas:list'),
+    notes: (slug: string) => call('areas:notes', { slug }),
+    createNote: (request: IpcRequest<'areas:createNote'>) => call('areas:createNote', request),
+    create: (title: string) => call('areas:create', { title }),
+    moveNote: (request: IpcRequest<'areas:moveNote'>) => call('areas:moveNote', request),
+  },
+  condense: {
+    read: (unit: IpcRequest<'condense:read'>['unit'], slug: string) =>
+      call('condense:read', { unit, slug }),
+    run: (unit: IpcRequest<'condense:run'>['unit'], slug: string) =>
+      call('condense:run', { unit, slug }),
+    accept: (proposal: IpcRequest<'condense:accept'>['proposal']) =>
+      call('condense:accept', { proposal }),
+    reject: (unit: IpcRequest<'condense:reject'>['unit'], slug: string, reason: string) =>
+      call('condense:reject', { unit, slug, reason }),
+    delete: (unit: IpcRequest<'condense:delete'>['unit'], slug: string, expectedHash: string) =>
+      call('condense:delete', { unit, slug, expectedHash }),
   },
   journal: {
     list: (limit?: number) => call('journal:list', limit === undefined ? {} : { limit }),
@@ -85,10 +114,27 @@ export const api = {
     append: (date: string, text: string) => call('journal:append', { date, text }),
     setDay: (request: IpcRequest<'journal:setDay'>) => call('journal:setDay', request),
     setMood: (request: IpcRequest<'journal:setMood'>) => call('journal:setMood', request),
+    setClosed: (request: IpcRequest<'journal:setClosed'>) => call('journal:setClosed', request),
     coach: (request: IpcRequest<'journal:coach'>) => call('journal:coach', request),
     abort: (messageId: string) => call('journal:abort', { messageId }),
     close: (date: string) => call('journal:close', { date }),
     applyClose: (request: IpcRequest<'journal:applyClose'>) => call('journal:applyClose', request),
+    discardClose: (date: string) => call('journal:discardClose', { date }),
+    foldDay: (date: string, expectedHash?: string) =>
+      call('journal:foldDay', { date, expectedHash }),
+    answerLooseEnd: (request: IpcRequest<'journal:answerLooseEnd'>) =>
+      call('journal:answerLooseEnd', request),
+    interviewPlan: (date: string) => call('journal:interviewPlan', { date }),
+    interviewAnswer: (
+      date: string,
+      step: IpcRequest<'journal:interviewAnswer'>['step'],
+      answer: string,
+    ) => call('journal:interviewAnswer', { date, step, answer }),
+    interviewFollowUp: (
+      date: string,
+      step: IpcRequest<'journal:interviewFollowUp'>['step'],
+      answer: string,
+    ) => call('journal:interviewFollowUp', { date, step, answer }),
   },
   modules: {
     list: () => call('modules:list'),
@@ -98,6 +144,11 @@ export const api = {
     savePage: (request: IpcRequest<'modules:savePage'>) => call('modules:savePage', request),
     sources: (module?: string) => call('modules:sources', module === undefined ? {} : { module }),
     graph: (module: string) => call('modules:graph', { module }),
+    renamePlan: (slug: string, title: string) => call('modules:renamePlan', { slug, title }),
+    rename: (request: IpcRequest<'modules:rename'>) => call('modules:rename', request),
+    deletePlan: (slug: string) => call('modules:deletePlan', { slug }),
+    delete: (request: IpcRequest<'modules:delete'>) => call('modules:delete', request),
+    undo: (undoToken: string) => call('modules:undo', { undoToken }),
   },
   chat: {
     ask: (request: IpcRequest<'chat:ask'>) => call('chat:ask', request),
@@ -112,6 +163,10 @@ export const api = {
     jobs: () => call('ingest:jobs'),
     cancel: (id: string) => call('ingest:cancel', { id }),
     retry: (id: string) => call('ingest:retry', { id }),
+    condense: (request: IpcRequest<'ingest:condense'>) => call('ingest:condense', request),
+    detail: (path: string) => call('ingest:detail', { path }),
+    analyzeResources: (path: string) => call('ingest:analyzeResources', { path }),
+    attachFiles: (path: string) => call('ingest:attachFiles', { path }),
     pickFiles: () => call('ingest:pickFiles'),
     ytdlpStatus: () => call('ingest:ytdlpStatus'),
     ytdlpInstall: () => call('ingest:ytdlpInstall'),
@@ -132,6 +187,44 @@ export const api = {
     setDefault: (request: IpcRequest<'llm:setDefault'>) => call('llm:setDefault', request),
     suggestRouting: () => call('llm:suggestRouting'),
     testTask: (task: IpcRequest<'llm:testTask'>['task']) => call('llm:testTask', { task }),
+    scanMachine: () => call('llm:scanMachine'),
+    getMachineScan: () => call('llm:getMachineScan'),
+    setVramOverride: (vramMb: number | null) => call('llm:setVramOverride', { vramMb }),
+    setResourceBudget: (percent: number) => call('llm:setResourceBudget', { percent }),
+    recommendModels: () => call('llm:recommendModels'),
+    localRuntimeStatus: (runtime: IpcRequest<'llm:localRuntimeStatus'>['runtime']) =>
+      call('llm:localRuntimeStatus', { runtime }),
+    runtimeInstallPlan: (
+      runtime: IpcRequest<'llm:runtimeInstallPlan'>['runtime'],
+      buildId?: IpcRequest<'llm:runtimeInstallPlan'>['buildId'],
+    ) => call('llm:runtimeInstallPlan', { runtime, buildId }),
+    downloadRuntime: (
+      runtime: IpcRequest<'llm:downloadRuntime'>['runtime'],
+      buildId?: IpcRequest<'llm:downloadRuntime'>['buildId'],
+    ) => call('llm:downloadRuntime', { runtime, buildId }),
+    cancelRuntimeDownload: (
+      runtime: IpcRequest<'llm:cancelRuntimeDownload'>['runtime'],
+      downloadId: string,
+    ) => call('llm:cancelRuntimeDownload', { runtime, downloadId }),
+    openRuntimeInstaller: (runtime: IpcRequest<'llm:openRuntimeInstaller'>['runtime']) =>
+      call('llm:openRuntimeInstaller', { runtime }),
+    startLocalRuntime: (runtime: IpcRequest<'llm:startLocalRuntime'>['runtime']) =>
+      call('llm:startLocalRuntime', { runtime }),
+    llamaEngineStatus: () => call('llm:llamaEngineStatus'),
+    llamaStartPlan: () => call('llm:llamaStartPlan'),
+    stopLlamaEngine: () => call('llm:stopLlamaEngine'),
+    setLlamaOverrides: (patch: IpcRequest<'llm:setLlamaOverrides'>) =>
+      call('llm:setLlamaOverrides', patch),
+    setLlamaAutoStart: (mode: IpcRequest<'llm:setLlamaAutoStart'>) =>
+      call('llm:setLlamaAutoStart', mode),
+    pullModel: (
+      runtime: IpcRequest<'llm:pullModel'>['runtime'],
+      modelId: string,
+      hfFile?: IpcRequest<'llm:pullModel'>['hfFile'],
+    ) => call('llm:pullModel', { runtime, modelId, hfFile }),
+    cancelPull: (pullId: string) => call('llm:cancelPull', { pullId }),
+    searchModelFiles: (request: IpcRequest<'llm:searchModelFiles'>) =>
+      call('llm:searchModelFiles', request),
   },
   dashboard: {
     data: () => call('dashboard:data'),
@@ -146,17 +239,47 @@ export const api = {
   },
   gardener: {
     report: () => call('gardener:report'),
-    run: (useLlm?: boolean) => call('gardener:run', useLlm === undefined ? {} : { useLlm }),
+    runStatus: () => call('gardener:runStatus'),
+    run: (options?: IpcRequest<'gardener:run'>) => call('gardener:run', options ?? {}),
     cancel: () => call('gardener:cancel'),
     dismiss: (id: string) => call('gardener:dismiss', { id }),
     undismiss: (id: string) => call('gardener:undismiss', { id }),
+    snooze: (id: string, days: number) => call('gardener:snooze', { id, days }),
+    unsnooze: (id: string) => call('gardener:unsnooze', { id }),
     applyFix: (finding: IpcRequest<'gardener:applyFix'>['finding']) =>
       call('gardener:applyFix', { finding }),
     undoFix: (undoToken: string) => call('gardener:undoFix', { undoToken }),
+    discardPlan: (request: IpcRequest<'gardener:discardPlan'>) =>
+      call('gardener:discardPlan', request),
+    discardPage: (request: IpcRequest<'gardener:discardPage'>) =>
+      call('gardener:discardPage', request),
+    supersede: (request: IpcRequest<'gardener:supersede'>) => call('gardener:supersede', request),
+    orphanTargets: (findingId: string) => call('gardener:orphanTargets', { findingId }),
+    linkOrphan: (request: IpcRequest<'gardener:linkOrphan'>) =>
+      call('gardener:linkOrphan', request),
+    linkOrphans: (request: IpcRequest<'gardener:linkOrphans'>) =>
+      call('gardener:linkOrphans', request),
+  },
+  work: {
+    list: () => call('work:list'),
+  },
+  tasks: {
+    cancel: (id: string) => call('tasks:cancel', { id }),
+    remove: (id: string) => call('tasks:remove', { id }),
+    retry: (id: string) => call('tasks:retry', { id }),
+    result: (id: string) => call('tasks:result', { id }),
   },
   claude: {
     sessions: (limit?: number) => call('claude:sessions', limit === undefined ? {} : { limit }),
     link: (sessionId: string, project: string) => call('claude:link', { sessionId, project }),
+  },
+  agents: {
+    projects: (agent: AgentKind) => call('agents:projects', { agent }),
+    sessions: (agent: AgentKind, projectKey: string) =>
+      call('agents:sessions', { agent, projectKey }),
+    transcript: (request: IpcRequest<'agents:transcript'>) => call('agents:transcript', request),
+    link: (agent: AgentKind, projectKey: string, project: string) =>
+      call('agents:link', { agent, projectKey, project }),
   },
   settings: {
     get: () => call('settings:get'),
@@ -170,6 +293,8 @@ export const api = {
     minimize: () => call('window:minimize'),
     toggleMaximize: () => call('window:toggleMaximize'),
     close: () => call('window:close'),
+    confirmClose: () => call('window:confirmClose'),
+    cancelClose: () => call('window:cancelClose'),
     isMaximized: () => call('window:isMaximized'),
     show: () => call('window:show'),
   },
@@ -180,5 +305,14 @@ export const api = {
   },
   app: {
     info: () => call('app:info'),
+    releaseNotes: () => call('app:releaseNotes'),
+  },
+  update: {
+    state: () => call('update:state'),
+    check: () => call('update:check'),
+    download: () => call('update:download'),
+    cancelDownload: () => call('update:cancelDownload'),
+    installAndRestart: () => call('update:installAndRestart'),
+    dismiss: () => call('update:dismiss'),
   },
 } as const;

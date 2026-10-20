@@ -169,6 +169,72 @@ describe('YoutubeIngestor', () => {
 
   it('nimmt ohne yt-dlp den Fallback und sagt, dass das Binary fehlt', async () => {
     const store = memoryStore();
+    const description = 'Beschreibung';
+    const chapterTitle = 'Testkapitel';
+    const ctx: IngestContext = {
+      store,
+      now: new Date(NOW_MS),
+      youtube: {
+        ytdlpPath: null,
+        innertube: async () => ({
+          getInfo: async () => ({
+            basic_info: {
+              id: ID,
+              title: 'Aus dem Fallback',
+              short_description: description,
+              duration: 60,
+              channel: { name: 'Kanal' },
+            },
+            player_overlays: {
+              decorated_player_bar: {
+                player_bar: {
+                  markers_map: [
+                    {
+                      marker_key: 'DESCRIPTION_CHAPTERS',
+                      value: {
+                        chapters: [{ time_range_start_millis: 5000, title: chapterTitle }],
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          }),
+        }),
+      },
+    };
+
+    const outcome = await createYoutubeIngestor().ingest(URL, ctx);
+
+    expect(outcome.provenance['metadata']).toBe('youtubei.js');
+    expect(outcome.notes.map((note) => note.code)).toEqual(['ytdlp-missing', 'no-transcript']);
+    // Ohne Transcript ist outcome.text leer — nur die Platzhalter-Datei bleibt.
+    expect(outcome.text).toBe('');
+    expect(await store.exists(`${DIR}/transcript.md`)).toBe(true);
+    expect((await store.readText(`${DIR}/transcript.md`)) ?? '').toContain(
+      '_Kein Transcript verfuegbar._',
+    );
+    expect(await store.exists(`${DIR}/metadata.md`)).toBe(true);
+    expect(await store.exists(`${DIR}/metadata.json`)).toBe(true);
+
+    // AC2: die Description und die Kapitel aus der Fixture ueberleben tatsaechlich
+    // im geschriebenen metadata.md/metadata.json, nicht nur die Dateien selbst.
+    const metadataMd = (await store.readText(`${DIR}/metadata.md`)) ?? '';
+    expect(metadataMd).toContain(description);
+    expect(metadataMd).toContain(chapterTitle);
+
+    const metadataJson = JSON.parse((await store.readText(`${DIR}/metadata.json`)) ?? '{}') as {
+      description: string;
+      chapters: { start: number; title: string }[];
+    };
+    expect(metadataJson.description).toBe(description);
+    expect(metadataJson.chapters).toEqual([
+      expect.objectContaining({ start: 5, title: chapterTitle }),
+    ]);
+  });
+
+  it('liest bei einer liegenden Quelle ohne Transcript ebenfalls leeren Text', async () => {
+    const store = memoryStore();
     const ctx: IngestContext = {
       store,
       now: new Date(NOW_MS),
@@ -188,14 +254,13 @@ describe('YoutubeIngestor', () => {
       },
     };
 
-    const outcome = await createYoutubeIngestor().ingest(URL, ctx);
+    const first = await createYoutubeIngestor().ingest(URL, ctx);
+    expect(first.text).toBe('');
 
-    expect(outcome.provenance['metadata']).toBe('youtubei.js');
-    expect(outcome.notes.map((note) => note.code)).toEqual(['ytdlp-missing', 'no-transcript']);
-    expect(await store.exists(`${DIR}/transcript.md`)).toBe(true);
-    expect((await store.readText(`${DIR}/transcript.md`)) ?? '').toContain(
-      '_Kein Transcript verfuegbar._',
-    );
+    // Zweiter Lauf: die Quelle liegt schon, es wird nichts neu geschrieben.
+    const second = await createYoutubeIngestor().ingest(URL, ctx);
+    expect(second.rawPath).toBe(DIR);
+    expect(second.text).toBe('');
   });
 
   it('sagt ehrlich, wenn es keinen Weg zu YouTube gibt', async () => {

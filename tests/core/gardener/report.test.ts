@@ -3,9 +3,10 @@
    2. Halten Sortierung, Ausblenden und die Ehrlichkeit über `usedLlm`?
    3. Bleibt er auf 1000 Seiten unter drei Sekunden? */
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { runGardener, sortFindings } from '@core/gardener';
 import type { GardenerFinding, GardenerFindingKind } from '@shared/types';
+import { serialize } from '@core/vault/frontmatter';
 import { emptyGateway } from '../../helpers/llm';
 import { day } from '../../helpers/time';
 import { DEMO } from './demo-vault';
@@ -35,6 +36,9 @@ describe('runGardener über den Demo-Bestand', () => {
       'unfiled-dump': 1,
       'unprocessed-source': 1,
       'project-without-next-step': 1,
+      /* 046: jedes der drei laufenden Demo-Projekte hat Material und noch kein
+         `condensed.md` — die fehlende Variante, einmal je Projekt. */
+      'condensation-due': 3,
     });
     expect(of(report.findings, 'orphan')[0]?.paths).toContain(DEMO.scim);
     expect(of(report.findings, 'broken-link')[0]?.title).toContain('device-code-flow');
@@ -45,6 +49,12 @@ describe('runGardener über den Demo-Bestand', () => {
     expect(of(report.findings, 'project-without-next-step')[0]?.paths).toEqual([
       DEMO.projectWithoutStep,
     ]);
+    const condensation = of(report.findings, 'condensation-due');
+    // Das noch nicht existierende Artefakt zuerst, `project.md` dahinter.
+    expect(condensation.every((finding) => finding.paths[0]?.endsWith('/condensed.md'))).toBe(true);
+    expect(condensation.map((finding) => finding.paths[1]).sort()).toEqual(
+      [DEMO.pausedProject, DEMO.projectWithStep, DEMO.projectWithoutStep].sort(),
+    );
   });
 
   it('bleibt ohne Modell deterministisch und behauptet keine Deutung', async () => {
@@ -109,6 +119,125 @@ describe('runGardener über den Demo-Bestand', () => {
     expect(report.findings).toEqual([]);
     expect(report.healthKnown).toBe(false);
     expect(report.healthContributions).toEqual([]);
+  });
+});
+
+/* 039, D4: die Verdichtung-faellig-Pruefung ueber einen echten, ueber
+ * `IndexService` gelaufenen Bestand — anders als in `checks-condensed.test.ts`
+ * (handgebauter Kontext), hier zaehlt, dass `runGardener()` selbst ohne
+ * Modell dasselbe liefert und dabei keine Datei anfasst. */
+const CONDENSATION_AREA_SLUG = 'ruecken';
+const CONDENSATION_AREA_PATH = `areas/${CONDENSATION_AREA_SLUG}.md`;
+const CONDENSATION_DAY_PATH = 'journal/2026/07/2026-07-15.md';
+
+/** Eine Area mit Material und ganz ohne Artefakt — die "fehlende Variante". */
+function condensationDueFiles(): Record<string, string> {
+  return {
+    [CONDENSATION_AREA_PATH]: serialize(
+      { type: 'area', title: 'Rücken' },
+      '## Notizen\n\n### 2026-07-28\n\nDer Rücken meldet sich bei langen Sitzungen.\n',
+    ),
+    [CONDENSATION_DAY_PATH]: serialize(
+      {
+        type: 'journal',
+        title: 'Dienstag, 15. Juli 2026',
+        date: '2026-07-15',
+        mood: 3,
+        energy: 3,
+        people: [],
+        projects: [],
+        areas: [CONDENSATION_AREA_SLUG],
+        tags: [],
+        lang: 'de',
+      },
+      '## Tag\n\nRückenübungen gemacht.\n',
+    ),
+  };
+}
+
+describe('condensation-due über einen echten Bestand (039, D4)', () => {
+  it('bleibt ohne Gateway und mit einem nicht verfügbaren Gateway identisch — der Check hängt an keinem Modell', async () => {
+    const fixture = await gardenerFixture(condensationDueFiles());
+
+    const withoutGateway = await runGardener(fixture.deps(), { settings: SETTINGS });
+    const withUnavailableGateway = await runGardener(fixture.deps(emptyGateway()), {
+      settings: SETTINGS,
+      useLlm: true,
+    });
+
+    expect(of(withoutGateway.findings, 'condensation-due')).toHaveLength(1);
+    expect(withUnavailableGateway.findings.map((finding) => finding.id)).toEqual(
+      withoutGateway.findings.map((finding) => finding.id),
+    );
+    expect(withUnavailableGateway.usedLlm).toBe(false);
+  });
+
+  it('schreibt nichts in den Vault, obwohl eine Verdichtung fällig ist', async () => {
+    const fixture = await gardenerFixture(condensationDueFiles());
+    const writeMethods = ['write', 'create', 'writeText', 'append', 'move', 'delete'] as const;
+    const spies = writeMethods.map((method) => vi.spyOn(fixture.store, method));
+
+    const report = await runGardener(fixture.deps(), { settings: SETTINGS });
+
+    expect(of(report.findings, 'condensation-due')).toHaveLength(1);
+    for (const spy of spies) expect(spy).not.toHaveBeenCalled();
+  });
+});
+
+/* 046, D2: derselbe echte-Bestand-Nachweis wie oben, hier fuer den Projekt-Arm
+ * — ein laufendes Projekt mit Material und ganz ohne `condensed.md`. */
+const CONDENSATION_PROJECT_SLUG = 'nyota';
+const CONDENSATION_PROJECT_PATH = `projects/work/${CONDENSATION_PROJECT_SLUG}/project.md`;
+
+function condensationDueProjectFiles(): Record<string, string> {
+  return {
+    [CONDENSATION_PROJECT_PATH]: serialize(
+      {
+        type: 'project',
+        title: 'Nyota',
+        slug: CONDENSATION_PROJECT_SLUG,
+        scope: 'work',
+        status: 'active',
+        priority: 2,
+        started: day(-40),
+        tags: [],
+        modules: [],
+        repos: [],
+        created: day(-40),
+        updated: day(-2),
+        lang: 'de',
+      },
+      '## Stand\n\nWieder aufgenommen, Kamera laeuft.\n',
+    ),
+  };
+}
+
+describe('condensation-due (Projekt-Arm) über einen echten Bestand (046, D2)', () => {
+  it('bleibt ohne Gateway und mit einem nicht verfügbaren Gateway identisch — der Check hängt an keinem Modell', async () => {
+    const fixture = await gardenerFixture(condensationDueProjectFiles());
+
+    const withoutGateway = await runGardener(fixture.deps(), { settings: SETTINGS });
+    const withUnavailableGateway = await runGardener(fixture.deps(emptyGateway()), {
+      settings: SETTINGS,
+      useLlm: true,
+    });
+
+    expect(of(withoutGateway.findings, 'condensation-due')).toHaveLength(1);
+    expect(withUnavailableGateway.findings.map((finding) => finding.id)).toEqual(
+      withoutGateway.findings.map((finding) => finding.id),
+    );
+    expect(withUnavailableGateway.usedLlm).toBe(false);
+  });
+
+  it('schreibt nichts in den Vault, obwohl eine Verdichtung fällig ist', async () => {
+    const fixture = await gardenerFixture(condensationDueProjectFiles());
+    const writeMethods = ['write', 'create', 'writeText', 'append', 'move', 'delete'] as const;
+    const spies = writeMethods.map((method) => vi.spyOn(fixture.store, method));
+
+    const report = await runGardener(fixture.deps(), { settings: SETTINGS });
+
+    expect(of(report.findings, 'condensation-due')).toHaveLength(1);
+    for (const spy of spies) expect(spy).not.toHaveBeenCalled();
   });
 });
 

@@ -167,6 +167,26 @@ export function BehaviorTab() {
               }
             }}
           />
+
+          {/* Gelesen in `main/ipc/overview-deps.ts`: der Schalter entscheidet, ob
+              `~/.codex/sessions` überhaupt gelesen wird, das Feld sagt wo. */}
+          <Switch
+            label={t('settings.behavior.codex.label')}
+            description={t('settings.behavior.codex.hint')}
+            checked={overview.useCodexSessions}
+            onChange={(event) => patch({ overview: { useCodexSessions: event.target.checked } })}
+          />
+          <Input
+            label={t('settings.behavior.codex.dir.label')}
+            hint={t('settings.behavior.codex.dir.hint')}
+            defaultValue={overview.codexSessionsDir}
+            onBlur={(event) => {
+              const next = event.target.value.trim();
+              if (next !== overview.codexSessionsDir) {
+                patch({ overview: { codexSessionsDir: next } });
+              }
+            }}
+          />
         </div>
       </Panel>
 

@@ -2,12 +2,14 @@
  * „Was muss ich noch tun, bis wann, und auf wen warte ich?" — Teil zwei der drei
  * Fragen, als Liste von Erinnerungen.
  *
- * Vier Quellen, jede mit einem eigenen `source`, damit die Oberflaeche sagen kann,
+ * Sechs Quellen, jede mit einem eigenen `source`, damit die Oberflaeche sagen kann,
  * **warum** etwas mahnt:
  *   `todo-due`          eine Checkbox mit Frist (`@due:`, ersatzweise `@needed:`)
  *   `project-deadline`  die harte Frist eines Projekts
  *   `waiting-overdue`   eine Antwort, die ueberfaellig ist
  *   `stale-project`     ein Projekt ohne Spur, das noch laeuft
+ *   `loose-end`         eine Ankuendigung im Tagebuch, deren Tag vorbei ist (020 D1)
+ *   `upcoming-mention`  dieselbe Ankuendigung, bevor ihr Tag kommt (070 D2)
  *
  * Zwei Grundsaetze:
  * - **Nichts erfinden.** Ohne Datum keine Frist. `waiting-overdue` erscheint nur,
@@ -18,8 +20,18 @@
  *   ruhen — bis das Ruhen ablaeuft.
  */
 
-import type { Project, Reminder, ReminderUrgency, Todo, WaitingOn } from '@shared/types';
+import type {
+  LooseEnd,
+  Project,
+  Reminder,
+  ReminderUrgency,
+  Todo,
+  UpcomingMention,
+  WaitingOn,
+} from '@shared/types';
 import { daysBetween } from '@core/index/dates';
+import { scopeFromPath } from '@core/index/todos';
+import { looseEndsDerived } from '@core/journal';
 import { sha256 } from '@core/vault/hash';
 import { isoDay } from '@core/vault/paths';
 import type { DateLike } from '@core/vault/paths';
@@ -49,7 +61,18 @@ export function urgencyFor(daysOut: number, horizonDays: number): ReminderUrgenc
 }
 
 function rank(urgency: ReminderUrgency): number {
-  return urgency === 'overdue' ? 0 : urgency === 'today' ? 1 : urgency === 'soon' ? 2 : 3;
+  switch (urgency) {
+    case 'overdue':
+      return 0;
+    case 'today':
+      return 1;
+    case 'soon':
+      return 2;
+    case 'upcoming':
+      return 3;
+    case 'open':
+      return 4;
+  }
 }
 
 /**
@@ -192,6 +215,69 @@ function fromStale(projects: readonly Project[], today: string, staleDays: numbe
   return reminders;
 }
 
+/**
+ * Erinnerungen aus losen Enden (020, D1): eine Ankuendigung im Tagebuch, deren
+ * Tag vorbei ist und niemand seitdem etwas dazu gesagt hat. Die Erkennung
+ * selbst steckt vollstaendig in `findLooseEnds` — hier wird nur abgebildet,
+ * nichts neu entschieden. Eine Ankuendigung, deren Gegenstand schon ein Todo
+ * mit Frist traegt, taucht dank `findLooseEnds`'s eigener Subtraktion gar
+ * nicht erst auf — keine doppelte Mahnung ueber zwei Kacheln.
+ *
+ * Kein Modell hier: dieselbe Heuristik, die auch der Pflegelauf ohne Modell
+ * faehrt. Die Kennung ist bewusst `idFor('loose-end', looseEnd.id)` — exakt
+ * dieselbe Formel wie `findingId('loose-end', looseEnd.id)` im Pflegelauf
+ * (`core/gardener/types.ts`), damit ein und dieselbe Ankuendigung auf beiden
+ * Oberflaechen dieselbe Kennung traegt: nur so zaehlt ein „beantwortet" aus
+ * D5 oder ein „passt so"/„ruhen" aus 017 auch hier.
+ */
+function fromLooseEnds(looseEnds: readonly LooseEnd[], today: string): Reminder[] {
+  return looseEnds.map((looseEnd) => ({
+    id: idFor('loose-end', looseEnd.id),
+    source: 'loose-end',
+    urgency: 'open',
+    title: looseEnd.subject.length > 0 ? looseEnd.subject : looseEnd.quote,
+    date: looseEnd.refDate,
+    daysOut: daysBetween(today, looseEnd.refDate) ?? 0,
+    scope: scopeFromPath(looseEnd.path) ?? 'private',
+    path: looseEnd.path,
+    project: null,
+    who: null,
+  }));
+}
+
+/**
+ * Erinnerungen aus kommenden Erwaehnungen (070, D2): eine Ankuendigung im
+ * Tagebuch, deren Tag noch bevorsteht. Die andere Haelfte derselben Regel wie
+ * `fromLooseEnds`, im selben Fenster gespiegelt — `findUpcomingMentions` traegt
+ * die Erkennung, hier wird nur abgebildet.
+ *
+ * Die Kennung ist bewusst dieselbe Formel wie bei `fromLooseEnds` —
+ * `idFor('loose-end', mention.id)`, nicht `idFor('upcoming-mention', ...)` —
+ * weil `mention.id` bereits `looseEndId(day, quote)` ist (D1) und auf beiden
+ * Seiten des Uebergangs identisch bleibt: dieselbe Ankuendigung traegt eine
+ * Erinnerung frueher als kommende Erwaehnung und einen Tag spaeter als loses
+ * Ende, ohne die Kennung zu wechseln — sonst wuerde ein Ruhen den Uebergang
+ * nicht ueberleben.
+ *
+ * `urgency` ist immer `'upcoming'`, nie `'today'`/`'overdue'` — die Sache ist
+ * noch nicht faellig, nur schon sichtbar. `DaySummary`s „heute faellig" und
+ * `DeadlinesTile`s Quellenfilter fragen ohnehin nicht nach `upcoming-mention`.
+ */
+function fromUpcomingMentions(mentions: readonly UpcomingMention[], today: string): Reminder[] {
+  return mentions.map((mention) => ({
+    id: idFor('loose-end', mention.id),
+    source: 'upcoming-mention',
+    urgency: 'upcoming',
+    title: mention.subject.length > 0 ? mention.subject : mention.quote,
+    date: mention.refDate,
+    daysOut: daysBetween(today, mention.refDate) ?? 0,
+    scope: scopeFromPath(mention.path) ?? 'private',
+    path: mention.path,
+    project: null,
+    who: null,
+  }));
+}
+
 /** Ruht diese Erinnerung noch? `until` ist der Tag, ab dem sie wieder mahnt. */
 function snoozed(
   id: string,
@@ -220,12 +306,16 @@ export function reminders(
   const day = isoDay(today);
   const { staleAfterDays, deadlineHorizonDays, waitingNudgeDays } = limits(settings);
   const projects = index.projects();
+  const todos = index.todos();
+  const derived = looseEndsDerived(index.index(), day);
 
   const all = [
-    ...fromTodos(index.todos(), day, deadlineHorizonDays, closedProjects(projects)),
+    ...fromTodos(todos, day, deadlineHorizonDays, closedProjects(projects)),
     ...fromDeadlines(projects, day, deadlineHorizonDays),
     ...fromWaiting(projects, day, waitingNudgeDays),
     ...fromStale(projects, day, staleAfterDays),
+    ...fromLooseEnds(derived.looseEnds, day),
+    ...fromUpcomingMentions(derived.upcoming(deadlineHorizonDays), day),
   ].filter((reminder) => !snoozed(reminder.id, day, snoozes));
 
   all.sort(

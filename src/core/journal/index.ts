@@ -4,9 +4,37 @@
  *
  * Der Weg eines Tages, in dieser Reihenfolge:
  *   `day`       Tagesdatei anlegen (idempotent), lesen, anhaengen, Stimmung setzen
- *   `dialog`    das Gespraech im Tageseintrag protokollieren und zurueck lesen
+ *   `dialog`    das Gespraech im Tageseintrag protokollieren und zurueck lesen (legacy)
+ *   `stream`    „Tag" als ein Block-Strom: eigene Worte und Antworten der App,
+ *               in Schreibreihenfolge (011) — lesen mit `parseStream`, schreiben
+ *               mit `appendEntry`/`appendAnswer`
+ *   `loose-ends` was ein Tag angekuendigt hat und niemand mehr erwaehnt hat
+ *               (`findLooseEnds`) — reine Ableitung ueber Tage und Todos, ohne Uhr
+ *   `loose-ends-derived` dieselbe Ableitung einmal pro Index und Tag
+ *               (`looseEndsDerived`), fuer alle Aufrufer geteilt
+ *   `loose-end-resolution` ein Tag als Liste seiner Ankuendigungen samt Aufloesung
+ *               (`dayLooseEnds`) — Vault zuerst, `answered`-Map (state file) nur
+ *               dort, wo die Vault-Heuristik nichts findet
+ *   `loose-ends-llm` die optionale Modellstufe darauf (`modelLooseEnds`): findet,
+ *               was die Regel nicht sieht, und verwirft jedes Zitat, das nicht
+ *               wortwoertlich in der genannten Tagesdatei steht
+ *   `upcoming-mentions` the forward-looking half of the same rule
+ *               (`findUpcomingMentions`, 070): the same scan with the opposite
+ *               date window — a coming day that has been named, before it arrives
+ *   `interview` Fragebogen als Starthilfe (012): `planInterview` bestimmt, was
+ *               von den fuenf festen Themen an einem Tag noch offen ist,
+ *               `recordAnswer` schreibt eine beantwortete Frage als Paar
+ *               (Frage als App-Blockzitat, Antwort als eigene Prosa) in den Strom
+ *   `interview-followup` die optionale Rueckfrage zu einer schon beantworteten
+ *               Frage (`interviewFollowup`, mit Modell) — die feste Themenmenge
+ *               bleibt dabei unangetastet, das ist nur eine Zusatzfrage
+ *   `legacy`    `foldLegacyDay`: den alten „Gespräch"-Abschnitt in den Strom
+ *               falten — reine Textfunktion, wird nie von selbst aufgerufen
  *   `coach`     die drei Haltungen — zuhoeren, Tipps, analysieren
  *   `close`     Tagesabschluss: Todos, Warte-auf, Personen, Stimmung als Vorschlag
+ *   `close-request` die serverseitige Nachpruefung der bestaetigten Todos
+ *               (`normalizeCloseTodos`, 075): trimmen, begrenzen, unbekanntes
+ *               Projekt auf den Tag, abweichender Scope als Tag auf der Zeile
  *   `streak`    Serie, laengste Serie, Monat, Stimmungsverlauf
  *
  * Geschrieben wird nur, was der Mensch selbst gesagt hat, plus die Antwort, die
@@ -26,6 +54,8 @@ export {
   requireDay,
   setMood,
 } from './day';
+export { setClosed } from './closed';
+export { reopenIfClosed } from './reopen';
 export {
   appendTurn,
   dialogHistory,
@@ -35,9 +65,52 @@ export {
   type AppendTurnOptions,
 } from './dialog';
 export {
+  appendAnswer,
+  appendEntry,
+  formatAnswer,
+  parseStream,
+  type AppendAnswerOptions,
+  type AppendEntryOptions,
+} from './stream';
+export {
+  announcementsOf,
+  findLooseEnds,
+  looseEndId,
+  resolutionCheck,
+  sentencesOf,
+  subjectTerms,
+  type Announcement,
+  type AnnouncementWindow,
+  type LooseEndDay,
+  type LooseEndResolution,
+  type LooseEndTodo,
+} from './loose-ends';
+export { looseEndsDerived, type LooseEndDerivation } from './loose-ends-derived';
+export { findUpcomingMentions } from './upcoming-mentions';
+export { dayLooseEnds, type DayLooseEnd, type DayLooseEndResolution } from './loose-end-resolution';
+export {
+  MAX_LOOSE_END_DAYS,
+  MAX_LOOSE_END_QUOTE_CHARS,
+  MAX_TRACKED_TODOS,
+  modelLooseEnds,
+  type LooseEndModelInput,
+  type LooseEndModelOptions,
+  type LooseEndModelResult,
+} from './loose-ends-llm';
+export { answerLooseEnd, type AnswerLooseEndOptions } from './loose-end-answer';
+export { planInterview, recordAnswer, type RecordAnswerOptions } from './interview';
+export {
+  interviewFollowup,
+  type InterviewFollowupDeps,
+  type InterviewFollowupInput,
+  type InterviewFollowupResult,
+} from './interview-followup';
+export { foldLegacyDay } from './legacy';
+export {
   dayText,
   isSectionOf,
   journalSections,
+  rawDayText,
   sectionIn,
   sectionText,
   type JournalSectionKind,
@@ -55,6 +128,7 @@ export {
   type FactsInput,
 } from './facts';
 export { GERMAN_CLOSE_LABELS, closeDay } from './close';
+export { normalizeCloseTodos, type CloseTodoOptions } from './close-request';
 export {
   DEFAULT_MOOD_SPAN,
   entriesInMonth,
@@ -67,6 +141,7 @@ export {
 } from './streak';
 export {
   DIALOG_HISTORY_TURNS,
+  INTERVIEW_TOPICS,
   JournalError,
   MAX_EARLIER_DAYS,
   type CloseDayDeps,
@@ -79,6 +154,12 @@ export {
   type DialogRole,
   type DialogTurn,
   type EnsureDayResult,
+  type InterviewLooseEnd,
+  type InterviewMode,
+  type InterviewPlan,
+  type InterviewStep,
+  type InterviewTopic,
+  type JournalBlock,
   type JournalDayDoc,
   type JournalFrontmatterSuggestion,
   type JournalIndexView,

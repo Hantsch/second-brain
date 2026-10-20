@@ -1,3 +1,7 @@
+<!-- This file mirrors MODULE_SCHEMA_TEMPLATE in src/core/wiki/agents-md.ts.
+     The code is authoritative; this doc is a generated-by-hand mirror kept in sync
+     by tests/core/wiki/module.test.ts. Edit the constant first, then copy here. -->
+
 # Wissens-Modul: Schema
 
 Ein Wissens-Modul ist ein eigenständiges kleines Wiki unter `modules/<slug>/`, gepflegt nach

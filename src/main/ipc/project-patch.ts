@@ -1,27 +1,32 @@
-/* Was an einem Projekt-Frontmatter geändert werden darf — und in welcher Form.
+/* What may be changed in a project's frontmatter — and in what form.
 
-   Zwei Regeln aus docs/VAULT-FORMAT.md stecken hier drin:
+   Two rules from docs/VAULT-FORMAT.md are embedded here:
 
-   1. **Unbekannte Felder bleiben erhalten.** Der Store mergt (`composeContent`),
-      also wird hier nur der Patch geprüft, nie das Bestandsfrontmatter neu
-      geschrieben.
-   2. **Was die App nicht kennt, schreibt sie nicht.** Ein unbekanntes Feld im
-      Patch ist ein Fehler, kein stilles Weglassen: sonst meldet die Oberfläche
-      Erfolg für etwas, das nicht passiert ist.
+   1. **Unknown fields are preserved.** The store merges (`composeContent`),
+      so only the patch is validated here, never the existing frontmatter
+      rewritten from scratch.
+   2. **What the app doesn't know, it doesn't write.** An unknown field in the
+      patch is an error, not a silent omission: otherwise the UI would report
+      success for something that didn't happen.
 
-   `type`, `slug` und `scope` sind nicht änderbar — sie stecken im Dateipfad.
-   Wer den Bereich wechselt, verschiebt eine Datei; das ist ein eigener Vorgang
-   und keine Frontmatter-Änderung. */
+   `type`, `slug`, and `scope` are not changeable — they're embedded in the
+   file path. Changing the scope means moving a file; that's a separate
+   operation, not a frontmatter change. */
 
 import type { ProjectFrontmatter, WaitingOn } from '@shared/types';
 import { PROJECT_STATUSES } from '@shared/types';
 import { fail } from './errors';
 
-/** Felder, die `projects:patch` schreiben darf. */
+/* `status_set` and `next_step_set` are deliberately absent: the app stamps them
+   itself when it writes the paired field, so a caller sending them lands in the
+   "unknown field" branch below — which is the honest answer, because `by` is not
+   the caller's to claim. */
+/** Fields that `projects:patch` is allowed to write. */
 const WRITABLE = [
   'title',
   'status',
   'priority',
+  'favorite',
   'started',
   'deadline',
   'next_step',
@@ -31,7 +36,7 @@ const WRITABLE = [
   'tags',
 ] as const;
 
-/** Felder, die es gibt, aber nicht über diesen Weg. */
+/** Fields that exist but not via this path. */
 const LOCKED: readonly string[] = ['type', 'slug', 'scope', 'created', 'updated'];
 
 const MAX_TEXT = 300;
@@ -60,8 +65,8 @@ function asList(field: string, value: unknown): string[] {
 }
 
 /**
- * Ein `waiting_on`-Eintrag. Unbekannte Felder eines Eintrags bleiben stehen —
- * auch innerhalb der Liste gilt: was der Nutzer geschrieben hat, überlebt.
+ * A `waiting_on` entry. Unknown fields of an entry are preserved — within the
+ * list too the rule holds: whatever the user wrote survives.
  */
 function asWaiting(field: string, value: unknown): WaitingOn & Record<string, unknown> {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) {
@@ -90,8 +95,8 @@ function asPriority(value: unknown): number {
 }
 
 /**
- * Der geprüfte Patch, fertig für `VaultStore.write`. `null` als Wert heißt
- * ausdrücklich „Feld leeren"; `undefined` kommt hier nicht vor.
+ * The validated patch, ready for `VaultStore.write`. `null` as a value
+ * explicitly means "clear the field"; `undefined` never occurs here.
  */
 export function checkProjectPatch(patch: Partial<ProjectFrontmatter>): Record<string, unknown> {
   if (patch === null || typeof patch !== 'object') throw fail('invalid', 'patch: erwartet Felder');
@@ -113,6 +118,11 @@ export function checkProjectPatch(patch: Partial<ProjectFrontmatter>): Record<st
     }
     if (key === 'priority') {
       out[key] = value === null ? null : asPriority(value);
+      continue;
+    }
+    if (key === 'favorite') {
+      if (value !== true && value !== false) invalid('favorite', 'erwartet true oder false');
+      out[key] = value;
       continue;
     }
     if (key === 'started' || key === 'deadline') {
@@ -139,8 +149,8 @@ export function checkProjectPatch(patch: Partial<ProjectFrontmatter>): Record<st
 }
 
 /**
- * Ein einzelnes Warte-auf als erledigt markieren. Alle anderen Einträge gehen
- * wortwörtlich zurück in die Datei — auch die, die die App nicht deuten kann.
+ * Mark a single waiting-on entry as resolved. All other entries go back into
+ * the file verbatim — including ones the app can't interpret.
  */
 export function resolveWaitingEntry(raw: unknown, index: number): unknown[] {
   if (!Array.isArray(raw) || raw.length === 0) {

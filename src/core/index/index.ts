@@ -7,10 +7,12 @@
  */
 
 export * from './types';
+export * from './passages';
 export * from './dates';
 export * from './text';
 export * from './todos';
 export * from './projects';
+export * from './areas';
 export * from './dumps';
 export * from './journal';
 export * from './modules';

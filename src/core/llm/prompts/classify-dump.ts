@@ -1,10 +1,10 @@
-/* Einen Dump einordnen: Wohin gehört er, was steht als Todo darin, auf wen wird
-   gewartet. Das Ergebnis ist ein Vorschlag, den der Nutzer bestätigt — deshalb
-   ist `reason` Pflicht und `confidence` ehrlich zu füllen.
+/* Filing a dump: where it belongs, what todos it contains, who it's waiting
+   on. The result is a proposal the user confirms — that's why `reason` is
+   mandatory and `confidence` must be filled in honestly.
 
-   Die harte Regel dieses Prompts: **nur Ziele aus der mitgegebenen Liste.** Ein
-   erfundener Projekt-Slug ist keine Einordnung, sondern eine Halluzination; der
-   Aufrufer verwirft sie und nimmt die Heuristik (`core/capture/classify`). */
+   The hard rule of this prompt: **only targets from the given list.** A
+   made-up project slug isn't a filing decision, it's a hallucination; the
+   caller discards it and falls back to the heuristic (`core/capture/classify`). */
 
 import type { ChatTurn, DocLanguage } from '@shared/types';
 import { clamp, documentLanguageRule, turns } from './shared';
@@ -15,29 +15,29 @@ export interface ClassifyProjectHint {
   scope: 'work' | 'private';
   status?: string;
   tags?: readonly string[];
-  /** Erster Absatz des Projektstands — daran erkennt das Modell den Bezug. */
+  /** First paragraph of the project status — this is how the model recognizes the connection. */
   excerpt?: string;
 }
 
-/** Ein Wissens-Modul. Als reiner Slug oder mit Titel und Beschreibung. */
+/** A knowledge module. Either a plain slug or with title and description. */
 export type ClassifyModuleHint = string | { slug: string; title?: string; description?: string };
 
 export interface ClassifyDumpInput {
   text: string;
-  /** Heutiges Datum als YYYY-MM-DD — Grundlage für „morgen", „nächste Woche". */
+  /** Today's date as YYYY-MM-DD — basis for "tomorrow", "next week". */
   today: string;
   projects?: readonly ClassifyProjectHint[];
-  /** Wissens-Module. */
+  /** Knowledge modules. */
   modules?: readonly ClassifyModuleHint[];
-  /** Bereichs-Slugs unter `areas/`. */
+  /** Area slugs under `areas/`. */
   areas?: readonly string[];
   knownTags?: readonly string[];
 }
 
 /**
- * Kernfelder eines `FilingProposal`. Der Aufbau der eigentlichen `FilingAction`
- * (Pfade, Abschnitte) passiert in `core/capture` — das Modell entscheidet nur
- * über Ziel und Inhalt, nicht über Dateinamen.
+ * Core fields of a `FilingProposal`. Building the actual `FilingAction`
+ * (paths, sections) happens in `core/capture` — the model only decides on
+ * target and content, not on file names.
  */
 export const CLASSIFY_DUMP_SCHEMA: Record<string, unknown> = {
   type: 'object',
@@ -104,7 +104,7 @@ export const CLASSIFY_DUMP_SCHEMA: Record<string, unknown> = {
   },
 };
 
-/** Ein Projekt in einer Zeile: Slug zuerst, damit die Antwort ihn abschreiben kann. */
+/** A project in one line: slug first, so the answer can copy it verbatim. */
 function projectLine(project: ClassifyProjectHint): string {
   const meta = [project.scope, project.status].filter((part) => part !== undefined).join(', ');
   const tags = project.tags && project.tags.length > 0 ? ` [${project.tags.join(', ')}]` : '';
@@ -126,7 +126,7 @@ export function classifyDumpPrompt(input: ClassifyDumpInput, docLanguage: DocLan
 
   return turns(
     [
-      'Du ordnest einen rohen Gedanken in ein persönliches Second Brain ein.',
+      'Du ordnest einen rohen Gedanken in ein persönliches Wissensarchiv ein.',
       documentLanguageRule(docLanguage),
       `Heute ist ${input.today}. Rechne relative Fristen („morgen", „bis Freitag") in YYYY-MM-DD um.`,
       'Wähle ein bestehendes Projekt, wenn der Text erkennbar dazugehört. Lege ein neues Projekt nur vor, wenn es um ein klar abgegrenztes Vorhaben mit Ziel geht.',

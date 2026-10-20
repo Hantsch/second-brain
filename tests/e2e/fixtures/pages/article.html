@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Keeping a knowledge base honest</title>
+  </head>
+  <body>
+    <article>
+      <h1>Keeping a knowledge base honest</h1>
+      <p>
+        A knowledge base earns trust one citation at a time. Every claim it makes should trace back
+        to a real note, written by a real person, on a real day — not to a guess dressed up as an
+        answer. The moment a system starts inventing plausible-sounding facts to fill a gap, its
+        usefulness collapses, because nobody can tell the difference between the parts that were
+        checked and the parts that were made up.
+      </p>
+      <p>
+        This is why a fetched source that yields nothing readable has to say so, loudly and
+        specifically, rather than quietly turning into an empty page. A cookie banner, a paywall, or
+        a mostly-empty single-page app shell all return a perfectly valid HTTP 200, but none of them
+        are a source in any meaningful sense. Treating that response as if it were an article would
+        let a hollow page slip into the vault, indistinguishable from a real one until someone
+        happens to open it and finds nothing there.
+      </p>
+      <p>
+        The same discipline applies to duplicates. Ingesting the same page twice should not silently
+        create two near-identical entries, nor should it silently refuse the second attempt forever.
+        The honest middle path is to say plainly that the source already exists, and to offer a
+        deliberate way to ingest it again if that is truly what the person wants — a choice made in
+        the open, not a decision the software makes quietly on someone's behalf.
+      </p>
+    </article>
+  </body>
+</html>

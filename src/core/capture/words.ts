@@ -1,29 +1,30 @@
 /**
- * Deutsche Wortgrenzen und ein Scanner darueber.
+ * German word boundaries and a scanner built on top of them.
  *
- * `\b` kennt nur ASCII und versagt genau bei den Woertern, um die es beim
- * Einordnen geht: `/\buebermorgen\b/` trifft, `/\bübermorgen\b/` nie — denn vor
- * dem `ü` steht fuer die Regex-Maschine schon eine Wortgrenze. Alle Muster im
- * Capture-Kern werden deshalb hier gebaut.
+ * `\b` only knows ASCII and fails on exactly the words that matter for
+ * classification: `/\buebermorgen\b/` matches, `/\bübermorgen\b/` never
+ * does — because as far as the regex engine is concerned, there's already a
+ * word boundary right before the `ü`. That's why every pattern in the
+ * capture core is built here.
  */
 
-/** Kein Wortzeichen davor. */
+/** No word character before. */
 export const LEFT_EDGE = '(?<![\\p{L}\\p{N}_])';
-/** Kein Wortzeichen dahinter. */
+/** No word character after. */
 export const RIGHT_EDGE = '(?![\\p{L}\\p{N}_])';
 
-/** Muster mit Wortgrenzen, die Umlaute als Wortzeichen zaehlen. */
+/** Pattern with word boundaries that count umlauts as word characters. */
 export function wordRegex(body: string, flags = 'giu'): RegExp {
   return new RegExp(`${LEFT_EDGE}(?:${body})${RIGHT_EDGE}`, flags);
 }
 
-/** Muster, das eines der Woerter trifft — auch gebeugt (bis zu drei Endbuchstaben). */
+/** Pattern that matches one of the words — including inflected forms (up to three trailing letters). */
 export function anyWordRegex(words: readonly string[], extraLetters = 3): RegExp {
   const body = words.map((word) => `${word}\\p{L}{0,${extraLetters}}`).join('|');
   return wordRegex(body);
 }
 
-/** Ein Treffer mit seiner Stelle im Text. */
+/** A match with its location in the text. */
 export interface Match {
   at: number;
   text: string;
@@ -31,8 +32,9 @@ export interface Match {
 }
 
 /**
- * Alle Treffer eines Musters. Das Muster wird kopiert, damit `lastIndex` beim
- * Aufrufer nicht haengen bleibt — geteilte Muster mit `g` sind sonst eine Falle.
+ * All matches of a pattern. The pattern is copied so `lastIndex` doesn't
+ * stick around on the caller's copy — shared patterns with `g` are a trap
+ * otherwise.
  */
 export function matchAll(pattern: RegExp, text: string): Match[] {
   const flags = pattern.flags.includes('g') ? pattern.flags : `${pattern.flags}g`;
@@ -45,12 +47,12 @@ export function matchAll(pattern: RegExp, text: string): Match[] {
   return found;
 }
 
-/** Trifft das Muster irgendwo? */
+/** Does the pattern match anywhere? */
 export function hasMatch(pattern: RegExp, text: string): boolean {
   return new RegExp(pattern.source, pattern.flags.replace('g', '')).test(text);
 }
 
-/** Die getroffenen Woerter, klein geschrieben und ohne Wiederholung. */
+/** The matched words, lowercased and without duplicates. */
 export function matchedWords(pattern: RegExp, text: string): string[] {
   const seen = new Set<string>();
   for (const match of matchAll(pattern, text)) {

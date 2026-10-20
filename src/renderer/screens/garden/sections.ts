@@ -1,22 +1,22 @@
-/* Die Stelle, an der ein Widerspruch steht — und die ehrliche Auskunft, wenn es
-   sie nicht gibt.
+/* The passage where a contradiction is stated — and the honest answer when
+   there isn't one.
 
-   Ein Widerspruch wird laut docs/MODULE-SCHEMA.md unter der Überschrift
-   „Widersprüche" benannt (auf Englisch „Contradictions" — dieselben Wörter wie in
-   `core/wiki/text.ts`). Gibt es den Abschnitt, ist er die Stelle. Gibt es ihn
-   nicht, zeigt die Karte den Anfang der Seite und sagt dazu, dass die Stelle in
-   der Datei nicht benannt ist. Einen Ausschnitt als „die widersprechende Stelle"
-   zu verkaufen wäre eine Behauptung über einen Text, den niemand geprüft hat. */
+   Per docs/MODULE-SCHEMA.md, a contradiction is named under the heading
+   "Widersprüche" (English "Contradictions" — the same words as in
+   `core/wiki/text.ts`). If the section exists, it's the passage. If it
+   doesn't, the card shows the beginning of the page and states that the
+   passage isn't named in the file. Selling an excerpt as "the contradicting
+   passage" would be a claim about text no one has checked. */
 
-/** Überschriften, unter denen ein benannter Widerspruch steht (beide Sprachen). */
+/** Headings under which a named contradiction appears (both languages). */
 const HEADINGS: readonly string[] = ['widersprüche', 'widerspruche', 'contradictions'];
 
-/** So viel Text zeigt der Ausschnitt, wenn es keinen Abschnitt gibt. */
+/** How much text the excerpt shows when there's no section. */
 export const EXCERPT_CHARS = 420;
 
 export interface Passage {
   text: string;
-  /** Stammt der Text aus dem Abschnitt „Widersprüche"? */
+  /** Does the text come from the "Contradictions" section? */
   named: boolean;
 }
 
@@ -29,8 +29,8 @@ function trimTo(text: string, max: number): string {
 }
 
 /**
- * Der Abschnitt „Widersprüche" eines Seitenrumpfs, sonst der Anfang der Seite.
- * `named` sagt, welches von beiden — die Karte beschriftet danach.
+ * The "Contradictions" section of a page body, otherwise the beginning of the
+ * page. `named` says which of the two — the card labels accordingly.
  */
 export function contradictionPassage(body: string): Passage {
   const lines = body.split(/\r?\n/);
@@ -49,7 +49,7 @@ export function contradictionPassage(body: string): Passage {
   const section = collected.join('\n').trim();
   if (section.length > 0) return { text: trimTo(section, EXCERPT_CHARS), named: true };
 
-  /* Ohne Abschnitt: der Anfang des Rumpfs, ohne die Überschriften. */
+  /* Without a section: the beginning of the body, without the headings. */
   const plain = lines
     .filter((line) => !/^#{1,6}\s+/.test(line))
     .join('\n')

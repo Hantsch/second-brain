@@ -14,39 +14,53 @@ draft ──► ready ──► in-progress ──► done
   └─────────┘  (back, as long as "Open Questions" are unresolved)
 ```
 
-| Status        | Meaning                                                       |
-| ------------- | ------------------------------------------------------------- |
-| `draft`       | The requirement is written, the plan is missing               |
-| `ready`       | Plan + deliverables are in the document, approved to build    |
-| `in-progress` | Implementation is running                                     |
-| `done`        | Implemented (+ verified), Done section filled                 |
+| Status        | Meaning                                                     |
+| ------------- | ----------------------------------------------------------- |
+| `draft`       | The requirement is written, the plan is missing             |
+| `ready`       | Plan + deliverables are in the document, approved to build  |
+| `in-progress` | Implementation is running, or a real blocker holds it there |
+| `done`        | Implemented, every criterion's test green, review through   |
+
+`done` is set by `/build` itself, as soon as verification is green and the clean-agent review
+is through. There is **no** approval state behind it: acceptance is the test each criterion was
+mapped to, not a person with a click list. A story stays `in-progress` only for a real
+blocker — red tests nobody can fix, a criterion whose test was never written, review-fix cycles
+exhausted. Anything found later is a **new** story, not a reopened one.
 
 ## Flow
 
 1. **You** create a new file from `_TEMPLATE.md` and describe the requirement
-   (`status: draft`) — or let `/ai-scrum:roadmap plan` cut sprint + story drafts out of the
+   (`status: draft`) — or let `/roadmap plan` cut sprint + story drafts out of the
    next roadmap milestone with you.
 
-2. **`/ai-scrum:refine <id>`** (runs on Opus) triages:
+2. **`/refine <id>`** (runs on Opus) triages:
    - **Trivial/mechanical** → no ceremony plan, direct handoff in the same session offered
      ("too small to refine, say GO").
    - **Unclear** → `Open Questions` filled and put to you; status stays `draft`.
    - **Clear** → **`Plan`** (precise, max. ~50 lines), **`Deliverables`** (small,
-     individually acceptable pieces), **`Model Hints`** and possibly **`Test Plan`** are
-     written into the document and `status: ready` is set.
+     individually acceptable pieces), **`Model Hints`** and **`Acceptance Tests`** — one line
+     per acceptance criterion naming the automated test that will prove it — are written into
+     the document and `status: ready` is set.
+   - **The coverage gate:** no `ready` while a criterion lacks a deliverable, and none while it
+     lacks a named test or a `manual residue` reason. Whatever is not mapped here is never
+     checked at all — there is no manual round downstream to catch it.
    - Usable in a **separate session** while another session implements.
 
-3. **`/ai-scrum:build <id>`** (cheap tier) reads the `ready` requirement + plan and implements
-   the **deliverables in order**, in one go (scrum-like, no giant diff at the end). Then it
-   verifies with the project's build/test commands, has the diff reviewed by a **fresh clean
-   agent**, fills **`Done`** (summary + a 1–2 line commit message), moves the file to `done/`
-   and appends a line to `done/INDEX.md`. Status → `in-progress` → `done`.
-   **You make the commit deliberately yourself.**
+3. **`/build <id>`** (cheap tier) reads the `ready` requirement + plan and implements
+   the **deliverables in order**, in one go (scrum-like, no giant diff at the end) — each D
+   including the acceptance test named for it, written by the same agent, not afterwards. Then
+   it verifies with a narrow gate — build/lint/typecheck, the tests its changes affect and
+   only its own e2e tests (full `test`/`e2e` where the profile narrows nothing) — has the diff reviewed by a **fresh clean agent** — which also judges whether those
+   tests would fail on a broken implementation — fills **`Done`** (summary + a 1–2 line commit
+   message), moves the file to `done/` and appends a line to `done/INDEX.md`.
+   Status → `in-progress` → `done`. **You make the commit deliberately yourself** — after
+   the full suites, which `/build <id> --full` runs for you; inside `/sprint` they run once
+   after the last story.
 
 ## Model routing
 
-- `/ai-scrum:refine` forces **Opus** (thinking), `/ai-scrum:build` the cheap tier (execution)
-  — via `model:` frontmatter in the plugin's command files.
+- `/refine` forces **Opus** (thinking), `/build` the cheap tier (execution)
+  — via `model:` frontmatter in `.claude/commands/`.
 - Both are **orchestrators**: they delegate research (refine) and per-deliverable
   implementation (build) to fresh `Agent` calls with a self-contained prompt. If a step needs
   more brainpower, the orchestrator uses the `deliverable-hard` / `story-review-hard` agent —
@@ -56,8 +70,14 @@ draft ──► ready ──► in-progress ──► done
 
 ## Document sections (see `_TEMPLATE.md`)
 
-`Requirement` · `Acceptance Criteria` · `Open Questions` · `Plan` · `Deliverables` ·
-`Model Hints` · `Test Plan (manual acceptance)` · `Done`.
+`Requirement` · `Acceptance Criteria` · `Open Questions` · `Decisions (Sprint)` · `Plan` ·
+`Deliverables` · `Model Hints` · `Acceptance Tests` · `Done`.
+
+`Decisions (Sprint)` records what the user decided during a sprint; `/sprint`'s clarification
+round and `/refine` inside a sprint fill it.
+
+Stories written before the test mapping existed carry `Test Plan (manual acceptance)` in place
+of `Acceptance Tests` — the commands treat it as equivalent and do not restructure the file.
 
 ## IDs
 
@@ -69,6 +89,6 @@ Open requirements (`draft`/`ready`/`in-progress`) live **directly** in this fold
 one is `done`, the file moves to `done/` via `git mv`. So the flat folder always shows only the
 work that is actually open.
 
-On the move, `/ai-scrum:build` appends a line to `done/INDEX.md`
+On the move, `/build` appends a line to `done/INDEX.md`
 (`- NNN — <title> · <sprint or —> · <one-sentence result>`) — the index is the fast story
 history, without having to read the full texts.

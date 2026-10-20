@@ -20,9 +20,10 @@ import type {
   WikiPageType,
   WriteResult,
 } from '@shared/types';
-import type { IndexedDoc } from '@core/index/types';
+import type { IndexedDoc, PassageHit } from '@core/index/types';
 import type { LlmGateway } from '@core/llm';
 import type { DateLike } from '@core/vault/paths';
+import type { DeleteResult } from '@core/vault/types';
 
 /** Ein Schreibvorgang mit Konfliktschutz. Untermenge von `WriteInput` aus `core/vault`. */
 export interface WikiWriteInput {
@@ -56,12 +57,25 @@ export interface WikiStore {
 }
 
 /**
+ * What a transaction (`transaction.ts`) needs on top of that: the vault's trash.
+ * Taking back a page this run created means `delete` — a copy into
+ * `.secondbrain/trash/` plus a mark, never a permanent removal. `VaultStore`
+ * satisfies this structurally, `MemoryVaultStore` too, so no caller and no
+ * fixture has to hand in anything new.
+ */
+export interface WikiTxStore extends WikiStore {
+  delete(path: string): Promise<DeleteResult>;
+}
+
+/**
  * Was der Wissens-Kern am Index braucht. `IndexService` erfuellt es strukturell.
  * Nur Lesen: der Index ist abgeleitet und wird hier nie fortgeschrieben.
  */
 export interface WikiIndexView {
   index(): { docs: readonly IndexedDoc[]; byPath: ReadonlyMap<string, IndexedDoc> };
   search(query: SearchQuery): SearchHit[];
+  /** Matching passages with their file lines, not collapsed per file (053). */
+  searchPassages(query: SearchQuery): PassageHit[];
   pages(): readonly WikiPage[];
   modules(): readonly KnowledgeModule[];
 }
@@ -87,6 +101,24 @@ export interface WikiDeps extends WikiOptions {
   store: WikiStore;
   index: WikiIndexView;
   gateway: LlmGateway;
+  /**
+   * Fortschritt einer Verdichtung, 0..1, streng steigend. Fragen und
+   * Zurueckschreiben rufen das nie auf — nur `condenseSource`/`ingestSource`
+   * bewegen damit den Balken, statt ihn bis zum Ende stillstehen zu lassen
+   * (Story 050, D7). Wie der Aufrufer die Zahl weiterreicht, ist seine Sache.
+   */
+  onProgress?: (progress: number) => void;
+}
+
+/**
+ * What a digestion needs on top of that: a store with the vault's trash.
+ * `ingestSource` writes through a `WikiTransaction`, and taking back a page this
+ * run created is a `delete` — so the store underneath has to offer one.
+ * `VaultStore` and `MemoryVaultStore` both satisfy it structurally, so no caller
+ * and no fixture has to hand in anything new.
+ */
+export interface WikiIngestDeps extends WikiDeps {
+  store: WikiTxStore;
 }
 
 /** Eine Seite, wie der Kern sie beim Suchen und Schreiben identifiziert. */

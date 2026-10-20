@@ -8,13 +8,15 @@
  * 3. Eine erfundene Seite oder ein erfundenes Modul faellt weg.
  * 4. **Ohne Modell geht nichts verloren:** die Quelle steht trotzdem im Katalog und
  *    in der Chronik, sichtbar als „noch nicht verdichtet".
+ * 5. **Ganz oder gar nicht:** ein Fehlschlag mitten im Schreiben laesst keine Seite,
+ *    keinen Katalogeintrag und keinen Protokollvermerk zurueck.
  *
  * Kein Test geht ins Netz: alles laeuft ueber den `FakeProvider`.
  */
 
 import { describe, expect, it } from 'vitest';
 import { ingestSource, parseIndex, parseLog, protocolPaths } from '@core/wiki';
-import type { WikiIngestResult } from '@core/wiki';
+import type { WikiIngestResult, WikiTxStore } from '@core/wiki';
 import { emptyGateway, gatewayWithReplies } from '../../helpers/llm';
 import type { FakeGatewaySetup } from '../../helpers/llm';
 import { TODAY } from '../../helpers/time';
@@ -156,9 +158,20 @@ describe('ingestSource mit Modell', () => {
       origin: 'https://example.org/orbit-mandanten',
     });
     expect(doc?.frontmatter['condensed']).toBeUndefined();
+    expect(doc?.frontmatter['source_basis']).toBeUndefined();
     expect(doc?.body).toContain('## Tragende Aussagen');
     expect(doc?.body).toContain('## Rohquelle');
     expect(doc?.body).toContain(`[${RAW_PATH}](${RAW_PATH})`);
+  });
+
+  it('sagt auf der Seite, dass sie aus Beschreibung/Kapiteln statt einem Transcript entstand', async () => {
+    const fixture = await wikiFixture();
+
+    await ingest(fixture, setup().gateway, { basis: 'metadata' });
+
+    const doc = await fixture.store.read(SOURCE_PATH);
+    expect(doc?.frontmatter['source_basis']).toBe('metadata');
+    expect(doc?.body).toContain('Aus Beschreibung und Kapiteln erstellt, es gab kein Transcript.');
   });
 
   it('beruehrt drei Seiten: anlegen, ergaenzen, Widerspruch benennen', async () => {
@@ -287,6 +300,20 @@ describe('ingestSource mit Modell', () => {
     expect(overview?.body).toContain('Tokens leben kurz: 15 Minuten Access');
   });
 
+  it('verlinkt Source-Seite und neue Seiten aus der Overview, erweiterte nicht', async () => {
+    const fixture = await wikiFixture();
+    const result = await ingest(fixture, setup().gateway);
+
+    const overview = await fixture.store.read(`modules/${MODULE}/wiki/overview.md`);
+    expect(overview?.body).toContain('## Seiten');
+    expect(overview?.body).toContain(`[[${SOURCE_SLUG}]]`);
+    expect(overview?.body).toContain('[[mandantentrennung]]');
+    expect(overview?.body).toContain('[[access-token-laufzeit]]');
+    // oauth2 wird nur ergaenzt und hat seinen Verweis schon.
+    expect(overview?.body).not.toContain('[[oauth2]] —');
+    expect(result.touchedPages).toContain(`modules/${MODULE}/wiki/overview.md`);
+  });
+
   it('verdichtet einen langen Text abschnittsweise und fuehrt ihn zusammen', async () => {
     const fixture = await wikiFixture();
     const { gateway, provider } = setup();
@@ -337,6 +364,15 @@ describe('ingestSource ohne Modell', () => {
     expect(doc?.body).toContain('Orbit Identity trennt Mandanten');
     expect(doc?.body).toContain('Noch nicht verdichtet — braucht ein Modell.');
     expect(doc?.body).toContain('## Rohquelle');
+  });
+
+  it('verlinkt die unverdichtete Source-Seite aus der Overview, damit sie keine Waise ist', async () => {
+    const fixture = await wikiFixture();
+
+    await ingest(fixture, emptyGateway());
+
+    const overview = await fixture.store.read(`modules/${MODULE}/wiki/overview.md`);
+    expect(overview?.body).toContain(`[[${SOURCE_SLUG}]]`);
   });
 
   it('nennt die Quelle im Katalog und in der Chronik', async () => {
@@ -395,6 +431,237 @@ describe('ingestSource: Grenzen', () => {
     const second = await ingest(fixture, emptyGateway());
 
     expect(second.sourceSlug).toBe(`${first.sourceSlug}-2`);
+    expect(await fixture.store.exists(first.sourcePage)).toBe(true);
+  });
+});
+
+/* Ganz oder gar nicht (Story 050, AC1 — die Haelfte „Fehlschlag hinterlaesst nichts";
+   die andere Haelfte, „ein zweiter Versuch schreibt genau eine Seite", steht in D4).
+   Der Fehler faellt beim Schreiben von `log.md` — dem vorletzten Schritt, also nach
+   Source-Seite, Entitaeten, Widerspruch und Katalog. Genau diese Stelle hinterliess
+   vorher verdichtete Seiten neben einer Rohquelle, die sich weiter „unverdichtet"
+   nannte. */
+const DISK_ERROR = new Error('Chronik nicht schreibbar');
+
+/**
+ * Ein Store, der genau bei einem Pfad das Schreiben verweigert. Alles andere geht
+ * an den echten Store durch — der Rueckweg trifft dieselben Dateien wie im Betrieb.
+ */
+function storeFailingOn(store: WikiTxStore, failPath: string): WikiTxStore {
+  return {
+    read: (path) => store.read(path),
+    readText: (path) => store.readText(path),
+    exists: (path) => store.exists(path),
+    delete: (path) => store.delete(path),
+    create: (path, frontmatter, body) => store.create(path, frontmatter, body),
+    write: (input) => store.write(input),
+    append: (path, section, content, options) => store.append(path, section, content, options),
+    writeText: async (path, content, options) => {
+      if (path === failPath) throw DISK_ERROR;
+      return store.writeText(path, content, options);
+    },
+  };
+}
+
+function ingestFailingOn(fixture: WikiFixture, failPath: string): Promise<WikiIngestResult> {
+  return ingestSource(
+    { ...fixture.deps(setup().gateway), store: storeFailingOn(fixture.store, failPath) },
+    {
+      rawPath: RAW_PATH,
+      module: MODULE,
+      title: SOURCE_TITLE,
+      text: RAW_TEXT,
+      origin: 'https://example.org/orbit-mandanten',
+    },
+  );
+}
+
+describe('ingestSource: ganz oder gar nicht', () => {
+  it('laesst nach einem Fehler an der Chronik keine Seite und keinen Katalogeintrag stehen', async () => {
+    const fixture = await wikiFixture();
+    const oauthBefore = await fixture.text(OAUTH_PATH);
+    const tokenBefore = await fixture.text(TOKEN_PATH);
+    const indexBefore = await fixture.text(INDEX_PATH);
+    const logBefore = await fixture.text(LOG_PATH);
+
+    await expect(ingestFailingOn(fixture, LOG_PATH)).rejects.toThrow(/Chronik nicht schreibbar/);
+
+    // Angelegte Seiten sind wieder weg (im Papierkorb, nicht verloren).
+    expect(await fixture.store.exists(SOURCE_PATH)).toBe(false);
+    expect(await fixture.store.exists(CONCEPT_PATH)).toBe(false);
+    expect(await fixture.store.exists(CONFLICT_PATH)).toBe(false);
+    // Ergaenzte Seiten stehen Zeichen fuer Zeichen wieder auf ihrem alten Stand.
+    expect(await fixture.text(OAUTH_PATH)).toBe(oauthBefore);
+    expect(await fixture.text(TOKEN_PATH)).toBe(tokenBefore);
+    // Kein Katalogeintrag, keine Chronikzeile.
+    expect(parseIndex(await fixture.text(INDEX_PATH)).map((entry) => entry.slug)).not.toContain(
+      SOURCE_SLUG,
+    );
+    expect(await fixture.text(INDEX_PATH)).toBe(indexBefore);
+    expect(await fixture.text(LOG_PATH)).toBe(logBefore);
+  });
+
+  it('laesst die Rohquelle unverdichtet — das Protokoll wird nicht vermerkt', async () => {
+    const fixture = await wikiFixture();
+    const before = await fixture.text(PROTOCOL_PATH);
+
+    await expect(ingestFailingOn(fixture, LOG_PATH)).rejects.toThrow(DISK_ERROR);
+
+    const protocol: unknown = JSON.parse(await fixture.text(PROTOCOL_PATH));
+    expect(protocol).toMatchObject({ sourcePage: null, modules: [] });
+    expect(await fixture.text(PROTOCOL_PATH)).toBe(before);
+  });
+
+  /* Der Vermerk ist der letzte Schritt: scheitert er, muss auch die Chronik
+     zurueckgedreht werden — sonst stuende eine Ingest-Zeile ueber einer Quelle,
+     die es nicht gibt. */
+  it('dreht auch die Chronik zurueck, wenn erst der Protokollvermerk scheitert', async () => {
+    const fixture = await wikiFixture();
+    const logBefore = await fixture.text(LOG_PATH);
+    const indexBefore = await fixture.text(INDEX_PATH);
+
+    await expect(ingestFailingOn(fixture, PROTOCOL_PATH)).rejects.toThrow(DISK_ERROR);
+
+    expect(await fixture.store.exists(SOURCE_PATH)).toBe(false);
+    expect(await fixture.text(LOG_PATH)).toBe(logBefore);
+    expect(await fixture.text(INDEX_PATH)).toBe(indexBefore);
+    const protocol: unknown = JSON.parse(await fixture.text(PROTOCOL_PATH));
+    expect(protocol).toMatchObject({ sourcePage: null });
+  });
+
+  it('reicht den echten Fehler an den Aufrufer durch', async () => {
+    const fixture = await wikiFixture();
+
+    const caught = await ingestFailingOn(fixture, LOG_PATH).then(
+      () => null,
+      (error: unknown) => error,
+    );
+
+    // Derselbe Fehler, nicht ein Ersatz aus dem Rueckweg.
+    expect(caught).toBe(DISK_ERROR);
+  });
+});
+
+/* Genau eine Source-Seite je Rohquelle (Story 050, AC1 — die zweite Haelfte, D4).
+   Der Fall, den kein Rueckweg abdeckt: ein `SIGKILL` oder ein Stromausfall. Dann
+   steht die Source-Seite, das Protokoll nennt die Quelle aber weiter unverdichtet —
+   und der zweite Versuch muss in genau diese Seite zurueckschreiben, statt `…-2`
+   daneben zu legen. */
+const KILLED_DAY = '2026-08-09';
+const SECOND_PATH = `modules/${MODULE}/wiki/sources/${SOURCE_SLUG}-2.md`;
+const FOREIGN_RAW = 'raw/web/2026-08-09-ganz-andere-quelle.md';
+
+/** Der Rumpf, den ein abgebrochener Lauf ohne Modell hinterlaesst. */
+const KILLED_BODY = [
+  'Orbit Identity trennt Mandanten über eigene Organisationen.',
+  '',
+  'Noch nicht verdichtet — braucht ein Modell.',
+  '',
+  '## Rohquelle',
+  '',
+  `- [${RAW_PATH}](${RAW_PATH})`,
+  '',
+].join('\n');
+
+/**
+ * Eine liegengebliebene Source-Seite anlegen — der Zustand nach dem harten
+ * Abbruch. Danach wird der Index nachgezogen: die App startet nach einem Kill neu
+ * und liest die Datei wieder ein.
+ */
+async function leftoverSourcePage(
+  fixture: WikiFixture,
+  patch: { path?: string; raw?: string } = {},
+): Promise<void> {
+  await fixture.store.create(
+    patch.path ?? SOURCE_PATH,
+    {
+      type: 'source',
+      title: SOURCE_TITLE,
+      module: MODULE,
+      created: KILLED_DAY,
+      updated: KILLED_DAY,
+      tags: [],
+      sources: [],
+      lang: 'de',
+      raw: patch.raw ?? RAW_PATH,
+      condensed: false,
+    },
+    KILLED_BODY,
+  );
+  await fixture.refresh();
+}
+
+describe('ingestSource: ein zweiter Versuch schreibt genau eine Source-Seite', () => {
+  it('schreibt in die liegengebliebene Seite zurueck, statt eine zweite anzulegen', async () => {
+    const fixture = await wikiFixture();
+    await leftoverSourcePage(fixture);
+
+    const result = await ingest(fixture, setup().gateway);
+
+    expect(result.sourceSlug).toBe(SOURCE_SLUG);
+    expect(result.sourcePage).toBe(SOURCE_PATH);
+    // Die Seite stand schon — sie ist in diesem Lauf nicht entstanden.
+    expect(result.createdPages).not.toContain(SOURCE_PATH);
+    expect(await fixture.store.exists(SECOND_PATH)).toBe(false);
+
+    const doc = await fixture.store.read(SOURCE_PATH);
+    expect(doc?.body).toContain('## Tragende Aussagen');
+    expect(doc?.body).not.toContain('Noch nicht verdichtet');
+    expect(doc?.frontmatter).toMatchObject({
+      type: 'source',
+      module: MODULE,
+      raw: RAW_PATH,
+      // Angelegt wurde die Seite im abgebrochenen Lauf; verdichtet ist sie heute.
+      created: KILLED_DAY,
+      updated: TODAY,
+      condensed: true,
+    });
+  });
+
+  it('laesst danach genau eine Seite und einen Katalogeintrag zu dieser Rohquelle stehen', async () => {
+    const fixture = await wikiFixture();
+    await leftoverSourcePage(fixture);
+
+    await ingest(fixture, setup().gateway);
+    await fixture.refresh();
+
+    const forRaw = fixture.index.index().docs.filter((doc) => doc.frontmatter['raw'] === RAW_PATH);
+    expect(forRaw.map((doc) => doc.path)).toEqual([SOURCE_PATH]);
+    expect(
+      parseIndex(await fixture.text(INDEX_PATH)).filter((e) => e.slug === SOURCE_SLUG),
+    ).toEqual([{ type: 'source', slug: SOURCE_SLUG, summary: expect.any(String) }]);
+    const protocol: unknown = JSON.parse(await fixture.text(PROTOCOL_PATH));
+    expect(protocol).toMatchObject({ sourcePage: SOURCE_SLUG, modules: [MODULE] });
+  });
+
+  /* Der teure Irrtum waere, die Seite einer *anderen* Quelle zu ueberschreiben:
+     zwei Quellen desselben Tages mit demselben Titel treffen sich im Slug. Nur
+     `raw` entscheidet, und dieselbe Kollision loest weiter `freeSlug`. */
+  it('ueberschreibt keine Seite, die zu einer anderen Rohquelle gehoert', async () => {
+    const fixture = await wikiFixture();
+    await leftoverSourcePage(fixture, { raw: FOREIGN_RAW });
+    const foreignBefore = await fixture.text(SOURCE_PATH);
+
+    const result = await ingest(fixture, setup().gateway);
+
+    expect(result.sourceSlug).toBe(`${SOURCE_SLUG}-2`);
+    expect(result.sourcePage).toBe(SECOND_PATH);
+    expect(result.createdPages).toContain(SECOND_PATH);
+    expect(await fixture.text(SOURCE_PATH)).toBe(foreignBefore);
+  });
+
+  /* Die Gegenprobe zum Protokollvermerk: eine vollstaendig verdichtete Quelle ein
+     zweites Mal zu verdichten ist eine Absicht, kein Wiederanlauf — auch wenn der
+     Index die erste Seite inzwischen kennt. */
+  it('legt neben eine schon verdichtete Quelle weiter eine zweite Seite', async () => {
+    const fixture = await wikiFixture();
+
+    const first = await ingest(fixture, emptyGateway());
+    await fixture.refresh();
+    const second = await ingest(fixture, emptyGateway());
+
+    expect(second.sourceSlug).toBe(`${first.sourceSlug}-2`);
+    expect(second.createdPages).toContain(second.sourcePage);
     expect(await fixture.store.exists(first.sourcePage)).toBe(true);
   });
 });

@@ -1,19 +1,20 @@
-/* Todos: lesen, abhaken, anlegen, ändern.
+/* Todos: read, check off, create, change.
 
-   Ein Todo ist eine Checkbox in einer Datei, die der Nutzer auch in Obsidian
-   bearbeitet. Deshalb gilt hier die härteste Fassung der Schreibregel aus
-   docs/VAULT-FORMAT.md: **genau eine Zeile wird umgeschrieben**, der Rest der
-   Datei geht wortwörtlich zurück auf die Platte (`todo-lines.ts`).
+   A todo is a checkbox in a file the user also edits in Obsidian. That's why
+   the strictest version of the write rule from docs/VAULT-FORMAT.md applies
+   here: edits rewrite exactly one line; reordering only permutes the existing
+   checkbox lines. Everything else goes back to disk verbatim (`todo-lines.ts`).
 
-   Was „extern geändert" heißt, entscheidet der Vergleich mit dem Stand, den die
-   Oberfläche gesehen hat: findet sich die Zeile nicht mehr, oder trägt sie
-   inzwischen einen anderen Zustand, eine andere Frist oder eine andere
-   Priorität, wird nicht geschrieben — es gibt einen Konflikt. Ein Häkchen, das
-   die fremde Änderung überschreibt, wäre schlimmer als eine Absage. */
+   What counts as "changed externally" is decided by comparing against the
+   version the UI has seen: if the line can no longer be found, or it now
+   carries a different state, a different due date, or a different priority,
+   nothing is written — there's a conflict. A checkmark that overwrites a
+   change made elsewhere would be worse than a refusal. */
 
-import { SECTION_FACTS, SECTION_TODOS, todoLine } from '@core/capture';
+import { areaSectionIn } from '@core/areas/sections';
+import { SECTION_TODOS, todoLine } from '@core/capture';
 import { parseTodos, scopeFor } from '@core/index';
-import { ensureDay } from '@core/journal';
+import { ensureDay, sectionIn } from '@core/journal';
 import { isoDay, projectPath } from '@core/vault/paths';
 import type { DocLanguage, Scope, Todo, VaultDoc } from '@shared/types';
 import { SCOPES } from '@shared/types';
@@ -21,13 +22,19 @@ import type { HandlerMap } from './registry';
 import { defineHandlers, fail } from './registry';
 import { journalStore } from './journal-day';
 import { requireLists } from './lists';
-import { formatCheckboxLine, parseCheckboxLine, replaceTodoText, setDayMarker } from './todo-lines';
+import {
+  formatCheckboxLine,
+  parseCheckboxLine,
+  replaceTodoText,
+  setDayMarker,
+  setPriority,
+} from './todo-lines';
 import type { CheckboxLine } from './todo-lines';
 import { settle } from './wiki-bridge';
 import type { VaultStoreLike } from '../contracts';
 import type { Services } from '../services';
 
-/** Tag ohne Frontmatter-Deutung: der Rumpf beginnt bei Zeile 1. */
+/** Day without frontmatter interpretation: the body starts at line 1. */
 const BODY_OFFSET = 1;
 
 function store(services: Services): VaultStoreLike {
@@ -38,7 +45,7 @@ function docLanguage(services: Services): DocLanguage {
   return services.settings.vault()?.languages.documents ?? 'de';
 }
 
-/** Todos einer Datei, wie der Parser sie in dieser Reihenfolge sieht. */
+/** A file's todos, in the order the parser sees them. */
 function todosOf(path: string, doc: VaultDoc, now: Date): Todo[] {
   return parseTodos(doc.body, {
     path,
@@ -48,7 +55,7 @@ function todosOf(path: string, doc: VaultDoc, now: Date): Todo[] {
   });
 }
 
-/** Trägt die Zeile noch das, was die Oberfläche gezeigt hat? */
+/** Does the line still carry what the UI showed? */
 function sameTodo(a: Todo, b: Todo): boolean {
   return (
     a.state === b.state &&
@@ -64,16 +71,16 @@ interface Located {
   todo: Todo;
   doc: VaultDoc;
   lines: string[];
-  /** 0-basierter Index im Rumpf. */
+  /** 0-based index in the body. */
   at: number;
   parts: CheckboxLine;
-  /** Stelle in der Reihenfolge der Todos dieser Datei. */
+  /** Position in the order of this file's todos. */
   ordinal: number;
 }
 
 /**
- * Die Zeile zu einer Todo-Kennung — in der Datei, nicht im Index. Der Index sagt
- * nur, wo gesucht wird; gefunden werden muss es in der Datei selbst.
+ * The line for a todo id — in the file, not in the index. The index only
+ * says where to look; the actual finding has to happen in the file itself.
  */
 async function locate(services: Services, id: string, now: Date): Promise<Located> {
   const wanted = requireLists(services)
@@ -99,7 +106,7 @@ async function locate(services: Services, id: string, now: Date): Promise<Locate
   return { todo: wanted, doc, lines, at, parts, ordinal };
 }
 
-/** Genau eine Zeile ersetzen und die Datei zurückschreiben. */
+/** Replace exactly one line and write the file back. */
 async function writeLine(
   services: Services,
   found: Located,
@@ -117,9 +124,10 @@ async function writeLine(
 }
 
 /**
- * Das Todo, wie es nach dem Schreiben dasteht: aus dem Index, damit Projekttitel
- * und Fristberechnung stimmen. Kennt der Index die Datei noch nicht, kommt die
- * Fassung aus der Datei — sie ist wahr, nur ohne Projekttitel.
+ * The todo as it stands after writing: from the index, so that project title
+ * and due-date calculation are correct. If the index doesn't know the file
+ * yet, the version comes from the file — it's true, just without a project
+ * title.
  */
 async function reread(services: Services, path: string, ordinal: number, now: Date): Promise<Todo> {
   const indexed = (services.index()?.todos?.() ?? []).filter((todo) => todo.path === path);
@@ -132,16 +140,28 @@ async function reread(services: Services, path: string, ordinal: number, now: Da
   return found;
 }
 
-/** Wohin ein neues Todo geht: in die Projektdatei, sonst in den heutigen Tag. */
+/**
+ * Where a new todo goes: into the project file, into the area file, or —
+ * without either — into today's day. `project` and `area` are exclusive
+ * destinations for one new line; naming both is a caller error, not a
+ * silent pick of one.
+ */
 async function targetFor(
   services: Services,
   project: string | null | undefined,
+  area: string | null | undefined,
   scope: Scope,
   now: Date,
 ): Promise<{ path: string; section: string }> {
-  const slug = typeof project === 'string' ? project.trim() : '';
-  if (slug.length > 0) {
-    const known = (services.index()?.projects?.() ?? []).find((entry) => entry.slug === slug);
+  const projectSlug = typeof project === 'string' ? project.trim() : '';
+  const areaSlug = typeof area === 'string' ? area.trim() : '';
+  if (projectSlug.length > 0 && areaSlug.length > 0) {
+    throw fail('invalid', 'project und area schließen sich aus: ein Todo hat nur ein Zuhause');
+  }
+  if (projectSlug.length > 0) {
+    const known = (services.index()?.projects?.() ?? []).find(
+      (entry) => entry.slug === projectSlug,
+    );
     if (known !== undefined) {
       if (known.scope !== scope) {
         throw fail('invalid', `dieses Projekt liegt im Bereich ${known.scope}`);
@@ -149,31 +169,52 @@ async function targetFor(
       return { path: known.path, section: SECTION_TODOS };
     }
     for (const where of SCOPES) {
-      const path = projectPath(where, slug);
+      const path = projectPath(where, projectSlug);
       if (await store(services).exists(path)) return { path, section: SECTION_TODOS };
     }
-    throw fail('not-found', `dieses Projekt gibt es nicht: ${slug}`);
+    throw fail('not-found', `dieses Projekt gibt es nicht: ${projectSlug}`);
   }
-  return { path: await ensureJournal(services, now), section: SECTION_FACTS };
+  if (areaSlug.length > 0) {
+    const known = requireLists(services)
+      .areas()
+      .find((entry) => entry.slug === areaSlug);
+    if (known === undefined) throw fail('not-found', `diesen Bereich gibt es nicht: ${areaSlug}`);
+    const doc = await store(services).read(known.path);
+    if (doc === null) throw fail('not-found', `diese Datei gibt es nicht: ${known.path}`);
+    return { path: known.path, section: areaSectionIn(doc.body, 'todos', docLanguage(services)) };
+  }
+  const journal = await ensureJournal(services, now);
+  return {
+    path: journal.path,
+    /* The facts heading, whichever spelling the file already carries — same
+       rule `journal/close.ts` uses. Without this, a day file `ensureDay` just
+       created under `en` (`## Facts`) would get a *second*, hardcoded German
+       section from a caller that never looked at what was actually written. */
+    section: sectionIn(journal.body, 'facts', docLanguage(services)),
+  };
 }
 
 /**
- * Der heutige Tageseintrag — die Heimat eines Todos ohne Projekt. Fehlt die
- * Datei, legt sie **der Tagebuch-Kern** an (`ensureDay`), nicht dieser Bereich:
- * es gab hier eine zweite Fassung des Tagesformats (Titel per `Intl`, Rumpf nur
- * „## Tag"), und zwei Fassungen laufen beim ersten Sprachwechsel auseinander.
- * `ensureDay` ist idempotent — liegt die Datei, wird sie nicht angefasst.
+ * Today's daily entry — home for a todo without a project. If the file is
+ * missing, **the journal core** creates it (`ensureDay`), not this module:
+ * there used to be a second version of the day format here (title via
+ * `Intl`, body just "## Day"), and two versions drift apart at the first
+ * language change. `ensureDay` is idempotent — if the file exists, it's left
+ * untouched.
  */
-async function ensureJournal(services: Services, now: Date): Promise<string> {
-  const { path } = await ensureDay(journalStore(services), now, docLanguage(services));
-  return path;
+async function ensureJournal(
+  services: Services,
+  now: Date,
+): Promise<{ path: string; body: string }> {
+  const { path, doc } = await ensureDay(journalStore(services), now, docLanguage(services));
+  return { path, body: doc.body };
 }
 
 /**
- * Der Scope eines Todos kommt aus der Datei (VAULT-FORMAT.md). Sagt die Datei
- * schon das Gewünschte, bleibt die Zeile schmucklos; sonst trägt sie den Bereich
- * als Tag. Legt das Frontmatter den Bereich anders fest, wird nicht geschrieben:
- * ein zurückgegebener Scope, den die Datei nicht deckt, wäre eine Behauptung.
+ * A todo's scope comes from the file (VAULT-FORMAT.md). If the file already
+ * says what's wanted, the line stays plain; otherwise it carries the scope as
+ * a tag. If the frontmatter fixes the scope differently, nothing is written:
+ * a returned scope that the file doesn't back up would be a false claim.
  */
 function scopeTag(path: string, frontmatter: Record<string, unknown>, wanted: Scope): string {
   if (scopeFor(path, frontmatter) === wanted) return '';
@@ -186,19 +227,20 @@ function scopeTag(path: string, frontmatter: Record<string, unknown>, wanted: Sc
 
 export function todoHandlers(services: Services): HandlerMap {
   return defineHandlers({
-    'todos:list': ({ scope, project, open, dueBefore }) =>
+    'todos:list': ({ scope, project, area, open, dueBefore }) =>
       requireLists(services)
         .todos()
         .filter(
           (todo) =>
             (scope === undefined || todo.scope === scope) &&
             (project === undefined || todo.project === project) &&
+            (area === undefined || todo.area === area) &&
             (open === undefined || (open ? todo.state === 'open' : todo.state === 'done')) &&
             (dueBefore === undefined || (todo.due !== null && todo.due < dueBefore)),
         ),
 
-    /* Abhaken setzt `@done:` mit dem heutigen Tag, Zurücksetzen entfernt den
-       Marker wieder. Nichts anderes an der Zeile wird angefasst. */
+    /* Checking off sets `@done:` with today's date, unchecking removes the
+       marker again. Nothing else about the line is touched. */
     'todos:toggle': async ({ id }) => {
       const now = new Date();
       const found = await locate(services, id, now);
@@ -208,7 +250,7 @@ export function todoHandlers(services: Services): HandlerMap {
       return reread(services, found.todo.path, found.ordinal, now);
     },
 
-    'todos:create': async ({ text, scope, project, due }) => {
+    'todos:create': async ({ text, scope, project, area, due, priority = 2 }) => {
       const body = typeof text === 'string' ? text.replace(/\s+/g, ' ').trim() : '';
       if (body.length === 0) throw fail('invalid', 'text: darf nicht leer sein');
       if (scope !== 'work' && scope !== 'private') {
@@ -218,8 +260,11 @@ export function todoHandlers(services: Services): HandlerMap {
       if (day !== null && !/^\d{4}-\d{2}-\d{2}$/.test(day)) {
         throw fail('invalid', 'due: erwartet ein Datum YYYY-MM-DD');
       }
+      if (priority !== 1 && priority !== 2 && priority !== 3) {
+        throw fail('invalid', 'priority: erwartet 1, 2 oder 3');
+      }
       const now = new Date();
-      const target = await targetFor(services, project, scope, now);
+      const target = await targetFor(services, project, area, scope, now);
       const doc = await store(services).read(target.path);
       if (doc === null) throw fail('not-found', `diese Datei gibt es nicht: ${target.path}`);
       const tag = scopeTag(target.path, doc.frontmatter, scope);
@@ -228,7 +273,7 @@ export function todoHandlers(services: Services): HandlerMap {
         scope,
         due: day,
         waitingFor: null,
-        priority: 0,
+        priority,
         project: null,
       });
 
@@ -244,9 +289,9 @@ export function todoHandlers(services: Services): HandlerMap {
       return reread(services, target.path, ordinal, now);
     },
 
-    /* Text und Frist ändern, alle übrigen Marker behalten — auch die, die die
-       App nicht selbst setzt. */
-    'todos:update': async ({ id, text, due }) => {
+    /* Change text, due date and priority, keep all other markers — including
+       the ones the app doesn't set itself. */
+    'todos:update': async ({ id, text, due, priority }) => {
       const now = new Date();
       const found = await locate(services, id, now);
       let rest = found.parts.rest;
@@ -261,9 +306,75 @@ export function todoHandlers(services: Services): HandlerMap {
         }
         rest = setDayMarker(rest, 'due', due);
       }
+      if (priority !== undefined) {
+        if (priority !== 1 && priority !== 2 && priority !== 3) {
+          throw fail('invalid', 'priority: erwartet 1, 2 oder 3');
+        }
+        rest = setPriority(rest, priority);
+      }
       if (rest === found.parts.rest) return found.todo;
       await writeLine(services, found, rest);
       return reread(services, found.todo.path, found.ordinal, now);
+    },
+
+    'todos:reorder': async ({ ids }) => {
+      if (!Array.isArray(ids) || ids.length === 0 || new Set(ids).size !== ids.length) {
+        throw fail('invalid', 'ids: erwartet alle Todo-IDs genau einmal');
+      }
+      const now = new Date();
+      const indexed = requireLists(services).todos();
+      const first = indexed.find((todo) => todo.id === ids[0]);
+      if (first === undefined) throw fail('not-found', 'dieses Todo gibt es nicht');
+      if (first.project === null)
+        throw fail('invalid', 'nur Projekt-Todos lassen sich umsortieren');
+
+      const expected = indexed.filter((todo) => todo.path === first.path);
+      if (
+        expected.length !== ids.length ||
+        expected.some((todo) => !ids.includes(todo.id)) ||
+        expected.some((todo) => todo.project !== first.project)
+      ) {
+        throw fail('conflict', 'Die Todo-Liste hat sich zwischenzeitlich geändert.');
+      }
+
+      const doc = await store(services).read(first.path);
+      if (doc === null) throw fail('not-found', `diese Datei gibt es nicht: ${first.path}`);
+      const fresh = todosOf(first.path, doc, now);
+      if (
+        fresh.length !== expected.length ||
+        fresh.some((todo) => {
+          const before = expected.find((entry) => entry.id === todo.id);
+          return before === undefined || !sameTodo(todo, before);
+        })
+      ) {
+        throw fail('conflict', `Die Todo-Liste in ${first.path} wurde zwischenzeitlich geändert.`);
+      }
+
+      const byId = new Map(
+        fresh.map(
+          (todo) => [todo.id, doc.body.split('\n')[todo.line - BODY_OFFSET] ?? ''] as const,
+        ),
+      );
+      const lines = doc.body.split('\n');
+      const slots = fresh.map((todo) => todo.line - BODY_OFFSET).sort((a, b) => a - b);
+      ids.forEach((id, index) => {
+        const line = byId.get(id);
+        if (line === undefined)
+          throw fail('conflict', 'Die Todo-Liste ist nicht mehr vollständig.');
+        const at = slots[index];
+        if (at !== undefined) lines[at] = line;
+      });
+
+      await store(services).write({
+        path: first.path,
+        body: lines.join('\n'),
+        expectedHash: doc.hash,
+      });
+      await settle(services, [first.path], 'todos');
+      const written = await store(services).read(first.path);
+      if (written === null)
+        throw fail('io', `die Datei ließ sich nicht wieder einlesen: ${first.path}`);
+      return todosOf(first.path, written, now);
     },
   });
 }

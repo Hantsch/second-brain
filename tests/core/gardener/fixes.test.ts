@@ -9,13 +9,15 @@
      gerade gelesenen Hash und lässt eine fremde Änderung stehen. */
 
 import { describe, expect, it } from 'vitest';
-import { applyFix, auditFindings, runGardener, undoFix } from '@core/gardener';
+import { applyFix, auditFindings, orphanTargets, runGardener, undoFix } from '@core/gardener';
+import { VaultConflictError } from '@core/vault';
+import type { WikiStore } from '@core/wiki';
 import type { GardenerFinding, GardenerFindingKind } from '@shared/types';
 import { gatewayWithReplies } from '../../helpers/llm';
 import { NOW_MS, TODAY } from '../../helpers/time';
 import { DEMO } from './demo-vault';
-import { SETTINGS, demoFixture, moduleFixture } from './fixtures';
-import type { GardenerFixture } from './fixtures';
+import { SETTINGS, demoFixture, moduleFixture, pagePathOf } from './fixtures';
+import type { FixturePage, GardenerFixture } from './fixtures';
 
 async function findingOf(
   fixture: GardenerFixture,
@@ -305,6 +307,156 @@ describe('applyFix: add-links', () => {
     );
 
     await expect(applyFix(deps(fixture), finding as GardenerFinding)).rejects.toThrow(/benannt/);
+  });
+});
+
+/* ── Ein gewähltes Ziel (016) ───────────────────────────────────────────────
+   Dieselbe Aktion wie oben, nur dass das Ziel ein Mensch gewählt hat: aus der
+   Auswahl baut `gardener:linkOrphan` genau diesen Befund. Geprüft wird hier die
+   Naht zwischen Lesen und Schreiben. Eine Änderung *vor* dem Aufruf ist kein
+   Konflikt — die liest `addLinks` frisch mit. Ein Konflikt ist erst, was
+   *während* des Aufrufs landet; genau dafür schreibt jeder Fix mit dem gerade
+   gelesenen Hash. */
+
+const PICKER_MODULE = 'wissen';
+
+const PICKER_PAGES: FixturePage[] = [
+  {
+    type: 'entity',
+    slug: 'scim',
+    title: 'SCIM',
+    summary: 'Das Bereitstellungsprotokoll',
+    body: 'Ein Protokoll, um Konten zwischen Systemen abzugleichen.',
+  },
+  {
+    type: 'overview',
+    slug: 'overview',
+    title: 'Überblick',
+    summary: 'Was das Modul zusammenhält',
+    body: 'Die Synthese über das Modul.',
+  },
+  {
+    type: 'concept',
+    slug: 'oauth2',
+    title: 'OAuth2',
+    summary: 'Das Protokoll darunter',
+    body: 'Das Protokoll, auf dem alles aufsetzt.',
+  },
+];
+
+/** Die verwaiste Seite: niemand verlinkt sie, und niemand nennt ihren Namen. */
+const PICKER_ORPHAN = pagePathOf(PICKER_MODULE, { type: 'entity', slug: 'scim' });
+
+/**
+ * Ein Store, der beim Lesen von `path` **einmal** eine fremde Änderung an genau
+ * dieser Datei durchlässt — der Aufrufer bekommt trotzdem den Inhalt von vorher.
+ * Damit liegt die Fremdänderung in der Lücke zwischen `readCurrent` und
+ * `writeText`, die von außen sonst nicht zu treffen ist.
+ */
+function raceOnRead(real: WikiStore, path: string, injected: string): WikiStore {
+  let raced = false;
+  return {
+    read: (candidate) => real.read(candidate),
+    readText: async (candidate) => {
+      const content = await real.readText(candidate);
+      if (candidate === path && !raced) {
+        raced = true;
+        await real.writeText(candidate, `${content ?? ''}\n${injected}\n`);
+      }
+      return content;
+    },
+    write: (input) => real.write(input),
+    writeText: (candidate, content, options) => real.writeText(candidate, content, options),
+    create: (candidate, frontmatter, body) => real.create(candidate, frontmatter, body),
+    append: (candidate, section, content, options) =>
+      real.append(candidate, section, content, options),
+    exists: (candidate) => real.exists(candidate),
+  };
+}
+
+interface Picked {
+  finding: GardenerFinding;
+  /** Die gewählte Seite — `paths[1]` des Befunds. */
+  target: string;
+  line: string;
+}
+
+/**
+ * Genau der Befund, den `gardener:linkOrphan` (`src/main/ipc/gardener.ts`) aus
+ * einer Auswahl baut: `paths[0]` die verwaiste Seite, `paths[1]` das gewählte
+ * Ziel, und als Vorschau die Zeile aus derselben Berechnung, die die Kandidaten
+ * geliefert hat. Die Kandidaten kommen aus `orphanTargets` — nicht aus einer
+ * zweiten, handgeschriebenen Wahrheit.
+ */
+function pickedOrphan(fixture: GardenerFixture, orphanPath: string): Picked {
+  const pages = fixture.index.pages();
+  const orphan = pages.find((page) => page.path === orphanPath);
+  if (orphan === undefined) throw new Error(`Keine Wiki-Seite: ${orphanPath}`);
+  const candidates = orphanTargets(pages, orphan, 'de');
+  const target = candidates.targets[0]?.path;
+  if (target === undefined) throw new Error('Kein Ziel für die verwaiste Seite.');
+  return {
+    target,
+    line: candidates.line,
+    finding: {
+      id: 'orphan-scim',
+      kind: 'orphan',
+      severity: 'warn',
+      title: '„SCIM" wird von niemandem verlinkt',
+      detail: '',
+      paths: [orphanPath, target],
+      module: PICKER_MODULE,
+      foundAt: '2026-08-10T00:00:00.000Z',
+      fix: { action: 'add-links', label: 'Verweis ergänzen', preview: candidates.line },
+    },
+  };
+}
+
+describe('applyFix: add-links auf ein gewähltes Ziel', () => {
+  it('meldet einen Konflikt, wenn die Zieldatei zwischen Lesen und Schreiben wächst', async () => {
+    const fixture = await moduleFixture(PICKER_MODULE, PICKER_PAGES);
+    const picked = pickedOrphan(fixture, PICKER_ORPHAN);
+    /* Die Überblicksseite steht in der Auswahl vorn (`orphan-targets.ts`). */
+    expect(picked.target).toBe(pagePathOf(PICKER_MODULE, { type: 'overview', slug: 'overview' }));
+    expect(picked.line).toBe('Bezug: [[scim]]');
+    const before = await fixture.text(picked.target);
+    const orphanBefore = await fixture.text(PICKER_ORPHAN);
+    const foreign = 'Von einem anderen Prozess geschrieben.';
+
+    const failed: unknown = await applyFix(
+      { store: raceOnRead(fixture.store, picked.target, foreign), docLanguage: 'de', now: NOW_MS },
+      picked.finding,
+    ).catch((error: unknown) => error);
+
+    /* `assertWritable` (`core/vault/compose.ts`) wirft, bevor etwas angefasst
+       wird — und `code: 'conflict'` ist die Zusage, die bis in den Renderer
+       trägt (`decodeIpcError`). */
+    expect(failed).toBeInstanceOf(VaultConflictError);
+    expect(failed).toMatchObject({ code: 'conflict' });
+    /* Der fremde Schreibvorgang steht unverändert da, der Verweis nicht. */
+    const after = await fixture.text(picked.target);
+    expect(after).toBe(`${before}\n${foreign}\n`);
+    expect(after).not.toContain(picked.line);
+    expect(await fixture.text(PICKER_ORPHAN)).toBe(orphanBefore);
+  });
+
+  it('hängt den Verweis unter eine Änderung, die schon vor dem Klick da war', async () => {
+    const fixture = await moduleFixture(PICKER_MODULE, PICKER_PAGES);
+    const picked = pickedOrphan(fixture, PICKER_ORPHAN);
+    const byHand = 'Eine Zeile, die der Nutzer in Obsidian geschrieben hat.';
+    await fixture.store.writeText(
+      picked.target,
+      `${await fixture.text(picked.target)}\n${byHand}\n`,
+    );
+
+    const result = await applyFix(deps(fixture), picked.finding);
+
+    expect(result.written).toEqual([picked.target]);
+    const after = await fixture.text(picked.target);
+    expect(after).toContain(byHand);
+    /* Frisch gelesen heißt: der Verweis steht unter der Fremdänderung, nicht
+       statt ihr. */
+    expect(after.indexOf(picked.line)).toBeGreaterThan(after.indexOf(byHand));
   });
 });
 

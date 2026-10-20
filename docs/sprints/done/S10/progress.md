@@ -1,0 +1,73 @@
+- 2026-09-01 22:26 · 036 · D1 the close proposes areas (core) · started
+- 2026-09-01 22:29 · 036 · D1 the close proposes areas (core) · done
+- 2026-09-01 22:29 · 036 · D2 accepting writes areas (contract + write path) · started
+- 2026-09-01 22:32 · 036 · D2 accepting writes areas (contract + write path) · done
+- 2026-09-01 22:32 · 036 · D4 an area can name its days (query) · started
+- 2026-09-01 22:35 · 036 · D4 an area can name its days (query) · done
+- 2026-09-01 22:35 · 036 · D3 areas row in close panel (renderer) · started
+- 2026-09-01 22:45 · 036 · D3 areas row in close panel (renderer) · done
+- 2026-09-01 22:56 · 036 · story done (build+test+lint+typecheck green, review PASS, seed/shot smoke ok) · done
+- 2026-09-01 22:57 · 037 · D1 condensed vault file kind · started
+- 2026-09-01 22:59 · 037 · D1 condensed vault file kind · done
+- 2026-09-01 22:59 · 037 · D2 artifact section headings · started
+- 2026-09-01 23:00 · 037 · D2 artifact section headings · done
+- 2026-09-01 23:00 · 037 · D3 artifact read/write round-trip · started
+- 2026-09-01 23:06 · 037 · D3 artifact read/write round-trip · done
+- 2026-09-01 23:06 · 037 · D4 task kind condense-area · started
+- 2026-09-01 23:10 · 037 · D4 task kind condense-area · done
+- 2026-09-01 23:10 · 037 · D5 input selection · started
+- 2026-09-01 23:10 · 037 · D6 condense-area prompt · started
+- 2026-09-01 23:13 · 037 · D5 input selection · done
+- 2026-09-01 23:13 · 037 · D6 condense-area prompt · done
+- 2026-09-01 23:13 · 037 · D7 condenseArea run · started
+- 2026-09-01 23:25 · 037 · D7 condenseArea run · done
+- 2026-09-01 23:25 · 037 · D8 write helper · started
+- 2026-09-01 23:29 · 037 · D8 write helper · done
+- 2026-09-01 23:29 · 037 · verification (build/test/lint/typecheck) · started
+- 2026-09-01 23:39 · 037 · verification (build/test/lint/typecheck) · done
+- 2026-09-01 23:39 · 037 · code review · started
+- 2026-09-01 23:52 · 037 · code review · done (1 fix cycle)
+- 2026-09-01 23:52 · 037 · final verification · started
+- 2026-09-01 23:54 · 037 · final verification · done
+- 2026-09-01 23:54 · 037 · story closeout (Done section, AC ticks) · started
+- 2026-09-02 00:01 · 037 · story closeout (Done section, AC ticks, moved to done/) · done
+- 2026-09-02 00:02 · 038 · start · started
+- 2026-09-02 00:02 · 038 · D1 line diff in core · started
+- 2026-09-02 00:09 · 038 · D1 line diff in core · done
+- 2026-09-02 00:02 · 038 · D2 undo copy before overwrite · started
+- 2026-09-02 00:09 · 038 · D2 undo copy before overwrite · done
+- 2026-09-02 00:10 · 038 · D3 accept and reject compositions · started
+- 2026-09-02 00:14 · 038 · D3 accept and reject compositions · done
+- 2026-09-02 00:16 · 038 · D4 IPC contract and main handlers · started
+- 2026-09-02 00:25 · 038 · D4 IPC contract and main handlers · done
+- 2026-09-02 00:26 · 038 · D5 tabs inside the area · started
+- 2026-09-02 00:31 · 038 · D5 tabs inside the area · done
+- 2026-09-02 00:31 · 038 · D6 condensed tab base states · started
+- 2026-09-02 00:38 · 038 · D6 condensed tab base states · done
+- 2026-09-02 00:38 · 038 · D7 diff view and accept · started
+- 2026-09-02 00:44 · 038 · D7 diff view and accept · done
+- 2026-09-02 00:44 · 038 · D8 reject with a reason · started
+- 2026-09-02 00:49 · 038 · D8 reject with a reason · done
+- 2026-09-02 00:50 · 038 · D9 acceptance surface seed/screenshot/docs · started
+- 2026-09-02 00:54 · 038 · D9 acceptance surface seed/screenshot/docs · done
+- 2026-09-02 01:26 · 039 · D1 the input inventory and the hash contract · started
+- 2026-09-02 01:38 · 039 · D1 the input inventory and the hash contract · done
+- 2026-09-02 01:38 · 039 · D2 the check · started
+- 2026-09-02 01:47 · 039 · D2 the check · done
+- 2026-09-02 01:47 · 039 · D3 sentences in both languages · started
+- 2026-09-02 01:51 · 039 · D3 sentences in both languages · done
+- 2026-09-02 01:51 · 039 · D4 conformance (no model, severity, scope, stop/continue) · started
+- 2026-09-02 01:56 · 039 · D4 conformance (no model, severity, scope, stop/continue) · done
+- 2026-09-02 01:56 · 039 · D5 exemptions and normal-document behaviour · done
+- 2026-09-02 01:56 · 039 · D6 the maintenance surface · started
+- 2026-09-02 02:00 · 039 · D6 the maintenance surface · done
+- 2026-09-02 02:00 · 039 · D7 seed and live smoke · started
+- 2026-09-02 02:06 · 039 · D7 seed and live smoke · done
+- 2026-09-02 02:06 · 039 · fix: umlaut transliteration in condensation-due labels · done
+- 2026-09-02 02:06 · 039 · verification (build/test/lint/typecheck) · started
+- 2026-09-02 02:10 · 039 · verification (build/test/lint/typecheck) · done
+- 2026-09-02 02:10 · 039 · code review (story-review-hard) · started
+- 2026-09-02 02:22 · 039 · code review (story-review-hard) · done (PASS, 6 findings, 1 fixed)
+- 2026-09-02 02:22 · 039 · final verification · started
+- 2026-09-02 02:23 · 039 · final verification · done
+- 2026-09-02 02:23 · 039 · story closeout (Done section, AC ticks, moved to done/) · done

@@ -16,8 +16,13 @@
    Aktionen, die nichts schreiben, heißen „open" und nicht „file". */
 
 import { GERMAN_GARDENER_LABELS } from '@core/gardener';
-import type { FindingText, GardenerLabels, IndexDriftKind } from '@core/gardener';
-import type { GardenerFindingKind, GardenerFix, UiLanguage } from '@shared/types';
+import type { CondensationUnit, FindingText, GardenerLabels, IndexDriftKind } from '@core/gardener';
+import type {
+  GardenerFindingKind,
+  GardenerFix,
+  SourceBlockReason,
+  UiLanguage,
+} from '@shared/types';
 
 function percent(value: number): string {
   return `${Math.round(value * 100)}%`;
@@ -25,6 +30,11 @@ function percent(value: number): string {
 
 function days(count: number): string {
   return count === 1 ? '1 day' : `${count} days`;
+}
+
+/** Singular/plural for the number of changed inputs, mirroring `days`. */
+function changedInputsCount(count: number): string {
+  return count === 1 ? '1 input has changed' : `${count} inputs have changed`;
 }
 
 const ENGLISH_FIX_LABELS: Record<GardenerFix['action'], string> = {
@@ -101,11 +111,25 @@ export const ENGLISH_GARDENER_LABELS: GardenerLabels = {
     };
   },
 
-  unprocessedSource(source: string): FindingText {
+  unprocessedSource(source: string, reason: SourceBlockReason | null = null): FindingText {
+    if (reason === 'no-transcript') {
+      return {
+        title: `Source without a distillation: ${source}`,
+        detail:
+          'No transcript is available. The raw source sits under raw/; only the description could be distilled — that is a choice for a person on the source screen.',
+      };
+    }
     return {
       title: `Source without a distillation: ${source}`,
       detail:
         'The raw source sits under raw/, a source page in the wiki does not exist. Undistilled it cannot be cited.',
+    };
+  },
+
+  looseEnd(quote: string, day: string): FindingText {
+    return {
+      title: `Loose end from ${day}: "${quote}"`,
+      detail: `Announced on ${day}, nothing since. The day has come and gone, and it isn't visibly settled.`,
     };
   },
 
@@ -136,6 +160,27 @@ export const ENGLISH_GARDENER_LABELS: GardenerLabels = {
       detail: named
         ? `${note} The contradiction is named on the page and stays.`
         : `${note} Both versions stay; the conflict gets named, not smoothed over.`,
+    };
+  },
+
+  /* The unit word is the union member itself — English needs no genus, so the
+     German side's word/demonstrative table has no counterpart here. */
+  condensationDue(
+    name: string,
+    condensedAt: string,
+    changedCount: number,
+    unit: CondensationUnit = 'area',
+  ): FindingText {
+    return {
+      title: `Condensation due: ${unit} "${name}"`,
+      detail: `Last condensed on ${condensedAt}. ${changedInputsCount(changedCount)} since.`,
+    };
+  },
+
+  condensationMissing(name: string, unit: CondensationUnit = 'area'): FindingText {
+    return {
+      title: `No condensation yet: ${unit} "${name}"`,
+      detail: `The ${unit} has input material but no condensation artifact yet. Only a person starts a condensation.`,
     };
   },
 

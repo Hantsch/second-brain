@@ -5,16 +5,21 @@
  * `raw/`, der Index kennt sie, und die Verdichtung passiert genau dann, wenn ein
  * Modell dafür eingerichtet ist — sonst sagt der Auftrag ehrlich `awaiting-llm`.
  *
+ * Und was davon nach außen dringt, geht seit 074 D4 über die eine Warteschlange:
+ * jeder Auftrag wird als `WorkTask` (`kind: 'ingest'`, Spur `import`) gespiegelt
+ * und mit `event:work-tasks` verschickt. `IngestQueue` selbst bleibt unberührt —
+ * ihr Pump, ihre Parallelität, ihr Abbruch je Auftrag sind dieselben.
+ *
  * Die Modul-Kanäle stehen hier mit im Haus, weil sie am selben Kern hängen
  * (`@core/wiki`) und dieselbe Verdrahtung brauchen: Store, Index, Nachlauf.
  */
 
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { IpcChannel, IpcRequest, IpcResponse } from '@shared/ipc';
-import type { IngestJob } from '@shared/types';
+import type { IngestJob, WorkTask } from '@shared/types';
 import { createFetchFake, jsonResponse } from '../fakes/llm';
 import { createTempVault } from '../helpers/vault';
 import type { TempVault } from '../helpers/vault';
@@ -41,10 +46,15 @@ async function createHarness(userDataDir: string) {
   const { SettingsService } = await import('../../src/main/settings');
   const { ingestHandlers } = await import('../../src/main/ipc/ingest');
   const { moduleHandlers } = await import('../../src/main/ipc/modules');
+  const { getWorkQueue, resetWorkQueue } = await import('../../src/main/work-queue');
 
   const settings = await SettingsService.load(userDataDir);
   const keys = await createKeyStore(userDataDir);
   const services = createServices(settings, keys, userDataDir);
+  /* Die Warteschlange ist prozessweit; ohne diesen Schnitt trüge der nächste
+     Test die Aufgaben des vorigen mit sich. */
+  resetWorkQueue();
+  const workQueue = getWorkQueue(services);
   services.attachVaultStore((root) => new FsVaultStore(root));
   /* Kein Watcher: der Index zieht über `settle()` im Handler nach — genau das
      soll geprüft werden. */
@@ -61,7 +71,7 @@ async function createHarness(userDataDir: string) {
     return (handler as (payload: IpcRequest<K>) => Promise<IpcResponse<K>>)(request);
   };
 
-  return { services, settings, call, events };
+  return { services, settings, call, events, workQueue };
 }
 
 type Harness = Awaited<ReturnType<typeof createHarness>>;
@@ -107,6 +117,35 @@ describe('Quellen- und Modul-Kanäle im Main', () => {
     return job;
   }
 
+  /**
+   * Der Auftrag, der in einer Aufgabe steckt — oder `null`, wenn es kein
+   * Aufnahme-Auftrag ist. `id` ist der Unterscheider: nur ein `IngestJob` hat
+   * eine, ein `GardenerRunProgress` nicht.
+   */
+  function jobDetail(task: WorkTask): IngestJob | null {
+    const detail = task.detail;
+    return detail !== null && 'id' in detail ? detail : null;
+  }
+
+  /**
+   * Jede Spiegelung dieses Auftrags, in der Reihenfolge, in der sie hinausging.
+   * `event:work-tasks` trägt immer die ganze Liste, deshalb wird sie flach
+   * gezogen und auf den einen Auftrag gefiltert.
+   */
+  function mirrored(jobId: string): WorkTask[] {
+    return harness.events.mock.calls
+      .filter((entry) => entry[0] === 'event:work-tasks')
+      .flatMap((entry) => entry[1] as WorkTask[])
+      .filter((task) => task.kind === 'ingest' && jobDetail(task)?.id === jobId);
+  }
+
+  /** Der jüngste Stand der gespiegelten Aufgabe zu diesem Auftrag. */
+  function lastMirrored(jobId: string): WorkTask {
+    const last = mirrored(jobId).at(-1);
+    if (last === undefined) throw new Error(`keine gespiegelte Aufgabe zu ${jobId}`);
+    return last;
+  }
+
   // ── Ohne Modell ────────────────────────────────────────────────────────────
 
   it('legt einen eingefügten Text als Rohquelle ab und bleibt ehrlich ohne Modell', async () => {
@@ -138,11 +177,24 @@ describe('Quellen- und Modul-Kanäle im Main', () => {
     });
     const job = await settled(started.id);
 
-    const stages = harness.events.mock.calls
-      .filter((entry) => entry[0] === 'event:ingest-progress')
-      .map((entry) => (entry[1] as IngestJob).stage);
+    /* Der Fortschritt geht über die Warteschlange hinaus, nicht mehr über einen
+       eigenen Kanal: jede Stufe steht im `detail` der gespiegelten Aufgabe. */
+    const snapshots = mirrored(started.id);
+    const stages = snapshots.map((task) => jobDetail(task)?.stage);
     expect(stages).toContain('fetching');
     expect(stages).toContain('awaiting-llm');
+
+    /* Und die Aufgabe selbst ist eine Aufnahme auf der Spur `import` — sie
+       taucht damit neben jeder anderen langlaufenden Arbeit auf. */
+    const task = lastMirrored(started.id);
+    expect(task.kind).toBe('ingest');
+    expect(task.lane).toBe('import');
+    expect(task.subject.label).toBe(job.label);
+    /* `awaiting-llm` ist ein ehrliches Ende, kein Absturz: die Rohquelle liegt. */
+    expect(task.state).toBe('done');
+    expect(task.error).toBeNull();
+    expect(task.progress).toBe(1);
+    expect(jobDetail(task)?.stage).toBe('awaiting-llm');
 
     /* Der Index kennt die Quelle danach, ohne dass ein Watcher lief. Der Nachlauf
        hängt nicht am Auftrag — er darf ihn nicht aufhalten. */
@@ -172,6 +224,68 @@ describe('Quellen- und Modul-Kanäle im Main', () => {
     const job = await settled(started.id);
     expect(job.stage).toBe('error');
     expect(job.error).toBe('cancelled');
+
+    /* Dasselbe in der Warteschlange: ein Abbruch ist `cancelled`, nicht
+       `failed` — sonst läse die Aufgabenliste ein Stoppen als Absturz und böte
+       ein Wiederholen für etwas an, das niemand scheitern sah. */
+    const task = lastMirrored(started.id);
+    expect(task.state).toBe('cancelled');
+    expect(task.error).toBeNull();
+  });
+
+  it('meldet ein echtes Scheitern als gescheiterte Aufgabe, mit Grund im Klartext', async () => {
+    const started = await harness.call('ingest:start', {
+      kind: 'file',
+      input: join(userDataDir, 'gibt-es-nicht.md'),
+      module: null,
+    });
+
+    const job = await settled(started.id);
+    expect(job.stage).toBe('error');
+    expect(job.error).toBe('not-found');
+
+    /* Der Code des Auftrags überlebt den Weg in die Warteschlange — die Aufgabe
+       trägt denselben Grund, nicht ein anonymes „unknown". */
+    const task = lastMirrored(started.id);
+    expect(task.state).toBe('failed');
+    expect(task.error).toBe('not-found');
+    expect(task.message).toBe(job.message);
+    expect(task.message).toBeTruthy();
+  });
+
+  it('spiegelt einen wiederholten Auftrag als neue Aufgabe, nicht als auferstandene', async () => {
+    const started = await harness.call('ingest:start', {
+      kind: 'file',
+      input: join(userDataDir, 'auch-nicht-da.md'),
+      module: null,
+    });
+    await settled(started.id);
+    const failed = lastMirrored(started.id);
+    expect(failed.state).toBe('failed');
+
+    /* Die Datei gibt es inzwischen — dasselbe Auftrags-Id, ein zweiter Anlauf. */
+    await writeFile(join(userDataDir, 'auch-nicht-da.md'), '# Jetzt da\n\nEin Absatz.\n', 'utf8');
+    await harness.call('ingest:retry', { id: started.id });
+    const second = await settled(started.id);
+    expect(second.stage).toBe('awaiting-llm');
+
+    /* Eine abgeschlossene Aufgabe lässt sich nicht zurückdrehen: der zweite
+       Anlauf ist eine eigene Aufgabe, und die gescheiterte bleibt lesbar. */
+    const fresh = lastMirrored(started.id);
+    expect(fresh.id).not.toBe(failed.id);
+    expect(fresh.state).toBe('done');
+    expect(new Set(mirrored(started.id).map((task) => task.id)).size).toBe(2);
+    expect(harness.workQueue.list().filter((task) => task.state === 'failed')).toHaveLength(1);
+  });
+
+  it('kennt die abgelösten Fortschrittskanäle nicht mehr', async () => {
+    const { IPC_EVENTS } = await import('@shared/ipc');
+    const names: readonly string[] = IPC_EVENTS;
+    /* 074, D4: beide Kanäle sind ersatzlos weg — was sie trugen, steht in
+       `event:work-tasks`. Ein Zuhörer darauf käme im Preload nicht mehr durch. */
+    expect(names).not.toContain('event:ingest-progress');
+    expect(names).not.toContain('event:gardener-progress');
+    expect(names).toContain('event:work-tasks');
   });
 
   it('verlangt einen offenen Vault', async () => {
@@ -199,8 +313,10 @@ describe('Quellen- und Modul-Kanäle im Main', () => {
   /**
    * Ein Modell, das über gefälschtes `fetch` antwortet. Die Verdichtung bekommt
    * Markdown, der Wiki-Schritt (er verlangt ein JSON-Schema) bekommt JSON.
+   *
+   * `hold` hält jede Antwort auf, solange der Test einen laufenden Auftrag braucht.
    */
-  async function routeToFakeModel(): Promise<void> {
+  async function routeToFakeModel(hold?: Promise<void>): Promise<void> {
     await harness.settings.setVaultSection('providers', [
       {
         id: 'local-1',
@@ -221,7 +337,8 @@ describe('Quellen- und Modul-Kanäle im Main', () => {
       },
       defaults: {},
     });
-    const fake = createFetchFake((call) => {
+    const fake = createFetchFake(async (call) => {
+      if (hold !== undefined) await hold;
       const structured = call.body?.['response_format'] !== undefined;
       const content = structured
         ? JSON.stringify({ suggestions: [], overviewChange: null })
@@ -253,6 +370,34 @@ describe('Quellen- und Modul-Kanäle im Main', () => {
     expect(log.modules).toEqual([MODULE]);
   });
 
+  it('lässt den Fortschritt der Warteschlange bis zur Wissens-Verdichtung durchreichen', async () => {
+    // Story 050, D7: der Balken bleibt nicht bei 0.85 stehen, solange die
+    // Verdichtung läuft — die Warteschlange spiegelt den Fortschritt aus
+    // `core/wiki` weiter.
+    await routeToFakeModel();
+
+    const started = await harness.call('ingest:start', {
+      kind: 'text',
+      input: '# Kurze Token\n\nEin Praxisbericht über 15-Minuten-Tokens und Rotation.',
+      module: MODULE,
+    });
+    const job = await settled(started.id);
+    expect(job.stage).toBe('done');
+
+    const snapshots = mirrored(started.id)
+      .map((task) => jobDetail(task)?.progress)
+      .filter((value): value is number => value !== undefined);
+    /* Zwischen dem festen Tick vor dem Modellaufruf (0.85) und dem festen Tick
+       danach (0.95, `wiki-update`) muss der Kern selbst mindestens einmal
+       nachgezogen haben — sonst stünde der Balken die ganze Verdichtung über
+       still. Streng kleiner als 0.95: der Warteschlangen-eigene Tick liegt exakt
+       bei 0.95 (queue.ts) und wuerde diese Behauptung sonst auch dann bestehen
+       lassen, wenn die Weiterleitung von `onProgress` in den Wiki-Kern entfernt
+       wuerde — jeder vom Kern selbst gemeldete Fortschritt landet nach der
+       Abbildung `0.85 + fraction * 0.1` (ingest.ts) strikt zwischen 0.85 und 0.95. */
+    expect(snapshots.some((value) => value > 0.85 && value < 0.95)).toBe(true);
+  });
+
   it('wiederholt einen Auftrag ohne eine zweite Rohquelle anzulegen', async () => {
     const started = await harness.call('ingest:start', {
       kind: 'text',
@@ -279,6 +424,246 @@ describe('Quellen- und Modul-Kanäle im Main', () => {
       },
       { timeout: 5000, interval: 25 },
     );
+  });
+
+  it('stoppt denselben Import als Duplikat, bevor eine zweite Rohquelle entsteht', async () => {
+    const input = 'Eine Quelle, die exakt einmal in raw liegen soll.';
+    const first = await settled(
+      (
+        await harness.call('ingest:start', {
+          kind: 'text',
+          input,
+          module: null,
+        })
+      ).id,
+    );
+
+    const duplicate = await harness.call('ingest:start', {
+      kind: 'text',
+      input: `${input}\r\n`,
+      module: null,
+    });
+
+    expect(duplicate.stage).toBe('duplicate');
+    expect(duplicate.duplicateOf).toBe(first.rawPath);
+    expect(duplicate.rawPath).toBe(first.rawPath);
+    await vi.waitFor(async () => {
+      const matching = (await harness.call('modules:sources', {})).filter(
+        (source) => source.path === first.rawPath,
+      );
+      expect(matching).toHaveLength(1);
+    });
+  });
+
+  it('nimmt einen erzwungenen Import erneut auf, ohne die erste Rohquelle anzutasten', async () => {
+    const input = 'Nochmal aufnehmen.';
+    const first = await settled(
+      (
+        await harness.call('ingest:start', {
+          kind: 'text',
+          input,
+          module: null,
+        })
+      ).id,
+    );
+    const firstBytes = await vault.read(`${first.rawPath}/source.md`);
+    expect(firstBytes).not.toBeNull();
+
+    const forced = await harness.call('ingest:start', {
+      kind: 'text',
+      input,
+      module: null,
+      force: true,
+    });
+    /* Kein Duplikat-Kurzschluss: das ist ein echter, neuer Auftrag. */
+    expect(forced.stage).not.toBe('duplicate');
+    expect(forced.duplicateOf ?? null).toBeNull();
+    const second = await settled(forced.id);
+
+    expect(second.rawPath).not.toBe(first.rawPath);
+    expect(await vault.read(`${first.rawPath}/source.md`)).toBe(firstBytes);
+  });
+
+  it('verdichtet eine Bestandsquelle aus dem Detailfenster ohne neuen Rohimport', async () => {
+    const first = await settled(
+      (
+        await harness.call('ingest:start', {
+          kind: 'text',
+          input: '# Später verdichten\n\nDiese Quelle wurde in einer früheren Phase nur abgelegt.',
+          module: null,
+        })
+      ).id,
+    );
+    expect(first.stage).toBe('awaiting-llm');
+    await vi.waitFor(async () => {
+      expect(
+        (await harness.call('modules:sources', {})).some((source) => source.path === first.rawPath),
+      ).toBe(true);
+    });
+
+    const detail = await harness.call('ingest:detail', { path: first.rawPath ?? '' });
+    expect(detail.source.sourcePage).toBeNull();
+
+    await routeToFakeModel();
+    const started = await harness.call('ingest:condense', {
+      path: first.rawPath ?? '',
+      module: MODULE,
+    });
+    const condensed = await settled(started.id);
+
+    expect(condensed.stage).toBe('done');
+    expect(condensed.rawPath).toBe(first.rawPath);
+    const protocol = JSON.parse((await vault.read(`${first.rawPath}/.ingest.json`)) ?? '{}');
+    expect(protocol.sourcePage).toMatch(/^s-/);
+  });
+
+  it('verdichtet eine Bestandsquelle auch bei zwei Klicks nur einmal', async () => {
+    const first = await settled(
+      (
+        await harness.call('ingest:start', {
+          kind: 'text',
+          input: '# Einmal verdichten\n\nZweimal geklickt, einmal verdichtet.',
+          module: null,
+        })
+      ).id,
+    );
+    await vi.waitFor(async () => {
+      expect(
+        (await harness.call('modules:sources', {})).some((source) => source.path === first.rawPath),
+      ).toBe(true);
+    });
+
+    /* Das Modell antwortet erst auf Freigabe — sonst wäre der erste Lauf schon
+       durch, bevor der zweite Klick kommt, und es gäbe nichts zu prüfen. */
+    const gate = { release: (): void => {}, promise: Promise.resolve() };
+    gate.promise = new Promise<void>((resolve) => {
+      gate.release = resolve;
+    });
+    await routeToFakeModel(gate.promise);
+
+    const started = await harness.call('ingest:condense', {
+      path: first.rawPath ?? '',
+      module: MODULE,
+    });
+    const again = await harness.call('ingest:condense', {
+      path: first.rawPath ?? '',
+      module: MODULE,
+    });
+    /* Derselbe Auftrag, kein zweiter: ein Klick zuviel legt keine zweite Seite an. */
+    expect(again.id).toBe(started.id);
+
+    gate.release();
+    const condensed = await settled(started.id);
+    expect(condensed.stage).toBe('done');
+    expect(condensed.touchedPages.filter((path) => path.includes('/wiki/sources/'))).toHaveLength(
+      1,
+    );
+
+    /* Und danach ist Schluss: die Quelle trägt ihre Seite. */
+    await expect(
+      harness.call('ingest:condense', { path: first.rawPath ?? '', module: MODULE }),
+    ).rejects.toMatchObject({ code: 'conflict' });
+  });
+
+  // ── 051, D5: die Wahl der Grundlage über IPC ────────────────────────────────
+
+  /** Ein transcript-loses YouTube-Video mit Beschreibung/Kapiteln in `metadata.md`.
+      Ein leerer `description` lässt auch die Überschrift weg — sonst wäre der
+      Textkörper nie wirklich leer, egal wie leer die Beschreibung ist. */
+  async function writeNoTranscriptYoutube(videoId: string, description: string): Promise<string> {
+    const rawPath = `raw/youtube/${videoId}`;
+    const body =
+      description.length === 0
+        ? ''
+        : ['# Ein Video ohne Transcript', '', description, ''].join('\n');
+    await vault.write(
+      `${rawPath}/metadata.md`,
+      ['---', 'title: Ein Video ohne Transcript', '---', body].join('\n'),
+    );
+    await vault.write(`${rawPath}/transcript.md`, '# Video\n\n_Kein Transcript verfuegbar._\n');
+    await vault.write(
+      `${rawPath}/.ingest.json`,
+      `${JSON.stringify({
+        kind: 'youtube',
+        origin: `https://www.youtube.com/watch?v=${videoId}`,
+        ingestedAt: '2026-08-12T08:00:00+02:00',
+        title: 'Ein Video ohne Transcript',
+        sourcePage: null,
+        modules: [],
+        provenance: { metadata: 'youtubei.js' },
+        transcript: { available: false },
+      })}\n`,
+    );
+    return rawPath;
+  }
+
+  it('verdichtet mit basis: metadata, wenn die Beschreibung Text trägt', async () => {
+    await routeToFakeModel();
+    const rawPath = await writeNoTranscriptYoutube(
+      'noTranscript1',
+      'Die Beschreibung des Videos mit den Kapiteln.',
+    );
+    await harness.services.requireIndex().rebuild();
+
+    const started = await harness.call('ingest:condense', {
+      path: rawPath,
+      module: MODULE,
+      basis: 'metadata',
+    });
+    const condensed = await settled(started.id);
+
+    expect(condensed.stage).toBe('done');
+    expect(condensed.rawPath).toBe(rawPath);
+    const sourcePage = condensed.touchedPages.find((path) => path.includes('/wiki/sources/'));
+    expect(sourcePage).toBeDefined();
+    expect(await vault.read(sourcePage ?? '')).toContain('source_basis: metadata');
+  });
+
+  it('weist basis: metadata mit leerer Beschreibung ab, statt einen hohlen Auftrag zu starten', async () => {
+    const rawPath = await writeNoTranscriptYoutube('noTranscript2', '');
+    await harness.services.requireIndex().rebuild();
+
+    await expect(
+      harness.call('ingest:condense', { path: rawPath, module: MODULE, basis: 'metadata' }),
+    ).rejects.toMatchObject({ code: 'invalid' });
+
+    expect(await harness.call('ingest:jobs', undefined)).toEqual([]);
+  });
+
+  it('kopiert nachgereichte Dateien kollisionsfrei in den sources-Ordner des Videos', async () => {
+    const youtubePath = 'raw/youtube/xOFkpf9KgKg';
+    await vault.write(
+      `${youtubePath}/.ingest.json`,
+      `${JSON.stringify({
+        kind: 'youtube',
+        origin: 'https://www.youtube.com/watch?v=xOFkpf9KgKg',
+        ingestedAt: '2026-08-12T08:00:00+02:00',
+        title: 'ComfyUI workflow',
+        sourcePage: null,
+        modules: [],
+        provenance: { metadata: 'test' },
+      })}\n`,
+    );
+    await vault.write(`${youtubePath}/metadata.json`, '{"links":[]}\n');
+    await harness.services.requireIndex().rebuild();
+    const youtube = (await harness.call('modules:sources', {})).find(
+      (source) => source.kind === 'youtube',
+    );
+    expect(youtube).toBeDefined();
+    const external = join(userDataDir, 'workflow.json');
+    await writeFile(external, '{"workflow":true}\n', 'utf8');
+    const { attachSourceFiles } = await import('../../src/main/ipc/source-detail');
+
+    const first = await attachSourceFiles(harness.services, youtube?.path ?? '', [external]);
+    const second = await attachSourceFiles(harness.services, youtube?.path ?? '', [external]);
+
+    expect(first.detail.attachments.map((entry) => entry.name)).toContain('workflow.json');
+    expect(second.detail.attachments.map((entry) => entry.name)).toEqual([
+      'workflow-2.json',
+      'workflow.json',
+    ]);
+    expect(await vault.read(`${youtube?.path}/sources/workflow.json`)).toContain('workflow');
+    expect(await vault.read(`${youtube?.path}/sources/workflow-2.json`)).toContain('workflow');
   });
 
   // ── Module ─────────────────────────────────────────────────────────────────

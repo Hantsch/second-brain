@@ -1,18 +1,19 @@
-/* Inbox: die Arbeitsfläche des Einordnens — Liste, Dump, Vorschlag, Rückweg und
-   die Auswahl eines anderen Ziels. Farben, Abstände und Radien ausschließlich aus
-   den Gaston-Tokens.
+/* Inbox: the working surface for filing — list, dump, suggestion, undo, and
+   picking a different target. Colors, spacing, and radii exclusively from
+   the Gaston tokens.
 
-   Gelesen wird in Spalten von etwa 72 Zeichen. Alles, was Fließtext ist, bekommt
-   diese Breite; Zahlen und Pfade stehen daneben in Mono. */
+   Reading happens in columns of about 72 characters. Anything that is
+   running prose gets this width; numbers and paths sit next to it in mono. */
 
-/* ── Inbox: zwei Spalten ────────────────────────────────────────────────── */
+/* ── Inbox: two columns ─────────────────────────────────────────────────── */
 
 .sb-screen--wide {
   max-width: 1180px;
 }
-/* Der Screen füllt den Inhaltsbereich genau, statt ihn zu überlaufen: gescrollt
-   wird dann in den Spalten. Nur so steht die Aktionsleiste des Vorschlags
-   verlässlich im Bild — auf 1152×720 lag sie 145 px unter dem Fensterrand. */
+/* The screen fills the content area exactly, instead of overflowing it:
+   scrolling then happens inside the columns. Only this way does the
+   proposal's action bar reliably stay in view — at 1152×720 it sat 145 px
+   below the window edge. */
 .sb-screen--fill {
   height: 100%;
   min-height: 0;
@@ -67,7 +68,7 @@
 .sb-dumpitem:focus-visible {
   box-shadow: var(--focus-ring);
 }
-/* Die Auswahl ist eine Fläche, kein zweites Teal: der Akzent gehört dem Knopf. */
+/* The selection is a surface, not a second teal: the accent belongs to the button. */
 .sb-dumpitem--active {
   background: var(--surface-raised);
   border-color: var(--border-strong);
@@ -92,16 +93,16 @@
 .sb-dumpitem-old {
   color: var(--warning);
 }
-/* Das Abzeichen folgt seinem Text, statt die Zeilenbreite zu füllen. */
+/* The badge follows its text, instead of filling the line's width. */
 .sb-dumpitem .gs-badge {
   align-self: flex-start;
 }
 
-/* ── Inbox: der Dump ────────────────────────────────────────────────────── */
+/* ── Inbox: the dump ────────────────────────────────────────────────────── */
 
-/* Die Detailspalte ist so hoch wie ihre Spur — nicht höher. Gescrollt wird
-   darin: der Dumptext ist gekürzt, Text und Todos des Vorschlags rollen, Kopf
-   und Aktionsleiste stehen. */
+/* The detail column is as tall as its content — not taller. Scrolling
+   happens inside it: the dump text is truncated, the proposal's text and
+   todos scroll, the header and action bar stay fixed. */
 .sb-inbox-detail {
   display: flex;
   flex-direction: column;
@@ -157,26 +158,26 @@
   line-height: var(--leading-relaxed);
   color: var(--text-body);
 }
-/* Die Vorschau, nicht der Volltext: der steht unten im Feld noch einmal. Vier
-   Zeilen reichen, um den Dump zu erkennen — mehr schiebt die Aktionsleiste aus
-   dem Fenster. */
+/* The preview, not the full text: that appears once more below, in the
+   field. Four lines are enough to recognize the dump — more would push the
+   action bar out of the window. */
 .sb-dumptext--clamped {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 4;
   overflow: hidden;
 }
-/* Steht derselbe Text unten schon im Feld, genügen zwei Zeilen. */
+/* If the same text is already in the field below, two lines are enough. */
 .sb-dumptext--twice.sb-dumptext--clamped {
   -webkit-line-clamp: 2;
 }
 
-/* ── Der Vorschlag ──────────────────────────────────────────────────────── */
+/* ── The suggestion ─────────────────────────────────────────────────────── */
 
-/* Die Karte darf schrumpfen, aber nicht wachsen, und sie rollt selbst: Ziel,
-   Begründung, Text und Todos wandern durch, die Aktionsleiste bleibt am unteren
-   Rand stehen (`position: sticky` unten). Damit liegt sie auch dann im Bild,
-   wenn der Vorschlag länger ist als das Fenster. */
+/* The card may shrink but not grow, and it scrolls on its own: target,
+   reasoning, text, and todos scroll through, the action bar stays anchored
+   at the bottom (`position: sticky` at the bottom). This keeps it in view
+   even when the suggestion is longer than the window. */
 .sb-proposal {
   display: flex;
   flex-direction: column;
@@ -215,6 +216,12 @@
   line-height: var(--leading-normal);
   color: var(--text-muted);
 }
+.sb-proposal-section {
+  max-width: 72ch;
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--text-muted);
+}
 .sb-proposal-confidence {
   display: flex;
   align-items: center;
@@ -243,7 +250,7 @@
   border-bottom: 1px solid var(--border-subtle);
   background: var(--surface-sunken);
 }
-/* Rollt mit der Karte, statt einen zweiten Rollbalken aufzumachen. */
+/* Scrolls with the card, instead of opening a second scrollbar. */
 .sb-proposal-body {
   display: flex;
   flex-direction: column;
@@ -288,7 +295,7 @@
   flex: 1;
   min-width: 0;
 }
-/* Wohin ein Todo geht, wenn nicht zum Hauptziel. Nebentext, kein Zweitakzent. */
+/* Where a todo goes when not to the main target. Secondary text, no second accent. */
 .sb-todoedit-into {
   flex: none;
   color: var(--text-muted);
@@ -298,7 +305,7 @@
   text-overflow: ellipsis;
   max-width: 14ch;
 }
-/* Das Datum eines Warte-auf steht nur da; geändert wird es in der Projektdatei. */
+/* The date of a waiting-on entry is just shown here; it's changed in the project file. */
 .sb-todoedit-due {
   flex: none;
   font-size: var(--text-xs);
@@ -306,7 +313,7 @@
   white-space: nowrap;
 }
 
-/* ── Frist: drei Chips statt eines Systemkalenders ──────────────────────── */
+/* ── Due date: three chips instead of a system calendar ─────────────────── */
 
 .sb-due {
   display: inline-flex;
@@ -325,12 +332,12 @@
   align-items: center;
   gap: var(--space-1);
 }
-/* Ein gewählter Chip ist eine Fläche, kein zweites Teal. */
+/* A selected chip is a surface, not a second teal. */
 .sb-due-chips .gs-btn[aria-pressed='true'] {
   color: var(--text-heading);
 }
-/* Nur wenn jemand ein anderes Datum braucht — und dann im dunklen Schema, statt
-   einen hellen Systemkalender in die Fläche zu schneiden. */
+/* Only when someone needs a different date — and then in the dark scheme,
+   instead of cutting a light system calendar into the surface. */
 .sb-due-input {
   width: auto;
   min-width: 140px;
@@ -345,10 +352,10 @@
   white-space: nowrap;
 }
 
-/* ── Die Aktionsleiste des Vorschlags ───────────────────────────────────── */
+/* ── The proposal's action bar ──────────────────────────────────────────── */
 
-/* Am unteren Rand der Karte verankert, mit eigener Fläche und Trennstrich —
-   durchscheinender Text darunter wäre unlesbar. */
+/* Anchored at the bottom edge of the card, with its own surface and a
+   divider line — text showing through underneath it would be unreadable. */
 .sb-proposal-actions {
   position: sticky;
   bottom: 0;
@@ -367,7 +374,7 @@
 .sb-proposal-hint {
   margin-left: auto;
 }
-/* „Nichts wird geschrieben": die Feststellung steht dort, wo sonst das Feld war. */
+/* "Nothing is written": the statement takes the place where the field would otherwise be. */
 .sb-proposal-nothing {
   max-width: 72ch;
   font-size: var(--text-sm);
@@ -375,7 +382,39 @@
   color: var(--text-muted);
 }
 
-/* ── Rückgängig ─────────────────────────────────────────────────────────── */
+/* ── The filed trail ────────────────────────────────────────────────────── */
+
+/* Sits below the two-column working area, not inside it — the same gap the
+   screen already uses between its own stacked blocks. */
+.sb-filedtrail {
+  margin-top: var(--space-6);
+}
+.sb-filedlist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.sb-filedrow {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.sb-filedrow:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+.sb-filedrow-title {
+  font-size: var(--text-sm);
+  color: var(--text-body);
+}
+
+/* ── Undo ───────────────────────────────────────────────────────────────── */
 
 .sb-undostrip {
   display: flex;
@@ -400,9 +439,9 @@
   max-width: 48ch;
 }
 
-/* Im engen Fenster stehen Liste und Vorschlag untereinander. Dann rollt wieder
-   die Seite — zwei Spalten übereinander in Fensterhöhe zu pressen ergäbe zwei
-   Guckkästen. */
+/* In a narrow window, the list and the proposal stack vertically. Then the
+   page scrolls again — squeezing two stacked columns into window height
+   would create two peepholes. */
 @media (max-width: 1100px) {
   .sb-inbox {
     grid-template-columns: minmax(0, 1fr);
@@ -416,7 +455,7 @@
   }
 }
 
-/* ── Ziel wählen ────────────────────────────────────────────────────────── */
+/* ── Picking a target ───────────────────────────────────────────────────── */
 
 .sb-picker-search {
   margin-bottom: var(--space-3);
@@ -454,11 +493,11 @@
   background: var(--accent-soft);
   color: var(--text-heading);
 }
-/* `.sb-mono` setzt eine eigene, blasse Farbe direkt am Kind — die gewinnt
-   gegen die vererbte Farbe der Zeile, egal wie stark die Zeilenregel ist.
-   Auf `--accent-soft` (Auswahl) und `--surface-hover` (Maus drüber)
-   unterschritt das den Kontrast (axe: color-contrast, 4.44 statt 4.5).
-   Deshalb hier ausdrücklich, direkt am Kind. */
+/* `.sb-mono` sets its own faint color directly on the child — that wins
+   against the row's inherited color, no matter how strong the row rule is.
+   On `--accent-soft` (selection) and `--surface-hover` (mouse over), this
+   fell short of the contrast requirement (axe: color-contrast, 4.44 instead
+   of 4.5). Hence the explicit override here, directly on the child. */
 .sb-picker-item[aria-current='true'] .sb-picker-path,
 .sb-picker-item:hover .sb-picker-path {
   color: var(--text-heading);

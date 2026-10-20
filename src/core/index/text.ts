@@ -1,15 +1,15 @@
 /**
- * Textwerkzeug des Index. Zwei Aufgaben, die sich mehrere Ableitungen teilen:
+ * Text utilities for the index. Two responsibilities shared by several derivations:
  *
- * 1. **Zeilen ohne Code.** Checkboxen und Wikilinks in Code-Zaeunen sind Beispiele,
- *    keine Daten — Todo-Parser und Wikilink-Graph muessen sie gleich behandeln.
- * 2. **Deutsche Faltung.** 'Rueckmeldung' und 'Rückmeldung' sind fuer die Suche
- *    dasselbe Wort. Beide Seiten werden auf eine ASCII-Form gefaltet.
+ * 1. **Lines without code.** Checkboxes and wikilinks inside code fences are examples,
+ *    not data — the todo parser and the wikilink graph must treat them the same way.
+ * 2. **German folding.** 'Rueckmeldung' and 'Rückmeldung' are the same word for
+ *    search purposes. Both sides are folded to an ASCII form.
  */
 
 const FENCE = /^ {0,3}(`{3,}|~{3,})/;
 
-/* Ausgeschrieben, nicht entschaerft — dieselbe Regel wie in vault/slug.ts. */
+/* Spelled out, not stripped — the same rule as in vault/slug.ts. */
 const UMLAUTS: [RegExp, string][] = [
   [/ä/g, 'ae'],
   [/ö/g, 'oe'],
@@ -20,15 +20,15 @@ const UMLAUTS: [RegExp, string][] = [
   [/ø/g, 'oe'],
 ];
 
-/** Eine Zeile des Rumpfs mit ihrem 0-basierten Index. */
+/** A line of the body with its 0-based index. */
 export interface ContentLine {
   line: string;
   index: number;
 }
 
 /**
- * Alle Zeilen eines Rumpfs **ausserhalb** von Code-Zaeunen, mit ihrem
- * Originalindex. Der Index bleibt erhalten, damit Zeilennummern stimmen.
+ * All lines of a body **outside** of code fences, with their original
+ * index. The index is preserved so that line numbers stay correct.
  */
 export function* contentLines(body: string): Generator<ContentLine> {
   const lines = body.split('\n');
@@ -48,8 +48,8 @@ export function* contentLines(body: string): Generator<ContentLine> {
 }
 
 /**
- * Suchform eines Wortes: klein, ASCII, Umlaute ausgeschrieben, Diakritika weg.
- * Wird auf Dokument- *und* Anfrageseite angewandt, damit beide sich treffen.
+ * Search form of a word: lowercase, ASCII, umlauts spelled out, diacritics removed.
+ * Applied on both the document *and* the query side, so both meet in the middle.
  */
 export function fold(term: string): string {
   let text = (term ?? '').normalize('NFC').toLowerCase();
@@ -57,24 +57,24 @@ export function fold(term: string): string {
   return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
 
-/** Mehrere Leerzeichen und Umbrueche zu einem Leerzeichen. */
+/** Collapses multiple whitespace characters and line breaks into a single space. */
 export function collapse(text: string): string {
   return (text ?? '').replace(/\s+/g, ' ').trim();
 }
 
-/** Zeichen entschaerfen, die in einem regulaeren Ausdruck Bedeutung haetten. */
+/** Escapes characters that would have meaning in a regular expression. */
 export function escapeRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-/** 'YYYY-MM-DD' oder nichts. Wirft nie. */
+/** 'YYYY-MM-DD' or nothing. Never throws. */
 export function asDate(value: unknown): string | null {
   if (typeof value !== 'string') return null;
   const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value.trim());
   return match ? (match[0] ?? null) : null;
 }
 
-/** Ein Wert als Liste von Zeichenketten — Frontmatter ist nie zu trauen. */
+/** A value as a list of strings — frontmatter is never to be trusted. */
 export function asStringList(value: unknown): string[] {
   if (typeof value === 'string') return value.trim().length > 0 ? [value.trim()] : [];
   if (!Array.isArray(value)) return [];
@@ -86,7 +86,7 @@ export function asStringList(value: unknown): string[] {
   return result;
 }
 
-/** Ein Wert als Zeichenkette, oder null. */
+/** A value as a string, or null. */
 export function asText(value: unknown): string | null {
   if (typeof value === 'string' && value.trim().length > 0) return value.trim();
   if (typeof value === 'number') return String(value);

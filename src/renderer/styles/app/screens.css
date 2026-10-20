@@ -98,7 +98,91 @@
   flex-wrap: wrap;
 }
 
-/* ── Onboarding: die zwei Wege ──────────────────────────────────────────── */
+/* ── Onboarding: Sprache, dann die zwei Wege, dann „kein Modell" ─────────── */
+
+.sb-onboarding-lang {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+}
+.sb-onboarding-lang-label {
+  color: var(--text-faint);
+}
+.sb-onboarding-lang-seg {
+  display: inline-flex;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.sb-onboarding-langbtn {
+  all: unset;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--sb-hit);
+  padding: 0 var(--space-3);
+  cursor: pointer;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  border-right: 1px solid var(--border-subtle);
+}
+.sb-onboarding-langbtn:last-child {
+  border-right: none;
+}
+.sb-onboarding-langbtn:hover {
+  background: var(--surface-raised);
+  color: var(--text-body);
+}
+.sb-onboarding-langbtn:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+/* Neutral, not teal: this screen's one accent stays on "open a vault". */
+.sb-onboarding-langbtn--active {
+  background: var(--surface-raised);
+  color: var(--text-heading);
+}
+
+.sb-onboarding-lang-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+.sb-onboarding-lang-advtoggle {
+  all: unset;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: var(--sb-hit);
+  padding: 0 var(--space-2);
+  cursor: pointer;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+.sb-onboarding-lang-advtoggle:hover {
+  color: var(--text-body);
+}
+.sb-onboarding-lang-advtoggle:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+.sb-onboarding-lang-adv {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+  padding: var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.sb-onboarding-nomodel {
+  margin-top: var(--space-5);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border-subtle);
+}
 
 .sb-onboarding-what {
   margin-bottom: var(--space-3);

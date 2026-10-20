@@ -1,11 +1,12 @@
-/* Toleranter JSON-Leser für Modellantworten. Kleine Modelle rahmen JSON gern in
-   Code-Fences oder schreiben „Hier ist das Ergebnis:" davor. Das ist reparierbar
-   — kaputtes JSON dagegen nicht: dann ein klarer Fehler statt eines Rätsels.
+/* Tolerant JSON reader for model responses. Small models like to wrap JSON in
+   code fences or write "Here is the result:" in front of it. That's
+   fixable — broken JSON, on the other hand, is not: then a clear error
+   instead of a mystery.
 
-   Die Fehlermeldung enthält nie den Antworttext: der kann Tagebuchinhalt tragen. */
+   The error message never contains the response text: it might carry journal content. */
 
 export class JsonParseError extends Error {
-  /** Länge der Rohantwort — genug für ein Log, ohne Inhalt zu verraten. */
+  /** Length of the raw response — enough for a log, without revealing content. */
   readonly rawLength: number;
 
   constructor(message: string, rawLength: number) {
@@ -15,7 +16,7 @@ export class JsonParseError extends Error {
   }
 }
 
-/** Entfernt ```json-Zäune, auch wenn nur der öffnende gesetzt ist. */
+/** Removes ```json fences, even when only the opening one is present. */
 export function stripCodeFences(text: string): string {
   const trimmed = text.trim();
   if (!trimmed.startsWith('```')) return trimmed;
@@ -24,8 +25,8 @@ export function stripCodeFences(text: string): string {
 }
 
 /**
- * Schneidet das erste vollständige JSON-Objekt bzw. -Array heraus und ignoriert
- * Text davor und danach. Klammern in Strings zählen nicht mit.
+ * Cuts out the first complete JSON object or array and ignores text before
+ * and after it. Braces inside strings don't count.
  */
 export function extractJsonBlock(text: string): string | null {
   const openIndex = firstOpener(text);
@@ -62,8 +63,8 @@ function firstOpener(text: string): number {
 }
 
 /**
- * Liest JSON so nachsichtig wie vertretbar: Code-Fences weg, Rahmentext weg,
- * abschließende Kommas weg. Danach entweder ein Wert oder `JsonParseError`.
+ * Reads JSON as leniently as is reasonable: code fences gone, surrounding
+ * text gone, trailing commas gone. After that, either a value or `JsonParseError`.
  */
 export function parseJsonLoose<T = unknown>(text: string): T {
   const candidate = extractJsonBlock(stripCodeFences(text));
@@ -74,7 +75,7 @@ export function parseJsonLoose<T = unknown>(text: string): T {
     return JSON.parse(candidate) as T;
   } catch {
     try {
-      // Ein einzelnes überzähliges Komma vor } oder ] ist der häufigste Fehler.
+      // A single extra comma before } or ] is the most common error.
       return JSON.parse(candidate.replace(/,(\s*[}\]])/g, '$1')) as T;
     } catch {
       throw new JsonParseError('Antwort war kein gültiges JSON.', text.length);
@@ -82,7 +83,7 @@ export function parseJsonLoose<T = unknown>(text: string): T {
   }
 }
 
-/** Wie `parseJsonLoose`, gibt das Ergebnis aber wieder als kompaktes JSON zurück. */
+/** Like `parseJsonLoose`, but returns the result as compact JSON again. */
 export function normalizeJsonText(text: string): string {
   return JSON.stringify(parseJsonLoose(text));
 }

@@ -1,15 +1,16 @@
-/* Der Rahmen jeder Dashboard-Kachel: Griff, Titel, Zahl, Menü — und die vier
-   Zustände, die jede Kachel gleich behandelt (lädt, Fehler, leer, gefüllt).
+/* The frame of every dashboard tile: handle, title, count, menu — and the
+   four states every tile treats alike (loading, error, empty, filled).
 
-   Die Kachel selbst weiß nichts vom Gitter. Griff und Menü brauchen aber den
-   Zustand des Gitters (welche Kachel wird gerade verschoben, welche Breite hat
-   sie, an welcher Position steht sie) — der kommt über einen Kontext, den
-   `TileGrid` bereitstellt. Ohne Kontext rendert der Rahmen ohne Griff und ohne
-   Menü: so lässt sich eine Kachel einzeln testen und einzeln anschauen.
+   The tile itself knows nothing about the grid. But the handle and menu
+   need the grid's state (which tile is currently being moved, what width
+   does it have, at what position does it sit) — that arrives via a context
+   that `TileGrid` provides. Without a context, the frame renders without a
+   handle and without a menu: that way a tile can be tested and viewed on
+   its own.
 
-   Der Griff ist ein Knopf, kein Handgriff aus `<div>`: damit ist er im
-   Tastaturweg, hat einen Namen und kann `aria-pressed` tragen. Genau daran hängt
-   das Verschieben per Tastatur. */
+   The handle is a button, not a hand-rolled `<div>`: that puts it in the
+   keyboard path, gives it a name, and lets it carry `aria-pressed`. Moving
+   via keyboard depends on exactly that. */
 
 import { createContext, useContext } from 'react';
 import type { KeyboardEvent, PointerEvent, ReactNode } from 'react';
@@ -21,19 +22,19 @@ import { ErrorState } from './ErrorState';
 import { Skeleton } from './Skeleton';
 import { TileMenu } from './TileMenu';
 
-/** Was der Rahmen vom Gitter braucht. `null` heißt: kein Gitter, kein Griff. */
+/** What the frame needs from the grid. `null` means: no grid, no handle. */
 export interface TileControls {
-  /** Welche Kachel ist angehoben (Verschiebemodus)? */
+  /** Which tile is lifted (move mode)? */
   lifted: DashboardModuleId | null;
   size(id: DashboardModuleId): ModuleSize;
   position(id: DashboardModuleId): { index: number; total: number };
   onGrabPointer(id: DashboardModuleId, event: PointerEvent<HTMLElement>): void;
   onGrabKey(id: DashboardModuleId, event: KeyboardEvent<HTMLElement>): void;
-  /** Der Fokus verlässt den Griff — ein angehobener Zug endet damit. */
+  /** Focus leaves the handle — that ends a lifted move. */
   onGrabBlur(id: DashboardModuleId): void;
   onResize(id: DashboardModuleId, size: ModuleSize): void;
   onHide(id: DashboardModuleId): void;
-  /** Meldet den Griff an, damit das Gitter den Fokus dorthin setzen kann. */
+  /** Registers the handle so the grid can move focus to it. */
   registerHandle(id: DashboardModuleId, element: HTMLButtonElement | null): void;
 }
 
@@ -43,21 +44,27 @@ export const TileControlsProvider = TileControlsContext.Provider;
 
 export interface TileFrameProps {
   id: DashboardModuleId;
-  /** Titel, bereits übersetzt. */
+  /** Title, already translated. */
   title: string;
-  /** Kennzahl rechts im Kopf — Daten, deshalb Mono. */
+  /** Number on the right of the header — data, hence mono. */
   count?: number | null;
-  /** Ruhige Zusatzangabe im Kopf, bereits übersetzt. */
+  /**
+   * How many of the rows in this tile are overdue. Rendered next to the count,
+   * in `--danger` and with the word — colour alone must not carry the
+   * statement. `null` or `0` means: nothing overdue, no marker.
+   */
+  overdue?: number | null;
+  /** Calm additional info in the header, already translated. */
   meta?: string;
-  /** Läuft die Abfrage noch? Dann Platzhalter statt einer Aussage. */
+  /** Is the query still running? Then a placeholder instead of a statement. */
   pending?: boolean;
   error?: unknown;
   onRetry?: () => void;
-  /** Geladen und nichts gefunden — der einzige Fall, in dem `empty` gilt. */
+  /** Loaded and nothing found — the only case where `empty` applies. */
   isEmpty?: boolean;
-  /** Was hier erscheinen wird, plus die Aktion, die es füllt. */
+  /** What will appear here, plus the action that fills it. */
   empty?: { body: string; action?: { label: string; onClick: () => void } };
-  /** Fußzeile, etwa ein Weg in den zuständigen Screen. */
+  /** Footer, e.g. a path into the responsible screen. */
   foot?: ReactNode;
   children?: ReactNode;
 }
@@ -66,6 +73,7 @@ export function TileFrame({
   id,
   title,
   count,
+  overdue,
   meta,
   pending = false,
   error,
@@ -75,6 +83,7 @@ export function TileFrame({
   foot,
   children,
 }: TileFrameProps) {
+  const t = useT();
   const controls = useContext(TileControlsContext);
 
   return (
@@ -83,6 +92,14 @@ export function TileFrame({
         {controls === null ? null : <TileHandle id={id} title={title} controls={controls} />}
         <h2 className="sb-tile-title">{title}</h2>
         {typeof count === 'number' ? <span className="sb-tile-count">{count}</span> : null}
+        {typeof overdue === 'number' && overdue > 0 ? (
+          <>
+            {/* Two bare numbers next to each other read as one — the middot
+                separates them, the same way the day summary does. */}
+            {typeof count === 'number' ? <span className="sb-tile-dot">·</span> : null}
+            <span className="sb-tile-overdue">{t('tile.overdue', { count: overdue })}</span>
+          </>
+        ) : null}
         {meta === undefined ? null : <span className="sb-tile-meta">{meta}</span>}
         {controls === null ? null : (
           <TileMenu
@@ -123,7 +140,7 @@ interface HandleProps {
   controls: TileControls;
 }
 
-/** Der Griff: anfassen mit dem Zeiger, anheben mit der Tastatur. */
+/** The handle: grab with the pointer, lift with the keyboard. */
 function TileHandle({ id, title, controls }: HandleProps) {
   const t = useT();
   const lifted = controls.lifted === id;

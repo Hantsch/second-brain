@@ -1,38 +1,72 @@
-/* Der Pflegewert — oder die ehrliche Auskunft, dass es noch keinen gibt.
+/* The maintenance score — or the honest word that there isn't one yet.
 
-   `DashboardData.healthKnown` sagt, ob ein Pflegelauf vorliegt. Ist er `false`
-   oder fehlt er, steht hier „noch nicht geprüft" und **keine Zahl**. Eine 100 zu
-   zeigen, weil niemand nachgesehen hat, wäre die Sorte Lüge, an der ein Dashboard
-   stirbt: der Nutzer glaubt es, und dann stimmt es nicht.
+   `DashboardData.healthKnown` says whether a maintenance run has happened. If
+   it's `false` or missing, this shows "not checked yet" and **no number**.
+   Showing a 100 because nobody looked would be the kind of lie a dashboard
+   dies from: the user believes it, and then it isn't true.
 
-   Liegt ein Lauf vor, zeigt die Kachel drei Dinge: den Wert als Balken (mit
-   Textalternative), die Zahl der Befunde und die zwei dringendsten Kategorien —
-   damit sie nicht nur eine Note verkündet, sondern sagt, was drückt. Die
-   Reihenfolge kommt aus dem Bericht (`healthContributions`, schwerste zuerst).
+   If a run exists, the tile shows three things: the score as a bar (with a
+   text alternative), the number of findings, and the two most urgent
+   categories — so it doesn't just announce a grade but says what's weighing
+   it down. The order comes from the report (`healthContributions`, worst
+   first).
 
-   Beide Wege führen in den Pflege-Screen: mit Lauf „zur Pflege", ohne Lauf
-   „jetzt prüfen" — dort steht der Knopf, der prüft. */
+   Both paths lead into the maintenance screen: with a run "go to maintenance",
+   without one "check now" — that's where the button that checks lives.
+
+   021b D5: a run that was stopped partway must not sell its partial finding
+   count as the vault's current state — that number can be smaller than
+   reality simply because a stage never ran. So with `complete: false` the
+   tile freezes on the score as of the last complete run (with its date) and
+   says the check was stopped, instead of the usual "N findings" line. The
+   score bar and worst-categories list stay: both come from
+   `healthContributions`, which mirrors the frozen score itself, not the count
+   of open findings in this run.
+
+   If that stopped run was this vault's **first** check, there is no frozen
+   score at all: `healthKnown` is then false and the tile falls back to "not
+   checked yet" — no number, and no "as of" line with nothing in it.
+
+   021c D5: a run scoped to a kind or module (`report.scope`) is also
+   `complete: false`, but it is not the same story as a run that ran out of
+   time — it is a run that was *asked* to look at only a part. Selling that as
+   "the last check was stopped" would suggest the user should re-run it to get
+   the whole picture "for free"; the honest wording says what it did cover,
+   the same descriptor the findings screen's "check only this" button uses
+   (`garden.kind.*`, `garden.filter.noModule`) — via the shared `scopeLabel`
+   from `screens/garden/scope.ts`, not a second copy of that wording. Either
+   way the score stays the frozen one from the last *complete* run — a scoped
+   run's own findings never become the "N results" line. */
 
 import { useNavigate } from 'react-router-dom';
-import { useT } from '../../i18n';
-import { plural } from '../../lib/format';
+import { useLanguage, useT } from '../../i18n';
+import { formatDate, plural } from '../../lib/format';
 import { useDashboardData } from '../../lib/queries/dashboard';
 import { useGardenerReport } from '../../lib/queries/gardener';
+import { scopeLabel } from '../../screens/garden/scope';
 import { HealthMeter } from '../HealthMeter';
 import { TileFrame } from '../TileFrame';
 
-/** So viele Kategorien nennt die Kachel — die dringendsten. */
+/** This many categories the tile names — the most urgent ones. */
 const WORST = 2;
 
 export function GardenerTile() {
   const t = useT();
+  const language = useLanguage();
   const navigate = useNavigate();
   const { data, isPending, error, refetch } = useDashboardData();
-  /* Die Aufschlüsselung steht nur im Bericht, nicht im Dashboard-Bündel. Sie ist
-     eine Datei und schon geladen, wenn der Pflege-Screen offen war. */
+  /* The breakdown lives only in the report, not in the dashboard bundle. It's
+     a file, and already loaded if the maintenance screen was open. */
   const report = useGardenerReport();
   const known = data?.healthKnown === true;
   const worst = (report.data?.healthContributions ?? []).slice(0, WORST);
+  const partial = report.data?.complete === false;
+  const asOf = partial ? formatDate(report.data?.healthAsOf ?? null, language) : '';
+  /* A scoped run is a kind of partial run (both are `complete: false`), but it
+     must not share the "stopped" sentence — one says the run ran out of time,
+     the other says it was asked to look at only a part (021c D5). */
+  const scope = report.data?.scope;
+  const scoped = partial && scope !== undefined ? scopeLabel(scope, t) : null;
 
   return (
     <TileFrame
@@ -57,16 +91,27 @@ export function GardenerTile() {
       {data === undefined ? null : (
         <div className="sb-gtile">
           <HealthMeter score={data.health} size="sm" />
-          <span className="sb-tile-note">
-            {plural(data.findingCount, 'tile.gardener.findingsOne', 'tile.gardener.findingsMany')}
-          </span>
+          {partial ? (
+            /* Without a date there is no complete run to be "as of" — the
+               stopped note stands alone rather than with an empty date in
+               front of it (021b). */
+            <span className="sb-tile-note">
+              {asOf === ''
+                ? (scoped ?? t('tile.gardener.stopped'))
+                : `${t('tile.gardener.asOf', { date: asOf })} · ${scoped ?? t('tile.gardener.stopped')}`}
+            </span>
+          ) : (
+            <span className="sb-tile-note">
+              {plural(data.findingCount, 'tile.gardener.findingsOne', 'tile.gardener.findingsMany')}
+            </span>
+          )}
           {worst.length === 0 ? null : (
             <ul className="sb-lines">
               {worst.map((entry) => (
                 <li key={entry.kind} className="sb-line">
-                  {/* Der ganze Satz als Titel: in der schmalen Kachel bricht die
-                      Zeile ab, und ein abgeschnittener Befund darf nicht die
-                      einzige Auskunft sein. */}
+                  {/* The full sentence as the title: in the narrow tile the
+                      line truncates, and a cut-off finding must not be the
+                      only information given. */}
                   <span className="sb-line-detail" title={t(`garden.kind.${entry.kind}`)}>
                     {plural(
                       entry.count,

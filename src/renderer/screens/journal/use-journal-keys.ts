@@ -1,37 +1,56 @@
-/* Der Tastaturweg des Tagebuchs.
+/* The journal's keyboard path.
  *
- * Zwei Entscheidungen, und beide sind Konflikte, die aufgelöst werden müssen:
+ * Two decisions, and both are conflicts that need resolving:
  *
- * - **Pfeile und j/k wechseln den Tag** — aber nicht, während jemand schreibt. In
- *   einem Textfeld gehören sie dem Text (Zeilenwechsel, Cursor), sonst könnte man
- *   im Tagestext nicht nach oben.
- * - **Die Haltung wechselt mit Ctrl+1 bis Ctrl+3, nicht mit 1/2/3.** Die nackten
- *   Ziffern gehören der Rail (Screenwechsel, `use-shell-hotkeys.ts`), und im
- *   Schreibfeld sind sie Zeichen — genau dort braucht man den Wechsel aber. Mit
- *   Strg greift er überall: die Hülle lässt Tastendrücke mit Modifikator liegen,
- *   und ein Textfeld schreibt sie nicht. Der Hinweis dazu steht am Segment
- *   (`CoachModeSwitch`), damit niemand raten muss.
+ * - **Arrows and j/k switch the day** — but not while someone is typing. In a
+ *   text field they belong to the text (line breaks, cursor), otherwise you
+ *   couldn't move up within the day's text.
+ * - **The stance switches with Ctrl+1 through Ctrl+3, not with 1/2/3.** The
+ *   bare digits belong to the rail (screen switching, `use-shell-hotkeys.ts`),
+ *   and in the writing field they're characters — but that's exactly where the
+ *   switch is needed. With Ctrl it works everywhere: the shell leaves keypresses
+ *   with a modifier alone, and a text field doesn't type them. The hint for it
+ *   sits on the segment (`CoachModeSwitch`), so no one has to guess.
  *
- * Ein offener Dialog behält seine Tasten (Prüfung auf `.gs-scrim`).
+ * An open dialog keeps its keys (checked via `.gs-scrim`), and so does the
+ * month calendar's grid (`.sb-monthcal-grid`, 010/D3 — see `inCalendarGrid`).
  */
 
 import { useEffect } from 'react';
 import type { CoachMode } from '@shared/types';
 import { COACH_MODE_ORDER } from '../../lib/queries/journal';
 
-/* Im Feld tippt der Nutzer — dieselbe Regel wie in der Hülle. */
+/* The user is typing in the field — same rule as in the shell, with one
+   exception this screen needs since 013/D5: a checkbox (the "only open days"
+   filter above the list) holds focus after a click but has no use for an
+   arrow key, so it must not swallow the day switch. Radios and selects keep
+   their arrows — there they mean something. */
 function isTyping(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
   if (target.isContentEditable) return true;
+  if (target instanceof HTMLInputElement && target.type === 'checkbox') return false;
   return ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
 }
 
+/* Since 010/D3 the month calendar's grid carries its own `keydown` handler
+   (`MonthCalendar.tsx`: arrows move within the month, PageUp/PageDown page it).
+   Both handlers see the same keypress — this one runs on `window`, so the
+   grid's event bubbles up to it afterwards — and exactly one of them may act.
+   The subtree named here is precisely the one the grid's handler is attached
+   to, which is what makes the split airtight in both directions: no arrow key
+   is handled twice, and none is dropped. Everything outside it keeps the day
+   switch it always had — the day list, the writing field, and the calendar's
+   own toolbar buttons above the grid, which have no grid to move in. */
+function inCalendarGrid(target: EventTarget | null): boolean {
+  return target instanceof Element && target.closest('.sb-monthcal-grid') !== null;
+}
+
 export interface JournalKeysOptions {
-  /** Die auswählbaren Tage, jüngster zuerst. */
+  /** The selectable days, most recent first. */
   dates: readonly string[];
-  /** Der gerade offene Tag. */
+  /** The day that's currently open. */
   current: string;
-  /** Tag wählen; `focus` zieht den Tastaturfokus auf die Zeile. */
+  /** Select a day; `focus` moves keyboard focus to the row. */
   select: (date: string, focus?: boolean) => void;
   onMode: (mode: CoachMode) => void;
 }
@@ -50,7 +69,9 @@ export function useJournalKeys({ dates, current, select, onMode }: JournalKeysOp
         }
         return;
       }
-      if (event.altKey || isTyping(event.target)) return;
+      /* Deliberately after the Ctrl block above: the stance switch stays
+         global, the day switch does not. */
+      if (event.altKey || isTyping(event.target) || inCalendarGrid(event.target)) return;
 
       const at = dates.indexOf(current);
       const step = event.key === 'j' || event.key === 'ArrowDown' ? 1 : -1;

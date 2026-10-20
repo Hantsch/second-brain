@@ -1,21 +1,21 @@
 /**
- * Das Gespraech steht im Tageseintrag — nicht in einer Datenbank, nicht in einer
- * JSON-Datei daneben. Format aus docs/VAULT-FORMAT.md, Blockquote je Runde:
+ * The conversation lives in the journal entry — not in a database, not in a
+ * separate JSON file. Format from docs/VAULT-FORMAT.md, blockquote per turn:
  *
  * ```
  * > **Ich** — 18:40
  * > Der Sprint fühlt sich unmöglich an.
  *
- * > **Second Brain** — 18:40
+ * > **Gaston** — 18:40
  * > ...
  * ```
  *
- * Zwei Zusicherungen, weil der Nutzer in dieser Datei mitschreiben darf:
+ * Two guarantees, because the user is allowed to write in this file too:
  *
- * - **Gelesen wird nachsichtig.** Ein Block ohne Sprecher, mit fremdem Sprecher
- *   oder mit kaputter Uhrzeit wird uebersprungen, nicht gedeutet.
- * - **Geschrieben wird nur angehaengt.** Nichts hier loescht oder schreibt eine
- *   Zeile um. Was der Nutzer von Hand ergaenzt hat, ueberlebt jede Runde.
+ * - **Reading is lenient.** A block without a speaker, with an unfamiliar
+ *   speaker, or with a broken timestamp is skipped, not interpreted.
+ * - **Writing only appends.** Nothing here deletes or rewrites a line. What
+ *   the user added by hand survives every turn.
  */
 
 import type { DocLanguage } from '@shared/types';
@@ -27,22 +27,23 @@ import { isSectionOf } from './sections';
 import { JournalError } from './types';
 import type { DialogRole, DialogTurn, JournalStore } from './types';
 
-/** Sprecherzeile: `> **Ich** — 18:40`. Die Uhrzeit ist freiwillig. */
+/** Speaker line: `> **Ich** — 18:40`. The timestamp is optional. */
 const SPEAKER_LINE = /^ {0,3}>\s*\*\*\s*([^*]+?)\s*\*\*\s*(?:[—–-]\s*(\d{1,2}:\d{2})\s*)?$/;
-/** Fortsetzung eines Blockquotes: '> Text', '>' oder '> '. */
+/** Continuation of a blockquote: '> Text', '>' or '> '. */
 const QUOTE_LINE = /^ {0,3}>\s?(.*)$/;
 
-/** Wie die Sprecher in der Dokumentsprache heissen. */
+/** What the speakers are called in the document language. */
 const SPEAKERS: Record<DocLanguage, Record<DialogRole, string>> = {
-  de: { user: 'Ich', assistant: 'Second Brain' },
-  en: { user: 'Me', assistant: 'Second Brain' },
+  de: { user: 'Ich', assistant: 'Gaston' },
+  en: { user: 'Me', assistant: 'Gaston' },
 };
 
-/* Gefaltete Bezeichnungen, die als Rolle erkannt werden. Alles andere ist ein
-   fremder Block und bleibt unberuehrt liegen. */
+/* Folded labels that are recognized as a role. Anything else is a foreign
+   block and stays untouched. 'second brain'/'secondbrain'/'brain' stay
+   recognized for days written before the app was renamed to Gaston. */
 const LABELS: Record<DialogRole, readonly string[]> = {
   user: ['ich', 'me', 'i'],
-  assistant: ['second brain', 'secondbrain', 'brain', 'coach'],
+  assistant: ['gaston', 'second brain', 'secondbrain', 'brain', 'coach'],
 };
 
 function roleOf(label: string): DialogRole | null {
@@ -52,7 +53,7 @@ function roleOf(label: string): DialogRole | null {
   return null;
 }
 
-/** Uhrzeit 'HH:MM' in Ortszeit — der Zeitstempel einer Runde. */
+/** Time 'HH:MM' in local time — the timestamp of a turn. */
 export function timeOf(at: DateLike = new Date()): string {
   const date = at instanceof Date ? at : new Date(at);
   if (Number.isNaN(date.getTime())) {
@@ -63,9 +64,9 @@ export function timeOf(at: DateLike = new Date()): string {
 }
 
 /**
- * Eine Runde als Blockquote. Leerzeilen im Text bleiben als '>' erhalten, damit
- * der Block zusammenhaengt — eine echte Leerzeile wuerde ihn aufreissen und die
- * zweite Haelfte zu einem sprecherlosen Block machen.
+ * A turn as a blockquote. Blank lines in the text are kept as '>' so the
+ * block stays contiguous — a real blank line would break it apart and turn
+ * the second half into a block without a speaker.
  */
 export function formatTurn(
   role: DialogRole,
@@ -98,9 +99,9 @@ function toTurn(block: Block): DialogTurn | null {
 }
 
 /**
- * Die Bloecke eines Zeilenbereichs. Ein Block beginnt an einer Sprecherzeile und
- * endet an der ersten Zeile, die kein Blockquote mehr ist — eine Leerzeile, ein
- * Absatz, eine Liste. Die endet ihn und bleibt stehen.
+ * The blocks of a line range. A block starts at a speaker line and ends at
+ * the first line that's no longer a blockquote — a blank line, a paragraph, a
+ * list. That ends it and stays in place.
  */
 function blocksIn(lines: readonly string[], from: number, to: number): Block[] {
   const blocks: Block[] = [];
@@ -126,8 +127,40 @@ function blocksIn(lines: readonly string[], from: number, to: number): Block[] {
 }
 
 /**
- * Die Runden aus dem Abschnitt „Gespraech", aelteste zuerst. Gibt es den
- * Abschnitt nicht, ist die Liste leer — das ist ein Ergebnis, kein Fehler.
+ * A recognized `assistant` block plus its raw line span (`end` is the first line
+ * after it) — pure line scanning, no heading awareness. Shared by
+ * `journal/stream.ts` (to surface an app answer embedded in "Day", 011) and
+ * `journal/sections.ts` (to strip that same answer out of `dayText`), so the
+ * blockquote regexes above stay the one place that knows this format.
+ *
+ * Restricted to `assistant`: a stream block is never authored by "me" as a
+ * quote, so `user` blocks never need this reading.
+ */
+export interface AssistantBlockSpan {
+  start: number;
+  end: number;
+  text: string;
+  at: string | null;
+}
+
+export function assistantBlockSpans(
+  lines: readonly string[],
+  from: number,
+  to: number,
+): AssistantBlockSpan[] {
+  const spans: AssistantBlockSpan[] = [];
+  for (const block of blocksIn(lines, from, to)) {
+    if (roleOf(block.label) !== 'assistant') continue;
+    const text = block.lines.join('\n').trim();
+    if (text.length === 0) continue;
+    spans.push({ start: block.line, end: block.line + 1 + block.lines.length, text, at: block.at });
+  }
+  return spans;
+}
+
+/**
+ * The turns from the "Conversation" section, oldest first. If the section
+ * doesn't exist, the list is empty — that's a result, not an error.
  */
 export function parseDialog(body: string): DialogTurn[] {
   const lines = body.split('\n');
@@ -142,12 +175,12 @@ export function parseDialog(body: string): DialogTurn[] {
   return turns;
 }
 
-/** Die letzten Runden als Prompt-Vorgeschichte, aelteste zuerst. */
+/** The most recent turns as prompt history, oldest first. */
 export function dialogHistory(
   body: string,
   turns: number,
 ): { role: DialogRole; content: string }[] {
-  /* `slice(-0)` waere die ganze Liste — deshalb der ausdrueckliche Fall. */
+  /* `slice(-0)` would be the whole list — hence the explicit case. */
   if (turns <= 0) return [];
   return parseDialog(body)
     .slice(-turns)
@@ -156,14 +189,15 @@ export function dialogHistory(
 
 export interface AppendTurnOptions {
   docLanguage?: DocLanguage;
-  /** Uhrzeit 'HH:MM'. Fehlt sie, kommt sie aus `now`. */
+  /** Time 'HH:MM'. If missing, derived from `now`. */
   at?: string;
   now?: DateLike;
 }
 
 /**
- * Eine Runde unter „Gespraech" anhaengen. Fehlt die Tagesdatei, wird sie angelegt:
- * ein Satz, der nirgendwo landet, waere der schlimmste Fall dieses Screens.
+ * Appends a turn under "Conversation". If the day's file is missing, it gets
+ * created: a sentence that lands nowhere would be the worst case for this
+ * screen.
  */
 export async function appendTurn(
   store: JournalStore,

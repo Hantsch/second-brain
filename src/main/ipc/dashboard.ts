@@ -20,7 +20,8 @@ import type { HandlerMap } from './registry';
 import { defineHandlers, fail } from './registry';
 import { normalizeLayout } from './dashboard-layout';
 import {
-  claudeSessions,
+  SESSION_LIMIT,
+  agentWorkSessions,
   gardenerSummary,
   overviewIndex,
   overviewLabels,
@@ -38,7 +39,7 @@ export function dashboardHandlers(services: Services): HandlerMap {
       const state = await overviewStateFor(services, today);
       /* Erst die Sitzungen: sie schreiben `lastTouch` und `stale` fort, und der
          Index muss nachgezogen sein, bevor die Projekte gelesen werden. */
-      const sessions = await claudeSessions(services);
+      const sessions = (await agentWorkSessions(services)).slice(0, SESSION_LIMIT);
       const index = overviewIndex(services);
 
       return dashboardData(index, sessions, overviewSettings(services), now, state.snoozes(), {

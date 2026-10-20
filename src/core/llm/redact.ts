@@ -1,30 +1,30 @@
-/* Ein Schlüssel darf nie in ein Log, eine Fehlermeldung oder eine Vault-Datei
-   geraten. Jeder Text, der aus einer HTTP-Antwort in eine Fehlermeldung wandert,
-   läuft vorher durch `sanitize`. */
+/* A key must never end up in a log, an error message, or a vault file. Any
+   text that migrates from an HTTP response into an error message passes
+   through `sanitize` first. */
 
 const PLACEHOLDER = '***';
 
-/** Typische Schlüsselformen, falls ein Dienst den Schlüssel in der Antwort spiegelt. */
+/** Typical key shapes, in case a service mirrors the key back in its response. */
 const KEY_PATTERNS: readonly RegExp[] = [
   /\b(?:sk|pk|rk|xai|gsk|or)-[A-Za-z0-9._-]{8,}/g,
   /\bsk-ant-[A-Za-z0-9._-]{8,}/g,
   /\bBearer\s+[A-Za-z0-9._-]{8,}/g,
 ];
 
-/** Entfernt genau diesen Schlüssel aus dem Text. */
+/** Removes exactly this key from the text. */
 export function redactSecret(text: string, secret?: string | null): string {
   if (!secret || secret.length < 4) return text;
   return text.split(secret).join(PLACEHOLDER);
 }
 
-/** Entfernt alles, was wie ein API-Schlüssel aussieht. */
+/** Removes anything that looks like an API key. */
 export function redactKeyLikeStrings(text: string): string {
   return KEY_PATTERNS.reduce((acc, pattern) => acc.replace(pattern, PLACEHOLDER), text);
 }
 
 /**
- * Macht einen Fremdtext logfähig: Schlüssel raus, Länge begrenzt.
- * `max` schützt davor, dass eine HTML-Fehlerseite die Logs flutet.
+ * Makes a foreign text loggable: keys removed, length capped.
+ * `max` protects against an HTML error page flooding the logs.
  */
 export function sanitize(text: string, secret?: string | null, max = 400): string {
   const clean = redactKeyLikeStrings(redactSecret(text, secret)).trim();

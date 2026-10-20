@@ -1,12 +1,23 @@
-/* Pflege: Gesundheitsbalken mit Begründung, Fortschritt, Filter, Befundkarten und
-   die Widerspruchs-Karte mit ihren zwei Spalten.
+/* Maintenance: health bar with reasoning, progress, filters, finding cards,
+   and the contradiction card with its two columns.
 
-   Farben, Abstände und Radien ausschließlich aus den Gaston-Tokens. Der Balken
-   trägt genau drei Töne (gut, mittel, schlecht) plus „unbekannt" — kein Verlauf,
-   der Genauigkeit vortäuscht. Jede klickbare Fläche ist mindestens `--sb-hit`
-   hoch; das gilt auch für die Pfade in Mono. */
+   Colors, spacing, and radii exclusively from the Gaston tokens. The bar
+   carries exactly three tones (good, fair, poor) plus "unknown" — no
+   gradient that would fake precision. Every clickable area is at least
+   `--sb-hit` tall; that applies to the mono paths too. */
 
-/* ── Gesundheit ─────────────────────────────────────────────────────────── */
+/* ── Header ─────────────────────────────────────────────────────────────── */
+
+/* 021b, D4: "continue" sits next to "check now" when a stopped run left
+   stages behind — secondary variant, so the one teal accent still belongs
+   to "check now" alone. */
+.sb-gheader-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* ── Health ─────────────────────────────────────────────────────────────── */
 
 .sb-health {
   display: flex;
@@ -38,11 +49,12 @@
 .sb-health-value--unknown {
   color: var(--text-faint);
 }
-/* Groß (Kopf des Pflege-Screens): die Zahl bleibt ruhig, die Farbe trägt
-   allein der Balken — sonst stehen zwei starke Farben (Zahl und Balken, dazu
-   Bernstein/Rot in den Befund-Badges) auf einem Screen nebeneinander. Klein
-   (Dashboard-Kachel) bleibt die Farbe an der Zahl: dort ist sie die einzige
-   auffällige Fläche der Kachel, kein zweiter Akzent neben einer Kopf-Aktion. */
+/* Large (head of the maintenance screen): the number stays calm, the color
+   is carried by the bar alone — otherwise two strong colors (number and bar,
+   plus amber/red in the finding badges) would sit side by side on one
+   screen. Small (dashboard tile): the color stays on the number — there
+   it's the only eye-catching surface of the tile, no second accent next to
+   a header action. */
 .sb-health--lg .sb-health-value {
   color: var(--text-heading);
 }
@@ -118,8 +130,8 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  /* Die Punkte stehen rechts an der Zahl, nicht am Fensterrand: über 60 Zeichen
-     hinaus verliert die Zuordnung „Kategorie → Punkte" den Blickkontakt. */
+  /* The points sit right next to the number, not at the window edge: past
+     60 characters, the "category → points" pairing loses eye contact. */
   max-width: 62ch;
 }
 .sb-ghealth-item {
@@ -138,6 +150,15 @@
   font-size: var(--text-xs);
   color: var(--text-faint);
   line-height: var(--leading-snug);
+}
+.sb-ghealth-hidden {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+.sb-ghealth-hidden .sb-ghealth-note {
+  margin: 0;
 }
 .sb-ghealth-stamp {
   display: flex;
@@ -174,8 +195,8 @@
   line-height: var(--leading-snug);
 }
 
-/* Die Kachel: Balken, Zahl, die zwei dringendsten Kategorien — untereinander,
-   weil drei Angaben in einer Zeile auf der schmalsten Kachelbreite umbrechen. */
+/* The tile: bar, number, the two most urgent categories — stacked, because
+   three pieces of information on one line wrap at the tile's narrowest width. */
 .sb-gtile {
   display: flex;
   flex-direction: column;
@@ -188,7 +209,7 @@
   padding: 0 var(--space-1);
 }
 
-/* ── Ohne Modell ────────────────────────────────────────────────────────── */
+/* ── Without a model ────────────────────────────────────────────────────── */
 
 .sb-gllm {
   display: flex;
@@ -201,46 +222,6 @@
 }
 .sb-gllm-title {
   color: var(--text-muted);
-}
-
-/* ── Lauf ───────────────────────────────────────────────────────────────── */
-
-.sb-grun {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--accent-soft-border);
-  background: var(--accent-soft);
-}
-.sb-grun-text {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-3);
-  min-width: 0;
-}
-.sb-grun-what {
-  font-size: var(--text-sm);
-  color: var(--text-body);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.sb-grun-track {
-  display: block;
-  flex: 1;
-  min-width: 80px;
-  height: 6px;
-  border-radius: var(--radius-full);
-  background: var(--surface-raised);
-  overflow: hidden;
-}
-.sb-grun-fill {
-  display: block;
-  height: 100%;
-  background: var(--accent);
-  border-radius: var(--radius-full);
 }
 
 /* ── Filter ─────────────────────────────────────────────────────────────── */
@@ -256,7 +237,7 @@
   min-width: 180px;
 }
 
-/* ── Gruppen und Karten ─────────────────────────────────────────────────── */
+/* ── Groups and cards ───────────────────────────────────────────────────── */
 
 .sb-ggroup {
   display: flex;
@@ -324,7 +305,7 @@
   align-items: flex-start;
   gap: var(--space-1);
 }
-/* Ein Pfad ist ein Knopf: 32 px hoch, auch wenn die Schrift kleiner ist. */
+/* A path is a button: 32 px tall, even when the type is smaller. */
 .sb-finding-path {
   display: inline-flex;
   align-items: center;
@@ -366,7 +347,7 @@
   padding-top: var(--space-1);
 }
 
-/* ── Widerspruch ────────────────────────────────────────────────────────── */
+/* ── Contradiction ──────────────────────────────────────────────────────── */
 
 .sb-contra {
   display: grid;
@@ -420,7 +401,55 @@
   user-select: text;
 }
 
-/* ── Ruhig stellen ──────────────────────────────────────────────────────── */
+/* ── Near-duplicate direction ───────────────────────────────────────────── */
+
+.sb-ndup-direction {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+/* ── Orphan target picker ───────────────────────────────────────────────── */
+
+.sb-orphan-pick {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+/* ── Loose end ──────────────────────────────────────────────────────────── */
+
+.sb-looseend-quote {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-left: 2px solid var(--border-strong);
+  font-size: var(--text-sm);
+  color: var(--text-body);
+  line-height: var(--leading-normal);
+  white-space: pre-wrap;
+  user-select: text;
+}
+.sb-looseend-answer {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.sb-looseend-answer-input {
+  min-width: 220px;
+}
+
+/* ── Discard dialog ─────────────────────────────────────────────────────── */
+
+.sb-discard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* ── Snooze ─────────────────────────────────────────────────────────────── */
 
 .sb-snooze {
   position: relative;

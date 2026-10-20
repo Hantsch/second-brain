@@ -1,0 +1,220 @@
+/* Notes: the composer, the rule sentence, and one collapsible section per
+   area. Colors, spacing, and radii exclusively from the Gaston tokens. */
+
+.sb-notes-rule {
+  max-width: 72ch;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  line-height: var(--leading-relaxed);
+}
+
+/* ── Composer ───────────────────────────────────────────────────────────── */
+
+.sb-notecompose {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.sb-notecompose-field {
+  resize: vertical;
+  min-height: 4.5em;
+}
+.sb-notecompose-foot {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+.sb-notecompose-target {
+  min-width: 200px;
+}
+.sb-notecompose-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+}
+
+/* ── Areas ──────────────────────────────────────────────────────────────── */
+
+.sb-noteslist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.sb-areabody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.sb-areanotes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.sb-areanote {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.sb-areanote:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+.sb-areanote-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.sb-areanote-move {
+  margin-left: auto;
+}
+.sb-areanote-day {
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+}
+.sb-areanote-text {
+  max-width: 72ch;
+  font-size: var(--text-sm);
+  color: var(--text-body);
+  line-height: var(--leading-relaxed);
+  white-space: pre-wrap;
+}
+
+.sb-areatodos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.sb-areatodos-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.sb-areatodos-title {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text-heading);
+}
+
+/* ── Condensed tab (story 038, D6) ─────────────────────────────────────── */
+
+.sb-condensed {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.sb-condensed-artifact {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.sb-condensed-meta {
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+}
+.sb-condensed-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.sb-condensed-proposal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.sb-condensed-running {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--text-faint);
+}
+
+/* ── Condensation diff view (story 038, D7) ────────────────────────────── */
+
+.sb-condensediff {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.sb-condensediff-summary {
+  font-size: var(--text-2xs);
+  color: var(--text-faint);
+}
+.sb-condensediff-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.sb-condensediff-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+}
+.sb-condensediff-row--added {
+  background: var(--success-soft);
+  border-left: 2px solid var(--success);
+}
+.sb-condensediff-row--removed {
+  background: var(--danger-soft);
+  border-left: 2px solid var(--danger);
+}
+.sb-condensediff-row--context {
+  border-left: 2px solid transparent;
+}
+.sb-condensediff-marker {
+  flex-shrink: 0;
+  width: 1.5em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-faint);
+}
+.sb-condensediff-row--added .sb-condensediff-marker {
+  color: var(--success);
+}
+.sb-condensediff-row--removed .sb-condensediff-marker {
+  color: var(--danger);
+}
+.sb-condensediff-text {
+  white-space: pre-wrap;
+  font-size: var(--text-xs);
+  color: var(--text-body);
+}
+
+/* ── New area / move note dialogs ──────────────────────────────────────── */
+
+.sb-newarea {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.sb-newarea-path {
+  min-height: 1em;
+}
+.sb-movenote {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}

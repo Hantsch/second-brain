@@ -1,9 +1,10 @@
-/* Den Status eines Projekts wechseln — mit sichtbarer Bestätigung.
+/* Change a project's status — with visible confirmation.
 
-   Der Wechsel schreibt sofort ins Frontmatter. Deshalb sagt das Feld danach, was
-   in der Datei steht: eine Auswahl, die nur anders aussieht, wäre eine
-   Behauptung. Läuft der Schreibvorgang noch, ist das Feld gesperrt — sonst
-   klickte man gegen einen Stand, der noch nicht gilt. */
+   The change writes to the frontmatter immediately. That's why the field
+   afterward states what's in the file: a selection that merely looks
+   different would be a false claim. While the write is still in progress,
+   the field is locked — otherwise you'd be clicking against a state that
+   doesn't apply yet. */
 
 import { Select } from '../atoms/Select';
 import type { ProjectStatus } from '@shared/types';
@@ -12,9 +13,9 @@ import { useT } from '../i18n';
 
 export interface StatusPickerProps {
   value: ProjectStatus;
-  /** Der Schreibvorgang läuft. */
+  /** The write is in progress. */
   busy?: boolean;
-  /** Der letzte Wechsel steht in der Datei — dann steht die Bestätigung da. */
+  /** The last change is in the file — then the confirmation is shown. */
   savedAs?: ProjectStatus | null;
   onChange: (next: ProjectStatus) => void;
 }

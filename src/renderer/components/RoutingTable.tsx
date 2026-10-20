@@ -1,12 +1,15 @@
-/* Jede LLM-Aufgabe der App als Zeile: was sie tut, welche Klasse empfohlen ist,
-   welches Modell sie nimmt — und ein Testlauf, der die Antwort zeigt.
+/* Every LLM task of the app as a row: what it does, which tier is
+   recommended, which model it uses — and a test run that shows the response.
 
-   Die Auswahl kennt drei Sorten Einträge: die Modelle je Provider (gruppiert,
-   „provider / modell"), den Standard der Leistungsklasse und — wenn dieser
-   Standard fehlt — die ehrliche Auskunft, dass die Aufgabe dann ohne Modell
-   läuft. Ein per-Aufgabe-Aus gibt es im Vertrag (`Routing`) nicht; was hier
-   steht, ist deshalb immer die tatsächliche Folge der Einstellung. */
+   The dropdown knows three kinds of entries: the models per provider
+   (grouped, "provider / model"), the performance tier's default, and — if
+   that default is missing — the honest disclosure that the task then runs
+   without a model. There's no per-task off-switch in the contract
+   (`Routing`); so what's shown here is always the actual consequence of the
+   configuration. */
 
+import { loadCatalogue } from '@core/llm/catalogue';
+import { judgeRouteForSensitiveTask } from '@core/llm/sensitive';
 import type { ModelRef, ProviderConfig, Routing, TaskDefinition, TaskKind } from '@shared/types';
 import { Badge } from '../atoms/Badge';
 import { Button } from '../atoms/Button';
@@ -15,7 +18,14 @@ import { useT } from '../i18n';
 import type { TaskTestResult } from '../lib/queries/llm';
 import { TierBadge } from './TierBadge';
 
-/** Gründe, die `llm:testTask` melden kann (aus `LlmUnavailable.reason`). */
+/* Bundled, pure and small (3.4 KB) — loaded once at module scope, same way
+   `MachineCard.tsx` pulls a pure `@core/llm` helper straight into the
+   renderer instead of a new IPC round trip (067, D3). Only used to judge
+   whether the model a row is *currently* routed to would pass the
+   sensitive-task rule; the table itself never filters on it. */
+const CATALOGUE_ENTRIES = loadCatalogue().entries;
+
+/** Reasons `llm:testTask` can report (from `LlmUnavailable.reason`). */
 const REASONS: readonly string[] = [
   'no-route',
   'provider-disabled',
@@ -25,25 +35,35 @@ const REASONS: readonly string[] = [
   'error',
 ];
 
-/** Wert des Eintrags „Standard für diese Klasse" im Auswahlfeld. */
+/** Value of the "default for this tier" entry in the dropdown. */
 export const INHERIT_VALUE = 'inherit';
+
+/**
+ * Stable DOM id for a task's routing select — the focus target the
+ * recommendation panel's "Assign manually" button points at (067, D2). A
+ * plain template rather than `useId()`: the id has to be predictable from a
+ * `TaskKind` alone, from outside this component's own render.
+ */
+export function routingSelectId(task: TaskKind): string {
+  return `routing-select-${task}`;
+}
 
 export interface RoutingTableProps {
   tasks: readonly TaskDefinition[];
   routing: Routing;
   providers: readonly ProviderConfig[];
-  /** `null` heißt: Eintrag löschen, damit der Klassen-Standard greift. */
+  /** `null` means: clear the entry so the tier default takes effect. */
   onSetRoute: (task: TaskKind, ref: ModelRef | null) => void;
   onTest: (task: TaskKind) => void;
-  /** Ergebnis je Aufgabe, solange der Screen offen ist. */
+  /** Result per task, for as long as the screen is open. */
   results: Partial<Record<TaskKind, TaskTestResult>>;
   testingTask?: TaskKind | null;
 }
 
 /**
- * Provider und Modell in einem Auswahlwert. Getrennt wird beim ersten `|`:
- * Modellnamen tragen Doppelpunkte und Schrägstriche (`llama3.1:8b`,
- * `meta/llama-3`), eine Provider-Kennung nicht.
+ * Provider and model combined into one dropdown value. Split at the first
+ * `|`: model names carry colons and slashes (`llama3.1:8b`, `meta/llama-3`),
+ * a provider id doesn't.
  */
 export function refValue(ref: ModelRef): string {
   return `${ref.providerId}|${ref.model}`;
@@ -57,7 +77,7 @@ export function parseValue(value: string): ModelRef | null {
   return model ? { providerId, model } : null;
 }
 
-/** „provider / modell" — der Provider gibt dem Modellnamen seinen Kontext. */
+/** "provider / model" — the provider gives the model name its context. */
 export function describeRef(ref: ModelRef, providers: readonly ProviderConfig[]): string {
   const provider = providers.find((entry) => entry.id === ref.providerId);
   return `${provider?.label ?? ref.providerId} / ${ref.model}`;
@@ -91,10 +111,20 @@ export function RoutingTable({
           const own = routing.tasks[task.kind];
           const inherited = routing.defaults[task.suggested];
           const result = results[task.kind];
-          /* Ohne eigene Wahl und ohne Klassen-Standard läuft die Aufgabe ohne
-             Modell. Was dann noch geht, steht in der Zeile der Aufgabe — über
-             der Tabelle hat es niemand gelesen. */
+          /* Without its own choice and without a tier default, the task runs
+             without a model. What still works then is stated in the task's
+             own row — above the table, nobody ever read it. */
           const fallback = own === undefined && inherited === undefined;
+          /* What the row actually runs on right now: its own choice, or
+             failing that the tier default — the same resolution `fallback`
+             above uses. A sensitive task routed (directly or by default) to
+             a target that would not pass the rule gets a warning; the
+             table never blocks or filters on it (067, D3, AC2). */
+          const effectiveRef = own ?? inherited;
+          const sensitiveWarning =
+            task.sensitive && effectiveRef
+              ? judgeRouteForSensitiveTask(task.kind, effectiveRef, providers, CATALOGUE_ENTRIES)
+              : null;
           return (
             <tr key={task.kind}>
               <td>
@@ -109,9 +139,9 @@ export function RoutingTable({
                 ) : null}
               </td>
               <td>
-                {/* Nur die Marke: die Begründung stand in jeder Zeile wortwörtlich
-                    gleich und machte sie 150 px hoch. Sie steht im Titel und
-                    unter „Standard je Leistungsklasse". */}
+                {/* Badge only: the reasoning used to appear verbatim in every
+                    row and made it 150px tall. It now lives in the title and
+                    under "default per performance tier". */}
                 <TierBadge tier={task.suggested} title={t(`settings.tier.${task.suggested}.why`)} />
                 {task.sensitive ? (
                   <Badge variant="warning" title={t('settings.routing.sensitive')}>
@@ -121,6 +151,7 @@ export function RoutingTable({
               </td>
               <td>
                 <Select
+                  id={routingSelectId(task.kind)}
                   aria-label={t('settings.routing.selectAria', { task: label })}
                   value={own ? refValue(own) : INHERIT_VALUE}
                   onChange={(event) =>
@@ -150,6 +181,11 @@ export function RoutingTable({
                     </optgroup>
                   ))}
                 </Select>
+                {sensitiveWarning?.warn ? (
+                  <span className="sb-routing-fallback">
+                    {t(`settings.routing.sensitiveWarn.${sensitiveWarning.reason}`)}
+                  </span>
+                ) : null}
               </td>
               <td>
                 <Button
@@ -182,7 +218,7 @@ export function RoutingTable({
   );
 }
 
-/** Der Testlauf meldet den Grund des Gateways; daraus wird ein Satz im Klartext. */
+/** The test run reports the gateway's reason; this turns it into a plain-language sentence. */
 export function reasonKey(reason: string | undefined): string {
   const known = reason !== undefined && REASONS.includes(reason) ? reason : 'error';
   return `settings.routing.reason.${known}`;

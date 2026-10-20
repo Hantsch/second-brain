@@ -1,0 +1,74 @@
+- 2026-09-24 11:09 · 057 · D1 shell:openPath refuses non-vault paths · started
+- 2026-09-24 11:09 · 057 · D2 rejected citation is text · started
+- 2026-09-24 11:13 · 057 · D1 shell:openPath refuses non-vault paths · done
+- 2026-09-24 11:13 · 057 · D2 rejected citation is text · done
+- 2026-09-24 11:13 · 057 · D3 core verifies filing action · started
+- 2026-09-24 11:19 · 057 · D3 core verifies filing action · done
+- 2026-09-24 11:19 · 057 · D4 capture:apply re-validates · started
+- 2026-09-24 11:23 · 057 · D4 capture:apply re-validates · done
+- 2026-09-24 11:23 · 057 · D5 navigation stays in the app · started
+- 2026-09-24 11:29 · 057 · D5 navigation stays in the app · done
+- 2026-09-24 11:42 · 057 · review-fix D5 navigation host/origin check · started
+- 2026-09-24 11:43 · 057 · review-fix D5 navigation host/origin check · done
+- 2026-09-24 11:46 · 058 · D1 closeToTray setting and harness options · started
+- 2026-09-24 11:52 · 058 · D1 closeToTray setting and harness options · done
+- 2026-09-24 11:52 · 058 · D2 tray module · started
+- 2026-09-24 11:59 · 058 · D2 tray module · done
+- 2026-09-24 11:59 · 058 · D3 close hides quit quits guard still asks · started
+- 2026-09-24 13:25 · 058 · D3 close hides quit quits guard still asks (resumed) · started
+- 2026-09-24 13:33 · 058 · D3 close hides quit quits guard still asks (resumed) · done
+- 2026-09-24 13:34 · 058 · D4 start in the tray second start shows · started
+- 2026-09-24 13:41 · 058 · D4 start in the tray second start shows · done
+- 2026-09-24 13:42 · 058 · D5 reminder click reaches hidden window · started
+- 2026-09-24 13:46 · 058 · D5 reminder click reaches hidden window · done
+- 2026-09-24 13:48 · 058 · D6 tray switches in settings · started
+- 2026-09-24 13:56 · 058 · D6 tray switches in settings · done
+- 2026-09-24 13:56 · 058 · D7 ARCHITECTURE.md tells the truth · started
+- 2026-09-24 13:59 · 058 · D7 ARCHITECTURE.md tells the truth · done
+- 2026-09-24 14:33 · 058 · review-fix start-hidden maximize/tray-throw/AC4-test/close-guard-test · started
+- 2026-09-24 14:40 · 058 · review-fix start-hidden maximize/tray-throw/AC4-test/close-guard-test · done
+- 2026-09-24 14:57 · 058 · review-fix maximized-state-lost-on-hidden-start + tray-throw-test-gap · started
+- 2026-09-24 14:59 · 058 · review-fix maximized-state-lost-on-hidden-start + tray-throw-test-gap · done
+- 2026-09-24 15:05 · 059 · D1 search scope + link resolver (core) · started
+- 2026-09-24 15:11 · 059 · D1 search scope + link resolver (core) · done
+- 2026-09-24 15:11 · 059 · D2 search:resolveLinks channel · started
+- 2026-09-24 15:16 · 059 · D2 search:resolveLinks channel · done
+- 2026-09-24 15:17 · 059 · D3 homeOf + useOpenDoc · started
+- 2026-09-24 15:22 · 059 · D3 homeOf + useOpenDoc · done
+- 2026-09-24 15:22 · 059 · D4 reading view · started
+- 2026-09-24 15:51 · 059 · D4 reading view · done
+- 2026-09-24 15:51 · 059 · D5 full result view · started
+- 2026-09-24 16:11 · 059 · D5 full result view · done
+- 2026-09-24 16:11 · 059 · D6 Ctrl+K wiring · started
+- 2026-09-24 16:29 · 059 · D6 Ctrl+K wiring · done
+- 2026-09-24 16:30 · 059 · D7 citations open in-app · started
+- 2026-09-24 16:37 · 059 · D7 citations open in-app · done
+- 2026-09-24 18:43 · 059 · verification (build/test/lint/typecheck/format/e2e, resumed after rate-limit interruption) · started
+- 2026-09-24 18:43 · 059 · verification (build/test/lint/typecheck/format/e2e, resumed after rate-limit interruption) · done
+- 2026-09-24 18:43 · 059 · clean-agent review (full story diff) · started
+- 2026-09-24 18:43 · 059 · clean-agent review (full story diff) · done (PASS, no fix cycle)
+- 2026-09-24 18:45 · 063 · D1 read-only plans + reference rewriters · started
+- 2026-09-24 19:05 · 063 · D1 read-only plans + reference rewriters · done
+- 2026-09-24 19:05 · 063 · D2 rename apply + journal moved entry · started
+- 2026-09-24 19:17 · 063 · D2 rename apply + journal moved entry · done
+- 2026-09-24 19:17 · 063 · D3 delete apply · started
+- 2026-09-24 19:22 · 063 · D3 delete apply · done
+- 2026-09-24 19:22 · 063 · D4 channels, main handler, index settle · started
+- 2026-09-25 07:53 · 063 · D4 channels, main handler, index settle (resumed after rate-limit interruption) · started
+- 2026-09-25 08:15 · 063 · D4 channels, main handler, index settle · done
+- 2026-09-25 08:15 · 063 · D5 rename in the app · started
+- 2026-09-25 08:41 · 063 · D5 rename in the app · done (found real bug: dir move fails under live vault watcher on Windows, EPERM — confirmed reproducible, fix dispatched separately)
+- 2026-09-25 08:41 · 063 · fix: pause vault watcher around module move/delete (Windows EPERM) · started
+- 2026-09-25 08:44 · 063 · fix: pause vault watcher around module move/delete (Windows EPERM) · done
+- 2026-09-25 08:44 · 063 · D6 delete in the app, screenshots · started
+- 2026-09-25 09:00 · 063 · D6 delete in the app, screenshots · done
+- 2026-09-25 09:00 · 063 · verification (build/test/lint/typecheck/format/e2e) · started
+- 2026-09-25 09:06 · 063 · verification (build/test/lint/typecheck/format/e2e) · done (green; quick-capture.test.tsx 9 failures confirmed pre-existing via stash)
+- 2026-09-25 09:06 · 063 · clean-agent review (full story diff, story-review-hard) · started
+- 2026-09-25 09:35 · 063 · clean-agent review (full story diff, story-review-hard) · done (FAIL: 1 HIGH + several MEDIUM/LOW findings)
+- 2026-09-25 09:35 · 063 · review-fix cycle 1: frontmatter data-loss + hardcoded strings + string-replace bugs (core) · started
+- 2026-09-25 09:35 · 063 · review-fix cycle 1: frontmatter data-loss + hardcoded strings + string-replace bugs (core) · done
+- 2026-09-25 09:35 · 063 · review-fix cycle 1: watcher-pause race + silent undo + rename confirm gaps (main/renderer) · started
+- 2026-09-25 09:35 · 063 · review-fix cycle 1: watcher-pause race + silent undo + rename confirm gaps (main/renderer) · done
+- 2026-09-25 09:35 · 063 · re-verification after review-fix (build/test/lint/typecheck/format/e2e) · done (green; quick-capture.test.tsx 9 failures still confirmed pre-existing)
+- 2026-09-25 09:38 · 063 · Done section filled, moved to docs/requirements/done/, INDEX.md updated, status: done · done

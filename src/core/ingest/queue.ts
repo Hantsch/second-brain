@@ -10,26 +10,60 @@
  *   nicht; sie weiss nur, dass nach der Rohquelle etwas passieren *kann*. Fehlt der
  *   Schritt oder fehlt das Modell, endet der Auftrag als `awaiting-llm`: die
  *   Rohquelle liegt, die Verdichtung ist offen — und niemand behauptet etwas anderes.
+ * - **Eine leere Quelle wartet auf niemanden.** Gibt es keinen Text (Video ohne
+ *   Transcript, ungelesenes PDF), endet der Auftrag als `no-content` mit dem Grund
+ *   als Code — nicht als `awaiting-llm`, denn kein Modell kann daran etwas aendern.
  * - **Wiederholen legt keine zweite Rohquelle an.** Das Ergebnis des ersten Laufs
  *   bleibt am Auftrag haengen; ein `retry` setzt hinter der Rohquelle wieder an.
+ * - **Verdichtet wird einmal pro Rohquelle.** Zwei Auftraege zur selben Quelle
+ *   legten zwei Source-Seiten zum selben Inhalt an; der zweite endet daher als
+ *   `duplicate` mit dem Hinweis `already-condensed`.
  */
 
 import { copyJob, createJob, describeFailure, TERMINAL_STAGES } from './job';
 import type { AddJobInput } from './job';
-import { patchIngestLog } from './raw';
+import { patchIngestLog, readIngestLog } from './raw';
 import { IngestError, throwIfCancelled } from './types';
 import type {
   IngestContext,
+  IngestNoteCode,
   IngestOutcome,
   IngestProgressEvent,
   IngestStore,
   SourceIngestor,
 } from './types';
-import type { IngestJob, IngestKind } from '@shared/types';
+import type { IngestJob, IngestKind, IngestStage } from '@shared/types';
 
 export type { AddJobInput };
 
 export const DEFAULT_CONCURRENCY = 2;
+
+/** Stufen, in denen ein Auftrag gerade verdichtet — kein zweiter darf daneben. */
+const CONDENSING_STAGES: ReadonlySet<IngestStage> = new Set<IngestStage>([
+  'summarizing',
+  'wiki-update',
+  'indexing',
+]);
+
+/**
+ * Hinweise, die die Leere selbst erklaeren, in dieser Vorrangfolge. Alles andere
+ * (`content-truncated`, `partial-metadata`, `ytdlp-missing`) ist beilaeufig: eine
+ * abgeschnittene Seite ist normalerweise verdichtbar, also waere „abgeschnitten"
+ * an einer leeren Quelle der falsche Grund. Steht kein Hinweis dieser Liste an,
+ * bleibt es beim ersten vorhandenen — er ist naeher an der Quelle als wir.
+ */
+const EMPTINESS_REASONS: readonly IngestNoteCode[] = ['no-transcript', 'no-content'];
+
+/**
+ * Warum es nichts zu verdichten gibt — als Code, nicht als Satz. `no-transcript`
+ * hat Vorrang: liegen mehrere Hinweise an einer leeren Quelle, ist das fehlende
+ * Transcript der Grund, der sie erklaert. Ohne jeden Hinweis bleibt das
+ * allgemeine `no-content` — auch dann wird nicht geraten.
+ */
+function noContentReason(outcome: IngestOutcome): IngestNoteCode {
+  const codes = outcome.notes.map((note) => note.code);
+  return EMPTINESS_REASONS.find((code) => codes.includes(code)) ?? codes[0] ?? 'no-content';
+}
 
 export interface CondenseInput {
   job: IngestJob;
@@ -91,6 +125,35 @@ export class IngestQueue {
     return copyJob(job);
   }
 
+  /** Queue only the condensation phase for a raw source that is already in the vault. */
+  addExisting(input: AddJobInput, outcome: IngestOutcome): IngestJob {
+    this.sequence += 1;
+    const id = this.deps.newId?.() ?? `ingest-${this.sequence}`;
+    const job = createJob(id, input, this.stamp());
+    job.rawPath = outcome.rawPath;
+    this.entries.push({ job, controller: null, outcome });
+    this.emit(job);
+    this.pump();
+    return copyJob(job);
+  }
+
+  /** Record a stopped duplicate import without touching or condensing the existing source. */
+  addDuplicate(input: AddJobInput, rawPath: string): IngestJob {
+    this.sequence += 1;
+    const id = this.deps.newId?.() ?? `ingest-${this.sequence}`;
+    const job = createJob(id, input, this.stamp());
+    Object.assign(job, {
+      stage: 'duplicate' as const,
+      progress: 1,
+      finishedAt: this.stamp(),
+      rawPath,
+      duplicateOf: rawPath,
+    });
+    this.entries.push({ job, controller: null, outcome: null });
+    this.emit(job);
+    return copyJob(job);
+  }
+
   /** Alle Auftraege, juengster zuletzt — Kopien, nichts Lebendiges. */
   jobs(): IngestJob[] {
     return this.entries.map((entry) => copyJob(entry.job));
@@ -130,6 +193,7 @@ export class IngestQueue {
   retry(id: string): IngestJob {
     const entry = this.find(id);
     if (entry === null) throw new IngestError('not-found', `Kein Auftrag ${id}.`);
+    if (entry.job.stage === 'duplicate') return copyJob(entry.job);
     if (!TERMINAL_STAGES.has(entry.job.stage)) return copyJob(entry.job);
     this.update(entry, {
       stage: 'queued',
@@ -233,17 +297,43 @@ export class IngestQueue {
   private async condense(entry: Entry, outcome: IngestOutcome, signal: AbortSignal): Promise<void> {
     const step = this.deps.condense;
     const available = this.deps.llmAvailable?.() ?? step !== undefined;
-    if (step === undefined || !available || outcome.text.trim().length === 0) {
+    /* Der leere Text steht vor dem fehlenden Modell: kein Modell verwandelt eine
+       leere Quelle in Inhalt, also waere `awaiting-llm` hier ein Warten, das nie
+       endet. Der Grund reist als Code mit — geraten wird nicht. */
+    if (outcome.text.trim().length === 0) {
+      this.update(entry, {
+        stage: 'no-content',
+        progress: 1,
+        message: noContentReason(outcome),
+        finishedAt: this.stamp(),
+      });
+      return;
+    }
+    if (step === undefined || !available) {
       this.update(entry, {
         stage: 'awaiting-llm',
         progress: 1,
-        message: outcome.text.trim().length === 0 ? (outcome.notes[0]?.code ?? null) : null,
+        message: null,
         finishedAt: this.stamp(),
       });
       return;
     }
 
+    /* Zweimal auf „Verdichten" geklickt, oder ein Wiederholen hinter einem
+       fertigen Lauf: ein zweiter Durchgang legte eine zweite Source-Seite zum
+       selben Inhalt an. Die Pruefung steht vor dem Anspruch auf die Stufe —
+       erst fragen, dann `summarizing` belegen, damit kein Dritter dazwischen
+       rutscht. */
+    if (this.condensingElsewhere(entry, outcome.rawPath)) {
+      this.markCondensedTwice(entry, outcome.rawPath);
+      return;
+    }
     this.update(entry, { stage: 'summarizing', progress: 0.85, message: null });
+    if (await this.alreadyCondensed(outcome.rawPath)) {
+      this.markCondensedTwice(entry, outcome.rawPath);
+      return;
+    }
+
     const result = await step({
       job: copyJob(entry.job),
       outcome,
@@ -264,6 +354,36 @@ export class IngestQueue {
       progress: 1,
       message: null,
       finishedAt: this.stamp(),
+    });
+  }
+
+  /** Laeuft fuer dieselbe Rohquelle schon eine Verdichtung? */
+  private condensingElsewhere(entry: Entry, rawPath: string): boolean {
+    return this.entries.some(
+      (other) =>
+        other !== entry && other.job.rawPath === rawPath && CONDENSING_STAGES.has(other.job.stage),
+    );
+  }
+
+  /** Traegt das Protokoll eine Source-Seite, ist diese Quelle schon verdichtet. */
+  private async alreadyCondensed(rawPath: string): Promise<boolean> {
+    const log = await readIngestLog(this.deps.store, rawPath).catch(() => null);
+    return typeof log?.sourcePage === 'string' && log.sourcePage.length > 0;
+  }
+
+  /**
+   * Ein zweiter Verdichtungslauf ist kein Fehler, sondern ein Duplikat: die
+   * Rohquelle liegt, die Seite steht — es gibt nichts mehr zu tun.
+   */
+  private markCondensedTwice(entry: Entry, rawPath: string): void {
+    this.update(entry, {
+      stage: 'duplicate',
+      progress: 1,
+      message: 'already-condensed',
+      error: null,
+      finishedAt: this.stamp(),
+      rawPath,
+      duplicateOf: rawPath,
     });
   }
 

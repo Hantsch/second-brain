@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { dashboardData, journalStreak, moodTrend, staleProjects } from '@core/overview';
 import { deriveJournalDays } from '@core/index/journal';
+import { makeDoc } from '../index/fixtures';
 import {
   NOW,
   TODAY,
@@ -85,6 +86,21 @@ describe('dashboardData — Todos', () => {
     const data = dashboardData(index, [], LIMITS, TODAY, undefined, { todoLimit: 2 });
     expect(data.todos.work).toHaveLength(2);
   });
+
+  it('zaehlt auch die Todos eines Bereichs mit — kein Projekt, aber ein Slug', () => {
+    const areaDoc = makeDoc({
+      path: 'areas/gesundheit.md',
+      docType: 'area',
+      title: 'Gesundheit',
+      frontmatter: { type: 'area', title: 'Gesundheit', scope: 'work' },
+      body: todoBody('- [ ] Zahnarzttermin holen'),
+    });
+    const index = indexFrom([areaDoc]);
+    const data = dashboardData(index, [], LIMITS, TODAY);
+
+    expect(data.todos.work.map((todo) => todo.text)).toEqual(['Zahnarzttermin holen']);
+    expect(data.todos.work[0]).toMatchObject({ area: 'gesundheit', project: null });
+  });
 });
 
 describe('dashboardData — Warte-auf und stagnierende Projekte', () => {
@@ -107,6 +123,39 @@ describe('dashboardData — Warte-auf und stagnierende Projekte', () => {
       projectTitle: 'Nyota Auth0 Migration',
       path: 'projects/work/nyota/project.md',
     });
+  });
+
+  it('nimmt eine composer-angelegte Zeile (nur wer und seit, ohne was) genauso auf wie eine ausgefuellte, richtig einsortiert', () => {
+    const index = indexFrom([
+      projectDoc({
+        slug: 'nyota',
+        title: 'Nyota Auth0 Migration',
+        waitingOn: [
+          { who: 'Stefan', what: 'Freigabe', since: day(-2) },
+          { who: 'Neu', what: '', since: day(-3) },
+        ],
+      }),
+    ]);
+    const data = dashboardData(index, [], LIMITS, TODAY);
+    expect(data.waitingOn.map((entry) => entry.who)).toEqual(['Neu', 'Stefan']);
+    expect(data.waitingOn[0]).toMatchObject({
+      who: 'Neu',
+      what: '',
+      project: 'nyota',
+      projectTitle: 'Nyota Auth0 Migration',
+      path: 'projects/work/nyota/project.md',
+    });
+  });
+
+  it('laesst eine erledigte composer-angelegte Zeile weg', () => {
+    const index = indexFrom([
+      projectDoc({
+        slug: 'nyota',
+        waitingOn: [{ who: 'Neu', what: '', since: day(-3), resolved: true }],
+      }),
+    ]);
+    const data = dashboardData(index, [], LIMITS, TODAY);
+    expect(data.waitingOn).toEqual([]);
   });
 
   it('nennt stagnierende Projekte als Slugs, laengste Pause zuerst', () => {
@@ -158,6 +207,32 @@ describe('dashboardData — Inbox, Journal und Sitzungen', () => {
     const data = dashboardData(indexFrom([]), sessions, LIMITS, TODAY);
     expect(data.sessions).toEqual(sessions);
     expect(data.sessions).not.toBe(sessions);
+  });
+
+  it('dashboard sessions carry both agent kinds', () => {
+    const claude = session({ id: 'c-1', agent: 'claude', vaultProject: 'x' });
+    const codex = session({
+      id: 'x-1',
+      agent: 'codex',
+      vaultProject: 'x',
+      firstPrompt: '',
+      files: [],
+      subagents: null,
+    });
+    const data = dashboardData(indexFrom([]), [claude, codex], LIMITS, TODAY);
+
+    expect(data.sessions).toHaveLength(2);
+    const byId = new Map(data.sessions.map((s) => [s.id, s]));
+    expect(byId.get('c-1')).toMatchObject({ agent: 'claude' });
+    expect(byId.get('x-1')).toMatchObject({ agent: 'codex' });
+
+    const recentKindsByAgent = new Map(
+      data.recentWork
+        .filter((item) => item.kind === 'claude-session' || item.kind === 'codex-session')
+        .map((item) => [item.kind, item.kind]),
+    );
+    expect(recentKindsByAgent.has('claude-session')).toBe(true);
+    expect(recentKindsByAgent.has('codex-session')).toBe(true);
   });
 
   it('mischt Sitzungen und Quellen in „zuletzt gearbeitet"', () => {

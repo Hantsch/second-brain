@@ -10,6 +10,9 @@
  * Dokumentation im gepackten Programm nicht neben dem Code liegt. `tests/core/wiki`
  * vergleicht die Konstante mit docs/MODULE-SCHEMA.md — laeuft die Vorlage auseinander,
  * faellt der Test und nicht der Nutzer auf.
+ *
+ * `MODULE_SCHEMA_TEMPLATE` unten ist die Wahrheit; docs/MODULE-SCHEMA.md ist ihr Spiegel,
+ * nicht umgekehrt (Story 023).
  */
 
 import { phrases } from './text';

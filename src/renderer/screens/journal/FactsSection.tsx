@@ -1,32 +1,33 @@
-/* Der Abschnitt „Fakten": was der Tagesabschluss herausgezogen und der Mensch
- * bestätigt hat — plus der Rückweg danach. Der Knopf, der den Abschluss anwirft
- * („Tag abschließen"), steht nicht hier: er ist am unteren Rand der
- * Detailspalte verankert, neben dem Composer (CoachPanel), damit er nie unter
- * den sichtbaren Rand rutscht.
+/* The "Facts" section: what the day-close extracted and the human confirmed —
+ * plus the way back afterward. The button that triggers the close ("Close
+ * day") isn't here: it's anchored to the bottom edge of the detail column,
+ * next to the composer (CoachPanel), so it never slides below the visible
+ * edge.
  *
- * Zwei Entscheidungen:
+ * Two decisions:
  *
- * - **Die Zeilen stehen wörtlich da**, nicht als gerendertes Markdown. Eine
- *   Checkbox mit `@due:2026-08-17 #work` ist genau die Zeile, die in der Datei
- *   steht; als Liste gedeutet würden daraus lose Klammern und die Marker
- *   verschwänden.
- * - **Die Bestätigung nennt nur, was wirklich geschrieben wurde**, und den Rückweg
- *   nur, wenn es einen gibt. Der Rückweg ist die Liste der `vault:write`-Aufträge
- *   aus `journal:applyClose` — jeder mit dem Hash des Stands, den er zurückdreht.
+ * - **The lines appear verbatim**, not as rendered markdown. A checkbox with
+ *   `@due:2026-08-17 #work` is exactly the line that's in the file; parsed as
+ *   a list, the loose brackets would fall away and the markers would
+ *   disappear.
+ * - **The confirmation names only what was actually written**, and the way
+ *   back only if there is one. The way back is the list of `vault:write`
+ *   requests from `journal:applyClose` — each carrying the hash of the state
+ *   it reverts.
  */
 
 import type { WriteRequest } from '@shared/ipc';
 import { Button } from '../../atoms/Button';
 import { useT } from '../../i18n';
 
-/** Was ein ausgeführter Tagesabschluss hinterlassen hat. */
+/** What a performed day-close has left behind. */
 export interface AppliedClose {
   written: string[];
   undo: WriteRequest[];
 }
 
 export interface FactsSectionProps {
-  /** Der Abschnitt aus der Datei, wörtlich. */
+  /** The section from the file, verbatim. */
   facts: string;
   applied: AppliedClose | null;
   undoBusy: boolean;
@@ -48,8 +49,8 @@ export function FactsSection({ facts, applied, undoBusy, onUndo }: FactsSectionP
       )}
 
       {applied === null ? null : (
-        /* Dieselbe Leiste wie in der Inbox — sie bleibt stehen, bis der Tag
-           wechselt: zehn Sekunden sind für eine Entscheidung zu kurz. */
+        /* The same strip as in the inbox — it stays put until the day
+           changes: ten seconds is too short for this decision. */
         <div className="sb-undostrip" role="status">
           <span className="sb-undostrip-text">
             {applied.written.length === 0

@@ -1,13 +1,13 @@
-/* Welches Modul welche Kachel rendert — die einzige Stelle, die das weiß.
+/* Which module renders which tile — the only place that knows this.
 
-   `Record<DashboardModuleId, …>` erzwingt Vollständigkeit: ein neues Modul im
-   Vertrag hat hier eine Kachel, sonst übersetzt der Compiler das nicht. Kein
-   `default`-Fall, der still eine leere Fläche zeigt.
+   `Record<DashboardModuleId, …>` enforces completeness: a new module in the
+   contract has a tile here, otherwise the compiler won't build it. No
+   `default` case that silently shows a blank surface.
 
-   `memo` ist hier kein Zierrat: während eines Zugs rendert das Gitter mit jeder
-   Zeigerbewegung neu. Die Kacheln bekommen keine Eigenschaften, also überspringt
-   React ihren Rumpf — nur der Rahmen zieht nach, weil er den Zustand des Gitters
-   aus dem Kontext liest. Ohne das würden dreizehn Listen pro Bild neu gebaut. */
+   `memo` is not decoration here: during a drag, the grid re-renders on
+   every pointer movement. The tiles receive no props, so React skips their
+   body — only the frame keeps up, because it reads the grid's state from
+   the context. Without this, thirteen lists would be rebuilt per frame. */
 
 import { memo } from 'react';
 import type { ComponentType } from 'react';
@@ -19,10 +19,12 @@ import { DeadlinesTile } from '../../components/tiles/DeadlinesTile';
 import { GardenerTile } from '../../components/tiles/GardenerTile';
 import { InboxTile } from '../../components/tiles/InboxTile';
 import { JournalStreakTile } from '../../components/tiles/JournalStreakTile';
+import { LooseEndsTile } from '../../components/tiles/LooseEndsTile';
 import { QuickCaptureTile } from '../../components/tiles/QuickCaptureTile';
 import { RecentWorkTile } from '../../components/tiles/RecentWorkTile';
 import { StaleProjectsTile } from '../../components/tiles/StaleProjectsTile';
 import { TodosTile } from '../../components/tiles/TodosTile';
+import { UpcomingMentionsTile } from '../../components/tiles/UpcomingMentionsTile';
 import { WaitingOnTile } from '../../components/tiles/WaitingOnTile';
 
 const TodosWork = memo(() => <TodosTile scope="work" />);
@@ -44,6 +46,8 @@ const TILES: Record<DashboardModuleId, ComponentType> = {
   'journal-streak': memo(JournalStreakTile),
   'claude-sessions': memo(ClaudeSessionsTile),
   gardener: memo(GardenerTile),
+  'loose-ends': memo(LooseEndsTile),
+  'upcoming-mentions': memo(UpcomingMentionsTile),
 };
 
 export function renderTile(id: DashboardModuleId): React.JSX.Element {

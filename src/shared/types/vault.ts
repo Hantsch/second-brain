@@ -25,7 +25,45 @@ export const VAULT_MARKER_FILE = '.secondbrain/vault.json';
 
 /** Was für ein Dokument eine Markdown-Datei ist. Steht im Frontmatter als `type`. */
 export type DocType =
-  'dump' | 'note' | 'project' | 'area' | 'journal' | 'source' | 'entity' | 'concept' | 'overview';
+  | 'dump'
+  | 'note'
+  | 'project'
+  | 'area'
+  | 'condensed'
+  | 'journal'
+  | 'source'
+  | 'entity'
+  | 'concept'
+  | 'overview'
+  | 'raw';
+
+/**
+ * Alle Mitglieder von `DocType`, zur Laufzeit erreichbar. Einzige Wahrheit —
+ * spaetere Ableitungen (z.B. eine Ausschlussliste) bauen darauf auf, statt die
+ * Literale erneut aufzuzaehlen.
+ */
+export const ALL_DOC_TYPES: readonly DocType[] = [
+  'dump',
+  'note',
+  'project',
+  'area',
+  'condensed',
+  'journal',
+  'source',
+  'entity',
+  'concept',
+  'overview',
+  'raw',
+];
+
+/**
+ * Exhaustiveness-Check auf Typ-Ebene: Wird `DocType` um ein Mitglied erweitert, ohne
+ * `ALL_DOC_TYPES` zu pflegen, wird `_MissingDocTypes` zu einem Typ ungleich `never` und
+ * die Zuweisung unten schlaegt beim Typechecken fehl (statt erst zur Laufzeit).
+ */
+type _MissingDocTypes = Exclude<DocType, (typeof ALL_DOC_TYPES)[number]>;
+const _allDocTypesIsExhaustive: _MissingDocTypes extends never ? true : never = true;
+void _allDocTypesIsExhaustive;
 
 /** Arbeit oder Privat — die Trennung, die im Dashboard überall auftaucht. */
 export type Scope = 'work' | 'private';
@@ -86,4 +124,6 @@ export interface VaultStatus {
   indexedAt: string | null;
   /** Läuft gerade ein (Neu-)Aufbau des Index? */
   indexing: boolean;
+  /** ISO timestamp of the last failed watcher-driven index refresh, or null when the index is current. A timestamp only — never the error text (Guardrail 6). */
+  indexRefreshFailedAt: string | null;
 }

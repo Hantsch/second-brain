@@ -1,8 +1,8 @@
-/* Die HTTP-Grundlage beider echten Provider. Kein SDK, nur `fetch` —
-   injiziert, damit Tests niemals ins Netz gehen.
+/* The HTTP foundation for both real providers. No SDK, just `fetch` —
+   injected so tests never hit the network.
 
-   Regel: Fehlermeldungen nennen den Host und den Status, nie den Schlüssel und
-   nie den vollen Antwortrumpf ungeprüft. */
+   Rule: error messages name the host and the status, never the key, and
+   never the full response body unchecked. */
 
 import { hostOf as hostOfUrl } from '@core/text/url';
 import { sanitize } from './redact';
@@ -10,23 +10,23 @@ import { LlmHttpError, LlmNetworkError, isAbortError, type FetchLike } from './t
 
 export interface HttpContext {
   fetchImpl: FetchLike;
-  /** Schlüssel dieses Providers — wird aus jedem Fehlertext entfernt. */
+  /** This provider's key — stripped from every error text. */
   secret?: string | null;
 }
 
-/** Nur der Host, damit kein Query-Parameter (und damit kein Schlüssel) im Log landet. */
+/** Only the host, so no query parameter (and thus no key) ends up in the log. */
 export function hostOf(url: string): string {
   return hostOfUrl(url, 'unbekanntem Host');
 }
 
-/** Basis-URL ohne Schrägstrich am Ende, damit `join` nicht doppelt trennt. */
+/** Base URL without a trailing slash, so `join` doesn't double up the separator. */
 export function joinUrl(baseUrl: string, path: string): string {
   return `${baseUrl.replace(/\/+$/, '')}${path.startsWith('/') ? path : `/${path}`}`;
 }
 
 /**
- * Führt eine Anfrage aus und wirft bei allem außer 2xx `LlmHttpError`
- * (mit Status, damit das Gateway über den Retry entscheiden kann).
+ * Executes a request and throws `LlmHttpError` for anything outside 2xx
+ * (with a status, so the gateway can decide whether to retry).
  */
 export async function request(url: string, init: RequestInit, ctx: HttpContext): Promise<Response> {
   let response: Response;
@@ -47,7 +47,7 @@ export async function request(url: string, init: RequestInit, ctx: HttpContext):
   return response;
 }
 
-/** Antwort als JSON lesen. Ein kaputter Rumpf ist ein Fehler, aber kein Retry-Grund. */
+/** Read the response as JSON. A broken body is an error, but not a reason to retry. */
 export async function requestJson<T>(url: string, init: RequestInit, ctx: HttpContext): Promise<T> {
   const response = await request(url, init, ctx);
   const text = await readTextSafely(response);
@@ -58,7 +58,7 @@ export async function requestJson<T>(url: string, init: RequestInit, ctx: HttpCo
   }
 }
 
-/** Fehlertext für Probe und Logs — Status plus (bereits bereinigter) Rumpf. */
+/** Error text for probing and logs — status plus (already sanitized) body. */
 export function describeError(error: unknown): string {
   if (error instanceof LlmHttpError) return `${error.message} ${error.body ?? ''}`.trim();
   if (error instanceof Error) return error.message;

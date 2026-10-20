@@ -1,13 +1,14 @@
-/* Eine Runde des Tagebuch-Gesprächs, so wie sie in der Datei steht:
- * Sprecher, Uhrzeit in Mono, dann der Text.
+/* One block of the unified journal stream (011), as it stands in the file:
+ * speaker, time in mono, then the text — or, with `plain`, just the text,
+ * for my own prose blocks that carry no speaker line in the file either.
  *
- * Der eigene Satz bleibt Text mit seinen Umbrüchen — er wird nicht als Markdown
- * gedeutet, weil niemand sein Tagebuch formatiert. Die Antwort des Coachs darf
- * eine Liste sein (Haltung „Tipps"), also läuft sie durch denselben
- * Markdown-Renderer wie jede andere Antwort der App.
+ * The user's own sentence stays text with its line breaks — it's not
+ * interpreted as Markdown, because no one formats their journal. The coach's
+ * response is allowed to be a list (the "Tips" stance), so it runs through the
+ * same Markdown renderer as any other response in the app.
  *
- * Während des Streams steht hier eine ruhige Denk-Anzeige, danach der wachsende
- * Text — kein Platzhalter, der eine fertige Antwort behauptet.
+ * During the stream, a calm thinking indicator shows here, then the growing
+ * text — no placeholder that claims a finished answer.
  */
 
 import type { JournalTurn } from '@shared/ipc';
@@ -17,11 +18,17 @@ import { useT } from '../i18n';
 
 export interface DialogTurnProps {
   turn: JournalTurn;
-  /** Die Antwort wächst noch. */
+  /** The response is still growing. */
   streaming?: boolean;
+  /** Suppresses the speaker header — for the day's own prose in the unified
+      stream (011, `EntryStream.tsx`): an `entry` block is not a "turn" with
+      a speaker, just what was written, and it never carries a timestamp
+      (`JournalStreamBlock.at` is always `null` for it) — mirroring the file,
+      where it's plain Markdown with no `> **Second Brain**` marker. */
+  plain?: boolean;
 }
 
-export function DialogTurn({ turn, streaming = false }: DialogTurnProps) {
+export function DialogTurn({ turn, streaming = false, plain = false }: DialogTurnProps) {
   const t = useT();
   const speaker = t(`journal.turn.${turn.role}`);
   const empty = turn.text.trim().length === 0;
@@ -29,15 +36,17 @@ export function DialogTurn({ turn, streaming = false }: DialogTurnProps) {
   return (
     <article
       className={`sb-dturn sb-dturn--${turn.role}`}
-      aria-label={speaker}
+      aria-label={plain ? undefined : speaker}
       aria-busy={streaming ? 'true' : undefined}
     >
-      <header className="sb-dturn-head">
-        {/* Overline als Text, keine Überschrift: das Gespräch ist eine Folge von
-            Runden, keine Gliederung. */}
-        <span className="gs-overline">{speaker}</span>
-        {turn.at === null ? null : <span className="sb-mono sb-dturn-time">{turn.at}</span>}
-      </header>
+      {plain ? null : (
+        <header className="sb-dturn-head">
+          {/* Overline as text, not a heading: the conversation is a sequence
+              of turns, not an outline. */}
+          <span className="gs-overline">{speaker}</span>
+          {turn.at === null ? null : <span className="sb-mono sb-dturn-time">{turn.at}</span>}
+        </header>
+      )}
 
       {streaming && empty ? (
         <p className="sb-thinking">

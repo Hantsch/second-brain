@@ -136,6 +136,36 @@ describe('RoutingGateway: Auflösung', () => {
     await expect(gateway.complete(ask)).rejects.toMatchObject({ info: { reason: 'no-key' } });
   });
 
+  it('nennt über unavailable() den Grund samt Provider statt nur false', () => {
+    const route: Routing = {
+      tasks: { 'query-answer': { providerId: 'cloud', model: 'gpt-4o' } },
+      defaults: {},
+    };
+    const noKey = harness({ routing: route, keys: new MemoryKeyStore() }).gateway;
+    expect(noKey.unavailable('query-answer')).toEqual({
+      reason: 'no-key',
+      task: 'query-answer',
+      provider: 'Cloud',
+    });
+    const off = harness({ routing: route, providers: [providerConfig({ enabled: false })] });
+    expect(off.gateway.unavailable('query-answer')).toMatchObject({
+      reason: 'provider-disabled',
+      provider: 'Cloud',
+    });
+    const none = harness({ routing: { tasks: {}, defaults: {} } }).gateway;
+    expect(none.unavailable('query-answer')).toEqual({ reason: 'no-route', task: 'query-answer' });
+    expect(harness({ routing: route }).gateway.unavailable('query-answer')).toBeNull();
+  });
+
+  it('nennt den Provider auch in der Fehlermeldung', () => {
+    const error = new LlmUnavailableError({
+      reason: 'no-key',
+      task: 'query-answer',
+      provider: 'OpenRouter',
+    });
+    expect(error.message).toBe('Für den zugeordneten Provider fehlt der Schlüssel (OpenRouter).');
+  });
+
   it('verlangt für lokale Provider keinen Schlüssel', () => {
     const { gateway } = harness({
       routing: {
@@ -242,6 +272,50 @@ describe('RoutingGateway: Retry', () => {
     const provider = failingProvider([httpError(500), httpError(500), httpError(500)]);
     const { gateway, sleeps } = harness({ routing: route, provider });
     await expect(gateway.complete(ask)).rejects.toMatchObject({ info: { reason: 'unreachable' } });
+    expect(sleeps).toHaveLength(2);
+  });
+
+  /* 034, D7: llama.cpp is just another `openai-compatible` provider to the
+     gateway, so a `llama-server` that was killed (stop pressed, or the
+     process died on its own) has to come through this same, generic
+     mapping — the story adds no llama.cpp-specific error handling of its
+     own (Decisions, Q5). A dead TCP listener surfaces to `fetch` as a
+     `TypeError` with an `ECONNREFUSED`/`ECONNRESET`-shaped `code`, exactly
+     what Node raises for a refused or reset loopback connection. */
+  it('meldet einen abgebrochenen llama.cpp-Prozess als unreachable, nie als Hänger (034, D7)', async () => {
+    const connectionGone = (): Error =>
+      Object.assign(new Error('connect ECONNREFUSED 127.0.0.1:11435'), {
+        code: 'ECONNREFUSED',
+      });
+    const provider = failingProvider([connectionGone(), connectionGone(), connectionGone()]);
+    const llamaRoute: Routing = {
+      tasks: { 'query-answer': { providerId: 'llamacpp', model: 'local-model' } },
+      defaults: {},
+    };
+    const llamaProvider = providerConfig({
+      id: 'llamacpp',
+      label: 'llama.cpp (lokal)',
+      kind: 'openai-compatible',
+      local: true,
+      hasKey: false,
+      baseUrl: 'http://127.0.0.1:11435/v1',
+    });
+    const { gateway, sleeps } = harness({
+      routing: llamaRoute,
+      providers: [llamaProvider],
+      keys: new MemoryKeyStore(),
+      provider,
+    });
+
+    const startedAt = Date.now();
+    await expect(gateway.complete(ask)).rejects.toMatchObject({
+      name: 'LlmUnavailableError',
+      info: { reason: 'unreachable' },
+    });
+    // Bounded: the fake `sleep` never actually waits, and every attempt here
+    // fails synchronously — a real hang would not finish within a test
+    // timeout at all, let alone within one second of wall-clock time.
+    expect(Date.now() - startedAt).toBeLessThan(1000);
     expect(sleeps).toHaveLength(2);
   });
 

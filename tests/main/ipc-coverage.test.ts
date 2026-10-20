@@ -104,6 +104,36 @@ describe('kein Kanal ist ein Platzhalter', () => {
   });
 });
 
+describe('033: llm:searchModelFiles', () => {
+  it('ist im Vertrag, hat einen Handler und ist im Preload-Allowlist', () => {
+    expect(IPC_CHANNELS).toContain('llm:searchModelFiles');
+    expect(channels).toContain('llm:searchModelFiles');
+    expect(typeof handlers.get('llm:searchModelFiles')).toBe('function');
+  });
+});
+
+describe('043: condense:delete', () => {
+  it('ist im Vertrag, hat einen Handler und ist im Preload-Allowlist', () => {
+    expect(IPC_CHANNELS).toContain('condense:delete');
+    expect(channels).toContain('condense:delete');
+    expect(typeof handlers.get('condense:delete')).toBe('function');
+  });
+});
+
+describe('063: modules:renamePlan|rename|deletePlan|delete|undo', () => {
+  it.each([
+    'modules:renamePlan',
+    'modules:rename',
+    'modules:deletePlan',
+    'modules:delete',
+    'modules:undo',
+  ] as const)('%s ist im Vertrag, hat einen Handler und ist im Preload-Allowlist', (channel) => {
+    expect(IPC_CHANNELS).toContain(channel);
+    expect(channels).toContain(channel);
+    expect(typeof handlers.get(channel)).toBe('function');
+  });
+});
+
 describe('Preload-Freigabe', () => {
   function bridge(): {
     invoke: (channel: string, payload?: unknown) => Promise<unknown>;

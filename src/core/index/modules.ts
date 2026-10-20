@@ -1,10 +1,10 @@
 /**
- * Wissens-Module: ein Modul ist ein Ordner `modules/<slug>/` mit einem eigenen
- * kleinen Wiki. Die Liste hier ist abgeleitet — Seitenzahlen kommen aus dem
- * Seitengraph, `lastIngest` aus den Rohquellen.
+ * Knowledge modules: a module is a folder `modules/<slug>/` with its own small
+ * wiki. The list here is derived — page counts come from the page graph,
+ * `lastIngest` from the raw sources.
  *
- * `findingCount` bleibt 0, solange kein Pflegelauf gelaufen ist: die Zahl sagt
- * „keine bekannten Befunde", nicht „geprüft und sauber".
+ * `findingCount` stays 0 as long as no maintenance run has happened: the
+ * number says "no known findings", not "checked and clean".
  */
 
 import type { KnowledgeModule, RawSource } from '@shared/types';
@@ -15,29 +15,29 @@ import type { IndexedDoc, ModulePageCounts } from './types';
 
 const EMPTY_COUNTS: ModulePageCounts = { sources: 0, entities: 0, concepts: 0 };
 
-/** `modules/<slug>/module.md` → Slug, sonst null. */
+/** `modules/<slug>/module.md` → slug, otherwise null. */
 function moduleFileSlug(path: string): string | null {
   const match = /^modules\/([^/]+)\/module\.md$/.exec(path);
   return match?.[1] ?? null;
 }
 
-/** Slug lesbar machen, wenn kein `module.md` einen Titel nennt. */
+/** Make the slug readable when no `module.md` provides a title. */
 function titleFromSlug(slug: string): string {
   const words = slug.replace(/[-_]+/g, ' ').trim();
   return words.length === 0 ? slug : words.charAt(0).toUpperCase() + words.slice(1);
 }
 
 export interface ModuleDerivationOptions {
-  /** Seitenzahlen je Modul, wie `derivePages` sie liefert. */
+  /** Page counts per module, as `derivePages` provides them. */
   counts?: ReadonlyMap<string, ModulePageCounts>;
-  /** Rohquellen; ihr jüngster Zeitpunkt wird `lastIngest`. */
+  /** Raw sources; their most recent timestamp becomes `lastIngest`. */
   sources?: readonly RawSource[];
 }
 
 /**
- * Alle Module, alphabetisch nach Titel. Ein Modul zaehlt, sobald irgendetwas
- * unter `modules/<slug>/` liegt — auch ohne `module.md`, damit ein von Hand
- * angelegtes Wiki nicht unsichtbar bleibt.
+ * All modules, alphabetically by title. A module counts as soon as anything
+ * exists under `modules/<slug>/` — even without `module.md`, so a manually
+ * created wiki doesn't stay invisible.
  */
 export function deriveModules(
   docs: readonly IndexedDoc[],

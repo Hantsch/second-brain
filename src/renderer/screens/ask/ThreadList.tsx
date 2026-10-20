@@ -1,12 +1,13 @@
-/* Die Gespräche: Titel, Datum, Suche.
+/* The conversations: title, date, search.
 
-   Höchstens die letzten fünfzig stehen hier — ein Verlauf, der alles behält, ist
-   ein Sammelsurium, in dem niemand etwas findet. Ältere sind über die Suche
-   erreichbar: sie läuft im Hauptprozess über Titel *und* Nachrichten.
+   At most the last fifty appear here — a history that keeps everything is a
+   jumble nobody can find anything in. Older ones are reachable via search: it
+   runs in the main process over title *and* messages.
 
-   Gelöscht wird nur nach Rückfrage — sie steht hier, weil der Knopf hier steht.
-   Der Verlauf wandert dabei in den Papierkorb des Vaults; abgelegte Wiki-Seiten
-   bleiben, wo sie sind. Genau das sagt die Rückfrage. */
+   Deletion only happens after confirmation — it lives here because the
+   button lives here. The conversation moves into the vault's trash; filed
+   wiki pages stay where they are. That's exactly what the confirmation
+   says. */
 
 import { useState } from 'react';
 import type { ChatThread } from '@shared/types';
@@ -21,13 +22,13 @@ import { formatAge } from '../../lib/format';
 export interface ThreadListProps {
   threads: readonly ChatThread[];
   activeId: string | null;
-  /** Suchbegriff im Verlauf. */
+  /** Search term within the history. */
   query: string;
   onQuery: (query: string) => void;
   onSelect: (id: string) => void;
-  /** Löschen — wird erst gerufen, wenn der Nutzer die Rückfrage bestätigt hat. */
+  /** Delete — only called once the user has confirmed the prompt. */
   onDelete: (id: string) => void;
-  /** Lädt die Liste noch? */
+  /** Is the list still loading? */
   pending?: boolean;
 }
 
@@ -73,7 +74,7 @@ export function ThreadList({
               <button
                 type="button"
                 className={`sb-threaditem ${thread.id === activeId ? 'sb-threaditem--active' : ''}`.trim()}
-                /* Der Titel benennt den Knopf; das Datum daneben ist Beiwerk. */
+                /* The title names the button; the date next to it is decoration. */
                 aria-label={t('ask.threads.open', { title: thread.title })}
                 aria-current={thread.id === activeId ? 'true' : undefined}
                 onClick={() => onSelect(thread.id)}

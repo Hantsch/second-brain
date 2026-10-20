@@ -5,18 +5,21 @@
  * Was gelesen wird:
  * - `.md`, `.txt`, `.markdown`, `.csv`, `.json`, `.log` → Text uebernehmen.
  * - `.html`, `.htm` → zu Markdown wandeln, Ergebnis als `source.md` daneben.
- * - `.pdf` → **nicht gelesen.** Die Datei liegt trotzdem als Quelle, und der Nutzer
- *   erfaehrt den Grund (`pdf-not-read`). Ein halbes PDF-Parsing waere eine Quelle,
- *   die aussieht wie Text und keiner ist — das ist schlimmer als eine Absage.
+ * - `.pdf` → Textebene extrahieren, Ergebnis als `source.md` daneben. Hat das PDF
+ *   keine Textebene (gescannte Seiten), sagt `pdf-no-text-layer` das ehrlich; laesst
+ *   es sich gar nicht oeffnen (beschaedigt, passwortgeschuetzt), sagt `pdf-not-read`
+ *   das. In beiden Faellen liegt die Originaldatei trotzdem als Quelle.
  * - alles andere → abgelegt, nicht gelesen (`binary-not-read`).
  */
 
 import { extName, sanitizeSegment, slugify } from '@core/vault/paths';
 import { htmlToArticle } from './html';
 import { markdownDoc } from './markdown';
+import { extractPdfText } from './pdf';
 import { freeRawPath, isoStamp, writeIngestLog } from './raw';
 import { IngestError, throwIfCancelled } from './types';
 import type { IngestContext, IngestNote, IngestOutcome, SourceIngestor } from './types';
+import { sourceFingerprint } from './fingerprint';
 
 /** Der Name der Datei, die den ausgelesenen Text traegt. */
 export const TEXT_FILE = 'source.md';
@@ -110,12 +113,26 @@ export function createFileIngestor(): SourceIngestor {
           foundTitle = titleFromMarkdown(text);
         }
       } else if (handling === 'pdf') {
-        notes.push({ code: 'pdf-not-read', detail: name });
+        if (stat.size > MAX_TEXT_BYTES) {
+          throw new IngestError('too-large', 'PDF is larger than 5 MB.', {
+            detail: String(stat.size),
+          });
+        }
+        const bytes = (await fs.readBytes(source)) ?? new Uint8Array();
+        const pdf = await extractPdfText(bytes);
+        if (pdf.kind === 'text') {
+          text = pdf.text;
+        } else if (pdf.kind === 'no-text-layer') {
+          notes.push({ code: 'pdf-no-text-layer', detail: name });
+        } else {
+          notes.push({ code: 'pdf-not-read', detail: name });
+        }
       } else {
         notes.push({ code: 'binary-not-read', detail: extName(name) || name });
       }
 
       const title = foundTitle ?? titleFromFileName(name);
+      const hasFileContent = handling === 'text' || handling === 'html' || text.length > 0;
 
       const now = ctx.now ?? new Date();
       const ingestedAt = isoStamp(now);
@@ -128,7 +145,7 @@ export function createFileIngestor(): SourceIngestor {
       await fs.copyFile(source, fs.join(ctx.store.root, ...dir.split('/'), copyName));
 
       // Nur wenn der lesbare Text nicht schon die Originaldatei ist.
-      if (handling === 'html' && text.length > 0) {
+      if ((handling === 'html' || handling === 'pdf') && text.length > 0) {
         await ctx.store.writeText(
           `${dir}/${TEXT_FILE}`,
           markdownDoc(
@@ -151,7 +168,8 @@ export function createFileIngestor(): SourceIngestor {
         title,
         sourcePage: null,
         modules: ctx.module === null || ctx.module === undefined ? [] : [ctx.module],
-        provenance: { content: handling === 'pdf' || handling === 'opaque' ? 'none' : 'file' },
+        provenance: { content: hasFileContent ? 'file' : 'none' },
+        fingerprint: sourceFingerprint('file', source),
         notes,
         file: copyName,
         bytes: stat.size,
@@ -163,7 +181,7 @@ export function createFileIngestor(): SourceIngestor {
         title,
         text,
         origin: source,
-        provenance: { content: handling === 'pdf' || handling === 'opaque' ? 'none' : 'file' },
+        provenance: { content: hasFileContent ? 'file' : 'none' },
         notes,
       };
     },

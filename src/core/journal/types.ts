@@ -17,6 +17,7 @@
  */
 
 import type {
+  Area,
   CoachMode,
   DocLanguage,
   FilingProposal,
@@ -39,7 +40,11 @@ import type { VaultStat } from '@core/vault/types';
 /** So viele frueheren Tage gehen hoechstens als Belege in ein `analyze`-Gespraech. */
 export const MAX_EARLIER_DAYS = 5;
 
-/** So viele frueheren Runden desselben Tages gehen als Vorgeschichte in den Prompt. */
+/**
+ * So viele frueheren Runden desselben Tages gehen als Vorgeschichte in den Prompt
+ * — seit 011 die Bloecke des Tagesstroms (eigene Prosa und Antworten der App) und
+ * die Runden eines noch nicht gefalteten „Gespraech"-Abschnitts zusammen.
+ */
 export const DIALOG_HISTORY_TURNS = 6;
 
 /** Untermenge von `VaultStore`, die der Tagebuch-Kern braucht. */
@@ -71,6 +76,7 @@ export interface JournalIndexView {
   index(): { docs: readonly IndexedDoc[]; byPath: ReadonlyMap<string, IndexedDoc> };
   search(query: SearchQuery): SearchHit[];
   projects(): readonly Project[];
+  areas(): readonly Area[];
   modules(): readonly KnowledgeModule[];
 }
 
@@ -109,6 +115,85 @@ export interface DialogTurn {
   line: number;
 }
 
+/**
+ * Ein Block im „Tag"-Abschnitt, so wie er geschrieben wurde (011): entweder ein
+ * Prosa-Lauf der Nutzerin oder eine Antwort der App als Blockzitat im Format von
+ * `formatTurn`. Reihenfolge der Liste = Reihenfolge im Dokument.
+ */
+export type JournalBlock =
+  | { kind: 'entry'; text: string; line: number }
+  | { kind: 'answer'; text: string; at: string | null; line: number };
+
+/**
+ * Der Fragebogen als Starthilfe (012): die feste Themenmenge, nie erweitert —
+ * auch nicht vom Modell (`interview-followup`, D3). `planInterview`
+ * (`interview.ts`) bestimmt daraus, welche Fragen an einem Tag noch offen sind.
+ */
+export const INTERVIEW_TOPICS = ['work', 'events', 'people', 'open', 'feeling'] as const;
+
+/** Eines der fuenf Themen, nach denen der Fragebogen fragt. */
+export type InterviewTopic = (typeof INTERVIEW_TOPICS)[number];
+
+/**
+ * Ob fuer die optionale Rueckfrage (`journal-chat`, D3) ein Modell geroutet
+ * ist. Das entscheidet der Aufrufer (IPC, D4) — ein reiner Kernbaustein hat
+ * kein `LlmGateway`, um das selbst zu pruefen, und soll auch keins bekommen,
+ * nur um diese eine Frage zu beantworten.
+ */
+export type InterviewMode = 'fixed' | 'model';
+
+/** Eine noch zu stellende Frage, schon in der verlangten Dokumentsprache. */
+export interface InterviewStep {
+  topic: InterviewTopic;
+  question: string;
+}
+
+/**
+ * Minimale Projektion eines losen Endes (020, D8), wie `planInterview` sie
+ * fuer ihre eine Zusatzfrage braucht. `id` ist absichtlich **nicht**
+ * `LooseEnd.id` (`@shared/types`, aus `findLooseEnds`): geschrieben wird die
+ * Antwort ueber `journal:answerLooseEnd` (D5) unter derselben Kennung, unter
+ * der der Pflegelauf und die Erinnerungen dasselbe lose Ende schon fuehren —
+ * `findingId('loose-end', looseEnd.id)` aus `@core/gardener`. Dieses Modul
+ * importiert `@core/gardener` nicht (das importiert bereits von hier,
+ * `checks/loose-end.ts` — ein Rueckeinstieg waere ein Zyklus), also rechnet
+ * der Aufrufer (`main/ipc/journal.ts`) die Kennung aus und reicht sie fertig
+ * herein.
+ */
+export interface InterviewLooseEnd {
+  /** `findingId('loose-end', looseEnd.id)` — die Kennung der Pflege- und
+      Erinnerungs-Oberflaeche, nicht `LooseEnd.id` selbst. */
+  id: string;
+  /** Der Tag, der die Ankuendigung gemacht hat, 'YYYY-MM-DD'. */
+  day: string;
+  /** Der ankuendigende Satz, wortwoertlich. */
+  quote: string;
+}
+
+/** Ergebnis von `planInterview`: was von der festen Themenmenge noch offen ist. */
+export interface InterviewPlan {
+  /** Verbleibende Schritte, in der Reihenfolge von `INTERVIEW_TOPICS`. */
+  steps: InterviewStep[];
+  mode: InterviewMode;
+  /**
+   * Fertig, sobald jedes Thema entweder aus dem Frontmatter hervorgeht oder an
+   * diesem Tag schon einmal beantwortet wurde — also `steps.length === 0`.
+   * Ein eigenes Feld statt einer leeren Liste, damit „fertig" nie erraten,
+   * sondern immer ausdruecklich gemeldet wird.
+   */
+  finished: boolean;
+  /**
+   * Die eine optionale Zusatzfrage zu einem noch offenen losen Ende (020,
+   * D8) — `null`, wenn keins uebergeben wurde oder die Liste leer war.
+   * Beantworten laeuft **nicht** ueber `recordAnswer`, sondern ueber das
+   * eigene Schreibgleis von D5 (`answerLooseEnd`/`journal:answerLooseEnd`);
+   * das Feld zaehlt deshalb bewusst nicht zu `steps` und nicht zu `finished`
+   * — die fuenf festen Themen bleiben davon unberuehrt (Decisions: die
+   * Themenmenge wird nie erweitert, auch nicht um diese Frage).
+   */
+  looseEnd: InterviewLooseEnd | null;
+}
+
 /** Alles, was das Coaching-Gespraech braucht. */
 export interface CoachDeps extends JournalOptions {
   store: JournalStore;
@@ -142,8 +227,10 @@ export interface CoachResult {
   /** Die protokollierte Antwort. Leer, wenn keine kam — nie erfunden. */
   reply: string;
   /**
-   * Es kam keine Antwort von einem Modell. Der Eintrag wurde trotzdem geschrieben;
-   * `earlier` traegt, was statt einer Antwort belegt ist.
+   * Es kam keine Antwort von einem Modell, **obwohl eine gewollt war**. Der Eintrag
+   * wurde trotzdem geschrieben; `earlier` traegt, was statt einer Antwort belegt
+   * ist. In der Haltung `listen` ist das `false`: dort war keine Antwort verlangt,
+   * und eine ausgebliebene ist dann kein Mangel, sondern der Auftrag.
    */
   noModel: boolean;
   /**
@@ -172,6 +259,9 @@ export interface JournalFrontmatterSuggestion {
   people: string[];
   /** Projekt-Slugs, die im Eintrag vorkommen. */
   projects: string[];
+  /** Bereichs-Slugs, die im Eintrag vorkommen. Nur das Modell schlaegt sie vor —
+      keine Heuristik ohne Modell (Ausnahme zu den anderen Feldern hier). */
+  areas: string[];
   mood: number | null;
   energy: number | null;
   tags: string[];

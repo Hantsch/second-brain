@@ -100,7 +100,9 @@ async function createHarness(userDataDir: string, vaultRoot: string) {
 
   await services.openVault(vaultRoot);
   /* Die Sitzungen kommen aus den Fixtures, nie aus dem echten ~/.claude. */
-  await settings.patchVault({ overview: { claudeProjectsDir: CLAUDE_PROJECTS_DIR } });
+  await settings.patchVault({
+    overview: { claudeProjectsDir: CLAUDE_PROJECTS_DIR, useCodexSessions: false },
+  });
   return { services, settings, call };
 }
 
@@ -153,7 +155,7 @@ describe('Überblick über die Bereichsgrenzen', () => {
     expect(toggled.state).toBe('done');
     /* Der Prüfstein: die Bestätigung sagt „abgehakt", also steht es in der Datei. */
     const afterToggle = (await vault.read(WORK)) ?? '';
-    expect(afterToggle).toContain(`- [x] Terraform-State migrieren @done:${TODAY}`);
+    expect(afterToggle).toContain(`- [x] Terraform-State migrieren !! @done:${TODAY}`);
 
     // ── Frist setzen → Erinnerung mit der richtigen Dringlichkeit ────────────
     const open = await harness.call('todos:create', {
@@ -172,7 +174,7 @@ describe('Überblick über die Bereichsgrenzen', () => {
     const dated = await harness.call('todos:update', { id: open.id, due: day(2) });
     expect(dated.due).toBe(day(2));
     expect((await vault.read(WORK)) ?? '').toContain(
-      `- [ ] Rollen-Mapping dokumentieren @due:${day(2)}`,
+      `- [ ] Rollen-Mapping dokumentieren !! @due:${day(2)}`,
     );
 
     /* Zwei Tage Vorlauf sind „bald", eine Frist von gestern ist „überfällig". */

@@ -1,63 +1,86 @@
-/* Was gerade passiert ist — und der Weg zurück.
+/* What just happened — and the way back.
 
-   Dieselbe Haltung wie in der Inbox: die Bestätigung steht im Screen und nicht als
-   Meldung, weil eine Meldung nach sechs Sekunden verschwindet und keinen Knopf
-   trägt. „Keine Aktion ohne Rückgängig" heißt, dass der Rückweg sichtbar dasteht.
+   The same stance as in the inbox: the confirmation stands in the screen and
+   not as a toast, because a toast disappears after six seconds and carries
+   no button. "No action without undo" means the way back stays visible.
 
-   Und sie behauptet nur, was wirklich geschehen ist: ohne geschriebene Datei
-   steht hier kein „geschrieben". Ein Fix, der nur öffnet, sagt „geöffnet"; ein
-   Rückweg, der eine seither bearbeitete Datei nicht angefasst hat, sagt auch das
-   (`kept`). */
+   And it only claims what actually happened: without a written file, no
+   "written" appears here. A fix that only opens says "opened"; an undo that
+   didn't touch a file edited since then also says so (`kept`). */
 
+import type { UiLanguage } from '@shared/types';
 import { Button } from '../../atoms/Button';
 import { Icon } from '../../atoms/Icon';
-import { useT } from '../../i18n';
-import { plural } from '../../lib/format';
+import { useLanguage, useT } from '../../i18n';
+import { formatDate, plural } from '../../lib/format';
 
 export type Outcome =
-  /** Ein Fix hat geschrieben. Ohne Marke gibt es keinen Rückweg. */
+  /** A fix has written. Without a token there is no way back. */
   | { kind: 'fixed'; files: string[]; undoToken: string | null }
-  /** „Passt so" — der Befund ist ausgeblendet. */
+  /** "Looks fine" — the finding is hidden. */
   | { kind: 'dismissed'; id: string }
-  /** Die Überholt-Beziehung steht im Frontmatter. */
+  /** "Not now" — hidden until `until`, the day the strip names. */
+  | { kind: 'snoozed'; id: string; until: string }
+  /** Back in the list, from either kind of putting away. */
+  | { kind: 'unsnoozed' }
+  /**
+   * A re-check ran. It wrote nothing, so the only thing it can report is
+   * whether the finding survived the fresh run.
+   */
+  | { kind: 'rechecked'; gone: boolean }
+  /** The supersedes relationship is in the frontmatter. */
   | { kind: 'superseded'; file: string; before: string[]; hash: string }
-  /** Ein Fix wurde zurückgedreht; `kept` blieb unberührt. */
+  /** A page went to the trash (015 D7/D8) — never "written", it wasn't. */
+  | { kind: 'discarded'; file: string; undoToken: string }
+  /** A fix was reverted; `kept` was left untouched. */
   | { kind: 'undone'; kept: string[] }
-  /** Ein Lauf wurde abgebrochen. */
-  | { kind: 'cancelled' }
-  /** Eine Aktion, die nichts schreibt: die zweite Datei bleibt als Weg. */
+  /** An action that writes nothing: the second file remains as a path. */
   | { kind: 'opened'; paths: string[] };
 
 export interface OutcomeStripProps {
   outcome: Outcome;
   busy: boolean;
-  /** Der Rückweg, wenn es einen gibt. */
+  /** The way back, if there is one. */
   onUndo?: () => void;
-  /** Der zweite Pfad einer „nur öffnen"-Aktion. */
+  /** The second path of an "open only" action. */
   onOpenSecond?: (path: string) => void;
 }
 
-function sentence(outcome: Outcome): { key: string; values?: Record<string, string | number> } {
+function sentence(
+  outcome: Outcome,
+  language: UiLanguage,
+): { key: string; values?: Record<string, string | number> } {
   if (outcome.kind === 'fixed') {
     return { key: 'garden.card.written', values: { file: outcome.files[0] ?? '' } };
   }
   if (outcome.kind === 'dismissed') return { key: 'garden.card.dismissed' };
+  if (outcome.kind === 'snoozed') {
+    return { key: 'garden.card.snoozed', values: { date: formatDate(outcome.until, language) } };
+  }
+  if (outcome.kind === 'unsnoozed') return { key: 'garden.card.unsnoozed' };
+  if (outcome.kind === 'rechecked') {
+    return { key: outcome.gone ? 'garden.card.recheckGone' : 'garden.card.recheckStill' };
+  }
   if (outcome.kind === 'superseded') {
     return { key: 'garden.contradiction.superseded', values: { file: outcome.file } };
   }
+  if (outcome.kind === 'discarded') {
+    return { key: 'garden.card.discarded', values: { file: outcome.file } };
+  }
   if (outcome.kind === 'undone') return { key: 'garden.card.undone' };
-  if (outcome.kind === 'cancelled') return { key: 'garden.run.cancelled' };
   return { key: 'garden.card.opened', values: { path: outcome.paths[0] ?? '' } };
 }
 
-/** Beschriftung des Rückwegs — „wieder anzeigen" ist kein „rückgängig". */
+/** Label of the way back — "show again" is not "undo". */
 function undoLabel(outcome: Outcome): string {
-  return outcome.kind === 'dismissed' ? 'garden.card.undismiss' : 'garden.card.undo';
+  const hidden = outcome.kind === 'dismissed' || outcome.kind === 'snoozed';
+  return hidden ? 'garden.card.undismiss' : 'garden.card.undo';
 }
 
 export function OutcomeStrip({ outcome, busy, onUndo, onOpenSecond }: OutcomeStripProps) {
   const t = useT();
-  const line = sentence(outcome);
+  const language = useLanguage();
+  const line = sentence(outcome, language);
   const second = outcome.kind === 'opened' ? (outcome.paths[1] ?? null) : null;
   const kept = outcome.kind === 'undone' ? outcome.kept : [];
 

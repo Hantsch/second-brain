@@ -1,6 +1,6 @@
-/* Puffer für streamende LLM-Antworten. Jedes Stück aus `event:llm-stream`
-   landet hier unter seiner `messageId`; erst wenn der Stream fertig ist,
-   invalidiert `events.ts` die betroffene Query. So flackert nichts. */
+/* Buffer for streaming LLM responses. Every chunk from `event:llm-stream`
+   lands here under its `messageId`; only once the stream is done does
+   `events.ts` invalidate the affected query. This way nothing flickers. */
 
 import { useSyncExternalStore } from 'react';
 import type { Citation } from '@shared/types';
@@ -51,7 +51,7 @@ function subscribe(notify: () => void): () => void {
   return () => subscribers.delete(notify);
 }
 
-/** Liest den Puffer einer Nachricht. Ohne Stream: leerer Zustand. */
+/** Reads the buffer for a message. Without a stream: empty state. */
 export function useLlmStream(messageId: string | null): StreamState {
   const getSnapshot = (): StreamState =>
     messageId === null ? EMPTY : (states[messageId] ?? EMPTY);

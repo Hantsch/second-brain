@@ -1,14 +1,15 @@
-/* Deutsche Texte des Tagebuchs: Tagesliste, Tageseintrag, Coaching-Gespräch,
-   Tagesabschluss.
+/* German texts for the journal: day list, day entry, coaching dialogue,
+   day close-out.
 
-   Zwei Dinge, die hier Text sind und nicht Code:
+   Two things here are text, not code:
 
-   - **Die Haltungen erklären sich selbst.** Jede trägt einen Satz in der Ich-Form
-     des Coachs („ich spiegle und frage nach, ohne Ratschläge") — man muss wissen,
-     mit wem man spricht, bevor man tippt.
-   - **Der Ausfall ist eine Feststellung, keine Entschuldigung.** Jeder Grund aus
-     `LlmUnavailable.reason` hat einen eigenen Satz, und jeder beginnt mit dem, was
-     trotzdem passiert ist: aufgeschrieben. */
+   - **The stances explain themselves.** Each carries a sentence naming what it
+     does before you press send ("Listen: filed as is, no answer" / "Tips: I
+     listen first, then at most three small steps") — you need to know what
+     happens next before you type, not after.
+   - **The failure is a statement, not an apology.** Every reason from
+     `LlmUnavailable.reason` has its own sentence, and each begins with what
+     happened anyway: it was written down. */
 
 export const deJournal = {
   // ── Tagesliste ────────────────────────────────────────────────────────────
@@ -19,9 +20,17 @@ export const deJournal = {
   'journal.words': '{count} Wörter',
   'journal.gap': '{count} Tage ohne Eintrag',
   'journal.gapOne': 'Ein Tag ohne Eintrag',
-  'journal.hasDialogue': 'Mit Gespräch',
+  'journal.hasDialogue': 'Mit Antwort der App',
+  'journal.list.closed': 'Abgeschlossen',
+  'journal.list.unfinished': 'Tag noch nicht abgeschlossen',
   'journal.open': 'Eintrag vom {date} öffnen',
   'journal.keys': 'Pfeiltasten wechseln den Tag',
+  /* Der Filter (009, D5): heute bleibt immer sichtbar, gilt aber selbst nie
+     als offen — deshalb zählt die Zeile darüber nur die vergangenen Tage. */
+  'journal.filter.openOnly': 'Nur offene Tage',
+  'journal.filter.count': '{count} Tage offen',
+  'journal.filter.countOne': 'Ein Tag offen',
+  'journal.filter.none': 'Nichts offen. Jeder vergangene Tag ist abgeschlossen.',
 
   // ── Kopf des Tages ────────────────────────────────────────────────────────
   'journal.mood.label': 'Stimmung',
@@ -43,21 +52,23 @@ export const deJournal = {
   'journal.projects': 'Projekte',
   'journal.project.open': 'Projekt {title} öffnen',
   'journal.file.open': 'Datei im Editor öffnen',
-  /* Nur im engen Fenster sichtbar (`DayEntry.tsx`) — zwei Reiter statt zwei
-     Spalten, weil beides zusammen in eine Rollspalte nicht passt. */
-  'journal.tab.day': 'Tag',
-  'journal.tab.talk': 'Gespräch',
+  /* Der manuelle Schalter (009, D3/D6) — unabhängig vom Tagesabschluss weiter
+     unten (`journal.close.*`), der Fakten und Todos herauszieht: hier geht es
+     nur um das eine Feld „offen/abgeschlossen“, das auch den Listenfilter
+     speist (009, D5). */
+  'journal.finish.markFinished': 'Als abgeschlossen markieren',
+  'journal.finish.reopen': 'Wieder öffnen',
+  'journal.finish.badge': 'Abgeschlossen am {date}',
 
-  // ── Abschnitt „Tag" ───────────────────────────────────────────────────────
+  // ── Abschnitt „Tag“ ───────────────────────────────────────────────────────
   'journal.day.title': 'Tag',
-  'journal.day.ask': 'Wie war der Tag?',
-  'journal.day.askHint': 'Ein Absatz genügt. Ctrl+Enter speichert.',
   'journal.day.placeholder': 'Was ist passiert?',
   'journal.day.write': 'Tagestext schreiben',
-  'journal.day.edit': 'Tagestext bearbeiten',
+  /* Dauerhaftes Label des Feldes — es ist immer editierbar, es gibt keinen
+     eigenen „Tagestext bearbeiten“-Auslöser mehr (047/D2). */
   'journal.day.editLabel': 'Tagestext',
   'journal.day.save': 'Speichern',
-  'journal.day.hint': 'Ctrl+Enter speichert, Esc verwirft',
+  'journal.day.hint': 'Nur „Speichern“ legt ab. Esc verlässt das Feld, ohne zu verwerfen.',
   'journal.day.saved': 'Gespeichert.',
   'journal.day.unsaved': 'Nicht gespeichert.',
   'journal.day.external.title': 'Dieser Abschnitt hat sich außerhalb geändert',
@@ -71,24 +82,33 @@ export const deJournal = {
   'journal.day.conflict.reload': 'Stand holen',
   'journal.day.conflict.overwrite': 'Trotzdem speichern',
 
-  // ── Gespräch ──────────────────────────────────────────────────────────────
-  'journal.dialogue.title': 'Gespräch',
+  // ── Conversation ───────────────────────────────────────────────────────────
+  /* Heißt bewusst nicht mehr „Gespräch“ (011, D10): der Stream zeigt meist
+     nur meinen eigenen Text ohne jede Antwort — „Zuhören“ fragt nie ein
+     Modell — und eine Überschrift, die Dialog verspricht, wäre dann falsch. */
+  'journal.dialogue.title': 'Verlauf',
   'journal.dialogue.empty': 'Was du hier schreibst, steht wörtlich im Tageseintrag — und nur dort.',
   'journal.turn.user': 'Ich',
-  'journal.turn.assistant': 'Second Brain',
+  'journal.turn.assistant': 'Gaston',
   'journal.thinking': 'Denkt nach',
-  'journal.field.label': 'Was beschäftigt dich?',
+  'journal.field.label': 'Mit dem Coach sprechen',
   'journal.field.placeholder': 'Schreib es hin, wie es dir kommt.',
-  'journal.field.hintSend': 'sagt es',
+  /* 048/D2: Enter/Shift+Enter/Ctrl+Enter legen im Coach-Feld nichts mehr ab —
+     nur der Knopf tut es, und der Hinweis nennt ihn beim Namen statt eine
+     Taste zu behaupten, die nichts mehr auslöst. */
+  'journal.field.hintNoSubmit': 'Nur der Knopf „{button}“ legt ab.',
   'journal.send': 'Sagen',
+  /* Nur für Tipps/Analysieren (011, D8): die Haltung entscheidet, ob überhaupt
+     ein Modell gefragt wird, und der Knopf sagt es geradeheraus. */
+  'journal.sendAsk': 'Speichern und fragen',
   'journal.mode.label': 'Haltung',
   'journal.mode.listen': 'Zuhören',
   'journal.mode.tips': 'Tipps',
   'journal.mode.analyze': 'Analysieren',
-  'journal.mode.listen.hint': 'Zuhören: ich spiegle und frage nach, ohne Ratschläge.',
+  'journal.mode.listen.hint': 'Zuhören: wird abgelegt, ohne Antwort und ohne Rückfrage.',
   'journal.mode.tips.hint': 'Tipps: ich höre erst zu, dann höchstens drei kleine Schritte.',
   'journal.mode.analyze.hint':
-    'Analysieren: ich vergleiche mit früheren Tagen und zeige Muster, mit Datum.',
+    'Analysieren: ich helfe verstehen und stütze dich, anhand echter früherer Einträge.',
   'journal.mode.keys': 'Ctrl+1 bis Ctrl+3 wechseln die Haltung',
   'journal.mode.set': 'Haltung {label} wählen',
 
@@ -111,31 +131,104 @@ export const deJournal = {
   'journal.evidence.title': 'Ähnlich klang es an diesen Tagen',
   'journal.evidence.open': 'Zum Eintrag vom {date}',
 
+  // ── Altes Gespräch (Legacy, 011/D9) ───────────────────────────────────────
+  'journal.legacy.title': 'Altes Gespräch',
+  'journal.legacy.fold.action': 'In den Eintrag übernehmen',
+  'journal.legacy.fold.title': 'Gespräch in den Eintrag übernehmen',
+  'journal.legacy.fold.body':
+    'Was sich als Gesprächsrunde lesen lässt, wandert der Reihe nach in den Tagestext — deine Worte als Absatz, die Antworten der App als Zitat. Zeilen im alten Abschnitt, die sich keiner Runde zuordnen lassen, gehen dabei verloren. Das Kapitel „Gespräch“ verschwindet danach aus der Datei, und es gibt keinen Weg zurück.',
+  'journal.legacy.fold.confirm': 'Übernehmen',
+
   // ── Fakten und Tagesabschluss ─────────────────────────────────────────────
   'journal.facts.title': 'Fakten',
   'journal.facts.empty': 'Hier steht, was der Tagesabschluss gefunden und du bestätigt hast.',
   'journal.close.action': 'Tag abschließen',
+  /* 073, D6: Warten/Fehlschlag des Abschluss-Laufs in der Warteschlange —
+     dieselbe Form wie `notes.condensed.waiting`/`failed.reason`. Eigener
+     Name statt `journal.close.waiting`: der Schlüssel ist schon durch die
+     Warte-auf-Zeile des Vorschlags belegt. */
+  'journal.close.queueWaiting': 'Wartet auf das Modell — Platz {position} in der Warteschlange',
+  'journal.close.failed.reason': 'Grund: {reason}',
   'journal.close.title': 'Tagesabschluss',
   'journal.close.body':
     'Gefunden im Tagestext. Geschrieben ist nichts — du entscheidest, was übernommen wird.',
   'journal.close.empty': 'Im Tagestext steht noch nichts, was sich herausziehen ließe.',
   'journal.close.heuristic': 'Ohne Modell gefunden — Regeln statt Verstehen.',
-  'journal.close.nothing': 'Im Tagestext war nichts zu holen. Der Eintrag bleibt, wie er ist.',
-  'journal.close.todos': 'Erkannte Todos',
+  'journal.close.nothing':
+    'Im Tagestext war nichts zu holen. „Übernehmen und abschließen“ schließt den Tag trotzdem ab.',
+  'journal.close.todos': 'Todos',
   'journal.close.waiting': 'Warte-auf',
   'journal.close.waitingInto': 'als Todo mit @wait im Tageseintrag',
   'journal.close.into': 'in {target}',
   'journal.close.target.day': 'Tageseintrag, Abschnitt Fakten',
   'journal.close.target.project': 'Projekt {title}',
-  'journal.close.fields': 'Für das Frontmatter des Tages',
+  /* 075, D3: ein Todo, das das Modell übersehen hat, von Hand hinzugefügt. */
+  'journal.close.addTodo': 'Todo hinzufügen',
+  'journal.close.removeAdded': 'Dieses Todo entfernen',
+  /* 075, D2: Aria-Labels für die eigenen Inline-Felder der Zeile — die
+     Checkbox behält den Zeilentext als Label (unverändert seit 018), diese
+     benennen die Felder daneben. */
+  'journal.close.textLabel': 'Text des Todos',
+  'journal.close.targetLabel': 'Ziel',
+  'journal.close.scopeLabel': 'Arbeit oder privat',
+  'journal.close.waitingPersonLabel': 'Wartet auf (Person)',
   'journal.close.people': 'Personen',
+  'journal.close.people.empty': 'Keine Person übernommen.',
+  'journal.close.people.removeOf': '„{name}“ entfernen',
   'journal.close.projects': 'Projekte',
+  'journal.close.projects.empty': 'Kein Projekt übernommen.',
+  'journal.close.projects.addLabel': 'Projekt hinzufügen',
+  'journal.close.projects.addPlaceholder': 'Projekt hinzufügen …',
+  'journal.close.projects.removeOf': '„{title}“ entfernen',
+  'journal.close.areas': 'Bereiche',
+  'journal.close.areas.empty': 'Kein Bereich ausgewählt.',
+  'journal.close.areas.addLabel': 'Bereich hinzufügen',
+  'journal.close.areas.addPlaceholder': 'Bereich hinzufügen …',
+  'journal.close.areas.removeOf': '„{title}“ entfernen',
   'journal.close.tags': 'Tags',
+  'journal.close.tags.empty': 'Kein Tag übernommen.',
+  'journal.close.tags.removeOf': '„{tag}“ entfernen',
+  'journal.close.moodEnergy': 'Stimmung und Energie',
   'journal.close.mood': 'Stimmung {label}',
   'journal.close.energy': 'Energie {label}',
-  'journal.close.apply': 'Übernehmen',
-  'journal.close.dueOf': 'Frist für „{text}"',
+  'journal.close.apply': 'Übernehmen und abschließen',
+  'journal.close.discard': 'Verwerfen',
+  'journal.close.runAgain': 'Erneut ausführen',
+  'journal.close.dueOf': 'Frist für „{text}“',
   'journal.close.done': 'Übernommen in',
   'journal.close.doneMore': 'und {count} weitere',
-  'journal.close.doneNothing': 'Nichts ausgewählt — nichts geschrieben.',
+  'journal.close.doneNothing': 'Nichts Neues geschrieben — der Tag war bereits abgeschlossen.',
+
+  // ── Interview (012) ───────────────────────────────────────────────────────
+  /* Der Einstieg direkt am Tag (D6) — ein Schlüssel für den Knopf, unabhängig
+     davon, ob der Tag leer ist oder schon Text hat; nur die Variante
+     (primary/secondary) des Knopfs ändert sich damit. */
+  'journal.interview.start': 'Interview starten',
+  'journal.interview.title': 'Interview',
+  'journal.interview.description':
+    'Eine Frage nach der anderen — antworten, überspringen oder selbst weiterschreiben.',
+  'journal.interview.field.label': 'Deine Antwort',
+  'journal.interview.field.placeholder': 'Schreib deine Antwort hierhin.',
+  'journal.interview.answer': 'Antworten und weiter',
+  'journal.interview.skip': 'Überspringen',
+  'journal.interview.leave': 'Verlassen und selbst schreiben',
+  'journal.interview.progress': '{current} / {total}',
+  'journal.interview.engine.fixed': 'Fester Fragenkatalog — kein Modell nötig.',
+  'journal.interview.engine.model.local': 'Rückfragen laufen lokal auf diesem Rechner.',
+  'journal.interview.engine.model.remote':
+    'Rückfragen gehen an {provider} — ein lokales Modell bleibt auf diesem Rechner.',
+  'journal.interview.done.body':
+    'Das Interview ist für heute durch — Übersprungenes bleibt offen. Stimmung und Energie warten noch auf die Regler oben im Tag.',
+  /* Die eine Zusatzfrage zu einem noch offenen losen Ende (020, D8): eine
+     Nachfrage, keine Behauptung — sie zitiert nur den eigenen Satz von
+     damals zurück, ohne zu unterstellen, was daraus geworden ist. */
+  'journal.interview.looseEnd.question': 'Wie ist es ausgegangen: „{quote}“?',
+  // ── Lose Ende am Tag selbst (022, D6) ────────────────────────────────────
+  'journal.looseEnd.quote': '„{quote}“',
+  'journal.looseEnd.answerLabel': 'Antwort',
+  'journal.looseEnd.answerPlaceholder': 'Was ist daraus geworden?',
+  'journal.looseEnd.answerSubmit': 'Eintragen',
+  // ── Beantwortetes loses Ende (069, D4) ───────────────────────────────────
+  'journal.looseEnd.resolvedOn': 'Beantwortet am {date}',
+  'journal.looseEnd.resolvedOpen': 'Tageseintrag vom {date} öffnen',
 } as const;

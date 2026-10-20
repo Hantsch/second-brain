@@ -101,7 +101,11 @@ export function QuickCaptureTile() {
             <button type="button" className="sb-textlink" onClick={undo}>
               {t('capture.undo')}
             </button>
-            <button type="button" className="sb-textlink" onClick={() => void navigate('/inbox')}>
+            <button
+              type="button"
+              className="sb-textlink"
+              onClick={() => void navigate('/notes?filter=unfiled')}
+            >
               {t('capture.toInbox')}
             </button>
           </p>

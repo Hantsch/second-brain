@@ -12,7 +12,11 @@ import {
   nearDuplicateCheck,
   shingles,
 } from '@core/gardener';
-import { SETTINGS, moduleFixture } from './fixtures';
+import { condensedAreaPath, condensedProjectPath } from '@core/condense/paths';
+import { projectPath } from '@core/vault/paths';
+import { serialize } from '@core/vault/frontmatter';
+import { day } from '../../helpers/time';
+import { SETTINGS, gardenerFixture, moduleFiles, moduleFixture } from './fixtures';
 
 const LIST = `Die Angebotsliste im Kundenportal lädt bei vierhundert Einträgen langsam, weil für jede
 Zeile die Berechtigungen einzeln nachgeladen werden. Ein Sammelaufruf würde die Zahl der
@@ -56,6 +60,13 @@ describe('nearDuplicateCheck', () => {
       label: 'Beide Seiten vergleichen',
       preview: null,
     });
+    /* Der Befund hält den Hash beider Dateien zum Laufzeitpunkt fest — dieselben
+       Hashes, aus denen der Index rechnet. Ohne sie könnte später niemand mehr
+       sagen, ob die Datei seit dem Lauf bearbeitet wurde (AC 10, zweiter Satz). */
+    const { byPath } = fixture.index.index();
+    for (const path of findings[0]?.paths ?? []) {
+      expect(findings[0]?.hashes?.[path]).toBe(byPath.get(path)?.hash);
+    }
   });
 
   it('schweigt bei zwei Seiten zum selben Thema mit eigenem Text', async () => {
@@ -94,6 +105,50 @@ describe('nearDuplicateCheck', () => {
     expect(nearDuplicateCheck.run(fixture.ctx({ settings: SETTINGS }))).toEqual([]);
   });
 
+  it('schweigt bei einem Paar, das per `supersedes` schon benannt ist', async () => {
+    const fixture = await moduleFixture('wissen', [
+      {
+        type: 'concept',
+        slug: 'ladezeiten',
+        title: 'Ladezeiten',
+        summary: 'Erste',
+        body: LIST,
+        extra: { supersedes: ['ladezeiten-notiz'] },
+      },
+      {
+        type: 'concept',
+        slug: 'ladezeiten-notiz',
+        title: 'Ladezeiten (Notiz)',
+        summary: 'Zweite',
+        body: LIST_AGAIN,
+      },
+    ]);
+
+    expect(nearDuplicateCheck.run(fixture.ctx({ settings: SETTINGS }))).toEqual([]);
+  });
+
+  it('schweigt bei einem Paar, das per `contradicts` schon benannt ist — in der anderen Richtung', async () => {
+    const fixture = await moduleFixture('wissen', [
+      {
+        type: 'concept',
+        slug: 'ladezeiten',
+        title: 'Ladezeiten',
+        summary: 'Erste',
+        body: LIST,
+      },
+      {
+        type: 'concept',
+        slug: 'ladezeiten-notiz',
+        title: 'Ladezeiten (Notiz)',
+        summary: 'Zweite',
+        body: LIST_AGAIN,
+        extra: { contradicts: ['ladezeiten'] },
+      },
+    ]);
+
+    expect(nearDuplicateCheck.run(fixture.ctx({ settings: SETTINGS }))).toEqual([]);
+  });
+
   it('urteilt nicht über sehr kurze Seiten', async () => {
     const fixture = await moduleFixture('wissen', [
       { type: 'concept', slug: 'kurz-a', title: 'Kurz A', summary: 'A', body: 'Ein kurzer Satz.' },
@@ -101,6 +156,90 @@ describe('nearDuplicateCheck', () => {
     ]);
 
     expect(nearDuplicateCheck.run(fixture.ctx({ settings: SETTINGS }))).toEqual([]);
+  });
+
+  it('meldet ein Verdichtungs-Artefakt nicht als Beinahe-Dublette, obwohl es seine Quelle wörtlich wiederholt (039, AC7)', async () => {
+    // Die Area und ihr Artefakt teilen fast denselben Text — genau das, was eine
+    // Verdichtung tun soll. `docType: 'condensed'` hält den Pfad aber schon
+    // ausserhalb des Seitengraphen (`isWikiPage()` prüft nur `modules/*/wiki/**`),
+    // also darf hier gar kein Vergleich stattfinden, egal wie ähnlich der Text ist.
+    const areaSlug = 'gesundheit';
+    const artifactPath = condensedAreaPath(areaSlug);
+    const files = {
+      ...moduleFiles('wissen', [
+        { type: 'concept', slug: 'ladezeiten', title: 'Ladezeiten', summary: 'Erste', body: LIST },
+      ]),
+      [`areas/${areaSlug}.md`]: serialize(
+        { type: 'area', title: 'Gesundheit', created: day(-30), updated: day(0), tags: [] },
+        LIST,
+      ),
+      [artifactPath]: serialize(
+        {
+          type: 'condensed',
+          title: 'Gesundheit — verdichtet',
+          condensed_at: '2026-08-01T09:00:00+02:00',
+          sources: [`areas/${areaSlug}.md`],
+          source_hashes: {},
+          created: day(-1),
+          updated: day(0),
+          tags: [],
+        },
+        LIST_AGAIN,
+      ),
+    };
+    const fixture = await gardenerFixture(files);
+
+    const findings = nearDuplicateCheck.run(fixture.ctx({ settings: SETTINGS }));
+
+    expect(findings.some((finding) => finding.paths.includes(artifactPath))).toBe(false);
+    expect(findings.some((finding) => finding.paths.includes(`areas/${areaSlug}.md`))).toBe(false);
+  });
+
+  it('meldet ein Projekt-Verdichtungs-Artefakt ebenfalls nicht als Beinahe-Dublette (046, D3)', async () => {
+    // Dieselbe Begruendung wie beim Area-Artefakt oben, nur fuer
+    // `projects/<scope>/<slug>/condensed.md`: `isWikiPage()` verlangt
+    // `modules/*/wiki/**`, ein Projektpfad passt da nie hinein.
+    const scope = 'work';
+    const slug = 'nyota';
+    const projPath = projectPath(scope, slug);
+    const artifactPath = condensedProjectPath(scope, slug);
+    const files = {
+      ...moduleFiles('wissen', [
+        { type: 'concept', slug: 'ladezeiten', title: 'Ladezeiten', summary: 'Erste', body: LIST },
+      ]),
+      [projPath]: serialize(
+        {
+          type: 'project',
+          title: 'Nyota',
+          slug,
+          scope,
+          status: 'active',
+          created: day(-30),
+          updated: day(0),
+          tags: [],
+        },
+        LIST,
+      ),
+      [artifactPath]: serialize(
+        {
+          type: 'condensed',
+          title: 'Nyota — verdichtet',
+          condensed_at: '2026-08-01T09:00:00+02:00',
+          sources: [projPath],
+          source_hashes: {},
+          created: day(-1),
+          updated: day(0),
+          tags: [],
+        },
+        LIST_AGAIN,
+      ),
+    };
+    const fixture = await gardenerFixture(files);
+
+    const findings = nearDuplicateCheck.run(fixture.ctx({ settings: SETTINGS }));
+
+    expect(findings.some((finding) => finding.paths.includes(artifactPath))).toBe(false);
+    expect(findings.some((finding) => finding.paths.includes(projPath))).toBe(false);
   });
 
   it('liegt bei umformuliertem Text über, bei fremdem Text weit unter der Schwelle', () => {

@@ -1,85 +1,116 @@
-/* Die rechte Spalte: alles zu einem Projekt, in der Reihenfolge, in der man es
-   nach einer Pause braucht.
+/* The right column: everything about a project, in two tabs.
 
-   Kopf, dann der nächste Schritt (die eine Zeile, die den Wiedereinstieg trägt),
-   dann was hängt: Warte-auf, Todos. Danach der Stand als Prosa, die
-   eingeordneten Notizen und die Arbeitsspur.
+   The head stays put — title, scope, status, deadline: that is the project's
+   identity, and it belongs above both tabs, not inside one of them. Below it
+   the view splits: "Overview" answers "where did I leave off?" (next step,
+   waiting-on, todos, status, notes), "Sessions" answers "what actually ran,
+   and where?" (the work trail plus the agent CLIs' sessions).
 
-   Dieses Component besitzt die Schreibwege des Projekts — Status, nächster
-   Schritt, Warte-auf, Todos. Der Screen darüber kümmert sich um Auswahl und
-   Filter; so gibt es keine Kette von Rückrufen durch drei Ebenen.
+   Which tab is open lives in the address, not here (`?p=<slug>&tab=sessions`),
+   so a link leads straight into a project's sessions. The screen above owns
+   the address and hands the derived state down as `view`.
 
-   Der Screen gibt diesem Component den Projekt-Slug als `key`: beim Wechsel
-   entsteht es neu, und damit ist von selbst weg, was zum vorigen Projekt gehörte
-   — Vorschlag, Bestätigung, fokussierte Zeile. */
+   This component keeps the write paths whose controls sit in the head
+   itself — the status and the favourite star. Their failure is reported
+   right below the head — where the change was made. Every other write
+   belongs to the Overview tab and reports itself there.
+
+   The Knowledge tab (story 045, D4) is unconditional, unlike Sessions: every
+   project can be condensed, whether or not it has an agent working directory,
+   so it is always offered.
+
+   The Sessions tab is only offered when there is something in it: a project
+   with no agent working directory would carry an empty tab forever. What
+   counts as "there is something" is decided from what the project itself
+   declares (`repos`) plus any agent project a CLI has already matched to it —
+   never from a CLI's silence, see the rule below. Whoever wants the tab
+   anyway turns on `overview.showEmptySessionsTab` in the projects filter bar
+   — one switch for all projects, revealing the tab with the way to link a
+   directory inside it.
+
+   The screen gives this component the project slug as `key`: on a switch it
+   is recreated, which automatically clears out whatever belonged to the
+   previous project. */
 
 import { useState } from 'react';
-import type { Project, ProjectStatus, Todo, VaultDoc, WaitingOn } from '@shared/types';
-import { Button } from '../../atoms/Button';
+import type { AgentKind, Project, ProjectStatus, VaultDoc } from '@shared/types';
+import { Tabs } from '../../atoms/Tabs';
 import { ErrorState } from '../../components/ErrorState';
-import { LlmMissing } from '../../components/LlmMissing';
-import { Markdown } from '../../components/Markdown';
-import { Panel } from '../../components/Panel';
-import { Skeleton } from '../../components/Skeleton';
-import { TodoList } from '../../components/TodoList';
-import { NextStepEditor } from '../../components/NextStepEditor';
-import { WaitingList } from '../../components/WaitingList';
 import { useT } from '../../i18n';
 import { api } from '../../lib/api';
-import { useTaskRouted } from '../../lib/queries/llm';
-import { isNotWired, useProjectMutations, useProjectSessions } from '../../lib/queries/projects';
-import type { StatusSuggestion } from '../../lib/queries/projects';
-import { useProjectTodos, useTodoMutations } from '../../lib/queries/todos';
-import { pushToast } from '../../lib/toast';
+import { useAgentProjects } from '../../lib/queries/agents';
+import { useOverviewSettings } from '../../lib/queries/dashboard';
+import { useProjectMutations } from '../../lib/queries/projects';
 import { ProjectHead } from './ProjectHead';
-import { SuggestionCard } from './SuggestionCard';
-import { WorkTrace } from './WorkTrace';
-import { SECTION_NOTES, SECTION_STATE, datedEntries, sectionOf } from './sections';
-import { useTodoKeys } from './use-project-keys';
+import { ProjectKnowledgeTab } from './ProjectKnowledgeTab';
+import { ProjectOverviewTab } from './ProjectOverviewTab';
+import { ProjectSessionsTab } from './ProjectSessionsTab';
 
-function openFile(path: string): void {
-  void api.shell.openPath(path).catch(() => undefined);
-}
+export type ProjectTab = 'overview' | 'knowledge' | 'sessions';
 
-/**
- * Die `waiting_on`-Liste, wie sie in der Datei steht — samt Feldern, die die App
- * nicht deutet. Genau diese Fassung geht beim Rückgängig zurück: `project.waitingOn`
- * kennt nur die vier bekannten Felder, und ein Rückgängig, das Nutzerinhalt kostet,
- * ist keins. Geprüft wird jeder Eintrag im Hauptprozess (`checkProjectPatch`).
- */
-function rawWaiting(doc: VaultDoc, fallback: readonly WaitingOn[]): WaitingOn[] {
-  const raw = doc.frontmatter['waiting_on'];
-  return Array.isArray(raw) ? (raw as WaitingOn[]) : [...fallback];
+/** Where the detail stands, and how it gets somewhere else. */
+export interface ProjectView {
+  tab: ProjectTab;
+  /** The selected CLI of the Sessions tab. */
+  agent: AgentKind;
+  /** The open session of the Sessions tab, or null. */
+  sessionId: string | null;
+  /** An omitted field keeps its current value, `null` clears it. */
+  go: (next: {
+    tab?: ProjectTab | undefined;
+    a?: AgentKind | undefined;
+    s?: string | null | undefined;
+  }) => void;
 }
 
 export interface ProjectDetailProps {
   project: Project;
   doc: VaultDoc;
-  /** Aus der Tastatur: `t` öffnet das Feld für ein neues Todo. */
+  view: ProjectView;
   now?: Date;
 }
 
-export function ProjectDetail({ project, doc, now }: ProjectDetailProps) {
+export function ProjectDetail({ project, doc, view, now }: ProjectDetailProps) {
   const t = useT();
-  const todos = useProjectTodos(project.slug);
   const mutations = useProjectMutations();
-  const todoMutations = useTodoMutations();
-  const modelRouted = useTaskRouted('project-status');
-
-  const [suggestion, setSuggestion] = useState<StatusSuggestion | null | undefined>(undefined);
-  /* Der Stand, aus dem der Vorschlag gerechnet wurde. Er wird beim Eintreffen
-     eingefroren, nicht beim Klick gelesen: ein Vorschlag über eine Datei, die
-     sich seither geändert hat, ist veraltet, und ihn mit dem neuen Hash zu
-     schreiben hieße, eine fremde Änderung still zu überschreiben. */
-  const [suggestBase, setSuggestBase] = useState<string | null>(null);
+  const overview = useOverviewSettings();
+  const claudeProjects = useAgentProjects('claude');
+  const codexProjects = useAgentProjects('codex');
   const [savedStatus, setSavedStatus] = useState<ProjectStatus | null>(null);
-  const [stepSaved, setStepSaved] = useState(false);
-  const [notesOpen, setNotesOpen] = useState(false);
-  const [waitingBusy, setWaitingBusy] = useState<number | null>(null);
-  const [focused, setFocused] = useState<Todo | null>(null);
-  const [composeOpen, setComposeOpen] = useState(false);
 
-  const sessions = useProjectSessions(project);
+  /* Does an agent working directory belong to this project? Two things say
+     yes, and nothing says no.
+
+     `repos` is the field the matching itself goes by (docs/VAULT-FORMAT.md),
+     and the index carries it in the very first frame, without any CLI. A
+     project that names a working directory has therefore declared the link:
+     no interim value, no flash, no tab that appears late or is taken away
+     again.
+
+     A matched agent project of either CLI counts as well, because a link can
+     be made by name instead of by path — and Codex alone is reason enough,
+     just like Claude Code alone.
+
+     Deliberately not part of this: a CLI that reports nothing. An empty
+     `agents:projects` means "reading is switched off" or "the configured
+     directory is gone" just as much as "nothing there" — reading "not linked"
+     out of it would hide the tab exactly when the user needs the state inside
+     it, the one that names the broken setting. A read that says nothing
+     changes nothing. */
+  const hasAgentProject =
+    project.repos.length > 0 ||
+    [...(claudeProjects.data ?? []), ...(codexProjects.data ?? [])].some(
+      (entry) => entry.vaultProject === project.slug,
+    );
+  const offersSessions = hasAgentProject || (overview?.showEmptySessionsTab ?? false);
+
+  /* A tab that isn't offered must not be open either: `?tab=sessions` on a
+     project without a link shows the overview instead of a body no click can
+     get back out of. The address stays as it is — it belongs to the screen,
+     and with the switch on, the same link leads into the tab again. Knowledge
+     carries no such condition — it is unconditional, so `view.tab` applies to
+     it as-is. */
+  const tab: ProjectTab = view.tab === 'sessions' && !offersSessions ? 'overview' : view.tab;
 
   const setStatus = (status: ProjectStatus): void => {
     setSavedStatus(null);
@@ -89,225 +120,71 @@ export function ProjectDetail({ project, doc, now }: ProjectDetailProps) {
     );
   };
 
-  const saveStep = (next: string): void => {
-    setStepSaved(false);
-    mutations.patch.mutate(
-      { slug: project.slug, patch: { next_step: next }, expectedHash: doc.hash },
-      { onSuccess: () => setStepSaved(true) },
-    );
+  /* Same write path as the status, with the doc hash: a stale hash surfaces
+     through the shared error state below `ProjectHead`, not as a silent
+     no-op. No confirmation line — the story asks for one click, nothing
+     more, unlike the status's `savedStatus`. */
+  const setFavorite = (): void => {
+    mutations.patch.mutate({
+      slug: project.slug,
+      patch: { favorite: !project.favorite },
+      expectedHash: doc.hash,
+    });
   };
-
-  /* Der Vorschlag verschwindet erst, wenn er in der Datei steht: schlägt das
-     Schreiben fehl, bleibt er stehen und daneben der Fehler. */
-  const accept = (what: 'both' | 'step'): void => {
-    if (suggestion === undefined || suggestion === null) return;
-    mutations.patch.mutate(
-      {
-        slug: project.slug,
-        patch:
-          what === 'both'
-            ? { status: suggestion.status, next_step: suggestion.nextStep }
-            : { next_step: suggestion.nextStep },
-        expectedHash: suggestBase ?? doc.hash,
-      },
-      {
-        onSuccess: () => {
-          setSuggestion(undefined);
-          setSuggestBase(null);
-        },
-      },
-    );
-  };
-
-  /* „Erledigt" schreibt `resolved: true`, der Eintrag verschwindet aus der Liste
-     — ohne Meldung sähe das aus wie Löschen. Also sagt die Meldung, was in der
-     Datei steht, und nimmt es auf Wunsch zurück (Muster des Ausblenden-Toasts). */
-  const resolveWaiting = (index: number): void => {
-    const who = project.waitingOn[index]?.who ?? '';
-    const before = rawWaiting(doc, project.waitingOn);
-    setWaitingBusy(index);
-    mutations.resolveWaiting.mutate(
-      { slug: project.slug, index },
-      {
-        onSuccess: () =>
-          pushToast('success', {
-            message: 'project.waiting.resolved',
-            values: { who },
-            description: 'project.waiting.resolvedWhere',
-            action: {
-              label: 'common.undo',
-              run: () =>
-                mutations.patch.mutate({ slug: project.slug, patch: { waiting_on: before } }),
-            },
-          }),
-      },
-    );
-  };
-
-  /* Nur die Zeile, auf der der Fokus liegt. Ohne Fokus passiert nichts: ein `x`,
-     das irgendein Todo abhakt, wäre schlimmer als ein `x`, das nichts tut. */
-  const toggleFocused = (): void => {
-    if (focused === null) return;
-    todoMutations.toggle.mutate(focused.id);
-  };
-
-  useTodoKeys({ compose: () => setComposeOpen(true), toggle: toggleFocused });
-
-  const state = sectionOf(doc.body, SECTION_STATE);
-  const notes = sectionOf(doc.body, SECTION_NOTES);
-  const noteCount = datedEntries(notes);
-  const openWaiting = project.waitingOn.filter((entry) => entry.resolved !== true).length;
-  const failed =
-    mutations.patch.error ??
-    mutations.resolveWaiting.error ??
-    mutations.suggest.error ??
-    todoMutations.toggle.error ??
-    todoMutations.create.error ??
-    todoMutations.update.error ??
-    null;
 
   return (
-    /* `section` mit Namen, nicht ein `div` mit `aria-label`: an einem Element
-       ohne Rolle ist der Name unzulässig — und für Hilfsmittel unsichtbar. */
+    /* A named `section`, not a `div` with `aria-label`: on an element without
+       a role, the name is invalid — and invisible to assistive tech. */
     <section className="sb-pdetail" aria-label={t('project.detail.aria')}>
       <ProjectHead
         project={project}
         statusBusy={mutations.patch.isPending}
         savedStatus={savedStatus}
         onStatus={setStatus}
-        onOpenFile={() => openFile(project.path)}
+        onFavorite={setFavorite}
+        onOpenFile={() => void api.shell.openPath(project.path).catch(() => undefined)}
         {...(now === undefined ? {} : { now })}
       />
 
-      {failed === null ? null : (
-        <ErrorState error={failed} variant="secondary" subject={project.title} scrollIntoView />
+      {mutations.patch.error === null || mutations.patch.error === undefined ? null : (
+        <ErrorState
+          error={mutations.patch.error}
+          variant="secondary"
+          subject={project.title}
+          scrollIntoView
+        />
       )}
 
-      <NextStepEditor
-        value={project.nextStep}
-        busy={mutations.patch.isPending}
-        saved={stepSaved}
-        onSave={saveStep}
-        suggestBusy={mutations.suggest.isPending}
-        onSuggest={() =>
-          mutations.suggest.mutate(project.slug, {
-            onSuccess: (result) => {
-              setSuggestion(result);
-              setSuggestBase(doc.hash);
-            },
+      <Tabs
+        aria-label={t('project.tab.label')}
+        items={[
+          { id: 'overview', label: t('project.tab.overview'), icon: 'file-text' },
+          { id: 'knowledge', label: t('project.tab.knowledge'), icon: 'layers' },
+          ...(offersSessions
+            ? [{ id: 'sessions', label: t('project.tab.sessions'), icon: 'workflow' }]
+            : []),
+        ]}
+        value={tab}
+        onChange={(id) =>
+          view.go({
+            tab: id === 'sessions' ? 'sessions' : id === 'knowledge' ? 'knowledge' : 'overview',
           })
         }
       />
-      {modelRouted === false && suggestion !== undefined ? (
-        <LlmMissing task="project-status" tone="note" />
-      ) : null}
-      {suggestion === null ? <p className="sb-note-line">{t('project.suggest.none')}</p> : null}
-      {suggestion === undefined || suggestion === null ? null : (
-        <SuggestionCard
-          suggestion={suggestion}
-          current={project.status}
-          busy={mutations.patch.isPending}
-          onAccept={accept}
-          onReject={() => {
-            setSuggestion(undefined);
-            setSuggestBase(null);
-          }}
-        />
-      )}
 
-      <Panel
-        title={t('project.waiting.title')}
-        meta={openWaiting === 0 ? undefined : String(openWaiting)}
-      >
-        <WaitingList
-          entries={project.waitingOn}
-          busyIndex={mutations.resolveWaiting.isPending ? waitingBusy : null}
-          onResolve={resolveWaiting}
-          {...(now === undefined ? {} : { now })}
-        />
-      </Panel>
-
-      <Panel
-        title={t('project.todos.title')}
-        meta={t('todos.openOf', { open: project.openTodoCount, total: project.todoCount })}
-      >
-        {todos.isPending ? (
-          <Skeleton lines={3} height={30} />
-        ) : (
-          <TodoList
-            todos={todos.data ?? []}
-            emptyText={t('project.todos.empty')}
-            activeId={focused?.id ?? null}
-            busyId={
-              todoMutations.toggle.isPending ? (todoMutations.toggle.variables ?? null) : null
-            }
-            createBusy={todoMutations.create.isPending}
-            composerOpen={composeOpen}
-            onComposerChange={setComposeOpen}
-            onFocusTodo={setFocused}
-            onToggle={(todo) => todoMutations.toggle.mutate(todo.id)}
-            onDue={(todo, day) => todoMutations.update.mutate({ id: todo.id, due: day })}
-            onCreate={(text, due) =>
-              todoMutations.create.mutateAsync({
-                text,
-                scope: project.scope,
-                project: project.slug,
-                due,
-              })
-            }
-            {...(now === undefined ? {} : { now })}
-          />
-        )}
-      </Panel>
-
-      <Panel
-        title={t('project.state.title')}
-        action={
-          <Button variant="ghost" size="sm" icon="external-link" onClick={() => openFile(doc.path)}>
-            {t('common.openInEditor')}
-          </Button>
-        }
-      >
-        {state.length === 0 ? (
-          <p className="sb-panel-empty">{t('project.state.empty')}</p>
-        ) : (
-          <Markdown text={state} onOpenPath={openFile} />
-        )}
-      </Panel>
-
-      <Panel
-        title={t('project.notes.title')}
-        meta={noteCount === 0 ? undefined : String(noteCount)}
-        action={
-          notes.length === 0 ? undefined : (
-            <Button
-              variant="ghost"
-              size="sm"
-              icon={notesOpen ? 'chevron-up' : 'chevron-down'}
-              aria-expanded={notesOpen}
-              onClick={() => setNotesOpen(!notesOpen)}
-            >
-              {t(notesOpen ? 'project.notes.hide' : 'project.notes.show')}
-            </Button>
-          )
-        }
-      >
-        {notes.length === 0 ? (
-          <p className="sb-panel-empty">{t('project.notes.empty')}</p>
-        ) : notesOpen ? (
-          <Markdown text={notes} onOpenPath={openFile} />
-        ) : null}
-      </Panel>
-
-      <Panel title={t('project.trace.title')}>
-        <WorkTrace
+      {tab === 'sessions' ? (
+        <ProjectSessionsTab
           project={project}
-          sessions={sessions.data}
-          pending={sessions.isPending}
-          notWired={isNotWired(sessions.error)}
+          agent={view.agent}
+          sessionId={view.sessionId}
+          go={(next) => view.go(next)}
           {...(now === undefined ? {} : { now })}
         />
-      </Panel>
+      ) : tab === 'knowledge' ? (
+        <ProjectKnowledgeTab project={project} />
+      ) : (
+        <ProjectOverviewTab project={project} doc={doc} {...(now === undefined ? {} : { now })} />
+      )}
     </section>
   );
 }

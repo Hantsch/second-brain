@@ -1,0 +1,78 @@
+- 2026-10-20 07:13:58 · refine · 076 077 078 079 · started
+- 2026-10-20 07:18:31 · refine · 076 077 078 079 · done
+- 2026-10-20 07:18:31 · 076 · build · started
+- 2026-10-20 07:18 · 076 · D1 changelog and version core · started
+- 2026-10-20 07:21 · 076 · D1 changelog and version core · done
+- 2026-10-20 07:21 · 076 · D2 release plan and asset set · started
+- 2026-10-20 07:22 · 076 · D2 release plan and asset set · done
+- 2026-10-20 07:22 · 076 · D3 packaging publishes update metadata · started
+- 2026-10-20 07:23 · 076 · D3 packaging publishes update metadata · done
+- 2026-10-20 07:23 · 076 · D4 release runner (hard) · started
+- 2026-10-20 07:27 · 076 · D4 release runner (hard) · done
+- 2026-10-20 07:27 · 076 · D5 the workflow · started
+- 2026-10-20 07:27 · 076 · D5 the workflow · done
+- 2026-10-20 07:27 · 076 · D6 changelog and wiring · started
+- 2026-10-20 07:28 · 076 · D6 changelog and wiring · done
+- 2026-10-20 07:28 · 076 · verify · started
+- 2026-10-20 07:32 · 076 · verify · done
+- 2026-10-20 07:32 · 076 · review 1 · started
+- 2026-10-20 07:34 · 076 · review 1 · done
+- 2026-10-20 07:34 · 076 · story · done
+- 2026-10-20 07:34:29 · 077 · build · started
+- 2026-10-20 07:34 · 077 · D1 contract and store · started
+- 2026-10-20 07:35 · 077 · D1 contract and store · done
+- 2026-10-20 07:35 · 077 · D2 checker · started
+- 2026-10-20 07:36 · 077 · D2 checker · done
+- 2026-10-20 07:36 · 077 · D3 update service (hard) · started
+- 2026-10-20 07:39 · 077 · D3 update service (hard) · done
+- 2026-10-20 07:39 · 077 · D4 IPC wiring and e2e seam · started
+- 2026-10-20 07:43 · 077 · D4 IPC wiring and e2e seam · done
+- 2026-10-20 07:43 · 077 · D5 renderer panel and e2e · started
+- 2026-10-20 07:48 · 077 · D5 renderer panel and e2e · done
+- 2026-10-20 07:48 · 077 · verify · started
+- 2026-10-20 07:52 · 077 · verify · blocked: e2e-wiring test.step rule (2 specs)
+- 2026-10-20 07:52 · 077 · D5 fix test.step in specs · started
+- 2026-10-20 07:53 · 077 · D5 fix test.step in specs · done
+- 2026-10-20 07:53 · 077 · review 1 · started
+- 2026-10-20 07:54 · 077 · review 1 · done
+- 2026-10-20 07:54 · 077 · story · done
+- 2026-10-20 07:54:27 · 078 · build · started
+- 2026-10-20 07:54 · 078 · D1 restart blocker · started
+- 2026-10-20 07:56 · 078 · D1 restart blocker · done
+- 2026-10-20 07:57 · 078 · D2 staged update actions · started
+- 2026-10-20 08:03 · 078 · D2 staged update actions · done
+- 2026-10-20 08:03 · 078 · D3 update fixture + D4 ProgressBar atom (parallel) · started
+- 2026-10-20 08:07 · 078 · D3 update fixture + D4 ProgressBar atom (parallel) · done
+- 2026-10-20 08:07 · 078 · D5 title-bar update control · started
+- 2026-10-20 08:10 · 078 · D5 title-bar update control · done
+- 2026-10-20 08:10 · 078 · D6 e2e proof · started
+- 2026-10-20 08:18 · 078 · D6 e2e proof · done
+- 2026-10-20 08:18 · 078 · verify · started
+- 2026-10-20 08:21 · 078 · verify · done
+- 2026-10-20 08:21 · 078 · review 1 · started
+- 2026-10-20 08:24 · 078 · review 1 · done
+- 2026-10-20 08:24 · 078 · verify · started
+- 2026-10-20 08:26 · 078 · verify · done
+- 2026-10-20 08:26 · 078 · story · done
+- 2026-10-20 08:27:04 · 079 · build · started
+- 2026-10-20 08:27 · 079 · D1 Release-note extraction (core) · started
+- 2026-10-20 08:28 · 079 · D1 Release-note extraction (core) · done
+- 2026-10-20 08:28 · 079 · D2 Notes channel (main + IPC) · started
+- 2026-10-20 08:31 · 079 · D2 Notes channel (main + IPC) · done
+- 2026-10-20 08:31 · 079 · D3 About running notes, empty state, links · started
+- 2026-10-20 08:36 · 079 · D3 About running notes, empty state, links · done
+- 2026-10-20 08:36 · 079 · D4 About pending update and check row · started
+- 2026-10-20 08:40 · 079 · D4 About pending update and check row · done
+- 2026-10-20 08:40 · 079 · verify · started
+- 2026-10-20 08:42 · 079 · verify · done
+- 2026-10-20 08:42 · 079 · review 1 · started
+- 2026-10-20 08:43 · 079 · review 1 · done
+- 2026-10-20 08:43 · 079 · review fix 1 · started
+- 2026-10-20 08:46 · 079 · review fix 1 · done
+- 2026-10-20 08:46 · 079 · verify · started
+- 2026-10-20 08:49 · 079 · verify · blocked: update-installed.spec strict-mode clash with About action
+- 2026-10-20 08:49 · 079 · review fix 2 · started
+- 2026-10-20 08:51 · 079 · review fix 2 · done
+- 2026-10-20 08:51 · 079 · story · done
+- 2026-10-20 08:51:34 · gate · build+test+e2e · started
+- 2026-10-20 09:00:14 · gate · done

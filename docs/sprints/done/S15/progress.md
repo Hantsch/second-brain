@@ -1,0 +1,71 @@
+- 2026-09-07 17:01 · 071 D1 the record and the state machine · started
+- 2026-09-07 17:06 · 071 D1 the record and the state machine · done
+- 2026-09-07 17:07 · 071 D2 cancellation, failure isolation, shutdown · started
+- 2026-09-07 17:15 · 071 D2 cancellation, failure isolation, shutdown · done
+- 2026-09-07 17:15 · 071 D3 one channel, plus the list on demand · started
+- 2026-09-07 17:19 · 071 D3 one channel, plus the list on demand · done
+- 2026-09-07 17:19 · 071 D4 closing the vault ends the work · started
+- 2026-09-07 17:22 · 071 D4 closing the vault ends the work · done
+- 2026-09-07 17:40 · 071 done · moved to docs/requirements/done/
+- 2026-09-07 17:42 · 072 · D1 the place and an honest empty screen · started
+- 2026-09-07 17:42 · 072 · D2 the queue's verbs over IPC · started
+- 2026-09-07 17:52 · 072 · D1 the place and an honest empty screen · done
+- 2026-09-07 17:52 · 072 · D2 the queue's verbs over IPC · done
+- 2026-09-07 17:52 · 072 · D3 one source, read once · started
+- 2026-09-07 18:04 · 072 · D3 one source, read once · done
+- 2026-09-07 18:04 · 072 · D4 the three groups and their actions · started
+- 2026-09-07 18:24 · 072 · D4 the three groups and their actions · done
+- 2026-09-07 18:24 · 072 · D5 a real trigger for waiting and failed · started
+- 2026-09-07 18:37 · 072 · D5 a real trigger for waiting and failed · done
+- 2026-09-07 19:41 · 072 · review-fix cycle 1 (untranslated maintenance label, badge a11y, test-strength findings) · done
+- 2026-09-07 19:53 · 072 · review-fix cycle 2 (AC8 test gaps, AC9 test naming, quote style) · done
+- 2026-09-07 19:55 · 072 · done · moved to docs/requirements/done/
+- 2026-09-07 19:59 · 073 · D1 e2e can drive a deterministic offline model · started
+- 2026-09-07 20:05 · 073 · D1 e2e can drive a deterministic offline model · done
+- 2026-09-07 20:05 · 073 · D2 the result store · started
+- 2026-09-07 20:14 · 073 · D2 the result store · done
+- 2026-09-07 20:14 · 073 · D3 condensation becomes a task · started
+- 2026-09-07 20:36 · 073 · D3 condensation becomes a task · done
+- 2026-09-07 20:36 · 073 · D4 the day's close becomes a task · started
+- 2026-09-07 20:53 · 073 · D4 the day's close becomes a task · done
+- 2026-09-07 20:53 · 073 · D5 the condense panel reads the queue · started
+- 2026-09-07 21:23 · 073 · D5 the condense panel reads the queue · done
+- 2026-09-07 21:23 · 073 · fix e2e-wiring guard test regressed by D1's fake-provider seam · done
+- 2026-09-07 21:23 · 073 · D6 the journal close reads the queue · started
+- 2026-09-07 22:18 · 073 · D6 the journal close reads the queue · done
+- 2026-09-07 22:18 · 073 · D7 the way back · started
+- 2026-09-07 22:31 · 073 · D7 the way back · done
+- 2026-09-07 22:45 · 073 · review-fix cycle 1 (retry stale task id, mark-before-write ordering, journal discard/apply cache staleness) · started
+- 2026-09-07 23:03 · 073 · review-fix cycle 1 (retry stale task id, mark-before-write ordering, journal discard/apply cache staleness) · done
+- 2026-09-07 23:06 · 073 · done · moved to docs/requirements/done/
+- 2026-09-07 23:18 · 074 · D1 Task kinds and lanes for the three migrating kinds · started
+- 2026-09-07 23:31 · 074 · D1 Task kinds and lanes for the three migrating kinds · done
+- 2026-09-07 23:31 · 074 · D2 Maintenance becomes a task; gardener-run-state.ts becomes a facade · started
+- 2026-09-07 23:49 · 074 · D2 Maintenance becomes a task; gardener-run-state.ts becomes a facade · done
+- 2026-09-07 23:49 · 074 · D3 No path starts a run behind the registry · started
+- 2026-09-07 23:52 · 074 · D3 No path starts a run behind the registry · done
+- 2026-09-07 23:52 · 074 · D4 Imports publish into the registry; both old event channels deleted · started
+- 2026-09-08 00:06 · 074 · D4 Imports publish into the registry; both old event channels deleted · done
+- 2026-09-08 00:06 · 074 · D5 RunStrip store reads the registry · started
+- 2026-09-08 00:28 · 074 · D5 RunStrip store reads the registry · done
+- 2026-09-08 00:28 · 074 · D6 Ingest consumers read the registry · started
+- 2026-09-08 00:36 · 074 · D6 Ingest consumers read the registry · done
+- 2026-09-08 00:36 · 074 · D7 Close guard covers every running task · started
+- 2026-09-08 00:50 · 074 · D7 The close guard covers every running task · done
+- 2026-09-08 00:50 · 074 · D8 The interview plan is a fast-lane task · started
+- 2026-09-08 00:55 · 074 · D8 The interview plan is a fast-lane task · done
+- 2026-09-08 01:35 · 074 · done · moved to docs/requirements/done/
+- 2026-09-08 01:37 · 075 · D1 Edit state and payload derivation · started
+- 2026-09-08 01:46 · 075 · D1 Edit state and payload derivation · done
+- 2026-09-08 01:46 · 075 · D2 The editable todo row · started
+- 2026-09-08 01:56 · 075 · D2 The editable todo row · done
+- 2026-09-08 01:56 · 075 · D3 Add a todo by hand · started
+- 2026-09-08 02:12 · 075 · D3 Add a todo by hand · done
+- 2026-09-08 02:12 · 075 · D4 Fields item by item and mood/energy · started
+- 2026-09-08 02:24 · 075 · D4 Fields item by item and mood/energy · done
+- 2026-09-08 02:24 · 075 · D5 Re-validated write, scope on the line · started
+- 2026-09-08 02:34 · 075 · D5 Re-validated write, scope on the line · done
+- 2026-09-08 02:34 · 075 · D6 e2e correcting a proposal · started
+- 2026-09-08 03:05 · 075 · D6 e2e correcting a proposal · done
+- 2026-09-08 03:05 · 075 · D7 e2e waiting-on, added todo, fields, survival, discard · started
+- 2026-09-08 03:18 · 075 · D7 e2e waiting-on, added todo, fields, survival, discard · done

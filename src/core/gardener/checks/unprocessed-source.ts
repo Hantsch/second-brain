@@ -24,7 +24,7 @@ export const unprocessedSourceCheck: Check = {
 
     for (const source of ctx.index.sources()) {
       if (source.sourcePage !== null && source.sourcePage.length > 0) continue;
-      const text = ctx.labels.unprocessedSource(source.title);
+      const text = ctx.labels.unprocessedSource(source.title, source.blocked);
       findings.push(
         buildFinding(ctx, {
           kind: 'unprocessed-source',

@@ -1,20 +1,21 @@
-/* Was läuft: aktive Projekte mit nächstem Schritt und Frist.
+/* What's running: active projects with next step and deadline.
 
-   Quelle ist die Projektliste des Index, gefiltert auf `active` und nach
-   Priorität und jüngster Spur sortiert. `waiting` steht hier nicht: darauf wartet
-   die Kachel „Warte auf", und ein Projekt an zwei Stellen zu zeigen macht die
-   Liste länger, nicht klarer. */
+   The source is the index's project list, filtered to `active` and sorted
+   by priority and most recent trail. `waiting` is not shown here: that's
+   what the "Waiting on" tile is for, and showing a project in two places
+   makes the list longer, not clearer. */
 
 import { useNavigate } from 'react-router-dom';
 import type { Project } from '@shared/types';
 import { useT } from '../../i18n';
+import { favoritesFirst } from '../../lib/favorites';
 import { useProjects } from '../../lib/queries/data';
 import { DeadlineChip } from '../DeadlineChip';
 import { TileFrame } from '../TileFrame';
 
 const LIMIT = 4;
 
-/** Wichtigstes zuerst: Priorität, dann jüngste Spur. */
+/** Most important first: priority, then most recent trail. */
 function byPriority(a: Project, b: Project): number {
   return a.priority - b.priority || (a.lastTouch < b.lastTouch ? 1 : -1);
 }
@@ -24,7 +25,7 @@ export function ActiveProjectsTile() {
   const navigate = useNavigate();
   const { data, isPending, error, refetch } = useProjects();
   const active = (data ?? []).filter((project) => project.status === 'active');
-  const rows = [...active].sort(byPriority).slice(0, LIMIT);
+  const rows = favoritesFirst([...active].sort(byPriority)).slice(0, LIMIT);
 
   return (
     <TileFrame

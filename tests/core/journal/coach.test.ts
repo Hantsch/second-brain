@@ -1,31 +1,56 @@
-/* Der Coach. Vier Dinge, an denen dieser Screen scheitern könnte, und deshalb
+/* Der Coach. Fünf Dinge, an denen dieser Screen scheitern könnte, und deshalb
    hier festgenagelt:
 
-   1. **Die Nutzerrunde steht in der Datei, bevor das Modell gefragt wird.** Der
-      Test lässt das Modell danach werfen — der Satz des Menschen muss dastehen.
-   2. **Die Antwort wird unverändert protokolliert.** Kein Umbau, kein Zusatz.
-   3. **`analyze` belegt mit Daten** und zieht höchstens fünf frühere Tage heran,
-      nie den heutigen und nie einen späteren.
-   4. **Ohne Modell** wird der Eintrag geschrieben, `noModel` gesetzt und **keine**
-      Antwort erfunden — im Protokoll steht dann nichts vom Coach. */
+   1. **„Zuhören" fragt kein Modell.** Der Satz wird als Prosa abgelegt, das
+      Gateway bleibt unberührt (nachgewiesen, nicht behauptet: `watchGateway`),
+      und das ist ein Erfolg — kein „kein Modell konfiguriert".
+   2. **Die eigenen Worte stehen in der Datei, bevor das Modell gefragt wird.**
+      Geprüft von innen: der Fake-Provider liest die Datei im Moment des Aufrufs.
+   3. **Die Antwort wird unverändert protokolliert** — als Antwortblock im
+      Tagesstrom, nie in die eigene Prosa gemischt.
+   4. **`analyze` belegt mit Daten** und zieht höchstens fünf frühere Tage heran,
+      nie den heutigen und nie einen späteren; `tips` zieht keine.
+   5. **Ohne Modell** wird der Eintrag geschrieben, `noModel` gesetzt und **keine**
+      Antwort erfunden — im Strom steht dann kein Antwortblock. */
 
 import { describe, expect, it } from 'vitest';
-import { JournalError, coach, earlierDays, parseDialog } from '@core/journal';
+import { JournalError, coach, earlierDays, parseStream } from '@core/journal';
+import type { JournalBlock } from '@core/journal';
 import type { CoachRequest } from '@shared/types';
-import { emptyGateway, gatewayWithReplies } from '../../helpers/llm';
+import {
+  createFakeGateway,
+  emptyGateway,
+  gatewayWithReplies,
+  watchGateway,
+} from '../../helpers/llm';
 import { NOW_MS } from '../../helpers/time';
 import { DAY, DAY_PATH, journalFile, journalFixture, journalPathOf } from './fixtures';
 
 const REPLY = 'Das klingt nach einem Tag, an dem viel auf dir lag.';
+const MESSAGE = 'Der Sprint fühlt sich unmöglich an.';
 
 function ask(patch: Partial<CoachRequest> = {}): CoachRequest {
   return {
-    mode: 'listen',
+    mode: 'tips',
     date: DAY,
-    message: 'Der Sprint fühlt sich unmöglich an.',
+    message: MESSAGE,
     useHistory: false,
     ...patch,
   };
+}
+
+/** Der Rumpf einer Tagesdatei, so wie `parseStream` ihn liest. */
+function bodyOf(content: string): string {
+  return content.slice(content.indexOf('\n---\n', 4) + 5);
+}
+
+/** Die Blöcke des Abschnitts „Tag" — Prosa und Antwortblöcke in Schreibreihenfolge. */
+function streamOf(content: string): JournalBlock[] {
+  return parseStream(bodyOf(content));
+}
+
+function answersIn(content: string): JournalBlock[] {
+  return streamOf(content).filter((block) => block.kind === 'answer');
 }
 
 /** Sieben frühere Tage mit demselben Thema, dazu ein späterer — zum Ausschließen. */
@@ -47,24 +72,111 @@ function stressfulWeek(): Record<string, string> {
 }
 
 describe('coach: zuhören', () => {
-  it('protokolliert Frage und Antwort im Blockquote-Format', async () => {
+  it('legt den Satz als Prosa ab und fasst das Gateway nicht an', async () => {
+    const fixture = await journalFixture();
+    /* Ein Gateway, das antworten *könnte* — es darf trotzdem nicht gefragt werden. */
+    const watched = watchGateway(gatewayWithReplies({ 'journal-chat': REPLY }).gateway);
+
+    const result = await coach(fixture.deps(watched.gateway), ask({ mode: 'listen' }));
+
+    expect(watched.calls).toEqual([]);
+    /* Kein Modell gewollt heißt nicht „kein Modell da": das ist ein Erfolg. */
+    expect(result).toMatchObject({
+      mode: 'listen',
+      reply: '',
+      noModel: false,
+      failure: null,
+      usedLlm: false,
+      model: null,
+      earlier: [],
+      path: DAY_PATH,
+    });
+    expect(result.hash.length).toBeGreaterThan(10);
+
+    const content = await fixture.text(DAY_PATH);
+    /* Im Strom unter „Tag", als Prosa — nicht als Zitatblock. */
+    const blocks = streamOf(content);
+    expect(blocks.every((block) => block.kind === 'entry')).toBe(true);
+    expect(blocks.at(-1)?.text).toContain(MESSAGE);
+    /* Eine eigene Zeile ohne '>' — der Fixture-Tag zitiert denselben Satz im
+       Alt-Abschnitt, deshalb wird hier auf die unzitierte Zeile geprüft. */
+    expect(content).toContain(`\n${MESSAGE}\n`);
+    /* Die eine Antwort aus dem Bestand bleibt die einzige in der Datei. */
+    expect(content.split('> **Second Brain**')).toHaveLength(2);
+  });
+
+  it('legt auch ohne konfiguriertes Modell ab: kein Fehler, kein toter Zustand', async () => {
+    const fixture = await journalFixture();
+    const watched = watchGateway(emptyGateway());
+
+    const result = await coach(fixture.deps(watched.gateway), ask({ mode: 'listen' }));
+
+    expect(watched.calls).toEqual([]);
+    expect(result.noModel).toBe(false);
+    expect(result.failure).toBeNull();
+    expect(await fixture.text(DAY_PATH)).toContain(MESSAGE);
+  });
+
+  it('nimmt keine leere Runde an', async () => {
+    const fixture = await journalFixture();
+    const watched = watchGateway(gatewayWithReplies({ 'journal-chat': REPLY }).gateway);
+    const before = await fixture.text(DAY_PATH);
+
+    await expect(
+      coach(fixture.deps(watched.gateway), ask({ mode: 'listen', message: '   ' })),
+    ).rejects.toThrow(JournalError);
+    await expect(
+      coach(fixture.deps(watched.gateway), ask({ mode: 'tips', message: '   ' })),
+    ).rejects.toThrow(JournalError);
+
+    expect(await fixture.text(DAY_PATH)).toBe(before);
+    expect(watched.calls).toEqual([]);
+  });
+});
+
+describe('coach: Tipps und Analyse', () => {
+  it('hat meinen Satz in der Datei, bevor das Modell gefragt wird', async () => {
+    const fixture = await journalFixture();
+    /* Von innen geprüft: der Provider liest die Datei im Moment des Aufrufs. */
+    const atCall: Promise<string>[] = [];
+    const { gateway, provider } = createFakeGateway({
+      replies: {
+        'journal-chat': () => {
+          atCall.push(fixture.text(DAY_PATH));
+          return REPLY;
+        },
+      },
+    });
+
+    await coach(fixture.deps(gateway), ask());
+
+    expect(provider.countFor('journal-chat')).toBe(1);
+    expect(atCall).toHaveLength(1);
+    const seen = (await Promise.all(atCall)).join('\n');
+    expect(seen).toContain(MESSAGE);
+    /* Und die Antwort steht zu diesem Zeitpunkt noch nirgends. */
+    expect(seen).not.toContain(REPLY);
+  });
+
+  it('hängt die Antwort wortwörtlich als Antwortblock in den Tagesstrom', async () => {
     const fixture = await journalFixture();
     const { gateway } = gatewayWithReplies({ 'journal-chat': REPLY });
 
     const result = await coach(fixture.deps(gateway), ask());
 
-    expect(result.noModel).toBe(false);
-    expect(result.usedLlm).toBe(true);
-    expect(result.reply).toBe(REPLY);
+    expect(result).toMatchObject({ reply: REPLY, noModel: false, failure: null, usedLlm: true });
+    expect(result.model).not.toBeNull();
+
     const content = await fixture.text(DAY_PATH);
-    expect(content).toContain('> **Ich** — 14:32\n> Der Sprint fühlt sich unmöglich an.');
-    expect(content).toContain(`> **Second Brain** — 14:32\n> ${REPLY}`);
-    const turns = parseDialog(content.slice(content.indexOf('\n---\n', 4) + 5));
-    expect(turns).toHaveLength(4);
-    expect(turns[3]?.text).toBe(REPLY);
+    expect(content).toContain(`> **Gaston** — 14:32\n> ${REPLY}`);
+    /* Meine Prosa zuerst, die Antwort darunter — und nichts vermischt. */
+    const blocks = streamOf(content);
+    expect(blocks.map((block) => block.kind)).toEqual(['entry', 'answer']);
+    expect(blocks[0]?.text).toContain(MESSAGE);
+    expect(blocks[1]?.text).toBe(REPLY);
   });
 
-  it('schickt die Verbote und den bisherigen Eintrag mit', async () => {
+  it('schickt Haltung, bisherigen Eintrag und die Runden des Tages mit', async () => {
     const fixture = await journalFixture();
     const { gateway, provider } = gatewayWithReplies({ 'journal-chat': REPLY });
 
@@ -73,18 +185,46 @@ describe('coach: zuhören', () => {
     const call = provider.lastCall('journal-chat');
     expect(call?.streamed).toBe(true);
     const system = call?.messages.find((turn) => turn.role === 'system')?.content ?? '';
-    expect(system).toContain('nur zuhören');
-    expect(system).toContain('Gib keine Ratschläge');
-    expect(system).toContain('"hast du schon versucht"');
+    expect(system).toContain('konkret helfen');
+    expect(system).toContain('höchstens drei Vorschläge');
     const user = call?.messages.at(-1)?.content ?? '';
     expect(user).toContain('Vormittag im Testsystem');
-    /* Die frühere Runde des Tages steht als eigener Turn davor, nicht im Eintrag. */
+    expect(user.endsWith(MESSAGE)).toBe(true);
+    /* Der Fixture-Tag ist ein Alt-Tag: seine „Gespräch"-Runden stehen als eigene
+       Turns davor, danach der Strom unter „Tag". */
+    expect(call?.messages.map((turn) => turn.role)).toEqual([
+      'system',
+      'user',
+      'assistant',
+      'user',
+      'user',
+    ]);
+  });
+
+  it('sieht in der zweiten Runde die Antwort der ersten', async () => {
+    /* Ohne Bestand: ein Tag im neuen Format, ganz ohne „Gespräch"-Abschnitt. */
+    const fixture = await journalFixture({ sample: false });
+    const first = 'Zwei Punkte offen, beide warten auf andere.';
+    const { gateway, provider } = gatewayWithReplies({ 'journal-chat': first });
+
+    await coach(fixture.deps(gateway), ask({ message: 'Der Tag war zäh.' }));
+    provider.setReply('journal-chat', REPLY);
+    await coach(fixture.deps(gateway), ask({ message: 'Und jetzt noch eine Absage.' }));
+
+    const call = provider.lastCall('journal-chat');
     expect(call?.messages.map((turn) => turn.role)).toEqual([
       'system',
       'user',
       'assistant',
       'user',
     ]);
+    /* Der Kern des Tests: die erste Antwort ist als Vorgeschichte dabei. Ohne sie
+       würde die zweite Runde dieselben Vorschläge wieder aufschreiben. */
+    expect(call?.messages.find((turn) => turn.role === 'assistant')?.content).toBe(first);
+    expect(call?.messages[1]?.content).toContain('Der Tag war zäh.');
+
+    const content = await fixture.text(DAY_PATH);
+    expect(answersIn(content).map((block) => block.text)).toEqual([first, REPLY]);
   });
 
   it('streamt die Antwort in Stücken', async () => {
@@ -107,23 +247,12 @@ describe('coach: zuhören', () => {
     expect(result.path).toBe('journal/2026/08/2026-08-12.md');
     const content = await fixture.text(result.path);
     expect(content).toContain('title: Mittwoch, 12. August 2026');
-    expect(content).toContain('> **Ich** — 14:32');
-  });
-
-  it('nimmt keine leere Runde an', async () => {
-    const fixture = await journalFixture();
-    const { gateway } = gatewayWithReplies({ 'journal-chat': REPLY });
-    const before = await fixture.text(DAY_PATH);
-
-    await expect(coach(fixture.deps(gateway), ask({ message: '   ' }))).rejects.toThrow(
-      JournalError,
-    );
-    expect(await fixture.text(DAY_PATH)).toBe(before);
+    expect(streamOf(content).map((block) => block.kind)).toEqual(['entry', 'answer']);
   });
 });
 
 describe('coach: Absturz nach dem Schreiben', () => {
-  it('lässt die Nutzerrunde stehen, wenn der Modellaufruf wirft', async () => {
+  it('lässt die eigenen Worte stehen, wenn der Modellaufruf wirft', async () => {
     const fixture = await journalFixture();
     const { gateway, provider } = gatewayWithReplies({ 'journal-chat': REPLY });
     provider.fail('journal-chat', 'Modell überlastet');
@@ -136,8 +265,9 @@ describe('coach: Absturz nach dem Schreiben', () => {
     expect(result.failure?.reason).toBe('error');
     expect(result.failure?.task).toBe('journal-chat');
     const content = await fixture.text(DAY_PATH);
-    expect(content).toContain('> Der Sprint fühlt sich unmöglich an.');
-    /* Genau eine Antwort steht in der Datei: die aus dem Bestand, keine neue. */
+    expect(content).toContain(MESSAGE);
+    /* Kein Antwortblock im Strom, und keine neue Runde im Alt-Abschnitt. */
+    expect(answersIn(content)).toEqual([]);
     expect(content.split('> **Second Brain**')).toHaveLength(2);
   });
 
@@ -150,7 +280,9 @@ describe('coach: Absturz nach dem Schreiben', () => {
     await expect(
       coach(fixture.deps(gateway, { signal: controller.signal }), ask()),
     ).rejects.toMatchObject({ name: 'AbortError' });
-    expect(await fixture.text(DAY_PATH)).toContain('> Der Sprint fühlt sich unmöglich an.');
+    const content = await fixture.text(DAY_PATH);
+    expect(content).toContain(MESSAGE);
+    expect(answersIn(content)).toEqual([]);
   });
 
   it('protokolliert eine leere Modellantwort nicht', async () => {
@@ -162,7 +294,10 @@ describe('coach: Absturz nach dem Schreiben', () => {
     expect(result.reply).toBe('');
     expect(result.usedLlm).toBe(true);
     expect(result.noModel).toBe(true);
-    expect((await fixture.text(DAY_PATH)).split('> **Second Brain**')).toHaveLength(2);
+    const content = await fixture.text(DAY_PATH);
+    expect(content).toContain(MESSAGE);
+    expect(answersIn(content)).toEqual([]);
+    expect(content.split('> **Second Brain**')).toHaveLength(2);
   });
 });
 
@@ -178,7 +313,8 @@ describe('coach: ohne Modell', () => {
     expect(result.model).toBeNull();
     expect(result.failure?.reason).toBe('no-route');
     const content = await fixture.text(DAY_PATH);
-    expect(content).toContain('> Der Sprint fühlt sich unmöglich an.');
+    expect(content).toContain(MESSAGE);
+    expect(answersIn(content)).toEqual([]);
     expect(content.split('> **Second Brain**')).toHaveLength(2);
   });
 
@@ -238,6 +374,25 @@ describe('coach: analysieren', () => {
     );
 
     expect(result.earlier).toEqual([]);
+  });
+
+  it('zieht für tips keine früheren Tage, auch mit useHistory', async () => {
+    const fixture = await journalFixture({ sample: false, files: stressfulWeek() });
+    const { gateway, provider } = gatewayWithReplies({ 'journal-chat': 'Kurz.' });
+
+    const result = await coach(
+      fixture.deps(gateway),
+      ask({
+        date: '2026-08-09',
+        mode: 'tips',
+        useHistory: true,
+        message: 'Stress mit der Abnahme',
+      }),
+    );
+
+    expect(result.earlier).toEqual([]);
+    const user = provider.lastCall('journal-chat')?.messages.at(-1)?.content ?? '';
+    expect(user).not.toContain('Frühere Tage:');
   });
 });
 

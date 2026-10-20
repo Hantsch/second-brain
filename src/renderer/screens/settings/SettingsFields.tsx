@@ -1,16 +1,16 @@
-/* Die kleinen Bauteile der Einstellungen: ein Feld mit Beispielzeile und ein
-   Zahlenfeld.
+/* The small building blocks of settings: a field with an example line and a
+   number field.
 
-   Das Zahlenfeld schreibt nicht bei jedem Tastendruck: es hält den Wert lokal und
-   übergibt ihn, wenn der Nutzer fertig ist. Sonst läge nach dem
-   Tippen von „14" kurz eine 1 in der Datei — und der Hauptprozess hätte zwei
-   Schreibvorgänge und zwei Ereignisse für eine Eingabe. */
+   The number field does not write on every keystroke: it holds the value
+   locally and hands it over once the user is done. Otherwise, typing "14"
+   would briefly leave a 1 in the file — and the main process would get two
+   writes and two events for one input. */
 
 import { useId, useState } from 'react';
 import type { ReactNode } from 'react';
 
 export interface FieldProps {
-  /** Ruhige Zeile unter dem Feld: ein Beispiel, bereits übersetzt. */
+  /** Quiet line below the field: an example, already translated. */
   example?: string;
   children: ReactNode;
 }
@@ -30,7 +30,7 @@ export interface NumberFieldProps {
   value: number;
   min: number;
   max: number;
-  /** Einheit hinter dem Feld, etwa „Tagen". */
+  /** Unit after the field, e.g. "days". */
   suffix?: string;
   onCommit: (value: number) => void;
 }
@@ -40,10 +40,10 @@ export function NumberField({ label, hint, value, min, max, suffix, onCommit }: 
   const [draft, setDraft] = useState(String(value));
   const [known, setKnown] = useState(value);
 
-  /* Kommt der Wert von außen zurück (gespeichert, geklemmt, anderer Vault),
-     folgt das Feld ihm — sonst zeigte es eine Eingabe, die nicht gilt. Das ist
-     der Weg aus „You Might Not Need an Effect": beim Rendern nachziehen, nicht
-     in einem Effekt hinterher. */
+  /* If the value comes back from outside (saved, clamped, different vault),
+     the field follows it — otherwise it would show an input that's no longer
+     valid. This is the pattern from "You Might Not Need an Effect": catch up
+     during render, not chase after it in an effect. */
   if (known !== value) {
     setKnown(value);
     setDraft(String(value));
@@ -60,9 +60,9 @@ export function NumberField({ label, hint, value, min, max, suffix, onCommit }: 
     if (clamped !== value) onCommit(clamped);
   };
 
-  /* Bewusst ohne das Input-Atom: Label, Feld, Einheit und Hinweis stehen hier in
-     drei Zeilen, damit die Einheit neben dem Feld sitzt und nicht neben dem
-     Hinweis. Die `gs-*`-Klassen sind dieselben. */
+  /* Deliberately without the input atom: label, field, unit, and hint are laid
+     out here in three rows so the unit sits next to the field and not next to
+     the hint. The `gs-*` classes are the same. */
   return (
     <div className="sb-setting">
       <label className="gs-label" htmlFor={id}>

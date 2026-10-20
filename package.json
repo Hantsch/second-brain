@@ -1,8 +1,8 @@
 {
-  "name": "guston",
+  "name": "gaston",
   "version": "0.1.0",
   "private": true,
-  "description": "Dateibasiertes Second Brain: reindumpen, einordnen, wiederfinden — lokal, portabel, LLM-gestützt",
+  "description": "Electron app that files, organizes and makes your notes findable again — a local, portable, LLM-assisted personal knowledge base",
   "author": "Hantsch",
   "license": "MIT",
   "type": "module",
@@ -11,9 +11,8 @@
     "node": ">=20.19"
   },
   "build": {
-    "appId": "app.hantsch.guston",
-    "productName": "Guston",
-    "artifactName": "guston-${version}-portable.${ext}",
+    "appId": "app.hantsch.gaston",
+    "productName": "Gaston",
     "directories": {
       "output": "dist",
       "buildResources": "assets"
@@ -22,49 +21,80 @@
       "out/**",
       "package.json"
     ],
+    "extraResources": [
+      {
+        "from": "assets/app-icons",
+        "to": "assets/app-icons",
+        "filter": [
+          "*.png",
+          "*.ico"
+        ]
+      }
+    ],
     "win": {
+      "icon": "app-icons/knowledge-garden.ico",
       "target": [
+        "nsis",
         "portable"
       ]
     },
     "portable": {
-      "unicode": true
+      "unicode": true,
+      "artifactName": "gaston-${version}-portable.${ext}"
+    },
+    "nsis": {
+      "artifactName": "gaston-${version}-setup.${ext}",
+      "oneClick": true,
+      "perMachine": false
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "Hantsch",
+      "repo": "second-brain"
     }
   },
   "scripts": {
     "dev": "node scripts/start.mjs dev",
     "build": "npm run typecheck && electron-vite build",
     "preview": "electron-vite preview",
-    "package": "npm run build && electron-builder --win portable",
+    "package": "npm run build && electron-builder --win nsis portable --publish never",
+    "handoff": "node scripts/handoff.mjs",
+    "release": "node scripts/release.mjs",
     "typecheck": "tsc -p tsconfig.node.json --noEmit && tsc -p tsconfig.web.json --noEmit",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
+    "test:e2e": "playwright test",
     "test:watch": "vitest",
     "seed": "node scripts/seed-vault.mjs",
-    "shot": "node scripts/shot.mjs",
-    "a11y": "node scripts/a11y.mjs",
+    "shot": "node scripts/verify.mjs --only shot",
+    "a11y": "node scripts/verify.mjs --only a11y",
     "verify": "npm run format:check && npm run lint && npm run typecheck && npm test && npm run build",
-    "verify:ui": "npm run seed && npm run build && npm run shot && npm run a11y"
+    "verify:ui": "npm run build && node scripts/verify.mjs"
   },
   "dependencies": {
     "@fontsource/ibm-plex-mono": "^5.2.7",
     "@fontsource/ibm-plex-sans": "^5.2.8",
     "@tanstack/react-query": "^5.101.2",
     "chokidar": "^5.0.0",
+    "electron-updater": "^6.8.9",
+    "extract-zip": "^2.0.1",
     "lucide-react": "^1.24.0",
     "marked": "^18.0.9",
     "minisearch": "^7.2.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.1",
+    "tar": "^7.5.22",
     "turndown": "^7.2.4",
+    "unpdf": "^1.8.1",
     "yaml": "^2.8.1",
     "youtubei.js": "^17.2.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.62.1",
     "@tailwindcss/vite": "^4.3.3",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.3",
@@ -73,6 +103,7 @@
     "@types/react-dom": "^19.2.3",
     "@types/turndown": "^5.0.6",
     "@vitejs/plugin-react": "^5.2.0",
+    "archiver": "^8.0.0",
     "axe-core": "^4.13.0",
     "electron": "^41.7.1",
     "electron-builder": "^26.15.3",
@@ -83,7 +114,7 @@
     "globals": "^17.7.0",
     "jsdom": "^30.0.1",
     "playwright": "^1.62.1",
-    "prettier": "^3.9.5",
+    "prettier": "3.9.6",
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.63.0",

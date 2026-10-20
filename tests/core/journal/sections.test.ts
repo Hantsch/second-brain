@@ -4,7 +4,15 @@
    Sonst stünden zwei Abschnitte für dieselbe Sache in einer Datei. */
 
 import { describe, expect, it } from 'vitest';
-import { dayText, isSectionOf, journalSections, sectionIn, sectionText } from '@core/journal';
+import {
+  dayText,
+  formatAnswer,
+  isSectionOf,
+  journalSections,
+  rawDayText,
+  sectionIn,
+  sectionText,
+} from '@core/journal';
 
 const GERMAN = [
   '## Tag',
@@ -87,5 +95,80 @@ describe('dayText', () => {
       '',
     ].join('\n');
     expect(dayText(body)).toBe('Vorspann ohne Überschrift.');
+  });
+
+  it('lässt eine eingebettete Antwort im Tag-Abschnitt weg (011)', () => {
+    const body = [
+      '## Tag',
+      '',
+      'Prosa davor.',
+      '',
+      formatAnswer('Eine Antwort der App.', '09:00'),
+      '',
+      'Prosa danach.',
+      '',
+    ].join('\n');
+
+    const result = dayText(body);
+
+    expect(result).toContain('Prosa davor.');
+    expect(result).toContain('Prosa danach.');
+    expect(result).not.toContain('Second Brain');
+    expect(result).not.toContain('Eine Antwort der App.');
+  });
+});
+
+describe('rawDayText', () => {
+  it('lässt Gespräch und Fakten weg, behält aber eine eingebettete Antwort (011)', () => {
+    const body = [
+      '## Tag',
+      '',
+      'Prosa davor.',
+      '',
+      formatAnswer('Eine Antwort der App.', '09:00'),
+      '',
+      'Prosa danach.',
+      '',
+      '## Gespräch',
+      '',
+      '> **Ich** — 08:00',
+      '> Hm.',
+      '',
+      '## Fakten',
+      '',
+      '- [ ] Etwas tun',
+      '',
+    ].join('\n');
+
+    const result = rawDayText(body);
+
+    expect(result).toContain('Prosa davor.');
+    expect(result).toContain('Prosa danach.');
+    expect(result).toContain('> **Gaston** — 09:00');
+    expect(result).toContain('> Eine Antwort der App.');
+    expect(result).not.toContain('Hm.');
+    expect(result).not.toContain('Etwas tun');
+  });
+
+  it('nimmt einen Rumpf ohne Überschriften vollständig, Antworten eingeschlossen', () => {
+    const body = ['Prosa ohne Überschrift.', '', formatAnswer('Antwort.', '10:00'), ''].join('\n');
+    expect(rawDayText(body)).toBe(
+      ['Prosa ohne Überschrift.', '', '> **Gaston** — 10:00', '> Antwort.'].join('\n'),
+    );
+  });
+
+  it('ist die Grundlage von dayText — dayText streicht daraus zusätzlich die Antworten', () => {
+    const body = [
+      '## Tag',
+      '',
+      'Nur Prosa, keine Antwort.',
+      '',
+      '## Fakten',
+      '',
+      '- [ ] Etwas tun',
+      '',
+    ].join('\n');
+    // Ohne eingebettete Antwort sind beide Funktionen deckungsgleich.
+    expect(dayText(body)).toBe(rawDayText(body));
   });
 });

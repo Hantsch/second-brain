@@ -27,7 +27,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { IpcChannel, IpcEvents, IpcRequest, IpcResponse } from '@shared/ipc';
-import type { GardenerFinding } from '@shared/types';
+import type { GardenerFinding, JournalCloseSuggestion } from '@shared/types';
 import { createFetchFake, sseChunks, sseResponse } from '../fakes/llm';
 import type { FetchResponder } from '../fakes/llm';
 import { createTempVault } from '../helpers/vault';
@@ -74,14 +74,20 @@ async function createHarness(userDataDir: string) {
   const { forgetGardenerState } = await import('../../src/main/gardener-state');
   const { forgetOverviewState } = await import('../../src/main/overview-state');
   const { forgetSessions } = await import('../../src/main/ipc/overview-deps');
-  const { cancelGardenerRun } = await import('../../src/main/ipc/gardener');
+  const { cancelGardenerRun } = await import('../../src/main/gardener-run-state');
   const { buildHandlers } = await import('../../src/main/ipc/register-all');
+  const { getWorkQueue, resetWorkQueue } = await import('../../src/main/work-queue');
+  const { resetTaskResults } = await import('../../src/main/task-results');
 
   /* Zustand aus einem früheren Test darf nicht überleben. */
   forgetSessions();
   forgetOverviewState();
   forgetGardenerState();
   cancelGardenerRun();
+  /* 073, D4: `journal:close` queues its work now — a fresh queue and result
+     store per test, or one test's task would still be there for the next. */
+  resetWorkQueue();
+  resetTaskResults();
 
   const settings = await SettingsService.load(userDataDir);
   const keys = await createKeyStore(userDataDir);
@@ -105,7 +111,7 @@ async function createHarness(userDataDir: string) {
     return (handler as (payload: IpcRequest<K>) => Promise<IpcResponse<K>>)(request);
   };
 
-  return { services, settings, call, streams };
+  return { services, settings, call, streams, queue: getWorkQueue(services) };
 }
 
 type Harness = Awaited<ReturnType<typeof createHarness>>;
@@ -124,6 +130,26 @@ function findingOfKind(findings: readonly GardenerFinding[], kind: string): Gard
   const found = findings.find((finding) => finding.kind === kind);
   expect(found, `Befund der Art ${kind}`).toBeDefined();
   return found as GardenerFinding;
+}
+
+/**
+ * `journal:close` als abgewarteter Task (073, D4): queued, wartet, holt den
+ * Vorschlag über `tasks:result`. `null` bleibt `null` — genau die Antwort, die
+ * der synchrone Kanal vorher direkt gegeben hat (`closeDay`'s eigener
+ * "nichts zu schließen"-Fall).
+ */
+async function closeDay(harness: Harness, date: string): Promise<JournalCloseSuggestion | null> {
+  const task = await harness.call('journal:close', { date });
+  if (task === null) return null;
+  await vi.waitFor(() => {
+    const found = harness.queue.list().find((entry) => entry.id === task.id);
+    if (found === undefined || found.state === 'queued' || found.state === 'running') {
+      throw new Error(`Task ${task.id} läuft noch`);
+    }
+    return found;
+  });
+  const result = await harness.call('tasks:result', { id: task.id });
+  return result?.kind === 'journal-close' ? result.suggestion : null;
 }
 
 describe('Welle E von einer Naht zur nächsten', () => {
@@ -197,9 +223,11 @@ describe('Welle E von einer Naht zur nächsten', () => {
     );
   }
 
+  /* Haltung „Tipps": seit 011 fragt `listen` kein Modell mehr (die Haltung legt nur
+     ab, über `journal:append`) — hier geht es aber gerade um die Runde mit Antwort. */
   async function coachRound(message: string): Promise<IpcEvents['event:llm-stream']> {
     const { messageId } = await harness.call('journal:coach', {
-      mode: 'listen',
+      mode: 'tips',
       date: DATE,
       message,
       useHistory: true,
@@ -214,12 +242,13 @@ describe('Welle E von einer Naht zur nächsten', () => {
     const created = await harness.call('journal:setDay', { date: DATE, text: DAY_TEXT });
     expect(created.path).toBe(DAY_PATH);
     const fresh = (await vault.read(DAY_PATH)) ?? '';
-    /* Das Format aus docs/VAULT-FORMAT.md, vom Kern angelegt — die drei Abschnitte
-       stehen da, auch die noch leeren. */
+    /* Das Format aus docs/VAULT-FORMAT.md, vom Kern angelegt — die Abschnitte eines
+       frischen Tages stehen da, auch der noch leere. Seit 011 sind es zwei: „Tag"
+       trägt den Strom aus Prosa und Antworten, „Gespräch" wird nicht mehr angelegt. */
     expect(fresh).toContain('type: journal');
     expect(fresh).toContain(`date: ${DATE}`);
     expect(fresh).toContain('## Tag');
-    expect(fresh).toContain('## Gespräch');
+    expect(fresh).not.toContain('## Gespräch');
     expect(fresh).toContain('## Fakten');
     expect(fresh).toContain('doppelten Interceptor');
 
@@ -232,26 +261,22 @@ describe('Welle E von einer Naht zur nächsten', () => {
     expect(second.threadId).toBe(first.threadId);
 
     const talked = (await vault.read(DAY_PATH)) ?? '';
-    const dialogue = talked.slice(talked.indexOf('## Gespräch'), talked.indexOf('## Fakten'));
-    /* Blockquote-Format aus VAULT-FORMAT.md: Sprecherzeile mit Uhrzeit, dann Text. */
-    expect(dialogue.match(/^> \*\*Ich\*\* — \d\d:\d\d$/gm)).toHaveLength(2);
-    expect(dialogue.match(/^> \*\*Second Brain\*\* — \d\d:\d\d$/gm)).toHaveLength(2);
-    for (const line of [
-      'Der Sprint fühlt sich unmöglich an.',
-      FIRST_REPLY,
-      'Und morgen kommt die Abnahme.',
-      SECOND_REPLY,
-    ]) {
-      expect(dialogue).toContain(`> ${line}`);
+    const stream = talked.slice(talked.indexOf('## Tag'), talked.indexOf('## Fakten'));
+    /* Ein Strom unter „Tag" (011): meine Sätze als Prosa, jede Antwort als
+       Blockquote-Block darunter — Sprecherzeile mit Uhrzeit wie in VAULT-FORMAT.md.
+       Meine Worte werden nie zitiert, deshalb steht dort keine „Ich"-Zeile. */
+    expect(stream.match(/^> \*\*Gaston\*\* — \d\d:\d\d$/gm)).toHaveLength(2);
+    expect(stream).not.toContain('> **Ich**');
+    for (const line of ['Der Sprint fühlt sich unmöglich an.', 'Und morgen kommt die Abnahme.']) {
+      expect(stream).toContain(`\n${line}\n`);
     }
-    /* Und der Renderer bekommt es getrennt, ohne selbst Markdown zu lesen. */
+    for (const reply of [FIRST_REPLY, SECOND_REPLY]) {
+      expect(stream).toContain(`> ${reply}`);
+    }
+    /* Der Renderer bekommt den Tag getrennt, ohne selbst Markdown zu lesen — und
+       dieser Tag hat keinen Alt-Abschnitt, also auch keine Alt-Runden. */
     const view = await harness.call('journal:get', { date: DATE });
-    expect(view?.turns.map((turn) => turn.role)).toEqual([
-      'user',
-      'assistant',
-      'user',
-      'assistant',
-    ]);
+    expect(view?.turns).toEqual([]);
 
     // ── Stimmung: genau eine Zeile ───────────────────────────────────────────
     const beforeMood = (await vault.read(DAY_PATH)) ?? '';
@@ -263,7 +288,7 @@ describe('Welle E von einer Naht zur nächsten', () => {
 
     // ── Tagesabschluss: schlägt vor, schreibt nicht ──────────────────────────
     const untouched = (await vault.read(DAY_PATH)) ?? '';
-    const suggestion = await harness.call('journal:close', { date: DATE });
+    const suggestion = await closeDay(harness, DATE);
     expect(suggestion).not.toBeNull();
     /* Ohne Route für `extract-tasks` läuft der Abschluss deterministisch — und
        sagt es, statt eine Deutung zu behaupten. */
@@ -300,6 +325,7 @@ describe('Welle E von einer Naht zur nächsten', () => {
         mood: null,
         energy: null,
         tags: [],
+        areas: [],
       },
     });
     expect(applied.written).toContain(DAY_PATH);
@@ -319,8 +345,9 @@ describe('Welle E von einer Naht zur nächsten', () => {
     /* Was übrig bleibt, ist die bekannte Grenze: **ein Frontmatter-Patch kann kein
        Feld entfernen.** Ein Feld, das es vorher nicht gab, steht danach leer da —
        begründet in `journal-day.ts` (`previousFields`). Ein erfundener alter Wert
-       wäre schlimmer als eine leere Liste. */
-    expect(dayDiff.added.filter((line) => !/^[a-z]+: \[\]$/.test(line))).toEqual([]);
+       wäre schlimmer als eine leere Liste — und `closed: null` ist genau das,
+       was „wieder offen" in der Datei heißt (009). */
+    expect(dayDiff.added.filter((line) => !/^[a-z]+: (\[\]|null)$/.test(line))).toEqual([]);
 
     for (const path of applied.written) {
       /* Die Zeile ist weg, und keine andere fehlt. */
@@ -387,16 +414,15 @@ describe('Welle E von einer Naht zur nächsten', () => {
     expect(done.delta).toBe('');
 
     const written = (await vault.read(DAY_PATH)) ?? '';
-    /* Die eigene Runde steht da — sie ist geschrieben, bevor gefragt wird. */
-    expect(written).toContain('> **Ich**');
-    expect(written).toContain('> Der Sprint fühlt sich unmöglich an.');
-    /* Und keine Antwortrunde: gespielte Empathie wäre schlimmer als Stille. */
-    expect(written).not.toContain('> **Second Brain**');
+    /* Die eigenen Worte stehen da — geschrieben, bevor gefragt wird, als Prosa. */
+    expect(written).toContain('\nDer Sprint fühlt sich unmöglich an.\n');
+    /* Und kein Antwortblock: gespielte Empathie wäre schlimmer als Stille. */
+    expect(written).not.toContain('> **Gaston**');
     const view = await harness.call('journal:get', { date: DATE });
-    expect(view?.turns.map((turn) => turn.role)).toEqual(['user']);
+    expect(view?.turns).toEqual([]);
 
     /* Der Tagesabschluss läuft trotzdem und sagt, dass er ohne Modell entstand. */
-    const suggestion = await harness.call('journal:close', { date: DATE });
+    const suggestion = await closeDay(harness, DATE);
     expect(suggestion?.heuristic).toBe(true);
     expect(suggestion?.proposal.todos.length).toBeGreaterThan(0);
 

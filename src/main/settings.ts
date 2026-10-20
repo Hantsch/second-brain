@@ -1,10 +1,10 @@
-/* Zwei Einstellungsebenen, bewusst getrennt:
-   - App-Settings in `<userData>/settings.json` hängen an der Maschine
-     (Fenstergeometrie, Vault-Historie, Sprache vor dem ersten Vault).
-   - Vault-Settings in `<vault>/.secondbrain/settings.json` reisen mit dem Vault.
+/* Two levels of settings, deliberately separated:
+   - App settings in `<userData>/settings.json` are tied to the machine
+     (window geometry, vault history, language before the first vault).
+   - Vault settings in `<vault>/.secondbrain/settings.json` travel with the vault.
 
-   Diese Datei kennt Electron nicht: die Pfade werden hereingegeben, damit die
-   Einstellungen ohne laufende App testbar sind. */
+   This file doesn't know Electron: the paths are passed in, so the
+   settings are testable without a running app. */
 
 import { join } from 'node:path';
 import { VAULT_SETTINGS_FILE } from '@shared/types';
@@ -28,7 +28,7 @@ import {
 const APP_SETTINGS_FILE = 'settings.json';
 const MAX_RECENT_VAULTS = 8;
 
-/** Wird nach jeder Änderung gerufen — der Service-Container schickt daraus `event:settings`. */
+/** Called after every change — the service container sends `event:settings` from it. */
 export type SettingsListener = (snapshot: SettingsSnapshot) => void;
 
 export class SettingsService {
@@ -44,7 +44,7 @@ export class SettingsService {
     this.appSettings = app;
   }
 
-  /** Lädt die App-Settings; fehlende Felder kommen aus den Defaults. */
+  /** Loads the app settings; missing fields come from the defaults. */
   static async load(userDataDir: string): Promise<SettingsService> {
     const stored = await readJson<Partial<AppSettings>>(join(userDataDir, APP_SETTINGS_FILE));
     const merged = deepMerge(defaultAppSettings(), stored);
@@ -69,12 +69,12 @@ export class SettingsService {
     return { app: this.appSettings, vault: this.vaultSettings };
   }
 
-  /** Die Sprache, in der die Oberfläche gerade läuft — Vault schlägt App. */
+  /** The language the UI is currently running in — vault overrides app. */
   uiLanguage(): UiLanguage {
     return this.vaultSettings?.languages.ui ?? this.appSettings.uiLanguage;
   }
 
-  async patchApp(patch: Partial<AppSettings>): Promise<AppSettings> {
+  async patchApp(patch: DeepPartial<AppSettings>): Promise<AppSettings> {
     this.appSettings = deepMerge(this.appSettings, patch);
     this.appSettings.version = APP_SETTINGS_VERSION;
     await this.saveApp();
@@ -92,9 +92,9 @@ export class SettingsService {
   }
 
   /**
-   * Ersetzt einen ganzen Abschnitt der Vault-Einstellungen. Nötig überall, wo
-   * Einträge auch verschwinden müssen (Routing, Provider, Dashboard) — ein
-   * Merge würde Gelöschtes wieder auferstehen lassen.
+   * Replaces an entire section of the vault settings. Needed anywhere
+   * entries also need to disappear (routing, providers, dashboard) — a
+   * merge would resurrect anything deleted.
    */
   async setVaultSection<K extends keyof VaultSettings>(
     key: K,
@@ -108,7 +108,7 @@ export class SettingsService {
     return this.vaultSettings;
   }
 
-  /** Sprachen sitzen im Vault, solange einer offen ist — sonst in den App-Settings. */
+  /** Languages live in the vault as long as one is open — otherwise in the app settings. */
   async setLanguages(next: {
     ui?: UiLanguage;
     documents?: DocLanguage;
@@ -123,13 +123,21 @@ export class SettingsService {
   }
 
   /**
-   * Bindet die Einstellungen an einen Vault. Fehlt die Datei, wird sie mit
-   * vollständigen Defaults angelegt — ein Vault ohne Einstellungen gibt es nicht.
+   * Binds the settings to a vault. If the file is missing, it's created
+   * with full defaults — there is no vault without settings.
    */
   async openVault(root: string): Promise<VaultSettings> {
     const file = join(root, VAULT_SETTINGS_FILE);
     const stored = await readJson<Partial<VaultSettings>>(file);
-    const merged = deepMerge(defaultVaultSettings(), stored);
+    /* A vault opened for the first time has no `stored` languages of its own
+       yet — its seed is what the onboarding screen collected before the vault
+       existed, not the hardcoded 'de' in `defaultVaultSettings()`. `stored`
+       overrides this seed field by field once the vault has its own file. */
+    const seed: VaultSettings = {
+      ...defaultVaultSettings(),
+      languages: { ui: this.appSettings.uiLanguage, ...this.appSettings.newVaultLanguages },
+    };
+    const merged = deepMerge(seed, stored);
     merged.version = VAULT_SETTINGS_VERSION;
     this.vaultRoot = root;
     this.vaultSettings = merged;
@@ -144,7 +152,7 @@ export class SettingsService {
     await this.patchApp({ lastVault: null });
   }
 
-  /** Schreibt den Vault in die Historie und merkt ihn als „zuletzt geöffnet". */
+  /** Writes the vault into the history and marks it as "last opened". */
   async rememberVault(root: string): Promise<void> {
     const recent = [root, ...this.appSettings.recentVaults.filter((p) => p !== root)].slice(
       0,
@@ -157,7 +165,7 @@ export class SettingsService {
     await this.patchApp({ recentVaults: this.appSettings.recentVaults.filter((p) => p !== root) });
   }
 
-  /** Fenstergeometrie merken. Wird beim Verschieben gedrosselt aufgerufen. */
+  /** Remembers window geometry. Called throttled while moving the window. */
   async saveWindow(bounds: WindowBounds): Promise<void> {
     await this.patchApp({ window: bounds });
   }

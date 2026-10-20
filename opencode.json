@@ -1,0 +1,19 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "llamacpp-coder/qwen3-coder-30b-a3b",
+  "small_model": "llamacpp-coder/qwen3-coder-30b-a3b",
+  "share": "disabled",
+  "autoupdate": false,
+  "agent": {
+    "impl": {
+      "description": "Implements one pre-specified deliverable in named files. Does not explore the repo.",
+      "mode": "primary",
+      "model": "llamacpp-coder/qwen3-coder-30b-a3b",
+      "prompt": "{file:./.opencode/impl-prompt.md}",
+      "tools": {
+        "webfetch": false,
+        "task": false
+      }
+    }
+  }
+}

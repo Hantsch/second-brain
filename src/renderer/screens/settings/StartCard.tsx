@@ -1,12 +1,12 @@
-/* Der Einstieg für den Nutzer, der noch kein Modell hat.
+/* The onboarding for a user who doesn't have a model yet.
 
-   Drei Wege, jeder mit einem Satz, was er bedeutet — und darunter der Befund
-   dieses Rechners: läuft hier schon eine lokale Runtime? Antwortet Ollama oder
-   LM Studio, steht hier die Zahl der gefundenen Modelle und ein Knopf, der den
-   Zugang übernimmt. Antwortet nichts, steht die Anleitung da statt eines
-   Achselzuckens.
+   Three paths, each with one sentence explaining what it means — and below
+   that, this machine's findings: is a local runtime already running here?
+   If Ollama or LM Studio answers, this shows the number of models found and
+   a button that adopts the connection. If nothing answers, the guide is
+   shown instead of a shrug.
 
-   Die Karte erscheint nur, solange kein Provider eingerichtet ist. */
+   The card only appears while no provider is configured. */
 
 import { Button } from '../../atoms/Button';
 import { Card } from '../../atoms/Card';
@@ -15,6 +15,7 @@ import { Spinner } from '../../atoms/Spinner';
 import { useT } from '../../i18n';
 import { api } from '../../lib/api';
 import type { LocalRuntime } from '../../lib/queries/llm';
+import { LOCAL_RUNTIME_CARD_ID } from './LocalRuntimeCard';
 
 const OLLAMA_URL = 'https://ollama.com';
 
@@ -46,8 +47,8 @@ export function StartCard({
 }: StartCardProps) {
   const t = useT();
   const running = (runtimes ?? []).filter((runtime) => runtime.running);
-  /* Ein Fokuspunkt pro Screen: gibt es etwas zu übernehmen, gehört das Teal dem
-     Übernehmen — sonst dem Anlegen von Hand. */
+  /* One focus point per screen: if there is something to adopt, the teal
+     belongs to adopting — otherwise it belongs to adding manually. */
   const adoptable = running.some((runtime) => !runtime.configured && runtime.models.length > 0);
 
   return (
@@ -97,11 +98,26 @@ export function StartCard({
         ) : (
           <div className="sb-start-found">
             <p>{t('settings.detect.none')}</p>
-            <p className="sb-start-hint">{t('settings.detect.guide')}</p>
-            <p className="sb-mono">{t('settings.detect.command')}</p>
+            {/* The guided flow (get it, watch the download, pull a model) lives
+                in `LocalRuntimeCard` below — this used to be a raw terminal
+                command instead, which the guided flow makes obsolete rather
+                than a second, competing path (guardrail 1: one honest way). */}
+            <p className="sb-start-hint">{t('settings.detect.runtimeCardHint')}</p>
             <div className="sb-setting-actions">
               <Button
                 variant="secondary"
+                size="sm"
+                icon="arrow-right"
+                onClick={() =>
+                  document
+                    .getElementById(LOCAL_RUNTIME_CARD_ID)
+                    ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                }
+              >
+                {t('settings.detect.goToRuntimeCard')}
+              </Button>
+              <Button
+                variant="ghost"
                 size="sm"
                 icon="external-link"
                 onClick={() => void api.shell.openExternal(OLLAMA_URL).catch(() => undefined)}

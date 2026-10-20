@@ -1,147 +1,156 @@
-# Konzept
+# Concept
 
-## Warum
+Gaston offloads the real brain: dump thoughts in, get them filed, organized, and
+findable again.
 
-Zu viele Projekte, zu viel Springen zwischen ihnen. Nach dem Wechsel ist weg, wo man war
-und was in welchem Status ist. Dazu Ideen, Quellen, Gelesenes, Sorgen — alles, was ein
-Kopf nicht halten kann. Dieses Zeug soll aus dem Kopf raus, aber nicht verloren gehen:
-**reindumpen, und die App sorgt für Struktur.**
+## Why
 
-Zweiter Antrieb: Ein Second Brain, das nur gefüllt wird, verrottet. Notizen veralten,
-Seiten verwaisen, Quellen liegen unverdichtet herum, und irgendwann glaubt man dem eigenen
-Archiv nicht mehr. Deshalb ist **Pflege** hier ein Screen und kein Zufall.
+Too many projects, too much jumping between them. After switching, where you were
+and what state things are in is gone. On top of that: ideas, sources, things read,
+worries — everything a head can't hold. This stuff needs to get out of the head,
+but not get lost: **dump it in, and the app handles structure.**
 
-## Grundsätze
+Second driver: a second brain that's only ever filled rots. Notes go stale, pages
+become orphaned, sources sit undigested, and eventually you stop trusting your own
+archive. That's why **maintenance** is a screen here, not an afterthought.
 
-1. **Reindumpen kostet nichts.** Ein Hotkey, ein Textfeld, Enter. Kein Ordner wählen, kein
-   Titel, keine Tags — das macht die App.
-2. **Der Nutzer kümmert sich nicht um Struktur.** Ordner, Dateinamen, Frontmatter,
-   Verlinkung: Aufgabe der App. Wer will, darf trotzdem alles selbst editieren.
-3. **Die KI schlägt vor, der Mensch bestätigt.** Sichtbarer Vorschlag, sichtbare
-   Begründung, ein Klick zum Ändern. Nichts wandert still irgendwohin.
-4. **Belegt oder nicht gesagt.** Antworten kommen aus dem Vault, mit Zitat und Pfad.
-5. **Autark.** Kein Server, kein Docker, keine Cloud-Pflicht. Ordner auf den Stick, fertig.
-6. **Manchmal will man keine Lösung.** Der Coach hat einen Modus, der nur zuhört.
+## Principles
 
-## Was die App tut
+1. **Dumping costs nothing.** A hotkey, a text field, Enter. No choosing a folder,
+   no title, no tags — the app does that.
+2. **The user doesn't worry about structure.** Folders, filenames, frontmatter,
+   linking: the app's job. Anyone who wants to can still edit everything by hand.
+3. **The AI proposes, the human confirms.** Visible proposal, visible reasoning,
+   one click to change it. Nothing moves anywhere silently.
+4. **Backed by evidence, or not said at all.** Answers come from the vault, with
+   citation and path.
+5. **Self-contained.** No server, no Docker, no cloud requirement. Folder onto a
+   stick, done.
+6. **Sometimes you don't want a solution.** The coach has a mode that just listens.
 
-### Rein — Erfassen und Einordnen
+## What the app does
 
-- **Dump**: großes Feld, `Ctrl+Enter` speichert. Global per `Ctrl+Shift+Space`, auch wenn
-  die App nicht im Vordergrund ist. Landet sofort als Datei in `inbox/` — nie erst nach
-  erfolgreicher Klassifizierung.
-- **Einordnen**: ein LLM liest den Dump und schlägt vor, wohin er gehört — in ein Projekt
-  (Arbeit oder Privat), in den Tageseintrag, als Notiz in einen Bereich, als Quelle in ein
-  Wissens-Modul, oder als neues Projekt. Dazu: Titel, Tags, erkannte Todos mit Fristen,
-  erkannte „warte auf X".
-- **Ohne LLM** greift eine Heuristik (Schlüsselwörter, Projektnamen, Datumsmuster) und der
-  Dump bleibt sichtbar in der Inbox — nichts geht verloren.
-- **Quellen aufnehmen**: YouTube-Videos (Pipeline aus `../yougrab`: Metadaten, Transcript
-  als Prosa, Transcript mit Deep-Links), Dateien, URLs, Text aus der Zwischenablage.
-  Rohquelle nach `raw/`, dann Verdichtung ins Wissens-Modul.
+### In — capturing and filing
 
-### Drin — Wissen, das zusammenwächst
+- **Dump**: a big field, `Ctrl+Enter` saves. Globally via `Ctrl+Shift+Space`, even
+  when the app isn't in the foreground. Lands immediately as a file in `inbox/` —
+  never only after successful classification.
+- **Filing**: an LLM reads the dump and suggests where it belongs — into a project
+  (work or private), into the daily entry, as a note in an area, as a source in a
+  knowledge module, or as a new project. Along with that: title, tags, detected
+  todos with deadlines, detected "waiting on X."
+- **Without an LLM**, a heuristic takes over (keywords, project names, date
+  patterns) and the dump stays visible in the inbox — nothing gets lost.
+- **Ingesting sources**: YouTube videos (pipeline from `../yougrab`: metadata,
+  transcript as prose, transcript with deep links), files, URLs, text from the
+  clipboard. Raw source goes to `raw/`, then digestion into the knowledge module.
 
-- **Wissens-Module** sind eigenständige kleine Wikis nach Karpathys LLM-Wiki-Muster
-  (übernommen aus `../godot-RAG`): Source-Seiten, Entity-Seiten, Concept-Seiten,
-  `index.md`, `log.md`, `overview.md`. Wissen wird **einmal beim Ingest verdichtet**, nicht
-  bei jeder Frage neu.
-- **Widersprüche werden behalten und benannt**, nicht plattgebügelt.
-- **Fragen** gehen gegen den ganzen Vault oder gegen ein Modul. Antwort mit Zitaten. War
-  die Frage gut, wird die Antwort auf Knopfdruck als Wiki-Seite abgelegt — so füttert das
-  Fragen das Second Brain, statt im Chat zu verschwinden.
+### Inside — knowledge that grows together
 
-### Überblick — was war, was ansteht
+- **Knowledge modules** are self-contained small wikis following Karpathy's
+  LLM-wiki pattern (adopted from `../godot-RAG`): source pages, entity pages,
+  concept pages, `index.md`, `log.md`, `overview.md`. Knowledge is **digested once
+  at ingest**, not re-derived on every question.
+- **Contradictions are kept and named**, not flattened.
+- **Questions** run against the whole vault or against one module. Answers with
+  citations. If the question was good, the answer can be filed as a wiki page at
+  the push of a button — that way asking feeds Gaston instead of
+  vanishing in the chat.
 
-- **Dashboard** aus verschiebbaren Modulen, die der Nutzer nach Laune anordnet:
-  - **Zuletzt gearbeitet** — aus Dateiänderungen _und_ Claude-Code-Sessions
-    (`~/.claude/projects`, Leseweise aus `../claude-control`)
-  - **Stagnierende Projekte** — lange nicht angefasst und nicht abgeschlossen
-  - **Todos Arbeit** und **Todos Privat**, getrennt
-  - **Warte auf** — wer, seit wann, bis wann die Antwort da sein sollte
-  - **Anstehende Fristen** — Projekt-Deadlines und Todo-Fristen in einer Zeile
-  - **Inbox**, **Journal-Serie**, **Pflege-Gesundheit**, **Schnell-Erfassen**, **Frage**
-- **Projekte** tragen `next_step` — den einen Satz, der den Wiedereinstieg trägt. Fehlt er,
-  ist das ein Pflege-Befund.
-- **Erinnerungen** kommen als Windows-Benachrichtigung, wenn eine Frist fällt oder eine
-  Antwort überfällig ist.
+### Overview — what happened, what's coming up
 
-### Mensch — Tagebuch und Coach
+- **Dashboard** made of movable modules, arranged by the user however they like:
+  - **Recent work** — from file changes _and_ Claude Code sessions
+    (`~/.claude/projects`, read the way `../claude-control` does it)
+  - **Stagnant projects** — untouched for a long time and not closed
+  - **Work todos** and **private todos**, kept separate
+  - **Waiting on** — who, since when, by when the reply should have arrived
+  - **Upcoming deadlines** — project deadlines and todo deadlines in one line
+  - **Inbox**, **journal streak**, **maintenance health**, **quick capture**, **ask**
+- **Projects** carry `next_step` — the one sentence that carries the re-entry.
+  If it's missing, that's a maintenance finding.
+- **Reminders** arrive as a Windows notification when a deadline is due or a reply
+  is overdue.
 
-- Tageseintrag pro Tag, mit optional Stimmung und Energie.
-- Der Coach kennt drei Haltungen, umschaltbar pro Gespräch (Strg+1 bis Strg+3; die Vorgabe
-  steht unter Einstellungen → Verhalten):
-  - **Zuhören** — spiegeln, bestätigen, keine Ratschläge
-  - **Tipps** — zuhören, dann konkrete Vorschläge
-  - **Analysieren** — im Licht früherer Einträge Muster zeigen
-- Tagesabschluss extrahiert Fakten, Todos und Fristen — als Vorschläge.
-- **Das Gespräch steht im Tageseintrag**, als Blockquote mit Sprecher und Uhrzeit
-  (docs/VAULT-FORMAT.md), nicht in einer Ablage daneben. Wer die Datei in Obsidian
-  aufschlägt, liest denselben Faden.
-- **Ohne Modell wird keine Antwort erfunden.** Die eigene Runde steht trotzdem in der
-  Datei — sie wird geschrieben, bevor gefragt wird. In der Haltung „Analysieren" nennt die
-  App dann die früheren Tage, die sie wirklich gefunden hat, wörtlich und mit Datum:
-  Belege statt gespielter Empathie.
+### Human — journal and coach
 
-### Pflege — gegen das Verrotten
+- One daily entry per day, with optional mood and energy.
+- The coach has three stances, switchable per conversation (Ctrl+1 through
+  Ctrl+3; the default lives under Settings → Behavior):
+  - **Listen** — reflect, acknowledge, no advice
+  - **Suggest** — listen, then give concrete suggestions
+  - **Analyze** — show patterns in light of earlier entries
+- Day close extracts facts, todos, and deadlines — as proposals.
+- **The conversation lives in the daily entry**, as a blockquote with speaker and
+  time (docs/VAULT-FORMAT.md), not in a separate store next to it. Anyone who opens
+  the file in Obsidian reads the same thread.
+- **Without a model, no reply is invented.** The user's own turn is still written
+  to the file — it's written before asking. In the "Analyze" stance, the app then
+  names the earlier days it actually found, verbatim and dated: evidence instead
+  of performed empathy.
 
-Deterministische Checks (verwaiste Seiten, kaputte Wikilinks, Index-Drift, angestaubte
-Seiten, Quellen ohne Verdichtung, Dumps, die zu lange liegen, Projekte ohne nächsten
-Schritt) plus optionale LLM-Deutung (Widersprüche, häufig genannte Begriffe ohne Seite,
-Beinahe-Dubletten). Ergebnis: ein Gesundheitswert, eine Liste mit Ein-Klick-Korrekturen und
-höchstens drei Sätze Rat, was als Nächstes zu tun ist.
+### Maintenance — against rot
 
-Drei Zusagen, die den Unterschied machen:
+Deterministic checks (orphaned pages, broken wikilinks, index drift, stale pages,
+undigested sources, dumps sitting too long, projects without a next step) plus
+optional LLM interpretation (contradictions, frequently mentioned terms without a
+page, near-duplicates). Result: a health score, a list of one-click fixes, and at
+most three sentences of advice on what to do next.
 
-- **Der Gesundheitswert wird nicht erfunden.** Ohne Lauf und ohne Bestand gibt es keinen
-  Wert, keine 100. Der Screen sagt, _warum_ der Wert so ist.
-- **Eine Korrektur zeigt vorher die Zeile, die sie schreibt** — wortwörtlich. Was nichts
-  schreibt (zwei Seiten vergleichen, zum Einordnen springen), heißt „öffnen" und nicht
-  „zusammenführen". Jeder Schreibvorgang hat ein Rückgängig; der Eintrag in der Chronik des
-  Moduls bleibt, weil `log.md` append-only ist.
-- **Widersprüche werden benannt, nicht geglättet.** Und sie brauchen ein Modell: ohne Route
-  behauptet die App keinen. Der Screen sagt an der Stelle, was ein Modell zusätzlich fände.
+Three commitments that make the difference:
 
-## LLM: kategorisiert, wählbar, ehrlich
+- **The health score is never invented.** Without a run and without content,
+  there's no score, no 100. The screen says _why_ the score is what it is.
+- **A fix shows the line it writes beforehand** — verbatim. Anything that writes
+  nothing (comparing two pages, jumping to filing) is called "open," not "merge."
+  Every write has an undo; the entry in the module's chronicle stays, because
+  `log.md` is append-only.
+- **Contradictions are named, not smoothed over.** And they need a model: without
+  a route, the app claims none. The screen states, right there, what a model would
+  additionally find.
 
-Jede LLM-Aufgabe der App ist eine Kategorie (`TaskKind`). Der Nutzer ordnet jeder Kategorie
-Provider und Modell zu — im Admin-Screen, mit Vorschlag pro Kategorie:
+## LLM: categorized, selectable, honest
 
-| Aufgabe                  | Empfehlung  | Warum                                                  |
-| ------------------------ | ----------- | ------------------------------------------------------ |
-| Titel und Tags           | klein/lokal | Ein Satz Ausgabe. Ein großes Modell wäre Verschwendung |
-| Dump einordnen           | klein/lokal | Persönlicher Inhalt, einfache Entscheidung             |
-| Todos und Fristen ziehen | klein/lokal | Strukturierte Extraktion                               |
-| Frage beantworten        | mittel      | Muss Belege korrekt zusammenführen                     |
-| Quelle verdichten        | mittel      | Länger, aber geradeaus                                 |
-| Wiki-Seiten schreiben    | groß        | Verknüpfen, Widersprüche erkennen, Bestand verändern   |
-| Pflegelauf deuten        | groß        | Urteil über den ganzen Bestand                         |
-| Tagebuch-Gespräch        | lokal       | Das Sensibelste, was es hier gibt                      |
+Every LLM task in the app is a category (`TaskKind`). The user assigns a provider
+and a model to each category — in the admin screen, with a suggestion per category:
 
-Provider werden im Admin-Screen angelegt (Anthropic, OpenAI, OpenRouter, Ollama,
-LM Studio, beliebige OpenAI-kompatible URL), mit Verbindungstest und Modell-Liste.
-Schlüssel liegen verschlüsselt auf der Maschine, nie im Vault.
+| Task                        | Recommendation | Why                                                     |
+| --------------------------- | -------------- | ------------------------------------------------------- |
+| Title and tags              | small/local    | One sentence of output. A large model would be wasteful |
+| File a dump                 | small/local    | Personal content, a simple decision                     |
+| Extract todos and deadlines | small/local    | Structured extraction                                   |
+| Answer a question           | medium         | Must correctly merge evidence                           |
+| Digest a source             | medium         | Longer, but straightforward                             |
+| Write wiki pages            | large          | Linking, spotting contradictions, changing content      |
+| Interpret a maintenance run | large          | Judgment over the whole content                         |
+| Journal conversation        | local          | The most sensitive thing here                           |
 
-**Ohne konfiguriertes Modell bleibt die App vollständig benutzbar**: erfassen, ablegen,
-suchen, Projekte, Todos, Fristen, Journal schreiben, Pflege-Checks. Was ein Modell
-bräuchte, sagt das an der Stelle, an der es fehlt — mit direktem Weg in die Einstellung.
+Providers are set up in the admin screen (Anthropic, OpenAI, OpenRouter, Ollama,
+LM Studio, any OpenAI-compatible URL), with a connection test and model list.
+Keys live encrypted on the machine, never in the vault.
 
-## Abgrenzung
+**Without a configured model, the app stays fully usable**: capturing, filing,
+searching, projects, todos, deadlines, writing the journal, maintenance checks.
+Wherever a model is needed, the app says so right at that spot — with a direct
+link into the setting.
 
-Nicht in dieser Fassung: Mehrbenutzer, Sync-Dienst, Mobile, Embeddings/Vektorsuche,
-Kalender- und Mail-Anbindung, Sprach-Eingabe, Web-Oberfläche. Der Vault ist ein Ordner —
-Sync macht, wer will, mit Git, OneDrive oder einem Stick.
+## Out of scope
 
-Und was beim Bauen ausdrücklich **nicht** entstanden ist, obwohl es geplant war:
+Not in this version: multi-user, a sync service, mobile, embeddings/vector
+search, calendar and mail integration, voice input, a web UI. The vault is a
+folder — anyone who wants to sync it can do so with Git, OneDrive, or a stick.
 
-- **Kein automatisches Ablegen.** Eine Schwelle, ab der ein Ablage-Vorschlag ohne Rückfrage
-  ausgeführt wird, war einmal eine Einstellung. Sie widerspricht Grundsatz „die KI schlägt
-  vor, der Mensch bestätigt", also konnte niemand sie lesen — und ein Schieber, den niemand
-  liest, ist eine Behauptung. Er ist weg.
-- **Kein Vorab-Abschalten des Tagesabschlusses.** Der Abschluss schlägt vor, was im Text
-  steht; anhaken tut der Mensch. Schalter, die einzelne Vorschlagsarten vorab unterdrücken,
-  verschweigen nur, was er ohnehin ablehnen kann.
-- **Kein Widerspruch quer über den ganzen Bestand.** Die Deutung sieht die von Befunden
-  berührten Seiten plus die mit benannter Beziehung, höchstens 24 — aus Kosten- und
-  Privatsphäregründen. Ein Widerspruch zwischen zwei sonst unauffälligen Seiten bleibt
-  unentdeckt; die Grenze steht im Kopf von `core/gardener/audit.ts`.
+And things that were explicitly **not** built, despite being planned:
+
+- **No automatic filing.** A threshold above which a filing proposal executes
+  without confirmation was once a setting. It contradicts the principle "the AI
+  proposes, the human confirms," so nobody could read it — and a toggle nobody
+  reads is a false claim. It's gone.
+- **No pre-disabling of day close.** The close suggests what's in the text;
+  checking it off is the human's job. Toggles that pre-suppress individual kinds
+  of proposals only hide what the user could reject anyway.
+- **No contradiction check across the whole content.** The interpretation sees
+  the pages touched by findings plus those with a named relationship, at most
+  24 — for cost and privacy reasons. A contradiction between two otherwise
+  unremarkable pages stays undiscovered; the boundary lives in the doc comment
+  of `core/gardener/audit.ts`.

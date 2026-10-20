@@ -1,11 +1,12 @@
-/* Der Eingang: ein Feld, das selbst erkennt, was hereinkommt.
+/* The inbox: a single field that detects on its own what's coming in.
 
-   Ein Feld statt vier Knöpfen — der Nutzer hat einen Link in der Zwischenablage
-   und will ihn loswerden, nicht erst die Quellenart bestimmen. Was erkannt wurde,
-   steht als Zeile darunter („YouTube-Video erkannt"), bevor irgendetwas passiert.
+   One field instead of four buttons — the user has a link on the clipboard and
+   wants to get rid of it, not determine the source type first. What was
+   detected is shown as a line below ("YouTube video detected") before
+   anything happens.
 
-   Das Zielmodul ist eine Auswahl mit „später einordnen" als erstem Eintrag: die
-   Verdichtung braucht ein Modul, aber die Rohquelle nicht. */
+   The target module is a dropdown with "file later" as the first entry:
+   condensing needs a module, but the raw source doesn't. */
 
 import { useId } from 'react';
 import type { IngestKind, KnowledgeModule } from '@shared/types';
@@ -18,16 +19,16 @@ export interface SourceInputProps {
   value: string;
   onChange: (value: string) => void;
   modules: readonly KnowledgeModule[];
-  /** Gewähltes Zielmodul, oder null für „später einordnen". */
+  /** Selected target module, or null for "file later". */
   module: string | null;
   onModule: (module: string | null) => void;
   busy: boolean;
   onSubmit: (kind: IngestKind, input: string) => void;
-  /** Dateidialog öffnen. */
+  /** Open the file dialog. */
   onPickFiles: () => void;
 }
 
-/** Symbol je erkannter Art — dieselbe Zuordnung wie in der Quellenliste. */
+/** Icon per detected kind — same mapping as in the source list. */
 const ICONS: Record<IngestKind, string> = {
   youtube: 'download',
   url: 'globe',
@@ -70,7 +71,7 @@ export function SourceInput({
             value={value}
             onChange={(event) => onChange(event.target.value)}
             onKeyDown={(event) => {
-              /* Ctrl+Enter schickt ab — wie überall in dieser App. */
+              /* Ctrl+Enter submits — same as everywhere else in this app. */
               if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
                 event.preventDefault();
                 submit();

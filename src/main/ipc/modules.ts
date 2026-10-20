@@ -1,38 +1,39 @@
-/* Wissens-Module und Wiki-Seiten.
+/* Knowledge modules and wiki pages.
 
-   Modul-, Seiten- und Quellenlisten kommen aus dem Index (er ist die abgeleitete
-   Wahrheit); Anlegen, Lesen und Schreiben einer Seite gehen durch `@core/wiki`.
-   Store, Index und Gateway kommen aus `wiki-bridge.ts` — dieselbe Verdrahtung
-   benutzen auch die Quellen- und die Fragen-Kanäle.
+   Module, page, and source lists come from the index (it is the derived
+   truth); creating, reading, and writing a page goes through `@core/wiki`.
+   Store, index, and gateway come from `wiki-bridge.ts` — the source and
+   question channels use the same wiring.
 
-   Eine Entscheidung, die man im Code sonst nicht sieht: **`modules:savePage`
-   setzt `updated`,** weil hier die App schreibt. Ohne `expectedHash` wird
-   ausdrücklich überschrieben — das ist der zweite Weg des Konfliktdialogs
-   („neu laden oder überschreiben?"). */
+   A decision you wouldn't otherwise see in the code: **`modules:savePage`
+   sets `updated`,** because this is where the app writes. Without
+   `expectedHash`, it explicitly overwrites — that's the second path of the
+   conflict dialog ("reload or overwrite?"). */
 
 import { excerpt, wordCount } from '@core/vault/doc';
 import { createModule, listModules, pageRefOf, readPage, writePage } from '@core/wiki';
 import type { KnowledgeModule, VaultDoc, WikiPage } from '@shared/types';
 import type { HandlerMap } from './registry';
 import { defineHandlers, fail } from './registry';
-import { gardenerStateFor } from './gardener-deps';
+import { gardenerReport } from './gardener-deps';
 import { requireLists } from './lists';
 import { docLanguage, settle, wikiIndex, wikiStore } from './wiki-bridge';
 import type { Services } from '../services';
 
 /**
- * Die Befundzahl je Modul aus dem letzten Pflegelauf.
+ * The finding count per module from the last maintenance run.
  *
- * Der Kern setzt `findingCount: 0` — er kennt keinen Pflegelauf, und 0 heißt dort
- * „keine bekannten Befunde". Gab es einen Lauf, ist die Zahl bekannt, und dann soll
- * sie auf der Modulkarte stehen: sonst hätte der Nutzer zwei Orte für dieselbe
- * Frage. Gab es keinen, bleibt es bei 0 — nicht bei einer erfundenen Zahl.
+ * The core sets `findingCount: 0` — it knows nothing of a maintenance run, and
+ * 0 there means "no known findings". If there was a run, the number is known,
+ * and then it should show up on the module card: otherwise the user would have
+ * two places for the same question. If there wasn't one, it stays at 0 — not
+ * at a made-up number.
  */
 async function withFindings(
   services: Services,
   modules: readonly KnowledgeModule[],
 ): Promise<KnowledgeModule[]> {
-  const report = (await gardenerStateFor(services)).present();
+  const report = await gardenerReport(services);
   if (report === null) return [...modules];
   return modules.map((module) => ({
     ...module,
@@ -41,9 +42,9 @@ async function withFindings(
 }
 
 /**
- * Die Seite, wie der Renderer sie braucht. Der Index kennt Graph und Zählungen;
- * eine gerade angelegte Seite steht dort noch nicht — dann wird sie aus der Datei
- * beschrieben, mit leerem Graphen statt einer erfundenen Nachbarschaft.
+ * The page as the renderer needs it. The index knows the graph and counts;
+ * a page that was just created isn't in there yet — then it's described from
+ * the file, with an empty graph instead of a made-up neighborhood.
  */
 function pageOf(services: Services, path: string): WikiPage | null {
   const pages = services.index()?.pages?.() ?? [];
@@ -75,7 +76,7 @@ function pageFromDoc(path: string, doc: VaultDoc): WikiPage | null {
   };
 }
 
-/** Knoten und Kanten eines Moduls. Die Kennung ist `modul/slug` — wie `outbound`. */
+/** Nodes and edges of a module. The identifier is `module/slug` — same as `outbound`. */
 function graphOf(
   services: Services,
   module: string,
@@ -96,8 +97,8 @@ function graphOf(
   for (const page of pages) {
     const from = `${page.module}/${page.slug}`;
     for (const to of page.outbound) {
-      /* Kanten über Modulgrenzen gehören nicht in diesen Graphen; kaputte Links
-         sind hier gar keine Kante — sie haben kein Ziel. */
+      /* Edges across module boundaries don't belong in this graph; broken
+         links aren't an edge here at all — they have no target. */
       if (!known.has(to) || to === from) continue;
       const key = from < to ? `${from}|${to}` : `${to}|${from}`;
       if (seen.has(key)) continue;
@@ -136,9 +137,9 @@ export function moduleHandlers(services: Services): HandlerMap {
       return { page, doc: found.doc };
     },
 
-    /* Schreiben mit Konfliktschutz. `expectedHash` ist das, was der Nutzer
-       gelesen hat; fehlt er, ist das die ausdrückliche Entscheidung, den
-       fremden Stand zu überschreiben. */
+    /* Writing with conflict protection. `expectedHash` is what the user has
+       read; if it's missing, that's the explicit decision to overwrite
+       someone else's version. */
     'modules:savePage': async (request) => {
       if (pageRefOf(request.path) === null) {
         throw fail('invalid', `keine Wiki-Seite: ${request.path}`);

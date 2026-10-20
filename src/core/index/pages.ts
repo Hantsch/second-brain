@@ -10,8 +10,9 @@
  * statt still zu verschwinden; daraus lebt der Pflegelauf.
  */
 
-import type { RawSource, WikiPage, WikiPageType } from '@shared/types';
+import type { RawSource, SourceBlockReason, WikiPage, WikiPageType } from '@shared/types';
 import { excerpt } from '@core/vault/doc';
+import { isTranscriptAvailable } from '@core/ingest/youtube/writer';
 import { baseName, extName } from '@core/vault/paths';
 import { asDate, asStringList, asText, contentLines } from './text';
 import type { BrokenLink, IndexedDoc, ModulePageCounts } from './types';
@@ -232,6 +233,17 @@ function kindOf(value: unknown, path: string): RawSource['kind'] {
 }
 
 /**
+ * Warum eine Quelle nichts zum Verdichten hergibt. Nur ein youtube-Protokoll
+ * mit `transcript`-Feld trifft ueberhaupt eine Aussage; ein legacy-Protokoll
+ * ohne dieses Feld bleibt unblockiert (AC5) statt geraten zu werden.
+ */
+export function blockedReasonOf(record: Record<string, unknown>): SourceBlockReason | null {
+  const transcript = record['transcript'];
+  if (typeof transcript !== 'object' || transcript === null) return null;
+  return isTranscriptAvailable(transcript) ? null : 'no-transcript';
+}
+
+/**
  * Rohquellen aus den `.ingest.json`-Protokollen. Ein kaputtes Protokoll versteckt
  * die Quelle nicht: Art und Titel kommen dann aus dem Pfad.
  */
@@ -259,6 +271,7 @@ export function deriveSources(entries: readonly IngestEntry[]): RawSource[] {
       origin: asText(record['origin']),
       bytes: entry.bytes,
       modules: asStringList(record['modules']),
+      blocked: blockedReasonOf(record),
     });
   }
   sources.sort((a, b) =>

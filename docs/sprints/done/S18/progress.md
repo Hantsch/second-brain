@@ -1,0 +1,134 @@
+- 2026-09-25 13:33:19 · refine · 054 055 056 062 052 053 060 061 · started
+- 2026-09-25 13:40:19 · refine · 054 055 056 062 052 053 060 061 · done
+- 2026-09-25 13:40:22 · 054 · build · started
+- 2026-09-25 13:40 · 054 · D1 persistence split · started
+- 2026-09-25 13:53 · 054 · D1 persistence split · done
+- 2026-09-25 13:54 · 054 · D2 incremental derivation stage · started
+- 2026-09-25 14:02 · 054 · D2 incremental derivation stage · done
+- 2026-09-25 14:02 · 054 · D3 path-scoped refresh · started
+- 2026-09-25 14:12 · 054 · D3 path-scoped refresh · done
+- 2026-09-25 14:12 · 054 · D4 startup no re-derive · started
+- 2026-09-25 14:20 · 054 · D4 startup no re-derive · done
+- 2026-09-25 14:20 · 054 · D5 document-size guard · started
+- 2026-09-25 14:23 · 054 · D5 document-size guard · done
+- 2026-09-25 14:23 · 054 · D6 index stats card note · started
+- 2026-09-25 14:25 · 054 · D6 index stats card note · done
+- 2026-09-25 14:26 · 054 · D7 realistic perf test · started
+- 2026-09-25 14:39 · 054 · D7 realistic perf test · done
+- 2026-09-25 14:39 · 054 · verify · started
+- 2026-09-25 14:47 · 054 · verify · blocked: module-lifecycle-ipc regression from path-scoped refresh
+- 2026-09-25 14:48 · 054 · verify · started
+- 2026-09-25 14:52 · 054 · verify · done
+- 2026-09-25 14:52 · 054 · review 1 · started
+- 2026-09-25 14:56 · 054 · review 1 · done
+- 2026-09-25 14:59 · 054 · verify · started
+- 2026-09-25 15:02 · 054 · verify · done
+- 2026-09-25 15:03 · 054 · story · done
+- 2026-09-25 15:03:48 · 055 · build · started
+- 2026-09-25 15:04 · 055 · D1 bounded wait batcher · started
+- 2026-09-25 15:06 · 055 · D1 bounded wait batcher · done
+- 2026-09-25 15:06 · 055 · D2 awaitWriteFinish · started
+- 2026-09-25 15:07 · 055 · D2 awaitWriteFinish · done
+- 2026-09-25 15:07 · 055 · D3 refresh coalescing · started
+- 2026-09-25 15:10 · 055 · D3 refresh coalescing · done
+- 2026-09-25 15:10 · 055 · D4 honest failure status · started
+- 2026-09-25 15:13 · 055 · D4 honest failure status · done
+- 2026-09-25 15:13 · 055 · D4-fix renderer VaultStatus fixtures · started
+- 2026-09-25 15:15 · 055 · D4-fix renderer VaultStatus fixtures · done
+- 2026-09-25 15:15 · 055 · D5 rail and settings visibility · started
+- 2026-09-25 15:18 · 055 · D5 rail and settings visibility · done
+- 2026-09-25 15:18 · 055 · verify · started
+- 2026-09-25 15:22 · 055 · verify · done
+- 2026-09-25 15:22 · 055 · review 1 · started
+- 2026-09-25 15:25 · 055 · review 1 · done: FAIL - 1 finding (pendingFailedChange leak across vault close/open)
+- 2026-09-25 15:28 · 055 · verify · started
+- 2026-09-25 15:31 · 055 · verify · done
+- 2026-09-25 15:31 · 055 · story · done
+- 2026-09-25 15:32:13 · 056 · build · started
+- 2026-09-25 15:33 · 056 · D1 once-per-index loose-end derivation (core) · started
+- 2026-09-25 15:37 · 056 · D1 once-per-index loose-end derivation (core) · done
+- 2026-09-25 15:37 · 056 · D2 core consumers read the derivation · started
+- 2026-09-25 15:44 · 056 · D2 core consumers read the derivation · done
+- 2026-09-25 15:44 · 056 · D3 main consumers read the derivation, plus cross-surface count · started
+- 2026-09-25 15:51 · 056 · D3 main consumers read the derivation, plus cross-surface count · done
+- 2026-09-25 15:51 · 056 · verify · started
+- 2026-09-25 15:53 · 056 · verify · done
+- 2026-09-25 15:53 · 056 · review 1 · started
+- 2026-09-25 15:58 · 056 · review 1 · done: PASS - no findings
+- 2026-09-25 15:58 · 056 · story · done
+- 2026-09-25 15:59:15 · 062 · build · started
+- 2026-09-25 15:59 · 062 · D1 Types and core treat both CLIs as work traces · started
+- 2026-09-25 16:04 · 062 · D1 Types and core treat both CLIs as work traces · done
+- 2026-09-25 16:05 · 062 · D2 The overview reads Codex, and one touches map holds both CLIs · started
+- 2026-09-25 16:13 · 062 · D2 The overview reads Codex, and one touches map holds both CLIs · done
+- 2026-09-25 16:13 · 062 · D3 The sessions tile shows both CLIs · started
+- 2026-09-25 16:18 · 062 · D3 The sessions tile shows both CLIs · done
+- 2026-09-25 16:18 · 062 · verify · started
+- 2026-09-25 16:23 · 062 · verify · done
+- 2026-09-25 16:23 · 062 · review 1 · started
+- 2026-09-25 16:27 · 062 · review 1 · done
+- 2026-09-25 16:28 · 062 · story · done
+- 2026-09-25 16:28:55 · 052 · build · started
+- 2026-09-25 16:29 · 052 · D1 SearchQuery.project filters before limit cut · started
+- 2026-09-25 16:30 · 052 · D1 SearchQuery.project filters before limit cut · done
+- 2026-09-25 16:30 · 052 · D2 retrieve scopes inside the search · started
+- 2026-09-25 16:42 · 052 · D2 retrieve scopes inside the search · done
+- 2026-09-25 16:42 · 052 · verify · started
+- 2026-09-25 16:45 · 052 · verify · done
+- 2026-09-25 16:45 · 052 · review 1 · started
+- 2026-09-25 16:46 · 052 · review 1 · done
+- 2026-09-25 16:47 · 052 · story · done
+- 2026-09-25 16:47:28 · 053 · build · started
+- 2026-09-25 16:47 · 053 · D1 raw DocType · started
+- 2026-09-25 16:52 · 053 · D1 raw DocType · done
+- 2026-09-25 16:52 · 053 · D2 passage splitter · started
+- 2026-09-25 16:59 · 053 · D2 passage splitter · done
+- 2026-09-25 16:59 · 053 · D3 passage search engine (hard) · started
+- 2026-09-25 17:05 · 053 · D3 passage search engine (hard) · done
+- 2026-09-25 17:05 · 053 · D4 ask retrieves passages · started
+- 2026-09-25 17:14 · 053 · D4 ask retrieves passages · done
+- 2026-09-25 17:14 · 053 · D5 perf test realistic sizes · started
+- 2026-09-25 17:19 · 053 · D5 perf test realistic sizes · done
+- 2026-09-25 17:19 · 053 · verify · started
+- 2026-09-25 17:22 · 053 · verify · done
+- 2026-09-25 17:22 · 053 · review 1 · started
+- 2026-09-25 17:25 · 053 · review 1 · done
+- 2026-09-25 17:25 · 053 · review 2 (hard) · started
+- 2026-09-25 17:27 · 053 · review 2 (hard) · done
+- 2026-09-25 17:29 · 053 · story · done
+- 2026-09-25 17:29:27 · 060 · build · started
+- 2026-09-25 17:30 · 060 · D1 unpdf dependency + no-native guard · started
+- 2026-09-25 17:30 · 060 · D1 unpdf dependency + no-native guard · done
+- 2026-09-25 17:30 · 060 · D2 PDF text extraction in core · started
+- 2026-09-25 17:33 · 060 · D2 PDF text extraction in core · done
+- 2026-09-25 17:33 · 060 · D3 file ingestor reads PDFs · started
+- 2026-09-25 17:36 · 060 · D3 file ingestor reads PDFs · done
+- 2026-09-25 17:36 · 060 · D4 oversized PDF fails visibly · started
+- 2026-09-25 17:39 · 060 · D4 oversized PDF fails visibly · done
+- 2026-09-25 17:39 · 060 · D5 strings + e2e through the real inbox · started
+- 2026-09-25 17:52 · 060 · D5 strings + e2e through the real inbox · done
+- 2026-09-25 17:52 · 060 · verify · started
+- 2026-09-25 17:56 · 060 · verify · done
+- 2026-09-25 17:56 · 060 · review 1 · started
+- 2026-09-25 17:57 · 060 · review 1 · done
+- 2026-09-25 17:58 · 060 · story · done
+- 2026-09-25 17:58:54 · 061 · build · started
+- 2026-09-25 17:59 · 061 · D1 English relative dates in findDates · started
+- 2026-09-25 18:02 · 061 · D1 English relative dates in findDates · done
+- 2026-09-25 18:02 · 061 · D2 English lexicon and task detection · started
+- 2026-09-25 18:05 · 061 · D2 English lexicon and task detection · done
+- 2026-09-25 18:05 · 061 · D3 heuristic speaks document language · started
+- 2026-09-25 18:08 · 061 · D3 heuristic speaks document language · done
+- 2026-09-25 18:08 · 061 · D4 link files to module only when named · started
+- 2026-09-25 18:08 · 061 · D4 link files to module only when named · done
+- 2026-09-25 18:08 · 061 · D5 ask path no-evidence marker follows reply language · started
+- 2026-09-25 18:09 · 061 · D5 ask path no-evidence marker follows reply language · done
+- 2026-09-25 18:09 · 061 · D6 loose ends in English forward-looking phrasing (hard) · started
+- 2026-09-25 18:14 · 061 · D6 loose ends in English forward-looking phrasing (hard) · done
+- 2026-09-25 18:14 · 061 · verify · started
+- 2026-09-25 18:18 · 061 · verify · done
+- 2026-09-25 18:18 · 061 · review 1 · started
+- 2026-09-25 18:21 · 061 · review 1 · done: PASS - no blocking findings (1 minor: unused TASK_VERBS_EN export)
+- 2026-09-25 18:21 · 061 · story · done
+- 2026-09-25 18:21:52 · gate · short-suites · started
+- 2026-09-25 18:25:43 · gate · short-suites · done: build green, test red (9 quick-capture.test.tsx), e2e green

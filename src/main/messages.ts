@@ -1,20 +1,23 @@
-/* Die einzigen Nutzertexte des Hauptprozesses. Zwei Stellen, beide begründet:
+/* The main process's only user-facing text. Three spots, all justified:
 
-   1. **Die Windows-Benachrichtigung.** Sie entsteht im Main, auch wenn kein
-      Fenster offen ist — der Renderer kann sie nicht formulieren. Ein Text, den
-      nur `t()` kennt, wäre hier nicht erreichbar.
-   2. **`RecentWorkItem.detail`.** Der IPC-Vertrag trägt an dieser Stelle einen
-      fertigen Satz, keinen Code (anders als `IngestNoteCode`, wo der Renderer
-      übersetzt). Der Kern lässt die Beschriftungen einsetzen
-      (`core/overview/labels`) und stellt Deutsch als Vorgabe; das englische
-      Gegenstück steht hier, weil `src/core/` keine Sprache wählt.
+   1. **The Windows notification.** It's created in the main process, even
+      when no window is open — the renderer can't compose it. A string that
+      only `t()` knows would be unreachable here.
+   2. **`RecentWorkItem.detail`.** At this point the IPC contract carries a
+      finished sentence, not a code (unlike `IngestNoteCode`, where the
+      renderer translates). The core lets the labels be injected
+      (`core/overview/labels`) and defaults to German; the English
+      counterpart lives here, because `src/core/` never chooses a language.
+   3. **The tray menu.** Same reasoning as the notification: `Tray`/`Menu` are
+      built in the main process, independent of whether any renderer window
+      exists at all, so their labels can't go through `t()` either.
 
-   Beides folgt `settings.uiLanguage()`. Sentence case, keine Emoji, Aussagen
-   statt Ausrufe — dieselbe Tonlage wie die Oberfläche. */
+   All three follow `settings.uiLanguage()`. Sentence case, no emoji, statements
+   instead of exclamations — the same tone as the UI. */
 
 import { GERMAN_RECENT_LABELS } from '@core/overview';
 import type { RecentWorkLabels } from '@core/overview';
-import type { UiLanguage } from '@shared/types';
+import type { AgentKind, UiLanguage } from '@shared/types';
 
 const ENGLISH_KIND_NAMES: Record<string, string> = {
   youtube: 'YouTube',
@@ -29,8 +32,8 @@ const ENGLISH_RECENT_LABELS: RecentWorkLabels = {
     return count === 1 ? '1 file changed' : `${count} files changed`;
   },
 
-  session(messages: number, branch: string | null): string {
-    const parts = ['Session'];
+  session(agent: AgentKind, messages: number, branch: string | null): string {
+    const parts = [agent === 'codex' ? 'Codex session' : 'Claude session'];
     parts.push(messages === 1 ? '1 message' : `${messages} messages`);
     if (branch !== null && branch.length > 0) parts.push(`branch ${branch}`);
     return parts.join(', ');
@@ -50,12 +53,12 @@ const ENGLISH_RECENT_LABELS: RecentWorkLabels = {
   },
 };
 
-/** Beschriftungen für „zuletzt gearbeitet" in der Sprache der Oberfläche. */
+/** Labels for "recently worked on" in the UI's language. */
 export function recentWorkLabels(language: UiLanguage): RecentWorkLabels {
   return language === 'en' ? ENGLISH_RECENT_LABELS : GERMAN_RECENT_LABELS;
 }
 
-/** Zusammenfassung einer Sammelbenachrichtigung: was ist überfällig, was heute fällig? */
+/** Summary of a collected notification: what's overdue, what's due today? */
 export function dueSummary(language: UiLanguage, overdue: number, today: number): string {
   if (language === 'en') {
     const parts: string[] = [];
@@ -72,7 +75,31 @@ export function dueSummary(language: UiLanguage, overdue: number, today: number)
   return parts.join(', ');
 }
 
-/** Der Rumpf der Benachrichtigung: die Titel, plus wie viele nicht draufstehen. */
+/** Labels for the tray menu's three items (058, D2). */
+export interface TrayLabels {
+  open: string;
+  quickCapture: string;
+  quit: string;
+}
+
+const ENGLISH_TRAY_LABELS: TrayLabels = {
+  open: 'Open Gaston',
+  quickCapture: 'Quick capture',
+  quit: 'Quit Gaston',
+};
+
+const GERMAN_TRAY_LABELS: TrayLabels = {
+  open: 'Gaston öffnen',
+  quickCapture: 'Schnell erfassen',
+  quit: 'Gaston beenden',
+};
+
+/** Labels for the tray menu in the UI's language. */
+export function trayLabels(language: UiLanguage): TrayLabels {
+  return language === 'en' ? ENGLISH_TRAY_LABELS : GERMAN_TRAY_LABELS;
+}
+
+/** The notification's body: the titles, plus how many more aren't listed. */
 export function dueBody(language: UiLanguage, titles: readonly string[], rest: number): string {
   const listed = titles.join(' · ');
   if (rest <= 0) return listed;

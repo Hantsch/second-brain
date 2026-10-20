@@ -1,10 +1,10 @@
-/* Meldungen. Ein kleiner Speicher außerhalb von React, damit auch die
-   Ereignis-Verdrahtung Meldungen einwerfen kann, ohne einen Hook zu brauchen.
+/* Toasts. A small store outside of React, so that event wiring can also
+   throw in toasts without needing a hook.
 
-   Eine Meldung darf einen Weg zurück tragen (`action`). Das ist keine Zierde:
-   ARCHITECTURE.md verlangt zu jeder Aktion ein Rückgängig, und für Aktionen, die
-   nur die Oberfläche betreffen (eine Kachel ausblenden), ist die Meldung der
-   einzige Ort, an dem es stehen kann. */
+   A toast may carry a way back (`action`). That's not decoration:
+   ARCHITECTURE.md requires an undo for every action, and for actions that
+   only affect the surface (hiding a tile), the toast is the only place it
+   can live. */
 
 import { useSyncExternalStore } from 'react';
 
@@ -13,17 +13,17 @@ export type ToastKind = 'info' | 'success' | 'warn' | 'error';
 export type ToastVars = Record<string, string | number>;
 
 export interface ToastAction {
-  /** i18n-Key der Beschriftung. */
+  /** i18n key of the label. */
   label: string;
   run: () => void;
 }
 
-/** Eine Meldung mit allem, was sie tragen kann. */
+/** A toast with everything it can carry. */
 export interface ToastSpec {
-  /** i18n-Key oder fertiger Text — `t()` lässt Unbekanntes unverändert durch. */
+  /** i18n key or finished text — `t()` passes unknown keys through unchanged. */
   message: string;
   values?: ToastVars;
-  /** Zweite Zeile: wo die Sache jetzt steht, nicht die halbe Anleitung. */
+  /** Second line: where things stand now, not half a set of instructions. */
   description?: string;
   action?: ToastAction;
 }
@@ -55,7 +55,7 @@ export function pushToast(kind: ToastKind, message: string | ToastSpec): string 
   return id;
 }
 
-/** Alle Meldungen wegnehmen. Für Tests und für den Wechsel des Vaults. */
+/** Remove all toasts. For tests and for switching vaults. */
 export function clearToasts(): void {
   if (items.length === 0) return;
   items = [];

@@ -2,7 +2,11 @@
  * Fragen beantworten — nur aus dem Vault, mit Beleg und Fundstelle.
  *
  * Der Weg ist immer derselbe, und er endet nie in einem toten Zustand:
- * 1. **Kandidaten** aus der Volltextsuche, optional vom Modell sortiert.
+ * 1. **Kandidaten** aus der Volltextsuche, optional vom Modell sortiert. Modul,
+ *    Scope und Projekt gehen als Filter in die Suchanfrage selbst hinein — die
+ *    Kandidaten kommen also schon eingeschraenkt zurueck, statt hinterher
+ *    ausgeduennt zu werden (sonst koennte der Limit-Schnitt der Suche einen
+ *    passenden Treffer schon verwerfen, bevor der Filter ihn je sieht).
  * 2. **Keine Treffer** → ehrliche Absage. Ohne Beleg wird kein Modell gefragt: es
  *    haette nichts zu lesen und wuerde raten (Guardrail 3).
  * 3. **Kein Modell** → die Suchtreffer selbst sind die Antwort („ich kann nicht
@@ -18,6 +22,7 @@ import { LlmUnavailableError, isAbortError, parseJsonLoose } from '@core/llm';
 import { queryAnswerPrompt } from '@core/llm';
 import type { IndexedDoc } from '@core/index/types';
 import { citationsFromExcerpts, validateCitations, type CitationSource } from './citations';
+import { evidenceTypesFor } from './evidence';
 import { buildExcerpt, questionTerms } from './excerpts';
 import { QUERY_RERANK_SCHEMA, applyOrder, rerankPrompt } from './rerank';
 import { phrases } from './text';
@@ -30,12 +35,19 @@ export const DEFAULT_RETRIEVE_LIMIT = 6;
 export const CANDIDATE_FACTOR = 3;
 /** Obergrenze der Kandidatenliste — mehr kostet nur Tokens. */
 export const MAX_CANDIDATES = 24;
+/**
+ * Hoechstzahl Ausschnitte je Datei (053): ein langes Dokument darf mehrere
+ * Passagen beisteuern, aber nicht die ganze Antwort mit sich selbst fuellen.
+ */
+export const MAX_PASSAGES_PER_DOC = 3;
 
 export interface RetrieveOptions {
   /** Auf ein Modul einschraenken. */
   module?: string | null;
   /** Auf Arbeit oder Privat einschraenken. */
   scope?: Scope | null;
+  /** Auf ein Projekt einschraenken (Slug aus `projects/<scope>/<slug>/`). */
+  project?: string | null;
   /** Auf Dokumenttypen einschraenken. */
   types?: readonly DocType[];
   limit?: number;
@@ -45,6 +57,10 @@ export interface RetrieveOptions {
  * Kandidaten zu einer Frage: Volltextsuche, dann je Treffer ein wortwoertlicher
  * Ausschnitt mit Zeilennummer. Leere Frage und leerer Vault liefern eine leere
  * Liste — das ist ein Ergebnis, kein Fehler.
+ *
+ * Gesucht wird immer nur in den Typen, die als Beleg taugen (`evidenceTypesFor`):
+ * hier haengt der Ausschluss maschinengeschriebener Zusammenfassungen, damit er
+ * fuer jeden Weg dahinter gilt — mit Modell, ohne Modell, mit und ohne Filter.
  */
 export function retrieve(
   index: WikiIndexView,
@@ -53,33 +69,47 @@ export function retrieve(
 ): WikiExcerpt[] {
   const text = (question ?? '').trim();
   if (text.length === 0) return [];
+  const types = evidenceTypesFor(options.types);
+  /* Bleibt nach dem Ausschluss kein Typ uebrig, ist die Antwort leer — und die
+     Suche darf gar nicht laufen: ein leeres `types` heisst dort „kein Filter"
+     (`matchesTypes`), das Durchreichen wuerde die Einschraenkung umdrehen. */
+  if (types.length === 0) return [];
   const limit = Math.max(1, options.limit ?? DEFAULT_RETRIEVE_LIMIT);
-  const hits = index.search({
+  const hits = index.searchPassages({
     text,
     limit: Math.min(MAX_CANDIDATES, limit),
     ...(options.module === undefined || options.module === null ? {} : { module: options.module }),
-    ...(options.types === undefined ? {} : { types: [...options.types] }),
+    ...(options.scope === undefined || options.scope === null ? {} : { scope: options.scope }),
+    ...(options.project === undefined || options.project === null
+      ? {}
+      : { project: options.project }),
+    types,
   });
   const byPath = index.index().byPath;
   const terms = questionTerms(text);
   const excerpts: WikiExcerpt[] = [];
+  const perDoc = new Map<string, number>();
 
   for (const hit of hits) {
     const doc = byPath.get(hit.path);
     if (doc === undefined) continue;
-    if (options.scope !== undefined && options.scope !== null && doc.scope !== options.scope) {
-      continue;
-    }
-    const slice = buildExcerpt(doc, terms);
+    const usedForPath = perDoc.get(hit.path) ?? 0;
+    if (usedForPath >= MAX_PASSAGES_PER_DOC) continue;
+    const lines = doc.body.replace(/\r\n/g, '\n').split('\n');
+    const startIndex = Math.max(0, hit.startLine - doc.bodyLine);
+    const endIndex = Math.max(startIndex, hit.endLine - doc.bodyLine);
+    const passageBody = lines.slice(startIndex, endIndex + 1).join('\n');
+    const slice = buildExcerpt({ body: passageBody, bodyLine: hit.startLine }, terms);
     if (slice === null) continue;
     excerpts.push({
       path: hit.path,
-      title: hit.title,
+      title: doc.title,
       module: doc.module,
       quote: slice.quote,
       line: slice.line,
       score: hit.score,
     });
+    perDoc.set(hit.path, usedForPath + 1);
     if (excerpts.length >= limit) break;
   }
   return excerpts;
@@ -130,9 +160,12 @@ async function rerank(
 function sourcesFor(index: WikiIndexView, excerpts: readonly WikiExcerpt[]): CitationSource[] {
   const byPath = index.index().byPath;
   const sources: CitationSource[] = [];
+  const seen = new Set<string>();
   for (const excerpt of excerpts) {
+    if (seen.has(excerpt.path)) continue;
     const doc: IndexedDoc | undefined = byPath.get(excerpt.path);
     if (doc === undefined) continue;
+    seen.add(excerpt.path);
     sources.push({
       path: doc.path,
       title: doc.title,

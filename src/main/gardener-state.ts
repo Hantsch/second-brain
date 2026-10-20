@@ -1,121 +1,52 @@
-/* Der letzte Pflegebericht und die Menge „passt so".
-   Beides liegt in `<vault>/.secondbrain/gardener.json` — nicht in den
-   Vault-Einstellungen und nicht im Suchindex.
+/* The last maintenance report and the decisions the user made about it —
+   "fine as is" and "not now, ask me again on <day>".
+   All of it lives in `<vault>/.secondbrain/gardener.json` — not in the
+   vault settings and not in the search index.
 
-   Warum eine eigene Datei:
-   - **Einstellungen sind Konfiguration.** Eine Liste gefundener Befunde und eine
-     wachsende Menge ausgeblendeter Kennungen sind Bedienzustand — dieselbe
-     Begründung wie bei den Ruhezeiten in `overview-state.ts`. `deepMerge` kann
-     außerdem nichts entfernen; ein zurückgenommenes „passt so" bliebe für immer.
-   - **Aber auch nicht in `overview.json`.** Ein Bericht ist zehn Kilobyte
-     Befunde, der Ruhezustand sind zwei Karten mit Kalendertagen. Wer den Bericht
-     wegwirft (er ist ableitbar: einmal prüfen genügt), soll dabei nicht die
-     Ruhezeiten der Erinnerungen verlieren.
-   - **`.secondbrain/` darf gelöscht werden** (VAULT-FORMAT.md). Fehlt die Datei,
-     gibt es keinen Bericht — die Oberfläche sagt „noch nicht geprüft" und
-     behauptet keine 100. Das ist der ehrliche Verlust.
+   Why a dedicated file:
+   - **Settings are configuration.** A list of found findings and a growing
+     set of dismissed IDs are operational state — the same reasoning as for
+     the snoozes in `overview-state.ts`. `deepMerge` also can't remove
+     anything; an undone "fine as is" would stay forever.
+   - **But not in `overview.json` either.** A report is ten kilobytes of
+     findings, the snooze state is two maps of calendar days. Discarding the
+     report (it's derivable: one check is enough) shouldn't cost the reminder
+     snoozes too.
+   - **`.secondbrain/` may be deleted** (VAULT-FORMAT.md). If the file is
+     missing, there's no report — the UI says "not checked yet" and doesn't
+     claim a 100. That's the honest loss.
 
-   Der Bericht wird **roh** gespeichert: alle Befunde des Laufs, auch die später
-   ausgeblendeten, dazu die Größe des Bestands zum Zeitpunkt des Laufs. Was der
-   Screen sieht, entsteht erst in `present()` — gefiltert und mit neu gerechneter
-   Gesundheit. Nur so bleibt „passt so" zurücknehmbar, ohne noch einmal zu prüfen,
-   und nur so passt der Gesundheitswert immer zu der Liste, die daneben steht. */
+   The report is stored **raw**: all findings of the run, including ones later
+   dismissed or snoozed, plus the size of the stock at the time of the run.
+   What the screen sees is only produced in `present(today)` — split into open
+   and hidden, and with the health score recalculated over the open list. Only
+   this way do "fine as is" and a snooze stay reversible without checking
+   again, and only this way does the health score always match the list shown
+   next to it. */
 
 import { join } from 'node:path';
-import { healthScore } from '@core/gardener';
-import type { GardenerFinding, GardenerReport } from '@shared/types';
+import { applySavedRun, empty, presentRun, readStoredGardener } from '@core/gardener';
+import type { SaveRunOptions, StoredGardener, StoredRun } from '@core/gardener';
+import type { GardenerReport } from '@shared/types';
 import { readJson, writeJsonAtomic } from './fs-json';
 
-/** Vault-relativer Ort. Steht auch in docs/VAULT-FORMAT.md. */
+/** Vault-relative location. Also documented in docs/VAULT-FORMAT.md. */
 export const GARDENER_STATE_FILE = '.secondbrain/gardener.json';
 
 export const GARDENER_STATE_VERSION = 1;
 
-/** Ein Lauf, so wie er gespeichert wird — vor jeder Filterung. */
-export interface StoredRun {
-  ranAt: string;
-  usedLlm: boolean;
-  /** Alle Befunde des Laufs, ungefiltert. */
-  findings: GardenerFinding[];
-  advice: string[];
-  /** `vaultSize` zum Zeitpunkt des Laufs — die Bezugsgröße der Gesundheit. */
-  size: number;
-}
+/** The stored run shape, unchanged in this file — now defined in
+ * `@core/gardener/run-record` (027, D1). Re-exported so every existing
+ * `import type { StoredRun } from '../gardener-state'` keeps working. */
+export type { StoredRun };
 
-/** Ein erledigter Befund mit der Marke, unter der der Fix zurückgedreht wird. */
-export interface FixedFinding {
-  id: string;
-  undoToken: string;
-}
-
-interface StoredGardener {
-  version: number;
-  run: StoredRun | null;
-  /** Kennungen, die der Nutzer als „passt so" markiert hat. */
-  dismissed: string[];
-  /**
-   * Befunde, die ein Fix geschrieben hat. Sie bleiben im Lauf stehen und werden
-   * nur ausgeblendet — so bringt `undoFix` sie zurück, ohne neu zu prüfen. Ein
-   * neuer Lauf leert die Liste: dann zählt, was in den Dateien steht.
-   */
-  fixed: FixedFinding[];
-}
-
-function empty(): StoredGardener {
-  return { version: GARDENER_STATE_VERSION, run: null, dismissed: [], fixed: [] };
-}
-
-function isFinding(value: unknown): value is GardenerFinding {
-  if (value === null || typeof value !== 'object') return false;
-  const record = value as Record<string, unknown>;
-  return (
-    typeof record['id'] === 'string' &&
-    typeof record['kind'] === 'string' &&
-    typeof record['severity'] === 'string' &&
-    typeof record['title'] === 'string' &&
-    Array.isArray(record['paths'])
-  );
-}
-
-function readStrings(value: unknown): string[] {
-  return Array.isArray(value)
-    ? value.filter((entry): entry is string => typeof entry === 'string')
-    : [];
-}
-
-function readFixed(value: unknown): FixedFinding[] {
-  if (!Array.isArray(value)) return [];
-  const result: FixedFinding[] = [];
-  for (const entry of value) {
-    if (entry === null || typeof entry !== 'object') continue;
-    const record = entry as Record<string, unknown>;
-    const id = record['id'];
-    const undoToken = record['undoToken'];
-    if (typeof id === 'string' && typeof undoToken === 'string') result.push({ id, undoToken });
-  }
-  return result;
-}
-
-/** Ein gespeicherter Lauf, oder `null`, wenn die Datei nichts Brauchbares trägt. */
-function readRun(value: unknown): StoredRun | null {
-  if (value === null || typeof value !== 'object') return null;
-  const record = value as Record<string, unknown>;
-  const ranAt = record['ranAt'];
-  const size = record['size'];
-  if (typeof ranAt !== 'string' || typeof size !== 'number') return null;
-  const findings = Array.isArray(record['findings']) ? record['findings'].filter(isFinding) : [];
-  return {
-    ranAt,
-    usedLlm: record['usedLlm'] === true,
-    findings,
-    advice: readStrings(record['advice']),
-    size: Math.max(0, Math.trunc(size)),
-  };
-}
+/** Same for the save options, now defined beside the merge they steer in
+ * `@core/gardener/run-merge` (027, D3). */
+export type { SaveRunOptions };
 
 /**
- * Der Pflegezustand eines geöffneten Vaults. Eine Instanz je Vault-Wurzel; wer
- * sie über `gardenerState()` holt, bekommt immer dieselbe.
+ * The maintenance state of an open vault. One instance per vault root;
+ * whoever fetches it via `gardenerState()` always gets the same one.
  */
 export class GardenerState {
   private data: StoredGardener;
@@ -131,73 +62,70 @@ export class GardenerState {
     return join(this.root, ...GARDENER_STATE_FILE.split('/'));
   }
 
-  static async load(root: string): Promise<GardenerState> {
-    const stored = await readJson<Partial<StoredGardener>>(
-      join(root, ...GARDENER_STATE_FILE.split('/')),
-    );
-    const state = new GardenerState(root, empty());
-    if (stored !== null) {
-      state.data = {
-        version: GARDENER_STATE_VERSION,
-        run: readRun(stored.run),
-        dismissed: readStrings(stored.dismissed),
-        fixed: readFixed(stored.fixed),
-      };
-    }
+  /**
+   * Loads the state and cleans up as it goes: snoozes whose day has come drop
+   * out, the same way `overview-state.ts` does it. A file without `snoozed` —
+   * written before this field existed — simply has none.
+   */
+  static async load(root: string, today: string): Promise<GardenerState> {
+    const stored = await readJson<unknown>(join(root, ...GARDENER_STATE_FILE.split('/')));
+    const data =
+      stored === null
+        ? empty(GARDENER_STATE_VERSION)
+        : readStoredGardener(stored, GARDENER_STATE_VERSION);
+    const state = new GardenerState(root, data);
+    state.pruneSnoozes(today);
     return state;
   }
 
-  /** Kennungen, die als „passt so" gelten. */
+  /** IDs considered "fine as is". */
   dismissed(): ReadonlySet<string> {
     return new Set(this.data.dismissed);
   }
 
-  /** Kennungen, deren Fix geschrieben wurde. */
+  /** Until when this finding is snoozed, or `null`. */
+  snoozedUntil(id: string): string | null {
+    return this.data.snoozed[id] ?? null;
+  }
+
+  /** IDs whose fix was written. */
   fixed(): ReadonlySet<string> {
     return new Set(this.data.fixed.map((entry) => entry.id));
   }
 
-  /** Der rohe Lauf, wie er gespeichert ist. */
+  /** The raw run, as stored. */
   run(): StoredRun | null {
     return this.data.run;
   }
 
   /**
-   * Der Bericht, wie der Screen ihn sieht: ohne die ausgeblendeten Befunde, und
-   * mit der Gesundheit, die zu genau dieser Liste gehört. Ohne Lauf `null` —
-   * eine erfundene 100 wäre die Sorte Lüge, an der ein Dashboard stirbt.
+   * The report as the screen sees it — open findings, hidden ones, and the
+   * (possibly frozen) health score. The full reasoning, including why a
+   * partial or scoped run never computes its own score, now lives with the
+   * logic in `@core/gardener/run-present#presentRun` (027, D4); this method
+   * is only the delegation, `this.data` being the one piece that method can't
+   * reach on its own.
    */
-  present(): GardenerReport | null {
-    const run = this.data.run;
-    if (run === null) return null;
-    const hidden = new Set([...this.dismissed(), ...this.fixed()]);
-    const findings = run.findings.filter((finding) => !hidden.has(finding.id));
-    const health = healthScore(findings, run.size);
-    return {
-      ranAt: run.ranAt,
-      usedLlm: run.usedLlm,
-      findings,
-      health: health.score ?? 0,
-      healthKnown: health.score !== null,
-      healthContributions: health.contributions,
-      advice: run.advice,
-    };
+  present(today: string, resolved: ReadonlySet<string> = new Set()): GardenerReport | null {
+    return presentRun(this.data, today, resolved);
   }
 
   /**
-   * Einen Lauf ablegen. Die Menge „passt so" bleibt (sie ist eine Entscheidung
-   * über die Sache, nicht über den Lauf); die Liste der erledigten Befunde fällt
-   * weg — was ein Fix wirklich behoben hat, sagt jetzt der neue Lauf.
+   * Stores a run. What the run does to the state it lands in — which decision
+   * survives it, which fix stays recorded, how a scoped run is laid over the
+   * one before it — is decided in `@core/gardener/run-merge#applySavedRun`
+   * (027, D3); this method is the write. A cancelled run never gets here: it
+   * throws before `save`, and its partial list must never be read as
+   * "everything else is gone".
    */
-  async save(run: StoredRun): Promise<void> {
-    this.data.run = run;
-    this.data.fixed = [];
+  async save(run: StoredRun, options: SaveRunOptions = {}): Promise<void> {
+    this.data = applySavedRun(this.data, run, options);
     await this.write();
   }
 
   /**
-   * Einen Befund als erledigt eintragen. `undoToken` ist die Marke des Fixes;
-   * `undoFixed(token)` macht den Eintrag rückgängig.
+   * Records a finding as resolved. `undoToken` is the fix's token;
+   * `undoFixed(token)` reverses the entry.
    */
   async markFixed(id: string, undoToken: string): Promise<void> {
     if (this.data.fixed.some((entry) => entry.id === id)) return;
@@ -205,7 +133,7 @@ export class GardenerState {
     await this.write();
   }
 
-  /** Den Eintrag zu dieser Marke wegnehmen — der Befund zählt wieder. */
+  /** Removes the entry for this token — the finding counts again. */
   async undoFixed(undoToken: string): Promise<void> {
     const next = this.data.fixed.filter((entry) => entry.undoToken !== undoToken);
     if (next.length === this.data.fixed.length) return;
@@ -214,9 +142,9 @@ export class GardenerState {
   }
 
   /**
-   * Einen Befund ausblenden. `false` heißt: den gibt es im letzten Lauf nicht —
-   * dann wird auch nichts geschrieben. Ein Knopf, der Erfolg meldet und nichts
-   * tut, ist schlimmer als ein fehlender Knopf.
+   * Dismisses a finding. `false` means: it doesn't exist in the last run —
+   * then nothing is written either. A button that reports success and does
+   * nothing is worse than a missing button.
    */
   async dismiss(id: string): Promise<boolean> {
     if (!this.knows(id)) return false;
@@ -226,7 +154,7 @@ export class GardenerState {
     return true;
   }
 
-  /** „Passt so" zurücknehmen. `false` heißt: war nicht ausgeblendet. */
+  /** Undoes "fine as is". `false` means: wasn't dismissed. */
   async undismiss(id: string): Promise<boolean> {
     if (!this.data.dismissed.includes(id)) return false;
     this.data.dismissed = this.data.dismissed.filter((entry) => entry !== id);
@@ -234,7 +162,41 @@ export class GardenerState {
     return true;
   }
 
-  /** Kennt der letzte Lauf diesen Befund? */
+  /**
+   * Puts a finding away until `until` — the day from which it counts again.
+   * `false` for the same reason as `dismiss`: no run knows this finding.
+   */
+  async snooze(id: string, until: string): Promise<boolean> {
+    if (!this.knows(id)) return false;
+    this.data.snoozed[id] = until;
+    await this.write();
+    return true;
+  }
+
+  /**
+   * Lifts the snooze: the entry drops out, the finding counts again. Same
+   * reasoning as `overview-state.ts` — setting the day to "today" would not be
+   * the reverse. `false` means: wasn't snoozed.
+   */
+  async unsnooze(id: string): Promise<boolean> {
+    if (this.data.snoozed[id] === undefined) return false;
+    delete this.data.snoozed[id];
+    await this.write();
+    return true;
+  }
+
+  /** Remove snoozes whose day has come. `true` if something changed. */
+  pruneSnoozes(today: string): boolean {
+    let changed = false;
+    for (const [id, until] of Object.entries(this.data.snoozed)) {
+      if (until > today) continue;
+      delete this.data.snoozed[id];
+      changed = true;
+    }
+    return changed;
+  }
+
+  /** Does the last run know this finding? */
   knows(id: string): boolean {
     return this.data.run?.findings.some((finding) => finding.id === id) === true;
   }
@@ -244,21 +206,21 @@ export class GardenerState {
   }
 }
 
-/* Eine Instanz je Vault. Der Vault wechselt selten; die Karte bleibt klein und
-   wird beim Wechsel geleert, damit kein fremder Zustand hängen bleibt. */
+/* One instance per vault. The vault changes rarely; the map stays small and
+   is cleared on a switch so no foreign state lingers. */
 const loaded = new Map<string, Promise<GardenerState>>();
 
-/** Der Pflegezustand dieses Vaults. Beim ersten Aufruf wird die Datei gelesen. */
-export function gardenerState(root: string): Promise<GardenerState> {
+/** This vault's maintenance state. The file is read on the first call. */
+export function gardenerState(root: string, today: string): Promise<GardenerState> {
   const known = loaded.get(root);
   if (known !== undefined) return known;
   loaded.clear();
-  const pending = GardenerState.load(root);
+  const pending = GardenerState.load(root, today);
   loaded.set(root, pending);
   return pending;
 }
 
-/** Vergisst den geladenen Zustand — für Tests und beim Schließen des Vaults. */
+/** Forgets the loaded state — for tests and when closing the vault. */
 export function forgetGardenerState(): void {
   loaded.clear();
 }

@@ -1,13 +1,14 @@
-/* Projekte, die liegen. Mit der Zahl der Tage und dem nächsten Schritt — oder
-   dem Hinweis, dass keiner festgelegt ist.
+/* Projects that are stalled. With the number of days and the next step — or
+   the note that none has been set.
 
-   Die Slugs kommen aus `dashboard:data` (dort ist die Schwelle aus den
-   Einstellungen schon angewandt), Titel und nächster Schritt aus der Projektliste.
-   Fehlt der nächste Schritt, steht das da: er ist der Wiedereinstiegspunkt, und
-   sein Fehlen ist der Grund, warum ein Projekt liegen bleibt. */
+   The slugs come from `dashboard:data` (the threshold from settings is
+   already applied there), title and next step from the project list. If the
+   next step is missing, that's shown: it's the re-entry point, and its
+   absence is the reason a project stalls. */
 
 import { useNavigate } from 'react-router-dom';
 import { useT } from '../../i18n';
+import { favoritesFirst } from '../../lib/favorites';
 import { useProjects } from '../../lib/queries/data';
 import { useDashboardData } from '../../lib/queries/dashboard';
 import { TileFrame } from '../TileFrame';
@@ -21,10 +22,10 @@ export function StaleProjectsTile() {
   const projects = useProjects();
 
   const slugs = dashboard.data?.staleProjects ?? [];
-  const rows = slugs
+  const resolved = slugs
     .map((slug) => projects.data?.find((project) => project.slug === slug))
-    .filter((project): project is NonNullable<typeof project> => project !== undefined)
-    .slice(0, LIMIT);
+    .filter((project): project is NonNullable<typeof project> => project !== undefined);
+  const rows = favoritesFirst(resolved).slice(0, LIMIT);
 
   return (
     <TileFrame

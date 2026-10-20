@@ -8,7 +8,7 @@
  */
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import axe from 'axe-core';
@@ -24,7 +24,8 @@ import type {
   TaskDefinition,
   VaultDoc,
 } from '@shared/types';
-import { AskScreen } from '@renderer/screens/ask/AskScreen';
+import { AskPanel } from '@renderer/screens/ask/AskPanel';
+import { homeOf } from '@renderer/lib/doc-home';
 import type { SbBridge } from '@renderer/lib/bridge';
 import { wireEvents } from '@renderer/lib/events';
 import { clearStream } from '@renderer/lib/llm-stream';
@@ -88,6 +89,13 @@ const QUESTION = 'Wie lange leben Access-Token?';
 const VERBATIM = 'Aktueller Stand: Access-Token 15 Minuten, Refresh-Token 8 Stunden';
 const ANSWER = `Access-Token leben 15 Minuten [[${TOKEN_PAGE}]].`;
 
+/* An area note (story 005): the citation panel resolves any path the same
+   way, with no branching on `docType` — this is the fixture that proves it
+   for `areas/`. */
+const AREA_PATH = 'areas/gesundheit.md';
+const AREA_QUOTE = 'Zwei Wochen Schlafprotokoll: vor Mitternacht ins Bett wirkt mehr.';
+const AREA_ANSWER = `Vor Mitternacht ins Bett wirkt mehr [[${AREA_PATH}]].`;
+
 const citation: Citation = {
   path: TOKEN_PAGE,
   title: 'Token-Lebensdauer',
@@ -114,8 +122,10 @@ const project: Project = {
   scope: 'work',
   status: 'active',
   priority: 1,
+  favorite: false,
   deadline: null,
   nextStep: 'Abnahmeprotokoll durchgehen',
+  nextStepStale: false,
   waitingOn: [{ who: 'Miriam', what: 'Abnahme', since: '2026-08-06' }],
   tags: [],
   modules: [],
@@ -138,6 +148,24 @@ const doc: VaultDoc = {
   size: 320,
 };
 
+/* Line 5 (1-indexed) is where `AREA_QUOTE` actually sits — the citation
+   below must agree, otherwise `contextOf` cannot relocate it. */
+const areaDoc: VaultDoc = {
+  path: AREA_PATH,
+  frontmatter: { type: 'area', title: 'Gesundheit', created: '2026-07-01' },
+  body: ['## Notizen', '', '### 2026-08-04', '', AREA_QUOTE, ''].join('\n'),
+  hash: 'hash-area',
+  modified: NOW,
+  size: 180,
+};
+
+const areaCitation: Citation = {
+  path: AREA_PATH,
+  title: 'Gesundheit',
+  quote: AREA_QUOTE,
+  line: 5,
+};
+
 const ROUTED: Routing = {
   tasks: { 'query-answer': { providerId: 'local-1', model: 'qwen2.5:14b' } },
   defaults: {},
@@ -149,6 +177,7 @@ const TASKS: TaskDefinition[] = [
     labelKey: 'task.query-answer.label',
     hintKey: 'task.query-answer.hint',
     suggested: 'strong',
+    typicalTokens: { in: 3000, out: 500 },
     sensitive: false,
     streams: true,
     structured: false,
@@ -161,6 +190,17 @@ function userMessage(id: string, content = QUESTION): ChatMessage {
 
 function thread(messages: ChatMessage[], id = 'c-2026-08-10-1432-aaaa'): ChatThread {
   return { id, kind: 'ask', title: QUESTION, created: NOW, updated: NOW, messages, context: null };
+}
+
+/* Where the router stands — opening a citation in the app (059) is observed
+   here, the same probe the other screen tests use. */
+function LocationProbe() {
+  const location = useLocation();
+  return (
+    <span data-testid="location" hidden>
+      {`${location.pathname}${location.search}`}
+    </span>
+  );
 }
 
 interface Rendered {
@@ -178,6 +218,7 @@ function renderAsk(extra: Handlers = {}): Rendered {
       docCount: 12,
       indexedAt: NOW,
       indexing: false,
+      indexRefreshFailedAt: null,
     }),
     'chat:threads': () => [],
     'chat:thread': () => null,
@@ -194,7 +235,8 @@ function renderAsk(extra: Handlers = {}): Rendered {
   const { container } = render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
-        <AskScreen />
+        <AskPanel />
+        <LocationProbe />
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -237,7 +279,7 @@ describe('Fragen: Leerzustand', () => {
       name: 'Was weiß ich über Identity management?',
     });
     expect(
-      screen.getByRole('button', { name: /Woran habe ich bei „Kundenportal Relaunch"/ }),
+      screen.getByRole('button', { name: /Woran habe ich bei „Kundenportal Relaunch“/ }),
     ).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Worauf warte ich bei Miriam?' })).toBeTruthy();
 
@@ -249,7 +291,7 @@ describe('Fragen: Leerzustand', () => {
 
   it('erklärt den Screen, wenn im Vault noch nichts liegt', async () => {
     open({ 'modules:list': () => [], 'projects:list': () => [] });
-    expect(await screen.findByText('Frag dein zweites Hirn')).toBeTruthy();
+    expect(await screen.findByText('Frag Gaston')).toBeTruthy();
   });
 });
 
@@ -275,6 +317,7 @@ describe('Fragen: eine Antwort entsteht', () => {
       expect(sb.payloadOf('chat:ask')).toEqual({
         question: QUESTION,
         module: null,
+        project: null,
         scope: null,
       }),
     );
@@ -391,7 +434,7 @@ describe('Fragen: eine Antwort entsteht', () => {
     open({ ...handlers(state), 'chat:threads': () => [state.thread] });
 
     await userEvent.click(
-      await screen.findByRole('button', { name: `Gespräch „${QUESTION}" öffnen` }),
+      await screen.findByRole('button', { name: `Gespräch „${QUESTION}“ öffnen` }),
     );
     const mark = await screen.findByRole('button', { name: 'Beleg 1 anzeigen' });
     expect(mark.textContent).toBe('[1]');
@@ -406,7 +449,158 @@ describe('Fragen: eine Antwort entsteht', () => {
     const hit = within(panel).getByText(VERBATIM).closest('li');
     expect(hit?.textContent?.startsWith('13')).toBe(true);
     expect(hit?.className).toContain('sb-context-line--hit');
-    expect(within(panel).getByRole('button', { name: 'Datei öffnen' })).toBeTruthy();
+    /* 059/D7: the way in is the app — primary; the OS editor is secondary. */
+    const inApp = within(panel).getByRole('button', { name: 'In der App öffnen' });
+    expect(inApp.className).toContain('gs-btn--primary');
+    const external = within(panel).getByRole('button', { name: 'Extern öffnen' });
+    expect(external.className).toContain('gs-btn--secondary');
+  });
+
+  /* 059/D7: the panel's primary action navigates to the document's home and
+     never asks the OS; the secondary one still does, with the same path. */
+  it('opens a citation in the app from the panel, externally only on request', async () => {
+    const state = {
+      thread: thread([
+        userMessage(`${messageId}-q`),
+        {
+          id: messageId,
+          role: 'assistant',
+          content: ANSWER,
+          at: NOW,
+          citations: [citation],
+          model: 'qwen2.5:14b',
+        },
+      ]),
+    };
+    const { sb } = open({ ...handlers(state), 'chat:threads': () => [state.thread] });
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: `Gespräch „${QUESTION}“ öffnen` }),
+    );
+    await userEvent.click(await screen.findByRole('button', { name: 'Beleg 1 anzeigen' }));
+    let panel = await screen.findByRole('dialog', { name: 'Token-Lebensdauer' });
+
+    await userEvent.click(within(panel).getByRole('button', { name: 'Extern öffnen' }));
+    await waitFor(() => expect(sb.payloadOf('shell:openPath')).toEqual({ path: TOKEN_PAGE }));
+
+    sb.calls.length = 0;
+    await userEvent.click(screen.getByRole('button', { name: 'Beleg 1 anzeigen' }));
+    panel = await screen.findByRole('dialog', { name: 'Token-Lebensdauer' });
+    await userEvent.click(within(panel).getByRole('button', { name: 'In der App öffnen' }));
+
+    expect(screen.getByTestId('location').textContent).toBe(homeOf(TOKEN_PAGE));
+    expect(screen.queryByRole('dialog', { name: 'Token-Lebensdauer' })).toBeNull();
+    expect(sb.calls.some((call) => call.channel === 'shell:openPath')).toBe(false);
+  });
+
+  /* 059/D7: the path under a validated citation in the list opens in the app
+     too — the list's own button, not only the panel's. */
+  it('opens a listed citation in the app, not in the OS editor', async () => {
+    const state = {
+      thread: thread([
+        userMessage(`${messageId}-q`),
+        {
+          id: messageId,
+          role: 'assistant',
+          content: ANSWER,
+          at: NOW,
+          citations: [citation],
+          model: 'qwen2.5:14b',
+        },
+      ]),
+    };
+    const { sb } = open({ ...handlers(state), 'chat:threads': () => [state.thread] });
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: `Gespräch „${QUESTION}“ öffnen` }),
+    );
+    const cites = await screen.findByRole('list', { name: 'Belege' });
+    await userEvent.click(within(cites).getByRole('button', { name: 'In der App öffnen' }));
+
+    expect(screen.getByTestId('location').textContent).toBe(homeOf(TOKEN_PAGE));
+    expect(sb.calls.some((call) => call.channel === 'shell:openPath')).toBe(false);
+  });
+
+  /* 057/D2: eine Antwort ist Modelltext, kein Zitatverzeichnis — ein Pfad
+     darin ist deshalb nur klickbar, wenn `validateCitations` ihn auch als
+     Beleg bestätigt hat. Sonst wäre er klickbar, ohne etwas zu behaupten:
+     genau das eine verbleibende Loch, das 057 schließt. */
+  it('an answer path without a validated citation is text, not a button', async () => {
+    const otherPath = `modules/${MODULE}/wiki/concepts/mfa.md`;
+    const content = `${ANSWER} Mehr dazu unter [[${otherPath}]].`;
+    const state = {
+      thread: thread([
+        userMessage(`${messageId}-q`),
+        {
+          id: messageId,
+          role: 'assistant',
+          content,
+          at: NOW,
+          citations: [citation],
+          model: 'qwen2.5:14b',
+        },
+      ]),
+    };
+    const { sb } = open({ ...handlers(state), 'chat:threads': () => [state.thread] });
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: `Gespräch „${QUESTION}“ öffnen` }),
+    );
+
+    /* Der geprüfte Beleg bleibt eine Marke … */
+    expect(await screen.findByRole('button', { name: 'Beleg 1 anzeigen' })).toBeTruthy();
+    /* … der zweite Pfad, ohne Beleg, ist keiner — nur der Name steht da. */
+    expect(screen.queryByRole('button', { name: `Datei öffnen: ${otherPath}` })).toBeNull();
+    const turn = screen.getByRole('article', { name: 'Antwort' });
+    expect(turn.textContent).toContain('mfa.md');
+
+    /* 059/D7 builds its in-app opening on exactly this guard, so the invariant
+       is spelled out here too: every in-app opener in this answer belongs to
+       the one validated citation (its list entry), none to the unconfirmed
+       path — and clicking that path's text opens nothing, in app or outside. */
+    expect(within(turn).getAllByRole('button', { name: 'In der App öffnen' })).toHaveLength(1);
+    const location = screen.getByTestId('location').textContent;
+    await userEvent.click(within(turn).getByText(/mfa\.md/));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.getByTestId('location').textContent).toBe(location);
+    expect(sb.calls.some((call) => call.channel === 'shell:openPath')).toBe(false);
+  });
+
+  /* Story 005: notes live under `areas/`, a document type the panel has never
+     special-cased. This is the proof — the same citation panel, the same
+     `contextOf` relocation, only the path and doc type differ. */
+  it('öffnet den Beleg für eine Notiz in einem Bereich genauso, ohne Sonderfall', async () => {
+    const state = {
+      thread: thread([
+        userMessage(`${messageId}-q`),
+        {
+          id: messageId,
+          role: 'assistant',
+          content: AREA_ANSWER,
+          at: NOW,
+          citations: [areaCitation],
+          model: 'qwen2.5:14b',
+        },
+      ]),
+    };
+    open({
+      ...handlers(state),
+      'chat:threads': () => [state.thread],
+      'vault:read': ({ path }) => (path === AREA_PATH ? areaDoc : doc),
+    });
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: `Gespräch „${QUESTION}“ öffnen` }),
+    );
+    const mark = await screen.findByRole('button', { name: 'Beleg 1 anzeigen' });
+    await userEvent.click(mark);
+
+    const panel = await screen.findByRole('dialog', { name: 'Gesundheit' });
+    const hit = within(panel).getByText(AREA_QUOTE).closest('li');
+    expect(hit?.textContent?.startsWith('5')).toBe(true);
+    expect(hit?.className).toContain('sb-context-line--hit');
+    expect(within(panel).getByRole('button', { name: 'In der App öffnen' })).toBeTruthy();
+    expect(within(panel).getByRole('button', { name: 'Extern öffnen' })).toBeTruthy();
   });
 });
 
@@ -435,7 +629,7 @@ describe('Fragen: ehrliche Zustände', () => {
     });
 
     await userEvent.click(
-      await screen.findByRole('button', { name: `Gespräch „${QUESTION}" öffnen` }),
+      await screen.findByRole('button', { name: `Gespräch „${QUESTION}“ öffnen` }),
     );
 
     expect(await screen.findByText(/Ich kann daraus keine Antwort formulieren/)).toBeTruthy();
@@ -467,7 +661,7 @@ describe('Fragen: ehrliche Zustände', () => {
     open({ 'chat:threads': () => [answered], 'chat:thread': () => answered });
 
     await userEvent.click(
-      await screen.findByRole('button', { name: `Gespräch „${QUESTION}" öffnen` }),
+      await screen.findByRole('button', { name: `Gespräch „${QUESTION}“ öffnen` }),
     );
 
     expect(await screen.findByText('Dazu steht nichts im Vault.')).toBeTruthy();
@@ -494,7 +688,7 @@ describe('Fragen: ehrliche Zustände', () => {
     open({ 'chat:threads': () => [answered], 'chat:thread': () => answered });
 
     await userEvent.click(
-      await screen.findByRole('button', { name: `Gespräch „${QUESTION}" öffnen` }),
+      await screen.findByRole('button', { name: `Gespräch „${QUESTION}“ öffnen` }),
     );
     expect(await screen.findByText(/ließen sich nicht belegen/)).toBeTruthy();
   });
@@ -532,7 +726,7 @@ describe('Fragen: Gespräche und Ablegen', () => {
   it('legt die Antwort mit Modul und Titel als Wiki-Seite ab', async () => {
     const { sb } = open(base);
     await userEvent.click(
-      await screen.findByRole('button', { name: `Gespräch „${QUESTION}" öffnen` }),
+      await screen.findByRole('button', { name: `Gespräch „${QUESTION}“ öffnen` }),
     );
 
     await userEvent.click(await screen.findByRole('button', { name: 'Als Wiki-Seite ablegen' }));
@@ -540,7 +734,7 @@ describe('Fragen: Gespräche und Ablegen', () => {
     /* Der Titel ist aus der Frage vorbelegt, das Modul gewählt. */
     const title = within(dialog).getByLabelText('Titel der Seite') as HTMLInputElement;
     expect(title.value).toBe('Wie lange leben Access-Token');
-    expect(within(dialog).getByText(/Konzept-Seite im Modul „Identity management"/)).toBeTruthy();
+    expect(within(dialog).getByText(/Konzept-Seite im Modul „Identity management“/)).toBeTruthy();
     await userEvent.click(within(dialog).getByRole('button', { name: 'Ablegen' }));
 
     await waitFor(() =>
@@ -564,7 +758,7 @@ describe('Fragen: Gespräche und Ablegen', () => {
   it('legt in ein neu benanntes Modul ab', async () => {
     const { sb } = open(base);
     await userEvent.click(
-      await screen.findByRole('button', { name: `Gespräch „${QUESTION}" öffnen` }),
+      await screen.findByRole('button', { name: `Gespräch „${QUESTION}“ öffnen` }),
     );
     await userEvent.click(await screen.findByRole('button', { name: 'Als Wiki-Seite ablegen' }));
     const dialog = await screen.findByRole('dialog', { name: 'Antwort als Wiki-Seite ablegen' });
@@ -583,10 +777,10 @@ describe('Fragen: Gespräche und Ablegen', () => {
 
   it('fragt vor dem Löschen nach und sucht im Verlauf', async () => {
     const { sb } = open(base);
-    const row = await screen.findByRole('button', { name: `Gespräch „${QUESTION}" öffnen` });
+    const row = await screen.findByRole('button', { name: `Gespräch „${QUESTION}“ öffnen` });
     expect(row.textContent).toContain(QUESTION);
 
-    await userEvent.click(screen.getByRole('button', { name: `Gespräch „${QUESTION}" löschen` }));
+    await userEvent.click(screen.getByRole('button', { name: `Gespräch „${QUESTION}“ löschen` }));
     const dialog = await screen.findByRole('dialog', { name: 'Gespräch löschen?' });
     expect(sb.calls.some((call) => call.channel === 'chat:delete')).toBe(false);
     await userEvent.click(within(dialog).getByRole('button', { name: 'Löschen' }));
@@ -606,12 +800,29 @@ describe('Fragen: Gespräche und Ablegen', () => {
 });
 
 describe('Fragen: Bedienbarkeit', () => {
-  it('schickt mit Enter und macht mit Shift+Enter einen Umbruch', async () => {
+  /* 048 changed `ChatComposer`'s `submitKey` default surface by adding a
+     third mode, `'none'` (used by the journal's coach field, D2/D3 of that
+     story) — the field one writes prose into rather than asks a question in.
+     Ask's own usage never passes `submitKey`, so it still gets the default
+     `'enter'`: this test pins that the new mode is opt-in only, and that
+     Ask's Enter-submits / Shift+Enter-breaks behavior, and its hint naming
+     `Enter` as the key that asks, are both completely unaffected. */
+  it('schickt mit Enter und macht mit Shift+Enter einen Umbruch (048: Fragen bleibt von submitKey="none" unberührt)', async () => {
     const { sb } = open({
       'chat:ask': () => ({ threadId: 'c-2026-08-10-1900-ffff', messageId: 'm-keys' }),
       'chat:thread': () => thread([userMessage('m-keys-q')], 'c-2026-08-10-1900-ffff'),
     });
     const field = await screen.findByLabelText('Deine Frage');
+
+    /* The hint above the field still names `Enter` as the key that asks —
+       exactly what a `submitKey="none"` field (the journal's coach field)
+       must *not* say, since no key submits there any more. */
+    const hint = document
+      .querySelector('#sb-ask-field')
+      ?.closest('.sb-composer')
+      ?.querySelector('.sb-composer-hint');
+    expect(hint?.textContent).toContain('Enter');
+    expect(hint?.textContent).toContain('fragt');
 
     await userEvent.type(field, 'Erste Zeile{Shift>}{Enter}{/Shift}zweite Zeile');
     expect((field as HTMLTextAreaElement).value).toBe('Erste Zeile\nzweite Zeile');
@@ -657,6 +868,7 @@ describe('Fragen: Bedienbarkeit', () => {
       expect(sb.payloadOf('chat:ask')).toEqual({
         question: QUESTION,
         module: MODULE,
+        project: null,
         scope: 'work',
       }),
     );
@@ -679,10 +891,10 @@ describe('Fragen: Bedienbarkeit', () => {
       'chat:thread': () => answered,
     });
 
-    await screen.findByRole('button', { name: `Gespräch „${QUESTION}" öffnen` });
+    await screen.findByRole('button', { name: `Gespräch „${QUESTION}“ öffnen` });
     await expectNoViolations(container);
 
-    await userEvent.click(screen.getByRole('button', { name: `Gespräch „${QUESTION}" öffnen` }));
+    await userEvent.click(screen.getByRole('button', { name: `Gespräch „${QUESTION}“ öffnen` }));
     await screen.findByRole('list', { name: 'Belege' });
     await expectNoViolations(container);
   });

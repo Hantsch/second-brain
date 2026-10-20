@@ -1,6 +1,6 @@
 /* Wissens-Module (Karpathy-Wiki), Suche, Chat und Ingest. */
 
-import type { BaseFrontmatter, DocType } from './vault';
+import type { BaseFrontmatter, DocType, Scope } from './vault';
 
 export type WikiPageType = 'source' | 'entity' | 'concept' | 'overview';
 
@@ -47,6 +47,14 @@ export interface WikiPage {
   wordCount: number;
 }
 
+/**
+ * Warum eine Rohquelle nichts zum Verdichten hergibt. Ein string union statt
+ * einer youtube-spezifischen Markierung: Story 064 füllt dasselbe Feld mit
+ * eigenen Gründen — dieser union bekommt dann weitere Mitglieder, ohne dass
+ * `RawSource.blocked` selbst sich ändert.
+ */
+export type SourceBlockReason = 'no-transcript';
+
 /** Eine Rohquelle unter `raw/` — unveränderlich, Fixpunkt aller Zitate. */
 export interface RawSource {
   /** Ordner oder Datei relativ zur Vault-Wurzel. */
@@ -61,6 +69,57 @@ export interface RawSource {
   bytes: number;
   /** Zu welchen Modulen die Quelle verdichtet wurde. */
   modules: string[];
+  /**
+   * Warum die Quelle nichts zum Verdichten hergibt, oder `null` wenn sie es
+   * tut (bzw. ein legacy-Protokoll ohne diese Information keine Aussage
+   * erlaubt). Nur youtube-Quellen kennen bislang einen Grund.
+   */
+  blocked: SourceBlockReason | null;
+}
+
+/** A URL found while checking a YouTube video for downloadable resources. */
+export interface SourceResourceLink {
+  url: string;
+  /** Context from the description, when it provides a useful label. */
+  label: string | null;
+}
+
+/** A workflow, model, file, repository, or other resource mentioned by a video. */
+export interface SourceResourceMention {
+  name: string;
+  /** The evidence from the transcript or description, kept short. */
+  mention: string;
+  location: 'video' | 'description';
+  /** Timecode such as `12:34`, only when the transcript supports it. */
+  timestamp: string | null;
+  /** Description links that plausibly lead to this resource. */
+  links: SourceResourceLink[];
+}
+
+/** Persistent result of the resource check performed during YouTube condensation. */
+export interface SourceResourceReport {
+  generatedAt: string;
+  /** True only if a model inspected the transcript, not merely the description links. */
+  analyzedWithModel: boolean;
+  model: string | null;
+  resources: SourceResourceMention[];
+  /** Every description link remains visible, even when it could not be matched safely. */
+  descriptionLinks: SourceResourceLink[];
+}
+
+/** A file manually supplied for a source, stored below its `sources/` directory. */
+export interface SourceAttachment {
+  name: string;
+  path: string;
+  bytes: number | null;
+  directory: boolean;
+}
+
+/** Everything the source detail window needs in one read. */
+export interface SourceDetail {
+  source: RawSource;
+  resourceReport: SourceResourceReport | null;
+  attachments: SourceAttachment[];
 }
 
 export interface SearchHit {
@@ -83,6 +142,10 @@ export interface SearchQuery {
   types?: DocType[];
   /** Auf ein Modul einschränken. */
   module?: string;
+  /** Auf Arbeit oder Privat einschränken. */
+  scope?: Scope;
+  /** Restrict to one project slug from `projects/<scope>/<slug>/`. */
+  project?: string;
   tags?: string[];
   /** Nur Dokumente ab diesem Datum. */
   since?: string;
@@ -112,7 +175,7 @@ export interface ChatMessage {
 }
 
 export type ChatKind =
-  /** Frage an das Second Brain, Antwort nur aus Belegen. */
+  /** Frage an Gaston, Antwort nur aus Belegen. */
   | 'ask'
   /** Tagebuch-/Coaching-Gespräch. */
   | 'journal'
@@ -141,8 +204,130 @@ export type IngestStage =
   | 'indexing'
   | 'done'
   | 'error'
+  /** The exact source already exists; no second raw source was written. */
+  | 'duplicate'
   /** Rohquelle liegt, aber der Verdichtungsschritt braucht ein LLM. */
-  | 'awaiting-llm';
+  | 'awaiting-llm'
+  /**
+   * The raw source is filed, but it holds nothing to distill — a video without a
+   * transcript, a PDF that isn't read. Terminal and honest: no model can turn an
+   * empty source into content, so this is neither `awaiting-llm` nor an `error`.
+   * `job.message` carries the reason as an `IngestNoteCode`.
+   */
+  | 'no-content';
+
+/**
+ * Warum ein Modul-Plan (Umbenennen/Löschen, Story 063) nicht angewendet werden
+ * kann. `target-exists` liest der Kern selbst aus dem Vaultinhalt heraus;
+ * `digestion-pending` kennt nur der IPC-Handler, weil nur er die
+ * Ingest-Warteschlange sieht — deshalb ist diese Vereinigung eigenständig und
+ * nicht einfach der Kern-Typ `LifecycleBlockReason` (`@core/wiki`), der nur den
+ * ersten Grund kennt.
+ */
+export type ModuleLifecycleBlockReason = 'target-exists' | 'digestion-pending';
+
+export type ModuleLifecycleChangeKind =
+  | 'module-file'
+  | 'page'
+  | 'agents-md'
+  | 'catalog'
+  | 'ingest-protocol'
+  | 'project'
+  | 'dump'
+  | 'wikilink';
+
+/** Eine Datei, die Umbenennen/Löschen umschreiben würde. Spiegelt `LifecycleChange`
+ * (`@core/wiki`) — nie eine Löschung, nie `log.md`. */
+export interface ModuleLifecycleChange {
+  path: string;
+  kind: ModuleLifecycleChangeKind;
+  summary: string;
+}
+
+/** Vorschau eines Modul-Umbenennens (`modules:renamePlan`, Story 063 D4). Spiegelt
+ * `RenamePlan` (`@core/wiki`) — nichts ist geschrieben, solange nur geplant wird. */
+export interface ModuleRenamePlan {
+  slug: string;
+  newSlug: string;
+  oldTitle: string;
+  title: string;
+  /** `newSlug === slug`: nur Titelzeilen ändern sich, der Ordner bleibt stehen. */
+  titleOnly: boolean;
+  changes: ModuleLifecycleChange[];
+  pages: readonly WikiPage[];
+  blocked: ModuleLifecycleBlockReason | null;
+  /** sha256 über sortierte `pfad:hash`-Paare — die Bestätigung reicht ihn zurück. */
+  fingerprint: string;
+}
+
+/** Wie eine Rohquelle nach der Löschung dasteht. Spiegelt `AffectedSource`. */
+export interface ModuleAffectedSource {
+  path: string;
+  protocolPath: string;
+  /** `undigested`: ihre `modules`-Liste wird leer. `stays-digested`: ein anderes Modul bleibt. */
+  outcome: 'undigested' | 'stays-digested';
+  remainingModule: string | null;
+}
+
+/** Ein eingehender Wikilink, der nach der Löschung ins Leere zeigt. Spiegelt
+ * `BrokenInboundLink` — wird nicht umgebogen, es gibt kein Ziel mehr. */
+export interface ModuleBrokenInboundLink {
+  path: string;
+  target: string;
+  line: string;
+}
+
+/** Ein Projekt, dessen `modules:`-Liste die Löschung verliert. Spiegelt `AffectedProject`. */
+export interface ModuleAffectedProject {
+  path: string;
+  slug: string;
+}
+
+/** Vorschau eines Modul-Löschens (`modules:deletePlan`, Story 063 D4). Spiegelt
+ * `DeletePlan` (`@core/wiki`). */
+export interface ModuleDeletePlan {
+  slug: string;
+  changes: ModuleLifecycleChange[];
+  pages: readonly WikiPage[];
+  sources: ModuleAffectedSource[];
+  brokenLinks: ModuleBrokenInboundLink[];
+  projects: ModuleAffectedProject[];
+  blocked: ModuleLifecycleBlockReason | null;
+  fingerprint: string;
+}
+
+/** Ergebnis eines bestätigten Umbenennens (`modules:rename`). Spiegelt `RenameResult`. */
+export interface ModuleRenameResult {
+  slug: string;
+  newSlug: string;
+  title: string;
+  /** `false` bei einem reinen Titel-Umbenennen: der Ordner blieb stehen. */
+  moved: boolean;
+  /** Jede umgeschriebene Datei, am jetzigen Pfad. */
+  written: string[];
+  /** Eine Marke für die ganze Aktion — `modules:undo` dreht sie zurück. */
+  undoToken: string;
+  /** Der Chronik-Eintrag mit dem `lint`-Vermerk; er wird nicht zurückgedreht. */
+  logged: string;
+}
+
+/** Ergebnis eines bestätigten Löschens (`modules:delete`). Spiegelt `DeleteResult`. */
+export interface ModuleDeleteResult {
+  slug: string;
+  /** Umgeschriebene Dateien außerhalb des gelöschten Ordners. */
+  written: string[];
+  /** Der Modulordner, jetzt im Papierkorb. */
+  deleted: string;
+  undoToken: string;
+}
+
+/** Ergebnis von `modules:undo` — dieselbe Form wie `gardener:undoFix`s Antwort. */
+export interface ModuleUndoResult {
+  /** Pfade, die wieder auf dem Stand von vorher sind. */
+  restored: string[];
+  /** Pfade, die unberührt bleiben, weil sie sich seither geändert haben. */
+  kept: string[];
+}
 
 export interface IngestJob {
   id: string;
@@ -162,4 +347,8 @@ export interface IngestJob {
   rawPath: string | null;
   /** Geschriebene bzw. geänderte Wiki-Seiten. */
   touchedPages: string[];
+  /** Existing raw path when duplicate detection stopped this import. */
+  duplicateOf?: string | null;
+  /** What the condensed page is built from. Undefined behaves as `'transcript'`. */
+  basis?: 'transcript' | 'metadata';
 }

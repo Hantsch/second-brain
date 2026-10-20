@@ -2,14 +2,18 @@
    Same key set as `de-wiki.ts` — a test compares both. */
 
 export const enWiki = {
+  // ── Knowledge: the screen's own tabs ──────────────────────────────────────
+  'knowledge.tab.modules': 'Modules',
+  'knowledge.tab.sources': 'Sources',
+
   // ── Modules: overview ─────────────────────────────────────────────────────
   'modules.count': '{count} modules',
   'modules.countOne': 'one module',
   'modules.counts': '{sources} sources · {entities} entities · {concepts} concepts',
   'modules.lastIngest': 'last condensed {date}',
   'modules.neverIngested': 'nothing condensed yet',
-  'modules.findings': '{count} maintenance findings',
-  'modules.findingsOne': 'one maintenance finding',
+  'modules.findings': '{count} results from Care',
+  'modules.findingsOne': 'one result from Care',
   'modules.open': 'Open module {title}',
   'modules.back': 'All modules',
   'modules.noDescription': 'No description.',
@@ -25,6 +29,59 @@ export const enWiki = {
   'modules.create.hint':
     'Created are the folder, the catalogue, the chronicle, the synthesis and AGENTS.md — the schema that lets any model maintain this module.',
   'modules.create.submit': 'Create',
+
+  // ── Modules: rename (063, D5) ─────────────────────────────────────────────
+  'modules.rename.action': 'Rename',
+  'modules.rename.title': 'Rename module',
+  'modules.rename.what':
+    'Renaming rewrites the module file, every affected page, AGENTS.md and the catalogue. Changing the slug also moves the folder and updates every wikilink, ingest protocol, project and filed dump that names it.',
+  'modules.rename.name': 'Title',
+  'modules.rename.submit': 'Rename',
+  'modules.rename.titleOnly': 'Only the title changes — the folder stays where it is.',
+  'modules.rename.moves': 'The module folder moves from modules/{from} to modules/{to}.',
+  'modules.rename.kind.module-file': 'Module file',
+  'modules.rename.kind.page': 'Pages',
+  'modules.rename.kind.wikilink': 'Wikilinks',
+  'modules.rename.kind.agents-md': 'AGENTS.md',
+  'modules.rename.kind.catalog': 'Catalogue',
+  'modules.rename.kind.ingest-protocol': 'Ingest protocols',
+  'modules.rename.kind.project': 'Projects',
+  'modules.rename.kind.dump': 'Filed dumps',
+  'modules.rename.blocked.target-exists':
+    'A module with this name already exists — pick a different title.',
+  'modules.rename.blocked.digestion-pending':
+    'A source is still being taken into this module — try again once it finishes.',
+  'modules.rename.conflict':
+    'Nothing was renamed — the module changed since the changes above were shown. Close and try again.',
+  'modules.rename.done': 'Renamed to “{title}”.',
+  'modules.rename.undoFailed': 'Undo failed — the module was not restored.',
+  'modules.rename.undoPartial': 'Undo partially applied — some changes could not be reverted.',
+
+  // ── Modules: delete (063, D6) ──────────────────────────────────────────────
+  'modules.delete.action': 'Delete',
+  'modules.delete.title': 'Delete “{title}”?',
+  'modules.delete.what':
+    'Deleting moves the module folder to the trash. Sources that named it return to undigested, inbound links from other modules break, and projects lose it from their list.',
+  'modules.delete.pagesOne': 'One page is deleted with the module.',
+  'modules.delete.pages': '{count} pages are deleted with the module.',
+  'modules.delete.sourcesNone': 'No raw source names this module.',
+  'modules.delete.sourcesHeading': 'What happens to the sources that named this module:',
+  'modules.delete.source.undigested': '{path} returns to undigested — no module claims it anymore.',
+  'modules.delete.source.staysDigested': '{path} stays digested in {module}.',
+  'modules.delete.brokenLinksOne': 'One inbound wikilink from outside the module breaks.',
+  'modules.delete.brokenLinks': '{count} inbound wikilinks from outside the module break.',
+  'modules.delete.brokenLink': '{path} links to {target}, which will be gone.',
+  'modules.delete.projectsOne': 'One project loses this module from its list.',
+  'modules.delete.projects': '{count} projects lose this module from their list.',
+  'modules.delete.project': '{slug} no longer lists this module.',
+  'modules.delete.blocked.digestion-pending':
+    'A source is still being taken into this module — try again once it finishes.',
+  'modules.delete.conflict':
+    'Nothing was deleted — the module changed since the changes above were shown. Close and try again.',
+  'modules.delete.submit': 'Delete',
+  'modules.delete.done': 'Deleted “{title}”.',
+  'modules.delete.undoFailed': 'Undo failed — the module was not restored.',
+  'modules.delete.undoPartial': 'Undo partially applied — some changes could not be reverted.',
 
   // ── Modules: detail ───────────────────────────────────────────────────────
   'modules.tab.pages': 'Pages',
@@ -100,16 +157,17 @@ export const enWiki = {
   'log.missing': 'This module has no chronicle yet.',
   'log.kind.ingest': 'Source taken in',
   'log.kind.query': 'Question answered',
-  'log.kind.lint': 'Maintenance run',
+  'log.kind.lint': 'Knowledge check',
   'log.touched': 'Touched',
   'log.summary': 'Summary',
   'log.notes': 'Note',
   'log.answeredFrom': 'Answered from',
   'log.filedBack': 'Filed as',
-  'log.findings': 'Findings',
+  'log.findings': 'Results',
 
   'modules.sourcesTab.empty':
     'No raw source condensed into this module yet. Sources come in through the “Sources” screen.',
+  'modules.sourcesTab.ingest': 'Take in a source for this module',
 
   // ── Sources: input ────────────────────────────────────────────────────────
   'sources.input.title': 'Take in a source',
@@ -154,7 +212,10 @@ export const enWiki = {
   'sources.stage.indexing': 'Index catching up',
   'sources.stage.done': 'Taken in',
   'sources.stage.error': 'Failed',
+  'sources.stage.duplicate': 'Already present',
   'sources.stage.awaiting-llm': 'Waiting for a model',
+  'sources.stage.no-content': 'No content',
+  'sources.stage.blocked.no-transcript': 'No transcript available',
   'sources.job.cancel': 'Cancel',
   'sources.job.retry': 'Retry',
   'sources.job.raw': 'View raw source',
@@ -168,17 +229,62 @@ export const enWiki = {
   'sources.awaiting.model': 'Set up a model',
   'sources.unfiled.title': 'The source rests in the vault, not filed into a module',
   'sources.unfiled.body':
-    'Intended with “file later”: the raw source stands, condensing follows — the maintenance run reports it as not condensed.',
+    'Intended with “file later”: the raw source stands, condensing follows — the check reports it as not condensed.',
+  'sources.duplicate': 'This source already exists at {path}. Nothing was imported twice.',
+  'sources.duplicate.title': 'Source already in the vault',
+  'sources.duplicate.body':
+    'The existing entry was opened. If condensation is still pending, use “Condense” there.',
+  'sources.duplicate.condensedTitle': 'Source is already condensed',
+  'sources.duplicate.again': 'Ingest again',
+  'sources.noContent.title': 'The source rests in the vault, there is nothing to condense',
+  'sources.noContent.body':
+    'The raw source is stored, but without readable text — no model could turn it into a page. A retry would end the same way; digesting from the description is the choice offered in the list below.',
 
   // ── Sources: what is already in ───────────────────────────────────────────
   'sources.list.title': 'Sources taken in',
   'sources.list.count': '{count} sources',
   'sources.list.countOne': 'one source',
+  'sources.list.hideSuccessful': 'Hide successful',
+  'sources.list.noAttention':
+    'No source needs attention right now. All sources taken in were condensed successfully.',
   'sources.list.uncondensed': 'Not condensed',
   'sources.list.module': 'in {module}',
   'sources.list.noModule': 'without module',
-  'sources.list.open': 'Show raw source {title} in the folder',
+  'sources.list.open': 'Open details for source {title}',
   'sources.list.page': 'To the wiki page',
+  'sources.list.moduleFor': 'Target module for {title}',
+  'sources.detail.title': 'Source details',
+  'sources.detail.status': 'Status',
+  'sources.detail.condensed': 'Condensed',
+  'sources.detail.kind': 'Kind',
+  'sources.detail.ingested': 'Ingested',
+  'sources.detail.origin': 'Origin',
+  'sources.detail.unknown': 'unknown',
+  'sources.detail.size': 'Size',
+  'sources.detail.targetModule': 'Target module',
+  'sources.detail.chooseModule': 'Choose a module',
+  'sources.detail.targetHint': 'Condensation writes the source page and updates this module.',
+  'sources.detail.condense': 'Condense',
+  'sources.detail.condensing': 'Condensing',
+  'sources.detail.condenseFromMetadata': 'Digest from description',
+  'sources.detail.folder': 'Source folder',
+  'sources.detail.wikiPage': 'Wiki page',
+  'sources.detail.resources': 'Mentioned resources',
+  'sources.detail.resourcesChecked': 'Transcript checked',
+  'sources.detail.linksOnly': 'Description links only',
+  'sources.detail.checkResources': 'Check resources',
+  'sources.detail.noResources':
+    'No concrete downloadable resource was identified. Every description link remains visible below.',
+  'sources.detail.inDescription': 'in the description',
+  'sources.detail.inVideo': 'in the video',
+  'sources.detail.inVideoAt': 'in the video at {time}',
+  'sources.detail.descriptionLinks': '{count} description links',
+  'sources.detail.attachments': 'Supplied sources',
+  'sources.detail.upload': 'Add files',
+  'sources.detail.noAttachments': 'No file has been supplied yet.',
+  'sources.detail.uploadHint':
+    "Selected files are copied into this video's sources/ folder. Files with the same name are not overwritten.",
+  'sources.detail.folderType': 'Folder',
   'sources.kind.youtube': 'YouTube',
   'sources.kind.url': 'Web page',
   'sources.kind.file': 'File',

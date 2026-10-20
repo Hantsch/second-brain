@@ -1,12 +1,14 @@
-/* Zentrale Ereignis-Verdrahtung: was aus dem Hauptprozess kommt, invalidiert
-   hier genau die betroffenen Query-Keys. Kein Polling, keine verstreuten
-   Listener in Components. */
+/* Central event wiring: whatever comes from the main process invalidates
+   exactly the affected query keys here. No polling, no scattered
+   listeners in components. */
 
 import type { QueryClient } from '@tanstack/react-query';
 import { bridge } from './bridge';
 import { appendStream } from './llm-stream';
+import { appendPull } from './pullStore';
 import { pushToast } from './toast';
 import { qk, VAULT_DEPENDENT_ROOTS } from './queries/keys';
+import { invalidateLlamaStartPlan, invalidateProviders } from './queries/llm';
 import { setLanguage } from '../i18n';
 
 function invalidateVaultDependent(client: QueryClient): void {
@@ -15,7 +17,7 @@ function invalidateVaultDependent(client: QueryClient): void {
   }
 }
 
-/** Meldet alle Ereignisse an; Rückgabe hängt sie wieder ab. */
+/** Subscribes to all events; the return value unsubscribes them again. */
 export function wireEvents(client: QueryClient): () => void {
   const sb = bridge();
   const unsubscribes: (() => void)[] = [];
@@ -49,28 +51,14 @@ export function wireEvents(client: QueryClient): () => void {
   );
 
   unsubscribes.push(
-    sb.on('event:ingest-progress', () => {
-      void client.invalidateQueries({ queryKey: qk.ingest.jobs() });
+    sb.on('event:update', (state) => {
+      client.setQueryData(qk.update.state(), state);
     }),
   );
 
   unsubscribes.push(
     sb.on('event:reminder', () => {
       void client.invalidateQueries({ queryKey: qk.reminders.list() });
-    }),
-  );
-
-  /* Ein Pflegelauf endet auch, wenn niemand auf dem Pflege-Screen steht — beim
-     Öffnen des Vaults etwa (`gardener.runOnOpen`). Danach hängt mehr als der
-     Bericht daran: das Dashboard zeigt den Gesundheitswert, die Modulkarten die
-     Befundzahl ihres Moduls. Ohne diese Stelle stünde dort die Zahl von vorher,
-     und zwei Screens sagten Verschiedenes über denselben Lauf. */
-  unsubscribes.push(
-    sb.on('event:gardener-progress', ({ phase }) => {
-      if (phase !== 'done') return;
-      void client.invalidateQueries({ queryKey: qk.gardener.report() });
-      void client.invalidateQueries({ queryKey: qk.dashboard.data() });
-      void client.invalidateQueries({ queryKey: qk.modules.list() });
     }),
   );
 
@@ -83,10 +71,31 @@ export function wireEvents(client: QueryClient): () => void {
   unsubscribes.push(
     sb.on('event:llm-stream', (chunk) => {
       appendStream(chunk.messageId, chunk);
-      /* Erst am Ende die Query invalidieren — sonst rendert jedes Stück neu. */
+      /* Only invalidate the query at the end — otherwise every chunk re-renders. */
       if (chunk.done) {
         void client.invalidateQueries({ queryKey: qk.chat.thread(chunk.threadId) });
         void client.invalidateQueries({ queryKey: qk.chat.threads() });
+      }
+    }),
+  );
+
+  /* Progress lives in `pullStore`, not the query cache — many events per
+     second, and nothing here needs re-fetching until the pull is done. Once
+     it finishes *successfully*, though, a model just became installed —
+     the same "provider models" picture `invalidateProviders` already
+     refreshes for every other provider-changing action, so the routing
+     table's model list re-probes and picks the new model up on its next
+     natural refresh (019c, F6) instead of staying silently stale. A
+     cancelled or failed pull changes nothing installed, so it skips this.
+     A finished pull is also a new `.gguf` file on disk, which is what 034's
+     derived start plan is computed over — hence the second invalidation, so
+     the llama.cpp card plans against the model that is now actually there. */
+  unsubscribes.push(
+    sb.on('event:pull-progress', (chunk) => {
+      appendPull(chunk.pullId, chunk);
+      if (chunk.done && chunk.error === undefined) {
+        invalidateProviders(client);
+        invalidateLlamaStartPlan(client);
       }
     }),
   );

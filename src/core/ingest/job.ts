@@ -5,14 +5,17 @@
  * `IngestJob` aussieht und was ein Fehler daran macht — dort, wann etwas laeuft.
  */
 
-import { IngestError } from './types';
 import type { IngestKind, IngestJob, IngestStage } from '@shared/types';
+import type { IngestError } from './types';
+import type { WikiError } from '@core/wiki/types';
 
 /** Stufen, bei denen nichts mehr laeuft. */
 export const TERMINAL_STAGES: ReadonlySet<IngestStage> = new Set<IngestStage>([
   'done',
   'error',
+  'duplicate',
   'awaiting-llm',
+  'no-content',
 ]);
 
 /** Laenge der Bezeichnung eines Auftrags in der Liste. */
@@ -22,6 +25,8 @@ export interface AddJobInput {
   kind: IngestKind;
   input: string;
   module?: string | null;
+  /** What to build the page from, for `addExisting`. Undefined behaves as `'transcript'`. */
+  basis?: 'transcript' | 'metadata';
 }
 
 /** Kurzform der Eingabe fuer die Liste — eine Zeile, ohne Umbrueche. */
@@ -46,6 +51,7 @@ export function createJob(id: string, input: AddJobInput, startedAt: string): In
     finishedAt: null,
     rawPath: null,
     touchedPages: [],
+    basis: input.basis,
   };
 }
 
@@ -55,12 +61,49 @@ export function copyJob(job: IngestJob): IngestJob {
 }
 
 /**
+ * Die Codes, die `IngestError` und `WikiError` tatsaechlich vergeben — die
+ * einzigen, fuer die `error.code.*` in beiden Sprachen einen Satz hat
+ * (tests/renderer/i18n.test.ts). Ein `errno` wie `ENOSPC` oder `EACCES` von
+ * einem ungewrappten Dateisystemfehler ist kein Mitglied dieser Menge: ohne
+ * diese Schranke wuerde `describeFailure` ihn ungeprueft durchreichen, und die
+ * Oberflaeche zeigt dann den rohen, unuebersetzten Key statt eines Satzes.
+ */
+type KnownErrorCode = IngestError['code'] | WikiError['code'];
+const KNOWN_ERROR_CODES: ReadonlySet<string> = new Set<KnownErrorCode>([
+  'invalid',
+  'not-found',
+  'io',
+  'cancelled',
+  'unknown',
+  'conflict',
+  'too-large',
+]);
+
+/**
+ * Ein Fehler mit einem `code`, wie ihn `IngestError`, `WikiError` und jeder
+ * kuenftige Fehlertyp mit demselben `IpcError.code`-Vertrag traegt. Strukturell
+ * geprueft (duck-typed), nicht per `instanceof` — 051 und 064 bringen eigene
+ * Fehlerklassen mit, die hier ohne Aenderung an dieser Funktion durchgereicht
+ * werden sollen. Beschraenkt auf `KNOWN_ERROR_CODES`: ein `code`, den keine
+ * dieser Klassen vergibt (ein roher `errno` zum Beispiel), zaehlt hier nicht als
+ * benannter Fehler und faellt auf `unknown` zurueck (Story 050, D8).
+ */
+function hasErrorCode(error: unknown): error is { code: KnownErrorCode; message: string } {
+  return (
+    error instanceof Error &&
+    'code' in error &&
+    typeof (error as { code: unknown }).code === 'string' &&
+    KNOWN_ERROR_CODES.has((error as { code: string }).code)
+  );
+}
+
+/**
  * Fehler in Code und Text zerlegen. Der Code entspricht `IpcError.code` und wird in
  * `IngestJob.error` gelegt; die Oberflaeche formuliert daraus den Satz und zeigt den
  * technischen Text nur hinter „Details anzeigen".
  */
 export function describeFailure(error: unknown): { code: string; message: string } {
-  if (error instanceof IngestError) return { code: error.code, message: error.message };
+  if (hasErrorCode(error)) return { code: error.code, message: error.message };
   if (error instanceof Error) return { code: 'unknown', message: error.message };
   return { code: 'unknown', message: String(error) };
 }

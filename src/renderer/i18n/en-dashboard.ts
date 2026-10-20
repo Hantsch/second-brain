@@ -5,12 +5,18 @@
 export const enDashboard = {
   // ── Day summary ──────────────────────────────────────────────────────────
   'dashboard.summary.label': 'What is pressing today',
-  'dashboard.summary.overdue': '{count} overdue',
   'dashboard.summary.today': '{count} due today',
   'dashboard.summary.waitingOne': '1 answer outstanding',
   'dashboard.summary.waitingMany': '{count} answers outstanding',
-  'dashboard.summary.clear': 'Nothing is overdue, nothing is due today.',
+  'dashboard.summary.clear': 'Nothing is due today, nobody is holding things up.',
   'dashboard.summary.jump': 'Jump to “{module}”',
+
+  // ── The "unfiled" strip (story 006) ────────────────────────────────────────
+  /* Above the grid, not part of the day summary — absent at 0 rather than
+     claiming "nothing unfiled". One key is enough, same as
+     `notes.filter.unfiled`: "1 unfiled" and "3 unfiled" need no separate
+     plural form. */
+  'dashboard.unfiled.strip': '{count} unfiled',
 
   // ── The grid ─────────────────────────────────────────────────────────────
   'dashboard.tiles.label': 'Dashboard modules',
@@ -48,7 +54,7 @@ export const enDashboard = {
   'module.quick-capture.name': 'Quick capture',
   'module.quick-capture.purpose': 'One field for the thought you have right now.',
   'module.ask.name': 'Question',
-  'module.ask.purpose': 'A question to the second brain, answered from the vault.',
+  'module.ask.purpose': 'A question to Gaston, answered from the vault.',
   'module.recent-work.name': 'Worked on last',
   'module.recent-work.purpose':
     'File changes, Claude sessions, journal entries and sources in one trail.',
@@ -68,26 +74,32 @@ export const enDashboard = {
   'module.stale-projects.purpose': 'Untouched for a while and not finished.',
   'module.journal-streak.name': 'Journal streak',
   'module.journal-streak.purpose': 'Days in a row, last entry, mood over the past weeks.',
-  'module.claude-sessions.name': 'Claude sessions',
+  'module.claude-sessions.name': 'Agent sessions',
   'module.claude-sessions.purpose': 'Work traces of the agent CLI, linked to your projects.',
-  'module.gardener.name': 'Gardening',
-  'module.gardener.purpose': 'Health score and findings of the last gardening pass.',
+  'module.gardener.name': 'Care',
+  'module.gardener.purpose': 'Health and results from the last check.',
+  'module.loose-ends.name': 'Loose ends',
+  'module.loose-ends.purpose':
+    'Announcements from the journal whose day has passed with no follow-up.',
+  'module.upcoming-mentions.name': 'Upcoming mentions',
+  'module.upcoming-mentions.purpose': 'Announcements from the journal whose day is still ahead.',
 
   // ── Tiles ────────────────────────────────────────────────────────────────
   'tile.more': '{count} more',
+  'row.overdue': 'Overdue',
+  'tile.overdue': '{count} overdue',
   'tile.capture.label': 'Thought',
   'tile.capture.placeholder': 'Raw and unsorted.',
   'tile.capture.hint': 'saves to the inbox',
-  'tile.ask.label': 'Question to the second brain',
+  'tile.ask.label': 'Question to Gaston',
   'tile.ask.placeholder': 'What do I know about …?',
   'tile.ask.submit': 'Ask',
-  'tile.ask.hint': 'The question travels to the questions screen.',
 
   'tile.recent.empty':
     'No trace of work yet. Change a file, run a session or write a journal entry and it shows up here.',
 
   'tile.claude.empty': 'No session in the past few days.',
-  'tile.claude.off': 'Reading Claude sessions is switched off.',
+  'tile.claude.off': 'Reading agent sessions is switched off.',
   'tile.claude.settings': 'Switch on',
   'tile.claude.messages': '{count} messages',
   'tile.claude.unlinked': 'No project',
@@ -98,6 +110,7 @@ export const enDashboard = {
   'tile.claude.linkedTo': 'Session linked to “{name}”',
   'tile.claude.linkSearch': 'Search projects',
   'tile.claude.linkNoMatch': 'No project matches “{query}”.',
+  'tile.claude.openBrowser': 'Open all agent sessions',
 
   'tile.stale.empty': 'No project has been idle longer than the configured threshold.',
   'tile.stale.days': 'for {count} days',
@@ -119,6 +132,9 @@ export const enDashboard = {
   'tile.waiting.due': 'by {date}',
   'tile.waiting.overdue': 'overdue',
 
+  /* 022 D2: the announcement itself is not a deadline — its own label instead
+     of the deadline language of "overdue". */
+  'reminder.urgency.open': 'Announced, open',
   'tile.deadlines.empty': 'No deadline within the next {days} days.',
   'tile.deadlines.project': 'Project deadline',
   'tile.deadlines.todo': 'Todo',
@@ -153,11 +169,32 @@ export const enDashboard = {
   'tile.journal.open': 'To the journal',
 
   'tile.gardener.unknown':
-    'Not checked yet. The gardening pass finds orphaned pages, broken links and forgotten dumps.',
+    'Not checked yet. The check finds orphaned pages, broken links and forgotten dumps.',
   'tile.gardener.check': 'Check now',
   'tile.gardener.worst': 'Heaviest',
   'tile.gardener.health': 'Health',
-  'tile.gardener.findingsOne': '1 finding',
-  'tile.gardener.findingsMany': '{count} findings',
-  'tile.gardener.open': 'To gardening',
+  'tile.gardener.findingsOne': '1 result',
+  'tile.gardener.findingsMany': '{count} results',
+  'tile.gardener.open': 'Open Care',
+  /* 021b D5: a stopped check must not sell its partial finding count as the
+     vault's current state — hence the as-of date and the stopped note
+     instead of the usual finding count. */
+  'tile.gardener.asOf': 'As of {date}',
+  'tile.gardener.stopped': 'Last check was stopped',
+
+  /* 022 D4: a tile of its own for loose ends — previously wrongly folded into
+     "Waiting for". The row names itself as an announcement without an
+     outcome, not as a deadline or a wait. */
+  'tile.looseEnds.empty': 'No loose end. Every announcement in the journal has an outcome.',
+  'tile.looseEnds.announced': 'Announced on {date}',
+  'tile.looseEnds.for': 'for {date}',
+  'tile.looseEnds.snooze': 'Snooze “{title}”',
+  'tile.looseEnds.open': 'Open the journal entry of {date}',
+
+  /* 070 D3: the other half of the same window as loose ends — visible before
+     the day arrives, read-only (no snooze: nothing to quiet down yet). */
+  'tile.upcomingMentions.empty': 'No upcoming mention. Nothing has been announced yet.',
+  'tile.upcomingMentions.announced': 'Announced on {date}',
+  'tile.upcomingMentions.for': 'for {date}',
+  'tile.upcomingMentions.open': 'Open the journal entry of {date}',
 } as const;

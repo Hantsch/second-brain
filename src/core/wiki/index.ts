@@ -7,6 +7,8 @@
  *   `chunk`      lange Quellen in verdichtbare Stuecke schneiden
  *   `summarize`  einmal verdichten (oder ehrlich nichts, wenn kein Modell steht)
  *   `ingest`     Source-Seite, Entitaeten, Konzepte, Katalog, Chronik
+ *                — je Modul serialisiert (`module-lock`), jeder Schreibvorgang
+ *                  mit Hash und begrenztem zweiten Versuch (`write-retry`)
  *   `ask`        Frage → Ausschnitte → Antwort mit gepruefeten Belegen
  *   `file-back`  gute Antwort als Seite ablegen — so fuettern Fragen das Wissen
  */
@@ -35,9 +37,11 @@ export {
   diffIndex,
   entryLine,
   parseIndex,
+  removeEntries,
   upsertEntries,
   type IndexDiff,
   type IndexDiffPage,
+  type RemoveOptions,
   type UpsertOptions,
   type WikiIndexEntry,
 } from './index-md';
@@ -52,6 +56,14 @@ export {
   type WikiLogEntry,
   type WikiLogKind,
 } from './log-md';
+export { withModuleLock } from './module-lock';
+export { linkIntoOverview, overviewEntryLine } from './overview-links';
+export {
+  MAX_WRITE_ATTEMPTS,
+  writeTextWithRetry,
+  type CurrentText,
+  type WriteRetryOptions,
+} from './write-retry';
 export {
   agentsPath,
   createModule,
@@ -65,6 +77,7 @@ export {
   appendUnderSection,
   createPage,
   findPage,
+  findSourcePageForRaw,
   mergeSources,
   pageFrontmatter,
   pageKey,
@@ -74,6 +87,7 @@ export {
   writePage,
   type CreatePageInput,
   type FindPageDeps,
+  type FindSourcePageDeps,
   type WikiPageDoc,
   type WritePageInput,
 } from './pages';
@@ -100,12 +114,58 @@ export {
   type CondenseInput,
   type CondenseResult,
 } from './summarize';
-export { markRawProtocol, protocolPaths } from './raw-protocol';
+export { isRawDigestedInto, markRawProtocol, protocolPaths } from './raw-protocol';
+export {
+  findModuleLinks,
+  retargetDumpFiledInto,
+  retargetHeadlineTitle,
+  retargetIngestModules,
+  retargetModuleFile,
+  retargetModuleLinks,
+  retargetModulePaths,
+  retargetOverviewTitle,
+  retargetPageModule,
+  retargetProjectModules,
+  retargetSlugList,
+  withFrontmatterPatch,
+  type IngestModulesEdit,
+  type ListEdit,
+  type ModuleLinkHit,
+} from './module-lifecycle/refs';
+export { deletePlan, renamePlan } from './module-lifecycle/plan';
+export {
+  deleteModule,
+  type DeleteInput,
+  type DeleteResult,
+  type DeleteWriteDeps,
+} from './module-lifecycle/delete';
+export {
+  renameModule,
+  type RenameInput,
+  type RenameResult,
+  type RenameWriteDeps,
+} from './module-lifecycle/rename';
+export {
+  type AffectedProject,
+  type AffectedSource,
+  type BrokenInboundLink,
+  type DeletePlan,
+  type DeletePlanInput,
+  type LifecycleBlockReason,
+  type LifecycleChange,
+  type LifecycleChangeKind,
+  type ModuleLifecycleDeps,
+  type ModuleLifecycleIndexView,
+  type RenamePlan,
+  type RenamePlanInput,
+} from './module-lifecycle/types';
+export { WikiTransaction, type WikiRollbackResult } from './transaction';
 export { ingestSource, knownPages, type IngestSourceInput } from './ingest';
 export {
   CANDIDATE_FACTOR,
   DEFAULT_RETRIEVE_LIMIT,
   MAX_CANDIDATES,
+  MAX_PASSAGES_PER_DOC,
   askQuestion,
   retrieve,
   type AskInput,
@@ -122,8 +182,10 @@ export {
   type WikiDeps,
   type WikiExcerpt,
   type WikiIndexView,
+  type WikiIngestDeps,
   type WikiIngestResult,
   type WikiOptions,
   type WikiStore,
+  type WikiTxStore,
   type WikiWriteInput,
 } from './types';

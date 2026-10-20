@@ -62,6 +62,12 @@ export function projectOfPath(path: string): string | null {
   return match ? (match[1] ?? null) : null;
 }
 
+/** `areas/<slug>.md` → Bereichs-Slug, sonst null. Areas sind flach, kein Unterordner. */
+export function areaOfPath(path: string): string | null {
+  const match = /^areas\/([^/]+)\.md$/.exec(path);
+  return match ? (match[1] ?? null) : null;
+}
+
 /** Scope aus dem Pfad: nur Projektordner sind hier eindeutig. */
 export function scopeFromPath(path: string): Scope | null {
   if (/^projects\/work\//.test(path)) return 'work';
@@ -150,6 +156,7 @@ export function parseTodos(body: string, options: TodoParseOptions): Todo[] {
   const offset = options.lineOffset ?? 1;
   const today = options.today ?? new Date();
   const project = projectOfPath(options.path);
+  const area = areaOfPath(options.path);
   const seen = new Map<string, number>();
   const todos: Todo[] = [];
 
@@ -177,6 +184,7 @@ export function parseTodos(body: string, options: TodoParseOptions): Todo[] {
       line: offset + index,
       project,
       projectTitle: null,
+      area,
       due,
       waitingFor: firstGroup(WAIT, raw),
       neededBy: firstGroup(NEEDED, raw),

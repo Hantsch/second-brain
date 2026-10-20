@@ -1,27 +1,28 @@
-/* Pflege — hier wird sichtbar, ob das Second Brain gesund ist.
+/* Maintenance — this is where it becomes visible whether Gaston's vault is
+   healthy.
 
-   Von oben nach unten in der Reihenfolge, in der man es braucht: der Wert mit
-   seiner Begründung, der Rat, dann die Befunde nach Art gruppiert und filterbar.
+   Top to bottom in the order you need it: the score with its reasoning, the
+   advice, then the findings grouped by kind and filterable.
 
-   Vier Zustände, alle ausdrücklich:
-   - **Kein Bericht** → „noch nicht geprüft" plus der eine Fokuspunkt „jetzt
-     prüfen". Keine erfundene 100.
-   - **Keine Befunde** → eine ruhige Feststellung mit dem Zeitpunkt und dem, was
-     geprüft wurde. Kein Konfetti.
-   - **Kein Modell** → die maschinellen Befunde stehen vollständig da, und eine
-     Zeile sagt, was ein Modell zusätzlich fände, mit dem Weg in die Einstellung.
-     Der Screen ist ohne Modell voll brauchbar; das ist der Normalfall.
-   - **Fehler** → als Karte an der Stelle der Aktion, mit Details dahinter.
+   Four states, all explicit:
+   - **No report** → "not checked yet" plus the one focal point "check now".
+     No invented 100.
+   - **No findings** → a calm statement with the timestamp and what was
+     checked. No confetti.
+   - **No model** → the mechanical findings appear in full, and one line says
+     what a model would additionally find, with the path into the setting.
+     The screen is fully usable without a model; that's the normal case.
+   - **Error** → as a card in the action's place, with details behind it.
 
-   Ein Fokuspunkt: „Jetzt prüfen" oben rechts. Alles in den Karten bleibt ruhig.
+   One focal point: "Check now" top right. Everything in the cards stays calm.
 
-   Nichts hier löst einen Widerspruch auf, und keine Aktion tut mehr, als sie
-   ankündigt: die Vorschau zeigt die Zeile, die geschrieben wird, „passt so"
-   blendet aus (mit Rückweg), und was nur öffnet, sagt das. */
+   Nothing here resolves a contradiction on its own, and no action does more
+   than it announces: the preview shows the line that will be written, "looks
+   fine" hides it (with a way back), and whatever merely opens says so. */
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { GardenerFinding } from '@shared/types';
+import type { GardenerRunScope, GardenerStageId } from '@shared/types';
 import { Button } from '../../atoms/Button';
 import { EmptyState } from '../../components/EmptyState';
 import { ErrorState } from '../../components/ErrorState';
@@ -32,7 +33,6 @@ import { useLanguage, useT } from '../../i18n';
 import { api } from '../../lib/api';
 import { formatAge } from '../../lib/format';
 import {
-  useGardenerCancel,
   useGardenerMutations,
   useGardenerProgress,
   useGardenerReport,
@@ -40,15 +40,23 @@ import {
 } from '../../lib/queries/gardener';
 import { useTaskRouted } from '../../lib/queries/llm';
 import { useModuleMutations } from '../../lib/queries/modules';
-import type { SupersedeWrite } from './ContradictionCard';
 import { FindingList } from './FindingList';
 import { HealthCard } from './HealthCard';
 import { OutcomeStrip } from './OutcomeStrip';
-import type { Outcome } from './OutcomeStrip';
-import { RunBar } from './RunBar';
+import { useFindingActions } from './useFindingActions';
 import { ALL_FILTERS } from './filter';
 import type { FindingFilterState } from './filter';
+import { scopeLabel } from './scope';
 import { targetFor } from './targets';
+
+/* 021b, D4: names a missing stage in the "stopped partway" notice — the same
+   labels `RunStrip`'s "still to come" line uses for a running plan's remaining
+   stages, so a stage is never called two different things on this screen. */
+const STAGE_LABEL_KEYS: Record<GardenerStageId, string> = {
+  checks: 'garden.run.stage.checks',
+  audit: 'garden.run.stage.audit',
+  'loose-ends': 'garden.run.stage.loose-ends',
+};
 
 export function GardenScreen() {
   const t = useT();
@@ -56,17 +64,14 @@ export function GardenScreen() {
   const navigate = useNavigate();
   const report = useGardenerReport();
   const run = useGardenerRun();
-  const cancel = useGardenerCancel();
   const progress = useGardenerProgress();
   const mutations = useGardenerMutations();
   const pages = useModuleMutations();
   const modelRouted = useTaskRouted('gardener-audit');
 
   const [filter, setFilter] = useState<FindingFilterState>(ALL_FILTERS);
-  const [outcome, setOutcome] = useState<Outcome | null>(null);
-  const [busyId, setBusyId] = useState<string | null>(null);
 
-  /* Ein Pfad führt dorthin, wo die Datei in der App steht — sonst zur Datei. */
+  /* A path leads to where the file lives in the app — otherwise to the file. */
   const openPath = (path: string): void => {
     const target = targetFor(path);
     if (target.kind === 'route') void navigate(target.to);
@@ -77,139 +82,131 @@ export function GardenScreen() {
     void api.shell.openPath(path).catch(() => undefined);
   };
 
+  const {
+    outcome,
+    busyId,
+    undoable,
+    reset,
+    applyFix,
+    dismiss,
+    snooze,
+    restore,
+    recheck,
+    supersede,
+    supersedeDuplicate,
+    discarded,
+    linkOrphan,
+    linkOrphans,
+    answerLooseEnd,
+    undo,
+  } = useFindingActions(mutations, pages, run, openPath);
+
+  /* 021a D6: a run is going the moment `useGardenerProgress` reports one —
+     not only while *this* mutation instance is pending. That query is
+     correct on mount (021a, D4), so it also catches a run this screen didn't
+     start itself (autostart, or a click from before a remount). Guarding
+     `start` itself, not just the button's `disabled` attribute, is what
+     actually stops a second `gardener:run` from firing — a rapid second
+     click must not reach the IPC call just because the disabled state
+     hasn't re-rendered yet. */
+  const running = run.isPending || progress !== null;
+  const data = report.data ?? null;
+  /* 021b, D4: a run that never reached every planned stage names what it
+     missed — `missingStages` is only set together with `complete: false`
+     (see `GardenerReport`), so the length check alone decides whether
+     "continue" has anything to offer. A no-model run's plan is just
+     `checks`, which always completes, so this never shows there. */
+  const missingStages = data?.missingStages ?? [];
+  const canContinue = data?.complete === false && missingStages.length > 0;
+  const missingStagesLabel = missingStages.map((stage) => t(STAGE_LABEL_KEYS[stage])).join(', ');
+  /* 021c, D4: a scoped run is a kind of incomplete run (021b's machinery), but
+     it must not read as the same "stopped partway" sentence — that would
+     claim stages were skipped rather than deliberately left for later. Keyed
+     off `scope` itself, not `missingStages`, since a scoped run's own plan
+     completes in full. */
+  const scope = data?.scope;
+  const scopedLabel = scope === undefined ? null : scopeLabel(scope, t);
+
   const start = (): void => {
-    setOutcome(null);
+    if (running) return;
+    reset();
     run.mutate(undefined);
   };
 
-  const stop = (): void => {
-    cancel.mutate(undefined, { onSuccess: () => setOutcome({ kind: 'cancelled' }) });
+  /* Continues the stopped run instead of starting over — the stages it
+     already finished are not run a second time (021b, D3). */
+  const resume = (): void => {
+    if (running) return;
+    reset();
+    run.mutate({ resume: true });
   };
 
-  const applyFix = (finding: GardenerFinding): void => {
-    setBusyId(finding.id);
-    mutations.fix.mutate(finding, {
-      onSettled: () => setBusyId(null),
-      /* Was die Bestätigung sagt, entscheidet das Ergebnis: ohne geschriebene
-         Datei ist nichts geschrieben, auch wenn der Knopf danach klang. */
-      onSuccess: (result) => {
-        const opened = result.open ?? [];
-        if (result.written.length === 0) {
-          if (opened.length > 0) {
-            setOutcome({ kind: 'opened', paths: opened });
-            openPath(opened[0] ?? '');
-          }
-          return;
-        }
-        setOutcome({
-          kind: 'fixed',
-          files: result.written,
-          undoToken: result.undoToken ?? null,
-        });
-      },
-    });
+  /* 021c, D3: "check only this" — the same run mutation as "check now", just
+     scoped to whatever the filter currently narrows to. Guarded the same way
+     `start`/`resume` are: a run already going must not accept a second one. */
+  const checkOnly = (scope: GardenerRunScope): void => {
+    if (running) return;
+    reset();
+    run.mutate({ scope });
   };
-
-  const dismiss = (finding: GardenerFinding): void => {
-    setBusyId(finding.id);
-    mutations.dismiss.mutate(finding.id, {
-      onSettled: () => setBusyId(null),
-      onSuccess: () => setOutcome({ kind: 'dismissed', id: finding.id }),
-    });
-  };
-
-  /* Der Wert und der Hash wurden beim Laden der Karte eingefroren; hat jemand die
-     Datei seither angefasst, kommt `conflict` zurück und steht als Karte da. */
-  const supersede = (write: SupersedeWrite): void => {
-    pages.savePage.mutate(
-      {
-        path: write.path,
-        frontmatter: { supersedes: write.supersedes },
-        expectedHash: write.expectedHash,
-      },
-      {
-        /* Der Rückweg braucht den Stand von vorher und den Hash von jetzt. */
-        onSuccess: (written) =>
-          setOutcome({
-            kind: 'superseded',
-            file: write.path,
-            before: write.before,
-            hash: written.hash,
-          }),
-      },
-    );
-  };
-
-  const undo = (): void => {
-    if (outcome === null) return;
-    if (outcome.kind === 'dismissed') {
-      mutations.undismiss.mutate(outcome.id, { onSuccess: () => setOutcome(null) });
-      return;
-    }
-    if (outcome.kind === 'fixed' && outcome.undoToken !== null) {
-      mutations.undoFix.mutate(outcome.undoToken, {
-        onSuccess: (result) => setOutcome({ kind: 'undone', kept: result.kept }),
-      });
-      return;
-    }
-    if (outcome.kind === 'superseded') {
-      /* Zurück auf den Stand von vorher. War das Feld leer, bleibt eine leere
-         Liste stehen: über den Merge lässt sich ein Feld nicht entfernen, und
-         `supersedes: []` sagt dasselbe wie „überholt nichts". */
-      pages.savePage.mutate(
-        {
-          path: outcome.file,
-          frontmatter: { supersedes: outcome.before },
-          expectedHash: outcome.hash,
-        },
-        { onSuccess: () => setOutcome({ kind: 'undone', kept: [] }) },
-      );
-    }
-  };
-
-  const undoable =
-    outcome !== null &&
-    (outcome.kind === 'dismissed' ||
-      outcome.kind === 'superseded' ||
-      (outcome.kind === 'fixed' && outcome.undoToken !== null));
 
   const header = (
     <ScreenHeader
       overline={t('screen.garden.overline')}
       title={t('screen.garden.title')}
       action={
-        <Button icon="sprout" loading={run.isPending} disabled={run.isPending} onClick={start}>
-          {report.data === null || report.data === undefined
-            ? t('garden.run.action')
-            : t('garden.run.again')}
-        </Button>
+        <div className="sb-gheader-actions">
+          {canContinue ? (
+            <Button
+              variant="secondary"
+              icon="refresh-cw"
+              loading={run.isPending}
+              disabled={running}
+              title={running ? t('garden.run.disabledWhileRunning') : undefined}
+              onClick={resume}
+            >
+              {t('garden.run.continue')}
+            </Button>
+          ) : null}
+          <Button
+            icon="sprout"
+            loading={run.isPending}
+            disabled={running}
+            title={running ? t('garden.run.disabledWhileRunning') : undefined}
+            onClick={start}
+          >
+            {data === null ? t('garden.run.action') : t('garden.run.again')}
+          </Button>
+        </div>
       }
     />
   );
 
   const failed =
     run.error ??
-    cancel.error ??
     mutations.fix.error ??
     mutations.dismiss.error ??
     mutations.undismiss.error ??
+    mutations.snooze.error ??
+    mutations.unsnooze.error ??
     mutations.undoFix.error ??
+    mutations.supersede.error ??
+    mutations.linkOrphan.error ??
+    mutations.linkOrphans.error ??
+    mutations.answerLooseEnd.error ??
     pages.savePage.error ??
     null;
 
   const notes = (
     <>
-      <RunBar
-        progress={progress}
-        busy={run.isPending}
-        cancelling={cancel.isPending}
-        onCancel={stop}
-      />
       {outcome === null ? null : (
         <OutcomeStrip
           outcome={outcome}
           busy={
-            mutations.undoFix.isPending || mutations.undismiss.isPending || pages.savePage.isPending
+            mutations.undoFix.isPending ||
+            mutations.undismiss.isPending ||
+            mutations.unsnooze.isPending ||
+            pages.savePage.isPending
           }
           {...(undoable ? { onUndo: undo } : {})}
           onOpenSecond={openPath}
@@ -237,8 +234,6 @@ export function GardenScreen() {
     );
   }
 
-  const data = report.data ?? null;
-
   if (data === null) {
     return (
       <div className="sb-screen sb-screen--wide">
@@ -259,7 +254,44 @@ export function GardenScreen() {
     <div className="sb-screen sb-screen--wide">
       {header}
       {notes}
-      <HealthCard report={data} />
+      {/* 021c, D4 finding 4: a run can be both scoped and stopped mid-stage —
+          e.g. "check only module X" cancelled before its own plan finished.
+          The two notices answer different questions ("what did I ask for"
+          vs. "did it finish") and stand beside each other rather than one
+          replacing the other, so "continue check" stays offered whenever it
+          is actually possible. */}
+      {data.complete === false && scopedLabel !== null ? (
+        <div className="sb-gllm" role="status">
+          <p className="sb-ghealth-note">
+            <span className="sb-gllm-title">{scopedLabel}</span>
+          </p>
+          <Button
+            variant="secondary"
+            size="sm"
+            icon="sprout"
+            loading={run.isPending}
+            disabled={running}
+            title={running ? t('garden.run.disabledWhileRunning') : undefined}
+            onClick={start}
+          >
+            {t('garden.scope.checkEverything')}
+          </Button>
+        </div>
+      ) : null}
+      {canContinue ? (
+        <div className="sb-gllm" role="status">
+          <p className="sb-ghealth-note">
+            <span className="sb-gllm-title">{t('garden.stopped.title')}</span>
+          </p>
+          <p className="sb-ghealth-note">
+            {t('garden.stopped.missing', { list: missingStagesLabel })}
+          </p>
+        </div>
+      ) : null}
+      <HealthCard
+        report={data}
+        onShowHidden={() => setFilter((prev) => ({ ...prev, state: 'all' }))}
+      />
 
       {modelRouted === false ? (
         <div className="sb-gllm">
@@ -271,7 +303,7 @@ export function GardenScreen() {
         </div>
       ) : null}
 
-      {data.findings.length === 0 ? (
+      {data.findings.length === 0 && (data.hidden ?? []).length === 0 ? (
         <EmptyState
           icon="circle-check-big"
           title={t('garden.findings.none')}
@@ -282,14 +314,25 @@ export function GardenScreen() {
       ) : (
         <FindingList
           findings={data.findings}
+          hidden={data.hidden ?? []}
           filter={filter}
           onFilter={setFilter}
+          onCheckOnly={checkOnly}
+          checkOnlyDisabled={running}
           busyId={busyId}
           onFix={applyFix}
           onDismiss={dismiss}
+          onSnooze={snooze}
+          onRecheck={recheck}
           onOpenPath={openPath}
           onOpenFile={openFile}
           onSupersede={supersede}
+          onSupersedeDuplicate={supersedeDuplicate}
+          onDiscarded={discarded}
+          onLinkOrphan={linkOrphan}
+          onLinkOrphans={linkOrphans}
+          onAnswerLooseEnd={answerLooseEnd}
+          onRestore={restore}
         />
       )}
     </div>

@@ -1,31 +1,51 @@
-/* Der Kopf der Pflege: der Wert, seine Begründung, der Zeitpunkt — und der Rat.
+/* The head of the maintenance screen: the score, its justification, the
+   timestamp — and the advice.
 
-   Nie eine nackte Zahl. Neben dem Balken steht, **woraus** sie entsteht: die
-   Beiträge je Kategorie aus dem Kern („12 kaputte Links, 3 verwaiste Seiten,
-   1 unverdichtete Quelle"), jeder mit seinen Punkten. Die Punkte summieren sich
-   auf `100 − Gesundheit`; der Kern rundet so, dass die Rechnung aufgeht
+   Never a bare number. Next to the bar is **what it's made of**: the
+   contributions per category from the core ("12 broken links, 3 orphaned
+   pages, 1 uncondensed source"), each with its points. The points add up to
+   `100 − health`; the core rounds so the math works out
    (`core/gardener/health.ts`).
 
-   Darunter zwei Angaben, die man sonst raten müsste: wann geprüft wurde (in Mono,
-   es ist ein Zeitstempel) und **ob ein Modell beteiligt war**. Ein Bericht ohne
-   Deutung ist kein schlechterer Bericht — aber ein anderer, und das muss dastehen.
+   Below that, two pieces of information you'd otherwise have to guess: when
+   it was checked (in mono, since it's a timestamp) and **whether a model was
+   involved**. A report without interpretation isn't a worse report — but a
+   different one, and that has to be stated.
 
-   Der Rat darunter kommt aus dem Bericht, wenn ein Modell ihn gegeben hat; sonst
-   aus der Aufschlüsselung, mit dem Vermerk, dass er so entstanden ist
+   The advice below comes from the report if a model produced it; otherwise
+   from the breakdown, with a note that it was derived that way
    (`advice.ts`). */
 
-import type { GardenerReport } from '@shared/types';
+/* 017 D5: hidden findings (dismissed or snoozed) don't count toward the score
+   — `present()` in `gardener-state.ts` already excludes them. But a score
+   that looks perfect while something was put away would be a quiet lie, so
+   this card names what it left out: the total and the split, plus a way to
+   go look at them. `garden.health.perfect` ("nothing pulls the score down")
+   must not render in that case, even when the visible score is 100. */
+
+import type { GardenerHiddenFinding, GardenerReport } from '@shared/types';
+import { Button } from '../../atoms/Button';
 import { Card } from '../../atoms/Card';
 import { HealthMeter } from '../../components/HealthMeter';
 import { useLanguage, useT } from '../../i18n';
-import { formatDate, plural } from '../../lib/format';
+import { formatDate, locale, plural } from '../../lib/format';
 import { adviceFor } from './advice';
+import { scopeLabel } from './scope';
 
-/** Zeitpunkt in Mono: Datum plus Uhrzeit, ohne Sekunden. */
+/** Total plus the split, worded as one sentence — never a bare count. */
+function hiddenNote(hidden: readonly GardenerHiddenFinding[], t: ReturnType<typeof useT>): string {
+  const dismissed = hidden.filter((entry) => entry.state === 'dismissed').length;
+  const snoozed = hidden.filter((entry) => entry.state === 'snoozed').length;
+  return hidden.length === 1
+    ? t('garden.health.hiddenOne', { dismissed, snoozed })
+    : t('garden.health.hidden', { total: hidden.length, dismissed, snoozed });
+}
+
+/** Timestamp in mono: date plus time, without seconds. */
 function stamp(iso: string, language: 'de' | 'en'): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return iso;
-  const time = new Intl.DateTimeFormat(language === 'de' ? 'de-DE' : 'en-GB', {
+  const time = new Intl.DateTimeFormat(locale(language), {
     hour: '2-digit',
     minute: '2-digit',
   }).format(date);
@@ -34,14 +54,24 @@ function stamp(iso: string, language: 'de' | 'en'): string {
 
 export interface HealthCardProps {
   report: GardenerReport;
+  /** Switches the findings filter to reveal what the score left out. Absent
+      when there is nothing hidden — the button then never renders. */
+  onShowHidden?: () => void;
 }
 
-export function HealthCard({ report }: HealthCardProps) {
+export function HealthCard({ report, onShowHidden }: HealthCardProps) {
   const t = useT();
   const language = useLanguage();
   const known = report.healthKnown !== false;
+  /* A stopped run with no earlier complete check behind it (021b): there is no
+     frozen score and none may be computed, so the card names that state
+     instead of printing an "as of" line with no date in it. */
+  const partial = report.complete === false;
+  const frozenAt = report.healthAsOf;
   const contributions = report.healthContributions ?? [];
   const lost = contributions.reduce((sum, entry) => sum + entry.points, 0);
+  const hidden = report.hidden ?? [];
+  const hasHidden = hidden.length > 0;
   const advice = adviceFor(report);
 
   return (
@@ -52,10 +82,12 @@ export function HealthCard({ report }: HealthCardProps) {
         <div className="sb-ghealth-why">
           <span className="gs-overline">{t('garden.health.why')}</span>
           {!known ? (
-            <p className="sb-ghealth-note">{t('garden.health.noStock')}</p>
-          ) : contributions.length === 0 ? (
+            <p className="sb-ghealth-note">
+              {t(partial ? 'garden.health.noCompleteBody' : 'garden.health.noStock')}
+            </p>
+          ) : contributions.length === 0 && !hasHidden ? (
             <p className="sb-ghealth-note">{t('garden.health.perfect')}</p>
-          ) : (
+          ) : contributions.length === 0 ? null : (
             <>
               <ul className="sb-ghealth-list">
                 {contributions.map((entry) => (
@@ -76,16 +108,42 @@ export function HealthCard({ report }: HealthCardProps) {
               <p className="sb-ghealth-note">{t('garden.health.lost', { count: lost })}</p>
             </>
           )}
+          {known && hasHidden ? (
+            <div className="sb-ghealth-hidden">
+              <p className="sb-ghealth-note">{hiddenNote(hidden, t)}</p>
+              <Button variant="ghost" size="sm" onClick={onShowHidden}>
+                {t('garden.health.showHidden')}
+              </Button>
+            </div>
+          ) : null}
         </div>
       </div>
 
       <p className="sb-ghealth-stamp">
-        <span>{t('garden.health.ranAt')}</span>
-        <span className="sb-mono">{stamp(report.ranAt, language)}</span>
+        {!partial ? (
+          <>
+            <span>{t('garden.health.ranAt')}</span>
+            <span className="sb-mono">{stamp(report.ranAt, language)}</span>
+          </>
+        ) : frozenAt === undefined ? (
+          <span>{t('garden.health.noComplete')}</span>
+        ) : (
+          <span className="sb-mono">
+            {t('garden.health.asOf', { when: stamp(frozenAt, language) })}
+          </span>
+        )}
         <span className="sb-ghealth-model">
           {t(report.usedLlm ? 'garden.health.withModel' : 'garden.health.withoutModel')}
         </span>
       </p>
+
+      {/* 021c, D4: next to the frozen-score stamp above — not instead of it —
+          names the part of the vault the last run actually looked at, so the
+          findings below read as "just this scope" rather than "the whole
+          vault, some of it missing" (021b's stopped-run reading). */}
+      {report.scope === undefined ? null : (
+        <p className="sb-ghealth-note">{scopeLabel(report.scope, t)}</p>
+      )}
 
       {advice.sentences.length === 0 ? null : (
         <div className="sb-gadvice">

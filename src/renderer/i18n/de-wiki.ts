@@ -1,21 +1,25 @@
-/* Deutsche Oberflächentexte der Wissens-Screens: Module und Quellen.
+/* German UI texts for the knowledge screens: modules and sources.
 
-   Eigene Datei, damit `de-screens.ts` nicht über den Zeilenrahmen wächst — und
-   damit die Texte dort liegen, wo die Screens liegen.
+   Its own file so `de-screens.ts` doesn't grow past the line limit — and so
+   the texts live where the screens live.
 
-   Die Kategorienamen sind dieselben, die der Kern in `wiki/index.md` schreibt
-   (`core/wiki/text.ts`): wer in der Oberfläche „Konzepte" liest, findet im Vault
-   dieselbe Überschrift. */
+   The category names are the same ones the core writes in `wiki/index.md`
+   (`core/wiki/text.ts`): whoever reads "Konzepte" in the UI finds the same
+   heading in the vault. */
 
 export const deWiki = {
-  // ── Module: Übersicht ──────────────────────────────────────────────────────
+  // ── Knowledge: the screen's own tabs ───────────────────────────────────────
+  'knowledge.tab.modules': 'Module',
+  'knowledge.tab.sources': 'Quellen',
+
+  // ── Modules: overview ──────────────────────────────────────────────────────
   'modules.count': '{count} Module',
   'modules.countOne': 'ein Modul',
   'modules.counts': '{sources} Quellen · {entities} Entitäten · {concepts} Konzepte',
   'modules.lastIngest': 'zuletzt verdichtet {date}',
   'modules.neverIngested': 'noch nichts verdichtet',
-  'modules.findings': '{count} Pflege-Befunde',
-  'modules.findingsOne': 'ein Pflege-Befund',
+  'modules.findings': '{count} Befunde aus der Pflege',
+  'modules.findingsOne': 'ein Befund aus der Pflege',
   'modules.open': 'Modul {title} öffnen',
   'modules.back': 'Alle Module',
   'modules.noDescription': 'Ohne Beschreibung.',
@@ -31,6 +35,64 @@ export const deWiki = {
   'modules.create.hint':
     'Angelegt werden der Ordner, der Katalog, die Chronik, die Synthese und AGENTS.md — das Schema, mit dem auch ein fremdes Modell das Modul pflegen kann.',
   'modules.create.submit': 'Anlegen',
+
+  // ── Module: Umbenennen (063, D5) ──────────────────────────────────────────
+  'modules.rename.action': 'Umbenennen',
+  'modules.rename.title': 'Modul umbenennen',
+  'modules.rename.what':
+    'Umbenennen schreibt die Moduldatei, jede betroffene Seite, AGENTS.md und den Katalog um. Ändert sich der Slug, zieht auch der Ordner um, und jeder Wikilink, jedes Ingest-Protokoll, jedes Projekt und jeder abgelegte Zettel, der ihn nennt, wird nachgezogen.',
+  'modules.rename.name': 'Titel',
+  'modules.rename.submit': 'Umbenennen',
+  'modules.rename.titleOnly': 'Nur der Titel ändert sich — der Ordner bleibt stehen.',
+  'modules.rename.moves': 'Der Modulordner zieht von modules/{from} nach modules/{to} um.',
+  'modules.rename.kind.module-file': 'Moduldatei',
+  'modules.rename.kind.page': 'Seiten',
+  'modules.rename.kind.wikilink': 'Wikilinks',
+  'modules.rename.kind.agents-md': 'AGENTS.md',
+  'modules.rename.kind.catalog': 'Katalog',
+  'modules.rename.kind.ingest-protocol': 'Ingest-Protokolle',
+  'modules.rename.kind.project': 'Projekte',
+  'modules.rename.kind.dump': 'Abgelegte Zettel',
+  'modules.rename.blocked.target-exists':
+    'Ein Modul mit diesem Namen gibt es schon — wähle einen anderen Titel.',
+  'modules.rename.blocked.digestion-pending':
+    'In dieses Modul wird gerade noch eine Quelle aufgenommen — versuche es erneut, wenn das fertig ist.',
+  'modules.rename.conflict':
+    'Umbenannt wurde nichts — das Modul hat sich seit der oben gezeigten Vorschau geändert. Schließen und erneut versuchen.',
+  'modules.rename.done': 'Umbenannt in „{title}“.',
+  'modules.rename.undoFailed':
+    'Rückgängig machen fehlgeschlagen — das Modul wurde nicht wiederhergestellt.',
+  'modules.rename.undoPartial':
+    'Rückgängig machen nur teilweise gelungen — manche Änderungen ließen sich nicht zurücknehmen.',
+
+  // ── Module: Löschen (063, D6) ──────────────────────────────────────────────
+  'modules.delete.action': 'Löschen',
+  'modules.delete.title': '„{title}“ löschen?',
+  'modules.delete.what':
+    'Löschen verschiebt den Modulordner in den Papierkorb. Quellen, die es nannten, gelten wieder als nicht verdichtet, eingehende Links aus anderen Modulen brechen, und Projekte verlieren es aus ihrer Liste.',
+  'modules.delete.pagesOne': 'Eine Seite wird mit dem Modul gelöscht.',
+  'modules.delete.pages': '{count} Seiten werden mit dem Modul gelöscht.',
+  'modules.delete.sourcesNone': 'Keine Rohquelle nennt dieses Modul.',
+  'modules.delete.sourcesHeading': 'Was mit den Quellen passiert, die dieses Modul nannten:',
+  'modules.delete.source.undigested':
+    '{path} gilt wieder als nicht verdichtet — kein Modul beansprucht sie mehr.',
+  'modules.delete.source.staysDigested': '{path} bleibt verdichtet in {module}.',
+  'modules.delete.brokenLinksOne': 'Ein eingehender Wikilink von außerhalb des Moduls bricht.',
+  'modules.delete.brokenLinks': '{count} eingehende Wikilinks von außerhalb des Moduls brechen.',
+  'modules.delete.brokenLink': '{path} verlinkt auf {target}, das dann fehlt.',
+  'modules.delete.projectsOne': 'Ein Projekt verliert dieses Modul aus seiner Liste.',
+  'modules.delete.projects': '{count} Projekte verlieren dieses Modul aus ihrer Liste.',
+  'modules.delete.project': '{slug} führt dieses Modul nicht mehr.',
+  'modules.delete.blocked.digestion-pending':
+    'In dieses Modul wird gerade noch eine Quelle aufgenommen — versuche es erneut, wenn das fertig ist.',
+  'modules.delete.conflict':
+    'Gelöscht wurde nichts — das Modul hat sich seit der oben gezeigten Vorschau geändert. Schließen und erneut versuchen.',
+  'modules.delete.submit': 'Löschen',
+  'modules.delete.done': '„{title}“ gelöscht.',
+  'modules.delete.undoFailed':
+    'Rückgängig machen fehlgeschlagen — das Modul wurde nicht wiederhergestellt.',
+  'modules.delete.undoPartial':
+    'Rückgängig machen nur teilweise gelungen — manche Änderungen ließen sich nicht zurücknehmen.',
 
   // ── Module: Detail ────────────────────────────────────────────────────────
   'modules.tab.pages': 'Seiten',
@@ -53,7 +115,7 @@ export const deWiki = {
   'pages.filter': 'Kategorie',
   'pages.count': '{count} Seiten',
   'pages.countOne': 'eine Seite',
-  'pages.noMatch': 'Keine Seite passt zu „{query}".',
+  'pages.noMatch': 'Keine Seite passt zu „{query}“.',
   'pages.empty': 'Dieses Modul hat noch keine Seite. Nimm eine Quelle auf, dann entstehen sie.',
   'pages.words': '{count} Wörter',
   'pages.choose': 'Wähle links eine Seite.',
@@ -106,7 +168,7 @@ export const deWiki = {
   'log.missing': 'Für dieses Modul gibt es noch keine Chronik.',
   'log.kind.ingest': 'Quelle aufgenommen',
   'log.kind.query': 'Frage beantwortet',
-  'log.kind.lint': 'Pflegelauf',
+  'log.kind.lint': 'Prüfung',
   'log.touched': 'Berührt',
   'log.summary': 'Zusammenfassung',
   'log.notes': 'Notiz',
@@ -115,7 +177,8 @@ export const deWiki = {
   'log.findings': 'Befunde',
 
   'modules.sourcesTab.empty':
-    'Für dieses Modul ist noch keine Rohquelle verdichtet. Quellen kommen über den Screen „Quellen" herein.',
+    'Für dieses Modul ist noch keine Rohquelle verdichtet. Quellen kommen über den Screen „Quellen“ herein.',
+  'modules.sourcesTab.ingest': 'Quelle in dieses Modul aufnehmen',
 
   // ── Quellen: Eingang ──────────────────────────────────────────────────────
   'sources.input.title': 'Quelle aufnehmen',
@@ -136,18 +199,18 @@ export const deWiki = {
   'sources.drop.title': 'Datei hier fallen lassen',
   'sources.drop.body': 'Text und Markdown werden übernommen.',
   'sources.drop.unsupported':
-    'Diese Dateiart lässt sich nicht hineinziehen: {names}. Über „Dateien wählen" wandert das Original unverändert nach raw/.',
+    'Diese Dateiart lässt sich nicht hineinziehen: {names}. Über „Dateien wählen“ wandert das Original unverändert nach raw/.',
   'sources.drop.unreadable': 'Diese Datei ließ sich nicht lesen: {names}',
 
   'sources.ytdlp.present': 'yt-dlp vorhanden',
   'sources.ytdlp.missing': 'yt-dlp fehlt',
   'sources.ytdlp.checking': 'yt-dlp wird geprüft',
   'sources.ytdlp.what':
-    'Ohne yt-dlp bleibt der Ersatzweg: Untertitel ja, Kapitelmarken und manuelle Spuren nein. „Automatisch holen" legt das eigenständige Binary in den Anwendungsordner — kein Python, keine Installation im System.',
+    'Ohne yt-dlp bleibt der Ersatzweg: Untertitel ja, Kapitelmarken und manuelle Spuren nein. „Automatisch holen“ legt das eigenständige Binary in den Anwendungsordner — kein Python, keine Installation im System.',
   'sources.ytdlp.install': 'Automatisch holen',
   'sources.ytdlp.installing': 'Wird geholt',
 
-  // ── Quellen: Aufträge ─────────────────────────────────────────────────────
+  // ── Sources: jobs ──────────────────────────────────────────────────────────
   'sources.jobs.title': 'Aufträge',
   'sources.jobs.count': '{count} Aufträge',
   'sources.jobs.countOne': 'ein Auftrag',
@@ -160,7 +223,10 @@ export const deWiki = {
   'sources.stage.indexing': 'Index zieht nach',
   'sources.stage.done': 'Aufgenommen',
   'sources.stage.error': 'Fehlgeschlagen',
+  'sources.stage.duplicate': 'Bereits vorhanden',
   'sources.stage.awaiting-llm': 'Wartet auf ein Modell',
+  'sources.stage.no-content': 'Kein Inhalt',
+  'sources.stage.blocked.no-transcript': 'Kein Transcript verfügbar',
   'sources.job.cancel': 'Abbrechen',
   'sources.job.retry': 'Wiederholen',
   'sources.job.raw': 'Rohquelle ansehen',
@@ -170,21 +236,68 @@ export const deWiki = {
   'sources.job.noModule': 'ohne Modul',
   'sources.awaiting.title': 'Quelle liegt im Vault, die Verdichtung braucht ein Modell',
   'sources.awaiting.body':
-    'Die Rohquelle ist unverändert gespeichert. Sobald ein Modell für „Quelle verdichten" eingerichtet ist, entstehen daraus Wiki-Seiten.',
+    'Die Rohquelle ist unverändert gespeichert. Sobald ein Modell für „Quelle verdichten“ eingerichtet ist, entstehen daraus Wiki-Seiten.',
   'sources.awaiting.model': 'Modell einrichten',
   'sources.unfiled.title': 'Quelle liegt im Vault, noch keinem Modul zugeordnet',
   'sources.unfiled.body':
-    'So gewollt bei „später einordnen": die Rohquelle steht, verdichtet wird sie später — der Pflegelauf meldet sie als unverdichtet.',
+    'So gewollt bei „später einordnen“: die Rohquelle steht, verdichtet wird sie später — die Prüfung meldet sie als unverdichtet.',
+  'sources.duplicate':
+    'Diese Quelle liegt bereits unter {path}. Es wurde nichts doppelt importiert.',
+  'sources.duplicate.title': 'Quelle bereits im Vault',
+  'sources.duplicate.body':
+    'Der vorhandene Eintrag wurde geöffnet. Für eine offene Verdichtung dient dort die Aktion „Verdichten“.',
+  'sources.duplicate.condensedTitle': 'Quelle ist bereits verdichtet',
+  'sources.duplicate.again': 'Erneut aufnehmen',
+  'sources.noContent.title': 'Quelle liegt im Vault, es gibt nichts zu verdichten',
+  'sources.noContent.body':
+    'Die Rohquelle ist gespeichert, aber ohne lesbaren Text — kein Modell könnte daraus eine Seite machen. Ein erneuter Versuch endet gleich; ein Digest aus der Beschreibung ist die Wahl in der Bestandsliste.',
 
   // ── Quellen: Bestand ──────────────────────────────────────────────────────
   'sources.list.title': 'Aufgenommene Quellen',
   'sources.list.count': '{count} Quellen',
   'sources.list.countOne': 'eine Quelle',
+  'sources.list.hideSuccessful': 'Erfolgreiche ausblenden',
+  'sources.list.noAttention':
+    'Keine Quelle braucht gerade Aufmerksamkeit. Alle aufgenommenen Quellen sind erfolgreich verdichtet.',
   'sources.list.uncondensed': 'Unverdichtet',
   'sources.list.module': 'in {module}',
   'sources.list.noModule': 'ohne Modul',
-  'sources.list.open': 'Rohquelle {title} im Ordner zeigen',
+  'sources.list.open': 'Details der Quelle {title} öffnen',
   'sources.list.page': 'Zur Wiki-Seite',
+  'sources.list.moduleFor': 'Zielmodul für {title}',
+  'sources.detail.title': 'Quellendetails',
+  'sources.detail.status': 'Status',
+  'sources.detail.condensed': 'Verdichtet',
+  'sources.detail.kind': 'Art',
+  'sources.detail.ingested': 'Aufgenommen',
+  'sources.detail.origin': 'Herkunft',
+  'sources.detail.unknown': 'unbekannt',
+  'sources.detail.size': 'Größe',
+  'sources.detail.targetModule': 'Zielmodul',
+  'sources.detail.chooseModule': 'Modul wählen',
+  'sources.detail.targetHint':
+    'Die Verdichtung schreibt die Source-Seite und pflegt dieses Modul nach.',
+  'sources.detail.condense': 'Verdichten',
+  'sources.detail.condensing': 'Wird verdichtet',
+  'sources.detail.condenseFromMetadata': 'Aus Beschreibung verdichten',
+  'sources.detail.folder': 'Quellordner',
+  'sources.detail.wikiPage': 'Wiki-Seite',
+  'sources.detail.resources': 'Erwähnte Ressourcen',
+  'sources.detail.resourcesChecked': 'Transcript geprüft',
+  'sources.detail.linksOnly': 'Nur Description-Links',
+  'sources.detail.checkResources': 'Ressourcen prüfen',
+  'sources.detail.noResources':
+    'Keine konkrete herunterladbare Ressource erkannt. Description-Links bleiben darunter vollständig einsehbar.',
+  'sources.detail.inDescription': 'in der Description',
+  'sources.detail.inVideo': 'im Video',
+  'sources.detail.inVideoAt': 'im Video bei {time}',
+  'sources.detail.descriptionLinks': '{count} Links in der Description',
+  'sources.detail.attachments': 'Nachgereichte Quellen',
+  'sources.detail.upload': 'Dateien hinzufügen',
+  'sources.detail.noAttachments': 'Noch keine Datei nachgereicht.',
+  'sources.detail.uploadHint':
+    'Die gewählten Dateien werden in sources/ dieses Videos kopiert. Gleichnamige Dateien werden nicht überschrieben.',
+  'sources.detail.folderType': 'Ordner',
   'sources.kind.youtube': 'YouTube',
   'sources.kind.url': 'Webseite',
   'sources.kind.file': 'Datei',

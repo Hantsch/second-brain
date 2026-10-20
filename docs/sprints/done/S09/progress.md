@@ -1,0 +1,77 @@
+- 2026-08-23 17:56 · 035 · D1 Machine-scan cache in userData · started
+- 2026-08-23 18:05 · 035 · D1 Machine-scan cache in userData · done
+- 2026-08-23 18:05 · 035 · D2 llm:getMachineScan channel + card reads on mount · started
+- 2026-08-23 18:12 · 035 · D2 llm:getMachineScan channel + card reads on mount · done
+- 2026-08-23 18:12 · 035 · D3 Manual VRAM in GB · started
+- 2026-08-23 18:12 · 035 · D4 Gaston slider atom · started
+- 2026-08-23 18:17 · 035 · D3 Manual VRAM in GB · done
+- 2026-08-23 18:17 · 035 · D4 Gaston slider atom · done
+- 2026-08-23 18:17 · 035 · D6 headline sentence without parameters · started
+- 2026-08-23 18:27 · 035 · D6 headline sentence without parameters · done
+- 2026-08-23 18:27 · 035 · D5 budget becomes a slider · started
+- 2026-08-23 18:32 · 035 · D5 budget becomes a slider · done
+- 2026-08-23 18:32 · 035 · D7 card split into groups · started
+- 2026-08-23 18:46 · 035 · D7 card split into groups · done
+- 2026-08-23 18:46 · 035 · D8 screenshots and both languages · started
+- 2026-08-23 18:50 · 035 · D8 screenshots and both languages · done
+- 2026-08-23 19:21 · 035 · story review + fix cycle + closing · done
+- 2026-08-23 19:22 · 032 · D1 Two small local models in the curated catalogue · started
+- 2026-08-23 19:23 · 032 · D1 Two small local models in the curated catalogue · done
+- 2026-08-23 19:23 · 032 · D2 Size signal inside cheap + per-task minimum · started
+- 2026-08-23 19:27 · 032 · D2 Size signal inside cheap + per-task minimum · done
+- 2026-08-23 19:27 · 032 · D3 Right-sized picks and beyond-this-machine verdict · started
+- 2026-08-23 19:43 · 032 · D3 Right-sized picks and beyond-this-machine verdict · done
+- 2026-08-23 19:43 · 032 · D4 Shortfall in the UI, both languages · started
+- 2026-08-23 19:48 · 032 · D4 Shortfall in the UI, both languages · done
+- 2026-08-23 20:04 · 032 · story review + fix cycle + closing · done
+- 2026-08-23 20:06 · 033 · D1 Runtime descriptors + generalised plan · started
+- 2026-08-23 20:11 · 033 · D1 Runtime descriptors + generalised plan · done
+- 2026-08-23 20:11 · 033 · D2 Engine build selection from GPU scan · started
+- 2026-08-23 20:11 · 033 · D3 Hugging Face search + file parsing · started
+- 2026-08-23 20:17 · 033 · D2 Engine build selection from GPU scan · done
+- 2026-08-23 20:17 · 033 · D3 Hugging Face search + file parsing · done
+- 2026-08-23 20:17 · 033 · D4 IPC contract carries the runtime · started
+- 2026-08-23 20:26 · 033 · D4 IPC contract carries the runtime · done
+- 2026-08-23 20:26 · 033 · D5 RuntimeInstaller interface + Ollama adapter · started
+- 2026-08-23 20:39 · 033 · D5 RuntimeInstaller interface + Ollama adapter · done
+- 2026-08-23 20:39 · 033 · D6 llama.cpp engine fetch · started
+- 2026-08-23 20:59 · 033 · D6 llama.cpp engine fetch · done
+- 2026-08-23 20:59 · 033 · D7 llama.cpp status + model file download · started
+- 2026-08-23 21:13 · 033 · D7 llama.cpp status + model file download · done
+- 2026-08-23 21:13 · 033 · D8 HF search handler · started
+- 2026-08-23 21:16 · 033 · D8 HF search handler · done
+- 2026-08-23 21:16 · 033 · D9 llama.cpp provider preset + minimal start · started
+- 2026-08-23 21:40 · 033 · D9 llama.cpp provider preset + minimal start · done
+- 2026-08-23 21:40 · 033 · D10 Runtime cards, one per runtime · started
+- 2026-08-23 22:04 · 033 · D10 Runtime cards, one per runtime · done
+- 2026-08-23 22:04 · 033 · D11 Model search and download panel · started
+- 2026-08-23 22:19 · 033 · D11 Model search and download panel · done
+- 2026-08-23 22:19 · 033 · story verification · started
+- 2026-08-23 22:36 · 033 · story verification (typecheck/lint/test/build/seed/shot) · done
+- 2026-08-23 22:36 · 033 · story review (story-review-hard) · started
+- 2026-08-23 22:52 · 033 · story review (story-review-hard) · done (FAIL, fix cycle 1 started)
+- 2026-08-23 23:08 · 033 · story review fix cycle (2 parallel agents) · done
+- 2026-08-23 23:08 · 033 · re-verification (typecheck/lint/test/build/seed/shot) · done
+- 2026-08-23 23:08 · 033 · closing (Done section filled, status left in-progress: AC8 needs live network+GPU) · done
+- 2026-08-23 23:13 · 034 · D1 pure llama.cpp start-plan derivation · started
+- 2026-08-23 23:21 · 034 · D1 pure llama.cpp start-plan derivation · done
+- 2026-08-23 23:22 · 034 · D2 status + start-plan contract (read-only) · started
+- 2026-08-23 23:37 · 034 · D2 status + start-plan contract (read-only) · done
+- 2026-08-23 23:37 · 034 · D3 start/stop/lifecycle · started
+- 2026-08-24 00:03 · 034 · D3 start/stop/lifecycle · done
+- 2026-08-24 00:03 · 034 · D4 engine card details · started
+- 2026-08-24 00:10 · 034 · D4 engine card details · done
+- 2026-08-24 00:10 · 034 · D5 advanced override row · started
+- 2026-08-24 00:26 · 034 · D5 advanced override row · done
+- 2026-08-24 00:26 · 034 · D6 auto-start mode · started
+- 2026-08-24 00:41 · 034 · D6 auto-start mode · done
+- 2026-09-01 20:20 · 034 · corrected: audit found D1-D6 code genuinely committed (commit a4ecd1d, mislabelled "prettier run and parts of 31"), plus D7 (privacy/redaction) also already implemented but never logged here. Verified all D1-D7 "Accepted when" clauses and all 10 Acceptance Criteria against the code — full PASS (audit agent report).
+- 2026-09-01 20:23 · 034 · story-review-hard (clean) · started
+- 2026-09-01 20:30 · 034 · story-review-hard (clean) · done (FAIL — confirmed process-lifecycle race between manual start and on-demand auto-start, plus 4 related findings)
+- 2026-09-01 20:31 · 034 · review-fix cycle 1 (5 confirmed findings) · started
+- 2026-09-01 20:42 · 034 · review-fix cycle 1 (5 confirmed findings) · done
+- 2026-09-01 20:44 · 034 · re-verification (typecheck/lint/test/build) · done
+- 2026-09-01 20:46 · 034 · fix verification review (story-review-hard) · started
+- 2026-09-01 20:51 · 034 · fix verification review (story-review-hard) · done (PASS, 2 low-severity non-blocking notes)
+- 2026-09-01 20:52 · 034 · live smoke (npm run seed && npm run shot) · done (screens render correctly; full start/stop click-through needs a real llama.cpp binary, not available in this environment — see Done section)
+- 2026-09-01 20:55 · 034 · closing (Done section filled, status left in-progress: live smoke steps 2-7 need a real llama.cpp install) · done

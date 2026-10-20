@@ -5,16 +5,23 @@
    tests/renderer/i18n.test.ts. Sentence case, no emoji. */
 
 import type { TranslationKey } from './de';
+import { enAgents } from './en-agents';
 import { enDashboard } from './en-dashboard';
 import { enGarden } from './en-garden';
 import { enJournal } from './en-journal';
+import { enJournalCalendar } from './en-journal-calendar';
+import { enNotes } from './en-notes';
 import { enProjects } from './en-projects';
 import { enScreens } from './en-screens';
+import { enSearch } from './en-search';
 import { enSettings } from './en-settings';
+import { enChats } from './en-chats';
+import { enTasks } from './en-tasks';
+import { enUpdate } from './en-update';
 import { enWiki } from './en-wiki';
 
 export const en: Record<TranslationKey, string> = {
-  'app.name': 'Second brain',
+  'app.name': 'Gaston',
 
   'common.cancel': 'Cancel',
   'common.close': 'Close',
@@ -32,20 +39,23 @@ export const en: Record<TranslationKey, string> = {
   'titlebar.maximize': 'Maximise window',
   'titlebar.restore': 'Restore window',
   'titlebar.close': 'Close window',
-  'titlebar.search': 'Jump, capture, search',
-  'titlebar.searchAria': 'Open the command palette — jump, capture, search',
+  'titlebar.search': 'Search or ask',
+  'titlebar.searchAria': 'Open the command palette — search or ask',
+  'titlebar.capture': 'Capture',
+  'titlebar.captureAria': 'Capture a thought',
 
   'rail.region': 'Main navigation',
   'rail.dashboard': 'Dashboard',
-  'rail.capture': 'Capture',
-  'rail.inbox': 'Inbox',
-  'rail.ask': 'Ask',
+  'rail.chats': 'Chats',
   'rail.projects': 'Projects',
   'rail.journal': 'Journal',
-  'rail.modules': 'Modules',
-  'rail.sources': 'Sources',
-  'rail.garden': 'Gardening',
+  'rail.notes': 'Notes',
+  'rail.knowledge': 'Knowledge',
+  'rail.tasks': 'Tasks',
+  'rail.garden': 'Care',
   'rail.settings': 'Settings',
+  'rail.journalOpenDays': 'Journal, {count} open days',
+  'rail.tasksRunningAndWaiting': 'Tasks, {count} running or waiting',
 
   'time.today': 'today',
   'time.yesterday': 'yesterday',
@@ -69,12 +79,23 @@ export const en: Record<TranslationKey, string> = {
 
   'palette.title': 'Commands',
   'palette.placeholder': 'Jump, capture, search',
+  'palette.mode.label': 'Mode',
+  'palette.mode.palette': 'Commands',
+  'palette.mode.ask': 'Ask',
+  'palette.ask.placeholder': 'What do you want to know?',
+  'palette.ask.hint': 'Enter asks, Esc closes, Tab back to the commands',
   'palette.empty': 'No match',
   'palette.group.screens': 'Places',
   'palette.group.actions': 'Actions',
   'palette.group.search': 'Search',
+  'palette.search.showAll': 'Show all results for {query}',
+  'palette.screen.sources': 'Sources',
+  'palette.screen.agentSessions': 'Agent sessions',
+  'palette.screen.unfiled': 'Unfiled',
   'palette.action.capture': 'Capture a thought',
-  'palette.hint': 'Arrows select, Enter opens, Esc closes',
+  'palette.action.captureWindow': 'Capture window',
+  'palette.action.ask': 'Ask a question',
+  'palette.hint': 'Arrows select, Enter opens, Esc closes, Tab asks',
 
   'error.title': 'That did not work',
   'error.details': 'Show details',
@@ -88,10 +109,23 @@ export const en: Record<TranslationKey, string> = {
   'error.code.io': 'File access failed.',
   'error.code.cancelled': 'Cancelled.',
   'error.code.unknown': 'Unexpected error.',
+  'error.code.too-large': 'The file is larger than 5 MB and was not taken in.',
   'error.about.no-vault': 'No vault is open for “{subject}”.',
   'error.about.not-found': '“{subject}” does not exist (any more).',
   'error.about.conflict': '“{subject}” changed in the meantime. Nothing was overwritten.',
   'error.about.llm-unavailable': 'No language model is reachable for “{subject}”.',
+  'error.code.llm-unavailable.no-route':
+    'No model is assigned to the task “{task}”. Assign one under Settings → Models.',
+  'error.code.llm-unavailable.no-key':
+    'No API key is stored for {provider}. Enter it under Settings → Models.',
+  'error.code.llm-unavailable.provider-disabled':
+    'The provider {provider} is switched off. Switch it on under Settings → Models.',
+  'error.about.llm-unavailable.no-route':
+    '“{subject}” cannot be processed: no model is assigned to the task “{task}”. Assign one under Settings → Models.',
+  'error.about.llm-unavailable.no-key':
+    '“{subject}” cannot be processed: no API key is stored for {provider}. Enter it under Settings → Models.',
+  'error.about.llm-unavailable.provider-disabled':
+    '“{subject}” cannot be processed: the provider {provider} is switched off. Switch it on under Settings → Models.',
   'error.about.invalid': '“{subject}” does not fit.',
   'error.about.io': '“{subject}” could not be opened — the folder is not writable.',
   'error.about.cancelled': '“{subject}” was cancelled.',
@@ -107,6 +141,8 @@ export const en: Record<TranslationKey, string> = {
     'Filing proposals need a model — capturing and filing work without one.',
   'llm.note.project-status':
     'A reasoned suggestion needs a model — the rule-based one works without.',
+  'llm.note.journal-loose-ends':
+    'Finding loose ends needs a model — the journal stays writable without one.',
   'llm.note.gardener-audit':
     'Contradictions, near duplicates and terms without a page need a model — the machine checks run without one.',
   'llm.note.action': 'Set up routing',
@@ -115,6 +151,7 @@ export const en: Record<TranslationKey, string> = {
   'vault.choose': 'Open a vault',
   'vault.docs': '{count} documents',
   'vault.indexing': 'Building the index',
+  'vault.indexFailed': 'Index update failed',
   'vault.indexed': 'Index up to date',
   'vault.noIndex': 'No index',
   'vault.statusAria': 'Vault status, opens the settings',
@@ -125,6 +162,7 @@ export const en: Record<TranslationKey, string> = {
   'toast.hotkeyBusy': 'The quick capture shortcut is taken. Change it in the settings.',
   'toast.keyNotPersisted':
     'This machine cannot store keys encrypted. The key lasts until you quit.',
+  'toast.journalReopened': 'The day is reopened — new content was added after it was closed.',
 
   /* Keys come from `src/core/llm/presets.ts`. */
   'llm.preset.ollama.hint':
@@ -159,18 +197,29 @@ export const en: Record<TranslationKey, string> = {
   'task.journal-chat.label': 'Journal conversation',
   'task.journal-chat.hint':
     'The most personal conversation in the app. A local model is explicitly recommended.',
+  'task.journal-loose-ends.label': 'Find loose ends',
+  'task.journal-loose-ends.hint':
+    'Reads journal prose to find things you announced and never followed up on. Personal content — a local model is explicitly recommended.',
   'task.project-status.label': 'Project status',
   'task.project-status.hint':
     'Derives status and next step from the project history — as a proposal.',
-  'task.gardener-audit.label': 'Interpret findings',
+  'task.gardener-audit.label': 'Interpret results',
   'task.gardener-audit.hint':
     'Finds contradictions, stale claims and missing pages. Needs judgement.',
+  'task.condense-area.label': 'Condense area',
+  'task.condense-area.hint':
+    "Reads an area's notes, todos and day entries and writes a shorter overview. Personal content — a local model is explicitly recommended.",
+  'task.condense-project.label': 'Condense project',
+  'task.condense-project.hint':
+    "Reads a project's notes, todos and day entries and writes a condensed file. Personal content — a local model is explicitly recommended.",
 
   /* Notes from ingesting. The core knows no language and sends a code
      (`IngestNoteCode`); the sentence lives here. Every refusal states something about
      the source instead of apologising. */
   'ingest.note.pdf-not-read':
-    'PDFs are not read yet — the file is stored as a source, please paste the text.',
+    'This PDF could not be opened — damaged or password-protected. The file is stored as a source.',
+  'ingest.note.pdf-no-text-layer':
+    'This PDF has no text layer — it looks scanned. The file is stored as a source; text recognition is not supported.',
   'ingest.note.binary-not-read':
     'This file type is not read — the file is stored as a source, please paste the text.',
   'ingest.note.no-transcript':
@@ -181,12 +230,22 @@ export const en: Record<TranslationKey, string> = {
   'ingest.note.content-truncated': 'The source was larger than 5 MB and was truncated.',
   'ingest.note.unsupported-content': 'This address returns no text.',
   'ingest.note.awaiting-llm': 'The raw source is stored. Distilling needs a model.',
+  'ingest.note.already-condensed':
+    'This source is already condensed. A second run would add a second source page for the same content — so it ends here.',
+  'ingest.note.no-content': 'There is nothing to condense from this source.',
 
   ...enScreens,
+  ...enAgents,
   ...enDashboard,
   ...enGarden,
   ...enJournal,
+  ...enJournalCalendar,
+  ...enNotes,
   ...enProjects,
+  ...enSearch,
   ...enSettings,
+  ...enChats,
+  ...enTasks,
+  ...enUpdate,
   ...enWiki,
 };

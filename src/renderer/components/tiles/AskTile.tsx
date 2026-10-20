@@ -23,16 +23,13 @@ export function AskTile() {
   };
 
   return (
-    <TileFrame id="ask" title={t('module.ask.name')}>
+    <TileFrame id="ask" title={t('tile.ask.label')}>
       <div className="sb-tileask">
-        <label className="gs-label" htmlFor="sb-tile-ask">
-          {t('tile.ask.label')}
-        </label>
         <div className="sb-tileask-row">
           <input
-            id="sb-tile-ask"
             type="text"
             className="gs-input"
+            aria-label={t('tile.ask.label')}
             placeholder={t('tile.ask.placeholder')}
             value={question}
             onChange={(event) => setQuestion(event.target.value)}
@@ -52,7 +49,6 @@ export function AskTile() {
             {t('tile.ask.submit')}
           </Button>
         </div>
-        <span className="gs-hint">{t('tile.ask.hint')}</span>
       </div>
     </TileFrame>
   );

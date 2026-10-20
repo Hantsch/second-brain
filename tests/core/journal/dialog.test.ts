@@ -22,14 +22,14 @@ describe('formatTurn', () => {
       ['> **Ich** — 18:40', '> Der Sprint fühlt sich unmöglich an.'].join('\n'),
     );
     expect(formatTurn('assistant', 'Ich höre.', '18:41')).toBe(
-      ['> **Second Brain** — 18:41', '> Ich höre.'].join('\n'),
+      ['> **Gaston** — 18:41', '> Ich höre.'].join('\n'),
     );
   });
 
   it('hält einen mehrzeiligen Text in einem Block zusammen', () => {
     const block = formatTurn('assistant', 'Erste Zeile.\n\nZweiter Absatz.', '09:05');
     expect(block).toBe(
-      ['> **Second Brain** — 09:05', '> Erste Zeile.', '>', '> Zweiter Absatz.'].join('\n'),
+      ['> **Gaston** — 09:05', '> Erste Zeile.', '>', '> Zweiter Absatz.'].join('\n'),
     );
   });
 
@@ -98,6 +98,39 @@ describe('parseDialog', () => {
     );
     expect(parseDialog(body)[0]?.role).toBe('user');
   });
+
+  /* 011 (D2): neue Tage legen "## Conversation"/"## Gespräch" nicht mehr an,
+     aber ein Tag, der ihn schon hat — ein legacy Tag — muss weiter lesbar
+     bleiben. Der Test oben deckt das bereits ab: die exakte englische
+     Ueberschrift "## Conversation" wird nach wie vor erkannt. */
+
+  it('erkennt „Second Brain" (alt) neben „Gaston" (neu) im selben Tag', () => {
+    /* Die Umbenennung (030): ein Tag kann eine Antwort tragen, die vor der
+       Umbenennung geschrieben wurde, und eine, die danach dazukam — beide
+       müssen als `assistant` zählen, in der richtigen Reihenfolge. */
+    const body = [
+      '## Gespräch',
+      '',
+      '> **Second Brain** — 09:00',
+      '> Alte Antwort aus der Zeit vor der Umbenennung.',
+      '',
+      '> **Ich** — 09:05',
+      '> Und jetzt?',
+      '',
+      formatTurn('assistant', 'Neue Antwort mit dem neuen Namen.', '09:06'),
+      '',
+    ].join('\n');
+
+    const turns = parseDialog(body);
+
+    expect(turns.map((turn) => turn.role)).toEqual(['assistant', 'user', 'assistant']);
+    expect(turns[0]?.text).toBe('Alte Antwort aus der Zeit vor der Umbenennung.');
+    expect(turns[2]?.text).toBe('Neue Antwort mit dem neuen Namen.');
+    /* Nichts wird beim Parsen umgeschrieben: das alte Label bleibt wörtlich
+       im Quelltext stehen, nur der neue Schreibweg nutzt den neuen Namen. */
+    expect(body).toContain('> **Second Brain** — 09:00');
+    expect(body).toContain('> **Gaston** — 09:06');
+  });
 });
 
 describe('appendTurn', () => {
@@ -137,9 +170,30 @@ describe('appendTurn', () => {
     const content = await fixture.text(FRESH_PATH);
     expect(content).toContain('Eigene Randnotiz, mitten im Abschnitt.');
     expect(content).toContain('> **Notiz** — 09:30');
-    expect(content).toContain('> **Second Brain** — 14:32');
+    expect(content).toContain('> **Gaston** — 14:32');
     const turns = parseDialog(bodyOf(content));
     expect(turns.map((turn) => turn.text)).toEqual(['Erste Runde.', 'Neue Antwort.']);
+  });
+
+  it('lässt ein altes „Second Brain"-Label stehen und schreibt die neue Runde als „Gaston"', async () => {
+    /* Ein Tag aus der Zeit vor der Umbenennung, mit dem alten Label von Hand
+       im Dialog-Abschnitt — appendTurn darf diese Zeile nicht anfassen, nur
+       die neue Runde bekommt den neuen Namen. */
+    const dialogue = ['> **Second Brain** — 09:00', '> Alte Antwort.'].join('\n');
+    const fixture = await journalFixture({
+      sample: false,
+      files: { [FRESH_PATH]: journalFile(FRESH_DAY, 'Kurzer Tag.', { dialogue }) },
+    });
+
+    await appendTurn(fixture.store, FRESH_DAY, 'assistant', 'Neue Antwort.', { now: NOW_MS });
+
+    const content = await fixture.text(FRESH_PATH);
+    /* Das alte Label bleibt wörtlich stehen — kein Rewrite bestehender Zeilen. */
+    expect(content).toContain('> **Second Brain** — 09:00');
+    expect(content).toContain('> **Gaston** — 14:32');
+    const turns = parseDialog(bodyOf(content));
+    expect(turns.map((turn) => turn.role)).toEqual(['assistant', 'assistant']);
+    expect(turns.map((turn) => turn.text)).toEqual(['Alte Antwort.', 'Neue Antwort.']);
   });
 
   it('legt Datei und Abschnitt an, wenn es den Tag noch nicht gibt', async () => {

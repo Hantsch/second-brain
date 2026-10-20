@@ -1,11 +1,12 @@
-/* Fragen: Gespräche, Verlauf, Composer, Belege. Farben, Abstände und Radien
-   ausschließlich aus den Gaston-Tokens.
+/* Ask: conversations, history, composer, citations. Colors, spacing, and
+   radii exclusively from the Gaston tokens.
 
-   Zwei Maße tragen den Screen: die Spalte des Verlaufs bleibt bei 72 Zeichen
-   (Fließtext, den man liest), und alles Belegte steht in Mono daneben. Antworten
-   und Zitate sind markierbarer Text — `user-select` ist im Fenster sonst aus. */
+   Two measurements carry the screen: the history column stays at 72
+   characters (running text meant to be read), and anything evidenced sits
+   in mono next to it. Answers and quotes are selectable text — `user-select`
+   is otherwise off in this window. */
 
-/* ── Zwei Spalten: Gespräche, Gespräch ──────────────────────────────────── */
+/* ── Two columns: conversations, conversation ───────────────────────────── */
 
 .sb-ask {
   display: grid;
@@ -30,7 +31,7 @@
   min-width: 0;
   min-height: 0;
 }
-/* Gelesen wird in einer Spalte, nicht über die Fensterbreite. */
+/* Reading happens in one column, not across the window width. */
 .sb-ask-column {
   flex: 1 1 auto;
   min-height: 0;
@@ -51,7 +52,24 @@
   line-height: var(--leading-relaxed);
 }
 
-/* ── Gespräche ──────────────────────────────────────────────────────────── */
+/* The chats screen's header over a conversation: title left, one action right. */
+.sb-chats-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  max-width: 72ch;
+}
+.sb-chats-title {
+  min-width: 0;
+  font-size: var(--text-md);
+  color: var(--text-heading);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Conversations ───────────────────────────────────────────────────────── */
 
 .sb-threads {
   display: flex;
@@ -112,7 +130,7 @@
 .sb-threaditem:focus-visible {
   box-shadow: var(--focus-ring);
 }
-/* Die Auswahl ist eine Fläche, kein zweites Teal. */
+/* The selection is a surface, not a second teal. */
 .sb-threaditem--active {
   background: var(--surface-raised);
   border-color: var(--border-strong);
@@ -128,7 +146,7 @@
   font-size: var(--text-2xs);
 }
 
-/* ── Verlauf ────────────────────────────────────────────────────────────── */
+/* ── History ─────────────────────────────────────────────────────────────── */
 
 .sb-feed {
   display: flex;
@@ -191,11 +209,11 @@
   margin-left: auto;
 }
 
-/* ── Markdown der Antwort ───────────────────────────────────────────────── */
+/* ── Answer markdown ─────────────────────────────────────────────────────── */
 
-/* Aufbau und Farben stehen in markdown.css (`.sb-md*`) — hier nur, was eine
-   Antwort anders braucht als eine Wiki-Seite: sie ist Fließtext zum Lesen, also
-   einen Schritt größer. */
+/* Structure and colors live in markdown.css (`.sb-md*`) — here only what an
+   answer needs differently from a wiki page: it's running text meant to be
+   read, so one step larger. */
 .sb-markdown {
   max-width: none;
 }
@@ -204,8 +222,8 @@
   font-size: var(--text-base);
 }
 
-/* Die Belegmarke im Text: klein, hochgestellt, teal — sie ist der Faden zum
-   Beleg und darf gefunden werden. */
+/* The citation mark in the text: small, superscript, teal — it's the
+   thread to the citation and is meant to be found. */
 .sb-citemark {
   all: unset;
   cursor: pointer;
@@ -223,7 +241,7 @@
 .sb-citemark:focus-visible {
   box-shadow: var(--focus-ring);
 }
-/* Ein Pfad ohne Beleg: lesbar, klickbar, aber ohne Akzent. */
+/* A path without a citation: readable, clickable, but without accent. */
 .sb-pathref {
   all: unset;
   cursor: pointer;
@@ -239,7 +257,7 @@
   box-shadow: var(--focus-ring);
 }
 
-/* ── Belege ─────────────────────────────────────────────────────────────── */
+/* ── Citations ───────────────────────────────────────────────────────────── */
 
 .sb-cites {
   list-style: none;
@@ -299,11 +317,11 @@
   color: var(--text-muted);
   line-height: var(--leading-snug);
   user-select: text;
-  /* Zeilenumbrüche der Quelle bleiben stehen (`plainExcerpt` hat sie schon von
-     `#`/`-`/`>`-Markern befreit) — sonst laufen mehrere Zeilen zu einer
-     Textwurst zusammen. */
+  /* Line breaks from the source are preserved (`plainExcerpt` has already
+     stripped `#`/`-`/`>` markers from it) — otherwise multiple lines would
+     run together into one text blob. */
   white-space: pre-line;
-  /* Drei Zeilen genügen: der ganze Kontext steht einen Klick entfernt. */
+  /* Three lines are enough: the full context is one click away. */
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
@@ -321,7 +339,7 @@
   user-select: text;
 }
 
-/* Die Stelle im Kontext: Zeilennummern in Mono, die Fundstelle hervorgehoben. */
+/* The spot in context: line numbers in mono, the matched line highlighted. */
 .sb-context {
   list-style: none;
   margin: 0;
@@ -352,7 +370,7 @@
   user-select: text;
 }
 
-/* ── Composer ───────────────────────────────────────────────────────────── */
+/* ── Composer ────────────────────────────────────────────────────────────── */
 
 .sb-composer {
   display: flex;
@@ -382,15 +400,19 @@
 .sb-composer-field {
   width: 100%;
   resize: vertical;
-  padding: 0;
-  border: none;
-  background: transparent;
+  padding: 0 var(--space-3);
+  background: var(--surface-sunken);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
   color: var(--text-heading);
   font-family: var(--font-sans);
   font-size: var(--text-md);
   line-height: var(--leading-relaxed);
   caret-color: var(--accent);
   user-select: text;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
 }
 .sb-composer-field::placeholder {
   color: var(--text-faint);
@@ -398,7 +420,8 @@
 .sb-composer-field:focus,
 .sb-composer-field:focus-visible {
   outline: none;
-  box-shadow: none;
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 .sb-composer-foot {
   display: flex;
@@ -418,7 +441,7 @@
   margin-left: auto;
 }
 
-/* Filter-Chips: ein Angebot, keine Pflicht — deshalb ruhig. */
+/* Filter chips: an offer, not a requirement — hence calm. */
 .sb-chips {
   display: inline-flex;
   align-items: center;
@@ -459,7 +482,7 @@
   color: var(--text-heading);
 }
 
-/* ── Beispielfragen ─────────────────────────────────────────────────────── */
+/* ── Example questions ───────────────────────────────────────────────────── */
 
 .sb-examples {
   display: flex;
@@ -498,7 +521,7 @@
   box-shadow: var(--focus-ring);
 }
 
-/* ── Zurückschreiben ────────────────────────────────────────────────────── */
+/* ── Write-back ──────────────────────────────────────────────────────────── */
 
 .sb-fileback,
 .sb-fileback-done {
@@ -524,7 +547,7 @@
   line-height: var(--leading-relaxed);
 }
 
-/* Im engen Fenster stehen die Gespräche über dem Verlauf. */
+/* In the narrow window, the conversations sit above the history. */
 @media (max-width: 1100px) {
   .sb-ask {
     grid-template-columns: minmax(0, 1fr);

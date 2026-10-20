@@ -85,6 +85,57 @@ describe('derivePages: Graph', () => {
     expect(counts.get('second-brain-methodik')).toEqual({ sources: 0, entities: 1, concepts: 0 });
   });
 
+  it('nimmt ein Verdichtungs-Artefakt nicht in den Seitengraphen auf (039, AC7/AC8)', () => {
+    // `isWikiPage()` verlangt `modules/*/wiki/**` — ein `areas/<slug>.condensed.md`
+    // passt nie, egal welchen `docType` das Dokument traegt. Das ist die
+    // strukturelle Ausnahme, die 039 mit einem Test statt einer neuen Regel belegt.
+    const docs = [
+      makeDoc({
+        path: 'modules/m/wiki/concepts/a.md',
+        docType: 'concept',
+        frontmatter: { type: 'concept', title: 'A' },
+        body: 'Ein Begriff.',
+      }),
+      makeDoc({
+        path: 'areas/gesundheit.condensed.md',
+        docType: 'condensed',
+        frontmatter: { type: 'condensed', title: 'Gesundheit — verdichtet' },
+        body: 'Laufen, schlafen, weniger Kaffee.',
+      }),
+    ];
+    const { pages, counts } = derivePages(docs);
+    expect(pages.some((page) => page.path === 'areas/gesundheit.condensed.md')).toBe(false);
+    expect(pages.map((page) => page.slug)).toEqual(['a']);
+    // Ein Artefakt gehoert zu keinem Modul — die Zaehlung von `m` bleibt unberuehrt.
+    expect(counts.get('m')).toEqual({ sources: 0, entities: 0, concepts: 1 });
+    expect(counts.has('areas')).toBe(false);
+  });
+
+  it('nimmt ein Projekt-Verdichtungs-Artefakt ebenfalls nicht in den Seitengraphen auf (046, D3)', () => {
+    // Dieselbe strukturelle Ausnahme wie beim Area-Artefakt oben: `isWikiPage()`
+    // verlangt `modules/*/wiki/**`, und `projects/<scope>/<slug>/condensed.md`
+    // passt da nie hinein — kein Sonderfall, keine neue Regel.
+    const docs = [
+      makeDoc({
+        path: 'modules/m/wiki/concepts/a.md',
+        docType: 'concept',
+        frontmatter: { type: 'concept', title: 'A' },
+        body: 'Ein Begriff.',
+      }),
+      makeDoc({
+        path: 'projects/work/nyota/condensed.md',
+        docType: 'condensed',
+        frontmatter: { type: 'condensed', title: 'Nyota — verdichtet' },
+        body: 'Rollenkonzept liegt bei Stefan.',
+      }),
+    ];
+    const { pages, counts } = derivePages(docs);
+    expect(pages.some((page) => page.path === 'projects/work/nyota/condensed.md')).toBe(false);
+    expect(pages.map((page) => page.slug)).toEqual(['a']);
+    expect(counts.get('m')).toEqual({ sources: 0, entities: 0, concepts: 1 });
+    expect(counts.has('projects')).toBe(false);
+  });
+
   it('nimmt einen Selbstverweis nicht in den Graphen', () => {
     const docs = [
       makeDoc({
@@ -129,5 +180,33 @@ describe('deriveSources', () => {
       ['url', '2026-08-10-artikel', 'M2'],
       ['file', '2026-08-10-vertrag', 'M1'],
     ]);
+  });
+
+  it('leitet ein Protokoll mit transcript.available: false als blockiert ab', () => {
+    const sources = deriveSources([
+      {
+        path: 'raw/youtube/no-cues',
+        json: JSON.stringify({
+          kind: 'youtube',
+          title: 'Ohne Untertitel',
+          transcript: { available: false, language: null, kind: null, provider: null },
+        }),
+        bytes: 512,
+        modified: 'M1',
+      },
+    ]);
+    expect(sources[0]?.blocked).toBe('no-transcript');
+  });
+
+  it('bleibt bei einem legacy-Protokoll ohne transcript-Feld unblockiert', () => {
+    const sources = deriveSources([
+      {
+        path: 'raw/youtube/xOFkpf9KgKg',
+        json: JSON.stringify({ kind: 'youtube', title: 'Altes Protokoll' }),
+        bytes: 512,
+        modified: 'M1',
+      },
+    ]);
+    expect(sources[0]?.blocked).toBeNull();
   });
 });

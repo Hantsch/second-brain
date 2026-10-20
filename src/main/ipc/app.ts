@@ -1,19 +1,11 @@
-/* Auskunft über die laufende App. Landet in „Über" und in Fehlerberichten. */
+/* Information about the running app. Used in "About" and in error reports. */
 
 import { app } from 'electron';
 import type { HandlerMap } from './registry';
 import { defineHandlers } from './registry';
 import type { Services } from '../services';
-
-/**
- * Demo-Modus: entweder hat der Starter `SB_DEMO` gesetzt (Prüfskripte), oder der
- * offene Vault ist der geseedete Beispielordner. Die Oberfläche darf das
- * kennzeichnen, damit niemand Beispielinhalte für echte hält.
- */
-function isDemoVault(root: string | null): boolean {
-  if (process.env['SB_DEMO'] === '1') return true;
-  return root !== null && /[\\/]\.demo-vault$/.test(root);
-}
+import { isDemoVault } from '../demo';
+import { installedReleaseNotes } from '../release-notes';
 
 export function appHandlers(services: Services): HandlerMap {
   return defineHandlers({
@@ -24,5 +16,6 @@ export function appHandlers(services: Services): HandlerMap {
       userData: services.userDataDir,
       demo: isDemoVault(services.vaultRoot()),
     }),
+    'app:releaseNotes': () => installedReleaseNotes(app.getVersion()),
   });
 }

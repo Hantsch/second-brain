@@ -1,0 +1,56 @@
+- 2026-09-08 08:38 · 065 · D1 Prettier pin + format pass · started
+- 2026-09-08 08:40 · 065 · D1 Prettier pin + format pass · done
+- 2026-09-08 08:40 · 065 · D2 verify.yml workflow · started
+- 2026-09-08 08:41 · 065 · D2 verify.yml workflow · done
+- 2026-09-08 08:41 · 065 · D3 ui-smoke.yml advisory lane · started
+- 2026-09-08 08:42 · 065 · D3 ui-smoke.yml advisory lane · done
+- 2026-09-08 08:42 · 065 · D4 README CI paragraph · started
+- 2026-09-08 08:44 · 065 · D4 README CI paragraph · done
+- 2026-09-08 08:52 · 050 · D1 shared undo step · started
+- 2026-09-08 08:54 · 050 · D1 shared undo step · done
+- 2026-09-08 08:54 · 050 · D2 WikiTransaction · started
+- 2026-09-08 09:01 · 050 · D2 WikiTransaction · done
+- 2026-09-08 09:01 · 050 · D3 ingestSource transaction · started
+- 2026-09-08 09:11 · 050 · D3 ingestSource transaction · done
+- 2026-09-08 09:11 · 050 · D4 idempotent retry · started
+- 2026-09-08 09:22 · 050 · D4 idempotent retry · done
+- 2026-09-08 09:22 · 050 · D5 module lock · started
+- 2026-09-08 09:36 · 050 · D5 module lock · done
+- 2026-09-08 09:36 · 050 · D6 truncation notice · started
+- 2026-09-08 09:41 · 050 · D6 truncation notice · done
+- 2026-09-08 09:41 · 050 · D7 progress reporting · started
+- 2026-09-08 09:48 · 050 · D7 progress reporting · done
+- 2026-09-08 09:48 · 050 · D8 failure codes · started
+- 2026-09-08 09:50 · 050 · D8 failure codes · done
+- 2026-09-08 09:50 · 050 · D9 quit-mid-digestion e2e · started
+- 2026-09-08 10:09 · 050 · D9 quit-mid-digestion e2e · done
+- 2026-09-08 10:22 · 050 · review-fix round 1 (findings 1,3,4,7) · started
+- 2026-09-08 10:31 · 050 · review-fix round 1 (findings 1,3,4,7) · done
+- 2026-09-08 10:35 · 051 · D1 honest terminal state in queue · started
+- 2026-09-08 10:40 · 051 · D1 honest terminal state in queue · done
+- 2026-09-08 10:40 · 051 · D2 transcript-less video yields no digestible text · started
+- 2026-09-08 10:43 · 051 · D2 transcript-less video yields no digestible text · done
+- 2026-09-08 10:43 · 051 · D3 index and gardener see the reason · started
+- 2026-09-08 10:51 · 051 · D3 index and gardener see the reason · done
+- 2026-09-08 10:51 · 051 · D4 digest from description in core · started
+- 2026-09-08 10:55 · 051 · D4 digest from description in core · done
+- 2026-09-08 10:55 · 051 · D5 choice reaches core through IPC · started
+- 2026-09-08 11:01 · 051 · D5 choice reaches core through IPC · done
+- 2026-09-08 11:01 · 051 · D6 row and job say it · started
+- 2026-09-08 11:06 · 051 · D6 row and job say it · done
+- 2026-09-08 11:06 · 051 · D7 seed transcript-less video + e2e spec · started
+- 2026-09-08 11:23 · 051 · D7 seed transcript-less video + e2e spec · done
+- 2026-09-08 11:48 · 064 · D1 fetch identifies itself · started
+- 2026-09-08 11:49 · 064 · D1 fetch identifies itself · done
+- 2026-09-08 11:49 · 064 · D2 empty extraction is a note · started
+- 2026-09-08 11:51 · 064 · D2 empty extraction is a note · done
+- 2026-09-08 11:51 · 064 · D3 terminal state names the reason · started
+- 2026-09-08 11:54 · 064 · D3 terminal state names the reason · done
+- 2026-09-08 11:54 · 064 · D4 override exists on real path · started
+- 2026-09-08 12:01 · 064 · D4 override exists on real path · done
+- 2026-09-08 12:01 · 064 · D5 duplicate row offers ingest again · started
+- 2026-09-08 12:05 · 064 · D5 duplicate row offers ingest again · done
+- 2026-09-08 12:05 · 064 · D6 offline fetch seam + e2e · started
+- 2026-09-08 12:15 · 064 · D6 offline fetch seam + e2e · done
+- 2026-09-08 12:29 · 064 · review-fix round 1 (findings 3,4,6,1) · started
+- 2026-09-08 12:32 · 064 · review-fix round 1 (findings 3,4,6,1) · done

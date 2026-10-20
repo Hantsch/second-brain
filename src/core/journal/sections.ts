@@ -1,62 +1,60 @@
 /**
- * Die drei Abschnitte eines Tageseintrags (docs/VAULT-FORMAT.md): „Tag" traegt,
- * was passiert ist, „Gespraech" den Coaching-Dialog, „Fakten" das, was der
- * Tagesabschluss herausgezogen und der Mensch bestaetigt hat.
+ * The three sections of a journal entry (docs/VAULT-FORMAT.md): "Day" carries
+ * what happened, "Conversation" the coaching dialogue, "Facts" what the day
+ * close extracted and the human confirmed.
  *
- * Zwei Dinge entscheidet diese Datei, und nur sie:
+ * Two things this file decides, and only this file:
  *
- * - **Wie die Ueberschrift heisst.** In der Dokumentsprache — der Index kennt
- *   beide Fassungen (`core/index/journal.ts`).
- * - **Welche Ueberschrift benutzt wird, wenn die Datei schon eine hat.** Steht in
- *   der Datei „## Gespräch" und ist die Dokumentsprache inzwischen Englisch, wird
- *   darunter angehaengt und nicht ein zweiter Abschnitt „Conversation" angelegt.
- *   Die Datei des Nutzers gibt den Ton vor, nicht die Einstellung.
+ * - **What the heading is called.** In the document language — the index
+ *   knows both versions (`core/index/journal.ts`).
+ * - **Which heading is used when the file already has one.** If the file has
+ *   "## Gespräch" and the document language has since become English, content
+ *   is appended below it rather than creating a second section "Conversation".
+ *   The user's file sets the tone, not the setting.
  */
 
 import type { DocLanguage } from '@shared/types';
-import { SECTION_DAY, SECTION_FACTS } from '@core/capture';
-import { fold } from '@core/index/text';
+import { sectionKindOf, sectionNameFor, type SectionKind } from '@core/vault/section-names';
 import { findSections } from '@core/vault/sections';
+import { assistantBlockSpans } from './dialog';
 
-/** Eine ATX-Ueberschrift, wie `core/vault/sections` sie erkennt. */
+/** An ATX heading, as `core/vault/sections` recognizes it. */
 const HEADING = /^ {0,3}#{1,6}\s/;
 
-/** Welcher der drei Abschnitte gemeint ist. */
-export type JournalSectionKind = 'day' | 'dialogue' | 'facts';
+/** Which of the three sections is meant. */
+export type JournalSectionKind = Extract<SectionKind, 'day' | 'dialogue' | 'facts'>;
 
-/** Die Ueberschriften eines Tageseintrags in einer Sprache. */
+/** The headings of a journal entry in one language. */
 export type JournalSections = Record<JournalSectionKind, string>;
 
-/* Die deutschen Namen kommen aus `core/capture/actions` — zwei Fassungen davon
-   waeren zwei Fassungen von docs/VAULT-FORMAT.md. */
+/* Sourced from the shared table (`core/vault/section-names`) — two versions of
+   these names would mean two versions of docs/VAULT-FORMAT.md. */
+function sectionsFor(docLanguage: DocLanguage): JournalSections {
+  return {
+    day: sectionNameFor('day', docLanguage),
+    dialogue: sectionNameFor('dialogue', docLanguage),
+    facts: sectionNameFor('facts', docLanguage),
+  };
+}
+
 const HEADINGS: Record<DocLanguage, JournalSections> = {
-  de: { day: SECTION_DAY, dialogue: 'Gespräch', facts: SECTION_FACTS },
-  en: { day: 'Day', dialogue: 'Conversation', facts: 'Facts' },
+  de: sectionsFor('de'),
+  en: sectionsFor('en'),
 };
 
-/**
- * Ueberschriften, die als derselbe Abschnitt gelten — gefaltet verglichen, damit
- * „Gespräch" und „Gespraech" dasselbe treffen.
- */
-const ALIASES: Record<JournalSectionKind, readonly string[]> = {
-  day: ['tag', 'day'],
-  dialogue: ['gespraech', 'conversation'],
-  facts: ['fakten', 'facts'],
-};
-
-/** Die Ueberschriften in dieser Dokumentsprache. */
+/** The headings in this document language. */
 export function journalSections(docLanguage: DocLanguage = 'de'): JournalSections {
   return HEADINGS[docLanguage] ?? HEADINGS.de;
 }
 
-/** Ist diese Ueberschrift der genannte Abschnitt? */
+/** Is this heading the named section? */
 export function isSectionOf(heading: string, kind: JournalSectionKind): boolean {
-  return ALIASES[kind].includes(fold(heading.trim()));
+  return sectionKindOf(heading) === kind;
 }
 
 /**
- * Die Ueberschrift, unter der angehaengt wird: die vorhandene, wenn es eine gibt,
- * sonst die der Dokumentsprache.
+ * The heading content gets appended under: the existing one if there is one,
+ * otherwise the document language's.
  */
 export function sectionIn(
   body: string,
@@ -67,7 +65,7 @@ export function sectionIn(
   return found?.heading.trim() ?? journalSections(docLanguage)[kind];
 }
 
-/** Der Text eines Abschnitts; '' wenn es ihn nicht gibt. Gleichnamige werden verbunden. */
+/** The text of a section; '' if it doesn't exist. Same-named ones are joined. */
 export function sectionText(body: string, kind: JournalSectionKind): string {
   const lines = body.split('\n');
   const parts = findSections(body, 2)
@@ -77,21 +75,24 @@ export function sectionText(body: string, kind: JournalSectionKind): string {
 }
 
 /**
- * Was der Mensch selbst ueber den Tag geschrieben hat — Grundlage jeder
- * Extraktion und jedes Prompts.
+ * Everything that isn't "Conversation"/"Facts" or a heading line — the raw
+ * material both `dayText` (below) and the day's *edit* surface
+ * (`main/ipc/journal-day.ts#toView`'s no-heading fallback) start from.
  *
- * Herausgenommen werden „Gespraech" und „Fakten": im Gespraech stehen auch die
- * Saetze des Coachs, und aus denen ein Todo zu ziehen hiesse, die App schlaegt
- * sich selbst vor. „Fakten" ist schon herausgezogen — es zweimal zu lesen
- * verdoppelt jeden Vorschlag.
+ * "Conversation" and "Facts" are dropped: the conversation also contains the
+ * coach's own sentences, and "Facts" has already been extracted. Everything
+ * else stays — including an embedded answer blockquote — even in a body
+ * without any heading at all: a hand-written file is just as valid as one
+ * the app created.
  *
- * Alles andere bleibt, auch ein Rumpf ohne jede Ueberschrift: eine von Hand
- * geschriebene Datei ist genauso gueltig wie eine von der App angelegte.
- *
- * Ueberschriften selbst fallen weg. Sonst waere ein frisch angelegter, noch leerer
- * Tag „## Tag" — ein Text, der nach etwas aussieht und nichts sagt.
+ * This is deliberately the *unfiltered* version: `dayText` below additionally
+ * strips answer blocks for reading (search, prompts, day close), but the
+ * editor that writes the "Day" section back (`withDayText`) must start from
+ * every byte that's actually there, or saving a heading-less day would
+ * silently delete an answer the app wrote — the exact silent loss CLAUDE.md
+ * rules out, just aimed at the app's own words instead of the human's.
  */
-export function dayText(body: string): string {
+export function rawDayText(body: string): string {
   const dropped = findSections(body, 2).filter(
     (range) => isSectionOf(range.heading, 'dialogue') || isSectionOf(range.heading, 'facts'),
   );
@@ -103,4 +104,32 @@ export function dayText(body: string): string {
     })
     .join('\n');
   return kept.trim();
+}
+
+/**
+ * What the human themself wrote about the day — the basis of every
+ * extraction and every prompt.
+ *
+ * Since 011, an app answer can also live *inside* "Day" itself, interleaved
+ * with the human's prose (`stream.ts`). Its blockquote is stripped out here
+ * too, for the same reason "Conversation" is dropped: the coach's own sentence
+ * must never come back as a todo the human supposedly wrote (see
+ * `close.test.ts`). The scan runs across the whole body rather than just the
+ * kept "Day" range — harmless where it overlaps an already-dropped section,
+ * correct where the answer sits in the content that's kept.
+ *
+ * This is a *read* view, meant for search/prompts/close-out — never for
+ * writing back. The edit surface uses `rawDayText` instead, which keeps the
+ * answer blocks, precisely so this function's stripping never becomes a
+ * deletion (see `rawDayText`'s doc comment).
+ */
+export function dayText(body: string): string {
+  const raw = rawDayText(body);
+  const rawLines = raw.split('\n');
+  const answers = assistantBlockSpans(rawLines, 0, rawLines.length);
+  if (answers.length === 0) return raw;
+  return rawLines
+    .filter((_line, at) => !answers.some((span) => at >= span.start && at < span.end))
+    .join('\n')
+    .trim();
 }

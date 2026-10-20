@@ -86,7 +86,7 @@ function commonRules(
 ): string[] {
   const { about, claims, novel, contradictions } = input.sections;
   return [
-    'Du verdichtest eine Quelle zu einer Wiki-Seite in einem persoenlichen Second Brain.',
+    'Du verdichtest eine Quelle zu einer Wiki-Seite in einem persoenlichen Wissensarchiv.',
     languageRule(docLanguage, input.translate !== false),
     `Gliedere die Antwort in genau diese Abschnitte als Markdown-Ueberschriften zweiter Ebene: "## ${about}", "## ${claims}", "## ${novel}", "## ${contradictions}".`,
     `Unter "${about}" stehen zwei bis vier Saetze: worum es geht und fuer wen.`,
@@ -130,6 +130,14 @@ export function summarizeSourcePrompt(
   );
 }
 
+/** Hoechstlaenge der zusammengefuehrten Teilverdichtungen, sofern `maxChars` fehlt. */
+const MERGE_SUMMARIES_CHARS = 12000;
+
+/** Der Text, den `mergeSummariesPrompt` tatsaechlich an das Modell schickt — vor `clamp`. */
+function mergeSummariesText(parts: readonly string[]): string {
+  return parts.map((part, index) => `--- Teil ${index + 1} ---\n${part.trim()}`).join('\n\n');
+}
+
 export interface MergeSummariesInput {
   title: string;
   /** Die Teilergebnisse in Reihenfolge. */
@@ -161,10 +169,21 @@ export function mergeSummariesPrompt(
       ...knownBlock(input.known),
       '',
       'Teilverdichtungen:',
-      clamp(
-        input.parts.map((part, index) => `--- Teil ${index + 1} ---\n${part.trim()}`).join('\n\n'),
-        input.maxChars ?? 12000,
-      ),
+      clamp(mergeSummariesText(input.parts), input.maxChars ?? MERGE_SUMMARIES_CHARS),
     ],
   );
+}
+
+/**
+ * Zeichen, die der Zusammenfuehrungs-Clamp tatsaechlich abgeschnitten hat — mirror
+ * von `promptItemsClampedChars` (`condense-project.ts`), nur fuer den einen
+ * zusammengefuehrten Text statt eine Liste von Eingaben. Genau dieselbe Rechnung
+ * wie `clamp()` selbst: getrimmt, dann nur der Ueberhang ueber die Grenze, sonst
+ * meldete ein Text mit Leerraum am Rand einen Schnitt, der nie stattfand.
+ */
+export function mergeSummariesClampedChars(
+  parts: readonly string[],
+  maxChars: number = MERGE_SUMMARIES_CHARS,
+): number {
+  return Math.max(0, mergeSummariesText(parts).trim().length - maxChars);
 }

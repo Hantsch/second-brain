@@ -31,6 +31,8 @@ export interface WikiPhrases {
   synthesis: string;
   decided: string;
   open: string;
+  /** Abschnitt von `wiki/overview.md`, in dem der Ingest neue Seiten verlinkt. */
+  pages: string;
   moduleIntro: string;
   moduleScope: string;
   /** Startzeile unter „Abgrenzung": eine Frage, die der Mensch beantwortet. */
@@ -45,6 +47,8 @@ export interface WikiPhrases {
   notCondensed: string;
   /** Einzeiler im Katalog, solange keine Verdichtung vorliegt. */
   notCondensedShort: string;
+  /** Steht auf einer Source-Seite, die aus Beschreibung/Kapiteln statt einem Transcript entstand. */
+  builtFromMetadata: string;
   /** Ehrliche Absage, wenn die Suche nichts findet. */
   noEvidence: string;
   /** Ehrliche Absage, wenn kein Modell zugeordnet ist. */
@@ -68,6 +72,7 @@ const DE: WikiPhrases = {
   synthesis: 'Synthese',
   decided: 'Was entschieden ist',
   open: 'Was offen ist',
+  pages: 'Seiten',
   moduleIntro: 'Was in diesem Modul belegt ist und was noch offen ist.',
   moduleScope: 'Abgrenzung',
   moduleScopeEmpty: 'Noch nicht festgelegt: was gehört hier nicht hinein?',
@@ -78,6 +83,7 @@ const DE: WikiPhrases = {
   rawSource: 'Rohquelle',
   notCondensed: 'Noch nicht verdichtet — braucht ein Modell.',
   notCondensedShort: 'noch nicht verdichtet',
+  builtFromMetadata: 'Aus Beschreibung und Kapiteln erstellt, es gab kein Transcript.',
   noEvidence: 'Dazu steht nichts im Vault.',
   noModel:
     'Ich kann die Antwort nicht formulieren — für diese Aufgabe ist kein Modell zugeordnet. Hier sind die Stellen, die zur Frage passen.',
@@ -99,6 +105,7 @@ const EN: WikiPhrases = {
   synthesis: 'Synthesis',
   decided: 'What is settled',
   open: 'What is open',
+  pages: 'Pages',
   moduleIntro: 'What is evidenced in this module and what is still open.',
   moduleScope: 'Scope',
   moduleScopeEmpty: 'Not decided yet: what does not belong here?',
@@ -109,6 +116,7 @@ const EN: WikiPhrases = {
   rawSource: 'Raw source',
   notCondensed: 'Not condensed yet — needs a model.',
   notCondensedShort: 'not condensed yet',
+  builtFromMetadata: 'Built from the description and chapters — there was no transcript.',
   noEvidence: 'Nothing in the vault covers that.',
   noModel:
     'I cannot phrase an answer — no model is routed to this task. Here are the passages that match the question.',

@@ -25,7 +25,7 @@ import {
   moodSignals,
   sentences,
 } from '@core/capture';
-import type { ProjectCandidate } from '@core/capture';
+import type { AreaCandidate, ProjectCandidate } from '@core/capture';
 import { fold } from '@core/index/text';
 import type { IndexedDoc } from '@core/index/types';
 import { isAbortError, parseJsonLoose } from '@core/llm';
@@ -86,6 +86,8 @@ export interface FactsInput {
   date: string;
   /** Projekte, die zugeordnet werden duerfen. */
   projects: readonly ProjectCandidate[];
+  /** Bereiche, die zugeordnet werden duerfen. */
+  areas: readonly AreaCandidate[];
   /** Namen, die im Vault schon vorkommen — sie halten die Schreibweise stabil. */
   people: readonly string[];
   /** Gebraeuchliche Tags des Vaults. */
@@ -162,6 +164,9 @@ export function heuristicFacts(input: FactsInput): DayFacts {
   return {
     people: uniqueNames([...waiting, ...knownHere], text),
     projects: findProjectMentions(text, input.projects).map((hit) => hit.project.slug),
+    /* Bereiche werden nie geraten — nur das Modell darf sie vorschlagen. Ohne
+       Modell bleibt die Liste leer, auch wenn ein Bereichsname im Text steht. */
+    areas: [],
     ...heuristicMood(text),
     tags: findKnownTags(text, input.tags).slice(0, MAX_TAGS),
     heuristic: true,
@@ -171,6 +176,7 @@ export function heuristicFacts(input: FactsInput): DayFacts {
 interface RawFacts {
   people?: unknown;
   projects?: unknown;
+  areas?: unknown;
   mood?: unknown;
   energy?: unknown;
   tags?: unknown;
@@ -198,12 +204,17 @@ export function sanitizeFacts(value: unknown, input: FactsInput, fallback: DayFa
   const projects = asStrings(raw.projects)
     .map((slug) => slug.trim())
     .filter((slug) => allowed.has(slug));
+  const allowedAreas = new Set(input.areas.map((area) => area.slug));
+  const areas = asStrings(raw.areas)
+    .map((slug) => slug.trim())
+    .filter((slug) => allowedAreas.has(slug));
   const tags = asStrings(raw.tags)
     .map((tag) => tag.trim().replace(/^#/, '').toLowerCase())
     .filter((tag) => tag.length > 0);
   return {
     people: uniqueNames([...asStrings(raw.people), ...fallback.people], input.text),
     projects: [...new Set([...projects, ...fallback.projects])],
+    areas: [...new Set([...areas, ...fallback.areas])],
     mood: asLevel(raw.mood) ?? fallback.mood,
     energy: asLevel(raw.energy) ?? fallback.energy,
     tags: [...new Set([...tags, ...fallback.tags])].slice(0, MAX_TAGS),
@@ -231,6 +242,7 @@ export async function dayFacts(deps: FactsDeps, input: FactsInput): Promise<DayF
             slug: project.slug,
             title: project.title,
           })),
+          areas: input.areas.map((area) => ({ slug: area.slug, title: area.title })),
           people: input.people,
           tags: input.tags,
         },

@@ -1,24 +1,32 @@
-/* Projekte — der Screen, der „wo war ich stehengeblieben?" beantwortet.
+/* Projects — the screen that answers "where did I leave off?"
 
-   Zwei Spalten: links die Liste, rechts das Detail. Ausgewählt ist beim Öffnen
-   das Projekt mit der jüngsten Spur — die Antwort steht also da, bevor jemand
-   klickt.
+   Two columns: the list on the left, the detail on the right. On open, the
+   project with the most recent trail is selected — so the answer is already
+   there before anyone clicks.
 
-   Zwei Ansichten, ein Screen: „Projekte" und „Alle Todos". Die Todos bekommen
-   keinen eigenen Rail-Platz (die Rail hat zehn feste) und keinen eigenen Screen,
-   weil sie dieselbe Frage aus der anderen Richtung beantworten — und weil man
-   von einem Todo aus regelmäßig ins Projekt springt. Beides in einem Screen hält
-   diesen Sprung bei einem Klick.
+   Two views, one screen: "Projects" and "All todos". The todos get no rail
+   slot of their own (the rail has ten fixed ones) and no screen of their
+   own, because they answer the same question from the other direction — and
+   because you regularly jump from a todo into its project. Having both in
+   one screen keeps that jump to a single click.
 
-   Was ausgewählt und welche Ansicht offen ist, steht in der Adresse
-   (`#/projects?p=<slug>&tab=todos`): so führt ein Verweis von außen — Dashboard,
-   Pflege, Befehlspalette — direkt in ein Projekt.
+   What's selected and which view is open lives in the address
+   (`#/projects?p=<slug>&tab=todos`): that way a link from outside —
+   dashboard, maintenance, command palette — leads straight into a project.
 
-   Tastatur: j/k und Pfeile wählen, Enter öffnet die Datei, n legt ein Projekt
-   an, t öffnet das Feld für ein Todo, x hakt das fokussierte Todo ab. */
+   The detail has tabs of its own (Overview | Sessions), and they use the same
+   `tab` parameter: `tab=sessions` is still this list-plus-detail layout, only
+   with the detail's second tab open. Its state — the chosen CLI (`a`) and the
+   open session (`s`) — hangs in the address too, because this screen owns the
+   address; `go` carries all four parameters, and a `go` that dropped `s`
+   would strand every link into a transcript.
+
+   Keyboard: j/k and arrows select, Enter opens the file, n creates a
+   project, t opens the field for a todo, x checks off the focused todo. */
 
 import { useCallback, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import type { AgentKind } from '@shared/types';
 import { Button } from '../../atoms/Button';
 import { Tabs } from '../../atoms/Tabs';
 import { EmptyState } from '../../components/EmptyState';
@@ -36,7 +44,28 @@ import { DEFAULT_FILTER, visibleProjects } from './filter';
 import type { ProjectFilter } from './filter';
 import { useListKeys } from './use-project-keys';
 
-type Tab = 'list' | 'todos';
+/* `sessions` and `knowledge` are the detail's own tabs, not a third layout:
+   they fall into the same list-plus-detail branch as `list`, and the
+   screen's own tab bar shows `list` as the selected one. */
+type Tab = 'list' | 'todos' | 'sessions' | 'knowledge';
+
+/** What `go` may change; an omitted field keeps its current value. */
+interface Nav {
+  p?: string | null | undefined;
+  tab?: Tab | undefined;
+  a?: AgentKind | undefined;
+  s?: string | null | undefined;
+}
+
+function tabOf(value: string | null): Tab {
+  if (value === 'todos') return 'todos';
+  if (value === 'sessions') return 'sessions';
+  return value === 'knowledge' ? 'knowledge' : 'list';
+}
+
+function agentOf(value: string | null): AgentKind {
+  return value === 'codex' ? 'codex' : 'claude';
+}
 
 export function ProjectsScreen() {
   const t = useT();
@@ -49,25 +78,33 @@ export function ProjectsScreen() {
   const [dialog, setDialog] = useState(false);
   const rows = useRef(new Map<string, HTMLButtonElement>());
 
-  const tab: Tab = params.get('tab') === 'todos' ? 'todos' : 'list';
+  const tab: Tab = tabOf(params.get('tab'));
+  const agent = agentOf(params.get('a'));
+  const sessionId = params.get('s');
   const wanted = params.get('p');
   const list = visibleProjects(projects.data ?? [], filter);
-  /* Die Auswahl hängt am Slug. Ist er weggefiltert oder gelöscht, gilt die
-     jüngste Spur — nie ein leeres Detail neben einer gefüllten Liste. */
+  /* The selection hangs off the slug. If it's filtered out or deleted, the
+     most recent trail applies — never an empty detail next to a full list. */
   const selected = list.all.find((project) => project.slug === wanted) ?? list.all[0] ?? null;
   const index = selected === null ? -1 : list.all.indexOf(selected);
   const detail = useProject(selected?.slug ?? null);
 
   const go = useCallback(
-    (next: { p?: string | null; tab?: Tab }) => {
+    (next: Nav) => {
       const merged = new URLSearchParams();
       const slug = next.p === undefined ? wanted : next.p;
       const view = next.tab ?? tab;
+      const kind = next.a ?? agent;
+      /* The open session belongs to one project on one tab: a different
+         project or another tab drops it, everything else carries it. */
+      const session = next.s !== undefined ? next.s : slug === wanted ? sessionId : null;
       if (slug !== null && slug.length > 0) merged.set('p', slug);
-      if (view === 'todos') merged.set('tab', view);
+      if (view !== 'list') merged.set('tab', view);
+      if (kind !== 'claude') merged.set('a', kind);
+      if (view === 'sessions' && session !== null && session.length > 0) merged.set('s', session);
       setParams(merged, { replace: true });
     },
-    [setParams, tab, wanted],
+    [agent, sessionId, setParams, tab, wanted],
   );
 
   const select = useCallback(
@@ -96,9 +133,10 @@ export function ProjectsScreen() {
       overline={t('screen.projects.overline')}
       title={t('screen.projects.title')}
       action={
-        /* Sekundär, immer: der Fokuspunkt dieses Screens ist der nächste Schritt
-           des offenen Projekts — und solange keines offen ist, der Knopf in der
-           Leerzustandskarte. Zwei Teal-Flächen auf einer Fläche gibt es nicht. */
+        /* Secondary, always: the focal point of this screen is the next step
+           of the open project — and as long as none is open, the button in
+           the empty-state card. There is no such thing as two teal surfaces
+           on one screen. */
         <Button variant="secondary" icon="folder-plus" onClick={() => setDialog(true)}>
           {t('projects.new.title')}
         </Button>
@@ -106,7 +144,7 @@ export function ProjectsScreen() {
     />
   );
 
-  /* Nur im offenen Zustand im Baum: so sind die Felder beim Öffnen leer. */
+  /* Only in the tree while open: that way the fields are empty when it opens. */
   const dialogNode = !dialog ? null : (
     <NewProjectDialog
       open={dialog}
@@ -123,8 +161,8 @@ export function ProjectsScreen() {
           {
             onSuccess: (created) => {
               setDialog(false);
-              /* Der erste nächste Schritt ist ein zweiter Schreibvorgang: `create`
-                 legt die Datei an, `patch` trägt das Feld nach. */
+              /* The first next step is a second write: `create` creates the
+                 file, `patch` adds the field afterward. */
               if (input.nextStep !== null) {
                 mutations.patch.mutate({
                   slug: created.slug,
@@ -146,7 +184,9 @@ export function ProjectsScreen() {
         { id: 'list', label: t('projects.tab.list'), icon: 'folder' },
         { id: 'todos', label: t('projects.tab.todos'), icon: 'circle-check-big' },
       ]}
-      value={tab}
+      /* `sessions` is a tab of the detail — here the list stays lit, because
+         that is what the layout below shows. */
+      value={tab === 'todos' ? 'todos' : 'list'}
       onChange={(next) => go({ tab: next as Tab })}
     />
   );
@@ -205,11 +245,14 @@ export function ProjectsScreen() {
             stalled={list.stalled}
             selected={selected?.slug ?? null}
             filter={filter}
-            grouped={list.grouped}
+            latest={list.latest}
             stalledOpen={stalledOpen}
             onFilter={setFilter}
             onSelect={(project) => go({ p: project.slug })}
             onStalledOpen={setStalledOpen}
+            onToggleFavorite={(project) =>
+              mutations.patch.mutate({ slug: project.slug, patch: { favorite: !project.favorite } })
+            }
             rowRef={(slug, element) => {
               if (element === null) rows.current.delete(slug);
               else rows.current.set(slug, element);
@@ -232,6 +275,25 @@ export function ProjectsScreen() {
               key={selected.slug}
               project={detail.data.project}
               doc={detail.data.doc}
+              view={{
+                tab:
+                  tab === 'sessions' ? 'sessions' : tab === 'knowledge' ? 'knowledge' : 'overview',
+                agent,
+                sessionId,
+                go: (next) =>
+                  go({
+                    tab:
+                      next.tab === undefined
+                        ? undefined
+                        : next.tab === 'sessions'
+                          ? 'sessions'
+                          : next.tab === 'knowledge'
+                            ? 'knowledge'
+                            : 'list',
+                    a: next.a,
+                    s: next.s,
+                  }),
+              }}
             />
           )}
         </div>

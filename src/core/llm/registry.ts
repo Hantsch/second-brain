@@ -1,9 +1,9 @@
-/* Provider-Verwaltung ohne Electron: anlegen, ändern, löschen, testen, Modelle
-   holen — und aus dem Vorhandenen ein sinnvolles Routing vorschlagen.
+/* Provider management without Electron: create, change, delete, test, fetch
+   models — and suggest a sensible routing from what's available.
 
-   Schlüssel laufen ausschließlich über den injizierten `KeyStore`. Diese Datei
-   sieht einen Schlüssel nur, um ihn an einen Provider weiterzugeben; sie gibt ihn
-   niemals nach außen. */
+   Keys run exclusively through the injected `KeyStore`. This file only ever
+   sees a key in order to pass it on to a provider; it never exposes it
+   externally. */
 
 import type { ProviderConfig, ProviderKind, Routing, TaskDefinition } from '@shared/types';
 import { createProviderFactory, type ProviderFactory } from './factory';
@@ -18,7 +18,7 @@ export interface NewProviderInput {
   label: string;
   kind: ProviderKind;
   baseUrl: string;
-  /** Wird sofort in den `KeyStore` gelegt, nie in die Konfiguration. */
+  /** Placed immediately into the `KeyStore`, never into the configuration. */
   apiKey?: string;
   local?: boolean;
   models?: string[];
@@ -30,9 +30,9 @@ export interface ProviderRegistryOptions {
   keys: KeyStore;
   fetchImpl?: FetchLike;
   createProvider?: ProviderFactory;
-  /** Zeitquelle, damit Tests `createdAt` festnageln können. */
+  /** Time source, so tests can pin down `createdAt`. */
   now?: () => Date;
-  /** ID-Quelle, damit Tests stabile IDs bekommen. */
+  /** ID source, so tests get stable IDs. */
   createId?: (input: NewProviderInput) => string;
 }
 
@@ -53,7 +53,7 @@ export class ProviderRegistry {
     this.createId = options.createId ?? defaultId;
   }
 
-  /** Alle Provider, als Kopie — niemand ändert den Bestand aus Versehen. */
+  /** All providers, as a copy — no one accidentally mutates the underlying list. */
   list(): ProviderConfig[] {
     return this.providers.map((config) => ({ ...config }));
   }
@@ -82,8 +82,8 @@ export class ProviderRegistry {
   }
 
   /**
-   * Ändert einen Provider. `apiKey === ''` löscht den Schlüssel, `undefined`
-   * lässt ihn unberührt — so kann die Oberfläche Felder leer lassen.
+   * Changes a provider. `apiKey === ''` deletes the key, `undefined`
+   * leaves it untouched — this way the UI can leave fields empty.
    */
   update(id: string, patch: Partial<Omit<ProviderConfig, 'id'>>, apiKey?: string): ProviderConfig {
     const config = this.require(id);
@@ -102,7 +102,7 @@ export class ProviderRegistry {
     this.keys.remove(id);
   }
 
-  /** Verbindungstest: Latenz, Modellzahl, Fehler als Text. Aktualisiert die Modell-Liste. */
+  /** Connection test: latency, model count, error as text. Updates the model list. */
   async probe(id: string): Promise<ProviderConfig> {
     const config = this.require(id);
     const provider = this.providerFor(config);
@@ -111,7 +111,7 @@ export class ProviderRegistry {
       try {
         config.models = await provider.listModels();
       } catch {
-        // Modelle bleiben, wie sie waren — der Test selbst hat ja funktioniert.
+        // Models stay as they were — the test itself did succeed after all.
       }
     }
     config.probe = probe;
@@ -119,7 +119,7 @@ export class ProviderRegistry {
     return { ...config };
   }
 
-  /** Modelle abfragen und merken. Wirft, wenn der Provider nicht antwortet. */
+  /** Queries and remembers models. Throws if the provider doesn't respond. */
   async listModels(id: string): Promise<string[]> {
     const config = this.require(id);
     const models = await this.providerFor(config).listModels();
@@ -127,13 +127,13 @@ export class ProviderRegistry {
     return [...models];
   }
 
-  /** Fehlt für einen Provider, der einen braucht, der Schlüssel? */
+  /** Is the key missing for a provider that needs one? */
   missingKey(id: string): boolean {
     const config = this.require(id);
     return needsApiKey(config) && this.keys.get(id) === null;
   }
 
-  /** Provider-Instanz mit Schlüssel — nur für den internen Gebrauch. */
+  /** Provider instance with key — for internal use only. */
   providerFor(config: ProviderConfig): LlmProvider {
     return this.factory(config, this.keys.get(config.id));
   }
@@ -146,10 +146,10 @@ export class ProviderRegistry {
 }
 
 /**
- * Weist jeder Aufgabe ein vorhandenes Modell zu:
- * - sensible Aufgaben bevorzugt an lokale Provider,
- * - sonst so nah wie möglich an der empfohlenen Leistungsklasse.
- * Gibt es keine Modelle, kommt ein leeres Routing zurück — die App bleibt benutzbar.
+ * Assigns an available model to every task:
+ * - sensitive tasks preferably to local providers,
+ * - otherwise as close as possible to the recommended performance tier.
+ * If there are no models, an empty routing comes back — the app stays usable.
  */
 export function suggestRouting(
   providers: readonly ProviderConfig[],

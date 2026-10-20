@@ -1,20 +1,22 @@
-/* Eine Frage an das Second Brain beantworten — ausschließlich aus den
-   mitgegebenen Ausschnitten.
+/* Answer a question against the vault — exclusively from the excerpts
+   passed in.
 
-   Das ist der Prompt, an dem Guardrail 3 hängt („Keine Halluzinationen"):
-   jede Aussage trägt einen Beleg als [[pfad]], und ohne Beleg sagt die Antwort
-   ausdrücklich, dass nichts gefunden wurde.
+   This is the prompt that guardrail 3 ("no hallucinations") hangs on: every
+   statement carries a citation as [[path]], and without a citation the answer
+   explicitly says that nothing was found.
 
-   Dazu kommt die Zitat-Regel: was in Anführungszeichen steht, muss Zeichen für
-   Zeichen in einem Ausschnitt stehen. Der Aufrufer prüft das nach
-   (`core/wiki/citations.ts`) und verwirft ein Zitat, das er in keiner Datei findet —
-   ein Beleg, der sich nicht wiederfinden lässt, ist keiner. Deshalb tragen die
-   Ausschnitte hier auch ihre Zeilennummer: sie ist der Weg zurück in die Datei. */
+   On top of that comes the quote rule: whatever is placed in quotation marks
+   must appear character-for-character in an excerpt. The caller verifies this
+   afterward (`core/wiki/citations.ts`) and discards a quote it can't find in
+   any file — a citation that can't be relocated isn't one. That's why the
+   excerpts here also carry their line number: it's the way back into the
+   file. */
 
 import type { ChatTurn, DocLanguage, UiLanguage } from '@shared/types';
+import { phrases } from '@core/wiki/text';
 import { documentLanguageRule, replyLanguageRule, turns, type PromptExcerpt } from './shared';
 
-/** Ein Ausschnitt mit Fundstelle. `line` ist die erste Zeile des Zitats in der Datei. */
+/** An excerpt with a location. `line` is the first line of the quote in the file. */
 export interface QueryExcerpt extends PromptExcerpt {
   line?: number | null;
 }
@@ -22,19 +24,24 @@ export interface QueryExcerpt extends PromptExcerpt {
 export interface QueryAnswerInput {
   question: string;
   excerpts: readonly QueryExcerpt[];
-  /** Frühere Runden desselben Gesprächs, älteste zuerst. */
+  /** Earlier turns of the same conversation, oldest first. */
   history?: readonly { role: 'user' | 'assistant'; content: string }[];
-  /** Nur ein Modul befragt? Dann steht das im Prompt. */
+  /** Only one module being queried? Then that's stated in the prompt. */
   module?: string | null;
 }
 
-/** Der Satz, der bei fehlendem Beleg fallen muss. Tests und Oberfläche prüfen darauf. */
-export const NO_EVIDENCE_MARKER = 'Dazu steht nichts im Vault.';
+/** The sentence that must appear when no citation was found, in the given language. */
+export function noEvidenceMarker(language: UiLanguage | DocLanguage): string {
+  return phrases(language).noEvidence;
+}
+
+/** The German no-evidence sentence. Tests and the UI check for it. */
+export const NO_EVIDENCE_MARKER = noEvidenceMarker('de');
 
 /**
- * Ausschnitte in der Form, in der das Modell sie zitieren kann. Wie
- * `formatExcerpts` in shared.ts, zusätzlich mit der Zeilennummer — sie macht aus
- * einem Beleg eine Fundstelle.
+ * Excerpts in the form the model can cite them in. Like `formatExcerpts` in
+ * shared.ts, but additionally with the line number — it turns a citation into
+ * a locatable spot.
  */
 export function formatQueryExcerpts(excerpts: readonly QueryExcerpt[]): string {
   if (excerpts.length === 0) return '(keine Ausschnitte)';
@@ -60,13 +67,13 @@ export function queryAnswerPrompt(
 ): ChatTurn[] {
   const base = turns(
     [
-      'Du beantwortest Fragen zu einem persönlichen Second Brain.',
+      'Du beantwortest Fragen zu einem persönlichen Wissensarchiv.',
       replyLanguageRule(replyLanguage),
       documentLanguageRule(docLanguage),
       'Benutze ausschließlich die mitgegebenen Ausschnitte. Kein Weltwissen, keine Vermutungen, keine Ergänzungen.',
       'Belege jede Aussage mit dem Pfad des Ausschnitts in doppelten eckigen Klammern, z. B. [[projects/work/nyota/project.md]]. Mehrere Belege stehen hintereinander.',
       'Zitiere wortwörtlich: was du in Anführungszeichen setzt, muss Zeichen für Zeichen in einem Ausschnitt stehen. Ein Zitat, das sich nicht wiederfinden lässt, wird verworfen.',
-      `Findest du in den Ausschnitten keine Antwort, schreibe genau: "${NO_EVIDENCE_MARKER}" — und nenne höchstens einen Satz dazu, wonach der Nutzer stattdessen suchen könnte.`,
+      `Findest du in den Ausschnitten keine Antwort, schreibe genau: "${noEvidenceMarker(replyLanguage)}" — und nenne höchstens einen Satz dazu, wonach der Nutzer stattdessen suchen könnte.`,
       'Widersprechen sich Ausschnitte, benenne den Widerspruch mit beiden Belegen statt ihn zu glätten.',
       'Antworte knapp und sachlich: erst die Antwort, dann bei Bedarf zwei bis drei Stichpunkte. Keine Einleitung, kein Lob, keine Emoji.',
       input.module ? `Die Frage bezieht sich auf das Modul ${input.module}.` : '',
@@ -76,7 +83,7 @@ export function queryAnswerPrompt(
 
   const history = input.history ?? [];
   if (history.length === 0) return base;
-  // Vorgeschichte zwischen System- und Frage-Turn: die aktuelle Frage bleibt zuletzt.
+  // History goes between the system turn and the question turn: the current question stays last.
   const [system, question] = base;
   return [
     ...(system ? [system] : []),

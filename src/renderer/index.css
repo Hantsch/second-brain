@@ -12,40 +12,47 @@
 @import './styles/app/capture.css';
 @import './styles/app/inbox.css';
 @import './styles/app/projects.css';
+@import './styles/app/notes.css';
 @import './styles/app/markdown.css';
 @import './styles/app/ask.css';
 @import './styles/app/journal.css';
+@import './styles/app/journal-calendar.css';
 @import './styles/app/modules.css';
+@import './styles/app/reader.css';
+@import './styles/app/search.css';
 @import './styles/app/sources.css';
 @import './styles/app/garden.css';
+@import './styles/app/tasks.css';
+@import './styles/app/agents.css';
 @import './styles/app/settings.css';
 @import './styles/app/overlays.css';
 
-/* Grundlage der Anwendung: Farbschema, Kennzahlen des Fensters, Ziehbereich.
-   Das Layout selbst liegt in `styles/app/`. Farben, Abstände und Radien kommen
-   ausschließlich aus den Gaston-Tokens — keine rohe Tailwind-Palette. */
+/* Foundation of the application: color scheme, window metrics, drag region.
+   The layout itself lives in `styles/app/`. Colors, spacing and radii come
+   exclusively from the Gaston tokens — no raw Tailwind palette. */
 
 :root {
   color-scheme: dark;
-  /* Gaston setzt 28 px für kleine Bedienelemente. ARCHITECTURE.md verlangt
-     mindestens 32 px für jede interaktive Fläche — das ist A11y-Pflicht, keine
-     Empfehlung, und sie gewinnt. Überschrieben hier statt im vendorierten
-     Token-Satz, damit ein neuer Gaston-Stand ohne Konflikt einziehen kann. */
+  /* Gaston sets 28 px for small controls. ARCHITECTURE.md requires at least
+     32 px for every interactive surface — that's an a11y requirement, not a
+     suggestion, and it wins. Overridden here instead of in the vendored
+     token set, so a new Gaston version can be pulled in without conflict. */
   --control-h-sm: 32px;
-  /* Mindestmaß für alles, was klickt — eine Zahl, viele Stellen. */
+  /* Minimum size for anything clickable — one number, many places. */
   --sb-hit: 32px;
   --sb-rail-w: var(--sidebar-w);
   --sb-titlebar-h: 36px;
-  /* Wie `--focus-ring`, aber mit der Fläche der Rail und der Titelzeile als
-     innerem Abstand — auf `--surface-sunken` würde der Seitenton auffallen. */
+  /* Like `--focus-ring`, but with the surface of the rail and titlebar as the
+     inner offset — on `--surface-sunken` the page tone would stand out. */
   --sb-focus-ring-sunken: 0 0 0 2px var(--surface-sunken), 0 0 0 4px var(--accent);
 }
 
-/* Derselbe A11y-Zwang wie bei `--control-h-sm`, aber am Icon-Knopf selbst: der
-   vendorierte `.gs-dialog-x` (16 px Icon + 4 px Padding = 24 px) unterschreitet
-   `--sb-hit` in jedem Dialog der App, egal welcher — der Knopf kommt aus
-   `atoms/Dialog.tsx` und steht überall gleich. Überschrieben hier statt im
-   vendorierten Satz, aus demselben Grund wie oben. */
+/* The same a11y constraint as `--control-h-sm`, but on the icon button
+   itself: the vendored `.gs-dialog-x` (16 px icon + 4 px padding = 24 px)
+   falls short of `--sb-hit` in every dialog of the app, no matter which one —
+   the button comes from `atoms/Dialog.tsx` and is the same everywhere.
+   Overridden here instead of in the vendored set, for the same reason as
+   above. */
 .gs-dialog-x {
   min-width: var(--sb-hit);
   min-height: var(--sb-hit);
@@ -64,8 +71,8 @@ body {
   user-select: none;
 }
 
-/* Ziehbereich des rahmenlosen Fensters. Interaktive Flächen darin brauchen
-   `sb-no-drag`, sonst schluckt der Rahmen den Klick. */
+/* Drag region of the frameless window. Interactive surfaces inside it need
+   `sb-no-drag`, otherwise the frame swallows the click. */
 .sb-drag {
   -webkit-app-region: drag;
 }
@@ -73,9 +80,17 @@ body {
   -webkit-app-region: no-drag;
 }
 
+/* Three rows, the middle one for `RunStrip`, which only exists while a run is
+   going. The filling element is pinned to row 3 so it keeps the `1fr` either
+   way: with only two rows, a mounted strip took the `1fr` itself and grew to
+   fill the window, pushing the screen into an implicit row below it. */
 .sb-app {
   display: grid;
-  grid-template-rows: var(--sb-titlebar-h) 1fr;
+  grid-template-rows: var(--sb-titlebar-h) auto 1fr;
   height: 100%;
   background: var(--surface-page);
+}
+.sb-app > .sb-body,
+.sb-app > .sb-content {
+  grid-row: 3;
 }

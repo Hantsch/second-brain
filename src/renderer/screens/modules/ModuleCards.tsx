@@ -1,10 +1,10 @@
-/* Die Übersicht: eine Karte je Modul.
+/* The overview: one card per knowledge module.
 
-   Auf der Karte steht, was die Entscheidung „hier weiterlesen" tragen kann:
-   Titel, Zweck, die drei Zählungen in Mono, wann zuletzt verdichtet wurde — und
-   offene Pflege-Befunde, falls es welche gibt. Eine Karte ohne Befunde zeigt
-   nichts: „0 Befunde" wäre eine Behauptung über einen Pflegelauf, den vielleicht
-   niemand gemacht hat. */
+   The card shows what can carry the decision "keep reading here": title,
+   purpose, the three counts in mono, when it was last condensed — and open
+   gardener findings, if there are any. A card with no findings shows nothing:
+   "0 findings" would be a claim about a gardener run that maybe nobody ever
+   did. */
 
 import type { KnowledgeModule } from '@shared/types';
 import { Badge } from '../../atoms/Badge';

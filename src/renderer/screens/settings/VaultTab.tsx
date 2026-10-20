@@ -1,9 +1,9 @@
-/* Tab „Vault": wo die Dateien liegen, was der Index von ihnen weiß, und die
-   drei Wege zu einem anderen Vault.
+/* "Vault" tab: where the files live, what the index knows about them, and the
+   three paths to a different vault.
 
-   Der Indexlauf zeigt seinen Fortschritt aus `event:index-progress` — ein
-   Neuaufbau über tausend Dateien dauert länger als zwei Sekunden und darf nicht
-   als stiller Klick enden. */
+   The index run shows its progress from `event:index-progress` — rebuilding
+   over a thousand files takes longer than two seconds and must not end as a
+   silent click. */
 
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -25,21 +25,26 @@ interface Progress {
   indexing: boolean;
 }
 
-/** Fortschritt des Indexlaufs, direkt aus dem Ereignis — kein Polling. */
+/** Progress of the index run, straight from the event — no polling. */
 function useIndexProgress(): Progress | null {
   const [progress, setProgress] = useState<Progress | null>(null);
   useEffect(() => bridge().on('event:index-progress', setProgress), []);
   return progress;
 }
 
-/** Der Ordnername eines Vaults — er ist der Gegenstand, den eine Meldung nennt. */
+/** The folder name of a vault — it's the subject a message names. */
 function vaultName(path: string): string {
   const parts = path.split(/[\\/]/).filter(Boolean);
   return parts.at(-1) ?? path;
 }
 
-function indexStateKey(status: { indexing: boolean; indexedAt: string | null }): string {
+function indexStateKey(status: {
+  indexing: boolean;
+  indexedAt: string | null;
+  indexRefreshFailedAt: string | null;
+}): string {
   if (status.indexing) return 'settings.vault.indexBuilding';
+  if (status.indexRefreshFailedAt !== null) return 'settings.vault.indexFailed';
   return status.indexedAt ? 'settings.vault.indexReady' : 'settings.vault.indexMissing';
 }
 
@@ -74,8 +79,8 @@ export function VaultTab() {
   const root = status?.root ?? null;
   const busy = rebuild.isPending || (progress?.indexing ?? false);
 
-  /* Ein Vault, der sich nicht öffnen lässt, war bisher ein Klick ohne Antwort.
-     Der Fehler nennt jetzt den Ordner, um den es ging. */
+  /* A vault that can't be opened used to be a click without any response.
+     The error now names the folder in question. */
   const failed = open.error ?? choose.error ?? create.error ?? rebuild.error ?? null;
   const failedName = open.variables ?? root ?? '';
 
@@ -133,7 +138,13 @@ export function VaultTab() {
             </div>
             <div>
               <dt>{t('settings.vault.indexState')}</dt>
-              <dd>{t(indexStateKey(status ?? { indexing: false, indexedAt: null }))}</dd>
+              <dd>
+                {t(
+                  indexStateKey(
+                    status ?? { indexing: false, indexedAt: null, indexRefreshFailedAt: null },
+                  ),
+                )}
+              </dd>
             </div>
             <div>
               <dt>{t('settings.vault.indexAt')}</dt>

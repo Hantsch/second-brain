@@ -1,30 +1,35 @@
-/* Leistungsklasse aus dem Modellnamen erraten. Das ist eine Heuristik und sagt
-   das auch: sie steuert nur Vorschläge, niemals die Technik.
+/* Guessing the performance tier from the model name. This is a heuristic and
+   says so: it only steers suggestions, never the actual mechanics.
 
-   Reihenfolge der Signale (das erste, das greift, entscheidet):
-   1. Parametergröße im Namen — das verlässlichste Signal (`llama3.1:8b`).
-   2. Namensmarken für klein (`mini`, `haiku`, `flash`, `small`).
-   3. Namensmarken für groß (`opus`, `large`, `fable`).
-   4. Namensmarken für mittel (`sonnet`, `4o`, `mixtral`).
-   5. Sonst: `balanced` — die ehrlichste Annahme über ein unbekanntes Modell. */
+   Order of signals (the first one that matches decides):
+   1. Parameter size in the name — the most reliable signal (`llama3.1:8b`).
+   2. Name markers for small (`mini`, `haiku`, `flash`, `small`).
+   3. Name markers for large (`opus`, `large`, `fable`).
+   4. Name markers for medium (`sonnet`, `4o`, `mixtral`).
+   5. Otherwise: `balanced` — the most honest assumption about an unknown model. */
 
 import type { ModelTier, ProviderConfig } from '@shared/types';
 
 export const TIER_ORDER: readonly ModelTier[] = ['cheap', 'balanced', 'strong'];
 
-/** Bis zu dieser Größe (Milliarden Parameter) gilt ein Modell als klein. */
+/** Up to this size (billions of parameters), a model counts as small. */
 const CHEAP_MAX_B = 8;
-/** Bis hierhin als mittel; darüber als groß. */
+/** Up to here as medium; above it as large. */
 const BALANCED_MAX_B = 34;
+
+/** Up to this size, a `cheap` model counts as `tiny` (032). */
+const TINY_MAX_B = 2;
+/** Up to this size, a `cheap` model counts as `small`, otherwise `mid` (032). */
+const SMALL_MAX_B = 4;
 
 const CHEAP_TOKENS = ['mini', 'nano', 'micro', 'tiny', 'small', 'haiku', 'flash', 'lite'];
 const STRONG_TOKENS = ['opus', 'fable', 'large', 'ultra', 'max', 'heavy'];
 const BALANCED_TOKENS = ['sonnet', 'medium', 'mixtral', 'turbo', '4o'];
 
 /**
- * Größe in Milliarden Parametern aus dem Namen, oder null.
- * Mixture-of-Experts (`8x7b`) wird mit der doppelten Expertengröße gerechnet:
- * aktiv ist nur ein Bruchteil der Gewichte, die Qualität liegt entsprechend tiefer.
+ * Size in billions of parameters from the name, or null.
+ * Mixture-of-experts (`8x7b`) is computed as double the expert size: only a
+ * fraction of the weights are active, so the quality sits correspondingly lower.
  */
 export function parameterBillions(name: string): number | null {
   const lower = name.toLowerCase();
@@ -39,7 +44,7 @@ export function parameterBillions(name: string): number | null {
   return biggest;
 }
 
-/** Grobe Leistungsklasse eines Modellnamens. Nie ein Fehler, immer ein Ergebnis. */
+/** Rough performance tier of a model name. Never an error, always a result. */
 export function classifyModelTier(name: string): ModelTier {
   const tokens = tokensOf(name);
 
@@ -57,8 +62,33 @@ export function classifyModelTier(name: string): ModelTier {
 }
 
 /**
- * Zerlegt den Namen in Wörter. Das vermeidet Treffer mitten in Wörtern —
- * `gemini` enthält `mini`, ist aber kein kleines Modell.
+ * Finer-grained size band inside the `cheap` tier (032): a 1.2B model and an
+ * 8B model are both `cheap`, but only one of them can carry a task's actual
+ * work — this band is the signal `minLocalParamsB` checks against. Only
+ * meaningful for models already classified `cheap` (paramsB <= CHEAP_MAX_B),
+ * but the function itself doesn't enforce that.
+ */
+export function cheapSizeBand(paramsB: number): 'tiny' | 'small' | 'mid' {
+  if (paramsB <= TINY_MAX_B) return 'tiny';
+  if (paramsB <= SMALL_MAX_B) return 'small';
+  return 'mid';
+}
+
+/**
+ * Floor, in billions of parameters, a local model must clear to run a task of
+ * this tier at all — independent of `CHEAP_MAX_B`/`BALANCED_MAX_B`, which only
+ * say what still counts as fast/cheap, not what's capable enough. A task can
+ * override this with `TaskDefinition.minLocalParamsB` (032).
+ */
+export const MIN_LOCAL_PARAMS_B_BY_TIER: Record<ModelTier, number> = {
+  cheap: 3, // First `TIER_LANDMARKS_B` landmark in src/core/llm/capacity.ts.
+  balanced: 7, // Second `TIER_LANDMARKS_B` landmark in src/core/llm/capacity.ts.
+  strong: 13, // First `TIER_LANDMARKS_B` landmark above CHEAP_MAX_B.
+};
+
+/**
+ * Splits the name into words. This avoids matches in the middle of words —
+ * `gemini` contains `mini`, but is not a small model.
  */
 function tokensOf(name: string): Set<string> {
   return new Set(
@@ -69,7 +99,7 @@ function tokensOf(name: string): Set<string> {
   );
 }
 
-/** Ein einsetzbares Ziel: Provider, Modell, geschätzte Klasse, lokal oder nicht. */
+/** A usable target: provider, model, estimated tier, local or not. */
 export interface ModelCandidate {
   providerId: string;
   model: string;
@@ -77,7 +107,7 @@ export interface ModelCandidate {
   local: boolean;
 }
 
-/** Alle Modelle aller eingeschalteten Provider, in Provider-Reihenfolge. */
+/** All models of all enabled providers, in provider order. */
 export function collectCandidates(providers: readonly ProviderConfig[]): ModelCandidate[] {
   const candidates: ModelCandidate[] = [];
   for (const provider of providers) {
@@ -95,31 +125,31 @@ export function collectCandidates(providers: readonly ProviderConfig[]): ModelCa
 }
 
 export interface PickOptions {
-  /** Sensible Aufgaben gehören auf lokale Provider, wenn es welche gibt. */
+  /** Sensitive tasks belong on local providers, if any are available. */
   sensitive: boolean;
 }
 
 /**
- * Bewertung: kleiner ist besser. Abstand zur gewünschten Klasse zählt am
- * meisten; danach entscheidet, ob lokal passt.
+ * Scoring: smaller is better. Distance to the desired tier counts the
+ * most; after that, whether local fits decides.
  */
 function score(candidate: ModelCandidate, wanted: ModelTier, options: PickOptions): number {
   const distance = Math.abs(TIER_ORDER.indexOf(candidate.tier) - TIER_ORDER.indexOf(wanted));
   let value = distance * 10;
   if (options.sensitive) {
-    // Ein lokales Modell der falschen Klasse ist besser als ein Cloud-Modell mit Tagebuchinhalt.
+    // A local model of the wrong tier is better than a cloud model with journal content.
     value += candidate.local ? 0 : 50;
   } else if (wanted === 'strong') {
-    // Für die großen Urteile ist Cloud in der Regel stärker.
+    // For the big judgment calls, cloud is usually stronger.
     value += candidate.local ? 3 : 0;
   } else {
-    // Reicht es lokal, kostet es nichts.
+    // If local is good enough, it costs nothing.
     value += candidate.local ? 0 : 3;
   }
   return value;
 }
 
-/** Bestes Modell für eine gewünschte Klasse, oder null wenn es keine Modelle gibt. */
+/** Best model for a desired tier, or null if there are no models. */
 export function pickCandidate(
   candidates: readonly ModelCandidate[],
   wanted: ModelTier,
@@ -129,7 +159,7 @@ export function pickCandidate(
   let bestScore = Number.POSITIVE_INFINITY;
   for (const candidate of candidates) {
     const value = score(candidate, wanted, options);
-    // Strikt kleiner: bei Gleichstand gewinnt der zuerst angelegte Provider.
+    // Strictly less than: in a tie, the provider created first wins.
     if (value < bestScore) {
       best = candidate;
       bestScore = value;

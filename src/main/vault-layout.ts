@@ -1,6 +1,6 @@
-/* Vault erkennen und anlegen — die Shell benutzt dafür ausschließlich
-   `core/vault/layout`. Diese Datei bündelt nur, was der Main davon braucht,
-   damit der Rest des Mains keine Kern-Interna importiert. */
+/* Detecting and creating a vault — the shell uses exclusively
+   `core/vault/layout` for this. This file only bundles what main needs from
+   it, so the rest of main doesn't import core internals. */
 
 import { stat } from 'node:fs/promises';
 import { basename } from 'node:path';
@@ -8,7 +8,7 @@ import { ensureStructure, isVault, readVaultMarker } from '@core/vault';
 
 export { ensureStructure, isVault, readVaultMarker };
 
-/** Name eines Vaults: aus dem Marker, sonst der Ordnername. */
+/** Name of a vault: from the marker, otherwise the folder name. */
 export async function vaultName(root: string): Promise<string> {
   const marker = await readVaultMarker(root);
   return marker?.name ?? basename(root);

@@ -1,11 +1,12 @@
-/* Die Auswahl der Module: was es gibt, wofür es gut ist, und ob es steht.
+/* The module catalog: what exists, what it's good for, and whether it's shown.
 
-   Bewusst kein zweiter Ort, an dem verschoben wird — das gehört ins Gitter. Hier
-   gibt es genau zwei Entscheidungen: zeigen oder ausblenden, und die Anordnung
-   zurücksetzen.
+   Deliberately not a second place for rearranging — that belongs to the
+   grid. Here there are exactly two decisions: show or hide, and reset the
+   arrangement.
 
-   Der Haken schaltet sofort. Ein „Speichern" wäre ein zweiter Zustand, in dem die
-   Auswahl etwas anderes zeigt als das Dashboard dahinter. */
+   The checkbox switches immediately. A "save" action would be a second
+   state, in which the catalog shows something different from the dashboard
+   behind it. */
 
 import type { DashboardLayout, DashboardModuleId } from '@shared/types';
 import { DASHBOARD_MODULES } from '@shared/types';
@@ -55,8 +56,8 @@ export function TileCatalog({ open, layout, onToggle, onReset, onClose }: TileCa
       }
     >
       <ul className="sb-catalog">
-        {/* Jedes Modul der Tabelle hat einen Screen dahinter — es gibt keinen
-            Eintrag mehr, der angehakt werden könnte, ohne etwas zu liefern. */}
+        {/* Every module in the table has a screen behind it — there is no
+            entry left that could be checked without delivering anything. */}
         {DASHBOARD_MODULES.map((id) => {
           const meta = MODULE_META[id];
           return (

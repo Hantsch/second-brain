@@ -45,6 +45,41 @@ export function emptyGateway(): LlmGateway {
   return createEmptyGateway();
 }
 
+export interface WatchedGateway {
+  gateway: LlmGateway;
+  /** Die Namen der aufgerufenen Gateway-Methoden, in Reihenfolge. */
+  calls: string[];
+}
+
+/**
+ * Legt ein Protokoll um ein Gateway: jede angefasste Methode steht danach in
+ * `calls`. Fuer die Wege, die **kein** Modell fragen duerfen (die Haltung
+ * „zuhoeren" im Tagebuch, 011) wird „es wurde kein Modell kontaktiert" damit
+ * pruefbar, statt behauptet zu sein.
+ */
+export function watchGateway(inner: LlmGateway): WatchedGateway {
+  const calls: string[] = [];
+  const gateway: LlmGateway = {
+    complete: (req) => {
+      calls.push('complete');
+      return inner.complete(req);
+    },
+    stream: (req, onDelta) => {
+      calls.push('stream');
+      return inner.stream(req, onDelta);
+    },
+    isAvailable: (task) => {
+      calls.push('isAvailable');
+      return inner.isAvailable(task);
+    },
+    routeFor: (task) => {
+      calls.push('routeFor');
+      return inner.routeFor(task);
+    },
+  };
+  return { gateway, calls };
+}
+
 export interface StreamCapture {
   /** Der zusammengesetzte Text. */
   text: string;

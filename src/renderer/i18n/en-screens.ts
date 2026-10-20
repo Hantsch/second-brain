@@ -23,6 +23,7 @@ export const enScreens = {
   'stats.todos': 'Todos',
   'stats.pages': 'Wiki pages',
   'stats.words': 'Words',
+  'stats.oversized': '{count} files are larger than 2 MB and are indexed by name only.',
 
   'screen.capture.overline': 'Dump it',
   'screen.capture.title': 'Capture',
@@ -36,7 +37,6 @@ export const enScreens = {
   'capture.hint': 'saves',
   'capture.hintEscape': 'leaves the field',
   'capture.hintPalette': 'jumps to the command palette',
-  'capture.window': 'In its own window',
   'capture.count': '{chars} characters · {words} words',
   'capture.scope': 'Scope',
   'capture.scopeOpen': 'Leave open',
@@ -49,8 +49,10 @@ export const enScreens = {
   'capture.classified': 'Proposal ready — in the inbox',
   'capture.toProposal': 'See it in the inbox',
 
-  'screen.inbox.overline': 'Sort it',
-  'screen.inbox.title': 'Inbox',
+  /* No header pair any more: the inbox is not a screen of its own but the
+     "unfiled" filter on Notes (story 006). `NotesScreen` owns the one
+     `ScreenHeader`; the empty state below still belongs to the workspace
+     (`UnfiledWorkspace`). */
   'screen.inbox.empty.title': 'The inbox is empty',
   'screen.inbox.empty.body':
     'Captured thoughts stay here until they have a home. For every dump the app proposes a target and says why.',
@@ -70,6 +72,7 @@ export const enScreens = {
   'inbox.proposal.confidence': 'Confidence {percent} %',
   'inbox.proposal.changed': 'Target chosen by you.',
   'inbox.proposal.heuristic': 'Sorted without a model — rules instead of understanding.',
+  'inbox.proposal.section': 'Lands under',
   'inbox.proposal.exact': 'This is what gets written',
   'inbox.proposal.nothing': 'Nothing gets written — the dump stays put',
   'inbox.proposal.todos': 'Todos found',
@@ -123,7 +126,7 @@ export const enScreens = {
 
   'screen.ask.overline': 'Look it up',
   'screen.ask.title': 'Ask',
-  'screen.ask.empty.title': 'Ask your second brain',
+  'screen.ask.empty.title': 'Ask Gaston',
   'screen.ask.empty.body':
     'Answers come from your own notes only, with a quote and a file path. If there is no evidence, the app says so.',
   'screen.ask.empty.action': 'Add a source',
@@ -132,12 +135,15 @@ export const enScreens = {
   'ask.field.hintSend': 'asks',
   'ask.field.hintBreak': 'adds a line break',
   'ask.field.hintEscape': 'leaves the field',
+  'ask.field.hintNoSubmit': 'only the button files it',
   'ask.action.send': 'Ask',
   'ask.action.cancel': 'Cancel',
   'ask.action.new': 'New question',
   'ask.filter.scope': 'Scope',
   'ask.filter.module': 'Module',
   'ask.filter.all': 'everything',
+  'ask.filter.project': 'Project',
+  'ask.filter.clear': 'Remove filter',
 
   'ask.turn.question': 'Question',
   'ask.turn.answer': 'Answer',
@@ -155,7 +161,8 @@ export const enScreens = {
   'ask.citation.openPath': 'Open file: {path}',
   'ask.citation.of': 'Evidence {index} — {path}',
   'ask.citation.context': 'The passage in context',
-  'ask.citation.openFile': 'Open file',
+  'ask.citation.openInApp': 'Open in app',
+  'ask.citation.openExternal': 'Open externally',
   'ask.citation.moved': 'This passage is no longer in the file — it has been changed since.',
 
   'ask.examples.title': 'Start here',
@@ -204,7 +211,7 @@ export const enScreens = {
   'projects.deadline': 'Due {date}',
   'projects.waiting': 'Waiting for {who}',
 
-  'screen.journal.overline': 'Day and conversation',
+  'screen.journal.overline': 'One day, one entry',
   'screen.journal.title': 'Journal',
   'screen.journal.empty.title': 'No journal entry in the vault yet',
   'screen.journal.empty.body':
@@ -212,24 +219,40 @@ export const enScreens = {
   'screen.journal.empty.action': 'Start the day',
   /* The texts of the screen itself live in `en-journal.ts`. */
 
-  'screen.modules.overline': 'Knowledge',
-  'screen.modules.title': 'Modules',
-  'screen.modules.empty.title': 'No knowledge module in the vault yet',
-  'screen.modules.empty.body':
+  'screen.notes.overline': 'Thoughts on their own',
+  'screen.notes.title': 'Notes',
+  'screen.notes.empty.title': 'No note in the vault yet',
+  'screen.notes.empty.body':
+    'A note is a thought that stands on its own — no area, no project needed first. Write the first one and an area appears automatically.',
+  'screen.notes.empty.action': 'Write your first note',
+  /* The texts of the screen itself live in `en-notes.ts`. */
+
+  'screen.knowledge.overline': 'Modules and sources',
+  'screen.knowledge.title': 'Knowledge',
+  'screen.knowledge.empty.title': 'No knowledge module in the vault yet',
+  'screen.knowledge.empty.body':
     'A module is a small wiki: sources, terms and connections on one topic, every claim with evidence.',
-  'screen.modules.empty.action': 'New module',
+  'screen.knowledge.empty.action': 'New module',
   'screen.sources.overline': 'Ingest',
   'screen.sources.title': 'Sources',
   'screen.sources.empty.title': 'No raw source in the vault yet',
   'screen.sources.empty.body':
     'Videos, files and web pages land immutably in raw/ and are distilled into wiki pages from there.',
   'screen.sources.empty.action': 'Add a source',
-  'screen.garden.overline': 'Against the rot',
-  'screen.garden.title': 'Gardening',
-  'screen.garden.empty.title': 'No gardening run yet',
+  'screen.garden.overline': 'Keep your knowledge healthy',
+  'screen.garden.title': 'Knowledge Care',
+  'screen.garden.empty.title': 'No check yet',
   'screen.garden.empty.body':
-    'The gardening run finds orphan pages, broken links, undistilled sources and projects without a next step.',
-  'screen.garden.empty.action': 'Start a run',
+    'The check finds orphan pages, broken links, undistilled sources and projects without a next step.',
+  'screen.garden.empty.action': 'Start check',
+
+  /* The texts of the screen itself (switch, empty and off states) live in
+     `en-agents.ts` — the header pair sits here, like every other screen.
+     The view hangs under Projects since story 008, so the header says where
+     you are: "Projects · Agent sessions". The key names stay `screen.agents.*`
+     — only the rail entry went, the family kept its name. */
+  'screen.agents.overline': 'Projects',
+  'screen.agents.title': 'Agent sessions',
 
   /* Not “Behaviour”: that is one of the tabs — as an overline it would read as if
      that tab were open. */
@@ -245,6 +268,11 @@ export const enScreens = {
   'settings.vault': 'Vault',
   'settings.vaultOpen': 'Open another vault',
 
+  'onboarding.language.label': 'Language',
+  'onboarding.language.de': 'Deutsch',
+  'onboarding.language.en': 'English',
+  'onboarding.language.hint': 'Applies to interface, documents, and conversation.',
+  'onboarding.language.advanced': 'Advanced',
   'onboarding.overline': 'First step',
   'onboarding.title': 'Welcome',
   'onboarding.what.title': 'What is a vault?',
@@ -257,11 +285,13 @@ export const enScreens = {
   'onboarding.create': 'Choose a folder and create',
   'onboarding.createCancel': 'Cancel',
   'onboarding.nameLabel': 'Name of the new vault',
-  'onboarding.namePlaceholder': 'Second brain',
+  'onboarding.namePlaceholder': 'My vault',
   'onboarding.nameHint':
     'The name shows up in the title bar later. You pick the folder in the next step — it should be empty, the app creates the structure.',
   'onboarding.recent': 'Opened recently',
   'onboarding.missing': 'not found',
+  'onboarding.noModel.body':
+    'No model is configured. Gaston works fully without one — set one up later, once a vault is open, in settings.',
 
   'quickCapture.title': 'Quick capture',
   'quickCapture.placeholder': 'What has been on your mind?',

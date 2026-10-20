@@ -115,10 +115,7 @@ export function findProjectMentions(
   return mentions;
 }
 
-/**
- * Modul, dessen Slug oder Titel im Text vorkommt. Gibt es genau ein Modul, ist es
- * das Ziel auch ohne Namensnennung — bei einem einzigen Wiki gibt es keine Wahl.
- */
+/** Modul, dessen Slug oder Titel im Text vorkommt. */
 export function findModuleMention(
   text: string,
   modules: readonly ModuleCandidate[],
@@ -127,7 +124,7 @@ export function findModuleMention(
     if (hasMatch(slugRegex(module.slug), text)) return module;
     if (hasMatch(wordRegex(escapeRegExp(module.title)), text)) return module;
   }
-  return modules.length === 1 ? (modules[0] ?? null) : null;
+  return null;
 }
 
 /** Bereich, dessen Titel oder Slug im Text vorkommt. */

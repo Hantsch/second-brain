@@ -21,6 +21,7 @@ import { isoDay, wikiLogPath } from '@core/vault/paths';
 import type { DateLike } from '@core/vault/paths';
 import { phrases } from './text';
 import type { WikiStore } from './types';
+import { writeTextWithRetry } from './write-retry';
 
 /** Die drei Anlaesse, die ein Modul protokolliert. */
 export type WikiLogKind = 'ingest' | 'query' | 'lint';
@@ -104,6 +105,17 @@ export interface AppendLogOptions {
 /**
  * Einen Eintrag anhaengen. Fehlt die Datei, entsteht sie mit ihrem Kopf; alles
  * Bestehende bleibt Zeichen fuer Zeichen stehen.
+ *
+ * The write carries the hash of the text it read and, on a conflict, reads again
+ * and appends to the newer text — bounded at `MAX_WRITE_ATTEMPTS`. The chronicle
+ * is append-only, so re-reading is the one reaction that loses neither the
+ * foreign line nor this entry. The module lock keeps two digestions of this
+ * process apart already; this guard is for the gardener and for a hand edit,
+ * which the lock cannot see (story 050, D-e).
+ *
+ * `expectedHash` is the exception: a caller that names a hash gets the conflict,
+ * not a retry — it asserted a state, and being told the assertion broke is the
+ * whole point of naming it.
  */
 export async function appendLog(
   store: WikiStore,
@@ -112,13 +124,17 @@ export async function appendLog(
   options: AppendLogOptions = {},
 ): Promise<{ path: string; block: string }> {
   const path = wikiLogPath(module);
-  const existing = await store.readText(path);
   const block = formatLogEntry(entry, options.now ?? new Date());
-  const head = existing === null ? logHeader(options.language ?? 'de') : existing;
-  const content = `${head.replace(/\s+$/, '')}\n\n${block}\n`;
-  await store.writeText(path, content, {
-    ...(options.expectedHash === undefined ? {} : { expectedHash: options.expectedHash }),
-  });
+  const language = options.language ?? 'de';
+  await writeTextWithRetry(
+    store,
+    path,
+    (current) => {
+      const head = current === null ? logHeader(language) : current.content;
+      return `${head.replace(/\s+$/, '')}\n\n${block}\n`;
+    },
+    options.expectedHash === undefined ? {} : { expectedHash: options.expectedHash },
+  );
   return { path, block };
 }
 

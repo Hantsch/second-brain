@@ -1,8 +1,9 @@
-/* Tab „Info": was hier läuft, wo es liegt, und wo die Schlüssel liegen.
+/* "About" tab: what's running here, where it lives, and where the keys are
+   stored.
 
-   Der Absatz über die Schlüssel ist keine Beruhigung, sondern eine Auskunft: der
-   Nutzer soll wissen, dass ein API-Schlüssel diese Maschine nicht verlässt und
-   nicht mit dem Vault reist. */
+   The paragraph about the keys isn't reassurance, it's information: the
+   user should know that an API key never leaves this machine and never
+   travels with the vault. */
 
 import { useQuery } from '@tanstack/react-query';
 import { Badge } from '../../atoms/Badge';
@@ -12,8 +13,11 @@ import { Skeleton } from '../../components/Skeleton';
 import { useT } from '../../i18n';
 import { api } from '../../lib/api';
 import { qk } from '../../lib/queries/keys';
+import { InstalledNotesPanel } from './about/InstalledNotesPanel';
+import { PendingUpdateBlock } from './about/PendingUpdateBlock';
+import { UpdatesPanel } from './UpdatesPanel';
 
-/** Das Format ist im Vault selbst erklärt: die README schreibt die App beim Anlegen. */
+/** The format is explained in the vault itself: the app writes the README when creating it. */
 const VAULT_README = 'README.md';
 
 export function AboutTab() {
@@ -26,6 +30,10 @@ export function AboutTab() {
         {info.data ? (
           <div className="sb-setting-block">
             <dl className="sb-kv">
+              <div>
+                <dt>{t('settings.about.app')}</dt>
+                <dd className="sb-mono">{t('app.name')}</dd>
+              </div>
               <div>
                 <dt>{t('settings.about.version')}</dt>
                 <dd className="sb-mono">{info.data.version}</dd>
@@ -50,6 +58,12 @@ export function AboutTab() {
           <Skeleton lines={4} height={20} />
         )}
       </Panel>
+
+      <UpdatesPanel />
+
+      <PendingUpdateBlock />
+
+      <InstalledNotesPanel />
 
       <Panel title={t('settings.about.format.title')} note={t('settings.about.format.body')}>
         <div className="sb-setting-block">

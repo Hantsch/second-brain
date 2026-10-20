@@ -2,8 +2,9 @@
    enforced by the type in `en-settings.ts`. */
 
 import type { SettingsModelsKey } from './de-settings-models';
+import { enSettingsRuntime } from './en-settings-runtime';
 
-export const enSettingsModels: Record<SettingsModelsKey, string> = {
+const own = {
   'settings.models.start.title': 'No model set up yet',
   'settings.models.start.body':
     'Three ways are open, and you can switch at any time. Without a model the app stays usable.',
@@ -17,6 +18,9 @@ export const enSettingsModels: Record<SettingsModelsKey, string> = {
     'Capturing, searching, projects and todos work without any model.',
   'settings.models.start.none.action': 'Go to the dashboard',
 
+  'llm.preset.llamacpp.hint':
+    'Runs on this machine. Gives you control over GPU offload and context size that Ollama decides for you — the choice for weak hardware.',
+
   'settings.detect.title': 'Is a model already running here?',
   'settings.detect.checking': 'Looking on this machine',
   'settings.detect.found':
@@ -28,10 +32,10 @@ export const enSettingsModels: Record<SettingsModelsKey, string> = {
   'settings.detect.configured': '{label} is already set up as a provider.',
   'settings.detect.adopt': 'Take it as a provider',
   'settings.detect.none': 'No local model found.',
-  'settings.detect.guide':
-    'How to: open ollama.com, install Ollama, then pull the model in your terminal.',
+  'settings.detect.runtimeCardHint':
+    'Guided setup, including the download and its progress, is further below under "Local runtime".',
+  'settings.detect.goToRuntimeCard': 'Go to the "Local runtime" card',
   'settings.detect.guideLink': 'Open ollama.com',
-  'settings.detect.command': 'ollama pull llama3.1:8b',
   'settings.detect.recheck': 'Look again',
   'settings.detect.failed': 'The search failed.',
 
@@ -112,6 +116,22 @@ export const enSettingsModels: Record<SettingsModelsKey, string> = {
   'settings.routing.reason.no-vault': 'No vault is open.',
   'settings.routing.reason.error': 'The call failed.',
 
+  /* The way out of a `pick === null` recommendation row (067, D2, AC1): a
+     dead end otherwise, no matter which reason key put the row there. */
+  'settings.routing.deadEnd.pointer': 'Assign a model directly in the task routing table above.',
+  'settings.routing.deadEnd.assign': 'Assign manually',
+  'settings.routing.deadEnd.assignAria': 'Assign a model for {task} by hand',
+
+  /* The manual table's own warning (067, D3, AC2): non-blocking, one
+     sentence naming why the currently routed model would not pass the
+     sensitive-task rule. One key per `SensitiveRefusalReason`. */
+  'settings.routing.sensitiveWarn.trains-on-input':
+    'This provider trains on submitted content — not fit for a task that reads personal content.',
+  'settings.routing.sensitiveWarn.policy-unknown':
+    'No data policy is known for this model — not fit for a task that reads personal content.',
+  'settings.routing.sensitiveWarn.policy-unattributed':
+    'The no-training policy for this model names no source or read date — not fit for a task that reads personal content.',
+
   'settings.routing.defaults': 'Default per performance class',
   'settings.routing.defaultsNote':
     'These three apply to every task without a choice of its own — the fallback chain.',
@@ -145,6 +165,102 @@ export const enSettingsModels: Record<SettingsModelsKey, string> = {
   'settings.fallback.summarize-source': 'the source stays under raw/',
   'settings.fallback.wiki-ingest': 'pages stay as they are',
   'settings.fallback.journal-chat': 'the day entry can still be written',
+  'settings.fallback.journal-loose-ends': 'loose ends stay unnoticed',
   'settings.fallback.project-status': 'status and next step stay handwork',
-  'settings.fallback.gardener-audit': 'the deterministic findings keep running',
+  'settings.fallback.gardener-audit': 'the deterministic checks keep running',
+  'settings.fallback.condense-area': 'the area page stays as it is',
+  'settings.fallback.condense-project': 'the project pages stay as they are',
+
+  'settings.machine.title': 'This machine',
+  'settings.machine.scan': 'Scan this machine',
+  'settings.machine.rescan': 'Scan again',
+  'settings.machine.scannedAt': 'Last scanned: {when}',
+  'settings.machine.group.facts': 'What this machine is',
+  'settings.machine.group.capacity': 'What it can carry',
+  'settings.machine.group.editable': 'What you may change',
+  'settings.machine.idle':
+    'No scan has run yet. It reads RAM, graphics memory, CPU cores and free disk space — nothing is sent or stored.',
+  'settings.machine.disclaimer':
+    'A rule of thumb, not a measurement: actual throughput depends on the model, its quantization, and the runtime.',
+  'settings.machine.unknown': 'unknown',
+  'settings.machine.unknowns': "Couldn't be determined: {list}.",
+  'settings.machine.verdict.unknown': "Can't be judged — too many facts are missing.",
+  'settings.machine.resource.ram': 'RAM',
+  'settings.machine.resource.vram': 'Graphics memory (VRAM)',
+  'settings.machine.resource.cpu': 'The number of CPU cores',
+  'settings.machine.verdict.band.none':
+    '{resource} is the ceiling: no local model fits comfortably on this machine right now.',
+  'settings.machine.verdict.band.small':
+    '{resource} is the ceiling: this machine comfortably carries small local models, for example quick chat-style helpers.',
+  'settings.machine.verdict.band.medium':
+    '{resource} is the ceiling: this machine comfortably carries medium-sized local models, with more context and better answers.',
+  'settings.machine.verdict.band.large':
+    '{resource} is the ceiling: this machine comfortably carries large local models too.',
+  'settings.machine.fact.ram': 'RAM',
+  'settings.machine.fact.vram': 'Graphics memory (VRAM)',
+  'settings.machine.fact.gpu': 'GPU',
+  'settings.machine.fact.cpu': 'CPU cores',
+  'settings.machine.fact.disk': 'Free disk space',
+  'settings.machine.vram.unitGb': 'GB',
+  'settings.machine.vram.enter': 'Enter it',
+  'settings.machine.vram.manual': 'Entered by you',
+  'settings.machine.vram.clear': 'Clear',
+  'settings.machine.vram.error.empty': 'Enter a number.',
+  'settings.machine.vram.error.not-a-number': 'Enter a number of GB.',
+  'settings.machine.vram.error.not-positive': 'Enter at least {min} GB.',
+  'settings.machine.vram.error.too-large': 'Enter at most {max} GB.',
+  'settings.machine.vram.conflict':
+    'Detection now reports {detected}, which disagrees with the {manual} you entered.',
+  'settings.machine.vram.conflict.keepMine': 'Keep mine',
+  'settings.machine.vram.conflict.useDetected': 'Use the detected value',
+  'settings.machine.budget.title': 'Resource budget',
+  'settings.machine.budget.value': '{percent} %',
+  'settings.machine.budget.help':
+    'Sizes model recommendations against this share of RAM and VRAM, after the fixed reserve. It does not limit a model that is already running.',
+  'settings.machine.budget.aria': 'Share of RAM and VRAM available for local models',
+  'settings.machine.budget.planned': 'planning with {planned} at {percent} % after reserve',
+
+  'settings.recommend.title': 'Model recommendation',
+  'settings.recommend.action': 'Get recommendations',
+  'settings.recommend.note':
+    'One suggestion per task, from the catalogue of models you can reach — nothing is taken over until you agree.',
+  'settings.recommend.idle':
+    'No recommendation fetched yet. It proposes a reachable model for every task, with a reason and a cost.',
+  'settings.recommend.stale':
+    'Prices may be out of date — they come from the bundled catalogue, dated {date}.',
+  'settings.recommend.acceptAll': 'Accept all',
+  'settings.recommend.discard': 'Discard',
+  'settings.recommend.accept': 'Accept',
+  'settings.recommend.accepted': 'Accepted',
+  'settings.recommend.acceptAria': 'Accept the recommendation for {task}',
+  'settings.recommend.needsDownload': '{model} — needs a download of {gb} GB',
+  'settings.recommend.notYetSetUp': 'Set up a matching provider to accept this one.',
+  'settings.recommend.costEstimate': '~{cost} per run (estimate)',
+  'settings.recommend.policy': 'Policy read from {source}, dated {date}.',
+  'settings.recommend.reason.best-fit-for-task': "Fits this task's typical size and cost.",
+  'settings.recommend.reason.cheapest-reachable':
+    "The matching size wasn't reachable — this is the cheapest reachable alternative.",
+  'settings.recommend.reason.only-local-option':
+    'Only a local model is reachable for this task, with nothing to compare it against.',
+  'settings.recommend.reason.no-reachable-model':
+    'No model you can currently reach fits this task.',
+  'settings.recommend.reason.sensitive-rule-no-qualifying-target':
+    'This task reads personal content, and no reachable model meets the rule for it — the task stays without a model.',
+  'settings.recommend.reason.beyond-this-machine':
+    'This task needs more than this machine can carry.',
+  'settings.recommend.tradeoff.cheaper-alternative-available':
+    'A cheaper or local alternative exists: {alternatives}.',
+
+  'settings.recommend.shortfall.required': 'Needs at least {required} B parameters.',
+  'settings.recommend.shortfall.carried': 'This machine carries about {carried} B.',
+  'settings.recommend.shortfall.carriedUnknown':
+    'What this machine carries could not be determined.',
+  'settings.recommend.shortfall.optionCloud': 'A cloud model could cover this one task instead.',
+  'settings.recommend.shortfall.optionNone':
+    'No cloud alternative is set up for this either — the task stays without a model.',
+};
+
+export const enSettingsModels: Record<SettingsModelsKey, string> = {
+  ...own,
+  ...enSettingsRuntime,
 };

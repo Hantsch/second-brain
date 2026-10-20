@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { IndexService } from '@core/index/service';
 import { VaultIndexStore } from '@core/index/persist';
 import { indexPath } from '@core/vault/paths';
+import type { VaultStat } from '@core/vault/types';
 import { CountingStore, TODAY, vaultFiles } from './fixtures';
 
 function store(): CountingStore {
@@ -147,6 +148,41 @@ describe('IndexService: eigene Ablage', () => {
   });
 });
 
+describe('IndexService: derived() Memoisierung', () => {
+  it('rechnet einmal je Generation und erneut nach einer Aenderung', async () => {
+    const vault = store();
+    const service = await IndexService.open(vault, OPTIONS);
+    const before = service.dumps();
+    const generationBefore = service.generation();
+    // Zweiter Aufruf ohne Aenderung: dieselbe Referenz, nicht neu gerechnet.
+    expect(service.dumps()).toBe(before);
+
+    await vault.writeText(
+      'inbox/2026-08-10-1500-neuer-gedanke.md',
+      '---\ntype: dump\ntitle: Neuer Gedanke\nstatus: raw\n---\n\nNoch unsortiert.\n',
+    );
+    await service.refresh(['inbox/2026-08-10-1500-neuer-gedanke.md']);
+
+    expect(service.generation()).toBeGreaterThan(generationBefore);
+    const after = service.dumps();
+    expect(after).not.toBe(before);
+    expect(after.length).toBe(before.length + 1);
+  });
+
+  it('rechnet nicht neu, wenn ein Lauf nichts am Index aendert', async () => {
+    const vault = store();
+    const service = await IndexService.open(vault, OPTIONS);
+    const before = service.dumps();
+    const generationBefore = service.generation();
+
+    await vault.writeText('raw/files/x/bild.png', 'binaer');
+    await service.refresh(['raw/files/x/bild.png']);
+
+    expect(service.generation()).toBe(generationBefore);
+    expect(service.dumps()).toBe(before);
+  });
+});
+
 describe('IndexService: abgeleitete Listen', () => {
   it('liefert Projekte, Todos, Dumps, Tage, Module und Quellen', async () => {
     const service = await IndexService.open(store(), OPTIONS);
@@ -177,5 +213,139 @@ describe('IndexService: abgeleitete Listen', () => {
     await service.refresh(['inbox/2026-08-10-1500-neuer-gedanke.md']);
 
     expect(service.dumps().map((dump) => dump.title)).toContain('Neuer Gedanke');
+  });
+});
+
+/**
+ * Haelt den ersten `stat` auf `gate` an, bis der Test ihn freigibt — so steht
+ * ein gezielter Refresh nachweislich mitten im Lauf, waehrend weitere Aufrufe
+ * eintreffen.
+ */
+class GatedStore extends CountingStore {
+  private gate: { path: string; entered: () => void; release: Promise<void> } | null = null;
+
+  holdAt(path: string): { entered: Promise<void>; release: () => void } {
+    let entered!: () => void;
+    let release!: () => void;
+    const enteredPromise = new Promise<void>((resolve) => (entered = resolve));
+    const releasePromise = new Promise<void>((resolve) => (release = resolve));
+    this.gate = { path, entered, release: releasePromise };
+    return { entered: enteredPromise, release };
+  }
+
+  override async stat(path: string): Promise<VaultStat | null> {
+    const gate = this.gate;
+    if (gate !== null && gate.path === path) {
+      this.gate = null;
+      gate.entered();
+      await gate.release;
+    }
+    return super.stat(path);
+  }
+}
+
+function note(title: string): string {
+  return ['---', 'type: note', `title: ${title}`, '---', '', `Inhalt ${title}.`, ''].join('\n');
+}
+
+describe('IndexService: gebuendeltes Nachziehen', () => {
+  it('refresh calls during a running update collapse into one follow-up run', async () => {
+    const vault = new GatedStore({
+      files: vaultFiles(),
+      now: new Date('2026-08-09T08:00:00.000Z'),
+    });
+    const service = await IndexService.open(vault, { ...OPTIONS, persistence: null });
+    for (let i = 0; i <= 5; i += 1) await vault.writeText(`areas/neu-${i}.md`, note(`Neu ${i}`));
+    const before = service.generation();
+
+    const gate = vault.holdAt('areas/neu-0.md');
+    const first = service.refresh(['areas/neu-0.md']);
+    await gate.entered;
+    const followers = [1, 2, 3, 4, 5].map((i) => service.refresh([`areas/neu-${i}.md`]));
+    // All five mid-run calls share the one queued run's promise.
+    for (const follower of followers) expect(follower).toBe(followers[0]);
+    expect(followers[0]).not.toBe(first);
+
+    gate.release();
+    await expect(Promise.all([first, ...followers])).resolves.toBeDefined();
+
+    // Each run that finds a new file bumps the generation once: two runs, not six.
+    expect(service.generation() - before).toBe(2);
+    expect(service.stats().docs).toBe(20);
+  });
+
+  it('a refresh arriving mid-run is not lost', async () => {
+    const vault = new GatedStore({
+      files: vaultFiles(),
+      now: new Date('2026-08-09T08:00:00.000Z'),
+    });
+    const service = await IndexService.open(vault, { ...OPTIONS, persistence: null });
+    await vault.writeText('areas/erste.md', note('Erste'));
+
+    const gate = vault.holdAt('areas/erste.md');
+    const first = service.refresh(['areas/erste.md']);
+    await gate.entered;
+    await vault.writeText('areas/nachzuegler.md', note('Nachzuegler'));
+    const late = service.refresh(['areas/nachzuegler.md']);
+
+    gate.release();
+    await Promise.all([first, late]);
+
+    const hits = service.search({ text: 'Nachzuegler' });
+    expect(hits.map((hit) => hit.path)).toContain('areas/nachzuegler.md');
+  });
+
+  it('a failed run rejects its callers but still starts the queued run', async () => {
+    const vault = new GatedStore({
+      files: vaultFiles(),
+      now: new Date('2026-08-09T08:00:00.000Z'),
+    });
+    const service = await IndexService.open(vault, { ...OPTIONS, persistence: null });
+    await vault.writeText('areas/kaputt.md', note('Kaputt'));
+    await vault.writeText('areas/danach.md', note('Danach'));
+
+    const gate = vault.holdAt('areas/kaputt.md');
+    const originalStat = vault.stat.bind(vault);
+    let failed = false;
+    vault.stat = async (path: string): Promise<VaultStat | null> => {
+      const result = await originalStat(path);
+      if (path === 'areas/kaputt.md' && !failed) {
+        failed = true;
+        throw new Error('stat failed');
+      }
+      return result;
+    };
+    const first = service.refresh(['areas/kaputt.md']);
+    await gate.entered;
+    const follower = service.refresh(['areas/danach.md']);
+
+    gate.release();
+    await expect(first).rejects.toThrow('stat failed');
+    await follower;
+    expect(service.search({ text: 'Danach' }).map((hit) => hit.path)).toContain('areas/danach.md');
+  });
+
+  it('a full refresh merged into the queued run wins over its path set', async () => {
+    const vault = new GatedStore({
+      files: vaultFiles(),
+      now: new Date('2026-08-09T08:00:00.000Z'),
+    });
+    const service = await IndexService.open(vault, { ...OPTIONS, persistence: null });
+    await vault.writeText('areas/start.md', note('Start'));
+
+    const gate = vault.holdAt('areas/start.md');
+    const first = service.refresh(['areas/start.md']);
+    await gate.entered;
+    await vault.writeText('areas/ungemeldet.md', note('Ungemeldet'));
+    const scoped = service.refresh(['areas/start.md']);
+    const full = service.refresh();
+    expect(full).toBe(scoped);
+
+    gate.release();
+    await Promise.all([first, scoped]);
+    // Nobody reported this path; only the full walk can have found it.
+    expect(service.search({ text: 'Ungemeldet' }).map((hit) => hit.path)).toContain(
+      'areas/ungemeldet.md',
+    );
   });
 });

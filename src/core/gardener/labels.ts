@@ -1,37 +1,49 @@
 /**
- * Die Beschriftungen der Befunde.
+ * The labels of the findings.
  *
- * `GardenerFinding.title`/`detail` und `GardenerFix.label` sind im IPC-Vertrag
- * fertige Saetze, kein Code — der Screen soll einen Befund vorlesen koennen, ohne
- * ihn zu deuten. Der Kern waehlt aber keine Sprache: deshalb sind die Texte
- * **einsetzbar** (genau wie `RecentWorkLabels` im Ueberblick), mit Deutsch als
- * Vorgabe. Das englische Gegenstueck liegt im Main (`src/main/gardener-labels.ts`),
- * weil `src/core/` die Sprache der Oberflaeche nicht kennt.
+ * `GardenerFinding.title`/`detail` and `GardenerFix.label` are finished
+ * sentences in the IPC contract, not code — the screen should be able to
+ * read a finding aloud without interpreting it. But the core does not choose
+ * a language: that's why the texts are **swappable** (exactly like
+ * `RecentWorkLabels` in the overview), with German as the default. The
+ * English counterpart lives in main (`src/main/gardener-labels.ts`), because
+ * `src/core/` does not know the UI language.
  *
- * Ton wie ueberall: Aussagen statt Ausrufe, Sentence case, keine Emoji. Jeder Satz
- * nennt die Sache und, wo es hilft, die Folge — nie eine Vermutung.
+ * Tone as everywhere: statements instead of exclamations, sentence case, no
+ * emoji. Every sentence names the thing and, where it helps, the consequence
+ * — never a guess.
  */
 
-import type { GardenerFindingKind, GardenerFix } from '@shared/types';
+import type { GardenerFindingKind, GardenerFix, SourceBlockReason } from '@shared/types';
 
-/** Titel und Erklaerung eines Befunds. */
+/** Title and explanation of a finding. */
 export interface FindingText {
   title: string;
   detail: string;
 }
 
-/** Welche Art von Katalog-Drift vorliegt. */
+/** Which kind of catalog drift is present. */
 export type IndexDriftKind =
-  /** Das Modul hat gar keinen Katalog — `wiki/index.md` fehlt. */
+  /** The module has no catalog at all — `wiki/index.md` is missing. */
   | 'no-catalog'
-  /** Die Seite gibt es, im Katalog fehlt sie. */
+  /** The page exists, but is missing from the catalog. */
   | 'missing'
-  /** Der Eintrag steht da, aber ohne Einzeiler. */
+  /** The entry is there, but without a one-liner. */
   | 'summary'
-  /** Der Eintrag steht in einer Rubrik, die nicht zum Seitentyp passt. */
+  /** The entry is filed under a category that doesn't match the page type. */
   | 'category'
-  /** Der Eintrag zeigt auf eine Seite, die es nicht mehr gibt. */
+  /** The entry points to a page that no longer exists. */
   | 'stale-entry';
+
+/**
+ * What a condensation covers. The sentence names it, so a finding cannot be
+ * read as being about the wrong thing when an area and a project share a name.
+ *
+ * One sentence pair with a unit word, not two pairs: the finding is one kind
+ * (`condensation-due`), and a second pair of sentences would have to be kept in
+ * step with the first in two languages forever.
+ */
+export type CondensationUnit = 'area' | 'project';
 
 export interface GardenerLabels {
   orphan(page: string): FindingText;
@@ -39,14 +51,36 @@ export interface GardenerLabels {
   indexDrift(page: string, drift: IndexDriftKind): FindingText;
   stalePage(page: string, reviewed: string, ageDays: number): FindingText;
   unfiledDump(dump: string, ageDays: number): FindingText;
-  unprocessedSource(source: string): FindingText;
+  /**
+   * `reason` kommt aus `RawSource.blocked` — `null` heisst, es gibt keinen
+   * (bekannten) Grund, warum die Quelle liegen blieb, nur dass sie es tut.
+   */
+  unprocessedSource(source: string, reason?: SourceBlockReason | null): FindingText;
+  looseEnd(quote: string, day: string): FindingText;
   projectWithoutNextStep(project: string, status: string): FindingText;
   nearDuplicate(first: string, second: string, similarity: number): FindingText;
   missingPage(term: string, pages: number): FindingText;
   contradiction(first: string, second: string, note: string, named: boolean): FindingText;
   /**
-   * Beschriftung des Knopfs. Sie sagt, was **passiert** — die drei Aktionen, die
-   * nichts schreiben, heissen deshalb „oeffnen" und nicht „einordnen".
+   * Verdichtung faellig, Artefakt vorhanden aber veraltet. `condensedAt` ist
+   * das `condensed_at` des Artefakts, `changedCount` die Zahl der aktuellen
+   * Eingaenge, die neu sind oder sich geaendert haben (dieselbe Zaehlung, die
+   * die Pruefung selbst ueber `isDue()`/`changedInputs()` trifft).
+   *
+   * `unit` defaults to `'area'` — the one unit story 039 shipped, so a call
+   * that names no unit says exactly what it said before.
+   */
+  condensationDue(
+    name: string,
+    condensedAt: string,
+    changedCount: number,
+    unit?: CondensationUnit,
+  ): FindingText;
+  /** Verdichtung faellig, noch kein Artefakt — kein `condensed_at`, kein Vergleich moeglich. */
+  condensationMissing(name: string, unit?: CondensationUnit): FindingText;
+  /**
+   * Label of the button. It says what **happens** — the three actions that
+   * write nothing are therefore called "open" rather than "file".
    */
   fix(action: GardenerFix['action'], kind?: GardenerFindingKind): string;
 }
@@ -56,21 +90,36 @@ function percent(value: number): string {
 }
 
 /**
- * Tage nach „seit" — also im Dativ. Beide Verwender schreiben „seit X", und
- * „seit 19 Tage" ist ein Satz, den niemand so sagt; auf dem Pflege-Screen stand
- * er in jeder zweiten Zeile.
+ * Days after "seit" (since) — i.e. in the German dative case. Both callers
+ * write "seit X", and "seit 19 Tage" is grammatically wrong German that
+ * nobody would say; on the maintenance screen it showed up in every other
+ * line.
  */
 function daysAgo(count: number): string {
   return count === 1 ? '1 Tag' : `${count} Tagen`;
 }
 
+/** Singular/Plural für die Zahl geänderter Eingänge, wie `daysAgo` für Tage. */
+function changedInputsCount(count: number): string {
+  return count === 1 ? '1 Eingang hat sich geändert' : `${count} Eingänge haben sich geändert`;
+}
+
+/**
+ * The German word for each unit, plus the demonstrative that goes with it. The
+ * genus differs, so a bare word would not carry the second sentence.
+ */
+const GERMAN_UNIT: Record<CondensationUnit, { word: string; demonstrative: string }> = {
+  area: { word: 'Area', demonstrative: 'diese Area' },
+  project: { word: 'Projekt', demonstrative: 'dieses Projekt' },
+};
+
 const GERMAN_FIX_LABELS: Record<GardenerFix['action'], string> = {
   'add-to-index': 'In den Katalog eintragen',
   'add-links': 'Verweis eintragen',
   'mark-reviewed': 'Als geprüft markieren',
-  /* Führt zusammen wird nichts — die beiden Seiten gehen nur auf. */
+  /* Nothing gets merged — both pages simply get opened. */
   merge: 'Beide Seiten vergleichen',
-  /* Ordnet nichts ein und verdichtet nichts: öffnet den Ort, an dem es passiert. */
+  /* Files nothing and condenses nothing: opens the place where it happens. */
   'open-classify': 'Zum Einordnen öffnen',
   'open-ingest': 'Zum Verdichten öffnen',
 };
@@ -103,7 +152,7 @@ const GERMAN_DRIFT: Record<IndexDriftKind, (page: string) => FindingText> = {
   }),
 };
 
-/** Vorgabe auf Deutsch. */
+/** Default in German. */
 export const GERMAN_GARDENER_LABELS: GardenerLabels = {
   orphan(page: string): FindingText {
     return {
@@ -140,11 +189,25 @@ export const GERMAN_GARDENER_LABELS: GardenerLabels = {
     };
   },
 
-  unprocessedSource(source: string): FindingText {
+  unprocessedSource(source: string, reason: SourceBlockReason | null = null): FindingText {
+    if (reason === 'no-transcript') {
+      return {
+        title: `Quelle ohne Verdichtung: ${source}`,
+        detail:
+          'Kein Transcript verfügbar. Die Rohquelle liegt unter raw/, verdichtet werden kann nur die Beschreibung — das entscheidet ein Mensch auf der Quellen-Seite.',
+      };
+    }
     return {
       title: `Quelle ohne Verdichtung: ${source}`,
       detail:
         'Die Rohquelle liegt unter raw/, eine Source-Seite im Wiki gibt es nicht. Unverdichtet ist sie nicht zitierfähig.',
+    };
+  },
+
+  looseEnd(quote: string, day: string): FindingText {
+    return {
+      title: `Loses Ende vom ${day}: „${quote}"`,
+      detail: `Am ${day} angekündigt, seitdem nichts dazu. Der Tag ist vorbei, die Sache nicht sichtbar erledigt.`,
     };
   },
 
@@ -178,9 +241,28 @@ export const GERMAN_GARDENER_LABELS: GardenerLabels = {
     };
   },
 
+  condensationDue(
+    name: string,
+    condensedAt: string,
+    changedCount: number,
+    unit: CondensationUnit = 'area',
+  ): FindingText {
+    return {
+      title: `Verdichtung fällig: ${GERMAN_UNIT[unit].word} „${name}“`,
+      detail: `Zuletzt verdichtet am ${condensedAt}. ${changedInputsCount(changedCount)} seitdem.`,
+    };
+  },
+
+  condensationMissing(name: string, unit: CondensationUnit = 'area'): FindingText {
+    return {
+      title: `Noch keine Verdichtung: ${GERMAN_UNIT[unit].word} „${name}“`,
+      detail: `Es gibt Eingangsmaterial für ${GERMAN_UNIT[unit].demonstrative}, aber noch kein Verdichtungs-Artefakt. Verdichten stößt nur ein Mensch an.`,
+    };
+  },
+
   fix(action: GardenerFix['action'], kind?: GardenerFindingKind): string {
-    /* Dieselbe Aktion, zwei Anlässe: bei einem Widerspruch wird nicht „ein
-       Verweis" eingetragen, sondern der Konflikt benannt. */
+    /* Same action, two occasions: for a contradiction, it's not "a
+       reference" being added, but the conflict being named. */
     if (action === 'add-links' && kind === 'contradiction') return 'Widerspruch benennen';
     return GERMAN_FIX_LABELS[action];
   },

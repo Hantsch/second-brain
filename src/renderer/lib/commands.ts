@@ -1,6 +1,6 @@
-/* Registrierbare Befehle für die Palette. Screens und die Grundaktionen stehen
-   fest; jeder Screen kann eigene Befehle nachlegen und beim Verlassen wieder
-   abmelden. */
+/* Registrable commands for the palette. Screens and the base actions are
+   fixed; each screen can add its own commands and unregister them again on
+   exit. */
 
 import { useSyncExternalStore } from 'react';
 
@@ -9,11 +9,11 @@ export type CommandGroup = 'screens' | 'actions' | 'search';
 export interface CommandDef {
   id: string;
   group: CommandGroup;
-  /** i18n-Key oder fertiger Text. */
+  /** i18n key or finished text. */
   labelKey: string;
-  /** Zweite Zeile in Mono — bei Suchtreffern der Dateipfad. Fertiger Text. */
+  /** Second line in mono — the file path for search hits. Finished text. */
   hint?: string;
-  /** Kebab-case-Name für das Icon-Atom. */
+  /** Kebab-case name for the icon atom. */
   icon?: string;
   run: () => void | Promise<void>;
 }
@@ -25,7 +25,7 @@ function emit(): void {
   for (const notify of subscribers) notify();
 }
 
-/** Legt einen Befehl in die Palette. Rückgabe meldet ihn wieder ab. */
+/** Puts a command into the palette. The return value unregisters it again. */
 export function registerCommand(command: CommandDef): () => void {
   commands = [...commands.filter((entry) => entry.id !== command.id), command];
   emit();

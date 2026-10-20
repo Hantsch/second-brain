@@ -5,9 +5,12 @@
    eine unverdichtete Quelle wird hervorgehoben, statt in der Liste zu
    verschwinden — sie ist eine offene Aufgabe, kein Zustand ohne Folgen. */
 
-import type { RawSource } from '@shared/types';
+import { useState } from 'react';
+import type { KnowledgeModule, RawSource } from '@shared/types';
 import { Badge } from '../../atoms/Badge';
+import { Button } from '../../atoms/Button';
 import { Icon } from '../../atoms/Icon';
+import { Select } from '../../atoms/Select';
 import { useT, useLanguage } from '../../i18n';
 import { formatDate } from '../../lib/format';
 
@@ -22,16 +25,34 @@ const ICONS: Record<RawSource['kind'], string> = {
 
 export interface SourceRowProps {
   source: RawSource;
-  /** Rohquelle im Ordner zeigen. */
+  /** Open the source's detail view. */
   onOpen: (path: string) => void;
   /** Zur Wiki-Seite springen, wenn es eine gibt. */
   onOpenPage?: (sourcePage: string) => void;
+  /** Module zur Auswahl, wenn direkt aus der Zeile verdichtet werden soll. */
+  modules?: readonly KnowledgeModule[];
+  /** Verdichten anstoßen, ohne erst die Detailansicht zu öffnen. */
+  onCondense?: (path: string, module: string) => void;
+  /** Verdichten aus der Beschreibung/den Metadaten statt aus dem Transcript —
+      nur relevant, wenn `source.blocked !== null`. */
+  onCondenseFromMetadata?: (path: string, module: string) => void;
+  /** Diese Zeile verdichtet gerade. */
+  condensing?: boolean;
 }
 
-export function SourceRow({ source, onOpen, onOpenPage }: SourceRowProps) {
+export function SourceRow({
+  source,
+  onOpen,
+  onOpenPage,
+  modules,
+  onCondense,
+  onCondenseFromMetadata,
+  condensing = false,
+}: SourceRowProps) {
   const t = useT();
   const language = useLanguage();
   const condensed = source.sourcePage !== null;
+  const [chosenModule, setChosenModule] = useState(source.modules[0] ?? '');
 
   return (
     <li className="sb-row">
@@ -45,6 +66,9 @@ export function SourceRow({ source, onOpen, onOpenPage }: SourceRowProps) {
           <Icon name={ICONS[source.kind]} size={15} />
           <span className="sb-row-name">{source.title}</span>
           {condensed ? null : <Badge variant="warning">{t('sources.list.uncondensed')}</Badge>}
+          {source.blocked === null ? null : (
+            <Badge variant="warning">{t(`sources.stage.blocked.${source.blocked}`)}</Badge>
+          )}
         </span>
         <span className="sb-row-meta">
           <span>{t(`sources.kind.${source.kind}`)}</span>
@@ -65,6 +89,38 @@ export function SourceRow({ source, onOpen, onOpenPage }: SourceRowProps) {
         >
           {t('sources.list.page')}
         </button>
+      ) : null}
+      {!condensed && onCondense !== undefined && modules !== undefined ? (
+        <span className="sb-row-condense">
+          <Select
+            aria-label={t('sources.list.moduleFor', { title: source.title })}
+            value={chosenModule}
+            onChange={(event) => setChosenModule(event.target.value)}
+            options={modules.map((entry) => ({ value: entry.slug, label: entry.title }))}
+            placeholder={t('sources.detail.chooseModule')}
+          />
+          <Button
+            variant="secondary"
+            size="sm"
+            icon="sparkles"
+            disabled={chosenModule.length === 0 || condensing}
+            loading={condensing}
+            onClick={() => onCondense(source.path, chosenModule)}
+          >
+            {condensing ? t('sources.detail.condensing') : t('sources.detail.condense')}
+          </Button>
+          {source.blocked !== null && onCondenseFromMetadata !== undefined ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              icon="file-text"
+              disabled={chosenModule.length === 0 || condensing}
+              onClick={() => onCondenseFromMetadata(source.path, chosenModule)}
+            >
+              {t('sources.detail.condenseFromMetadata')}
+            </Button>
+          ) : null}
+        </span>
       ) : null}
     </li>
   );
