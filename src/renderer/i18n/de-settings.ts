@@ -171,6 +171,13 @@ const own = {
   'settings.about.format.body':
     'Das verbindliche Dateiformat steht in docs/VAULT-FORMAT.md im Projektordner: Frontmatter, Ordnerbaum, Wikilinks. Was dort nicht steht, schreibt die App nicht.',
   'settings.about.format.open': 'Vault-README öffnen',
+  'settings.about.notes.title': 'Neu in {version}',
+  'settings.about.notes.loading': 'Versionshinweise werden geladen …',
+  'settings.about.notes.empty.title': 'Keine Versionshinweise für diese Version',
+  'settings.about.notes.empty.body':
+    'Das Changelog enthält keinen Eintrag zu dieser Version. Das vollständige Changelog ist unten verlinkt.',
+  'settings.about.links.project': 'Projektseite',
+  'settings.about.links.changelog': 'Vollständiges Changelog',
   'settings.about.updates.title': 'Updates',
   'settings.about.updates.status.idle': 'Noch nicht geprüft.',
   'settings.about.updates.status.checking': 'Suche nach einer neuen Version …',
@@ -187,12 +194,14 @@ const own = {
   'settings.about.updates.error.timeout': 'Der Release-Server hat nicht rechtzeitig geantwortet.',
   'settings.about.updates.error.unknown': 'Unbekannter Fehler.',
   'settings.about.updates.lastChecked': 'Zuletzt geprüft',
-  'settings.about.updates.never': 'nie',
   'settings.about.updates.distribution': 'Verteilung',
   'settings.about.updates.distribution.installed': 'Installiert',
   'settings.about.updates.distribution.portable': 'Portable Build',
   'settings.about.updates.check': 'Jetzt prüfen',
   'settings.about.updates.checking': 'Prüfe …',
+  'settings.about.update.never': 'Nie geprüft',
+  'settings.about.update.pending.title': 'Wartendes Update',
+  'settings.about.update.pending.badge': 'Noch nicht installiert',
 } as const;
 
 export const deSettings = { ...own, ...deSettingsModels } as const;

@@ -20,7 +20,7 @@ import type {
   VaultStatus,
   WikiPage,
 } from '@shared/types';
-import type { AppInfo, IndexStats } from '@shared/ipc';
+import type { AppInfo, IndexStats, ReleaseNotes } from '@shared/ipc';
 
 export const NOW = '2026-08-10T14:32:00+02:00';
 export const TODAY = '2026-08-10';
@@ -53,6 +53,11 @@ export const appInfo: AppInfo = {
   electron: '',
   userData: '',
   demo: true,
+};
+
+export const releaseNotes: ReleaseNotes = {
+  version: appInfo.version,
+  markdown: '### Added\n\n- Update notes in About.',
 };
 
 export const doc: VaultDoc = {

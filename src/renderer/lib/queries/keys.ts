@@ -153,6 +153,7 @@ export const qk = {
   },
   app: {
     info: () => ['app', 'info'] as const,
+    releaseNotes: () => ['app', 'releaseNotes'] as const,
   },
   update: {
     state: () => ['update', 'state'] as const,

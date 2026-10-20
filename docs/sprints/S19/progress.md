@@ -54,3 +54,23 @@
 - 2026-10-20 08:24 · 078 · verify · started
 - 2026-10-20 08:26 · 078 · verify · done
 - 2026-10-20 08:26 · 078 · story · done
+- 2026-10-20 08:27:04 · 079 · build · started
+- 2026-10-20 08:27 · 079 · D1 Release-note extraction (core) · started
+- 2026-10-20 08:28 · 079 · D1 Release-note extraction (core) · done
+- 2026-10-20 08:28 · 079 · D2 Notes channel (main + IPC) · started
+- 2026-10-20 08:31 · 079 · D2 Notes channel (main + IPC) · done
+- 2026-10-20 08:31 · 079 · D3 About running notes, empty state, links · started
+- 2026-10-20 08:36 · 079 · D3 About running notes, empty state, links · done
+- 2026-10-20 08:36 · 079 · D4 About pending update and check row · started
+- 2026-10-20 08:40 · 079 · D4 About pending update and check row · done
+- 2026-10-20 08:40 · 079 · verify · started
+- 2026-10-20 08:42 · 079 · verify · done
+- 2026-10-20 08:42 · 079 · review 1 · started
+- 2026-10-20 08:43 · 079 · review 1 · done
+- 2026-10-20 08:43 · 079 · review fix 1 · started
+- 2026-10-20 08:46 · 079 · review fix 1 · done
+- 2026-10-20 08:46 · 079 · verify · started
+- 2026-10-20 08:49 · 079 · verify · blocked: update-installed.spec strict-mode clash with About action
+- 2026-10-20 08:49 · 079 · review fix 2 · started
+- 2026-10-20 08:51 · 079 · review fix 2 · done
+- 2026-10-20 08:51 · 079 · story · done

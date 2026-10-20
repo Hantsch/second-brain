@@ -23,7 +23,7 @@ version and a pending update bring.
 - [x] 076 — A release ships from a changelog
 - [x] 077 — Gaston notices a new version
 - [x] 078 — I update when I choose to
-- [ ] 079 — About tells me what changed
+- [x] 079 — About tells me what changed
 
 ## Notes
 

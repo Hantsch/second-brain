@@ -5,6 +5,7 @@ import type { HandlerMap } from './registry';
 import { defineHandlers } from './registry';
 import type { Services } from '../services';
 import { isDemoVault } from '../demo';
+import { installedReleaseNotes } from '../release-notes';
 
 export function appHandlers(services: Services): HandlerMap {
   return defineHandlers({
@@ -15,5 +16,6 @@ export function appHandlers(services: Services): HandlerMap {
       userData: services.userDataDir,
       demo: isDemoVault(services.vaultRoot()),
     }),
+    'app:releaseNotes': () => installedReleaseNotes(app.getVersion()),
   });
 }

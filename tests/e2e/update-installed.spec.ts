@@ -6,7 +6,7 @@
    version, so each test offers its own version and never inherits a stage from
    the one before. "Not now" is process-wide, which is why dismissing comes last. */
 
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import type { UpdateFileFixture } from '../../src/main/update/e2e-fixture';
 import { expect, test } from './fixtures/app';
 
@@ -63,6 +63,11 @@ async function stopStartupRun(page: Page): Promise<void> {
     .toBe(0);
 }
 
+/* The update dialog, so the About tab's own update action never matches. */
+function dialogOf(page: Page): Locator {
+  return page.getByRole('dialog');
+}
+
 async function openDialog(page: Page): Promise<void> {
   if (!(await page.getByRole('dialog').isVisible())) await page.locator(CONTROL).click();
   await expect(page.getByRole('dialog')).toBeVisible();
@@ -75,7 +80,7 @@ async function closeDialog(page: Page): Promise<void> {
 
 async function download(page: Page): Promise<void> {
   await openDialog(page);
-  await page.getByRole('button', { name: 'Download update' }).click();
+  await dialogOf(page).getByRole('button', { name: 'Download update' }).click();
 }
 
 test('no control while up to date; the control appears once an update is available', async ({
@@ -107,7 +112,7 @@ test('the download shows progress and Gaston stays usable', async ({ app, writeU
   writeUpdateFixture(fixture('99.2.0', { ticks: 10, tickMs: 500 }));
   await checkNow(page);
   await download(page);
-  const bar = page.getByRole('progressbar', { name: 'Downloading update' });
+  const bar = dialogOf(page).getByRole('progressbar', { name: 'Downloading update' });
   await expect(bar).toBeVisible();
   const sample = async (): Promise<number> => Number(await bar.getAttribute('aria-valuenow'));
   await expect.poll(sample).toBeGreaterThanOrEqual(0);
@@ -122,7 +127,7 @@ test('the download shows progress and Gaston stays usable', async ({ app, writeU
   await expect.poll(() => page.url().split('#')[1] ?? '').toContain('/journal');
 
   await openDialog(page);
-  await expect(page.getByRole('button', { name: INSTALL })).toBeVisible();
+  await expect(dialogOf(page).getByRole('button', { name: INSTALL })).toBeVisible();
   await closeDialog(page);
 });
 
@@ -134,10 +139,14 @@ test('a running download can be cancelled and installs nothing', async ({
   writeUpdateFixture(fixture('99.3.0', { ticks: 20, tickMs: 500 }));
   await checkNow(page);
   await download(page);
-  await expect(page.getByRole('progressbar', { name: 'Downloading update' })).toBeVisible();
+  await expect(
+    dialogOf(page).getByRole('progressbar', { name: 'Downloading update' }),
+  ).toBeVisible();
   await page.getByRole('dialog').getByRole('button', { name: 'Cancel', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Download update' })).toBeVisible();
-  await expect(page.getByRole('progressbar', { name: 'Downloading update' })).toHaveCount(0);
+  await expect(dialogOf(page).getByRole('button', { name: 'Download update' })).toBeVisible();
+  await expect(dialogOf(page).getByRole('progressbar', { name: 'Downloading update' })).toHaveCount(
+    0,
+  );
   expect(await installCalls(app.app)).toEqual([]);
   await closeDialog(page);
 });
@@ -150,7 +159,7 @@ test('a finished download installs nothing until the second confirmation', async
   writeUpdateFixture(fixture('99.4.0'));
   await checkNow(page);
   await download(page);
-  const install = page.getByRole('button', { name: INSTALL });
+  const install = dialogOf(page).getByRole('button', { name: INSTALL });
   await expect(install).toBeVisible();
   expect(await installCalls(app.app)).toEqual([]);
 
@@ -167,7 +176,7 @@ test('install is refused while a task runs or an LLM response streams', async ({
   writeUpdateFixture(fixture('99.5.0'));
   await checkNow(page);
   await download(page);
-  await expect(page.getByRole('button', { name: INSTALL })).toBeVisible();
+  await expect(dialogOf(page).getByRole('button', { name: INSTALL })).toBeVisible();
   const before = (await installCalls(app.app)).length;
   const refusal = (): Promise<{ ok: boolean; error?: string }> =>
     page.evaluate("window.sb.invoke('update:installAndRestart')") as Promise<{
@@ -186,8 +195,8 @@ test('install is refused while a task runs or an LLM response streams', async ({
     await expect(running).toBeVisible();
 
     await openDialog(page);
-    await page.getByRole('button', { name: INSTALL }).click();
-    await expect(page.getByTestId('update-reason')).toHaveText(
+    await dialogOf(page).getByRole('button', { name: INSTALL }).click();
+    await expect(dialogOf(page).getByTestId('update-reason')).toHaveText(
       'A task is still running. Wait for it to finish, or stop it.',
     );
     expect(await refusal()).toMatchObject({ ok: false, error: 'update.error.taskRunning' });
@@ -204,8 +213,8 @@ test('install is refused while a task runs or an LLM response streams', async ({
     );
     await expect.poll(async () => (await refusal()).error).toBe('update.error.llmStreaming');
     await openDialog(page);
-    await page.getByRole('button', { name: INSTALL }).click();
-    await expect(page.getByTestId('update-reason')).toHaveText(
+    await dialogOf(page).getByRole('button', { name: INSTALL }).click();
+    await expect(dialogOf(page).getByTestId('update-reason')).toHaveText(
       'A reply is being generated. Wait for it to finish.',
     );
     await closeDialog(page);
@@ -219,19 +228,21 @@ test('a failed download says why and stays offerable', async ({ app, writeUpdate
   writeUpdateFixture(fixture('99.6.0', { ticks: 1, tickMs: 50, outcome: 'offline' }));
   await checkNow(page);
   await download(page);
-  await expect(page.getByTestId('update-reason')).toHaveText('The download failed: no connection.');
-  await expect(page.getByRole('button', { name: 'Download update' })).toBeEnabled();
+  await expect(dialogOf(page).getByTestId('update-reason')).toHaveText(
+    'The download failed: no connection.',
+  );
+  await expect(dialogOf(page).getByRole('button', { name: 'Download update' })).toBeEnabled();
 
   writeUpdateFixture(fixture('99.6.0', { ticks: 1, tickMs: 50, outcome: 'checksum' }));
-  await page.getByRole('button', { name: 'Download update' }).click();
-  await expect(page.getByTestId('update-reason')).toHaveText(
+  await dialogOf(page).getByRole('button', { name: 'Download update' }).click();
+  await expect(dialogOf(page).getByTestId('update-reason')).toHaveText(
     'The download was discarded: the checksum does not match.',
   );
 
   writeUpdateFixture(fixture('99.6.0', { ticks: 1, tickMs: 50, outcome: 'ok' }));
-  await page.getByRole('button', { name: 'Download update' }).click();
-  await expect(page.getByRole('button', { name: INSTALL })).toBeVisible();
-  await expect(page.getByTestId('update-reason')).toHaveCount(0);
+  await dialogOf(page).getByRole('button', { name: 'Download update' }).click();
+  await expect(dialogOf(page).getByRole('button', { name: INSTALL })).toBeVisible();
+  await expect(dialogOf(page).getByTestId('update-reason')).toHaveCount(0);
   await closeDialog(page);
 });
 

@@ -40,3 +40,5 @@ All notable changes to Gaston are recorded here. The format follows
 - Update button: when a new version exists, one calm button in the title bar offers it. Download
   it, cancel if you like, and Gaston restarts into it only after a second click — never in the
   middle of a running task or a streaming answer.
+- About: this version's release notes, what a waiting update would bring, when Gaston last
+  checked, and a "Check now" button — plus links to the project and the full changelog.

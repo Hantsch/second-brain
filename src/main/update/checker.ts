@@ -1,6 +1,7 @@
 /* The one place that talks to `electron-updater`. Everything else sees only the
    plain `check()` result, so the library stays swappable and tests never load it. */
 
+import { htmlReleaseNotesToMarkdown } from '@core/release/release-notes';
 import type { UpdateDistribution, UpdateFailure, UpdateOffer } from '../../shared/types/update';
 
 export const UPDATE_FEED = { provider: 'github', owner: 'Hantsch', repo: 'second-brain' } as const;
@@ -45,38 +46,6 @@ const NETWORK_CODES = new Set([
 export function detectDistribution(env: Record<string, string | undefined>): UpdateDistribution {
   const dir = env['PORTABLE_EXECUTABLE_DIR'];
   return typeof dir === 'string' && dir !== '' ? 'portable' : 'installed';
-}
-
-/** `&amp;` last, so an escaped `&amp;lt;` stays the literal text `&lt;`. */
-function decodeEntities(text: string): string {
-  return text
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;|&apos;/g, "'")
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&');
-}
-
-function stripTags(html: string): string {
-  return decodeEntities(html.replace(/<[^>]*>/g, ''))
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function notesToMarkdown(notes: string): string {
-  if (!/<\/?[a-z][a-z0-9]*\b[^>]*>/i.test(notes)) return notes;
-  return notes
-    .replace(
-      /<h[1-6]\b[^>]*>([\s\S]*?)<\/h[1-6]>/gi,
-      (_, inner: string) => `\n### ${stripTags(inner)}\n`,
-    )
-    .replace(/<li\b[^>]*>([\s\S]*?)<\/li>/gi, (_, inner: string) => `\n- ${stripTags(inner)}\n`)
-    .split('\n')
-    .map((line) => (/^(### |- )/.test(line) ? line : stripTags(line)))
-    .join('\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
 }
 
 function joinNotes(raw: ReleaseNotes): string {
@@ -146,7 +115,7 @@ export function createUpdateChecker(
         return {
           kind: 'available',
           version,
-          notes: notesToMarkdown(joinNotes(releaseNotes)).slice(0, NOTES_MAX_LENGTH),
+          notes: htmlReleaseNotesToMarkdown(joinNotes(releaseNotes)).slice(0, NOTES_MAX_LENGTH),
           releasedAt: releaseDate ?? null,
         };
       } catch (error) {

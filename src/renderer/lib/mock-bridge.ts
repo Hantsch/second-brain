@@ -907,6 +907,7 @@ const RESPONSES: MockResponses = {
   'shell:openExternal': () => undefined,
   'shell:showInFolder': () => undefined,
   'app:info': () => fx.appInfo,
+  'app:releaseNotes': () => fx.releaseNotes,
   'update:state': () => MOCK_UPDATE_STATE,
   'update:check': () => MOCK_UPDATE_STATE,
   'update:download': () => ({

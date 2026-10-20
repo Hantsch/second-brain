@@ -13,6 +13,8 @@ import { Skeleton } from '../../components/Skeleton';
 import { useT } from '../../i18n';
 import { api } from '../../lib/api';
 import { qk } from '../../lib/queries/keys';
+import { InstalledNotesPanel } from './about/InstalledNotesPanel';
+import { PendingUpdateBlock } from './about/PendingUpdateBlock';
 import { UpdatesPanel } from './UpdatesPanel';
 
 /** The format is explained in the vault itself: the app writes the README when creating it. */
@@ -58,6 +60,10 @@ export function AboutTab() {
       </Panel>
 
       <UpdatesPanel />
+
+      <PendingUpdateBlock />
+
+      <InstalledNotesPanel />
 
       <Panel title={t('settings.about.format.title')} note={t('settings.about.format.body')}>
         <div className="sb-setting-block">

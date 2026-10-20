@@ -118,6 +118,12 @@ export interface AppInfo {
   demo: boolean;
 }
 
+/** Notes of one version as Markdown; `null` when the changelog has no section for it. */
+export interface ReleaseNotes {
+  version: string;
+  markdown: string | null;
+}
+
 /** A write with conflict protection: `expectedHash` = what the client read. */
 export interface WriteRequest {
   path: string;
@@ -1307,6 +1313,7 @@ export interface IpcRoutes {
   'shell:openExternal': { req: { url: string }; res: void };
   'shell:showInFolder': { req: { path: string }; res: void };
   'app:info': { req: void; res: AppInfo };
+  'app:releaseNotes': { req: void; res: ReleaseNotes };
   /** The remembered update state; never touches the network. */
   'update:state': { req: void; res: UpdateState };
   /** A manual check (ignores the 24 h window); resolves with the resulting state. */
@@ -1501,6 +1508,7 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'shell:openExternal',
   'shell:showInFolder',
   'app:info',
+  'app:releaseNotes',
   'update:state',
   'update:check',
   'update:download',

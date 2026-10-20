@@ -132,6 +132,9 @@ export interface AppOptions {
    * default) sets no env var, i.e. every spec but the one that opts in keeps the
    * unmodified, instant-checks behaviour. */
   stageDelayMs: number;
+  /** Passed through as `SB_E2E_CHANGELOG`: a changelog file the About tab reads its notes
+   * from instead of the bundled one. `undefined` (the default) sets no env var. */
+  changelogFile: string | undefined;
   /** Passed through as `SB_E2E_INGEST_DELAY_MS` when > 0 — a spec-local way to hold a
    * digestion at the boundary between the raw phase and the wiki write long enough to
    * drive a real window close into it (050, D9). 0 (the default) sets no env var, i.e.
@@ -312,6 +315,8 @@ export const test = base.extend<
 
   stageDelayMs: [0, { scope: 'worker', option: true }],
 
+  changelogFile: [undefined, { scope: 'worker', option: true }],
+
   ingestDelayMs: [0, { scope: 'worker', option: true }],
 
   tasksFixture: [false, { scope: 'worker', option: true }],
@@ -381,6 +386,7 @@ export const test = base.extend<
         tempRoot,
         vaultPath,
         stageDelayMs,
+        changelogFile,
         ingestDelayMs,
         tasksFixture,
         fakeProvider,
@@ -409,6 +415,7 @@ export const test = base.extend<
         SB_E2E_TRAY: '1',
         ...(hotkey ? { SB_E2E_HOTKEY: '1' } : {}),
         ...(stageDelayMs > 0 ? { SB_E2E_STAGE_DELAY_MS: String(stageDelayMs) } : {}),
+        ...(changelogFile ? { SB_E2E_CHANGELOG: changelogFile } : {}),
         ...(ingestDelayMs > 0 ? { SB_E2E_INGEST_DELAY_MS: String(ingestDelayMs) } : {}),
         ...(tasksFixture ? { SB_E2E_TASKS_FIXTURE: '1' } : {}),
         ...(fakeProvider

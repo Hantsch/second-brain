@@ -1,7 +1,7 @@
 ---
 id: 079
 title: About tells me what changed
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-10-19
 ---
 
@@ -26,16 +26,16 @@ Reference: `../q2-launcher` story 099 (`AboutPanel.tsx`, `UpdateCheckRow.tsx`,
 
 ## Acceptance Criteria
 
-- [ ] **AC1** — About shows what changed in the currently running version, not only its number.
-- [ ] **AC2** — When [[077]] has an update available, About shows that version's notes too, marked
+- [x] **AC1** — About shows what changed in the currently running version, not only its number.
+- [x] **AC2** — When [[077]] has an update available, About shows that version's notes too, marked
       as not yet installed, next to the same update action [[078]] offers in the app shell.
-- [ ] **AC3** — About links out to the project and to the full changelog, opened in the system
+- [x] **AC3** — About links out to the project and to the full changelog, opened in the system
       browser through `shell:openExternal`, never in an app window.
-- [ ] **AC4** — About says when Gaston last checked for updates and lets the user check now,
+- [x] **AC4** — About says when Gaston last checked for updates and lets the user check now,
       showing the outcome including a failure reason ([[077]] AC8).
-- [ ] **AC5** — Notes that are unavailable (never fetched, offline, a dev build) render as a
+- [x] **AC5** — Notes that are unavailable (never fetched, offline, a dev build) render as a
       readable empty state, never as a blank panel or a crash.
-- [ ] **AC6** — The notes render as readable text — headings and list items — not as raw markdown
+- [x] **AC6** — The notes render as readable text — headings and list items — not as raw markdown
       source, and cannot inject markup into the renderer.
 
 ## Open Questions
@@ -256,3 +256,30 @@ Coverage gate: AC1 D1+D2+D3 · AC2 D2+D4 · AC3 D3 · AC4 D4 · AC5 D2+D3+D4 · 
 AC has a deliverable and a named test; no manual residue.
 
 ## Done
+
+Summary: About now shows the running version's notes (bundled CHANGELOG.md via `?raw`, section
+extracted in `src/core/release/`), a pending-update block (version, "Not yet installed" badge,
+notes, the shared UpdateAction), an update-check row (last checked, Check now, outcome) and links
+to project and changelog via `shell:openExternal`. New channel `app:releaseNotes`; env seam
+`SB_E2E_CHANGELOG`.
+
+Commit message: `079: About shows release notes — running + pending, check row, links`
+
+Verification (narrow gate): build, lint, typecheck, format:check green; `npx vitest run --changed HEAD`
+(111 files, 1694 tests) green; `npx playwright test` on about-release-notes, update-check,
+update-installed specs 17/17 green; `npm run verify:ui` green (D4). Review: default tier PASS, fixes
+applied, re-verified. AC -> test: AC1-AC6 mapped as in `## Acceptance Tests`, all ran and passed
+(AC1 bundled-text proof is `tests/main/release-notes-bundled.test.ts`, unmocked byte equality).
+No manual residue.
+
+Decisions:
+
+- Pending notes: 077's checker already normalised HTML; its duplicate helpers were replaced by core `htmlReleaseNotesToMarkdown` (added a `</li>` rule; checker tests unchanged).
+- Version in the notes panel title is plain text, not mono (`Panel` title takes a string only).
+- e2e keys the fixture changelog on the version `app.getVersion()` reports (Electron's, unpackaged); tests share one changelog file rewritten per test + `page.reload()`.
+- "Check now" e2e uses the file-mode update fixture: the button is disabled when unsupported (update-check-disabled spec), so the unpackaged "checks are off" path is not clickable.
+- UpdateCheckRow was moved out of UpdatesPanel (mounted through it) instead of duplicated; `update-status`/`update-version` ids kept.
+- The About pending block duplicated update buttons, breaking `update-installed.spec.ts` strict locators; scoped them to the dialog (assertion strength unchanged).
+- No `docs/systems/update.md` exists; no doc update. CHANGELOG entry added.
+
+tiers: D 4 / hard 0 · review default · cycles 2 · agents 9

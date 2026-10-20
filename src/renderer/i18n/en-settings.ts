@@ -171,6 +171,13 @@ const own = {
   'settings.about.format.body':
     'The binding file format is documented in docs/VAULT-FORMAT.md in the project folder: frontmatter, folder tree, wikilinks. What is not written there, the app does not write.',
   'settings.about.format.open': 'Open the vault README',
+  'settings.about.notes.title': "What's new in {version}",
+  'settings.about.notes.loading': 'Loading release notes …',
+  'settings.about.notes.empty.title': 'No release notes for this version',
+  'settings.about.notes.empty.body':
+    'The changelog has no entry for this version. The full changelog is linked below.',
+  'settings.about.links.project': 'Project page',
+  'settings.about.links.changelog': 'Full changelog',
   'settings.about.updates.title': 'Updates',
   'settings.about.updates.status.idle': 'Not checked yet.',
   'settings.about.updates.status.checking': 'Checking for a new version …',
@@ -187,12 +194,14 @@ const own = {
   'settings.about.updates.error.timeout': 'The release server did not answer in time.',
   'settings.about.updates.error.unknown': 'Unknown error.',
   'settings.about.updates.lastChecked': 'Last checked',
-  'settings.about.updates.never': 'never',
   'settings.about.updates.distribution': 'Distribution',
   'settings.about.updates.distribution.installed': 'Installed',
   'settings.about.updates.distribution.portable': 'Portable build',
   'settings.about.updates.check': 'Check now',
   'settings.about.updates.checking': 'Checking …',
+  'settings.about.update.never': 'Never checked',
+  'settings.about.update.pending.title': 'Update waiting',
+  'settings.about.update.pending.badge': 'Not yet installed',
 };
 
 export const enSettings: Record<SettingsKey, string> = { ...own, ...enSettingsModels };

@@ -305,6 +305,7 @@ export const api = {
   },
   app: {
     info: () => call('app:info'),
+    releaseNotes: () => call('app:releaseNotes'),
   },
   update: {
     state: () => call('update:state'),
