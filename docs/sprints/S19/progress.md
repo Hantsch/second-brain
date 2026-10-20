@@ -1,2 +1,20 @@
 - 2026-10-20 07:13:58 · refine · 076 077 078 079 · started
 - 2026-10-20 07:18:31 · refine · 076 077 078 079 · done
+- 2026-10-20 07:18:31 · 076 · build · started
+- 2026-10-20 07:18 · 076 · D1 changelog and version core · started
+- 2026-10-20 07:21 · 076 · D1 changelog and version core · done
+- 2026-10-20 07:21 · 076 · D2 release plan and asset set · started
+- 2026-10-20 07:22 · 076 · D2 release plan and asset set · done
+- 2026-10-20 07:22 · 076 · D3 packaging publishes update metadata · started
+- 2026-10-20 07:23 · 076 · D3 packaging publishes update metadata · done
+- 2026-10-20 07:23 · 076 · D4 release runner (hard) · started
+- 2026-10-20 07:27 · 076 · D4 release runner (hard) · done
+- 2026-10-20 07:27 · 076 · D5 the workflow · started
+- 2026-10-20 07:27 · 076 · D5 the workflow · done
+- 2026-10-20 07:27 · 076 · D6 changelog and wiring · started
+- 2026-10-20 07:28 · 076 · D6 changelog and wiring · done
+- 2026-10-20 07:28 · 076 · verify · started
+- 2026-10-20 07:32 · 076 · verify · done
+- 2026-10-20 07:32 · 076 · review 1 · started
+- 2026-10-20 07:34 · 076 · review 1 · done
+- 2026-10-20 07:34 · 076 · story · done

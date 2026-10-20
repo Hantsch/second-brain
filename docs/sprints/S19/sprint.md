@@ -20,7 +20,7 @@ version and a pending update bring.
 
 <!-- Order = the order the build phase works through. Dependent stories go last. -->
 
-- [ ] 076 — A release ships from a changelog
+- [x] 076 — A release ships from a changelog
 - [ ] 077 — Gaston notices a new version
 - [ ] 078 — I update when I choose to
 - [ ] 079 — About tells me what changed

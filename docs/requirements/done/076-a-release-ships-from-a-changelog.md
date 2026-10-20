@@ -1,7 +1,7 @@
 ---
 id: 076
 title: A release ships from a changelog
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-10-19
 ---
 
@@ -32,25 +32,25 @@ Artifact names carry no space (Q2's `artifactName` comment explains why: a space
 
 ## Acceptance Criteria
 
-- [ ] **AC1** — The repository has a `CHANGELOG.md` in Keep-a-Changelog shape whose
+- [x] **AC1** — The repository has a `CHANGELOG.md` in Keep-a-Changelog shape whose
       `## Unreleased` section is where pending user-facing changes are collected, seeded with the
       entries for what the first release ships with.
-- [ ] **AC2** — A release run refuses to publish while `## Unreleased` is empty, with a readable
+- [x] **AC2** — A release run refuses to publish while `## Unreleased` is empty, with a readable
       reason, and changes nothing in the repository when it refuses.
-- [ ] **AC3** — A release run determines the next version from the pending changes, promotes
+- [x] **AC3** — A release run determines the next version from the pending changes, promotes
       `## Unreleased` into a dated version section, writes that version into `package.json`, and
       leaves `## Unreleased` empty again — all in one commit plus a matching tag.
-- [ ] **AC4** — A release run produces the NSIS installer, the portable exe and the update
+- [x] **AC4** — A release run produces the NSIS installer, the portable exe and the update
       metadata [[077]] reads (`latest.yml`), and publishes them on a GitHub release of
       `Hantsch/second-brain` whose notes are the promoted changelog section.
-- [ ] **AC5** — A dry run performs every step including the build and prints the version it would
+- [x] **AC5** — A dry run performs every step including the build and prints the version it would
       release and the notes it would publish, but commits, tags and publishes nothing.
-- [ ] **AC6** — A release can be requested with an explicit version and an explicit bump level,
+- [x] **AC6** — A release can be requested with an explicit version and an explicit bump level,
       overriding what the pending changes would have chosen.
-- [ ] **AC7** — Running the release twice on unchanged `main` does not produce a second release,
+- [x] **AC7** — Running the release twice on unchanged `main` does not produce a second release,
       and the release commit itself never triggers another run.
-- [ ] **AC8** — A real (non-dry) release refuses to run outside CI.
-- [ ] **AC9** — The project's own workflow knows about the changelog: `changelog-path` in
+- [x] **AC8** — A real (non-dry) release refuses to run outside CI.
+- [x] **AC9** — The project's own workflow knows about the changelog: `changelog-path` in
       `.claude/ai-scrum.md` points at `CHANGELOG.md` instead of `none`.
 
 ## Open Questions
@@ -91,7 +91,7 @@ Artifact names carry no space (Q2's `artifactName` comment explains why: a space
   those, so an incomplete upload would break the next story silently.
 - **Release order: commit + tag locally, `git push --atomic origin HEAD:main v<v>`, then
   `gh release create v<v> <assets> --title "Gaston <v>" --notes-file <tmp> --repo
-  Hantsch/second-brain`:** if `gh` fails after the push, the run exits 1 and prints the exact `gh`
+Hantsch/second-brain`:** if `gh` fails after the push, the run exits 1 and prints the exact `gh`
   command to finish by hand (a rerun would correctly refuse: tag exists, Unreleased empty).
 - **Trigger is `push: [main]` plus `workflow_dispatch` (`version`, `bump`, `dry_run`); push runs
   pass `--if-pending`, which turns only the "Unreleased is empty" refusal into exit 0 with a
@@ -142,79 +142,79 @@ Order: D1 → D2 → D3 → D4 → D5 → D6 (D6 independent of D3–D5).
 
 ## Deliverables
 
-- **D1 — changelog and version core.** New `scripts/lib/release/changelog.mjs` + `changelog.d.mts`,
-  `scripts/lib/release/version.mjs` + `version.d.mts`; tests `tests/scripts/release/changelog.test.ts`,
-  `tests/scripts/release/version.test.ts`. Mirror `../q2-launcher/scripts/lib/release/changelog.mjs`
-  and `version.mjs` (plain ESM, JSDoc, no deps) and this repo's `scripts/lib/handoff-check.d.mts`
-  (declaration shape, no `any`). Functions: `parseChangelog(text)`, `readUnreleased(text)` →
-  `{categories, bullets}`, `validateUnreleased` (empty / comment-only / no bullet → reason),
-  `promote(text, version, date)` (Unreleased emptied, `## <version> — <date>` inserted directly
-  below it, output prettier-stable: blank line around headings), `notesFor(text, version)`;
-  `deriveBump(categories, bullets)` (`### Removed` or `**BREAKING**` → major, Added/Changed → minor,
-  else patch), `nextVersion(current, bump)`, `isPrerelease(v)`, `isValidVersion(v)`,
-  `applyVersion(pkgText, lockText, v)` (top-level `version` in package.json, top-level and
-  `packages[""]` version in the lockfile; formatting preserved). _Accepted when:_ the named tests
-  below pass.
-- **D2 — release plan and asset set.** New `scripts/lib/release/plan.mjs` + `plan.d.mts`,
-  `scripts/lib/release/artifacts.mjs` + `artifacts.d.mts`; tests `tests/scripts/release/plan.test.ts`,
-  `tests/scripts/release/artifacts.test.ts`. Reuse D1's functions; mirror Q2's `plan.mjs` /
-  `artifacts.mjs`. `planRelease({changelogText, pkgText, lockText, tags, requestedVersion, bump,
-  dryRun, isCi, today})` returns `{version, tag, notes, prerelease, writes, commands}` or throws
-  `ReleaseRefused` with `{kind, reason}`; kinds: `nothing-pending` (empty Unreleased),
-  `tag-exists`, `outside-ci` (non-dry and `!isCi`), `bad-version`, `bad-bump`. Explicit version
-  beats explicit bump beats derived. Writes: `package.json`, `package-lock.json`, `CHANGELOG.md`.
-  Commands (empty in a dry run): `git add` of the three files, `git commit -m "release: <v> [skip ci]"`,
-  `git tag -a v<v> -m "Gaston <v>"`, `git push --atomic origin HEAD:main v<v>`, `gh release create
-  v<v> <assets…> --title "Gaston <v>" --notes-file <notesPath> --repo Hantsch/second-brain`
-  (+ `--prerelease` when the version has a `-` identifier). `expectedAssets(version)` →
-  `gaston-<v>-setup.exe`, `gaston-<v>-setup.exe.blockmap`, `gaston-<v>-portable.exe`, `latest.yml`;
-  `collectAssets(dir, version)` refuses naming each missing file and when `latest.yml`'s `path`
-  is not the setup exe (parse with the `yaml` dependency). artifacts test uses a `node:fs` temp dir.
-- **D3 — packaging publishes update metadata.** `package.json`: `build.win.target` →
-  `["nsis", "portable"]`; top-level `build.artifactName` removed; `build.portable.artifactName`
-  `gaston-${version}-portable.${ext}`; `build.nsis` `{artifactName: "gaston-${version}-setup.${ext}",
-  oneClick: true, perMachine: false}`; `build.publish` `{provider: "github", owner: "Hantsch",
-  repo: "second-brain"}`; `package` script → `npm run build && electron-builder --win nsis portable
-  --publish never`. `scripts/handoff.mjs` (around line 246) renders `manifest.build.portable.artifactName`
-  instead of `manifest.build.artifactName`, still packaging `--win portable`. Extend
-  `tests/scripts/build-config.test.ts` (keep its allowlist assertions untouched).
-- **D4 — the release runner.** New `scripts/lib/release/runner.mjs` + `runner.d.mts`, new
-  `scripts/release.mjs` (entry only: argv/env → `runRelease`, exit code), `package.json` script
-  `"release": "node scripts/release.mjs"`; test `tests/scripts/release/runner.test.ts`.
-  `runRelease({argv, env, cwd, exec, fs, log, today})`: parses `--dry-run`, `--version <v>`,
-  `--bump <level>`, `--if-pending`; reads `CHANGELOG.md`, `package.json`, `package-lock.json`,
-  tags (`git tag --list`); calls D2's `planRelease`; on refusal logs the reason and returns 1
-  (0 only for `nothing-pending` with `--if-pending`) having executed no build and written nothing.
-  Then: `npm run build`; `checkBundleContents` from `scripts/lib/handoff-check.mjs` over `out/**`
-  (findings → exit 1); remove stale `dist/` files of D2's asset names; electron-builder via its
-  resolved CLI as `scripts/handoff.mjs` `electronBuilderCli` does (shell: false) with `--win nsis
-  portable --publish never -c.extraMetadata.version=<v>`; `collectAssets`; print version and notes.
-  Dry run stops here. Real run: write D2's `writes`, write notes to a temp file, execute D2's
-  `commands` in order; a failure after the push prints the remaining `gh` command and returns 1.
-  Fakes for `exec`/`fs` live in the test file (no real git, gh or build). Also run
-  `npm run release -- --dry-run` once on this machine and paste its version/notes output into
-  `## Done`.
-- **D5 — the workflow.** New `.github/workflows/release.yml` (mirror
-  `../q2-launcher/.github/workflows/release.yml`, drop every Linux job; setup/caching as in this
-  repo's `.github/workflows/verify.yml`): triggers `push: branches [main]` and `workflow_dispatch`
-  inputs `version` (string), `bump` (choice '', patch, minor, major), `dry_run` (boolean);
-  `permissions: contents: write`; `concurrency: {group: release, cancel-in-progress: false}`; job
-  `if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}`; `runs-on: windows-latest`;
-  checkout `fetch-depth: 0`; node `20.x`; `npm ci`; `npm run verify`; git identity
-  `github-actions[bot]`; `node scripts/release.mjs` with `--if-pending` on push events and the
-  inputs mapped to flags on dispatch; env `CI: 'true'`, `GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}`,
-  `CSC_IDENTITY_AUTO_DISCOVERY: 'false'`. Test `tests/scripts/release/wiring.test.ts` parses it
-  with `yaml` and asserts every invariant above.
-- **D6 — the changelog and the project knowing about it.** New `CHANGELOG.md` (Keep-a-Changelog
-  header, `## Unreleased` with `### Added` bullets for what the first release ships, grouped by
-  feature area from `docs/ROADMAP.md` milestones M1–M18 — capture/filing, search and answers with
-  citations, journal, wiki, ingest, overview/todos, gardener, Claude sessions, local models,
-  handoff, and the release + update pipeline of this sprint; no story numbers, sentence case, no
-  emoji); `README.md` gains a `## Releases` section after `## Handing it on` (write your line under
-  `## Unreleased` with the change; a push to `main` releases; `npm run release -- --dry-run`
-  locally) and a `release` row in `## npm scripts`; `.claude/ai-scrum.md` `changelog-path: none` →
-  `CHANGELOG.md`. Test `tests/scripts/release/changelog-file.test.ts` reads the real files and uses
-  D1's `readUnreleased`/`validateUnreleased`.
+- [x] **D1 — changelog and version core.** New `scripts/lib/release/changelog.mjs` + `changelog.d.mts`,
+      `scripts/lib/release/version.mjs` + `version.d.mts`; tests `tests/scripts/release/changelog.test.ts`,
+      `tests/scripts/release/version.test.ts`. Mirror `../q2-launcher/scripts/lib/release/changelog.mjs`
+      and `version.mjs` (plain ESM, JSDoc, no deps) and this repo's `scripts/lib/handoff-check.d.mts`
+      (declaration shape, no `any`). Functions: `parseChangelog(text)`, `readUnreleased(text)` →
+      `{categories, bullets}`, `validateUnreleased` (empty / comment-only / no bullet → reason),
+      `promote(text, version, date)` (Unreleased emptied, `## <version> — <date>` inserted directly
+      below it, output prettier-stable: blank line around headings), `notesFor(text, version)`;
+      `deriveBump(categories, bullets)` (`### Removed` or `**BREAKING**` → major, Added/Changed → minor,
+      else patch), `nextVersion(current, bump)`, `isPrerelease(v)`, `isValidVersion(v)`,
+      `applyVersion(pkgText, lockText, v)` (top-level `version` in package.json, top-level and
+      `packages[""]` version in the lockfile; formatting preserved). _Accepted when:_ the named tests
+      below pass.
+- [x] **D2 — release plan and asset set.** New `scripts/lib/release/plan.mjs` + `plan.d.mts`,
+      `scripts/lib/release/artifacts.mjs` + `artifacts.d.mts`; tests `tests/scripts/release/plan.test.ts`,
+      `tests/scripts/release/artifacts.test.ts`. Reuse D1's functions; mirror Q2's `plan.mjs` /
+      `artifacts.mjs`. `planRelease({changelogText, pkgText, lockText, tags, requestedVersion, bump,
+dryRun, isCi, today})` returns `{version, tag, notes, prerelease, writes, commands}` or throws
+      `ReleaseRefused` with `{kind, reason}`; kinds: `nothing-pending` (empty Unreleased),
+      `tag-exists`, `outside-ci` (non-dry and `!isCi`), `bad-version`, `bad-bump`. Explicit version
+      beats explicit bump beats derived. Writes: `package.json`, `package-lock.json`, `CHANGELOG.md`.
+      Commands (empty in a dry run): `git add` of the three files, `git commit -m "release: <v> [skip ci]"`,
+      `git tag -a v<v> -m "Gaston <v>"`, `git push --atomic origin HEAD:main v<v>`, `gh release create
+v<v> <assets…> --title "Gaston <v>" --notes-file <notesPath> --repo Hantsch/second-brain`
+      (+ `--prerelease` when the version has a `-` identifier). `expectedAssets(version)` →
+      `gaston-<v>-setup.exe`, `gaston-<v>-setup.exe.blockmap`, `gaston-<v>-portable.exe`, `latest.yml`;
+      `collectAssets(dir, version)` refuses naming each missing file and when `latest.yml`'s `path`
+      is not the setup exe (parse with the `yaml` dependency). artifacts test uses a `node:fs` temp dir.
+- [x] **D3 — packaging publishes update metadata.** `package.json`: `build.win.target` →
+      `["nsis", "portable"]`; top-level `build.artifactName` removed; `build.portable.artifactName`
+      `gaston-${version}-portable.${ext}`; `build.nsis` `{artifactName: "gaston-${version}-setup.${ext}",
+oneClick: true, perMachine: false}`; `build.publish` `{provider: "github", owner: "Hantsch",
+repo: "second-brain"}`; `package` script → `npm run build && electron-builder --win nsis portable
+--publish never`. `scripts/handoff.mjs` (around line 246) renders `manifest.build.portable.artifactName`
+      instead of `manifest.build.artifactName`, still packaging `--win portable`. Extend
+      `tests/scripts/build-config.test.ts` (keep its allowlist assertions untouched).
+- [x] **D4 — the release runner.** New `scripts/lib/release/runner.mjs` + `runner.d.mts`, new
+      `scripts/release.mjs` (entry only: argv/env → `runRelease`, exit code), `package.json` script
+      `"release": "node scripts/release.mjs"`; test `tests/scripts/release/runner.test.ts`.
+      `runRelease({argv, env, cwd, exec, fs, log, today})`: parses `--dry-run`, `--version <v>`,
+      `--bump <level>`, `--if-pending`; reads `CHANGELOG.md`, `package.json`, `package-lock.json`,
+      tags (`git tag --list`); calls D2's `planRelease`; on refusal logs the reason and returns 1
+      (0 only for `nothing-pending` with `--if-pending`) having executed no build and written nothing.
+      Then: `npm run build`; `checkBundleContents` from `scripts/lib/handoff-check.mjs` over `out/**`
+      (findings → exit 1); remove stale `dist/` files of D2's asset names; electron-builder via its
+      resolved CLI as `scripts/handoff.mjs` `electronBuilderCli` does (shell: false) with `--win nsis
+portable --publish never -c.extraMetadata.version=<v>`; `collectAssets`; print version and notes.
+      Dry run stops here. Real run: write D2's `writes`, write notes to a temp file, execute D2's
+      `commands` in order; a failure after the push prints the remaining `gh` command and returns 1.
+      Fakes for `exec`/`fs` live in the test file (no real git, gh or build). Also run
+      `npm run release -- --dry-run` once on this machine and paste its version/notes output into
+      `## Done`.
+- [x] **D5 — the workflow.** New `.github/workflows/release.yml` (mirror
+      `../q2-launcher/.github/workflows/release.yml`, drop every Linux job; setup/caching as in this
+      repo's `.github/workflows/verify.yml`): triggers `push: branches [main]` and `workflow_dispatch`
+      inputs `version` (string), `bump` (choice '', patch, minor, major), `dry_run` (boolean);
+      `permissions: contents: write`; `concurrency: {group: release, cancel-in-progress: false}`; job
+      `if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}`; `runs-on: windows-latest`;
+      checkout `fetch-depth: 0`; node `20.x`; `npm ci`; `npm run verify`; git identity
+      `github-actions[bot]`; `node scripts/release.mjs` with `--if-pending` on push events and the
+      inputs mapped to flags on dispatch; env `CI: 'true'`, `GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}`,
+      `CSC_IDENTITY_AUTO_DISCOVERY: 'false'`. Test `tests/scripts/release/wiring.test.ts` parses it
+      with `yaml` and asserts every invariant above.
+- [x] **D6 — the changelog and the project knowing about it.** New `CHANGELOG.md` (Keep-a-Changelog
+      header, `## Unreleased` with `### Added` bullets for what the first release ships, grouped by
+      feature area from `docs/ROADMAP.md` milestones M1–M18 — capture/filing, search and answers with
+      citations, journal, wiki, ingest, overview/todos, gardener, Claude sessions, local models,
+      handoff, and the release + update pipeline of this sprint; no story numbers, sentence case, no
+      emoji); `README.md` gains a `## Releases` section after `## Handing it on` (write your line under
+      `## Unreleased` with the change; a push to `main` releases; `npm run release -- --dry-run`
+      locally) and a `release` row in `## npm scripts`; `.claude/ai-scrum.md` `changelog-path: none` →
+      `CHANGELOG.md`. Test `tests/scripts/release/changelog-file.test.ts` reads the real files and uses
+      D1's `readUnreleased`/`validateUnreleased`.
 
 ## Model Hints
 
@@ -270,3 +270,17 @@ Coverage: AC1 D6 · AC2 D1/D2/D4 · AC3 D1/D2 · AC4 D2/D3 (+residue) · AC5 D2/
 AC7 D2/D4/D5 · AC8 D2/D4 · AC9 D6.
 
 ## Done
+
+Release pipeline ported from q2-launcher for Gaston: pure core in `scripts/lib/release/` (changelog, version, plan, artifacts), I/O runner behind `scripts/release.mjs` (`npm run release`), NSIS + portable packaging with GitHub publish config, `.github/workflows/release.yml`, a seeded `CHANGELOG.md`, README `## Releases`, and `changelog-path: CHANGELOG.md`.
+
+Commit message: `076: release from CHANGELOG.md — plan/runner scripts, nsis+portable, release workflow`
+
+Verification (narrow gate): `npm run lint`, `typecheck`, `build` green; `npx vitest run --changed HEAD` 4425 passed, `npx vitest run tests/scripts` 142 passed (stricter than test-story, since changed-selection misses untracked files). No e2e line (CLI/CI surface). `format:check` red only on two story files (076 and 077, prettier-unclean since refine; not code). Review default stage: PASS.
+
+AC → test, all ran and passed: AC1/AC9 changelog-file.test.ts · AC2 plan/runner/changelog tests · AC3 plan/changelog/version tests · AC4 artifacts/plan/build-config tests · AC5 runner/plan · AC6 plan · AC7 plan/wiring/runner · AC8 plan/runner. Manual residue: AC4's real `gh release create` against github.com (external service; merging to main is the user's call).
+
+Dry run (`npm run release -- --dry-run`, exit 0, 18 s): `version: 0.2.0`, notes start `### Added` with 16 area bullets (Capture, Search and answers, Journal, ...), ends `dry run: nothing written, committed, tagged or published.`; CHANGELOG.md/package.json/package-lock.json hashes unchanged.
+
+Decisions: `.gitignore` `release/` also hid `scripts/lib/release/` and `tests/scripts/release/` from git, anchored to `/release/`. Unfixed review findings (non-blocking): the manual `gh` hint after a post-push failure points at runner-local temp/dist paths (re-run via workflow_dispatch instead); `plan.mjs` `currentVersion` regex unanchored (works, `version` is the first key); runner's `electronBuilderCli` duplicates handoff.mjs's (handoff is an executable script, a shared helper is a later cleanup); a dry run still deletes stale `dist/` asset files and runs read-only `git tag --list`; the "plans no writes" half of the empty-Unreleased test is vacuous by construction (covered by runner refusal test).
+
+tiers: D 6 / hard 1 · review default · cycles 1 · agents 8

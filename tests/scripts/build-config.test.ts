@@ -32,4 +32,30 @@ describe('electron-builder file allowlist in package.json', () => {
       },
     ]);
   });
+
+  it('electron-builder builds nsis and portable, publishes to Hantsch/second-brain, and no artifact name has a space', () => {
+    const { build, scripts } = JSON.parse(packageJsonRaw) as {
+      build: Record<string, unknown> & {
+        win: { target: unknown };
+        portable: { artifactName: string };
+        nsis: { artifactName: string; oneClick: boolean; perMachine: boolean };
+      };
+      scripts: Record<string, string>;
+    };
+    expect(build.win.target).toEqual(['nsis', 'portable']);
+    expect(build.artifactName).toBeUndefined();
+    expect(build.portable.artifactName).toBe('gaston-${version}-portable.${ext}');
+    expect(build.nsis).toEqual({
+      artifactName: 'gaston-${version}-setup.${ext}',
+      oneClick: true,
+      perMachine: false,
+    });
+    expect(build.publish).toEqual({ provider: 'github', owner: 'Hantsch', repo: 'second-brain' });
+    expect(scripts.package).toBe(
+      'npm run build && electron-builder --win nsis portable --publish never',
+    );
+    // A space breaks the asset URL that latest.yml records.
+    expect(build.portable.artifactName).not.toMatch(/\s/);
+    expect(build.nsis.artifactName).not.toMatch(/\s/);
+  });
 });

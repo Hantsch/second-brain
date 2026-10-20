@@ -58,7 +58,7 @@ systems-path: docs/systems
 story-id-format: NNN <!-- three digits + slug, e.g. 042-npc-haggling.md -->
 sprint-id-format: SNN <!-- e.g. S07 -->
 
-changelog-path: none
+changelog-path: CHANGELOG.md
 <!--
   Optional. Path to a USER-FACING changelog (e.g. version.md, CHANGELOG.md) — not the
   git history. When set, /build and /sprint require an entry for every user-facing

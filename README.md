@@ -56,6 +56,7 @@ The binding file format is documented in [docs/VAULT-FORMAT.md](docs/VAULT-FORMA
 | `npm run shot`         | The same pass, screenshots only (PNGs into `.screenshots/`)                                                                  |
 | `npm run a11y`         | The same pass, axe-core only (`.screenshots/a11y.json`)                                                                      |
 | `npm run test:e2e`     | Flow-level acceptance suite (Playwright) against a disposable, no-model vault                                                |
+| `npm run release`      | Run the release flow; `-- --dry-run` does everything except publish (see Releases)                                           |
 
 All three run `scripts/verify.mjs` against the built app. `shot` and `a11y` need
 `npm run build` first. Each run rewrites `.demo-vault/` before it starts, so no run
@@ -97,6 +98,16 @@ auto-update — a new version is a new ZIP; only Windows x64 is built; settings 
 keys stay on the recipient's machine rather than travelling with the app; and the
 ZIP ships no starter vault — the recipient creates or opens their own on first
 start.
+
+## Releases
+
+Write your line under `## Unreleased` in `CHANGELOG.md` together with the change. A push
+to `main` releases from that file. The version is derived from the categories: `Removed` or a
+**BREAKING** bullet is a major, `Added` or `Changed` a minor, anything else a patch. A release
+with an empty Unreleased refuses to run.
+
+`npm run release -- --dry-run` runs everything locally except publishing. Real releases only
+run in CI.
 
 ## Status
 

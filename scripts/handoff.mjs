@@ -243,7 +243,7 @@ async function main() {
   if (zipPath === null) throw new HandoffError('version', 'package.json carries no version');
   /* From the same manifest electron-builder reads, so a renamed artifact
      cannot silently diverge from what gets staged and checked. */
-  const exeName = render('version', manifest.build.artifactName, { version, ext: 'exe' });
+  const exeName = render('version', manifest.build.portable.artifactName, { version, ext: 'exe' });
   const exePath = join(DIST_DIR, exeName);
 
   console.log(`Handoff package for ${manifest.build.productName} ${version}`);

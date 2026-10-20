@@ -276,3 +276,4 @@ second roadmap.
   same no-model heuristic floor as German (moods, tasks, scopes, relative dates, reasons, loose
   ends, ask no-evidence marker); the sole-module URL fallback was removed, a link only files to a
   module that is actually named — reviewed PASS with no fix cycle.
+- 076 — A release ships from a changelog · S19 · `npm run release` promotes CHANGELOG.md Unreleased, builds NSIS + portable and publishes via CI workflow (dry run local).

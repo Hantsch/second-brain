@@ -1,0 +1,90 @@
+name: release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release exactly this version, no leading "v" (passed as --version)'
+        required: false
+        type: string
+      bump:
+        description: 'Force this bump level instead of deriving it from CHANGELOG.md (passed as --bump)'
+        required: false
+        type: choice
+        options: ['', 'patch', 'minor', 'major']
+        default: ''
+      dry_run:
+        description: 'Build and print, but do not write, commit, tag, push or publish (passed as --dry-run)'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+# A second release must wait for the first: both would bump the same version and push to main.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    # The release commit is pushed to main by this very job; [skip ci] is what stops it from
+    # starting another run.
+    if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: npm
+
+      - name: Cache Electron binaries
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.LOCALAPPDATA }}\electron\Cache
+          key: ${{ runner.os }}-electron-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-electron-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify
+        run: npm run verify
+
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CI: 'true'
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+          # Inputs travel as env vars, never interpolated into the script: a free-text input
+          # would otherwise be shell code.
+          RELEASE_EVENT: ${{ github.event_name }}
+          RELEASE_VERSION_INPUT: ${{ inputs.version }}
+          RELEASE_BUMP_INPUT: ${{ inputs.bump }}
+          RELEASE_DRY_RUN_INPUT: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          ARGS=()
+          if [ "$RELEASE_EVENT" = "push" ]; then
+            ARGS+=(--if-pending)
+          else
+            if [ -n "$RELEASE_VERSION_INPUT" ]; then ARGS+=(--version "$RELEASE_VERSION_INPUT"); fi
+            if [ -n "$RELEASE_BUMP_INPUT" ]; then ARGS+=(--bump "$RELEASE_BUMP_INPUT"); fi
+            if [ "$RELEASE_DRY_RUN_INPUT" = "true" ]; then ARGS+=(--dry-run); fi
+          fi
+          node scripts/release.mjs "${ARGS[@]}"
