@@ -59,6 +59,20 @@ export function formatDate(iso: string | null, language: UiLanguage): string {
   }).format(date);
 }
 
+/** Date and time of day, for a moment the user may want to compare to the clock. */
+export function formatDateTime(iso: string | null, language: UiLanguage): string {
+  if (iso === null || iso.length === 0) return '';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat(locale(language), {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
+}
+
 /**
  * How long ago something was: "today", "yesterday", "5 days ago". From one
  * week on, the date is shown instead — "34 days ago" requires doing the math.

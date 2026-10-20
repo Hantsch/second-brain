@@ -11,3 +11,4 @@ export * from './settings';
 export * from './work';
 export * from './journal';
 export * from './tasks';
+export * from './update';

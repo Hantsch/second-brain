@@ -57,6 +57,7 @@ const services = {
   },
   setMainWindow: vi.fn(),
   mainWindow: () => window,
+  updates: () => ({ scheduleStartupCheck: vi.fn(), stop: vi.fn() }),
 };
 
 vi.mock('../../src/main/settings', () => ({ SettingsService: { load: async () => ({}) } }));

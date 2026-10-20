@@ -51,6 +51,12 @@ export function wireEvents(client: QueryClient): () => void {
   );
 
   unsubscribes.push(
+    sb.on('event:update', (state) => {
+      client.setQueryData(qk.update.state(), state);
+    }),
+  );
+
+  unsubscribes.push(
     sb.on('event:reminder', () => {
       void client.invalidateQueries({ queryKey: qk.reminders.list() });
     }),

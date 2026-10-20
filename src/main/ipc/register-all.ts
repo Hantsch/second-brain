@@ -46,6 +46,7 @@ import { settingsHandlers } from './settings';
 import { shellHandlers } from './shell';
 import { tasksHandlers } from './tasks';
 import { todoHandlers } from './todos';
+import { updateHandlers } from './update';
 import { vaultHandlers } from './vault';
 import { windowHandlers } from './window';
 import { workHandlers } from './work';
@@ -130,6 +131,7 @@ export function buildHandlers(services: Services): HandlerMap {
     ...tasksHandlers(services),
     ...shellHandlers(services),
     ...appHandlers(services),
+    ...updateHandlers(services),
   };
 }
 

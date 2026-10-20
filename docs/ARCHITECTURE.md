@@ -173,6 +173,17 @@ of all displays, is unfocusable, and is shown with `showInactive()`. In that mod
 reminders send no notification and no global hotkey is registered. Without the
 variable nothing changes.
 
+## Update check
+
+`src/main/update/` answers "is there a newer Gaston": `checker.ts` is the only
+module that talks to `electron-updater`, `service.ts` (`createUpdateService`) owns
+the `UpdateState` and the 24 h window, and `store.ts` remembers the last check in
+`userData`. `Services.updates()` in `src/main/services.ts` builds it; it is
+unsupported when unpackaged or in the demo vault (`src/main/demo.ts`). The IPC
+area is `src/main/ipc/update.ts`: `update:state`, `update:check` and the
+`event:update` push. `SB_E2E_UPDATE_FIXTURE` (`src/main/update/e2e-fixture.ts`)
+scripts the check outcome for e2e runs; unset, it changes nothing.
+
 ## State in the renderer
 
 - **TanStack Query** for everything that comes over IPC. One hook per channel in

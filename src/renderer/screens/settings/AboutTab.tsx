@@ -13,6 +13,7 @@ import { Skeleton } from '../../components/Skeleton';
 import { useT } from '../../i18n';
 import { api } from '../../lib/api';
 import { qk } from '../../lib/queries/keys';
+import { UpdatesPanel } from './UpdatesPanel';
 
 /** The format is explained in the vault itself: the app writes the README when creating it. */
 const VAULT_README = 'README.md';
@@ -55,6 +56,8 @@ export function AboutTab() {
           <Skeleton lines={4} height={20} />
         )}
       </Panel>
+
+      <UpdatesPanel />
 
       <Panel title={t('settings.about.format.title')} note={t('settings.about.format.body')}>
         <div className="sb-setting-block">

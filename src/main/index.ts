@@ -156,6 +156,7 @@ async function start(): Promise<void> {
   reminderNotifier = startReminderNotifier(services);
   /* Maintenance run on open — only if `gardener.runOnOpen` is on. */
   gardenerAutorun = startGardenerAutorun(services);
+  services.updates().scheduleStartupCheck();
 }
 
 if (hasSingleInstanceLock) {
@@ -180,6 +181,7 @@ app.on('will-quit', () => {
     reminderNotifier = null;
     gardenerAutorun?.stop();
     gardenerAutorun = null;
+    runningServices?.updates().stop();
     /* The shutdown net for everything in flight (071, D4) — a task running
        against the vault must not be left going once the process is on its way
        out, and since 074 D2 that reaches the maintenance run too: it is

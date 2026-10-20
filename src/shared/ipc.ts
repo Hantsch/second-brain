@@ -86,6 +86,7 @@ import type {
   WorkTask,
   WriteResult,
   SourceDetail,
+  UpdateState,
 } from './types';
 
 /** Answer to a question asked of Gaston. */
@@ -1305,6 +1306,10 @@ export interface IpcRoutes {
   'shell:openExternal': { req: { url: string }; res: void };
   'shell:showInFolder': { req: { path: string }; res: void };
   'app:info': { req: void; res: AppInfo };
+  /** The remembered update state; never touches the network. */
+  'update:state': { req: void; res: UpdateState };
+  /** A manual check (ignores the 24 h window); resolves with the resulting state. */
+  'update:check': { req: void; res: UpdateState };
 }
 
 export type IpcChannel = keyof IpcRoutes;
@@ -1487,6 +1492,8 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'shell:openExternal',
   'shell:showInFolder',
   'app:info',
+  'update:state',
+  'update:check',
 ];
 
 /** Events that main sends to the renderer. */
@@ -1565,6 +1572,8 @@ export interface IpcEvents {
    * instead of one channel per feature.
    */
   'event:work-tasks': WorkTask[];
+  /** Every change of the update state, including the end of a check. */
+  'event:update': UpdateState;
 }
 
 export type IpcEventName = keyof IpcEvents;
@@ -1582,6 +1591,7 @@ export const IPC_EVENTS: readonly IpcEventName[] = [
   'event:settings',
   'event:close-requested',
   'event:work-tasks',
+  'event:update',
 ];
 
 /** Errors that come back over IPC carry this shape. */

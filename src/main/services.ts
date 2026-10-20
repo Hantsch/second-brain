@@ -9,7 +9,7 @@
      services.store() / index() / llm() / requireStore() / requireIndex() / requireLlm()
      services.settings / services.keys / services.vaultRoot() */
 
-import { BrowserWindow } from 'electron';
+import { app, BrowserWindow } from 'electron';
 import type { IpcEventName, IpcEvents } from '@shared/ipc';
 import type { VaultStatus } from '@shared/types';
 import type {
@@ -27,6 +27,11 @@ import { fail, noVault } from './ipc/errors';
 import { ensureStructure, isVault } from './vault-layout';
 import { getWorkQueue } from './work-queue';
 import { getTaskResults } from './task-results';
+import { isDemoVault } from './demo';
+import { createUpdateChecker, detectDistribution } from './update/checker';
+import { updateFixtureFor } from './update/e2e-fixture';
+import { createUpdateService } from './update/service';
+import type { UpdateService } from './update/service';
 
 interface OpenVault {
   root: string;
@@ -68,6 +73,7 @@ export class Services {
      it, and both later recreate one — orphaning whichever recreate lost the
      race (never disposed) instead of leaving exactly one watcher behind. */
   private watcherGate: Promise<unknown> = Promise.resolve();
+  private updateService: UpdateService | null = null;
 
   constructor(
     readonly settings: SettingsService,
@@ -75,6 +81,28 @@ export class Services {
     readonly userDataDir: string,
   ) {
     this.settings.onChange((snapshot) => this.sendEvent('event:settings', snapshot));
+  }
+
+  /* Built on first use: constructing it reads `app.getVersion()`, which the
+     many tests that only need settings or the vault never provide. */
+  updates(): UpdateService {
+    if (this.updateService) return this.updateService;
+    const fixture = updateFixtureFor();
+    const checker = createUpdateChecker();
+    this.updateService = createUpdateService({
+      dir: this.userDataDir,
+      currentVersion: app.getVersion(),
+      distribution: detectDistribution(process.env),
+      check: fixture ?? (() => checker.check()),
+      isSupported: () => {
+        if (fixture) return { supported: true, disabledReason: null };
+        if (!app.isPackaged) return { supported: false, disabledReason: 'unpackaged' };
+        if (isDemoVault(this.vaultRoot())) return { supported: false, disabledReason: 'demo' };
+        return { supported: true, disabledReason: null };
+      },
+      onStateChange: (state) => this.sendEvent('event:update', state),
+    });
+    return this.updateService;
   }
 
   // ── Window ────────────────────────────────────────────────────────────────

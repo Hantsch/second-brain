@@ -154,6 +154,9 @@ export const qk = {
   app: {
     info: () => ['app', 'info'] as const,
   },
+  update: {
+    state: () => ['update', 'state'] as const,
+  },
 } as const;
 
 /** Roots affected by a file change in the vault. No polling, only this. */

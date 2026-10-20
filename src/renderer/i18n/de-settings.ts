@@ -171,6 +171,28 @@ const own = {
   'settings.about.format.body':
     'Das verbindliche Dateiformat steht in docs/VAULT-FORMAT.md im Projektordner: Frontmatter, Ordnerbaum, Wikilinks. Was dort nicht steht, schreibt die App nicht.',
   'settings.about.format.open': 'Vault-README öffnen',
+  'settings.about.updates.title': 'Updates',
+  'settings.about.updates.status.idle': 'Noch nicht geprüft.',
+  'settings.about.updates.status.checking': 'Suche nach einer neuen Version …',
+  'settings.about.updates.status.upToDate': 'Gaston ist auf dem neuesten Stand.',
+  'settings.about.updates.status.available': 'Version {version} ist verfügbar.',
+  'settings.about.updates.status.error': 'Prüfung fehlgeschlagen: {reason}',
+  'settings.about.updates.status.disabled.unpackaged':
+    'Update-Prüfung ist in diesem Build aus: Er ist kein verpacktes Release.',
+  'settings.about.updates.status.disabled.demo':
+    'Update-Prüfung ist in diesem Build aus: Er läuft auf einem Beispiel-Vault.',
+  'settings.about.updates.error.network': 'Der Release-Server war nicht erreichbar.',
+  'settings.about.updates.error.http': 'Der Release-Server hat mit einem Fehler geantwortet.',
+  'settings.about.updates.error.feed': 'Der Release-Feed ließ sich nicht lesen.',
+  'settings.about.updates.error.timeout': 'Der Release-Server hat nicht rechtzeitig geantwortet.',
+  'settings.about.updates.error.unknown': 'Unbekannter Fehler.',
+  'settings.about.updates.lastChecked': 'Zuletzt geprüft',
+  'settings.about.updates.never': 'nie',
+  'settings.about.updates.distribution': 'Verteilung',
+  'settings.about.updates.distribution.installed': 'Installiert',
+  'settings.about.updates.distribution.portable': 'Portable Build',
+  'settings.about.updates.check': 'Jetzt prüfen',
+  'settings.about.updates.checking': 'Prüfe …',
 } as const;
 
 export const deSettings = { ...own, ...deSettingsModels } as const;

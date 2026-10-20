@@ -171,6 +171,28 @@ const own = {
   'settings.about.format.body':
     'The binding file format is documented in docs/VAULT-FORMAT.md in the project folder: frontmatter, folder tree, wikilinks. What is not written there, the app does not write.',
   'settings.about.format.open': 'Open the vault README',
+  'settings.about.updates.title': 'Updates',
+  'settings.about.updates.status.idle': 'Not checked yet.',
+  'settings.about.updates.status.checking': 'Checking for a new version …',
+  'settings.about.updates.status.upToDate': 'Gaston is up to date.',
+  'settings.about.updates.status.available': 'Version {version} is available.',
+  'settings.about.updates.status.error': 'Check failed: {reason}',
+  'settings.about.updates.status.disabled.unpackaged':
+    'Update checks are off in this build: it is not a packaged release.',
+  'settings.about.updates.status.disabled.demo':
+    'Update checks are off in this build: it runs on a sample vault.',
+  'settings.about.updates.error.network': 'The release server could not be reached.',
+  'settings.about.updates.error.http': 'The release server answered with an error.',
+  'settings.about.updates.error.feed': 'The release feed could not be read.',
+  'settings.about.updates.error.timeout': 'The release server did not answer in time.',
+  'settings.about.updates.error.unknown': 'Unknown error.',
+  'settings.about.updates.lastChecked': 'Last checked',
+  'settings.about.updates.never': 'never',
+  'settings.about.updates.distribution': 'Distribution',
+  'settings.about.updates.distribution.installed': 'Installed',
+  'settings.about.updates.distribution.portable': 'Portable build',
+  'settings.about.updates.check': 'Check now',
+  'settings.about.updates.checking': 'Checking …',
 };
 
 export const enSettings: Record<SettingsKey, string> = { ...own, ...enSettingsModels };

@@ -156,6 +156,11 @@ export interface AppOptions {
    * real global `fetch` (still blocked from making a real request by `noNetworkCalls` unless
    * it never tries to fetch anything, exactly as before this seam existed). */
   fetchFixture: FetchFixtureManifest | undefined;
+  /** Passed through as `SB_E2E_UPDATE_FIXTURE`: comma-separated update-check outcomes
+   * (offline|http|up-to-date|available), consumed one per check, the last repeating. It
+   * also makes checks supported in the unpackaged e2e app. `undefined` (the default) sets
+   * no env var, so the app reports that checks are off in this build. */
+  updateFixture: string | undefined;
   /** Passed through to `prepareUserData` as `closeToTray` (058, D1): whether closing the
    * main window sends the app to the tray instead of quitting. `true` (the default)
    * matches the app-level default in `settings-defaults.ts`, so every spec but the ones
@@ -301,6 +306,8 @@ export const test = base.extend<
 
   fetchFixture: [undefined, { scope: 'worker', option: true }],
 
+  updateFixture: [undefined, { scope: 'worker', option: true }],
+
   closeToTray: [true, { scope: 'worker', option: true }],
 
   startMinimized: [false, { scope: 'worker', option: true }],
@@ -357,6 +364,7 @@ export const test = base.extend<
         tasksFixture,
         fakeProvider,
         fetchFixture,
+        updateFixture,
         closeToTray,
         startMinimized,
         hotkey,
@@ -388,6 +396,7 @@ export const test = base.extend<
         ...(fetchFixture
           ? { SB_E2E_FETCH_FIXTURE: writeFetchFixtureManifest(tempRoot, fetchFixture) }
           : {}),
+        ...(updateFixture ? { SB_E2E_UPDATE_FIXTURE: updateFixture } : {}),
       };
       const session = await launchApp({
         userDataDir,

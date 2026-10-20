@@ -18,3 +18,21 @@
 - 2026-10-20 07:32 · 076 · review 1 · started
 - 2026-10-20 07:34 · 076 · review 1 · done
 - 2026-10-20 07:34 · 076 · story · done
+- 2026-10-20 07:34:29 · 077 · build · started
+- 2026-10-20 07:34 · 077 · D1 contract and store · started
+- 2026-10-20 07:35 · 077 · D1 contract and store · done
+- 2026-10-20 07:35 · 077 · D2 checker · started
+- 2026-10-20 07:36 · 077 · D2 checker · done
+- 2026-10-20 07:36 · 077 · D3 update service (hard) · started
+- 2026-10-20 07:39 · 077 · D3 update service (hard) · done
+- 2026-10-20 07:39 · 077 · D4 IPC wiring and e2e seam · started
+- 2026-10-20 07:43 · 077 · D4 IPC wiring and e2e seam · done
+- 2026-10-20 07:43 · 077 · D5 renderer panel and e2e · started
+- 2026-10-20 07:48 · 077 · D5 renderer panel and e2e · done
+- 2026-10-20 07:48 · 077 · verify · started
+- 2026-10-20 07:52 · 077 · verify · blocked: e2e-wiring test.step rule (2 specs)
+- 2026-10-20 07:52 · 077 · D5 fix test.step in specs · started
+- 2026-10-20 07:53 · 077 · D5 fix test.step in specs · done
+- 2026-10-20 07:53 · 077 · review 1 · started
+- 2026-10-20 07:54 · 077 · review 1 · done
+- 2026-10-20 07:54 · 077 · story · done

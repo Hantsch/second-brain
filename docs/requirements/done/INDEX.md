@@ -277,3 +277,4 @@ second roadmap.
   ends, ask no-evidence marker); the sole-module URL fallback was removed, a link only files to a
   module that is actually named — reviewed PASS with no fix cycle.
 - 076 — A release ships from a changelog · S19 · `npm run release` promotes CHANGELOG.md Unreleased, builds NSIS + portable and publishes via CI workflow (dry run local).
+- 077 — Gaston notices a new version · S19 · once-a-day quiet update check with persisted state, IPC and an About updates panel

@@ -1,7 +1,7 @@
 ---
 id: 077
 title: Gaston notices a new version
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-10-19
 ---
 
@@ -31,22 +31,22 @@ This story is the knowledge, not the act. Downloading, installing and restarting
 
 ## Acceptance Criteria
 
-- [ ] **AC1** — On startup, Gaston checks for a newer published release at most once per 24 hours;
+- [x] **AC1** — On startup, Gaston checks for a newer published release at most once per 24 hours;
       further starts within that window reuse the last result instead of checking again.
-- [ ] **AC2** — When the published release is newer than the running version, Gaston holds an
+- [x] **AC2** — When the published release is newer than the running version, Gaston holds an
       "update available" state carrying that version and its release notes; when it is not, the
       state says up to date.
-- [ ] **AC3** — A failed check (offline, error response, malformed feed) leaves a state carrying the
+- [x] **AC3** — A failed check (offline, error response, malformed feed) leaves a state carrying the
       reason, shows the user nothing by itself, and does not delay or block startup.
-- [ ] **AC4** — A failed check does not burn the daily window: the next start may check again.
-- [ ] **AC5** — No check runs in development, in an unpackaged build, or in demo mode.
-- [ ] **AC6** — The state says whether the running copy is the installed or the portable build.
-- [ ] **AC7** — The renderer can read the current update state and be told when it changes,
+- [x] **AC4** — A failed check does not burn the daily window: the next start may check again.
+- [x] **AC5** — No check runs in development, in an unpackaged build, or in demo mode.
+- [x] **AC6** — The state says whether the running copy is the installed or the portable build.
+- [x] **AC7** — The renderer can read the current update state and be told when it changes,
       through the channels in `src/shared/ipc.ts` — no network access and no version comparison in
       the renderer.
-- [ ] **AC8** — The user can trigger a check by hand at any time, independently of the daily
+- [x] **AC8** — The user can trigger a check by hand at any time, independently of the daily
       window, and sees its outcome (including a failure reason).
-- [ ] **AC9** — The check result survives a restart, persisted in `userData` (never in the vault).
+- [x] **AC9** — The check result survives a restart, persisted in `userData` (never in the vault).
 
 ## Open Questions
 
@@ -56,7 +56,7 @@ This story is the knowledge, not the act. Downloading, installing and restarting
   `userData`, not to the vault; the pure parts (store, gating, notes, error mapping) still take no
   Electron import so they unit-test without it.
 - **The feed is set in code** (`setFeedURL({ provider: 'github', owner: 'Hantsch', repo:
-  'second-brain' })` from one constant) instead of relying on a packaged `app-update.yml` — the
+'second-brain' })` from one constant) instead of relying on a packaged `app-update.yml` — the
   portable exe does not ship that file, and both distributions must check the same way.
 - **`allowPrerelease: false`, `autoDownload: false`, `autoInstallOnAppQuit: false`, only
   `checkForUpdates()`** (never `…AndNotify`) — 076 publishes full releases only, downloading is
@@ -68,7 +68,7 @@ This story is the knowledge, not the act. Downloading, installing and restarting
   the old "available" must not linger, and no semver library is needed for it.
 - **Persisted in `<userData>/update-check.json` via `readJson`/`writeJsonAtomic`
   (`src/main/fs-json.ts`)**, mirroring `machine-scan-cache.ts`; the last error is persisted too,
-  because AC9 says the check *result* survives and a failure is a result.
+  because AC9 says the check _result_ survives and a failure is a result.
 - **Disabled when `!app.isPackaged` (covers development) or in demo mode (`isDemoVault`)** — the
   state then carries `supported: false` plus `disabledReason`, and a manual check returns that
   state without touching the network (AC5 covers manual checks as well).
@@ -121,37 +121,37 @@ this story does not touch the `build` block in `package.json` beyond the depende
   `UpdateFailure = 'network' | 'http' | 'feed' | 'timeout' | 'unknown'`;
   `UpdateDistribution = 'installed' | 'portable'`;
   `UpdateState { status; supported: boolean; disabledReason: 'unpackaged' | 'demo' | null;
-  distribution; currentVersion: string; update: { version: string; notes: string; releasedAt:
-  string | null } | null; error: UpdateFailure | null; lastCheckedAt: string | null;
-  lastSuccessAt: string | null }` (ISO timestamps). Add `src/main/update/store.ts`:
+distribution; currentVersion: string; update: { version: string; notes: string; releasedAt:
+string | null } | null; error: UpdateFailure | null; lastCheckedAt: string | null;
+lastSuccessAt: string | null }` (ISO timestamps). Add `src/main/update/store.ts`:
   `loadUpdateRecord(dir)` / `saveUpdateRecord(dir, record)` over `<dir>/update-check.json` using
   `readJson` / `writeJsonAtomic` from `src/main/fs-json.ts`; record = `{ version: 1, checkedWith:
-  string, update, error, lastCheckedAt, lastSuccessAt }`. Missing, broken, wrong-`version` or
+string, update, error, lastCheckedAt, lastSuccessAt }`. Missing, broken, wrong-`version` or
   wrong-shape file reads as `null` and never throws. No Electron import. Mirror
   `src/main/machine-scan-cache.ts` (shape and header comment) and its test. Test:
   `tests/main/update/store.test.ts` (temp dir via `mkdtemp`).
 - **D2 — Checker around `electron-updater`.** `npm i electron-updater` into `dependencies`. Add
   `src/main/update/checker.ts`, the only file that imports `electron-updater`:
   `createUpdateChecker({ autoUpdater? })` returning `check(): Promise<{ kind: 'up-to-date' } |
-  { kind: 'available'; version; notes; releasedAt } | { kind: 'failed'; reason: UpdateFailure }>`
+{ kind: 'available'; version; notes; releasedAt } | { kind: 'failed'; reason: UpdateFailure }>`
   — never throws. Load the real updater with a memoised-on-success dynamic `import`, taking the
   named `autoUpdater` export, else `default.autoUpdater`, else a classified failure (Q2 hit
   "Cannot set properties of undefined" in packaged builds here). Configure once: `autoDownload =
-  false`, `autoInstallOnAppQuit = false`, `allowPrerelease = false`, `setFeedURL({ provider:
-  'github', owner: 'Hantsch', repo: 'second-brain' })` from an exported `UPDATE_FEED` constant; no
+false`, `autoInstallOnAppQuit = false`, `allowPrerelease = false`, `setFeedURL({ provider:
+'github', owner: 'Hantsch', repo: 'second-brain' })` from an exported `UPDATE_FEED` constant; no
   custom request headers. Use `checkForUpdates()` and `result.isUpdateAvailable`. Notes: string
   passes, array joins each `.note` with blank lines, null → `''`; HTML → `### ` for `<hN>`, `- `
   for `<li>`, strip other tags, decode entities with `&amp;` last; cap 20 000 chars. Errors:
   numeric `statusCode` → `http`; `ENOTFOUND|ECONNREFUSED|ECONNRESET|ETIMEDOUT|EAI_AGAIN|
-  ENETUNREACH` → `network`; YAML/parse/"latest.yml"/`ERR_UPDATER_*` feed errors → `feed`; else
+ENETUNREACH` → `network`; YAML/parse/"latest.yml"/`ERR_UPDATER_*` feed errors → `feed`; else
   `unknown`. Also export `detectDistribution(env)` → `portable` iff `PORTABLE_EXECUTABLE_DIR` is a
   non-empty string. Reference: `../q2-launcher/src/main/services/update/checker.ts`. Test:
   `tests/main/update/checker.test.ts` with a fake `AutoUpdaterLike` (no network), including one
   test that, when `package.json` `build.publish` names a github owner/repo, it equals
   `UPDATE_FEED`.
 - **D3 — Update service.** Add `src/main/update/service.ts`: `createUpdateService({ dir, now,
-  check, currentVersion, distribution, isSupported: () => { supported; disabledReason },
-  timeoutMs = 20_000, onStateChange })` with `getState()`, `check({ manual })`,
+check, currentVersion, distribution, isSupported: () => { supported; disabledReason },
+timeoutMs = 20_000, onStateChange })` with `getState()`, `check({ manual })`,
   `scheduleStartupCheck(delayMs = 3_000)`, `stop()`. Rules: restore from D1's store; if
   `checkedWith !== currentVersion` drop `update` and `lastSuccessAt`; derive status (`error` if
   the last attempt failed, else `available` / `up-to-date` / `idle`). Unsupported → no check
@@ -171,10 +171,10 @@ this story does not touch the `build` block in `package.json` beyond the depende
   `IPC_EVENTS`. Add `src/main/ipc/update.ts` (`updateHandlers(services)` via `defineHandlers`,
   mirror `src/main/ipc/app.ts`) and register it in `src/main/ipc/register-all.ts`. Build the
   service in `src/main/services.ts` with `dir = userDataDir`, `currentVersion =
-  app.getVersion()`, `distribution = detectDistribution(process.env)`, `isSupported` = packaged
+app.getVersion()`, `distribution = detectDistribution(process.env)`, `isSupported` = packaged
   and not demo — export and reuse `isDemoVault` from `src/main/ipc/app.ts` (move it to a tiny
   `src/main/demo.ts` if importing from `ipc/` into `services.ts` would cycle), `onStateChange →
-  services.sendEvent('event:update', state)`. In `src/main/index.ts` call
+services.sendEvent('event:update', state)`. In `src/main/index.ts` call
   `scheduleStartupCheck()` at the end of `start()` next to `startGardenerAutorun`, and `stop()` in
   the `will-quit` handler. Add `src/main/update/e2e-fixture.ts`: `updateFixtureFor()` reads
   `SB_E2E_UPDATE_FIXTURE` (comma-separated `offline|http|up-to-date|available`; `available` yields
@@ -249,3 +249,23 @@ Review: → default
   checked on another version is dropped as stale" (D3)
 
 ## Done
+
+Gaston checks GitHub's release feed once a day at startup (3 s deferred, never awaited, 20 s timeout), keeps the
+result in `<userData>/update-check.json`, and exposes it through `update:state`, `update:check` and `event:update`.
+A failed check is silent and leaves the daily window open; unpackaged and demo builds never check. Settings › About
+has an "Updates" panel with status, last checked, distribution and "Check now".
+
+Commit message: `077: daily quiet update check — state, store, IPC, About updates panel`
+
+Verification (narrow gate): build, lint, typecheck green; full `npm test` run once after a `--changed` output was cut
+off: green after fixing the e2e-wiring step rule (`test.step` in the two new specs, re-verified green);
+`npx playwright test tests/e2e/update-check.spec.ts tests/e2e/update-check-disabled.spec.ts` 4/4; `verify:ui` 0
+serious/critical axe. Review: PASS (default tier), 1 cycle. All AC1-AC9 walked: each named test exists, ran, passed;
+no manual residue.
+Decisions: `Services.updates()` is lazy (`app.getVersion()` unavailable in many test mocks); `src/main/demo.ts` holds
+`isDemoVault`; mock-bridge and `start-without-tray` fake gained `update` stubs; `formatDateTime` added to format.ts.
+Unfixed review findings (minor): start()/will-quit wiring not asserted directly; real isSupported gate in
+`services.ts` not unit-tested (service-level gate is); `formatDateTime` resembles HealthCard `stamp()`; a timed-out
+check keeps running underneath; `console.warn` in store logs raw fs error (userData path only); manual-check IPC
+rejection has no UI. CHANGELOG already carries the Updates entry (added with 076).
+tiers: D 5 / hard 1 · review default · cycles 1 · agents 9

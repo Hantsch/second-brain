@@ -907,6 +907,20 @@ const RESPONSES: MockResponses = {
   'shell:openExternal': () => undefined,
   'shell:showInFolder': () => undefined,
   'app:info': () => fx.appInfo,
+  'update:state': () => MOCK_UPDATE_STATE,
+  'update:check': () => MOCK_UPDATE_STATE,
+};
+
+const MOCK_UPDATE_STATE: IpcResponse<'update:state'> = {
+  status: 'up-to-date',
+  supported: true,
+  disabledReason: null,
+  distribution: 'installed',
+  currentVersion: fx.appInfo.version,
+  update: null,
+  error: null,
+  lastCheckedAt: null,
+  lastSuccessAt: null,
 };
 
 export const mockBridge: SbBridge = {

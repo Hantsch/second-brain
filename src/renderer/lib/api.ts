@@ -306,4 +306,8 @@ export const api = {
   app: {
     info: () => call('app:info'),
   },
+  update: {
+    state: () => call('update:state'),
+    check: () => call('update:check'),
+  },
 } as const;
