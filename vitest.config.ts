@@ -19,6 +19,12 @@ const shimUrl = pathToFileURL(resolve('scripts/lib/undici-uncloneable-shim.mjs')
 const webStorageFlag = '--no-experimental-webstorage';
 const disableNodeWebStorage = process.allowedNodeEnvironmentFlags.has(webStorageFlag);
 
+/* The fixed test clock (`NOW` in tests/helpers/time.ts) is 14:32 Central
+   European summer time, and journal and ingest code format local wall-clock
+   time. CI runners sit in UTC, so without a pinned zone those tests only pass
+   on a machine in Berlin. Set before the forks start, which inherit it. */
+process.env.TZ = 'Europe/Berlin';
+
 export default defineConfig({
   plugins: [react()],
   resolve: {
