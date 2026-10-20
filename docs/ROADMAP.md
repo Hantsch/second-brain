@@ -1,16 +1,14 @@
 # Roadmap
 
 **The** one source of status and planning: where we stand, what comes next, what is not planned
-at all yet. As of: 2026-09-25.
+at all yet. As of: 2026-10-20.
 
-Where we stand: M18 just finished (S18, `done`) — saving one file now costs one file, a bulk
-external change reliably reaches the index, loose ends derive once per index instead of once
-per screen, a Codex session counts as work, a scoped question retrieves inside its scope, a
-long transcript answers by passage, a PDF becomes a readable source, and the heuristic floor
-speaks the vault's document language. Both M17 and M18 are now fully built. Next: nothing is
-cut yet beyond "Open / unprioritised" below — a `/roadmap plan` picks the next milestone.
-Nothing is waiting on the user beyond the eventual `sprint/S17` → `dev` and
-`sprint/S18` → `dev` merges, which stay the user's own decision.
+Where we stand: M19 just finished (S19, `done`) — a push to `main` with a filled `## Unreleased`
+publishes the installer, portable exe and `latest.yml`; an installed Gaston notices a release
+daily, downloads and restarts only on request, About shows the notes. Next: nothing is cut yet
+beyond "Open / unprioritised" below — a `/roadmap plan` picks the next milestone. Waiting on the
+user: the `sprint/S17`, `S18` and `S19` → `dev` merges, and the first real release (unverified
+against github.com).
 
 Rules (so this document does not drift):
 
@@ -1086,7 +1084,7 @@ Gaps/notes:
   lines even after 061 split `forward.ts` out of it. Same class of gap as M17's `ingest.ts`
   split candidates — worth one future split-only pass across all of them.
 
-### M19 — Gaston ships and updates itself — planned
+### M19 — Gaston ships and updates itself — done 2026-10-20
 
 Gaston can be packaged but not released: no tag, no GitHub release, no changelog, nothing an
 installed copy could update from. Modelled on `../q2-launcher`'s stories 096–099, Windows only.
@@ -1102,7 +1100,7 @@ Cut 2026-10-19.
 Sprints:
 
 - [sprints/S19/sprint.md](sprints/S19/sprint.md) — Gaston ships and updates itself (076, 077,
-  078, 079), `planned`
+  078, 079), `done` ([review](sprints/S19/review.md))
 
 ---
 
