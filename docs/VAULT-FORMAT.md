@@ -502,13 +502,21 @@ models, or other files. During condensation, `resourceReport` in `.ingest.json`
 records resources mentioned in the transcript or description and preserves all
 description links. Re-running ingestion never removes or overwrites `sources/`.
 
+One exception replaces payload: a YouTube source whose `.ingest.json` records
+`transcript.available: false` and no `sourcePage` may be fetched again in place
+("fetch again" in the source details, `ingest:refetch`). No citation rests on such
+a payload yet. Every file that gets replaced is snapshotted to
+`.secondbrain/trash/` first, and if the new fetch brings no transcript either,
+nothing is written at all.
+
 Files under `raw/` index as type `raw`, derived from the path, without any
 frontmatter change.
 
 ## What the app never does
 
 - Change or delete an ingested source payload under `raw/`; bookkeeping in
-  `.ingest.json` and files explicitly added to `sources/` are the two exceptions.
+  `.ingest.json` and files explicitly added to `sources/` are the two exceptions,
+  plus the trash-backed refetch of an uncondensed YouTube source without transcript.
 - Rewrite a user's line in a Markdown file it didn't create itself.
 - Remove frontmatter fields it doesn't recognize.
 - Write without checking the hash first.

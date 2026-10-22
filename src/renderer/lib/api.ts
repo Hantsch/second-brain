@@ -164,6 +164,7 @@ export const api = {
     cancel: (id: string) => call('ingest:cancel', { id }),
     retry: (id: string) => call('ingest:retry', { id }),
     condense: (request: IpcRequest<'ingest:condense'>) => call('ingest:condense', request),
+    refetch: (path: string) => call('ingest:refetch', { path }),
     detail: (path: string) => call('ingest:detail', { path }),
     analyzeResources: (path: string) => call('ingest:analyzeResources', { path }),
     attachFiles: (path: string) => call('ingest:attachFiles', { path }),

@@ -19,6 +19,11 @@ export function isJobRunning(job: IngestJob): boolean {
   return !TERMINAL.includes(job.stage);
 }
 
+/** The most recent refetch of this raw source, running or finished, or null. */
+export function latestRefetchFor(jobs: readonly IngestJob[], rawPath: string): IngestJob | null {
+  return [...jobs].reverse().find((job) => job.refetch === true && job.rawPath === rawPath) ?? null;
+}
+
 /** The most recent running job for this raw source, or null. */
 export function runningJobFor(jobs: readonly IngestJob[], rawPath: string): IngestJob | null {
   return [...jobs].reverse().find((job) => job.rawPath === rawPath && isJobRunning(job)) ?? null;

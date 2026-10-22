@@ -35,6 +35,7 @@ import {
   resolveYtdlp,
   patchIngestLog,
   readIngestLog,
+  refetchRefusal,
   sourceFingerprint,
   throwIfCancelled,
 } from '@core/ingest';
@@ -513,6 +514,27 @@ export function ingestHandlers(services: Services): HandlerMap {
         { kind: outcome.kind, input: outcome.origin, module: target, basis },
         outcome,
       );
+    },
+
+    'ingest:refetch': async ({ path }) => {
+      const rawPath = assertSafeVaultPath(path);
+      const log = await readIngestLog(wikiStore(services), rawPath);
+      if (log === null) throw fail('not-found', `keine Rohquelle: ${rawPath}`);
+      const refusal = refetchRefusal(log);
+      if (refusal === 'condensed') throw fail('conflict', 'Quelle ist bereits verdichtet');
+      if (refusal === 'has-transcript') throw fail('conflict', 'Transcript liegt bereits vor');
+      if (refusal !== null) throw fail('invalid', 'nur YouTube-Quellen lassen sich neu abrufen');
+      const queue = holder.current();
+      const working = jobWorkingOn(queue, rawPath, log);
+      if (working !== null) return working;
+      /* The cache only fills on a status check or an install. A refetch exists to
+         get past a run that had no yt-dlp — it must not repeat that run. */
+      if (ytdlpCache.path === null) {
+        ytdlpCache.path = (
+          await resolveYtdlp({ ...ytdlpDeps(services), configuredPath: null })
+        ).path;
+      }
+      return queue.addRefetch({ kind: 'youtube', input: log.origin, module: null }, rawPath);
     },
 
     'ingest:detail': ({ path }) => sourceDetail(services, path),

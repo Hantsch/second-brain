@@ -687,3 +687,59 @@ describe('IngestQueue', () => {
     expect(() => queue.retry('gibt-es-nicht')).toThrow(/Kein Auftrag/);
   });
 });
+
+describe('IngestQueue.addRefetch', () => {
+  it('knows the raw path from the start and hands the refetch flag to the ingestor', async () => {
+    const seen: IngestContext[] = [];
+    const ingestor: SourceIngestor = {
+      kind: 'youtube',
+      canHandle: () => true,
+      async ingest(_input, ctx): Promise<IngestOutcome> {
+        seen.push(ctx);
+        return {
+          kind: 'youtube',
+          rawPath: 'raw/youtube/abc',
+          title: 'Video',
+          text: 'Transcript.',
+          origin: 'https://www.youtube.com/watch?v=abc',
+          provenance: {},
+          notes: [],
+        };
+      },
+    };
+    const queue = new IngestQueue({ store: memoryStore(), ingestors: [ingestor] });
+
+    const job = queue.addRefetch(
+      { kind: 'youtube', input: 'https://www.youtube.com/watch?v=abc', module: null },
+      'raw/youtube/abc',
+    );
+
+    expect(job.rawPath).toBe('raw/youtube/abc');
+    expect(job.refetch).toBe(true);
+    await vi.waitFor(() => expect(queue.job(job.id)?.stage).toBe('awaiting-llm'));
+    expect(seen[0]?.refetch).toBe(true);
+    expect(seen[0]?.module).toBeNull();
+  });
+
+  it('leaves an ordinary job without the refetch flag', async () => {
+    const seen: IngestContext[] = [];
+    const queue = new IngestQueue({
+      store: memoryStore(),
+      ingestors: [
+        {
+          ...fakeIngestor(),
+          async ingest(input, ctx) {
+            seen.push(ctx);
+            return fakeIngestor().ingest(input, ctx);
+          },
+        },
+      ],
+    });
+
+    const job = queue.add({ kind: 'text', input: 'a' });
+
+    expect(job.refetch).toBeUndefined();
+    await vi.waitFor(() => expect(seen).toHaveLength(1));
+    expect(seen[0]?.refetch).toBe(false);
+  });
+});

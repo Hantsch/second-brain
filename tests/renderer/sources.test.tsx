@@ -656,6 +656,62 @@ describe('Quellen: Bestand', () => {
     );
   });
 
+  it('ruft eine Quelle ohne Transcript aus den Details erneut ab', async () => {
+    const { sb } = renderScreen({
+      'modules:sources': () => [blocked],
+      'ingest:detail': () => sourceDetail(blocked),
+      'ingest:refetch': ({ path }) =>
+        job({ rawPath: path, module: null, refetch: true, stage: 'queued', progress: 0 }),
+    });
+
+    await userEvent.click(await screen.findByText(blocked.title));
+    const dialog = await screen.findByRole('dialog', { name: blocked.title });
+    expect(within(dialog).getByText(/wandern vorher in den Papierkorb/)).toBeTruthy();
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Erneut abrufen' }));
+
+    await waitFor(() =>
+      expect(sb.calls.find((call) => call.channel === 'ingest:refetch')?.payload).toEqual({
+        path: blocked.path,
+      }),
+    );
+  });
+
+  it('sagt nach einem leeren Abruf, dass wieder kein Transcript kam', async () => {
+    renderScreen({
+      'modules:sources': () => [blocked],
+      'ingest:detail': () => sourceDetail(blocked),
+      'ingest:jobs': () => [
+        job({
+          rawPath: blocked.path,
+          module: null,
+          refetch: true,
+          stage: 'no-content',
+          message: 'no-transcript',
+          progress: 1,
+          finishedAt: NOW,
+        }),
+      ],
+    });
+
+    await userEvent.click(await screen.findByText(blocked.title));
+    const dialog = await screen.findByRole('dialog', { name: blocked.title });
+    expect(
+      within(dialog).getByText('Erneut abgerufen: wieder kein Transcript erhalten.'),
+    ).toBeTruthy();
+  });
+
+  it('bietet das erneute Abrufen bei einer Quelle mit Transcript nicht an', async () => {
+    const withTranscript: RawSource = { ...blocked, blocked: null };
+    renderScreen({
+      'modules:sources': () => [withTranscript],
+      'ingest:detail': () => sourceDetail(withTranscript),
+    });
+
+    await userEvent.click(await screen.findByText(withTranscript.title));
+    const dialog = await screen.findByRole('dialog', { name: withTranscript.title });
+    expect(within(dialog).queryByRole('button', { name: 'Erneut abrufen' })).toBeNull();
+  });
+
   it('lässt eine gewöhnliche unverdichtete Zeile unverändert', async () => {
     renderScreen();
 

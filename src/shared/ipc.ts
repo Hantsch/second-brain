@@ -775,6 +775,11 @@ export interface IpcRoutes {
     };
     res: IngestJob;
   };
+  /**
+   * Fetch an uncondensed YouTube source without a transcript again, in place. The
+   * replaced files go to the trash first; without a new transcript nothing is written.
+   */
+  'ingest:refetch': { req: { path: string }; res: IngestJob };
   /** Read the persistent state shown by the source detail window. */
   'ingest:detail': { req: { path: string }; res: SourceDetail };
   /** Re-run the YouTube resource check without re-condensing the wiki source. */
@@ -1421,6 +1426,7 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'ingest:cancel',
   'ingest:retry',
   'ingest:condense',
+  'ingest:refetch',
   'ingest:detail',
   'ingest:analyzeResources',
   'ingest:attachFiles',

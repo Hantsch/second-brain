@@ -591,6 +591,14 @@ const RESPONSES: MockResponses = {
     stage: 'queued',
     progress: 0,
   }),
+  'ingest:refetch': ({ path }) => ({
+    ...fx.ingestJob,
+    rawPath: path,
+    module: null,
+    refetch: true,
+    stage: 'queued',
+    progress: 0,
+  }),
   'ingest:detail': () => ({ source: rawSource, resourceReport: null, attachments: [] }),
   'ingest:analyzeResources': () => ({
     source: rawSource,

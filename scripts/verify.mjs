@@ -1198,6 +1198,30 @@ async function shootSourceDetail(session, shooter, log, skipped) {
   );
   await session.resize(WIDE.width, WIDE.height);
   await session.page.keyboard.press('Escape');
+
+  /* The seeded video without a transcript: its dialog carries "fetch again". */
+  const hollow = session.page.getByRole('button', {
+    name: /Details der Quelle Live AMA: Why We Killed Our Wiki Bot öffnen/,
+  });
+  if ((await hollow.count()) === 0) {
+    skipped.push('Quellendetail ohne Transcript: die Seed-Quelle stand nicht in der Liste');
+    return;
+  }
+  await hollow.click();
+  const reopened = await dialog.waitFor({ state: 'visible', timeout: 4000 }).then(
+    () => true,
+    () => false,
+  );
+  await settle(session.page);
+  if (!reopened) {
+    skipped.push('Quellendetail ohne Transcript: der Klick öffnete nichts');
+    return;
+  }
+  log(
+    `  Quelle ohne Transcript → ` +
+      `${await shooter.shotAs('source-detail-no-transcript.png', session.page)}`,
+  );
+  await session.page.keyboard.press('Escape');
 }
 
 /** Zustände, die in der Adresse stehen: Modul-Detail, Quellen, Einstellungen-Tabs. */

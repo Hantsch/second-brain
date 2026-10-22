@@ -120,6 +120,7 @@ export { nodeFileSystem, nodeProcessRunner } from './node-adapters';
 // ── YouTube ────────────────────────────────────────────────────────────────────
 
 export { buildProviders, createYoutubeIngestor } from './youtube/ingestor';
+export { refetchRefusal, type RefetchRefusal } from './youtube/refetch';
 export {
   harvestVideo,
   type Harvest,

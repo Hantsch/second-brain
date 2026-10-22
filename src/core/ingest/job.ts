@@ -27,6 +27,8 @@ export interface AddJobInput {
   module?: string | null;
   /** What to build the page from, for `addExisting`. Undefined behaves as `'transcript'`. */
   basis?: 'transcript' | 'metadata';
+  /** Fetch the filed YouTube source again instead of reusing it, for `addRefetch`. */
+  refetch?: boolean;
 }
 
 /** Kurzform der Eingabe fuer die Liste — eine Zeile, ohne Umbrueche. */
@@ -52,6 +54,7 @@ export function createJob(id: string, input: AddJobInput, startedAt: string): In
     rawPath: null,
     touchedPages: [],
     basis: input.basis,
+    ...(input.refetch === true ? { refetch: true } : {}),
   };
 }
 

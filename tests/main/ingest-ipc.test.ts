@@ -630,6 +630,40 @@ describe('Quellen- und Modul-Kanäle im Main', () => {
     expect(await harness.call('ingest:jobs', undefined)).toEqual([]);
   });
 
+  it('refuses to refetch a condensed source or one that has its transcript', async () => {
+    const condensed = await writeNoTranscriptYoutube('refetchDone', 'Beschreibung.');
+    const log = JSON.parse((await vault.read(`${condensed}/.ingest.json`)) ?? '{}') as object;
+    await vault.write(
+      `${condensed}/.ingest.json`,
+      JSON.stringify({ ...log, sourcePage: 's-2026-08-12-video' }),
+    );
+    const complete = await writeNoTranscriptYoutube('refetchFull', 'Beschreibung.');
+    await vault.write(
+      `${complete}/.ingest.json`,
+      JSON.stringify({ ...log, transcript: { available: true } }),
+    );
+
+    await expect(harness.call('ingest:refetch', { path: condensed })).rejects.toMatchObject({
+      code: 'conflict',
+    });
+    await expect(harness.call('ingest:refetch', { path: complete })).rejects.toMatchObject({
+      code: 'conflict',
+    });
+    await expect(
+      harness.call('ingest:refetch', { path: 'raw/youtube/missing' }),
+    ).rejects.toMatchObject({ code: 'not-found' });
+    expect(await harness.call('ingest:jobs', undefined)).toEqual([]);
+  });
+
+  it('refuses to refetch anything but a YouTube source', async () => {
+    const started = await harness.call('ingest:start', { kind: 'text', input: 'Notiz.' });
+    const filed = await settled(started.id);
+
+    await expect(
+      harness.call('ingest:refetch', { path: filed.rawPath ?? '' }),
+    ).rejects.toMatchObject({ code: 'invalid' });
+  });
+
   it('kopiert nachgereichte Dateien kollisionsfrei in den sources-Ordner des Videos', async () => {
     const youtubePath = 'raw/youtube/xOFkpf9KgKg';
     await vault.write(

@@ -279,6 +279,13 @@ export const enWiki = {
   'sources.detail.inVideo': 'in the video',
   'sources.detail.inVideoAt': 'in the video at {time}',
   'sources.detail.descriptionLinks': '{count} description links',
+  'sources.detail.transcript': 'Transcript',
+  'sources.detail.refetch': 'Fetch again',
+  'sources.detail.refetching': 'Fetching',
+  'sources.detail.refetchHint':
+    'No transcript came back when this source was ingested. Fetch again retrieves metadata and transcript anew, via yt-dlp where available. The current files go to the trash first; if no transcript arrives again, the source stays unchanged.',
+  'sources.detail.refetchEmpty': 'Fetched again: still no transcript.',
+  'sources.detail.refetchFailed': 'Fetching again failed. Details are in the job list.',
   'sources.detail.attachments': 'Supplied sources',
   'sources.detail.upload': 'Add files',
   'sources.detail.noAttachments': 'No file has been supplied yet.',

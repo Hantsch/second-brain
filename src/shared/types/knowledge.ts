@@ -351,4 +351,6 @@ export interface IngestJob {
   duplicateOf?: string | null;
   /** What the condensed page is built from. Undefined behaves as `'transcript'`. */
   basis?: 'transcript' | 'metadata';
+  /** This job fetches a filed YouTube source again (`ingest:refetch`). */
+  refetch?: boolean;
 }
