@@ -125,6 +125,7 @@ project's — reachable from the dashboard tile and the command palette.
 | `journal`   | Daily entry and coaching dialog                                                 | `6`    |
 | `knowledge` | Knowledge modules (pages, graph) and the sources tab (ingest, progress)         | `7`    |
 | `tasks`     | The work queue: running, waiting and finished, plus the maintenance run         | —      |
+| `agent`     | Claude Code in the vault: open it, its commands, CLI status, setup, protection  | —      |
 | `garden`    | Maintenance: findings, health, one-click fixes                                  | `9`    |
 | `settings`  | Languages, provider/models, task routing, vault, behavior                       | `0`    |
 
@@ -132,9 +133,9 @@ project's — reachable from the dashboard tile and the command palette.
 capture and ask became overlays. The rail gets renumbered wholesale by the later
 navigation stories, so there is no interim churn here.
 
-Between `tasks` and `garden` the rail carries one action that is not a screen: **Agent**
-opens a terminal in the vault with plain `claude` started — no first prompt, so the user
-picks model and session settings before anything runs.
+The `agent` screen's header action opens a terminal in the vault with plain `claude`
+started — no first prompt, so the user picks model and session settings before anything
+runs. `#/settings?tab=agent`, where its panels used to live, redirects there.
 
 Plus: `onboarding` (no vault open), `quick-capture` (its own frameless window).
 

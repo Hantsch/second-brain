@@ -13,7 +13,6 @@ import { useWorkTasks } from '../lib/queries/tasks';
 import { SCREENS, type ScreenDef, type ScreenId } from '../lib/screens';
 import { tasksBadgeCount } from '../lib/tasks-view';
 import { todayIso } from './DayList';
-import { RailAgentButton } from './RailAgentButton';
 import { VaultIndicator } from './VaultIndicator';
 
 /* No tooltip on the rail entries: the label and key are already visibly next
@@ -98,15 +97,7 @@ export function Rail() {
     <nav className="sb-rail" aria-label={t('rail.region')}>
       <div className="sb-rail-nav">{placeScreens.map(renderItem)}</div>
       <div className="sb-rail-foot">
-        <div className="sb-rail-nav">
-          {/* The agent entry is an action, not a route, so it is not in SCREENS;
-              it sits right after Tasks, where the work it picks up is listed. */}
-          {systemScreens.flatMap((screen) =>
-            screen.id === 'tasks'
-              ? [renderItem(screen), <RailAgentButton key="agent" />]
-              : [renderItem(screen)],
-          )}
-        </div>
+        <div className="sb-rail-nav">{systemScreens.map(renderItem)}</div>
         <VaultIndicator />
       </div>
     </nav>

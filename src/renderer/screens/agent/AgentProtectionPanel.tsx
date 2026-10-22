@@ -3,12 +3,12 @@
    visit, so a rule the user removed by hand shows up as missing. */
 
 import { VAULT_DIRS } from '@shared/types';
-import { Badge } from '../../../atoms/Badge';
-import { Panel } from '../../../components/Panel';
-import { Skeleton } from '../../../components/Skeleton';
-import { useT } from '../../../i18n';
-import { decodeIpcError } from '../../../lib/ipc-error';
-import { useAgentProtection } from '../../../lib/queries/agent';
+import { Badge } from '../../atoms/Badge';
+import { Panel } from '../../components/Panel';
+import { Skeleton } from '../../components/Skeleton';
+import { useT } from '../../i18n';
+import { decodeIpcError } from '../../lib/ipc-error';
+import { useAgentProtection } from '../../lib/queries/agent';
 
 export function AgentProtectionPanel() {
   const t = useT();

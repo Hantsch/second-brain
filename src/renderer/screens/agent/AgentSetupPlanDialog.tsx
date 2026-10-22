@@ -8,13 +8,13 @@
 
 import { useState } from 'react';
 import type { AgentSetupApplyResult, AgentSetupPlan } from '@shared/types';
-import { Badge } from '../../../atoms/Badge';
-import { Button } from '../../../atoms/Button';
-import { Checkbox } from '../../../atoms/Checkbox';
-import { Dialog } from '../../../atoms/Dialog';
-import { useT } from '../../../i18n';
-import { decodeIpcError } from '../../../lib/ipc-error';
-import { useApplyAgentSetup } from '../../../lib/queries/agent';
+import { Badge } from '../../atoms/Badge';
+import { Button } from '../../atoms/Button';
+import { Checkbox } from '../../atoms/Checkbox';
+import { Dialog } from '../../atoms/Dialog';
+import { useT } from '../../i18n';
+import { decodeIpcError } from '../../lib/ipc-error';
+import { useApplyAgentSetup } from '../../lib/queries/agent';
 
 export interface AgentSetupPlanDialogProps {
   plan: AgentSetupPlan;

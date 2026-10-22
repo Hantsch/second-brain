@@ -4,6 +4,7 @@
 
 import { CHATS_PAGE, DASHBOARD_PAGE, JOURNAL_PAGE, PROJECTS_PAGE } from './pages-screens-a';
 import {
+  AGENT_SCREEN_PAGE,
   GARDEN_PAGE,
   KNOWLEDGE_PAGE,
   NOTES_PAGE,
@@ -20,6 +21,7 @@ export type HelpScreenId =
   | 'knowledge'
   | 'notes'
   | 'tasks'
+  | 'agent'
   | 'garden'
   | 'settings';
 
@@ -31,6 +33,7 @@ export const SCREEN_PAGES: Record<HelpScreenId, HelpPageDef> = {
   knowledge: KNOWLEDGE_PAGE,
   notes: NOTES_PAGE,
   tasks: TASKS_PAGE,
+  agent: AGENT_SCREEN_PAGE,
   garden: GARDEN_PAGE,
   settings: SETTINGS_PAGE,
 };

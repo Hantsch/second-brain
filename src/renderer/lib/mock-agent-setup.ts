@@ -29,5 +29,5 @@ export const agentSetupNotInstalled: AgentSetupState = {
     leave: [],
     dirs: Object.values(AGENT_DIRS),
   },
-  help: { status: 'missing', installedVersion: null, shippedVersion: 3 },
+  help: { status: 'missing', installedVersion: null, shippedVersion: 4 },
 };

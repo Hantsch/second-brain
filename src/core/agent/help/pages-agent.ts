@@ -1,5 +1,5 @@
 /* The help page about the agent: setup, protection, proposals. It states what the shipped
- * templates and the Agent tab do, and the limits of the shell check as the guard script
+ * templates and the Agent screen do, and the limits of the shell check as the guard script
  * implements them (docs/VAULT-FORMAT.md, "Protection", words the same limits). */
 
 import type { HelpPageDef } from './types';
@@ -11,10 +11,11 @@ export const AGENT_PAGE: HelpPageDef = {
     'How Claude Code works on the vault: setup files, protection, wiki writes and proposals.',
   body: `# The agent: setup, protection and proposals
 
-The agent is Claude Code. The **Agent** entry in the rail, below **Tasks**, opens a terminal
-with the vault as its working folder and plain \`claude\` started, without a first prompt: pick
-the model and settings you want, then start a skill such as \`/gaston-jobs\` or
-\`/gaston-curate <module>\` yourself. Gaston only opens that terminal. The agent runs in
+The agent is Claude Code. On the **Agent** screen (in the rail, below **Tasks**), **Open Claude
+in the vault** opens a terminal with the vault as its working folder and plain \`claude\`
+started, without a first prompt: pick the model and settings you want, then start a skill such
+as \`/gaston-curate <module>\` yourself. The screen lists these commands and what each does.
+Gaston only opens that terminal. The agent runs in
 your own CLI session under your own login; Gaston never calls it, never passes it a key and
 never uses your subscription. Gaston only looks whether the Claude Code CLI is on this
 machine's PATH, and it does not install it. In a session the agent may curate the wiki layer of
@@ -22,7 +23,7 @@ a module and write proposals for everything else.
 
 ## The setup
 
-In Settings, tab **Agent**, the panel **Agent setup** lists the files Gaston installs and their
+On the **Agent** screen, the panel **Agent setup** lists the files Gaston installs and their
 status: current, outdated, missing, changed by you, from a newer Gaston, or yours. **Install**
 (or **Update**) opens a plan that lists exactly what will be written; Gaston writes only that,
 after you confirm. Install writes:
@@ -62,7 +63,7 @@ You read the files and decide; Gaston has no screen yet to review or apply them.
 
 ## Protection
 
-In Settings, tab **Agent**, the panel **Protection** shows per rule whether it is installed in
+On the **Agent** screen, the panel **Protection** shows per rule whether it is installed in
 \`.claude/settings.json\` or missing, and lists deny rules you added yourself. With no setup it
 says nothing protects the vault yet. The rules:
 

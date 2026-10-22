@@ -4,14 +4,14 @@
 
 import { useState } from 'react';
 import type { AgentSetupFileStatus, AgentSetupState } from '@shared/types';
-import { Badge } from '../../../atoms/Badge';
-import type { BadgeProps } from '../../../atoms/Badge';
-import { Button } from '../../../atoms/Button';
-import { Panel } from '../../../components/Panel';
-import { Skeleton } from '../../../components/Skeleton';
-import { useT } from '../../../i18n';
-import { decodeIpcError } from '../../../lib/ipc-error';
-import { useAgentSetupState } from '../../../lib/queries/agent';
+import { Badge } from '../../atoms/Badge';
+import type { BadgeProps } from '../../atoms/Badge';
+import { Button } from '../../atoms/Button';
+import { Panel } from '../../components/Panel';
+import { Skeleton } from '../../components/Skeleton';
+import { useT } from '../../i18n';
+import { decodeIpcError } from '../../lib/ipc-error';
+import { useAgentSetupState } from '../../lib/queries/agent';
 import { AgentSetupPlanDialog } from './AgentSetupPlanDialog';
 import { HelpModuleRow } from './HelpModuleRow';
 

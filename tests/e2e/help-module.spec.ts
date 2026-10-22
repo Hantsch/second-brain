@@ -6,6 +6,7 @@ import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Page } from '@playwright/test';
+import { HELP_MODULE_VERSION } from '../../src/core/agent/help/version';
 import { expect, test } from './fixtures/app';
 
 test.use({ specId: 'help-module' });
@@ -36,7 +37,7 @@ test('the help module comes with the agent setup and opens from About this', asy
   const at = (path: string): string => join(vaultPath, ...path.split('/'));
 
   await test.step('the help row reads missing before the install', async () => {
-    await page.evaluate('location.hash = "#/settings?tab=agent"');
+    await page.evaluate('location.hash = "#/agent"');
     await expect(helpRow(page).getByText('Missing')).toBeVisible();
     await expect(page.getByRole('link', { name: 'Read the agent page in Knowledge' })).toHaveCount(
       0,
@@ -56,7 +57,7 @@ test('the help module comes with the agent setup and opens from About this', asy
 
   await test.step('an older page makes the row read outdated', async () => {
     const old = readFileSync(at(OLD_PAGE), 'utf8').replace(
-      'template_version: 2',
+      `template_version: ${HELP_MODULE_VERSION}`,
       'template_version: 0',
     );
     expect(old).toContain('template_version: 0');
@@ -74,9 +75,9 @@ test('the help module comes with the agent setup and opens from About this', asy
     });
     writeFileSync(at(MANIFEST), `${JSON.stringify(manifest, null, 2)}\n`);
 
-    /* Another tab and back: the panel reads the files again on mount. */
+    /* Another screen and back: the panel reads the files again on mount. */
     await page.evaluate('location.hash = "#/settings?tab=about"');
-    await page.evaluate('location.hash = "#/settings?tab=agent"');
+    await page.evaluate('location.hash = "#/agent"');
     await expect(helpRow(page).getByText('Outdated')).toBeVisible();
   });
 
@@ -85,7 +86,9 @@ test('the help module comes with the agent setup and opens from About this', asy
     await expect(page.getByRole('dialog').getByText(OLD_PAGE, { exact: true })).toBeVisible();
     await confirmAndClose(page, /^Write 1 file$/);
     await expect(helpRow(page).getByText('Current')).toBeVisible();
-    expect(readFileSync(at(OLD_PAGE), 'utf8')).toContain('template_version: 2');
+    expect(readFileSync(at(OLD_PAGE), 'utf8')).toContain(
+      `template_version: ${HELP_MODULE_VERSION}`,
+    );
   });
 
   await test.step('About this opens the agent page in Knowledge', async () => {

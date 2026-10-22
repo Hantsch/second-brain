@@ -5,6 +5,7 @@
    Flat keys, sentence case, no emoji. `en.ts` must carry the same key set —
    a test checks that. */
 
+import { deAgentScreen } from './de-agent-screen';
 import { deAgents } from './de-agents';
 import { deDashboard } from './de-dashboard';
 import { deGarden } from './de-garden';
@@ -59,7 +60,6 @@ export const de = {
   'rail.tasksRunningAndWaiting': 'Aufgaben, {count} laufen oder warten',
   'rail.agent': 'Agent',
   'rail.agent.refused': 'Claude wurde nicht geöffnet.',
-  'rail.agent.settings': 'Agent-Einstellungen',
   'rail.agent.opened.windows-terminal': 'In Windows Terminal geöffnet.',
   'rail.agent.opened.powershell': 'In PowerShell geöffnet.',
   'rail.agent.reason.no-vault': 'Es ist kein Vault geöffnet.',
@@ -73,7 +73,7 @@ export const de = {
   'rail.agent.reason.no-terminal.detail': 'Es konnte kein Terminal gestartet werden ({code}).',
   'rail.agent.error': 'Die Terminal-Anfrage ist fehlgeschlagen. Es wurde nichts geöffnet.',
   'rail.agent.reason.setup-missing':
-    'Einrichtungsdateien fehlen. Installiere zuerst die Agent-Einrichtung unter Einstellungen, Agent.',
+    'Einrichtungsdateien fehlen. Installiere zuerst die Agent-Einrichtung weiter unten.',
 
   'time.today': 'heute',
   'time.yesterday': 'gestern',
@@ -265,6 +265,7 @@ export const de = {
   'ingest.note.no-content': 'Aus dieser Quelle gibt es nichts zu verdichten.',
 
   ...deScreens,
+  ...deAgentScreen,
   ...deAgents,
   ...deDashboard,
   ...deGarden,
