@@ -28,6 +28,7 @@ import { AskPanel } from '@renderer/screens/ask/AskPanel';
 import { homeOf } from '@renderer/lib/doc-home';
 import type { SbBridge } from '@renderer/lib/bridge';
 import { wireEvents } from '@renderer/lib/events';
+import { resetChatSession } from '@renderer/lib/chat-session';
 import { clearStream } from '@renderer/lib/llm-stream';
 import { setLanguage } from '@renderer/i18n';
 
@@ -903,4 +904,5 @@ describe('Fragen: Bedienbarkeit', () => {
 afterEach(() => {
   /* Der Stream-Puffer lebt im Modul — sonst tropft er in den nächsten Test. */
   for (const id of ['m-stream', 'm-passages', 'm-file', 'm-keys', 'm-filter']) clearStream(id);
+  resetChatSession();
 });

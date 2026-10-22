@@ -5,9 +5,5 @@
 export const deChats = {
   'screen.chats.overline': 'Was ich gefragt habe',
   'screen.chats.title': 'Chats',
-  'screen.chats.empty.title': 'Noch kein Chat',
-  'screen.chats.empty.body':
-    'Fragen an Gaston landen hier als Verlauf. Die erste Frage legt den ersten Chat an.',
-  'screen.chats.pick': 'Wähle links einen Chat, um ihn zu lesen.',
-  'chats.continue': 'Im Chat weiterfragen',
+  'chats.new': 'Neuer Chat',
 } as const;

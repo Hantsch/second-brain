@@ -47,29 +47,32 @@ export const CHATS_PAGE: HelpPageDef = {
   slug: 'screen-chats',
   tags: ['fragen', 'verlauf', 'antworten', 'belege'],
   title: 'Chats',
-  summary: 'The history of every question you asked Gaston, readable on its own.',
+  summary: 'Where you hold a conversation with Gaston and come back to it later.',
   body: `# Chats
 
-Asking Gaston is an overlay over whatever screen you are on. The Chats screen is where the
-finished conversations stay reachable.
+The Chats screen is where you ask Gaston and keep talking. The ask overlay, which opens over
+whatever screen you are on, shows the same conversations.
 
 ## What it shows
 
 - A list of threads on the left, with a search field.
-- The selected conversation on the right, read-only, with its answers and their citations.
-  Opening a citation shows the cited passage in a panel.
-- The selected chat is kept in the address, so Back and a reload land on the same chat.
+- The open conversation on the right, with its answers and their citations, and the composer
+  below it. Opening a citation shows the cited passage in a panel.
+- The open chat is kept in the address, so a reload lands on the same chat. Coming back to the
+  screen from elsewhere opens the chat you left.
+- An answer that is still being written when you leave keeps running and keeps growing when you
+  come back.
 
 ## Main actions
 
-- Pick a chat to read it.
-- **Continue in chat** hands the thread to the ask overlay, which owns the composer, the
-  streaming answer and filing an answer back. The read-only feed itself has no file-back
-  button.
+- Pick a chat and ask a follow-up in it.
+- **New chat** starts an empty conversation.
+- Cancel stops a running answer; an answer can be filed back as a wiki page.
 
 ## Without data
 
-With no chat the screen says "No chat yet" and that the first question starts the first chat.
+With no chat yet the screen suggests example questions drawn from the vault, or explains what
+asking does if the vault is still empty.
 `,
 };
 
