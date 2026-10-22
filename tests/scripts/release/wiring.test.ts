@@ -64,6 +64,18 @@ describe('release workflow', () => {
     expect(releaseStep.env.RELEASE_DRY_RUN_INPUT).toBe('${{ inputs.dry_run }}');
   });
 
+  it('fast-forwards dev to the release commit after releasing, never merging into it', () => {
+    const at = (needle: string) => steps.findIndex((s) => (s.run ?? '').includes(needle));
+    const sync = steps[at('HEAD:dev')];
+    expect(at('HEAD:dev')).toBeGreaterThan(at('scripts/release.mjs'));
+    expect(sync.if).toContain("github.ref_name == 'main'");
+    expect(sync.if).toContain('inputs.dry_run != true');
+    expect(sync.run).toContain('git merge-base --is-ancestor origin/dev HEAD');
+    // The warnings name `git merge origin/main` as advice; only an executed line would be a bug.
+    const lines: string[] = sync.run.split('\n').map((l: string) => l.trim());
+    expect(lines.some((l) => l.startsWith('git merge '))).toBe(false);
+  });
+
   it('only passes flags the runner parses', () => {
     const runner = readFileSync(resolve(__dirname, '../../../scripts/lib/release/runner.mjs'), 'utf8');
     for (const flag of ['--if-pending', '--version', '--bump', '--dry-run']) {
