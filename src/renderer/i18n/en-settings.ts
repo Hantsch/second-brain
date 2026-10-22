@@ -85,30 +85,6 @@ const own = {
   'settings.agent.protection.extra': 'Rules you added',
   'settings.agent.protection.limit':
     'The shell check reads the command text. A path built from variables, or a script that opens files itself, is not caught.',
-  'settings.agent.terminal.title': 'Terminal',
-  'settings.agent.terminal.intro':
-    'Opens a terminal with the vault as its working folder and Claude Code started.',
-  'settings.agent.terminal.open': 'Open Claude in the vault',
-  'settings.agent.terminal.jobs': 'Work the jobs',
-  'settings.agent.terminal.curate': 'Curate a module',
-  'settings.agent.terminal.module.label': 'Module to curate',
-  'settings.agent.terminal.module.placeholder': 'Pick a module',
-  'settings.agent.terminal.module.none': 'There is no module to curate yet.',
-  'settings.agent.terminal.opened.windows-terminal': 'Opened in Windows Terminal.',
-  'settings.agent.terminal.opened.powershell': 'Opened in PowerShell.',
-  'settings.agent.terminal.reason.no-vault': 'No vault is open.',
-  'settings.agent.terminal.reason.cli-absent':
-    'Claude Code was not found on this machine, so no terminal is opened.',
-  'settings.agent.terminal.reason.cli-unknown':
-    'Whether Claude Code is installed is unknown, so no terminal is opened.',
-  'settings.agent.terminal.reason.setup-missing':
-    'Setup files are missing. Install the agent setup above first.',
-  'settings.agent.terminal.reason.unsupported-platform':
-    'Opening a terminal from Gaston is only supported on Windows.',
-  'settings.agent.terminal.reason.invalid-module': 'That module does not exist in this vault.',
-  'settings.agent.terminal.reason.no-terminal': 'No terminal could be started.',
-  'settings.agent.terminal.reason.no-terminal.detail': 'No terminal could be started ({code}).',
-  'settings.agent.terminal.error': 'The terminal request failed. Nothing was opened.',
   'settings.agent.about.title': 'About this',
   'settings.agent.about.open': 'Read the agent page in Knowledge',
   'settings.agent.about.unavailable': 'Install the help module above to read it here.',

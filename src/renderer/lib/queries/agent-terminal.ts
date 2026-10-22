@@ -3,13 +3,9 @@
 
 import { useMutation } from '@tanstack/react-query';
 import type { UseMutationResult } from '@tanstack/react-query';
-import type { TerminalIntent, TerminalLaunchResult } from '@shared/types';
+import type { TerminalLaunchResult } from '@shared/types';
 import { api } from '../api';
 
-export function useLaunchAgentTerminal(): UseMutationResult<
-  TerminalLaunchResult,
-  unknown,
-  TerminalIntent
-> {
-  return useMutation({ mutationFn: (intent: TerminalIntent) => api.agent.launchTerminal(intent) });
+export function useLaunchAgentTerminal(): UseMutationResult<TerminalLaunchResult, unknown, void> {
+  return useMutation({ mutationFn: () => api.agent.launchTerminal() });
 }

@@ -132,6 +132,10 @@ project's — reachable from the dashboard tile and the command palette.
 capture and ask became overlays. The rail gets renumbered wholesale by the later
 navigation stories, so there is no interim churn here.
 
+Between `tasks` and `garden` the rail carries one action that is not a screen: **Agent**
+opens a terminal in the vault with plain `claude` started — no first prompt, so the user
+picks model and session settings before anything runs.
+
 Plus: `onboarding` (no vault open), `quick-capture` (its own frameless window).
 
 Capture and ask are **not** screens but **overlays** over the running screen

@@ -1,22 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { InvalidTerminalModuleError, buildLaunchPlans } from '../../../src/core/agent/terminal';
-import type { TerminalIntent, TerminalLaunchPlan } from '../../../src/shared/types/agent-terminal';
-import { AGENT_SKILLS } from '../../../src/shared/types/agent-setup';
+import { buildLaunchPlans } from '../../../src/core/agent/terminal';
+import type { TerminalLaunchPlan } from '../../../src/shared/types/agent-terminal';
 
 const VAULT = 'C:\\Vaults\\main';
 
-function plansPair(
-  intent: TerminalIntent,
-  vaultRoot: string,
-): [TerminalLaunchPlan, TerminalLaunchPlan] {
-  const [wt, ps] = buildLaunchPlans(intent, vaultRoot);
+function plansPair(vaultRoot: string): [TerminalLaunchPlan, TerminalLaunchPlan] {
+  const [wt, ps] = buildLaunchPlans(vaultRoot);
   if (!wt || !ps) throw new Error('expected two plans');
   return [wt, ps];
 }
 
 describe('terminal launch plans', () => {
   it('opening claude plans windows terminal then powershell, both in the vault folder with no first prompt', () => {
-    const plans = buildLaunchPlans({ kind: 'open' }, VAULT);
+    const plans = buildLaunchPlans(VAULT);
     expect(plans).toEqual([
       {
         terminal: 'windows-terminal',
@@ -24,6 +20,7 @@ describe('terminal launch plans', () => {
         args: ['-d', VAULT, 'powershell.exe', '-NoExit', '-Command', 'claude'],
         cwd: VAULT,
         windowsVerbatimArguments: false,
+        windowsHide: false,
       },
       {
         terminal: 'powershell',
@@ -31,38 +28,12 @@ describe('terminal launch plans', () => {
         args: ['/d', '/s', '/c', '"start "" powershell.exe -NoExit -Command "claude""'],
         cwd: VAULT,
         windowsVerbatimArguments: true,
+        windowsHide: true,
       },
     ]);
   });
 
-  it('working the jobs plans claude with the queue skill as the first prompt', () => {
-    const [wt, ps] = plansPair({ kind: 'jobs' }, VAULT);
-    const line = `claude '/${AGENT_SKILLS.jobs}'`;
-    expect(wt.args.at(-1)).toBe(line);
-    expect(ps.args.at(-1)).toBe(`"start "" powershell.exe -NoExit -Command "${line}""`);
-  });
-
-  it('curating a module plans claude with the curator skill and the module slug as the first prompt', () => {
-    const [wt, ps] = plansPair({ kind: 'curate', module: 'ai-projects' }, VAULT);
-    const line = `claude '/${AGENT_SKILLS.curate} ai-projects'`;
-    expect(wt.args.at(-1)).toBe(line);
-    expect(ps.args.at(-1)).toContain(line);
-  });
-
-  it('a module name that is not a slug is refused instead of quoted', () => {
-    for (const module of ["x'; calc; '", 'Has Space', 'a"b', '$(whoami)', 'Größe', '', 'a;b']) {
-      expect(() => buildLaunchPlans({ kind: 'curate', module }, VAULT)).toThrow(
-        InvalidTerminalModuleError,
-      );
-    }
-  });
-
   it('no plan carries a print, headless, permission-bypass or key flag', () => {
-    const intents = [
-      { kind: 'open' },
-      { kind: 'jobs' },
-      { kind: 'curate', module: 'ai-projects' },
-    ] as const;
     const banned = [
       '-p',
       '--print',
@@ -71,19 +42,17 @@ describe('terminal launch plans', () => {
       '--dangerously-skip-permissions',
       '--permission-mode',
     ];
-    for (const intent of intents) {
-      for (const plan of buildLaunchPlans(intent, VAULT)) {
-        const words = [plan.command, ...plan.args].join(' ').split(/\s+/);
-        for (const flag of banned) expect(words).not.toContain(flag);
-        expect([plan.command, ...plan.args].join(' ')).not.toContain('ANTHROPIC_');
-      }
+    for (const plan of buildLaunchPlans(VAULT)) {
+      const words = [plan.command, ...plan.args].join(' ').split(/\s+/);
+      for (const flag of banned) expect(words).not.toContain(flag);
+      expect([plan.command, ...plan.args].join(' ')).not.toContain('ANTHROPIC_');
     }
   });
 
   it('a vault path with spaces, quotes, semicolons and non-ascii appears only as the working directory and the escaped -d argument', () => {
     const odd = 'D:\\My Vault; it\'s "x" Größe';
     const escaped = odd.replaceAll(';', '\\;');
-    const [wt, ps] = plansPair({ kind: 'jobs' }, odd);
+    const [wt, ps] = plansPair(odd);
 
     expect(wt.cwd).toBe(odd);
     expect(ps.cwd).toBe(odd);

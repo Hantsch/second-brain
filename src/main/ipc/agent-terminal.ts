@@ -1,21 +1,19 @@
-/* `agent:launchTerminal`: a terminal in the vault with `claude` started.
+/* `agent:launchTerminal`: a terminal in the vault with plain `claude` started.
 
-   Expected refusals (no vault, CLI absent, setup missing, unknown module, no terminal) are the
-   result union; only a malformed request is an IPC error. The launch is exactly one attempt
-   chain — nothing else is started, in particular not `claude` itself to probe it. (story 087) */
+   Expected refusals (no vault, CLI absent, setup missing, no terminal) are the result union.
+   The launch is exactly one attempt chain — nothing else is started, in particular not
+   `claude` itself to probe it. (story 087) */
 
-import { buildLaunchPlans, InvalidTerminalModuleError } from '@core/agent/terminal';
+import { buildLaunchPlans } from '@core/agent/terminal';
 import { readSetupState } from '@core/agent/setup-status';
-import { listModules } from '@core/wiki';
 import { setupIsComplete, terminalReadiness } from '@shared/agent/terminal-readiness';
-import type { AgentCliStatus, TerminalIntent, TerminalLaunchResult } from '@shared/types';
+import type { AgentCliStatus, TerminalLaunchResult } from '@shared/types';
 import type { TerminalSpawnFn } from '../agent-terminal-launcher';
 import { launchTerminal, nodeTerminalSpawn } from '../agent-terminal-launcher';
 import { detectClaudeCli } from './agent';
 import type { HandlerMap } from './registry';
-import { defineHandlers, fail } from './registry';
+import { defineHandlers } from './registry';
 import { terminalSpawnFixture } from './terminal-e2e-fixture';
-import { wikiIndex } from './wiki-bridge';
 import type { Services } from '../services';
 
 export interface AgentTerminalDeps {
@@ -30,13 +28,6 @@ export function productionAgentTerminalDeps(): AgentTerminalDeps {
     spawn: terminalSpawnFixture() ?? nodeTerminalSpawn,
     cliStatus: detectClaudeCli,
   };
-}
-
-function requireIntent(value: unknown): TerminalIntent {
-  const { kind, module } = (value ?? {}) as { kind?: unknown; module?: unknown };
-  if (kind === 'open' || kind === 'jobs') return { kind };
-  if (kind === 'curate' && typeof module === 'string') return { kind, module };
-  throw fail('invalid', 'intent: expected open, jobs or curate with a module name');
 }
 
 type Refusal = Extract<TerminalLaunchResult, { ok: false }>;
@@ -59,8 +50,7 @@ async function readinessOf(services: Services, deps: AgentTerminalDeps, root: st
 
 export function agentTerminalHandlers(services: Services, deps: AgentTerminalDeps): HandlerMap {
   return defineHandlers({
-    'agent:launchTerminal': async (request): Promise<TerminalLaunchResult> => {
-      const intent = requireIntent(request);
+    'agent:launchTerminal': async (): Promise<TerminalLaunchResult> => {
       if (deps.platform !== 'win32') return refuse('unsupported-platform');
 
       const root = services.vaultRoot();
@@ -68,16 +58,7 @@ export function agentTerminalHandlers(services: Services, deps: AgentTerminalDep
       if (!readiness.ready || root === null)
         return refuse(readiness.ready ? 'no-vault' : readiness.reason);
 
-      if (intent.kind === 'curate') {
-        const known = listModules(wikiIndex(services)).some((m) => m.slug === intent.module);
-        if (!known) return refuse('invalid-module');
-      }
-      try {
-        return await launchTerminal(buildLaunchPlans(intent, root), deps.spawn);
-      } catch (error) {
-        if (error instanceof InvalidTerminalModuleError) return refuse('invalid-module');
-        throw error;
-      }
+      return launchTerminal(buildLaunchPlans(root), deps.spawn);
     },
   });
 }

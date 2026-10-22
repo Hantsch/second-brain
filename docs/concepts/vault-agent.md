@@ -161,7 +161,7 @@ gardener fix today.
 | Job kinds in v1         | **Condense source (`awaiting-llm`), curate module, gardener audit, condense module.**                                                                                          | The four places where today a model is needed and the local one is not good enough.                                                                                         |
 | Bookkeeping after a job | **Gaston does it when it reads the job result.** The agent writes content into the wiki and a result file; Gaston validates and updates `.ingest.json`, index and friends.     | The agent needs no write access to app bookkeeping. A model should not write the app's protocol files.                                                                      |
 | Run visibility          | **One report file per run.** The Agent tab shows the last run.                                                                                                                 | Hash detection alone would show changed files without saying why; the report carries changed pages, proposals and finished jobs.                                            |
-| Terminal buttons        | **Several buttons with a preset skill**: open Claude, work the jobs, curate a module.                                                                                          | Comfort over a single generic button; each opens `claude` in the vault with the matching skill as the first prompt.                                                         |
+| Terminal buttons        | **One Agent entry in the rail** that opens plain `claude` in the vault. (Revised: the preset-skill buttons were dropped.)                                                      | A preset first prompt runs before the user can pick a model, so a curate job ran on the CLI's default model. The user starts the skill themselves.                          |
 | Job trigger             | **Explicit "hand to agent" per task**, in the Tasks screen, at the source, in the gardener.                                                                                    | Nothing reaches the agent without the user's action.                                                                                                                        |
 | Help module scope       | **All of Gaston**: screens, vault format, the agent.                                                                                                                           | "How does X work" should work for everything through Ask. The maintenance cost on feature changes was named and accepted.                                                   |
 | Proposal targets        | **Everything except `journal/` and `raw/`**: `module.md`, `AGENTS.md`, projects, areas, notes, inbox filings.                                                                  | The curator should be able to suggest a filing or a project note; the human still confirms.                                                                                 |
@@ -345,10 +345,6 @@ the tab pattern in `SettingsScreen.tsx` (tab id, icon, i18n label, panel):
   skills under `.claude/skills/` marked as theirs.
 - **Last run** — from the newest report: when, skill, pages changed, proposals written,
   jobs finished. A link to the Maintenance screen when proposals wait.
-- **Terminal** — buttons "Open Claude in the vault", "Work the jobs", "Curate a module"
-  (with a module picker). Each opens a terminal in the vault folder with `claude` and
-  the skill as the first prompt. Disabled with a reason when the CLI is absent or the
-  setup is missing.
 - **About this** — a short description of what the agent does and does not do, with a
   link into the help module's agent page in Knowledge.
 

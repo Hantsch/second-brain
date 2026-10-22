@@ -11,9 +11,10 @@ export const AGENT_PAGE: HelpPageDef = {
     'How Claude Code works on the vault: setup files, protection, wiki writes and proposals.',
   body: `# The agent: setup, protection and proposals
 
-The agent is Claude Code. In Settings, tab **Agent**, the section **Terminal** opens a terminal
-with the vault as its working folder and \`claude\` started: **Open Claude in the vault**,
-**Work the jobs** or **Curate a module**. Gaston only opens that terminal. The agent runs in
+The agent is Claude Code. The **Agent** entry in the rail, below **Tasks**, opens a terminal
+with the vault as its working folder and plain \`claude\` started, without a first prompt: pick
+the model and settings you want, then start a skill such as \`/gaston-jobs\` or
+\`/gaston-curate <module>\` yourself. Gaston only opens that terminal. The agent runs in
 your own CLI session under your own login; Gaston never calls it, never passes it a key and
 never uses your subscription. Gaston only looks whether the Claude Code CLI is on this
 machine's PATH, and it does not install it. In a session the agent may curate the wiki layer of

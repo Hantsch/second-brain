@@ -10,7 +10,7 @@ import type { TerminalLaunchPlan, TerminalLaunchResult } from '@shared/types';
 export interface TerminalSpawnOptions {
   readonly cwd: string;
   readonly stdio: 'ignore';
-  readonly windowsHide: true;
+  readonly windowsHide: boolean;
   readonly windowsVerbatimArguments: boolean;
   readonly shell: false;
 }
@@ -40,7 +40,7 @@ function attempt(plan: TerminalLaunchPlan, spawnFn: TerminalSpawnFn): Promise<At
       child = spawnFn(plan.command, plan.args, {
         cwd: plan.cwd,
         stdio: 'ignore',
-        windowsHide: true,
+        windowsHide: plan.windowsHide,
         windowsVerbatimArguments: plan.windowsVerbatimArguments,
         shell: false,
       });

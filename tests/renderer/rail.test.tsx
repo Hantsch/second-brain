@@ -8,13 +8,14 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { IpcChannel, IpcRequest, IpcResponse } from '@shared/ipc';
 import type { VaultStatus } from '@shared/types';
 import { Rail } from '@renderer/components/Rail';
 import type { SbBridge } from '@renderer/lib/bridge';
 import { setLanguage } from '@renderer/i18n';
+import { clearToasts, useToasts } from '@renderer/lib/toast';
 
 type SbHandlers = Partial<{
   [K in IpcChannel]: (payload: IpcRequest<K>) => IpcResponse<K> | Promise<IpcResponse<K>>;
@@ -61,7 +62,12 @@ beforeEach(() => {
 
 afterEach(() => {
   delete window.sb;
+  clearToasts();
 });
+
+function toastSnapshot() {
+  return renderHook(() => useToasts()).result.current;
+}
 
 describe('Rail', () => {
   it('renders the vault indicator regardless of a maintenance run going', async () => {
@@ -82,14 +88,14 @@ describe('Rail', () => {
     expect(screen.queryByRole('button', { name: /Wartungslauf läuft/ })).toBeNull();
   });
 
-  /* 072, D1: the tasks entry is new in the rail's system group, immediately
-     before maintenance (garden) — checked in both languages because the
+  /* 072, D1: the tasks entry is new in the rail's system group, before
+     maintenance (garden), with only the agent action in between — checked in both languages because the
      order comes from `SCREENS` (language-independent) while the labels used
      to find each item are translated. */
-  it('sits the tasks entry directly above maintenance in both languages', async () => {
-    for (const [language, tasksLabel, gardenLabel] of [
-      ['de', 'Aufgaben', 'Pflege'],
-      ['en', 'Tasks', 'Care'],
+  it('sits the tasks entry, then the agent action, above maintenance in both languages', async () => {
+    for (const [language, tasksLabel, agentLabel, gardenLabel] of [
+      ['de', 'Aufgaben', 'Agent', 'Pflege'],
+      ['en', 'Tasks', 'Agent', 'Care'],
     ] as const) {
       setLanguage(language);
       installMock({
@@ -99,16 +105,19 @@ describe('Rail', () => {
       });
 
       const { container, unmount } = renderRail('/dashboard');
-      await screen.findByRole('button', { name: /./ }); // wait for the first render pass
+      await screen.findAllByRole('button', { name: /./ }); // wait for the first render pass
 
       const items = Array.from(container.querySelectorAll('.sb-rail-item'));
       const labels = items.map((item) => item.querySelector('span')?.textContent ?? '');
       const tasksIndex = labels.indexOf(tasksLabel);
+      const agentIndex = labels.indexOf(agentLabel);
       const gardenIndex = labels.indexOf(gardenLabel);
 
       expect(tasksIndex, `${language}: tasks entry not found`).toBeGreaterThanOrEqual(0);
-      expect(gardenIndex, `${language}: tasks must sit right before maintenance`).toBe(
-        tasksIndex + 1,
+      /* The agent action sits between tasks and maintenance (rail agent entry). */
+      expect(agentIndex, `${language}: agent must sit right after tasks`).toBe(tasksIndex + 1);
+      expect(gardenIndex, `${language}: maintenance must follow the agent entry`).toBe(
+        tasksIndex + 2,
       );
 
       /* D1 has no task data source yet — the badge lookup must read 0, not
@@ -189,5 +198,56 @@ describe('Rail', () => {
 
     expect(await screen.findByRole('link', { name: 'Tasks' })).toBeTruthy();
     expect(screen.queryByRole('link', { name: /running or waiting/ })).toBeNull();
+  });
+
+  it('opens plain Claude in the vault, without a first prompt, from the agent entry', async () => {
+    setLanguage('en');
+    const launches: unknown[] = [];
+    installMock({
+      'vault:status': () => READY_STATUS,
+      'journal:list': () => [],
+      'work:list': () => [],
+      'agent:launchTerminal': (request) => {
+        launches.push(request);
+        return { ok: true, terminal: 'windows-terminal' };
+      },
+    });
+
+    renderRail('/dashboard');
+    fireEvent.click(await screen.findByRole('button', { name: 'Agent' }));
+
+    await waitFor(() => expect(launches).toEqual([undefined]));
+    await waitFor(() =>
+      expect(toastSnapshot()).toEqual([
+        expect.objectContaining({
+          kind: 'success',
+          message: 'rail.agent.opened.windows-terminal',
+        }),
+      ]),
+    );
+  });
+
+  it('says why Claude was not opened and leads to the agent settings', async () => {
+    setLanguage('en');
+    installMock({
+      'vault:status': () => READY_STATUS,
+      'journal:list': () => [],
+      'work:list': () => [],
+      'agent:launchTerminal': () => ({ ok: false, reason: 'setup-missing' }),
+    });
+
+    renderRail('/dashboard');
+    fireEvent.click(await screen.findByRole('button', { name: 'Agent' }));
+
+    await waitFor(() =>
+      expect(toastSnapshot()).toEqual([
+        expect.objectContaining({
+          kind: 'warn',
+          message: 'rail.agent.refused',
+          description: 'rail.agent.reason.setup-missing',
+          action: expect.objectContaining({ label: 'rail.agent.settings' }),
+        }),
+      ]),
+    );
   });
 });

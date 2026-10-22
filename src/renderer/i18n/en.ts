@@ -57,6 +57,23 @@ export const en: Record<TranslationKey, string> = {
   'rail.settings': 'Settings',
   'rail.journalOpenDays': 'Journal, {count} open days',
   'rail.tasksRunningAndWaiting': 'Tasks, {count} running or waiting',
+  'rail.agent': 'Agent',
+  'rail.agent.refused': 'Claude was not opened.',
+  'rail.agent.settings': 'Agent settings',
+  'rail.agent.opened.windows-terminal': 'Opened in Windows Terminal.',
+  'rail.agent.opened.powershell': 'Opened in PowerShell.',
+  'rail.agent.reason.no-vault': 'No vault is open.',
+  'rail.agent.reason.cli-absent':
+    'Claude Code was not found on this machine, so no terminal is opened.',
+  'rail.agent.reason.cli-unknown':
+    'Whether Claude Code is installed is unknown, so no terminal is opened.',
+  'rail.agent.reason.unsupported-platform':
+    'Opening a terminal from Gaston is only supported on Windows.',
+  'rail.agent.reason.no-terminal': 'No terminal could be started.',
+  'rail.agent.reason.no-terminal.detail': 'No terminal could be started ({code}).',
+  'rail.agent.error': 'The terminal request failed. Nothing was opened.',
+  'rail.agent.reason.setup-missing':
+    'Setup files are missing. Install the agent setup under Settings, Agent first.',
 
   'time.today': 'today',
   'time.yesterday': 'yesterday',

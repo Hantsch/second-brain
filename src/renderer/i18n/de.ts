@@ -57,6 +57,23 @@ export const de = {
   'rail.settings': 'Einstellungen',
   'rail.journalOpenDays': 'Tagebuch, {count} offene Tage',
   'rail.tasksRunningAndWaiting': 'Aufgaben, {count} laufen oder warten',
+  'rail.agent': 'Agent',
+  'rail.agent.refused': 'Claude wurde nicht geöffnet.',
+  'rail.agent.settings': 'Agent-Einstellungen',
+  'rail.agent.opened.windows-terminal': 'In Windows Terminal geöffnet.',
+  'rail.agent.opened.powershell': 'In PowerShell geöffnet.',
+  'rail.agent.reason.no-vault': 'Es ist kein Vault geöffnet.',
+  'rail.agent.reason.cli-absent':
+    'Claude Code wurde auf diesem Rechner nicht gefunden, deshalb wird kein Terminal geöffnet.',
+  'rail.agent.reason.cli-unknown':
+    'Ob Claude Code installiert ist, ist unbekannt, deshalb wird kein Terminal geöffnet.',
+  'rail.agent.reason.unsupported-platform':
+    'Ein Terminal aus Gaston zu öffnen wird nur unter Windows unterstützt.',
+  'rail.agent.reason.no-terminal': 'Es konnte kein Terminal gestartet werden.',
+  'rail.agent.reason.no-terminal.detail': 'Es konnte kein Terminal gestartet werden ({code}).',
+  'rail.agent.error': 'Die Terminal-Anfrage ist fehlgeschlagen. Es wurde nichts geöffnet.',
+  'rail.agent.reason.setup-missing':
+    'Einrichtungsdateien fehlen. Installiere zuerst die Agent-Einrichtung unter Einstellungen, Agent.',
 
   'time.today': 'heute',
   'time.yesterday': 'gestern',

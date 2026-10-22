@@ -85,32 +85,6 @@ const own = {
   'settings.agent.protection.extra': 'Regeln, die du hinzugefügt hast',
   'settings.agent.protection.limit':
     'Die Shell-Prüfung liest den Befehlstext. Ein Pfad, der aus Variablen gebaut wird, oder ein Skript, das Dateien selbst öffnet, wird nicht erkannt.',
-  'settings.agent.terminal.title': 'Terminal',
-  'settings.agent.terminal.intro':
-    'Öffnet ein Terminal mit dem Vault als Arbeitsordner und gestartetem Claude Code.',
-  'settings.agent.terminal.open': 'Claude im Vault öffnen',
-  'settings.agent.terminal.jobs': 'Aufträge abarbeiten',
-  'settings.agent.terminal.curate': 'Modul pflegen',
-  'settings.agent.terminal.module.label': 'Zu pflegendes Modul',
-  'settings.agent.terminal.module.placeholder': 'Modul wählen',
-  'settings.agent.terminal.module.none': 'Es gibt noch kein Modul zum Pflegen.',
-  'settings.agent.terminal.opened.windows-terminal': 'In Windows Terminal geöffnet.',
-  'settings.agent.terminal.opened.powershell': 'In PowerShell geöffnet.',
-  'settings.agent.terminal.reason.no-vault': 'Es ist kein Vault geöffnet.',
-  'settings.agent.terminal.reason.cli-absent':
-    'Claude Code wurde auf diesem Rechner nicht gefunden, deshalb wird kein Terminal geöffnet.',
-  'settings.agent.terminal.reason.cli-unknown':
-    'Ob Claude Code installiert ist, ist unbekannt, deshalb wird kein Terminal geöffnet.',
-  'settings.agent.terminal.reason.setup-missing':
-    'Einrichtungsdateien fehlen. Installiere zuerst die Agent-Einrichtung oben.',
-  'settings.agent.terminal.reason.unsupported-platform':
-    'Ein Terminal aus Gaston zu öffnen wird nur unter Windows unterstützt.',
-  'settings.agent.terminal.reason.invalid-module': 'Dieses Modul gibt es in diesem Vault nicht.',
-  'settings.agent.terminal.reason.no-terminal': 'Es konnte kein Terminal gestartet werden.',
-  'settings.agent.terminal.reason.no-terminal.detail':
-    'Es konnte kein Terminal gestartet werden ({code}).',
-  'settings.agent.terminal.error':
-    'Die Terminal-Anfrage ist fehlgeschlagen. Es wurde nichts geöffnet.',
   'settings.agent.about.title': 'Worum es geht',
   'settings.agent.about.open': 'Die Agent-Seite in Wissen lesen',
   'settings.agent.about.unavailable': 'Installiere oben das Hilfemodul, um es hier zu lesen.',

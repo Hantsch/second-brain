@@ -82,7 +82,6 @@ import type {
   TaskDefinition,
   TaskKind,
   TaskResult,
-  TerminalIntent,
   TerminalLaunchResult,
   Todo,
   TranscriptPage,
@@ -1293,10 +1292,10 @@ export interface IpcRoutes {
    */
   'agent:setupApply': { req: AgentSetupApplyRequest; res: AgentSetupApplyResult };
   /**
-   * Opens a terminal in the vault with `claude` started, optionally with a skill as first
-   * prompt. Refusals are part of the result, not errors; main does the launch, nothing else.
+   * Opens a terminal in the vault with plain `claude` started, no first prompt. Refusals are
+   * part of the result, not errors; main does the launch, nothing else.
    */
-  'agent:launchTerminal': { req: TerminalIntent; res: TerminalLaunchResult };
+  'agent:launchTerminal': { req: void; res: TerminalLaunchResult };
 
   // ── Settings ──────────────────────────────────────────────────────────────
   'settings:get': { req: void; res: SettingsSnapshot };
