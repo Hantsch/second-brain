@@ -32,7 +32,9 @@ export type SectionKind =
   | 'directives'
   | 'next-step'
   | 'waiting-on'
-  | 'learned';
+  | 'learned'
+  | 'decided'
+  | 'contradictions';
 
 /** The headings of one document language. */
 export type SectionNames = Record<SectionKind, string>;
@@ -55,6 +57,8 @@ const NAMES: Record<DocLanguage, SectionNames> = {
     'next-step': 'Nächster Schritt',
     'waiting-on': 'Wartet auf',
     learned: 'Gelernt',
+    decided: 'Entschieden',
+    contradictions: 'Widersprüche',
   },
   en: {
     notes: 'Notes',
@@ -69,6 +73,8 @@ const NAMES: Record<DocLanguage, SectionNames> = {
     'next-step': 'Next step',
     'waiting-on': 'Waiting on',
     learned: 'Learned',
+    decided: 'Decided',
+    contradictions: 'Contradictions',
   },
 };
 
@@ -88,11 +94,16 @@ const ALIASES: Record<SectionKind, readonly string[]> = {
   facts: ['fakten', 'facts'],
   dialogue: ['gespraech', 'conversation'],
   patterns: ['muster', 'patterns'],
-  open: ['offen', 'open'],
+  /* The long phrasings are the headings a module overview carried before it became
+     a condensed artifact (the stub and `wiki/text.ts`'s phrases) — such a file must
+     parse into its sections rather than have them shoved aside as foreign text. */
+  open: ['offen', 'open', 'was offen ist', 'what is open'],
   directives: ['direktiven', 'directives'],
   'next-step': ['naechster schritt', 'next step'],
   'waiting-on': ['wartet auf', 'waiting on'],
   learned: ['gelernt', 'learned'],
+  decided: ['entschieden', 'decided', 'was entschieden ist', 'what is settled'],
+  contradictions: ['widersprueche', 'contradictions'],
 };
 
 /** The heading of this kind, in this document language. */

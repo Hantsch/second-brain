@@ -37,8 +37,9 @@ describe('runGardener über den Demo-Bestand', () => {
       'unprocessed-source': 1,
       'project-without-next-step': 1,
       /* 046: jedes der drei laufenden Demo-Projekte hat Material und noch kein
-         `condensed.md` — die fehlende Variante, einmal je Projekt. */
-      'condensation-due': 3,
+         `condensed.md` — die fehlende Variante, einmal je Projekt; dazu die zwei
+         Module mit Seiten und noch ohne verdichtete Uebersicht. */
+      'condensation-due': 5,
     });
     expect(of(report.findings, 'orphan')[0]?.paths).toContain(DEMO.scim);
     expect(of(report.findings, 'broken-link')[0]?.title).toContain('device-code-flow');
@@ -49,7 +50,12 @@ describe('runGardener über den Demo-Bestand', () => {
     expect(of(report.findings, 'project-without-next-step')[0]?.paths).toEqual([
       DEMO.projectWithoutStep,
     ]);
-    const condensation = of(report.findings, 'condensation-due');
+    const condensation = of(report.findings, 'condensation-due').filter(
+      (finding) => finding.module === null,
+    );
+    expect(of(report.findings, 'condensation-due').filter((f) => f.module !== null)).toHaveLength(
+      2,
+    );
     // Das noch nicht existierende Artefakt zuerst, `project.md` dahinter.
     expect(condensation.every((finding) => finding.paths[0]?.endsWith('/condensed.md'))).toBe(true);
     expect(condensation.map((finding) => finding.paths[1]).sort()).toEqual(

@@ -99,6 +99,7 @@ export const deWiki = {
   'modules.tab.graph': 'Graph',
   'modules.tab.sources': 'Quellen',
   'modules.tab.log': 'Protokoll',
+  'modules.tab.condensed': 'Verdichtet',
 
   'modules.category.source': 'Quellen',
   'modules.category.entity': 'Entitäten',

@@ -88,6 +88,7 @@ export const enWiki = {
   'modules.tab.graph': 'Graph',
   'modules.tab.sources': 'Sources',
   'modules.tab.log': 'Chronicle',
+  'modules.tab.condensed': 'Condensed',
 
   'modules.category.source': 'Sources',
   'modules.category.entity': 'Entities',

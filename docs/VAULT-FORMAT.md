@@ -344,6 +344,71 @@ section survives filing. Section headings follow the vault's configured
 document language, with the same de/en tolerance on read as the other
 sections in this document.
 
+## Condensed module overview (modules/<slug>/wiki/overview.md)
+
+```markdown
+---
+type: overview
+title: Identity Management
+module: identity-management
+condensed_at: 2026-08-10T09:15:00+02:00
+created: 2026-07-02
+sources:
+  - modules/identity-management/wiki/concepts/rbac.md
+  - modules/identity-management/wiki/sources/s-2026-07-02-auth0-rbac-guide.md
+source_hashes:
+  modules/identity-management/wiki/concepts/rbac.md: 9f2c1b…
+  modules/identity-management/wiki/sources/s-2026-07-02-auth0-rbac-guide.md: 4ad07e…
+---
+
+## Entschieden
+
+Was in diesem Modul belegt und entschieden ist.
+
+Aus: modules/identity-management/wiki/sources/s-2026-07-02-auth0-rbac-guide.md
+
+## Offen
+
+Was noch unklar ist und auf eine Entscheidung wartet.
+
+Aus: modules/identity-management/wiki/concepts/rbac.md
+
+## Widersprüche
+
+Wo sich Seiten des Moduls widersprechen — benannt, nicht geglättet.
+
+Aus: modules/identity-management/wiki/concepts/rbac.md
+
+## Direktiven
+
+Handschriftliche Vorgaben des Nutzers. Ein Kondensationslauf liest sie, schreibt
+sie aber nie.
+```
+
+The module overview is the third condensed level, next to the condensed project
+and the condensed area: a derived digest of the module's own wiki pages, kept at
+the overview's existing path instead of a sibling file. It stays a wiki page —
+`type: overview`, with `module`, `created`, `tags` and the other wiki keys
+carried over — and follows the condensed frontmatter contract on top:
+`condensed_at` is an ISO-8601 timestamp with time zone, `sources` lists the
+pages the run read **as vault paths** (not as slugs, unlike the other wiki
+pages), and `source_hashes` records the sha256 of each of them at digest time.
+The page graph reads a path to a page of the same module as that page's slug,
+so both spellings name the same page. Because the overview is a model-written
+digest, it is never cited as evidence for an answer; the pages it condenses
+are.
+
+The body has four sections, in this order: `Entschieden`/`Decided`,
+`Offen`/`Open`, `Widersprüche`/`Contradictions`, and `Direktiven`/`Directives`,
+the human-owned section a run never writes. Each machine section ends with a
+source line (`Aus:`/`From:` followed by the vault paths it rests on). Headings
+follow the document language and are read with de/en tolerance. The headings
+an overview carried before it became a condensed artifact — `Was entschieden
+ist`/`What is settled` and `Was offen ist`/`What is open` — are read as aliases
+of `Entschieden` and `Offen`, so an existing overview's content is kept rather
+than duplicated. Any other section (`Seiten`, a hand-written note) and any text
+above the first heading are foreign to the digest and carried over verbatim.
+
 ## Todos
 
 A todo is a GFM checkbox in any vault file — no dedicated format, so Obsidian and

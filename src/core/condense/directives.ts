@@ -67,6 +67,10 @@ function asSingleLine(reason: string): string {
  * would emit the three machine headings with nothing under them and claim a
  * state, patterns and open list that no run has ever produced.
  *
+ * `type` is the frontmatter `type:` of that minimal file. It differs per level: a
+ * module overview is a wiki page (`overview`), so a file written for it must not
+ * claim to be a `condensed` artifact. It is ignored when a file already exists.
+ *
  * A reason that is blank once collapsed adds no line; the rest of the file is
  * still returned unchanged.
  */
@@ -74,12 +78,13 @@ export function appendDirective(
   currentContent: string | null,
   reason: string,
   language: DocLanguage = 'de',
+  type: string = CONDENSED_TYPE,
 ): string {
   const line = asSingleLine(reason);
 
   if (currentContent === null) {
     const heading = `## ${sectionNameFor('directives', language)}`;
-    return serialize({ type: CONDENSED_TYPE }, join([heading, line], '\n\n'));
+    return serialize({ type }, join([heading, line], '\n\n'));
   }
 
   if (line.length === 0) return currentContent;

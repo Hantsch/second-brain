@@ -20,7 +20,7 @@ already typed.
 
 <!-- Order = the order the build phase works through. Dependent stories go last. -->
 
-- [ ] 081 — A module condenses itself
+- [x] 081 — A module condenses itself
 - [ ] 082 — The ingest leaves the overview alone
 - [ ] 083 — Settings has an Agent tab
 - [ ] 084 — Gaston installs and updates the agent setup

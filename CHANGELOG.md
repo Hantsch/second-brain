@@ -23,6 +23,8 @@ All notable changes to Gaston are recorded here. The format follows
   quiet periods, and a dashboard that answers where you left off.
 - Condensed layer: areas and projects gather themselves into a summary you read as a diff
   before anything is written.
+- Condensed layer: a module gathers itself into what is decided, what is open and where pages
+  contradict, which you read as a diff before anything is written.
 - Gardener: maintenance runs you can see, stop and continue, with findings you can act on and
   a health score that admits when it is partial.
 - Claude sessions: Claude Code and Codex sessions count as work on a project.

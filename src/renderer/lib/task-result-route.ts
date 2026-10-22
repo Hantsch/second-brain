@@ -22,6 +22,7 @@ function condenseRoute(ref: string): string | null {
   if (slug.length === 0) return null;
   if (unit === 'area') return `/notes?a=${encodeURIComponent(slug)}&tab=condensed`;
   if (unit === 'project') return `/projects?p=${encodeURIComponent(slug)}&tab=knowledge`;
+  if (unit === 'module') return `/knowledge?m=${encodeURIComponent(slug)}&tab=condensed`;
   return null;
 }
 

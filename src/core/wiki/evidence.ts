@@ -12,7 +12,10 @@ import type { DocType } from '@shared/types';
 import { ALL_DOC_TYPES } from '@shared/types';
 
 /** Dokumenttypen, die nie als Beleg fuer eine Antwort zitiert werden duerfen. */
-export const EVIDENCE_EXCLUDED_TYPES: readonly DocType[] = ['condensed'];
+/* `overview`: the module overview is a condensed artifact of its own wiki pages —
+   citing it would pass a model's digest off as evidence, the pages themselves are
+   the evidence (story 081). */
+export const EVIDENCE_EXCLUDED_TYPES: readonly DocType[] = ['condensed', 'overview'];
 
 /** Ob ein Dokumenttyp von der Beleg-Zitierung ausgeschlossen ist. */
 export function isEvidenceExcluded(type: DocType): boolean {

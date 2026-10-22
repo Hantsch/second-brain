@@ -87,6 +87,12 @@ export {
   type CondenseProjectSourceItem,
 } from './condense-project';
 export {
+  condenseModulePrompt,
+  CONDENSE_MODULE_SCHEMA,
+  type CondenseModuleInput,
+  type CondenseModuleSourceItem,
+} from './condense-module';
+export {
   clamp,
   CONDENSE_SOFT_CAP_CHARS,
   CONDENSE_SOFT_CAP_WORDS,

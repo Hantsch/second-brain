@@ -28,7 +28,10 @@ export type GardenerFindingKind =
   | 'project-without-next-step'
   /** A day announced something for a later day that never got a follow-up. */
   | 'loose-end'
-  /** An area's condensed artifact is missing or older than its material. */
+  /**
+   * A condensed artifact is missing or older than its material — an area's or
+   * project's condensed file, or a module's overview page.
+   */
   | 'condensation-due';
 
 /**

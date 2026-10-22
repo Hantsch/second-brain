@@ -116,7 +116,7 @@ export const deGarden = {
   'garden.advice.loose-end':
     'Angekündigte Sätze aufgreifen — beantworten oder als erledigt weglegen.',
   'garden.advice.condensation-due':
-    'Areas und Projekte mit fälliger Verdichtung öffnen und neu verdichten.',
+    'Areas, Projekte und Module mit fälliger Verdichtung öffnen und neu verdichten.',
 
   // ── Befunde ───────────────────────────────────────────────────────────────
   'garden.findings.label': 'Befunde',

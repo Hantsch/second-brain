@@ -170,6 +170,7 @@ const own = {
   'settings.fallback.gardener-audit': 'the deterministic checks keep running',
   'settings.fallback.condense-area': 'the area page stays as it is',
   'settings.fallback.condense-project': 'the project pages stay as they are',
+  'settings.fallback.condense-module': 'the module pages stay as they are',
 
   'settings.machine.title': 'This machine',
   'settings.machine.scan': 'Scan this machine',

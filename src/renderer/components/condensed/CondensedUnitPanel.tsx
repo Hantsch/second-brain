@@ -1,5 +1,5 @@
-/* The condensed panel of one unit — an area or a project (stories 038/043,
-   made level-agnostic in 045, D3). Everything level-specific arrives as a
+/* The condensed panel of one unit — an area, a project or a module (stories
+   038/043, made level-agnostic in 045, D3). Everything level-specific arrives as a
    prop: which unit is addressed (`unit` + `slug`), which routing entry a run
    needs (`task`), which i18n block the copy comes from (`keyPrefix`), and the
    unit's `title` for the messages that name it. The panel holds no
@@ -78,6 +78,8 @@ export interface CondensedUnitPanelProps {
   task: TaskKind;
   /** i18n key block this panel's copy comes from, e.g. `notes.condensed`. */
   keyPrefix: string;
+  /** Whether the artifact offers a delete; the module level has none (`condense:delete` refuses it). */
+  canDelete?: boolean;
 }
 
 /** A wikilink in a condensed page renders as its label, not a link — this
@@ -93,6 +95,7 @@ export function CondensedUnitPanel({
   title,
   task,
   keyPrefix,
+  canDelete = true,
 }: CondensedUnitPanelProps) {
   const t = useT();
   const language = useLanguage();
@@ -229,22 +232,26 @@ export function CondensedUnitPanel({
       </p>
       <div className="sb-md">{renderMarkdown(data.content, { wikilink: plainWikilink })}</div>
       <span className="gs-hint">{t(key('notEvidence'))}</span>
-      <div className="sb-condensed-actions">
-        <Button variant="danger" icon="trash-2" onClick={() => setDeleteOpen(true)}>
-          {t(key('delete.action'))}
-        </Button>
-      </div>
-      <CondenseDeleteDialog
-        open={deleteOpen}
-        path={data.path}
-        busy={del.isPending}
-        error={deleteError}
-        onClose={() => {
-          setDeleteOpen(false);
-          setDeleteError(null);
-        }}
-        onSubmit={() => deleteArtifact(data.hash)}
-      />
+      {canDelete ? (
+        <>
+          <div className="sb-condensed-actions">
+            <Button variant="danger" icon="trash-2" onClick={() => setDeleteOpen(true)}>
+              {t(key('delete.action'))}
+            </Button>
+          </div>
+          <CondenseDeleteDialog
+            open={deleteOpen}
+            path={data.path}
+            busy={del.isPending}
+            error={deleteError}
+            onClose={() => {
+              setDeleteOpen(false);
+              setDeleteError(null);
+            }}
+            onSubmit={() => deleteArtifact(data.hash)}
+          />
+        </>
+      ) : null}
     </div>
   );
 

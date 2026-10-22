@@ -1,9 +1,10 @@
 /**
- * Verdichtung faellig: das Eingangsmaterial einer Area (story 039) oder eines
- * Projekts (story 046) ist seit dem letzten Verdichtungslauf gewachsen oder hat
- * sich geaendert, oder es gibt Material und noch gar kein Artefakt.
+ * Verdichtung faellig: das Eingangsmaterial einer Area (story 039), eines
+ * Projekts (story 046) oder eines Moduls ist seit dem letzten Verdichtungslauf
+ * gewachsen oder hat sich geaendert, oder es gibt Material und noch gar kein
+ * Artefakt.
  *
- * One kind, two arms — not two kinds. Both answer the same question about the
+ * One kind, three arms — not three kinds. All answer the same question about the
  * same mechanism (`source_hashes:`), and a user who dismisses "condensation
  * due" dismisses one thing, not two.
  *
@@ -35,8 +36,9 @@
 import type { GardenerFinding, ProjectStatus } from '@shared/types';
 import { areaInputs } from '@core/condense/inputs';
 import type { CondenseInput } from '@core/condense/inputs';
+import { moduleInputs } from '@core/condense/inputs-module';
 import { projectInputs } from '@core/condense/inputs-project';
-import { condensedAreaPath, condensedProjectPath } from '@core/condense/paths';
+import { condensedAreaPath, condensedProjectPath, moduleOverviewPath } from '@core/condense/paths';
 import { recordedSources } from '@core/condense/sources';
 import type { RecordedSource } from '@core/condense/sources';
 import type { IndexedDoc } from '@core/index/types';
@@ -219,10 +221,73 @@ function projectFindings(ctx: GardenerContext): GardenerFinding[] {
   return findings;
 }
 
+/**
+ * The findings over module overviews.
+ *
+ * Same comparison once more, over `moduleInputs()` — the selector `condenseModule()`
+ * records its hashes from. A module is not "missing" when its overview file exists
+ * as the stub every module starts with: the stub has no `condensed_at`, and that,
+ * not the file's absence, is what says no condensation ever ran.
+ *
+ * The overview comes first in `paths`, as for a project: it is the file the
+ * finding's `open` exit resolves, and the only file that is about the whole module.
+ * A module-scoped run keeps these findings through `module: slug`.
+ */
+function moduleFindings(ctx: GardenerContext): GardenerFinding[] {
+  const findings: GardenerFinding[] = [];
+  const { docs, byPath } = ctx.index.index();
+
+  for (const module of ctx.modules) {
+    const current = moduleInputs(docs, module.slug);
+    if (current.length === 0) continue; // Only the stub: nothing to condense.
+
+    const overviewPath = moduleOverviewPath(module.slug);
+    const overview = byPath.get(overviewPath);
+    const condensedAt = overview === undefined ? '' : condensedAtOf(overview.frontmatter);
+    const key = findingKey(['module', module.slug], current);
+
+    if (overview === undefined || condensedAt === '') {
+      const text = ctx.labels.condensationMissing(module.slug, 'module');
+      findings.push(
+        buildFinding(ctx, {
+          kind: 'condensation-due',
+          severity: 'info',
+          title: text.title,
+          detail: text.detail,
+          paths: [overviewPath],
+          module: module.slug,
+          key,
+          fix: null,
+        }),
+      );
+      continue;
+    }
+
+    const changed = changedInputs(current, recordedSources(overview.frontmatter));
+    if (changed.length === 0) continue;
+
+    const text = ctx.labels.condensationDue(module.slug, condensedAt, changed.length, 'module');
+    findings.push(
+      buildFinding(ctx, {
+        kind: 'condensation-due',
+        severity: 'info',
+        title: text.title,
+        detail: text.detail,
+        paths: [overviewPath, ...changed.map((input) => input.path)],
+        module: module.slug,
+        key,
+        fix: null,
+      }),
+    );
+  }
+
+  return findings;
+}
+
 export const condensationDueCheck: Check = {
   kind: 'condensation-due',
 
   run(ctx: GardenerContext): GardenerFinding[] {
-    return [...areaFindings(ctx), ...projectFindings(ctx)];
+    return [...areaFindings(ctx), ...projectFindings(ctx), ...moduleFindings(ctx)];
   },
 };

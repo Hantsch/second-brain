@@ -85,7 +85,9 @@ export type TaskKind =
   /** Condense an area's notes, todos and day entries into a shorter overview. */
   | 'condense-area'
   /** Condense an entire project into one artifact file. */
-  | 'condense-project';
+  | 'condense-project'
+  /** Condense a module's wiki pages into one overview: decided, open, contradictions. */
+  | 'condense-module';
 
 export interface TaskDefinition {
   kind: TaskKind;

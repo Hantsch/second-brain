@@ -76,3 +76,23 @@ export const CONDENSE_SOFT_CAP_CHARS = 12000;
  * constant (see `promptItemsClampedChars` in `condense-project.ts`).
  */
 export const CONDENSE_ITEM_CHARS = 1500;
+
+/**
+ * Schema of one condensed section — `{ text, sources }` — shared by every level so
+ * the reply shape the run's attribution check reads cannot drift between them.
+ * `sourcesDescription` is the only part that differs: what a level may cite.
+ */
+export function condenseSectionSchema(
+  description: string,
+  sourcesDescription: string,
+): Record<string, unknown> {
+  return {
+    type: 'object',
+    additionalProperties: false,
+    required: ['text', 'sources'],
+    properties: {
+      text: { type: 'string', description },
+      sources: { type: 'array', items: { type: 'string' }, description: sourcesDescription },
+    },
+  };
+}

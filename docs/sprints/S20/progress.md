@@ -1,0 +1,27 @@
+- 2026-10-22T08:10:00 · sprint · resumed
+- 2026-10-22T08:14:13 · refine · 081 082 083 084 085 086 087 · started
+- 2026-10-22T08:35:07 · refine · 081 082 083 084 085 086 087 · done
+- 2026-10-22T08:35:07 · 081 · build · started
+- 2026-10-22 08:35 · 081 · D1 module overview format · started
+- 2026-10-22 08:41 · 081 · D1 module overview format · done
+- 2026-10-22 08:41 · 081 · D2 condense-module task kind · started
+- 2026-10-22 08:45 · 081 · D2 condense-module task kind · done
+- 2026-10-22 08:45 · 081 · D3 module run prompt+inputs+proposal · started
+- 2026-10-22 08:50 · 081 · D3 module run prompt+inputs+proposal · done
+- 2026-10-22 08:50 · 081 · D4 condense channels serve module · started
+- 2026-10-22 08:50 · 081 · D5 maintenance condensation due · started
+- 2026-10-22 08:54 · 081 · D4 condense channels serve module · done
+- 2026-10-22 08:54 · 081 · D5 maintenance condensation due · done
+- 2026-10-22 08:54 · 081 · D6 module condensed tab · started
+- 2026-10-22 08:58 · 081 · D6 module condensed tab · done
+- 2026-10-22 08:58 · 081 · D7 routes and module flow · started
+- 2026-10-22 09:03 · 081 · D7 routes and module flow · done
+- 2026-10-22 09:03 · 081 · verify · started
+- 2026-10-22 09:06 · 081 · verify · done
+- 2026-10-22 09:06 · 081 · review 1 · started
+- 2026-10-22 09:12 · 081 · review 1 · done
+- 2026-10-22 09:12 · 081 · review 1 fixes · started
+- 2026-10-22 09:17 · 081 · review 1 fixes · done
+- 2026-10-22 09:17 · 081 · verify · started
+- 2026-10-22 09:21 · 081 · verify · done
+- 2026-10-22 09:23 · 081 · story · done

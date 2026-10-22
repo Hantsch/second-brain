@@ -95,7 +95,7 @@ function slugOf(doc: IndexedDoc): string {
 }
 
 /** Ist die Datei eine Wiki-Seite? `index.md` und `log.md` sind keine. */
-function isWikiPage(doc: IndexedDoc): boolean {
+export function isWikiPage(doc: IndexedDoc): boolean {
   if (!/^modules\/[^/]+\/wiki\//.test(doc.path)) return false;
   const name = baseName(doc.path);
   const stem = name.slice(0, name.length - extName(name).length);
@@ -112,6 +112,17 @@ function countPage(counts: Map<string, ModulePageCounts>, page: WikiPage): void 
   if (page.type === 'entity') entry.entities += 1;
   if (page.type === 'concept') entry.concepts += 1;
   counts.set(page.module, entry);
+}
+
+/**
+ * A condensed module overview records its inputs as vault paths, every other page
+ * as slugs. A path to a page of the same module reads as that page's slug, so
+ * both spellings name one page; anything else stays exactly as written (story 081).
+ */
+function sourceRef(entry: string, module: string): string {
+  if (!entry.startsWith(`modules/${module}/wiki/`) || extName(entry) !== '.md') return entry;
+  const name = baseName(entry);
+  return name.slice(0, name.length - extName(name).length) || entry;
 }
 
 interface Draft {
@@ -137,7 +148,7 @@ function draftOf(doc: IndexedDoc): Draft | null {
       created: asDate(doc.frontmatter['created']) ?? doc.updated.slice(0, 10),
       updated: doc.updated,
       tags: doc.tags,
-      sources: asStringList(doc.frontmatter['sources']),
+      sources: asStringList(doc.frontmatter['sources']).map((entry) => sourceRef(entry, module)),
       outbound: [],
       inbound: [],
       excerpt: excerpt(doc.body),

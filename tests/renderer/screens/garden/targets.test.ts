@@ -47,6 +47,22 @@ describe('targetFor — projects', () => {
   });
 });
 
+describe('targetFor — modules', () => {
+  it("a module overview opens the module's condensed tab", () => {
+    expect(targetFor('modules/second-brain-methodik/wiki/overview.md')).toEqual({
+      kind: 'route',
+      to: '/knowledge?m=second-brain-methodik&tab=condensed',
+    });
+  });
+
+  it('leaves the other pages of a module to the generic route', () => {
+    expect(targetFor('modules/second-brain-methodik/wiki/concepts/belegpflicht.md')).not.toEqual({
+      kind: 'route',
+      to: '/knowledge?m=second-brain-methodik&tab=condensed',
+    });
+  });
+});
+
 describe('targetFor — regression guard', () => {
   it('still falls back to opening unrelated paths as a file', () => {
     expect(targetFor('notes/2026-01-01.md')).toEqual({

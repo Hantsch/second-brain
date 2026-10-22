@@ -86,6 +86,36 @@ describe('planSectionMigration', () => {
     ).toEqual([]);
   });
 
+  it('leaves module-only headings alone while still migrating the shared kinds', () => {
+    const body = [
+      '## Contradictions',
+      '',
+      'Mine.',
+      '',
+      '## Decided',
+      '',
+      'Also mine.',
+      '',
+      '## Notes',
+      '',
+      'Migrates.',
+      '',
+    ].join('\n');
+    const plan = planSectionMigration([{ path: PROJECT, body, hash: 'h1' }], 'de');
+
+    expect(plan).toEqual([
+      {
+        path: PROJECT,
+        hash: 'h1',
+        renames: [{ kind: 'notes', from: 'Notes', to: 'Notizen' }],
+        folds: [],
+      },
+    ]);
+    const migrated = migrateSectionHeadings(body, 'de');
+    expect(headings(migrated)).toEqual(['Contradictions', 'Decided', 'Notizen']);
+    expect(contentLines(migrated)).toEqual(contentLines(body));
+  });
+
   it('never plans anything under raw/, .secondbrain/ or a wiki folder', () => {
     const body = ['## Notizen', '', 'Text.', ''].join('\n');
     const docs = [

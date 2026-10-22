@@ -18,6 +18,7 @@ import { enSettings } from './en-settings';
 import { enChats } from './en-chats';
 import { enTasks } from './en-tasks';
 import { enUpdate } from './en-update';
+import { enModulesCondensed } from './en-modules-condensed';
 import { enWiki } from './en-wiki';
 
 export const en: Record<TranslationKey, string> = {
@@ -212,6 +213,9 @@ export const en: Record<TranslationKey, string> = {
   'task.condense-project.label': 'Condense project',
   'task.condense-project.hint':
     "Reads a project's notes, todos and day entries and writes a condensed file. Personal content — a local model is explicitly recommended.",
+  'task.condense-module.label': 'Condense module',
+  'task.condense-module.hint':
+    "Reads a module's wiki pages and writes an overview: what is decided, what is open, and contradictions. Runs on module content, not journal content — a local model is not required.",
 
   /* Notes from ingesting. The core knows no language and sends a code
      (`IngestNoteCode`); the sentence lives here. Every refusal states something about
@@ -248,4 +252,5 @@ export const en: Record<TranslationKey, string> = {
   ...enTasks,
   ...enUpdate,
   ...enWiki,
+  ...enModulesCondensed,
 };

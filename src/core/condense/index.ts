@@ -16,6 +16,7 @@
 export { agentRef, parseAgentRef, type AgentRef } from './agent-ref';
 export { areaSlugFromCondensedPath, condensedAreaPath, isCondensedAreaPath } from './paths';
 export { condensedProjectPath, isCondensedProjectPath, projectRefFromCondensedPath } from './paths';
+export { moduleOverviewPath, moduleSlugFromOverviewPath } from './paths';
 export { diffLines } from './diff';
 export type { DiffRow, DiffRowKind, LineDiffResult } from './diff';
 export { buildAcceptedDocument } from './apply';
@@ -42,6 +43,7 @@ export {
   composeCondensedArtifact,
   emptyArtifact,
   emptyCondensedArtifact,
+  MODULE_SECTIONS,
   parseArtifact,
   parseCondensedArtifact,
   PROJECT_SECTIONS,
@@ -49,6 +51,8 @@ export {
   type CondensedArtifact,
   type CondensedDirectives,
   type CondensedExtraSection,
+  type CondensedModuleArtifact,
+  type CondensedModuleSectionKind,
   type CondensedProjectArtifact,
   type CondensedProjectSectionKind,
   type CondensedSectionContent,
@@ -76,6 +80,7 @@ export {
   type CondenseProjectTruncationReport,
   type CondenseProjectVaultSources,
 } from './inputs-project';
+export { moduleInputs } from './inputs-module';
 export {
   recordedSources,
   SOURCE_HASHES_FIELD,
@@ -108,6 +113,19 @@ export {
   type CondenseProjectProposal,
   type CondenseProjectResult,
 } from './run-project';
+export {
+  condenseModule,
+  CONDENSE_MODULE_TASK,
+  MODULE_OVERVIEW_TYPE,
+  type CondenseModuleAttributionFailure,
+  type CondenseModuleAttributionProblem,
+  type CondenseModuleDeps,
+  type CondenseModuleFailed,
+  type CondenseModuleNoInputs,
+  type CondenseModuleNoModel,
+  type CondenseModuleProposal,
+  type CondenseModuleResult,
+} from './run-module';
 export {
   writeCondensedArea,
   writeCondensedArtifact,

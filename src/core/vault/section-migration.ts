@@ -114,6 +114,11 @@ interface Operations {
 
 const NOTHING: Operations = { renames: [], folds: [] };
 
+/* Kinds that only the module overview artifact owns. Wiki pages are outside this
+   migration, so a `## Contradictions` or `## Decided` anywhere it does run is the
+   user's own heading and is not ours to rename. */
+const MODULE_ONLY_KINDS: ReadonlySet<SectionKind> = new Set(['decided', 'contradictions']);
+
 /**
  * The renames and folds a body needs to speak `to`.
  *
@@ -132,7 +137,7 @@ function operationsFor(body: string, to: DocLanguage): Operations {
   for (const range of findSections(body, 2)) {
     const heading = range.heading.trim();
     const kind = sectionKindOf(heading);
-    if (kind === null) continue;
+    if (kind === null || MODULE_ONLY_KINDS.has(kind)) continue;
     byKind.set(kind, [...(byKind.get(kind) ?? []), heading]);
   }
 

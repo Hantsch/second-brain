@@ -5,7 +5,8 @@
  * The set of machine-owned sections is an **argument**, not a constant of this
  * module: `parseArtifact`/`composeArtifact` are handed `CONDENSED_SECTIONS` for
  * an area (`areas/<slug>.condensed.md`) and `PROJECT_SECTIONS` for a project
- * (`projects/<scope>/<slug>/condensed.md`). One round trip, two levels — a
+ * (`projects/<scope>/<slug>/condensed.md`) and `MODULE_SECTIONS` for a module
+ * overview (`modules/<slug>/wiki/overview.md`). One round trip, every level — a
  * second copy of it would be a second place the losslessness below can quietly
  * stop being true. The area-level `…CondensedArtifact` functions are thin
  * wrappers that pass `CONDENSED_SECTIONS`, so the area's callers keep one
@@ -78,6 +79,19 @@ export const PROJECT_SECTIONS: readonly CondensedProjectSectionKind[] = [
   'learned',
 ];
 
+/** The three sections a run of a module overview writes (docs/VAULT-FORMAT.md, story 081). */
+export type CondensedModuleSectionKind = Extract<
+  SectionKind,
+  'decided' | 'open' | 'contradictions'
+>;
+
+/** Their order in the file — the same stability argument as above. */
+export const MODULE_SECTIONS: readonly CondensedModuleSectionKind[] = [
+  'decided',
+  'open',
+  'contradictions',
+];
+
 /** Ein maschineller Abschnitt: Prosa plus die Pfade, aus denen sie stammt. */
 export interface CondensedSectionContent {
   /** Der Fliesstext ohne die `Aus:`/`From:`-Zeile. */
@@ -130,6 +144,13 @@ export interface CondensedArtifact<K extends SectionKind = CondensedSectionKind>
 
 /** Ein verdichtetes Projekt (`projects/<scope>/<slug>/condensed.md`). */
 export type CondensedProjectArtifact = CondensedArtifact<CondensedProjectSectionKind>;
+
+/**
+ * A module overview (`modules/<slug>/wiki/overview.md`). Its `module:`, `created:`
+ * and the other wiki keys travel in `extraFrontmatter`; its document type is
+ * `overview`, handed to `composeArtifact` by the caller.
+ */
+export type CondensedModuleArtifact = CondensedArtifact<CondensedModuleSectionKind>;
 
 /** An empty artifact for this section set — the starting point of a first run. */
 export function emptyArtifact<K extends SectionKind>(sections: readonly K[]): CondensedArtifact<K> {
@@ -192,13 +213,18 @@ export function parseArtifact<K extends SectionKind>(
   return artifact;
 }
 
-/** Aus der Struktur wieder eine ganze Datei machen. */
+/**
+ * Aus der Struktur wieder eine ganze Datei machen. `type` is written as the
+ * document's `type:` and picks its field order; `type` is an owned field, so
+ * parsing never carries it over — the caller of each level states it.
+ */
 export function composeArtifact<K extends SectionKind>(
   artifact: CondensedArtifact<K>,
   sections: readonly K[],
   docLanguage: DocLanguage = 'de',
+  type: string = CONDENSED_TYPE,
 ): string {
-  return serialize(frontmatterOf(artifact), bodyOf(artifact, sections, docLanguage));
+  return serialize(frontmatterOf(artifact, type), bodyOf(artifact, sections, docLanguage));
 }
 
 /** Eine bestehende verdichtete Area aufbrechen. */
@@ -261,10 +287,13 @@ function splitSourceLine(content: string): CondensedSectionContent {
   return { text: joinTrimmed(lines.slice(0, -1)), sources: cleanPaths(splitPaths(match[1] ?? '')) };
 }
 
-function frontmatterOf<K extends SectionKind>(artifact: CondensedArtifact<K>): Frontmatter {
+function frontmatterOf<K extends SectionKind>(
+  artifact: CondensedArtifact<K>,
+  type: string,
+): Frontmatter {
   const hashes = artifact.sourceHashes;
-  return orderFields({
-    type: CONDENSED_TYPE,
+  return orderFields(type, {
+    type,
     title: artifact.title.length > 0 ? artifact.title : undefined,
     condensed_at: artifact.condensedAt.length > 0 ? artifact.condensedAt : undefined,
     sources: cleanPaths(artifact.sources),
@@ -279,8 +308,8 @@ function frontmatterOf<K extends SectionKind>(artifact: CondensedArtifact<K>): F
  * Bekannte Felder in die kanonische Reihenfolge (`vault/frontmatter-order.ts`),
  * fremde dahinter in ihrer Dateireihenfolge — sie werden nicht umsortiert.
  */
-function orderFields(fields: Frontmatter): Frontmatter {
-  const order = canonicalOrder(CONDENSED_TYPE);
+function orderFields(type: string, fields: Frontmatter): Frontmatter {
+  const order = canonicalOrder(type);
   const keys = Object.keys(fields);
   const sorted = [
     ...order.filter((key) => keys.includes(key)),

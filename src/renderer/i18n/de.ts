@@ -18,6 +18,7 @@ import { deSettings } from './de-settings';
 import { deChats } from './de-chats';
 import { deTasks } from './de-tasks';
 import { deUpdate } from './de-update';
+import { deModulesCondensed } from './de-modules-condensed';
 import { deWiki } from './de-wiki';
 
 export const de = {
@@ -221,6 +222,9 @@ export const de = {
   'task.condense-project.label': 'Projekt verdichten',
   'task.condense-project.hint':
     'Liest Notizen, Todos und Tageseinträge eines Projekts und schreibt eine verdichtete Datei. Persönlicher Inhalt — ein lokales Modell ist ausdrücklich empfohlen.',
+  'task.condense-module.label': 'Modul verdichten',
+  'task.condense-module.hint':
+    'Liest die Wiki-Seiten eines Moduls und schreibt eine Übersicht: Entschiedenes, Offenes und Widersprüche. Arbeitet auf Modulinhalt, nicht auf Tagebuchinhalt — ein lokales Modell ist nicht nötig.',
 
   /* Hinweise des Aufnehmens. Der Kern kennt keine Sprache und schickt einen Code
      (`IngestNoteCode`); hier steht der Satz dazu. Jede Absage ist eine Aussage über
@@ -257,6 +261,7 @@ export const de = {
   ...deTasks,
   ...deUpdate,
   ...deWiki,
+  ...deModulesCondensed,
 } as const;
 
 export type TranslationKey = keyof typeof de;
