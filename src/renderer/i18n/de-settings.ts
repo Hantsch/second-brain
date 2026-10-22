@@ -37,6 +37,13 @@ const own = {
   'settings.agent.setup.install': 'Installieren',
   'settings.agent.setup.update': 'Aktualisieren',
   'settings.agent.setup.current': 'Die Einrichtung ist aktuell.',
+  'settings.agent.setup.help.title': 'Hilfemodul',
+  'settings.agent.setup.help.status.current': 'Aktuell',
+  'settings.agent.setup.help.status.outdated': 'Veraltet',
+  'settings.agent.setup.help.status.missing': 'Fehlt',
+  'settings.agent.setup.help.status.collision': 'Blockiert',
+  'settings.agent.setup.help.collision':
+    'Ein Modul namens „gaston-help“, das nicht von Gaston stammt, blockiert das Hilfemodul. Wird dieses Modul umbenannt, ist der Name frei. Es wurde nichts geschrieben.',
   'settings.agent.setup.plan.install': 'Agent-Einrichtung installieren',
   'settings.agent.setup.plan.update': 'Agent-Einrichtung aktualisieren',
   'settings.agent.setup.plan.intro':
@@ -79,6 +86,8 @@ const own = {
   'settings.agent.protection.limit':
     'Die Shell-Prüfung liest den Befehlstext. Ein Pfad, der aus Variablen gebaut wird, oder ein Skript, das Dateien selbst öffnet, wird nicht erkannt.',
   'settings.agent.about.title': 'Worum es geht',
+  'settings.agent.about.open': 'Die Agent-Seite in Wissen lesen',
+  'settings.agent.about.unavailable': 'Installiere oben das Hilfemodul, um es hier zu lesen.',
   'settings.agent.about.body':
     'Der Agent ist Claude Code, das du selbst in einem Terminal mit dem Vault als Arbeitsordner öffnest. Er darf die Wiki-Ebene eines Moduls pflegen, für alles andere Vorschläge schreiben und die Aufträge abarbeiten, die du ihm übergibst. Er liest nie journal/, schreibt nie raw/, und Gaston startet ihn nie ohne Terminal.',
 

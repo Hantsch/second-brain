@@ -20,8 +20,7 @@ import type { DocLanguage } from '@shared/types';
 import { isoDay, wikiLogPath } from '@core/vault/paths';
 import type { DateLike } from '@core/vault/paths';
 import { phrases } from './text';
-import type { WikiStore } from './types';
-import { writeTextWithRetry } from './write-retry';
+import { type TextStore, writeTextWithRetry } from './write-retry';
 
 /** Die drei Anlaesse, die ein Modul protokolliert. */
 export type WikiLogKind = 'ingest' | 'query' | 'lint';
@@ -118,7 +117,7 @@ export interface AppendLogOptions {
  * whole point of naming it.
  */
 export async function appendLog(
-  store: WikiStore,
+  store: TextStore,
   module: string,
   entry: WikiLogEntry,
   options: AppendLogOptions = {},

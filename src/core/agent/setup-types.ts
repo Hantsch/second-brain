@@ -5,7 +5,8 @@ export interface SetupTemplate {
   /** Vault-relative path the template is installed to. */
   path: string;
   version: number;
-  format: 'markdown' | 'markdown-frontmatter' | 'script' | 'json';
+  /** `rendered`: `body` is the final file content and already carries its own marker. */
+  format: 'markdown' | 'markdown-frontmatter' | 'script' | 'json' | 'rendered';
   body: string;
 }
 

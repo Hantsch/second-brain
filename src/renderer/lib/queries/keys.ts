@@ -187,4 +187,6 @@ export const VAULT_DEPENDENT_ROOTS: readonly string[] = [
   'gardener',
   'claude',
   'agents',
+  /* The agent setup's files, among them the help module's pages, are vault files. */
+  'agent',
 ];

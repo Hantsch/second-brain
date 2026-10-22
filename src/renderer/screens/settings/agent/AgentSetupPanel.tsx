@@ -13,6 +13,7 @@ import { useT } from '../../../i18n';
 import { decodeIpcError } from '../../../lib/ipc-error';
 import { useAgentSetupState } from '../../../lib/queries/agent';
 import { AgentSetupPlanDialog } from './AgentSetupPlanDialog';
+import { HelpModuleRow } from './HelpModuleRow';
 
 const STATUS_VARIANT: Record<AgentSetupFileStatus, NonNullable<BadgeProps['variant']>> = {
   current: 'success',
@@ -55,6 +56,7 @@ export function AgentSetupPanel() {
                 </li>
               ))}
             </ul>
+            <HelpModuleRow help={state.help} />
             {state.action === 'none' ? (
               <p>{t('settings.agent.setup.current')}</p>
             ) : (

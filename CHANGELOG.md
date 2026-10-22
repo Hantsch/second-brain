@@ -52,3 +52,6 @@ All notable changes to Gaston are recorded here. The format follows
   points you to the install guide if it is missing, and never plays host.
 - Agent tab: a Protection section reads the guard rules back from the vault's own settings file
   and tells you which ones hold. Delete one by hand and it says so, without sulking.
+- Help module: installing the agent setup also writes `gaston-help`, a module in which Gaston
+  explains its screens, the vault format and the agent. Pages you add there stay yours, and a
+  module of your own with that name blocks the install until you rename it.

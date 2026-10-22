@@ -1,8 +1,9 @@
 /* Applies the confirmed part of a setup plan. The status is recomputed first, so a
  * confirmation can never widen what may be written: only a managed path whose fresh
  * status is missing, outdated or modified is touched, and only while its content is
- * still the one the plan was made from. The manifest is written last, so it only ever
- * records files that actually landed. */
+ * still the one the plan was made from. The manifest is written after the files, so it
+ * only ever records files that actually landed. A help-module collision refuses every
+ * path: an Install or Update over a user's module writes nothing at all. */
 
 import type {
   AgentSetupApplyRequest,
@@ -10,10 +11,11 @@ import type {
   AgentSetupFileStatus,
 } from '../../shared/types/agent-setup';
 import { VaultConflictError } from '../vault/types';
+import { logHelpWrite } from './help/setup';
 import { renderSetupFile } from './setup-marker';
 import { readSetupManifest, recordSetupFiles, type SetupManifestEntry } from './setup-manifest';
 import { inspectSetup } from './setup-status';
-import { SETUP_TEMPLATES } from './setup-templates';
+import { MANAGED_TEMPLATES } from './managed-templates';
 import type { SetupStore, SetupTemplate } from './setup-types';
 
 type Outcome = AgentSetupApplyResult['results'][number]['outcome'];
@@ -23,9 +25,12 @@ const WRITABLE: ReadonlySet<AgentSetupFileStatus> = new Set(['missing', 'outdate
 export async function applySetup(
   store: SetupStore,
   request: AgentSetupApplyRequest,
-  templates: readonly SetupTemplate[] = SETUP_TEMPLATES,
+  templates: readonly SetupTemplate[] = MANAGED_TEMPLATES,
 ): Promise<AgentSetupApplyResult> {
   const { templates: inspected, manifest, state } = await inspectSetup(store, templates);
+  if (state.plan.collision !== undefined) {
+    return { results: request.confirmed.map(({ path }) => ({ path, outcome: 'refused' })) };
+  }
   const byPath = new Map(inspected.map((entry) => [entry.template.path, entry]));
   const handled = new Set<string>();
   const results: AgentSetupApplyResult['results'] = [];
@@ -66,5 +71,7 @@ export async function applySetup(
       await recordSetupFiles(store, await readSetupManifest(store), written);
     }
   }
+  // After the manifest, so a failing chronicle never leaves written files unrecorded.
+  await logHelpWrite(store, written);
   return { results };
 }

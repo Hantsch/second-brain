@@ -116,3 +116,33 @@
 - 2026-10-22 12:14 · 085 · verify · started
 - 2026-10-22 12:16 · 085 · verify · done
 - 2026-10-22 12:16 · 085 · story · done
+- 2026-10-22T12:17:11 · 086 · build · started
+- 2026-10-22 12:17 · 086 · D1 Help pages and renderer · started
+- 2026-10-22 12:23 · 086 · D1 Help pages and renderer · done
+- 2026-10-22 12:24 · 086 · D2 Help module joins managed setup · started
+- 2026-10-22 12:34 · 086 · D2 Help module joins managed setup · done
+- 2026-10-22 12:34 · 086 · D3 Gardener skips help module · started
+- 2026-10-22 12:34 · 086 · D4 Agent tab row, About link, e2e · started
+- 2026-10-22 12:41 · 086 · D3 Gardener skips help module · done
+- 2026-10-22 12:41 · 086 · D4 Agent tab row, About link, e2e · done
+- 2026-10-22 12:41 · 086 · verify · started
+- 2026-10-22 12:44 · 086 · verify · done
+- 2026-10-22 12:44 · 086 · review 1 · started
+- 2026-10-22 12:50 · 086 · review 1 · done
+- 2026-10-22 12:50 · 086 · review-fix 1 · started
+- 2026-10-22 12:52 · 086 · review-fix 1 · done
+- 2026-10-22 12:52 · 086 · verify · started
+- 2026-10-22 12:55 · 086 · verify · blocked: help-module e2e and journal.test.tsx red
+- 2026-10-22 12:58 · 086 · review-fix 2 · started
+- 2026-10-22 13:03 · 086 · review-fix 2 · done
+- 2026-10-22 13:03 · 086 · verify · started
+- 2026-10-22 13:05 · 086 · verify · blocked: help-setup.test.ts one test timed out at 5000ms under load
+- 2026-10-22 13:06 · 086 · review 2 (hard) · started
+- 2026-10-22 13:14 · 086 · review 2 (hard) · done
+- 2026-10-22 13:14 · 086 · review-fix 3 content · started
+- 2026-10-22 13:14 · 086 · review-fix 3 collision · started
+- 2026-10-22 13:16 · 086 · review-fix 3 content · done
+- 2026-10-22 13:16 · 086 · review-fix 3 collision · done
+- 2026-10-22 13:16 · 086 · verify · started
+- 2026-10-22 13:19 · 086 · verify · done
+- 2026-10-22 13:19 · 086 · story · done

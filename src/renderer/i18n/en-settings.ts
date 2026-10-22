@@ -38,6 +38,13 @@ const own = {
   'settings.agent.setup.install': 'Install',
   'settings.agent.setup.update': 'Update',
   'settings.agent.setup.current': 'Setup is current.',
+  'settings.agent.setup.help.title': 'Help module',
+  'settings.agent.setup.help.status.current': 'Current',
+  'settings.agent.setup.help.status.outdated': 'Outdated',
+  'settings.agent.setup.help.status.missing': 'Missing',
+  'settings.agent.setup.help.status.collision': 'Blocked',
+  'settings.agent.setup.help.collision':
+    "A module named gaston-help that is not Gaston's blocks the help module. Renaming that module frees the name. Nothing was written.",
   'settings.agent.setup.plan.install': 'Install the agent setup',
   'settings.agent.setup.plan.update': 'Update the agent setup',
   'settings.agent.setup.plan.intro': 'Gaston writes only what is listed here, after you confirm.',
@@ -79,6 +86,8 @@ const own = {
   'settings.agent.protection.limit':
     'The shell check reads the command text. A path built from variables, or a script that opens files itself, is not caught.',
   'settings.agent.about.title': 'About this',
+  'settings.agent.about.open': 'Read the agent page in Knowledge',
+  'settings.agent.about.unavailable': 'Install the help module above to read it here.',
   'settings.agent.about.body':
     'The agent is Claude Code, which you open yourself in a terminal with the vault as its working folder. It may curate the wiki layer of a module, write proposals for everything else, and work the jobs you hand to it. It never reads journal/, never writes raw/, and Gaston never starts it without a terminal.',
 

@@ -120,7 +120,7 @@ export function AgentSetupPlanDialog({
             <Button
               size="sm"
               loading={apply.isPending}
-              disabled={confirmed.length === 0}
+              disabled={confirmed.length === 0 || plan.collision !== undefined}
               onClick={confirm}
             >
               {t(
@@ -140,6 +140,11 @@ export function AgentSetupPlanDialog({
         ) : (
           <>
             <p className="sb-dialog-lead">{t('settings.agent.setup.plan.intro')}</p>
+            {plan.collision ? (
+              <p role="status" className="sb-note-detail sb-note-bad">
+                {t('settings.agent.setup.help.collision')}
+              </p>
+            ) : null}
             {plan.write.length > 0 ? (
               <PlanSection title={t('settings.agent.setup.plan.write')}>
                 <ul className="sb-setup-files">

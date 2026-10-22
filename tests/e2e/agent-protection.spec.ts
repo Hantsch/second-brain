@@ -44,7 +44,7 @@ test('the protection section reads the rules back from the vault', async ({ app,
   await test.step('installing lists all seven rules as installed', async () => {
     await page.getByRole('button', { name: 'Install', exact: true }).click();
     const dialog = page.getByRole('dialog');
-    await dialog.getByRole('button', { name: 'Write 7 files' }).click();
+    await dialog.getByRole('button', { name: 'Write 22 files' }).click();
     await expect(dialog.getByRole('status')).toContainText('Setup written.');
     await dialog.getByRole('button', { name: 'Close', exact: true }).last().click();
     await expect(dialog).toHaveCount(0);

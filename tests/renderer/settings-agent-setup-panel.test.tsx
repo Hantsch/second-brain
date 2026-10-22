@@ -19,6 +19,7 @@ vi.mock('@renderer/lib/api', () => ({
 }));
 
 const EMPTY_PLAN = { write: [], optIn: [], leave: [], dirs: [] };
+const HELP_CURRENT = { status: 'current', installedVersion: 1, shippedVersion: 1 } as const;
 
 function show() {
   return render(
@@ -69,6 +70,7 @@ describe('agent setup panel', () => {
       ],
       action: 'none',
       plan: EMPTY_PLAN,
+      help: HELP_CURRENT,
     };
     vi.mocked(api.agent.setupStatus).mockResolvedValue(state);
     show();
@@ -85,9 +87,68 @@ describe('agent setup panel', () => {
       files: [{ path: 'CLAUDE.md', status: 'outdated', installedVersion: 1, shippedVersion: 2 }],
       action: 'update',
       plan: EMPTY_PLAN,
+      help: HELP_CURRENT,
     });
     show();
     expect(await screen.findByRole('button', { name: 'Update' })).toBeTruthy();
     expect(screen.getByText('Outdated')).toBeTruthy();
+  });
+
+  it('the help module row reads missing, outdated and current', async () => {
+    const base: Omit<AgentSetupState, 'help'> = {
+      files: [],
+      action: 'install',
+      plan: EMPTY_PLAN,
+    };
+    vi.mocked(api.agent.setupStatus).mockResolvedValue({
+      ...base,
+      help: { status: 'missing', installedVersion: null, shippedVersion: 1 },
+    });
+    const first = show();
+    const row = within(await screen.findByRole('list', { name: 'Help module' }));
+    expect(row.getByText('Missing')).toBeTruthy();
+    first.unmount();
+
+    vi.mocked(api.agent.setupStatus).mockResolvedValue({
+      ...base,
+      action: 'update',
+      help: { status: 'outdated', installedVersion: 1, shippedVersion: 2 },
+    });
+    const second = show();
+    const outdated = within(await screen.findByRole('list', { name: 'Help module' }));
+    expect(outdated.getByText('Outdated')).toBeTruthy();
+    expect(outdated.getByText('v1 → v2')).toBeTruthy();
+    second.unmount();
+
+    vi.mocked(api.agent.setupStatus).mockResolvedValue({
+      ...base,
+      action: 'none',
+      help: HELP_CURRENT,
+    });
+    show();
+    const current = within(await screen.findByRole('list', { name: 'Help module' }));
+    expect(current.getByText('Current')).toBeTruthy();
+  });
+
+  it('a collision says why nothing is written, and its plan cannot be confirmed', async () => {
+    vi.mocked(api.agent.setupStatus).mockResolvedValue({
+      files: [],
+      action: 'install',
+      plan: {
+        ...EMPTY_PLAN,
+        collision: { module: 'gaston-help', path: 'modules/gaston-help/module.md' },
+      },
+      help: { status: 'collision', installedVersion: null, shippedVersion: 1 },
+    });
+    show();
+    const sentence = /A module named gaston-help that is not Gaston's blocks the help module/;
+    expect(await screen.findByText(sentence)).toBeTruthy();
+    expect(screen.getByText('Blocked')).toBeTruthy();
+
+    (await screen.findByRole('button', { name: 'Install' })).click();
+    const dialog = within(await screen.findByRole('dialog'));
+    expect(dialog.getByText(sentence)).toBeTruthy();
+    const confirm = dialog.getByRole('button', { name: /^Write \d+ files?$/ }) as HTMLButtonElement;
+    expect(confirm.disabled).toBe(true);
   });
 });

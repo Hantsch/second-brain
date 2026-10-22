@@ -1,12 +1,18 @@
 /* The in-file ownership marker of a setup file. The manifest is the authority on what
  * Gaston installed; the marker is only the fallback when the manifest is lost, so a
- * file is recognised as Gaston's solely by a marker line in its fixed position — a
- * user file that merely mentions the marker text somewhere stays the user's. */
+ * file is recognised as Gaston's solely by a marker in its fixed position — a user
+ * file that merely mentions the marker text somewhere stays the user's.
+ *
+ * Two forms: a comment line naming the template id, or, for a page that has
+ * frontmatter anyway, the keys `managed_by: gaston` and `template_version: <n>` in its
+ * leading YAML block. The frontmatter form names no id; its owner is the path. */
 
+import { parse } from '../vault/frontmatter';
 import type { SetupTemplate } from './setup-types';
 
 export interface SetupMarker {
-  id: string;
+  /** The template id of the comment form; `null` for the frontmatter form. */
+  id: string | null;
   version: number;
 }
 
@@ -30,6 +36,7 @@ export function renderSetupFile(template: SetupTemplate): string {
   const marker = markerText(template);
   switch (template.format) {
     case 'json':
+    case 'rendered':
       return template.body;
     case 'markdown':
       return `<!-- ${marker} -->\n${template.body}`;
@@ -51,8 +58,21 @@ export function renderSetupFile(template: SetupTemplate): string {
   }
 }
 
+/** The frontmatter form: both keys in a leading, parseable YAML block, the version an integer. */
+function frontmatterMarker(content: string): SetupMarker | null {
+  const { frontmatter, hadFrontmatter } = parse(content);
+  if (!hadFrontmatter || frontmatter.managed_by !== 'gaston') return null;
+  const version = frontmatter.template_version;
+  if (typeof version !== 'number' || !Number.isInteger(version) || version < 0) return null;
+  return { id: null, version };
+}
+
 /** The marker in one of the positions `renderSetupFile` puts it, or null. */
 export function parseMarker(content: string): SetupMarker | null {
+  return commentMarker(content) ?? frontmatterMarker(content);
+}
+
+function commentMarker(content: string): SetupMarker | null {
   const lines = content.split(/\r?\n/);
   const candidates = [lines[0]];
   if (lines[0]?.startsWith('#!') === true) candidates.push(lines[1]);

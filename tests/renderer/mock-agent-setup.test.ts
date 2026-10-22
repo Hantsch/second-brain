@@ -2,6 +2,7 @@
  * import the core's template list; this test is where the two are kept in step. */
 
 import { describe, expect, it } from 'vitest';
+import { HELP_MODULE_VERSION } from '@core/agent/help/version';
 import { SETUP_TEMPLATES } from '@core/agent/setup-templates';
 import { agentSetupNotInstalled } from '@renderer/lib/mock-agent-setup';
 
@@ -13,5 +14,13 @@ describe('browser-mode agent setup state', () => {
       const shipped = SETUP_TEMPLATES.find((t) => t.path === file.path);
       expect(file.shippedVersion, file.path).toBe(shipped?.version);
     }
+  });
+
+  it('reports the help module as missing at the shipped version', () => {
+    expect(agentSetupNotInstalled.help).toEqual({
+      status: 'missing',
+      installedVersion: null,
+      shippedVersion: HELP_MODULE_VERSION,
+    });
   });
 });

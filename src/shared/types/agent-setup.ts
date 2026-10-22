@@ -1,6 +1,8 @@
 /* Types and constants for the agent setup that Gaston installs into a vault (the
  * vault-level CLAUDE.md, skills, hooks and settings that let Claude Code work on it). */
 
+import type { HelpModuleState } from '../help-module';
+
 /** Where the agent exchanges files with Gaston; the only part of `.secondbrain/` it may write. */
 export const AGENT_DIRS = {
   jobs: '.secondbrain/agent/jobs',
@@ -34,12 +36,27 @@ export interface AgentSetupPlan {
   optIn: { path: string; expectedHash: string }[];
   leave: { path: string; status: AgentSetupFileStatus }[];
   dirs: string[];
+  /**
+   * A user-owned folder sits where Gaston would install a module. While it is set, the
+   * plan writes nothing at all — `write`, `optIn` and `dirs` are empty and apply refuses
+   * every path. Absent when nothing collides.
+   */
+  collision?: AgentSetupCollision;
+}
+
+export interface AgentSetupCollision {
+  /** Slug of the module whose folder is taken. */
+  module: string;
+  /** The module file that is missing or not Gaston's. */
+  path: string;
 }
 
 export interface AgentSetupState {
   files: AgentSetupFile[];
   action: 'install' | 'update' | 'none';
   plan: AgentSetupPlan;
+  /** The help module as one row; it travels with the setup because one Install writes both. */
+  help: HelpModuleState;
 }
 
 export interface AgentSetupApplyRequest {

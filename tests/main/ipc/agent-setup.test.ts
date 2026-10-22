@@ -51,4 +51,37 @@ describe('agent setup channels in main', () => {
     expect(await vault.exists('CLAUDE.md')).toBe(false);
     expect(await vault.exists('.claude/gaston-manifest.json')).toBe(false);
   });
+
+  it('an applied help module is refreshed into the index with its log, and the renderer is woken', async () => {
+    const refresh = vi.fn().mockResolvedValue(undefined);
+    const refreshIndexState = vi.fn().mockResolvedValue(undefined);
+    const sendEvent = vi.fn();
+    const { agentSetupHandlers } = await import('../../../src/main/ipc/agent-setup');
+    const { readSetupState } = await import('../../../src/core/agent/setup-status');
+    const services = {
+      requireStore: () => vault.store,
+      index: () => ({ refresh }),
+      refreshIndexState,
+      sendEvent,
+    } as unknown as Services;
+    const handlers = agentSetupHandlers(services);
+
+    const state = await readSetupState(vault.store);
+    const confirmed = state.plan.write.map(({ path, expectedHash }) => ({ path, expectedHash }));
+    await handlers['agent:setupApply']?.({ confirmed });
+
+    const helpPages = confirmed
+      .map((c) => c.path)
+      .filter((p) => p.startsWith('modules/gaston-help/'));
+    expect(helpPages.length).toBeGreaterThan(0);
+    const [refreshed] = refresh.mock.calls[0] as [string[]];
+    expect(refreshed).toEqual(
+      expect.arrayContaining([...helpPages, 'modules/gaston-help/wiki/log.md']),
+    );
+    expect(refreshed.every((p) => p.startsWith('modules/gaston-help/'))).toBe(true);
+    expect(sendEvent).toHaveBeenCalledWith('event:vault-changed', {
+      paths: refreshed,
+      external: false,
+    });
+  });
 });

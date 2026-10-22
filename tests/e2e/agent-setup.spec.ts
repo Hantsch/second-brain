@@ -101,7 +101,7 @@ test("install and update write only what the plan shows and leave the user's fil
   });
 
   await test.step('confirm writes every file with its marker and records the manifest', async () => {
-    await confirmAndClose(page, 'Write 7 files');
+    await confirmAndClose(page, 'Write 22 files');
     for (const path of MANAGED_PATHS) expect(existsSync(at(path))).toBe(true);
     expect(read('CLAUDE.md').split('\n')[0]).toContain('gaston:managed');
     for (const skill of MANAGED_PATHS.filter((path) => path.endsWith('SKILL.md'))) {

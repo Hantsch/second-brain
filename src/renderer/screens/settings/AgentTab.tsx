@@ -4,6 +4,7 @@
    Gaston only asks whether the CLI exists. It neither installs nor starts it,
    so the panel has no action beyond the link to the vendor's install guide. */
 
+import { HELP_AGENT_PAGE } from '@shared/help-module';
 import { CLAUDE_CODE_INSTALL_URL } from '@shared/types';
 import type { AgentCliStatus } from '@shared/types';
 import { Button } from '../../atoms/Button';
@@ -11,13 +12,17 @@ import { Panel } from '../../components/Panel';
 import { Skeleton } from '../../components/Skeleton';
 import { useT } from '../../i18n';
 import { api } from '../../lib/api';
-import { useAgentCliStatus } from '../../lib/queries/agent';
+import { homeOf } from '../../lib/doc-home';
+import { useAgentCliStatus, useAgentSetupState } from '../../lib/queries/agent';
 import { AgentProtectionPanel } from './agent/AgentProtectionPanel';
 import { AgentSetupPanel } from './agent/AgentSetupPanel';
 
 export function AgentTab() {
   const t = useT();
   const query = useAgentCliStatus();
+  const helpStatus = useAgentSetupState().data?.help.status;
+  /* Without the module there is no page to open; collision means the folder is not Gaston's. */
+  const helpReadable = helpStatus === 'current' || helpStatus === 'outdated';
 
   /* A failed query is "unknown", never a blank panel. */
   const status: AgentCliStatus | null = query.isError
@@ -72,7 +77,16 @@ export function AgentTab() {
       <AgentProtectionPanel />
 
       <Panel title={t('settings.agent.about.title')}>
-        <p>{t('settings.agent.about.body')}</p>
+        <div className="sb-setting-block">
+          <p>{t('settings.agent.about.body')}</p>
+          {/* No link atom exists. The router is a HashRouter, so a plain anchor navigates in-app
+              without a handler and keeps middle-click and keyboard semantics. */}
+          {helpReadable ? (
+            <a href={`#${homeOf(HELP_AGENT_PAGE)}`}>{t('settings.agent.about.open')}</a>
+          ) : helpStatus === undefined ? null : (
+            <p className="sb-setting-example">{t('settings.agent.about.unavailable')}</p>
+          )}
+        </div>
       </Panel>
     </>
   );

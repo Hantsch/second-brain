@@ -1,5 +1,7 @@
-/* The one list of files Gaston installs into a vault for Claude Code. Later stories
- * (agent protection, help module) extend this array — nothing else enumerates templates.
+/* The one list of files Gaston installs into a vault for Claude Code. Nothing else
+ * enumerates templates; the help module joins this list in managed-templates.ts, which
+ * is what status, plan and apply use. This file stays free of the help renderer because
+ * the renderer's browser mock imports it.
  * Each body is mirrored as plain text in docs/agent-setup/<id><extension of path>. */
 
 import type { SetupTemplate } from './setup-types';

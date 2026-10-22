@@ -574,7 +574,7 @@ export async function runWithProgress(
        D3) whatever the earlier call's interpretation already said — never
        invented, and never dropped just because this call didn't ask again. */
     advice: audit?.advice ?? (alreadyDone.has('audit') ? (resumeFrom?.advice ?? []) : []),
-    size: vaultSize(run.index),
+    size: vaultSize(ctx.index),
     plan: plan.map((entry) => entry.stage),
     completed,
     /* Set exactly when the run was scoped (021c) — absent for a full run, so

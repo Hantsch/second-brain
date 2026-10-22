@@ -7,8 +7,9 @@
 import { readProtection } from '@core/agent/protection-status';
 import { applySetup } from '@core/agent/setup-apply';
 import { readSetupState } from '@core/agent/setup-status';
-import { isSafeVaultPath } from '@core/vault/paths';
-import type { AgentSetupApplyRequest } from '@shared/types';
+import { isSafeVaultPath, wikiLogPath } from '@core/vault/paths';
+import { HELP_MODULE_SLUG } from '@shared/help-module';
+import type { AgentSetupApplyRequest, AgentSetupApplyResult } from '@shared/types';
 import type { HandlerMap } from './registry';
 import { defineHandlers, fail } from './registry';
 import type { Services } from '../services';
@@ -33,11 +34,34 @@ function requireApplyRequest(value: unknown): AgentSetupApplyRequest {
   return value as AgentSetupApplyRequest;
 }
 
+/** Written help pages and the module's chronicle must show in Knowledge without a restart;
+    the watcher is not relied on to report the app's own writes. */
+async function settle(services: Services, result: AgentSetupApplyResult): Promise<void> {
+  const written = result.results.filter((r) => r.outcome === 'written').map((r) => r.path);
+  const touched = written.filter((path) => path.startsWith(`modules/${HELP_MODULE_SLUG}/`));
+  if (touched.length === 0) return;
+  touched.push(wikiLogPath(HELP_MODULE_SLUG));
+  const index = services.index();
+  if (index?.refresh) {
+    try {
+      await index.refresh(touched);
+      await services.refreshIndexState();
+    } catch (error) {
+      // Derived state: a failed refresh must not turn a successful write into a failure.
+      console.warn('[agent-setup] Index-Nachlauf fehlgeschlagen:', error);
+    }
+  }
+  services.sendEvent('event:vault-changed', { paths: touched, external: false });
+}
+
 export function agentSetupHandlers(services: Services): HandlerMap {
   return defineHandlers({
     'agent:setupStatus': async () => readSetupState(services.requireStore()),
     'agent:protectionStatus': async () => readProtection(services.requireStore()),
-    'agent:setupApply': async (request) =>
-      applySetup(services.requireStore(), requireApplyRequest(request)),
+    'agent:setupApply': async (request) => {
+      const result = await applySetup(services.requireStore(), requireApplyRequest(request));
+      await settle(services, result);
+      return result;
+    },
   });
 }

@@ -620,6 +620,19 @@ Where the marker sits depends on the file type:
 | `SKILL.md`          | the line directly after the closing `---` of frontmatter |
 | Script              | a `# …` line right after the shebang                     |
 | JSON (the manifest) | none                                                     |
+| Help module page    | keys in the leading frontmatter, see below               |
+
+A file that has frontmatter anyway (the help module's `module.md` and wiki pages)
+carries the marker as two frontmatter keys instead of a comment:
+
+```yaml
+managed_by: gaston
+template_version: 1
+```
+
+Both keys count only in a real frontmatter block at the top of the file, and
+`template_version` must be an integer. The same text anywhere in the body marks
+nothing.
 
 `.claude/gaston-manifest.json` is the single source of ownership. For each managed
 file it records the template id, the template version, and the hash of what was
@@ -632,6 +645,23 @@ written. The rules that follow:
   current content to `.secondbrain/trash/` so the change can be undone.
 - A managed file whose hash still matches may be updated to a newer template version
   without asking.
+
+### Help module (`modules/gaston-help/`)
+
+The module slug `gaston-help` is reserved: installing the setup also writes a
+knowledge module in which Gaston explains itself. Its `module.md`, `AGENTS.md`,
+`wiki/index.md`, `wiki/overview.md` and `wiki/concepts/*.md` are managed files under
+the rules above, recorded in the same manifest. On top of that:
+
+- A page without a marker in the folder belongs to the user, like any other file.
+  An update never writes, moves or deletes it.
+- If `modules/gaston-help/` exists and its `module.md` carries no marker (or is
+  missing without a manifest entry), the folder is someone else's module. Install
+  and update then write nothing at all — no help page, no `.claude/` file, no
+  `CLAUDE.md`. Renaming that module frees the slug.
+- `wiki/log.md` is not managed: it is created with its header if missing, and every
+  install or update that writes help pages appends one `ingest` entry naming the
+  version and the pages written.
 
 ### Who writes what under `.secondbrain/agent/`
 
@@ -686,8 +716,9 @@ Limits. The protection narrows what the agent does by accident; it is not a sand
 
 - Indirection gets past the guard: variables, command substitution, and scripts that
   open files themselves.
-- Shell writes are only guarded for `raw/`, `.claude/` and `CLAUDE.md`. A shell write
-  anywhere else is not checked.
+- Shell writes are only guarded for `raw/`, `.claude/` and `CLAUDE.md`. A shell write to
+  `projects/`, `areas/`, `inbox/` or `.secondbrain/` (apart from `index/` and `chats/`, which
+  the guard blocks for any command that names them) is not checked.
 - Glob can show journal file names (never content); the guard does not block that.
 - The guard treats `.secondbrain/index/` and `.secondbrain/chats/` like `journal/` for
   every read, including a search from `.secondbrain/` or the vault root. A git command

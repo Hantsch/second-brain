@@ -285,3 +285,4 @@ second roadmap.
 - 083 — Settings has an Agent tab · S20 · Settings gets an Agent tab: pure PATH lookup shows whether Claude Code is installed (path, absent with install-guide link, unknown with reason) plus an About this panel
 - 084 — Gaston installs and updates the agent setup · S20 · Agent tab installs/updates CLAUDE.md, .claude settings, hooks and three skills with marker/manifest, plan dialog and undo copies; .claude kept out of the index
 - 085 — The agent cannot read the journal or touch raw · S20 · deny rules from one list, fail-closed PowerShell shell guard (journal, derived index, raw, setup), wiki post-write/Stop check, Protection panel read back from the installed files
+- 086 — Gaston explains itself from the vault · S20 · managed gaston-help module (page per rail screen, vault format, agent) written on agent Install, collision-guarded, skipped by gardener and health score, with an Agent tab row and an About link

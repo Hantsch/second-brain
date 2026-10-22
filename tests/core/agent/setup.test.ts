@@ -1,6 +1,8 @@
 /* Installing and updating the agent setup writes into folders the user owns too
  * (`.claude/`, the vault root), so every test here checks what must stay untouched as
- * carefully as what gets written. */
+ * carefully as what gets written.
+ * These tests pin the template list to SETUP_TEMPLATES; the help module that joins it
+ * by default is covered in help-setup.test.ts. */
 
 import { homedir } from 'node:os';
 import { describe, expect, it } from 'vitest';
@@ -65,7 +67,7 @@ async function manifestEntries(store: VaultStore) {
 
 describe('agent setup', () => {
   it('a vault without a setup reports every managed file missing and plans an install', async () => {
-    const state = await readSetupState(new MemoryVaultStore());
+    const state = await readSetupState(new MemoryVaultStore(), SETUP_TEMPLATES);
 
     expect(state.action).toBe('install');
     for (const t of SETUP_TEMPLATES) {
@@ -104,7 +106,7 @@ describe('agent setup', () => {
     expect((await store.readText(JOBS_SKILL))?.split('\n')[0]).toBe('---');
     for (const dir of Object.values(AGENT_DIRS)) expect(await store.exists(dir)).toBe(true);
 
-    const after = await readSetupState(store);
+    const after = await readSetupState(store, SETUP_TEMPLATES);
     expect(after.action).toBe('none');
     expect(after.files.every((file) => file.status === 'current')).toBe(true);
     expect(after.plan.dirs).toEqual([]);
@@ -147,7 +149,7 @@ describe('agent setup', () => {
     };
     const store = new MemoryVaultStore({ files: own });
 
-    const state = await readSetupState(store);
+    const state = await readSetupState(store, SETUP_TEMPLATES);
     for (const path of Object.keys(own)) {
       expect(statusOf(state, path)).toMatchObject({ status: 'yours', installedVersion: null });
     }
@@ -159,9 +161,11 @@ describe('agent setup', () => {
       path,
       expectedHash: sha256(content),
     }));
-    const first = await applySetup(store, {
-      confirmed: [...confirmEverything(state).confirmed, ...everyPath],
-    });
+    const first = await applySetup(
+      store,
+      { confirmed: [...confirmEverything(state).confirmed, ...everyPath] },
+      SETUP_TEMPLATES,
+    );
     const second = await applySetup(store, { confirmed: everyPath }, shippedWith(SETTINGS, 2));
 
     for (const result of [...first.results, ...second.results]) {
@@ -179,15 +183,15 @@ describe('agent setup', () => {
     const edited = `${await store.readText(CURATE_SKILL)}\nMy note.\n`;
     await store.writeText(CURATE_SKILL, edited);
 
-    const state = await readSetupState(store);
+    const state = await readSetupState(store, SETUP_TEMPLATES);
     expect(state.action).toBe('update');
     expect(state.plan.optIn).toEqual([{ path: CURATE_SKILL, expectedHash: sha256(edited) }]);
 
-    const declined = await applySetup(store, { confirmed: state.plan.write });
+    const declined = await applySetup(store, { confirmed: state.plan.write }, SETUP_TEMPLATES);
     expect(declined.results).toEqual([]);
     expect(await store.readText(CURATE_SKILL)).toBe(edited);
 
-    const accepted = await applySetup(store, { confirmed: state.plan.optIn });
+    const accepted = await applySetup(store, { confirmed: state.plan.optIn }, SETUP_TEMPLATES);
     expect(accepted.results).toEqual([{ path: CURATE_SKILL, outcome: 'written' }]);
     expect(await store.readText(CURATE_SKILL)).not.toContain('My note.');
     const undoCopies = Object.entries(store.allFiles()).filter(
@@ -204,12 +208,12 @@ My note.
 `;
     await store.writeText(CURATE_SKILL, edited);
     await store.delete(WIKI_HOOK);
-    const state = await readSetupState(store);
+    const state = await readSetupState(store, SETUP_TEMPLATES);
     expect(state.plan.write.map((w) => w.path)).toEqual([WIKI_HOOK]);
     expect(state.plan.optIn.map((o) => o.path)).toEqual([CURATE_SKILL]);
 
     // The dialog confirms the plan's write list; the opt-in entry stays unticked.
-    const { results } = await applySetup(store, { confirmed: state.plan.write });
+    const { results } = await applySetup(store, { confirmed: state.plan.write }, SETUP_TEMPLATES);
 
     expect(results).toEqual([{ path: WIKI_HOOK, outcome: 'written' }]);
     expect(await store.readText(CURATE_SKILL)).toBe(edited);
@@ -245,7 +249,7 @@ My note.
     await install(store, newer);
     const written = await store.readText(CURATE_SKILL);
 
-    const viaManifest = await readSetupState(store);
+    const viaManifest = await readSetupState(store, SETUP_TEMPLATES);
     expect(statusOf(viaManifest, CURATE_SKILL)).toEqual({
       path: CURATE_SKILL,
       status: 'newer',
@@ -255,12 +259,14 @@ My note.
     expect(viaManifest.action).toBe('none');
 
     await store.delete(AGENT_SETUP_MANIFEST);
-    const viaMarker = await readSetupState(store);
+    const viaMarker = await readSetupState(store, SETUP_TEMPLATES);
     expect(statusOf(viaMarker, CURATE_SKILL)?.status).toBe('newer');
 
-    const { results } = await applySetup(store, {
-      confirmed: [{ path: CURATE_SKILL, expectedHash: sha256(written ?? '') }],
-    });
+    const { results } = await applySetup(
+      store,
+      { confirmed: [{ path: CURATE_SKILL, expectedHash: sha256(written ?? '') }] },
+      SETUP_TEMPLATES,
+    );
     expect(results).toEqual([{ path: CURATE_SKILL, outcome: 'refused' }]);
     expect(await store.readText(CURATE_SKILL)).toBe(written);
   });

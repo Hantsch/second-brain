@@ -34,6 +34,7 @@
     "src/core/llm/catalogue/index.ts",
     "src/core/llm/catalogue/openrouter.ts",
     "src/core/llm/catalogue/models.json",
+    "src/core/agent/help/version.ts",
     "src/core/agent/setup-templates.ts",
     "src/core/agent/setup-types.ts",
     "src/core/agent/templates/*.ts",
