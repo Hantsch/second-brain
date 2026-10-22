@@ -237,6 +237,14 @@ export async function launchApp({
     env.SB_VAULT = vault;
     env.SB_DEMO = '1';
   }
+  /* On Windows the inherited key is usually `Path`; assigning `PATH` next to it would
+     leave two keys that differ only in case, and which one the child sees is undefined. */
+  for (const name of Object.keys(extraEnv)) {
+    if (name.toUpperCase() !== 'PATH') continue;
+    for (const existing of Object.keys(env)) {
+      if (existing.toUpperCase() === 'PATH') delete env[existing];
+    }
+  }
   Object.assign(env, extraEnv);
 
   const logs = createLogSink();

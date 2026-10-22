@@ -46,3 +46,17 @@
 - 2026-10-22 09:42 · 082 · review 1 fixes · done
 - 2026-10-22 09:42 · 082 · verify · started
 - 2026-10-22 09:45 · 082 · story · done
+- 2026-10-22T09:45:35 · 083 · build · started
+- 2026-10-22 09:45 · 083 · D1 CLI presence lookup in core · started
+- 2026-10-22 09:47 · 083 · D1 CLI presence lookup in core · done
+- 2026-10-22 09:47 · 083 · D2 agent:cliStatus over IPC · started
+- 2026-10-22 09:48 · 083 · D2 agent:cliStatus over IPC · done
+- 2026-10-22 09:48 · 083 · D3 The Agent tab · started
+- 2026-10-22 09:51 · 083 · D3 The Agent tab · done
+- 2026-10-22 09:51 · 083 · D4 e2e through the real surface · started
+- 2026-10-22 09:53 · 083 · D4 e2e through the real surface · done
+- 2026-10-22 09:53 · 083 · verify · started
+- 2026-10-22 09:56 · 083 · verify · done
+- 2026-10-22 09:56 · 083 · review 1 · started
+- 2026-10-22 09:57 · 083 · review 1 · done
+- 2026-10-22 09:58 · 083 · story · done

@@ -897,6 +897,7 @@ const RESPONSES: MockResponses = {
   'agents:sessions': () => [],
   'agents:transcript': () => ({ entries: [], nextCursor: null, totalKnown: true }),
   'agents:link': () => undefined,
+  'agent:cliStatus': () => ({ state: 'absent' }),
 
   'settings:get': () => st.settingsSnapshot,
   'settings:setApp': () => st.settingsSnapshot,

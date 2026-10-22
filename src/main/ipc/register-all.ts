@@ -5,6 +5,7 @@
 import type { HandlerMap } from './registry';
 import { register } from './registry';
 import type { Services } from '../services';
+import { agentHandlers as agentCliHandlers } from './agent';
 import { agentHandlers } from './agents';
 import { appHandlers } from './app';
 import { areaHandlers } from './areas';
@@ -125,6 +126,7 @@ export function buildHandlers(services: Services): HandlerMap {
     ...gardenerHandlers(services),
     ...claudeHandlers(services),
     ...agentHandlers(services),
+    ...agentCliHandlers(services),
     ...settingsHandlers(services),
     ...windowHandlers(services),
     ...workHandlers(services),

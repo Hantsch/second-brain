@@ -22,7 +22,7 @@ already typed.
 
 - [x] 081 — A module condenses itself
 - [x] 082 — The ingest leaves the overview alone
-- [ ] 083 — Settings has an Agent tab
+- [x] 083 — Settings has an Agent tab
 - [ ] 084 — Gaston installs and updates the agent setup
 - [ ] 085 — The agent cannot read the journal or touch raw
 - [ ] 086 — Gaston explains itself from the vault

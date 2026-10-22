@@ -184,6 +184,11 @@ export interface AppOptions {
    * claim a system-wide key while the developer types, and the default chord is
    * usually held by the developer's own Gaston anyway. */
   hotkey: boolean;
+  /** When set, the launched app's `PATH` is exactly this directory (083): a spec decides
+   * whether a `claude` executable is findable by putting one there or leaving it empty,
+   * independent of what the runner has installed. `undefined` (the default) inherits the
+   * runner's `PATH`. */
+  pathDir: string | undefined;
 }
 
 /** The chord a `hotkey: true` spec registers — deliberately not one a real
@@ -340,6 +345,8 @@ export const test = base.extend<
 
   hotkey: [false, { scope: 'worker', option: true }],
 
+  pathDir: [undefined, { scope: 'worker', option: true }],
+
   specIdMatchesFile: [
     async ({ specId }, use, testInfo) => {
       const file = basename(testInfo.file).replace(/\.spec\.ts$/, '');
@@ -395,6 +402,7 @@ export const test = base.extend<
         closeToTray,
         startMinimized,
         hotkey,
+        pathDir,
       },
       use,
     ) => {
@@ -414,6 +422,7 @@ export const test = base.extend<
            candidate for exercising tray behaviour, not just the ones that opt in. */
         SB_E2E_TRAY: '1',
         ...(hotkey ? { SB_E2E_HOTKEY: '1' } : {}),
+        ...(pathDir ? { PATH: pathDir } : {}),
         ...(stageDelayMs > 0 ? { SB_E2E_STAGE_DELAY_MS: String(stageDelayMs) } : {}),
         ...(changelogFile ? { SB_E2E_CHANGELOG: changelogFile } : {}),
         ...(ingestDelayMs > 0 ? { SB_E2E_INGEST_DELAY_MS: String(ingestDelayMs) } : {}),

@@ -353,6 +353,7 @@ describe('Einstellungen: Tabs', () => {
       'Modelle',
       'Verhalten',
       'Anpassung',
+      'Agent',
       'Info',
     ]);
     expect(screen.getByRole('tab', { name: 'Vault' }).getAttribute('aria-selected')).toBe('true');

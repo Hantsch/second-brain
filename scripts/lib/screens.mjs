@@ -138,6 +138,7 @@ export const DEEP_STATES = [
   { id: 'settings-models', hash: '/settings?tab=models', wait: '.sb-panel' },
   { id: 'settings-behavior', hash: '/settings?tab=behavior', wait: '.sb-panel' },
   { id: 'settings-customization', hash: '/settings?tab=customization', wait: '.sb-image-radio' },
+  { id: 'settings-agent', hash: '/settings?tab=agent', wait: '.sb-panel' },
   { id: 'settings-about', hash: '/settings?tab=about', wait: '.sb-panel' },
   /* Story 008: Der Sitzungsbrowser ist kein eigener Screen mehr, sondern hängt
      unter Projekte (`/projects/sessions`) — ohne Rail-Ziffer, erreichbar über

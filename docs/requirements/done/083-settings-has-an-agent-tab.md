@@ -1,7 +1,7 @@
 ---
 id: 083
 title: Settings has an Agent tab
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-10-22
 ---
 
@@ -22,17 +22,17 @@ The tab is never a dead screen (guardrail 1): every state has its sentence.
 
 ## Acceptance Criteria
 
-- [ ] **AC1** — Settings shows a tab "Agent" between Customization and About, reachable via
+- [x] **AC1** — Settings shows a tab "Agent" between Customization and About, reachable via
       `#/settings?tab=agent`, labelled in `de` and `en`.
-- [ ] **AC2** — With `claude` on `PATH`, the CLI status reads "installed" with the path it was found
+- [x] **AC2** — With `claude` on `PATH`, the CLI status reads "installed" with the path it was found
       at — no version, because reading one would mean starting the CLI (Decisions (Sprint), User).
-- [ ] **AC3** — Without `claude` on `PATH`, the CLI status says it is not installed and offers a
+- [x] **AC3** — Without `claude` on `PATH`, the CLI status says it is not installed and offers a
       link to the official installation guide that opens in the external browser.
-- [ ] **AC4** — Gaston downloads and installs nothing in either state.
-- [ ] **AC5** — "About this" states in a few sentences what the agent may do (curate the wiki
+- [x] **AC4** — Gaston downloads and installs nothing in either state.
+- [x] **AC5** — "About this" states in a few sentences what the agent may do (curate the wiki
       layer, write proposals, work handed-over jobs) and what it never does (read `journal/`, write
       `raw/`, be started by Gaston without a terminal).
-- [ ] **AC6** — A CLI lookup that fails (timeout, a `PATH` directory that cannot be read) shows
+- [x] **AC6** — A CLI lookup that fails (timeout, a `PATH` directory that cannot be read) shows
       "status unknown" with the reason, not "installed", not "not installed" and not a blank section.
 
 ## Open Questions
@@ -202,3 +202,20 @@ Review: → default
   surface without a test-only branch in main)
 
 ## Done
+
+Summary: Settings has a seventh tab, Agent, between Customization and About, at `#/settings?tab=agent`.
+CLI status is a pure `PATH` lookup in `src/core/agent/cli-presence.ts` (installed with path / absent with a link to the install guide / unknown with reason); no process is started, no version is shown. "About this" states what the agent may and never does. The lookup runs through the new `agent:cliStatus` channel.
+
+Commit message: `083: settings agent tab — pure PATH lookup for Claude Code, install-guide link, about this`
+
+Verification (narrow gate): `npm run build`, `lint`, `typecheck`, `format:check` green; `npx vitest run --changed HEAD` green (261 files, 3530 tests); `npx playwright test tests/e2e/settings-agent-tab.spec.ts` green (3/3). Review: clean default-tier agent, PASS, no blocking findings.
+AC → test (all ran and passed): AC1 e2e "the agent tab sits between customization and about and explains the agent" + i18n key-set unit; AC2 e2e "with claude on PATH the agent tab shows it installed without starting it" + unit "finds claude in a PATH directory and reports where"; AC3 e2e "without claude on PATH the agent tab links to the official install guide"; AC4 both of those e2e tests; AC5 the first e2e test; AC6 units "a lookup that exceeds its time limit reports unknown with timeout" and "an unreadable PATH directory makes a miss unknown with its error code" + renderer "an unknown CLI status shows the reason instead of a blank section". No manual residue. Full regression gate pending (sprint's).
+
+Decisions:
+- `src/main/ipc/agent.ts` exports `agentHandlers` as the story pins, though `agents.ts` already exports that name; `register-all.ts` aliases it as `agentCliHandlers` — left as is.
+- Added key `settings.agent.cli.unknown.errorNoCode` ("Status unknown: the lookup failed."): a failed query carries no code, so the `({code})` sentence cannot be used.
+- Stat errors without a string code are reported as code `UNKNOWN`.
+- Review findings left unfixed on purpose: AC5 e2e checks only `journal/` and `raw/` in the About text and the de label equals the en label (both "Agent"), a narrower proof than the criterion but the keys are pinned by the i18n key-set test; untested default `PATHEXT` and the `UNKNOWN` fallback are cosmetic branches; the German header comment in `SettingsScreen.tsx` was already German and only updated to "Sieben Tabs".
+- `out/` was rebuilt with `npx electron-vite build` for the e2e run; `tests/renderer/settings.test.tsx` tab-list assertion extended with "Agent" (not weakened).
+
+tiers: D 4 / hard 0 · review default · cycles 1 · agents 6

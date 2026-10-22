@@ -12,3 +12,4 @@ export * from './work';
 export * from './journal';
 export * from './tasks';
 export * from './update';
+export * from './agent';

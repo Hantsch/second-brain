@@ -282,6 +282,9 @@ export const api = {
     link: (agent: AgentKind, projectKey: string, project: string) =>
       call('agents:link', { agent, projectKey, project }),
   },
+  agent: {
+    cliStatus: () => call('agent:cliStatus'),
+  },
   settings: {
     get: () => call('settings:get'),
     setApp: (patch: IpcRequest<'settings:setApp'>['patch']) => call('settings:setApp', { patch }),

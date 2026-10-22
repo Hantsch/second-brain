@@ -148,6 +148,9 @@ export const qk = {
     transcript: (agent: string, sessionId: string, cursor?: string | null) =>
       ['agents', 'transcript', agent, sessionId, cursor ?? null] as const,
   },
+  agent: {
+    cliStatus: () => ['agent', 'cliStatus'] as const,
+  },
   settings: {
     snapshot: () => ['settings', 'snapshot'] as const,
   },

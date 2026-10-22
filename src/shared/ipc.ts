@@ -14,6 +14,7 @@
 import type {
   AgentKind,
   AgentProject,
+  AgentCliStatus,
   AgentSessionSummary,
   AppSettings,
   Area,
@@ -1274,6 +1275,8 @@ export interface IpcRoutes {
    * names the directory, so every session in it shares the link.
    */
   'agents:link': { req: { agent: AgentKind; projectKey: string; project: string }; res: void };
+  /** Is the `claude` CLI on this machine? Only looked up on PATH, never started. */
+  'agent:cliStatus': { req: void; res: AgentCliStatus };
 
   // ── Settings ──────────────────────────────────────────────────────────────
   'settings:get': { req: void; res: SettingsSnapshot };
@@ -1499,6 +1502,7 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'agents:sessions',
   'agents:transcript',
   'agents:link',
+  'agent:cliStatus',
   'settings:get',
   'settings:setApp',
   'settings:setVault',

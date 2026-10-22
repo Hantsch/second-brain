@@ -10,7 +10,23 @@ const own = {
   'settings.tab.models': 'Models',
   'settings.tab.behavior': 'Behaviour',
   'settings.tab.customization': 'Customization',
+  'settings.tab.agent': 'Agent',
   'settings.tab.about': 'About',
+
+  'settings.agent.cli.title': 'Claude Code',
+  'settings.agent.cli.installed': 'Claude Code is installed.',
+  'settings.agent.cli.foundAt': 'Found at',
+  'settings.agent.cli.absent':
+    "Claude Code was not found on this machine's PATH. Gaston does not install it.",
+  'settings.agent.cli.guide': 'Open installation guide',
+  'settings.agent.cli.unknown.timeout': 'Status unknown: the lookup timed out.',
+  'settings.agent.cli.unknown.error': 'Status unknown: the lookup failed ({code}).',
+  'settings.agent.cli.unknown.errorNoCode': 'Status unknown: the lookup failed.',
+  'settings.agent.cli.note':
+    'Gaston only looks for the CLI. It does not start it, so no version is shown.',
+  'settings.agent.about.title': 'About this',
+  'settings.agent.about.body':
+    'The agent is Claude Code, which you open yourself in a terminal with the vault as its working folder. It may curate the wiki layer of a module, write proposals for everything else, and work the jobs you hand to it. It never reads journal/, never writes raw/, and Gaston never starts it without a terminal.',
 
   'settings.customization.background.title': 'Background',
   'settings.customization.background.note':
