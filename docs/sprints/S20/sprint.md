@@ -1,6 +1,6 @@
 ---
 sprint: S20
-status: in-progress # planned | in-progress | done
+status: done # planned | in-progress | done
 branch: sprint/S20
 milestone: M20 — An agent curates the vault
 ---
@@ -53,3 +53,10 @@ already typed.
 ## Regression gate
 
 <!-- Filled by `/sprint` phase 2b: the commands run, minutes taken, result, commit, and a verdict per failure. -->
+
+- Ran on `6b46dd2` (HEAD of sprint/S20 after story 087), 2026-10-22, all green:
+  - `npm run build` — green, 0.1 min
+  - `npm test` — green, 1.2 min (378 files, 4871 tests)
+  - `npm run test:e2e` — green, 3.1 min (109 passed, no retries, no flaky)
+  - `e2e-all` is `none` (the e2e command is the full suite), so no long-suite launch.
+- No failures: no attribution, no fixes, no quarantine entries (`e2e-quarantine: none`), no unexpected passes.

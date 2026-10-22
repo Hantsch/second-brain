@@ -3,9 +3,10 @@
 **The** one source of status and planning: where we stand, what comes next, what is not planned
 at all yet. As of: 2026-10-22.
 
-Where we stand: M19 finished (S19, `done`). M20 (vault agent, with the condensed layer's module
-level) is cut into S20 and S21, both `planned`. Next: `/sprint S20`. Waiting on the user: the
-`sprint/S17`, `S18` and `S19` → `dev` merges, and the first real release (unverified against
+Where we stand: S20 finished (`done 2026-10-22`; 081–087, regression gate green). M20 stays open: S21
+(088–092) is `planned` and is next (`/sprint S21`). Before any release, story 093 has to run the
+shell guard's adversarial pass, which S20's review never got to. Waiting on the user: the
+`sprint/S17`, `S18`, `S19` and `S20` → `dev` merges, and the first real release (unverified against
 github.com).
 
 Rules (so this document does not drift):
@@ -1100,7 +1101,7 @@ Sprints:
 - [sprints/S19/sprint.md](sprints/S19/sprint.md) — Gaston ships and updates itself (076, 077,
   078, 079), `done` ([review](sprints/S19/review.md))
 
-### M20 — An agent curates the vault — planned
+### M20 — An agent curates the vault — in progress
 
 Concept: [concepts/vault-agent.md](concepts/vault-agent.md), plus the module level of
 [concepts/condensed-layer.md](concepts/condensed-layer.md). Cut 2026-10-22 into as few sprints as
@@ -1110,7 +1111,7 @@ possible; the user chose to build the module level here rather than defer the co
 Sprints:
 
 - [sprints/S20/sprint.md](sprints/S20/sprint.md) — a module condenses itself, and Claude Code works
-  safely in the vault (081–087), `planned`
+  safely in the vault (081–087), `done 2026-10-22` ([review](sprints/S20/review.md))
 - [sprints/S21/sprint.md](sprints/S21/sprint.md) — work goes to the agent and comes back
   (088–092), `planned`
 
@@ -1125,3 +1126,30 @@ Sprints:
 | Medication tracker                                            | Named in the user's journal feedback (2026-09-03) and postponed at the M15 cut by the user: the idea is not ripe enough to cut. Open shape questions: preparations, dose, schedule, adherence, correlation with mood/energy, own screen or a day section | Own `/ai-scrum:concept` once the user wants it — no story until then                                                                      |
 | Data import merges into an existing day                       | Rule agreed at the M15 cut (2026-09-03): an import must add to a day that already has content, never replace it. But no import path exists in the code, so the story has no subject yet                                                                  | Name the source (old journal files, another app's export, a folder of Markdown), then cut one story with the merge rule as its acceptance |
 | Phase 2                                                       | Not defined                                                                                                                                                                                                                                              | Cut after phase 1 has been used                                                                                                           |
+
+---
+
+## Follow-ups worth doing
+
+- Split `src/main/ipc/condense.ts` (312 lines), extract the third copy of `reasonOf` (condense `run.ts`,
+  `run-project.ts`, `run-module.ts`) and drop the unused `moduleSlugFromOverviewPath` —
+  [S20 review](sprints/S20/review.md)
+- Make `pages.ts` resolve a page whose `slug:` differs from its file name to the same graph ref —
+  [S20 review](sprints/S20/review.md)
+- Point the gardener's orphan fix at a module's `index.md`, not at `## Seiten` in the condensed
+  `overview.md` — [S20 review](sprints/S20/review.md)
+- Update the concept ([concepts/vault-agent.md](concepts/vault-agent.md), AGT-1 and §12: the Agent tab
+  is `PATH`-only, no version; the derived index and chats are protected like `journal/`) —
+  [S20 review](sprints/S20/review.md)
+- Widen the Agent tab tests: the About-text e2e should check every sentence, and the default `PATHEXT`
+  and `UNKNOWN` branches of `cli-presence.ts` need a test — [S20 review](sprints/S20/review.md)
+- Add the `agent/` row to `docs/ARCHITECTURE.md` — [S20 review](sprints/S20/review.md)
+- Fold the duplicated `settle` / status-set shapes in `agent-setup.ts` into one and unify `indexFile`
+  with `indexBody` in the help module — [S20 review](sprints/S20/review.md)
+- Re-read 084's wording about jobs and confirmation in `vault-claude.ts` and `en-settings.ts` when S21
+  extends the agent page — [S20 review](sprints/S20/review.md)
+- Mount the real terminal section in `settings-agent-tab.test.tsx` instead of a stub, show a failed
+  setup lookup as its own sentence, and report an unstable-slug module as such —
+  [S20 review](sprints/S20/review.md)
+- Stop `tests/core/ingest/queue.test.ts` and `tests/renderer/journal.test.tsx` from timing out once
+  under full-suite load (isolate the wait, not a longer timeout) — [S20 review](sprints/S20/review.md)

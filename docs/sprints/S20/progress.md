@@ -164,3 +164,5 @@
 - 2026-10-22 13:37 · 087 · verify · started
 - 2026-10-22 13:39 · 087 · verify · done
 - 2026-10-22 13:40 · 087 · story · done
+- 2026-10-22T13:40:14 · gate · short suites · started
+- 2026-10-22T13:45:12 · gate · short suites · done
