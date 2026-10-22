@@ -1,6 +1,6 @@
 {
   "name": "gaston",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Electron app that files, organizes and makes your notes findable again — a local, portable, LLM-assisted personal knowledge base",
   "author": "Hantsch",

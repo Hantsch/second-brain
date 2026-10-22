@@ -5,6 +5,29 @@ All notable changes to Gaston are recorded here. The format follows
 
 ## Unreleased
 
+<!-- Add changes as '- ...' bullets under '### Added' / '### Changed' / '### Fixed' / '### Removed' / '### Security'. -->
+
+### Added
+
+- Condensed layer: a module gathers itself into what is decided, what is open and where pages
+  contradict, which you read as a diff before anything is written.
+- Agent setup: Gaston writes the vault's setup for Claude Code, shows you the plan first, and
+  leaves every file you changed alone unless you tick it.
+- Imports: a new source no longer appends itself to a module's overview. Imports no longer touch it;
+  it changes only when you confirm a condensation. The catalog does the bookkeeping.
+- Agent: Gaston now says whether Claude Code is on this machine and where. Gaston looks,
+  points you to the install guide if it is missing, and never plays host.
+- Agent: a Protection section reads the guard rules back from the vault's own settings file
+  and tells you which ones hold. Delete one by hand and it says so, without sulking.
+- Help module: installing the agent setup also writes `gaston-help`, a module in which Gaston
+  explains its screens, the vault format and the agent. Pages you add there stay yours, and a
+  module of your own with that name blocks the install until you rename it.
+- Agent screen: the agent has its own place in the rail. One button opens plain Claude in your
+  vault and says why when it cannot; below it, the commands that session knows, with the modules
+  you can curate, then the CLI status, the setup and the protection rules.
+
+## 0.2.0 — 2026-10-20
+
 ### Added
 
 - Capture: dump a thought, get a filing proposal with visible reasoning, accept it, and undo it
@@ -23,13 +46,9 @@ All notable changes to Gaston are recorded here. The format follows
   quiet periods, and a dashboard that answers where you left off.
 - Condensed layer: areas and projects gather themselves into a summary you read as a diff
   before anything is written.
-- Condensed layer: a module gathers itself into what is decided, what is open and where pages
-  contradict, which you read as a diff before anything is written.
 - Gardener: maintenance runs you can see, stop and continue, with findings you can act on and
   a health score that admits when it is partial.
 - Claude sessions: Claude Code and Codex sessions count as work on a project.
-- Agent setup: Gaston writes the vault's setup for Claude Code, shows you the plan first, and
-  leaves every file you changed alone unless you tick it.
 - Work in flight: one list for condensations, day closes, imports and maintenance, with a queue
   for the model.
 - Local models: a machine scan, per-task recommendations in money, guided Ollama and llama.cpp
@@ -46,15 +65,3 @@ All notable changes to Gaston are recorded here. The format follows
   middle of a running task or a streaming answer.
 - About: this version's release notes, what a waiting update would bring, when Gaston last
   checked, and a "Check now" button — plus links to the project and the full changelog.
-- Imports: a new source no longer appends itself to a module's overview. Imports no longer touch it;
-  it changes only when you confirm a condensation. The catalog does the bookkeeping.
-- Agent: Gaston now says whether Claude Code is on this machine and where. Gaston looks,
-  points you to the install guide if it is missing, and never plays host.
-- Agent: a Protection section reads the guard rules back from the vault's own settings file
-  and tells you which ones hold. Delete one by hand and it says so, without sulking.
-- Help module: installing the agent setup also writes `gaston-help`, a module in which Gaston
-  explains its screens, the vault format and the agent. Pages you add there stay yours, and a
-  module of your own with that name blocks the install until you rename it.
-- Agent screen: the agent has its own place in the rail. One button opens plain Claude in your
-  vault and says why when it cannot; below it, the commands that session knows, with the modules
-  you can curate, then the CLI status, the setup and the protection rules.
