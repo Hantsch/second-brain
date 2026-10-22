@@ -7,6 +7,7 @@ import { register } from './registry';
 import type { Services } from '../services';
 import { agentHandlers as agentCliHandlers } from './agent';
 import { agentSetupHandlers } from './agent-setup';
+import { agentTerminalHandlers, productionAgentTerminalDeps } from './agent-terminal';
 import { agentHandlers } from './agents';
 import { appHandlers } from './app';
 import { areaHandlers } from './areas';
@@ -129,6 +130,7 @@ export function buildHandlers(services: Services): HandlerMap {
     ...agentHandlers(services),
     ...agentCliHandlers(services),
     ...agentSetupHandlers(services),
+    ...agentTerminalHandlers(services, productionAgentTerminalDeps()),
     ...settingsHandlers(services),
     ...windowHandlers(services),
     ...workHandlers(services),

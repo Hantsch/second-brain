@@ -1,8 +1,9 @@
-/* "Agent" tab: whether the Claude Code CLI is on this machine, and what the
-   agent is allowed to do.
+/* "Agent" tab: whether the Claude Code CLI is on this machine, the agent setup, what the
+   agent is allowed to do, and a Terminal section that opens a terminal in the vault.
 
-   Gaston only asks whether the CLI exists. It neither installs nor starts it,
-   so the panel has no action beyond the link to the vendor's install guide. */
+   Gaston only asks whether the CLI exists; it never installs it and never runs it itself.
+   The Terminal section starts a terminal and nothing more, so the agent runs in the user's
+   own CLI session under their own login. */
 
 import { HELP_AGENT_PAGE } from '@shared/help-module';
 import { CLAUDE_CODE_INSTALL_URL } from '@shared/types';
@@ -16,6 +17,7 @@ import { homeOf } from '../../lib/doc-home';
 import { useAgentCliStatus, useAgentSetupState } from '../../lib/queries/agent';
 import { AgentProtectionPanel } from './agent/AgentProtectionPanel';
 import { AgentSetupPanel } from './agent/AgentSetupPanel';
+import { AgentTerminalSection } from './agent/AgentTerminalSection';
 
 export function AgentTab() {
   const t = useT();
@@ -75,6 +77,8 @@ export function AgentTab() {
       <AgentSetupPanel />
 
       <AgentProtectionPanel />
+
+      <AgentTerminalSection />
 
       <Panel title={t('settings.agent.about.title')}>
         <div className="sb-setting-block">

@@ -287,6 +287,8 @@ export const api = {
     setupStatus: () => call('agent:setupStatus'),
     protectionStatus: () => call('agent:protectionStatus'),
     setupApply: (request: IpcRequest<'agent:setupApply'>) => call('agent:setupApply', request),
+    launchTerminal: (intent: IpcRequest<'agent:launchTerminal'>) =>
+      call('agent:launchTerminal', intent),
   },
   settings: {
     get: () => call('settings:get'),

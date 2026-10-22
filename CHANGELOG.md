@@ -55,3 +55,5 @@ All notable changes to Gaston are recorded here. The format follows
 - Help module: installing the agent setup also writes `gaston-help`, a module in which Gaston
   explains its screens, the vault format and the agent. Pages you add there stay yours, and a
   module of your own with that name blocks the install until you rename it.
+- Agent tab: a Terminal section opens Claude in your vault, works the jobs, or curates one
+  module, and says why when it cannot. One click, no copy-pasting a path.

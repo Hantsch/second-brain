@@ -56,7 +56,7 @@ test('the help module comes with the agent setup and opens from About this', asy
 
   await test.step('an older page makes the row read outdated', async () => {
     const old = readFileSync(at(OLD_PAGE), 'utf8').replace(
-      'template_version: 1',
+      'template_version: 2',
       'template_version: 0',
     );
     expect(old).toContain('template_version: 0');
@@ -85,7 +85,7 @@ test('the help module comes with the agent setup and opens from About this', asy
     await expect(page.getByRole('dialog').getByText(OLD_PAGE, { exact: true })).toBeVisible();
     await confirmAndClose(page, /^Write 1 file$/);
     await expect(helpRow(page).getByText('Current')).toBeVisible();
-    expect(readFileSync(at(OLD_PAGE), 'utf8')).toContain('template_version: 1');
+    expect(readFileSync(at(OLD_PAGE), 'utf8')).toContain('template_version: 2');
   });
 
   await test.step('About this opens the agent page in Knowledge', async () => {

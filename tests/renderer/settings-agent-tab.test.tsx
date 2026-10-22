@@ -18,6 +18,11 @@ vi.mock('@renderer/lib/api', () => ({
   },
 }));
 
+/* The terminal section has buttons of its own; these tests assert the CLI panel's button count. */
+vi.mock('@renderer/screens/settings/agent/AgentTerminalSection', () => ({
+  AgentTerminalSection: () => null,
+}));
+
 function show() {
   return render(
     <QueryClientProvider

@@ -26,7 +26,7 @@ already typed.
 - [x] 084 — Gaston installs and updates the agent setup
 - [x] 085 — The agent cannot read the journal or touch raw
 - [x] 086 — Gaston explains itself from the vault
-- [ ] 087 — Open Claude in the vault from Gaston
+- [x] 087 — Open Claude in the vault from Gaston
 
 ## Notes
 

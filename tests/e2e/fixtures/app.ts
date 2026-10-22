@@ -189,7 +189,16 @@ export interface AppOptions {
    * independent of what the runner has installed. `undefined` (the default) inherits the
    * runner's `PATH`. */
   pathDir: string | undefined;
+  /** When set, `SB_E2E_TERMINAL_FIXTURE` points at `TERMINAL_FIXTURE_FILE` in the run's temp dir,
+   * seeded with this content (087): the terminal launcher's spawn is replaced by a recorder, so
+   * no real terminal opens. A spec rewrites that file to change which programs are "missing".
+   * `undefined` (the default) sets no env var, i.e. the real spawn. */
+  terminalFixture: { missing: string[] } | undefined;
 }
+
+/** File name, inside `tempRoot`, of the terminal fixture; the recorded launches sit next to it
+ * as `<file>.launches.json`. */
+export const TERMINAL_FIXTURE_FILE = 'terminal-fixture.json';
 
 /** The chord a `hotkey: true` spec registers — deliberately not one a real
  * install (or anything else on the machine) is likely to hold. */
@@ -312,6 +321,13 @@ function writeUpdateFixtureFile(tempRoot: string, fixture: UpdateFileFixture): s
   return file;
 }
 
+/** Writes the terminal fixture and returns its path (the env var's value). */
+function writeTerminalFixtureFile(tempRoot: string, fixture: { missing: string[] }): string {
+  const file = join(tempRoot, TERMINAL_FIXTURE_FILE);
+  writeFileSync(file, JSON.stringify(fixture), 'utf8');
+  return file;
+}
+
 export const test = base.extend<
   { specIdMatchesFile: void; noNetworkCalls: void },
   AppOptions & AppFixtures
@@ -346,6 +362,8 @@ export const test = base.extend<
   hotkey: [false, { scope: 'worker', option: true }],
 
   pathDir: [undefined, { scope: 'worker', option: true }],
+
+  terminalFixture: [undefined, { scope: 'worker', option: true }],
 
   specIdMatchesFile: [
     async ({ specId }, use, testInfo) => {
@@ -403,6 +421,7 @@ export const test = base.extend<
         startMinimized,
         hotkey,
         pathDir,
+        terminalFixture,
       },
       use,
     ) => {
@@ -432,6 +451,11 @@ export const test = base.extend<
           : {}),
         ...(fetchFixture
           ? { SB_E2E_FETCH_FIXTURE: writeFetchFixtureManifest(tempRoot, fetchFixture) }
+          : {}),
+        ...(terminalFixture
+          ? {
+              SB_E2E_TERMINAL_FIXTURE: writeTerminalFixtureFile(tempRoot, terminalFixture),
+            }
           : {}),
         ...(updateFixture
           ? {

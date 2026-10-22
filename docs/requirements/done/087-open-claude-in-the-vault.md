@@ -1,7 +1,7 @@
 ---
 id: 087
 title: Open Claude in the vault from Gaston
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-10-22
 ---
 
@@ -18,17 +18,17 @@ absent ([[083]]) or the setup is missing ([[084]]).
 
 ## Acceptance Criteria
 
-- [ ] **AC1** — "Open Claude in the vault" opens a terminal window whose working directory is the
+- [x] **AC1** — "Open Claude in the vault" opens a terminal window whose working directory is the
       vault folder and which runs `claude`.
-- [ ] **AC2** — "Work the jobs" opens the same with the job-queue skill as the first prompt.
-- [ ] **AC3** — "Curate a module" asks for a module and opens the same with the curator skill and
+- [x] **AC2** — "Work the jobs" opens the same with the job-queue skill as the first prompt.
+- [x] **AC3** — "Curate a module" asks for a module and opens the same with the curator skill and
       that module as the first prompt.
-- [ ] **AC4** — With the CLI absent or the setup missing, all three buttons are disabled and the
+- [x] **AC4** — With the CLI absent or the setup missing, all three buttons are disabled and the
       section says why.
-- [ ] **AC5** — The launched command contains no print/headless flag, no API key and no credential
+- [x] **AC5** — The launched command contains no print/headless flag, no API key and no credential
       Gaston holds; Gaston starts the terminal and nothing else.
-- [ ] **AC6** — A vault path with spaces or non-ASCII characters launches correctly.
-- [ ] **AC7** — A launch that fails (no terminal found) says so in the tab, with the reason.
+- [x] **AC6** — A vault path with spaces or non-ASCII characters launches correctly.
+- [x] **AC7** — A launch that fails (no terminal found) says so in the tab, with the reason.
 
 ## Open Questions
 
@@ -112,7 +112,7 @@ only `navigation.md`; no route changes).
 
 ## Deliverables
 
-- [ ] **D1 — Launch plan and readiness, pure.** Files: `src/shared/types/agent-terminal.ts`
+- [x] **D1 — Launch plan and readiness, pure.** Files: `src/shared/types/agent-terminal.ts`
       (new), `src/shared/agent/terminal-readiness.ts` (new), `src/core/agent/terminal.ts` (new),
       `tests/core/agent/terminal.test.ts` (new), `tests/shared/agent-terminal-readiness.test.ts`
       (new). Types: `TerminalIntent = { kind: 'open' } | { kind: 'jobs' } | { kind: 'curate';
@@ -134,7 +134,7 @@ vaultRoot.replaceAll(';', '\\;'), 'powershell.exe', '-NoExit', '-Command', claud
 '"start "" powershell.exe -NoExit -Command "' + claudeLine + '""']`, `cwd: vaultRoot`,
       verbatim `true`. The vault path appears nowhere except `cwd` and the wt `-d` element. Tests
       in both test files as listed under Acceptance Tests.
-- [ ] **D2 — Launcher and `agent:launchTerminal`.** Files: `src/shared/ipc.ts` (route + entry in
+- [x] **D2 — Launcher and `agent:launchTerminal`.** Files: `src/shared/ipc.ts` (route + entry in
       `IPC_CHANNELS`: req `TerminalIntent`, res `TerminalLaunchResult`),
       `src/main/agent-terminal-launcher.ts` (new), `src/main/ipc/agent-terminal.ts` (new,
       `agentTerminalHandlers(services, deps)` via `defineHandlers`, `src/main/ipc/registry.ts`),
@@ -158,7 +158,7 @@ vaultRoot.replaceAll(';', '\\;'), 'powershell.exe', '-NoExit', '-Command', claud
       `error` (`ENOENT`) asynchronously for listed files, `spawn` otherwise. Extend the
       `electron` mock in `tests/main/ipc-coverage.test.ts` only if the handler needs it. Tests as
       listed under Acceptance Tests.
-- [ ] **D3 — Terminal section in the Agent tab.** Files:
+- [x] **D3 — Terminal section in the Agent tab.** Files:
       `src/renderer/screens/settings/AgentTerminalSection.tsx` (new; place it next to 083's Agent
       tab file if 083 used a subfolder), the Agent tab component from 083 (mount the section after
       the setup sections), `src/renderer/lib/queries/agent-terminal.ts` (new,
@@ -176,7 +176,7 @@ vaultRoot.replaceAll(';', '\\;'), 'powershell.exe', '-NoExit', '-Command', claud
       toast-only feedback. Gaston atoms and tokens only, sentence case, no emoji; every string via
       `t()`, German with „…“. CHANGELOG: one user-facing line under the unreleased section.
       Renderer test as listed under Acceptance Tests.
-- [ ] **D4 — e2e seam and flow.** Files: `src/main/ipc/terminal-e2e-fixture.ts` (new, pattern of
+- [x] **D4 — e2e seam and flow.** Files: `src/main/ipc/terminal-e2e-fixture.ts` (new, pattern of
       `src/main/ipc/tasks-e2e-fixture.ts`: inert unless `SB_E2E_TERMINAL_FIXTURE` is set),
       `src/main/ipc/agent-terminal.ts` (choose the fixture `SpawnFn` when the env var is set, the
       real one otherwise), `tests/e2e/fixtures/app.ts` (new option `terminalFixture` → env var via
@@ -215,7 +215,8 @@ Review: → default
 - AC4 → unit `tests/shared/agent-terminal-readiness.test.ts` › "the terminal is ready only with
   the cli installed and no managed setup file missing"; unit
   `tests/main/ipc/agent-terminal.test.ts` › "a launch with the cli absent or the setup missing is
-  refused without spawning"; renderer `tests/renderer/agent-terminal-section.test.tsx` › "with the
+  refused without spawning" and › "readiness is re-checked on every launch, not cached by the
+  handler"; renderer `tests/renderer/agent-terminal-section.test.tsx` › "with the
   cli absent or unknown all three buttons are disabled and the section says why"; e2e same spec,
   step: setup missing → three buttons disabled with the setup sentence → install → enabled
 - AC5 → unit `tests/core/agent/terminal.test.ts` › "no plan carries a print, headless,
@@ -239,3 +240,40 @@ Review: → default
   CLI (needs the user's desktop session and CLI login).
 
 ## Done
+
+Terminal section in the Agent tab: three buttons (open, work the jobs, curate a module with a
+picker that excludes `gaston-help`). Pure launch plans (Windows Terminal, PowerShell via
+`cmd /c start` fallback) in `src/core/agent/terminal.ts`, shared readiness rule, launcher with its
+own narrow `SpawnFn`, `agent:launchTerminal` re-checking CLI and setup on every call, e2e spawn
+recorder seam. The vault path appears only as `cwd` and the escaped `-d` argument.
+
+Commit message: `087: open Claude in the vault — terminal section, wt/PowerShell launch plans, readiness guard, e2e spawn seam`
+
+Verification (narrow gate, run twice: after D4 and after the review fix): format:check, lint,
+typecheck, build green; `npx vitest run --changed HEAD` green (275 files, 3777 tests);
+`npx playwright test tests/e2e/agent-terminal.spec.ts tests/e2e/help-module.spec.ts` green. Review
+(default tier, 1 cycle): PASS. AC → test, all ran and passed: AC1 terminal.test.ts + e2e; AC2
+terminal.test.ts + e2e; AC3 terminal.test.ts, agent-terminal.test.ts (module refused) + e2e; AC4
+readiness test, agent-terminal.test.ts (refused without spawning, re-checked on every launch),
+section test + e2e; AC5 terminal.test.ts (no flags) + agent-terminal.test.ts (one spawn, no env);
+AC6 terminal.test.ts + argv round-trip; AC7 fallback and no-terminal tests, section test + e2e.
+Manual residue: AC1–AC3, that a real Windows Terminal / PowerShell window opens in the vault with
+`claude` running and the skill typed — needs the user's desktop session and CLI login.
+
+Decisions:
+
+- 083's `pathDir` e2e option is the CLI-presence seam (fake `claude.cmd` on a temp PATH); no new
+  env var added. The e2e spec skips off Windows, where the handler refuses `unsupported-platform`
+  (covered by a main unit test).
+- Skill names come from `AGENT_SKILLS` (`gaston-jobs`, `gaston-curate`) in `agent-setup.ts`.
+- While the CLI/vault/setup queries load, buttons stay disabled without a sentence; a failed CLI
+  query counts as `unknown`, a failed setup query as setup incomplete (fail closed).
+- Review fixes: the `agent` help page said Gaston never starts a terminal — reworded, so
+  `HELP_MODULE_VERSION` is 2 (mock row and `help-module.spec.ts` pins updated); stale AgentTab
+  header comment; re-check test; `setupIsComplete` shared helper replaces the duplicated rule.
+- Unfixed, deliberate: `settings-agent-tab.test.tsx` stubs the section (its button-count asserts
+  predate it), the mount is proven by the e2e spec; minor wording edge cases (lookup error shown as
+  a missing-setup sentence; unstable-slug module reported as not found).
+- CHANGELOG has no `# Features` heading; entry is under `Unreleased > Added`.
+
+tiers: D 4 / hard 0 · review default · cycles 1 · agents 8

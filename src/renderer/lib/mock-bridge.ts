@@ -904,6 +904,7 @@ const RESPONSES: MockResponses = {
   'agent:setupApply': ({ confirmed }) => ({
     results: confirmed.map(({ path }) => ({ path, outcome: 'written' as const })),
   }),
+  'agent:launchTerminal': () => ({ ok: false, reason: 'cli-absent' }),
 
   'settings:get': () => st.settingsSnapshot,
   'settings:setApp': () => st.settingsSnapshot,

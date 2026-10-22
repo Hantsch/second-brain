@@ -82,6 +82,8 @@ import type {
   TaskDefinition,
   TaskKind,
   TaskResult,
+  TerminalIntent,
+  TerminalLaunchResult,
   Todo,
   TranscriptPage,
   VaultDoc,
@@ -1290,6 +1292,11 @@ export interface IpcRoutes {
    * a file changed since then comes back as `conflict`, never overwritten.
    */
   'agent:setupApply': { req: AgentSetupApplyRequest; res: AgentSetupApplyResult };
+  /**
+   * Opens a terminal in the vault with `claude` started, optionally with a skill as first
+   * prompt. Refusals are part of the result, not errors; main does the launch, nothing else.
+   */
+  'agent:launchTerminal': { req: TerminalIntent; res: TerminalLaunchResult };
 
   // ── Settings ──────────────────────────────────────────────────────────────
   'settings:get': { req: void; res: SettingsSnapshot };
@@ -1519,6 +1526,7 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'agent:setupStatus',
   'agent:protectionStatus',
   'agent:setupApply',
+  'agent:launchTerminal',
   'settings:get',
   'settings:setApp',
   'settings:setVault',

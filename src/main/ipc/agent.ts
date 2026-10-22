@@ -5,19 +5,23 @@
 
 import fs from 'node:fs';
 import { findClaudeCli } from '../../core/agent/cli-presence';
+import type { AgentCliStatus } from '@shared/types';
 import type { HandlerMap } from './registry';
 import { defineHandlers } from './registry';
 import type { Services } from '../services';
 
+/* On Windows `process.env` is case-insensitive, so `PATH` finds `Path`. */
+export function detectClaudeCli(): Promise<AgentCliStatus> {
+  return findClaudeCli({
+    pathValue: process.env.PATH ?? '',
+    pathExt: process.env.PATHEXT,
+    platform: process.platform,
+    stat: fs.promises.stat,
+  });
+}
+
 export function agentHandlers(_services: Services): HandlerMap {
   return defineHandlers({
-    /* On Windows `process.env` is case-insensitive, so `PATH` finds `Path`. */
-    'agent:cliStatus': () =>
-      findClaudeCli({
-        pathValue: process.env.PATH ?? '',
-        pathExt: process.env.PATHEXT,
-        platform: process.platform,
-        stat: fs.promises.stat,
-      }),
+    'agent:cliStatus': detectClaudeCli,
   });
 }

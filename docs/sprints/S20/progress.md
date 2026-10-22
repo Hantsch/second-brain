@@ -146,3 +146,21 @@
 - 2026-10-22 13:16 · 086 · verify · started
 - 2026-10-22 13:19 · 086 · verify · done
 - 2026-10-22 13:19 · 086 · story · done
+- 2026-10-22T13:19:51 · 087 · build · started
+- 2026-10-22 13:20 · 087 · D1 launch plan and readiness · started
+- 2026-10-22 13:22 · 087 · D1 launch plan and readiness · done
+- 2026-10-22 13:22 · 087 · D2 launcher and agent:launchTerminal · started
+- 2026-10-22 13:25 · 087 · D2 launcher and agent:launchTerminal · done
+- 2026-10-22 13:26 · 087 · D3 terminal section in the agent tab · started
+- 2026-10-22 13:28 · 087 · D3 terminal section in the agent tab · done
+- 2026-10-22 13:28 · 087 · D4 e2e seam and flow · started
+- 2026-10-22 13:30 · 087 · D4 e2e seam and flow · done
+- 2026-10-22 13:30 · 087 · verify · started
+- 2026-10-22 13:32 · 087 · verify · done
+- 2026-10-22 13:32 · 087 · review 1 · started
+- 2026-10-22 13:34 · 087 · review 1 · done
+- 2026-10-22 13:34 · 087 · review-fix 1 · started
+- 2026-10-22 13:37 · 087 · review-fix 1 · done
+- 2026-10-22 13:37 · 087 · verify · started
+- 2026-10-22 13:39 · 087 · verify · done
+- 2026-10-22 13:40 · 087 · story · done
