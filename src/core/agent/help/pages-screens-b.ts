@@ -111,7 +111,7 @@ answered once, so it never claims "nothing" before it knows.
 export const AGENT_SCREEN_PAGE: HelpPageDef = {
   slug: 'screen-agent',
   title: 'Agent',
-  summary: 'Open Claude Code in the vault, its commands, and the setup it needs.',
+  summary: 'Open Claude Code in the vault, and the commands it knows there.',
   body: `# Agent
 
 The rail entry sits below **Tasks**; its route is \`#/agent\`. The agent itself is Claude Code; the
@@ -121,17 +121,15 @@ agent page of this module explains what it may do.
 
 - **Commands**: what to type in the Claude session. From Gaston: \`/gaston-curate <module>\`
   (with the modules of this vault), \`/gaston-propose\` and \`/gaston-jobs\`. From Claude Code:
-  \`/model\` and \`/help\`. While the setup is not installed, the screen says the Gaston commands
-  are not there yet.
-- **Claude Code**: whether the CLI is on this machine's PATH, with a link to the installation
-  guide when it is not.
-- **Agent setup** and **Protection**: the files Gaston installs and the rules they carry.
+  \`/model\` and \`/help\`.
+- **Setup**: only when the agent setup in Settings, tab **Agent**, has something to install or
+  update, with a link there.
 
 ## Main actions
 
 - **Open Claude in the vault** opens a terminal in the vault with plain \`claude\`. When something
-  is missing (no vault, no CLI, setup files missing), nothing opens and a message names why.
-- **Install** or **Update** in the setup panel opens the plan of what will be written.
+  is missing (no vault, no CLI, setup files missing), nothing opens and a message names why,
+  with a way to the Agent tab in Settings.
 `,
 };
 
@@ -171,10 +169,10 @@ vault and lists what they find.
 export const SETTINGS_PAGE: HelpPageDef = {
   slug: 'screen-settings',
   title: 'Settings',
-  summary: 'Vault, languages, models, behaviour, customization and about.',
+  summary: 'Vault, languages, models, behaviour, customization, agent and about.',
   body: `# Settings
 
-Settings has six tabs. The open tab is kept in the address (\`#/settings?tab=models\`).
+Settings has seven tabs. The open tab is kept in the address (\`#/settings?tab=models\`).
 
 - **Vault**: the vault the app is working on.
 - **Languages**: the interface language, the document language and the conversation language
@@ -186,6 +184,8 @@ Settings has six tabs. The open tab is kept in the address (\`#/settings?tab=mod
   (Ollama), an API key (Anthropic, OpenAI, OpenRouter) or carrying on without a model.
 - **Behaviour**: further switches for how the app acts.
 - **Customization**: background, app icon and tray.
+- **Agent**: whether Claude Code is on this machine, the agent setup and its protection. See
+  the agent page of this module.
 - **About**: the app version, the vault format, release notes and updates.
 
 API keys are stored encrypted in the app's user data, never in the vault.

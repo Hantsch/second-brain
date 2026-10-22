@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-/* The agent screen's setup panel: it lists every managed file with its status, and
+/* The Agent tab's setup panel: it lists every managed file with its status, and
    a failed read says why instead of leaving the panel blank. */
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setLanguage } from '@renderer/i18n';
 import { api } from '@renderer/lib/api';
 import { encodeIpcError } from '@renderer/lib/ipc-error';
-import { AgentSetupPanel } from '@renderer/screens/agent/AgentSetupPanel';
+import { AgentSetupPanel } from '@renderer/screens/settings/agent/AgentSetupPanel';
 import type { AgentSetupState } from '@shared/types';
 
 vi.mock('@renderer/lib/api', () => ({

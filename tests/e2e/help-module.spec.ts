@@ -37,7 +37,7 @@ test('the help module comes with the agent setup and opens from About this', asy
   const at = (path: string): string => join(vaultPath, ...path.split('/'));
 
   await test.step('the help row reads missing before the install', async () => {
-    await page.evaluate('location.hash = "#/agent"');
+    await page.evaluate('location.hash = "#/settings?tab=agent"');
     await expect(helpRow(page).getByText('Missing')).toBeVisible();
     await expect(page.getByRole('link', { name: 'Read the agent page in Knowledge' })).toHaveCount(
       0,
@@ -75,9 +75,9 @@ test('the help module comes with the agent setup and opens from About this', asy
     });
     writeFileSync(at(MANIFEST), `${JSON.stringify(manifest, null, 2)}\n`);
 
-    /* Another screen and back: the panel reads the files again on mount. */
+    /* Another tab and back: the panel reads the files again on mount. */
     await page.evaluate('location.hash = "#/settings?tab=about"');
-    await page.evaluate('location.hash = "#/agent"');
+    await page.evaluate('location.hash = "#/settings?tab=agent"');
     await expect(helpRow(page).getByText('Outdated')).toBeVisible();
   });
 

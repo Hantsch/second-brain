@@ -1,4 +1,4 @@
-/* The agent screen's setup panel: the plan dialog and the write it confirms, on a vault
+/* The Agent tab's setup panel: the plan dialog and the write it confirms, on a vault
    that has never been set up and then on one the user has edited by hand. */
 
 import { createHash } from 'node:crypto';
@@ -24,10 +24,10 @@ const MANAGED_PATHS = [
   PROPOSE,
 ];
 
-/* Re-navigates through another screen: the panel reads the files again on mount. */
-async function openAgentScreen(page: Page): Promise<void> {
+/* Re-navigates through another tab: the panel reads the files again on mount. */
+async function openAgentTab(page: Page): Promise<void> {
   await page.evaluate('location.hash = "#/settings?tab=about"');
-  await page.evaluate('location.hash = "#/agent"');
+  await page.evaluate('location.hash = "#/settings?tab=agent"');
   await expect(page.getByRole('heading', { name: 'Agent setup' })).toBeVisible();
 }
 
@@ -60,10 +60,10 @@ function trashedContents(vault: string): string[] {
     .map((entry) => readFileSync(join(entry.parentPath, entry.name), 'utf8'));
 }
 
-test('the agent screen lists the setup as missing and offers install', async ({ app }) => {
+test('the agent tab lists the setup as missing and offers install', async ({ app }) => {
   const { page } = app;
-  await test.step('open the Agent screen', async () => {
-    await page.evaluate('location.hash = "#/agent"');
+  await test.step('open the Agent tab', async () => {
+    await page.evaluate('location.hash = "#/settings?tab=agent"');
     await expect(page.getByRole('heading', { name: 'Agent setup' })).toBeVisible();
   });
   await test.step('every managed file is listed as missing', async () => {
@@ -90,7 +90,7 @@ test("install and update write only what the plan shows and leave the user's fil
   await test.step('install lists all seven files and writes nothing until confirmed', async () => {
     expect(existsSync(at('CLAUDE.md'))).toBe(false);
     expect(existsSync(at('.claude'))).toBe(false);
-    await openAgentScreen(page);
+    await openAgentTab(page);
     await page.getByRole('button', { name: 'Install', exact: true }).click();
     await expect(page.getByRole('dialog', { name: 'Install the agent setup' })).toBeVisible();
     for (const path of MANAGED_PATHS) {
@@ -136,7 +136,7 @@ test("install and update write only what the plan shows and leave the user's fil
   });
 
   await test.step('the tab shows what changed and offers an update', async () => {
-    await openAgentScreen(page);
+    await openAgentTab(page);
     await expect(row(page, 'CLAUDE.md').getByText('Outdated')).toBeVisible();
     await expect(row(page, PROPOSE).getByText('Missing')).toBeVisible();
     await expect(row(page, CURATE).getByText('Changed by you')).toBeVisible();
@@ -162,7 +162,7 @@ test("install and update write only what the plan shows and leave the user's fil
   });
 
   await test.step('a ticked file is rewritten and its edited version goes to the trash', async () => {
-    await openAgentScreen(page);
+    await openAgentTab(page);
     await page.getByRole('button', { name: 'Update', exact: true }).click();
     /* The native input is visually replaced by the atom's box; its label is what a user clicks. */
     const optIn = planSection(page, 'Changed by you');

@@ -46,15 +46,19 @@ test('the agent screen launches plain claude in the vault, falls back to powersh
   const toasts = page.getByRole('region', { name: 'Notifications' });
   const lastClaudeLine = (launch: Launch | undefined): string => launch?.args.at(-1) ?? '';
 
-  await test.step('without the setup the button says why, and installing it on the same screen clears the block', async () => {
-    await page
-      .getByRole('navigation', { name: 'Main navigation' })
-      .getByRole('link', { name: 'Agent', exact: true })
-      .click();
+  const agentLink = page
+    .getByRole('navigation', { name: 'Main navigation' })
+    .getByRole('link', { name: 'Agent', exact: true });
+
+  await test.step('without the setup the button says why and leads to the agent tab, where installing it clears the block', async () => {
+    await agentLink.click();
     await agent.click();
     await expect(toasts.getByText('Claude was not opened.')).toBeVisible();
     await expect(toasts.getByText(/Setup files are missing\./)).toBeVisible();
     expect(launches()).toEqual([]);
+
+    await toasts.getByRole('button', { name: 'Agent settings' }).click();
+    await expect(page).toHaveURL(/#\/settings\?tab=agent/);
 
     await page.getByRole('button', { name: 'Install', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'Install the agent setup' });
@@ -63,6 +67,7 @@ test('the agent screen launches plain claude in the vault, falls back to powersh
     await dialog.getByRole('button', { name: 'Close', exact: true }).last().click();
     await expect(dialog).toHaveCount(0);
     expect(launches()).toEqual([]);
+    await agentLink.click();
   });
 
   await test.step('the button starts plain claude, no first prompt, in the vault through Windows Terminal', async () => {

@@ -1,5 +1,5 @@
 /* The help page about the agent: setup, protection, proposals. It states what the shipped
- * templates and the Agent screen do, and the limits of the shell check as the guard script
+ * templates, the Agent screen and the Agent tab do, and the limits of the shell check as the guard script
  * implements them (docs/VAULT-FORMAT.md, "Protection", words the same limits). */
 
 import type { HelpPageDef } from './types';
@@ -23,7 +23,7 @@ a module and write proposals for everything else.
 
 ## The setup
 
-On the **Agent** screen, the panel **Agent setup** lists the files Gaston installs and their
+In Settings, tab **Agent**, the panel **Agent setup** lists the files Gaston installs and their
 status: current, outdated, missing, changed by you, from a newer Gaston, or yours. **Install**
 (or **Update**) opens a plan that lists exactly what will be written; Gaston writes only that,
 after you confirm. Install writes:
@@ -63,7 +63,7 @@ You read the files and decide; Gaston has no screen yet to review or apply them.
 
 ## Protection
 
-On the **Agent** screen, the panel **Protection** shows per rule whether it is installed in
+In Settings, tab **Agent**, the panel **Protection** shows per rule whether it is installed in
 \`.claude/settings.json\` or missing, and lists deny rules you added yourself. With no setup it
 says nothing protects the vault yet. The rules:
 

@@ -9,6 +9,7 @@ const own = {
   'settings.tab.models': 'Modelle',
   'settings.tab.behavior': 'Verhalten',
   'settings.tab.customization': 'Anpassung',
+  'settings.tab.agent': 'Agent',
   'settings.tab.about': 'Info',
 
   'settings.agent.cli.title': 'Claude Code',

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 /* The agent screen: its header opens plain Claude in the vault, its commands panel says
-   what that session knows, and the old settings tab address still lands here. */
+   what that session knows, and a notice leads to Settings when the setup needs work. */
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -13,7 +13,6 @@ import { setLanguage } from '@renderer/i18n';
 import { agentSetupNotInstalled } from '@renderer/lib/mock-agent-setup';
 import { clearToasts, useToasts } from '@renderer/lib/toast';
 import { AgentScreen } from '@renderer/screens/agent/AgentScreen';
-import { SettingsScreen } from '@renderer/screens/settings/SettingsScreen';
 
 type SbHandlers = Partial<{
   [K in IpcChannel]: (payload: IpcRequest<K>) => IpcResponse<K> | Promise<IpcResponse<K>>;
@@ -37,7 +36,7 @@ const SETUP_INSTALLED: AgentSetupState = {
     installedVersion: file.shippedVersion,
   })),
   action: 'none',
-  help: { status: 'current', installedVersion: 4, shippedVersion: 4 },
+  help: agentSetupNotInstalled.help,
 };
 
 function module(slug: string): KnowledgeModule {
@@ -72,14 +71,13 @@ function baseHandlers(setup: AgentSetupState): SbHandlers {
   };
 }
 
-function show(path = '/agent') {
+function show() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={[path]}>
+      <MemoryRouter initialEntries={['/agent']}>
         <Routes>
           <Route path="/agent" element={<AgentScreen />} />
-          <Route path="/settings" element={<SettingsScreen />} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -120,7 +118,7 @@ describe('agent screen', () => {
     );
   });
 
-  it('says why Claude was not opened', async () => {
+  it('says why Claude was not opened and leads to the agent settings', async () => {
     installMock({
       ...baseHandlers(agentSetupNotInstalled),
       'agent:launchTerminal': () => ({ ok: false, reason: 'setup-missing' }),
@@ -135,6 +133,7 @@ describe('agent screen', () => {
           kind: 'warn',
           message: 'rail.agent.refused',
           description: 'rail.agent.reason.setup-missing',
+          action: expect.objectContaining({ label: 'rail.agent.settings' }),
         }),
       ]),
     );
@@ -151,20 +150,27 @@ describe('agent screen', () => {
     expect(screen.getByText('/help')).toBeTruthy();
     /* The help module is read-only by convention, so it is not offered. */
     expect(await screen.findByText('auth0, godot')).toBeTruthy();
-    expect(screen.queryByText(/only exist once the agent setup/)).toBeNull();
   });
 
-  it('says the Gaston commands are not there while the setup is missing', async () => {
-    installMock(baseHandlers(agentSetupNotInstalled));
+  it('shows no setup notice while the setup is current', async () => {
+    installMock(baseHandlers(SETUP_INSTALLED));
     show();
 
-    expect(await screen.findByText(/only exist once the agent setup/)).toBeTruthy();
+    expect(await screen.findByText('/gaston-jobs')).toBeTruthy();
+    await waitFor(() => expect(screen.queryByRole('status')).toBeNull());
   });
 
-  it('sends the old settings tab address to the agent screen', async () => {
-    installMock(baseHandlers(SETUP_INSTALLED));
-    show('/settings?tab=agent');
+  it('points to the agent settings when the setup is missing or outdated', async () => {
+    installMock(baseHandlers(agentSetupNotInstalled));
+    const first = show();
+    expect(await screen.findByText(/The agent setup is not installed yet\./)).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Go to agent settings' }).getAttribute('href')).toBe(
+      '#/settings?tab=agent',
+    );
+    first.unmount();
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'Agent' })).toBeTruthy();
+    installMock(baseHandlers({ ...SETUP_INSTALLED, action: 'update' }));
+    show();
+    expect(await screen.findByText('An update is available for the agent setup.')).toBeTruthy();
   });
 });

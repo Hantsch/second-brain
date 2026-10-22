@@ -1,4 +1,4 @@
-/* The agent screen's Protection section: the rules it lists are read back from the
+/* The Agent tab's Protection section: the rules it lists are read back from the
    installed settings.json, so a rule removed by hand shows up as missing. */
 
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -20,10 +20,10 @@ const RULES = {
 };
 const REMOVED = 'Read(/journal/**)';
 
-/* Re-navigates through another screen: the panel reads the file again on mount. */
-async function openAgentScreen(page: Page): Promise<void> {
+/* Re-navigates through another tab: the panel reads the file again on mount. */
+async function openAgentTab(page: Page): Promise<void> {
   await page.evaluate('location.hash = "#/settings?tab=about"');
-  await page.evaluate('location.hash = "#/agent"');
+  await page.evaluate('location.hash = "#/settings?tab=agent"');
   await expect(page.getByRole('heading', { name: 'Protection' })).toBeVisible();
 }
 
@@ -35,7 +35,7 @@ test('the protection section reads the rules back from the vault', async ({ app,
   const { page } = app;
 
   await test.step('without a setup it says nothing protects the vault and points to Install', async () => {
-    await openAgentScreen(page);
+    await openAgentTab(page);
     await expect(page.getByText(/^Nothing protects this vault from the agent yet\./)).toContainText(
       'Install',
     );
@@ -62,7 +62,7 @@ test('the protection section reads the rules back from the vault', async ({ app,
     settings.permissions.deny = settings.permissions.deny.filter((entry) => entry !== REMOVED);
     writeFileSync(file, `${JSON.stringify(settings, null, 2)}\n`);
 
-    await openAgentScreen(page);
+    await openAgentTab(page);
     const journal = rule(page, RULES.journal);
     await expect(journal.getByText('Missing', { exact: true })).toBeVisible();
     await expect(journal.getByText(REMOVED, { exact: true })).toBeVisible();

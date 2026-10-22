@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-/* The agent screen's CLI status: every state says what it knows, and a lookup that
+/* The Agent tab's CLI status: every state says what it knows, and a lookup that
    could not decide shows its reason instead of an empty section. */
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -7,13 +7,20 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setLanguage } from '@renderer/i18n';
 import { api } from '@renderer/lib/api';
-import { AgentCliPanel } from '@renderer/screens/agent/AgentCliPanel';
+import { AgentTab } from '@renderer/screens/settings/AgentTab';
 
 vi.mock('@renderer/lib/api', () => ({
   api: {
-    agent: { cliStatus: vi.fn() },
+    agent: { cliStatus: vi.fn(), setupStatus: vi.fn() },
+    /* Not ready: the setup panel stays on its skeleton and these tests keep to the CLI panel. */
+    vault: { status: vi.fn().mockResolvedValue({ ready: false, indexing: false }) },
     shell: { openExternal: vi.fn() },
   },
+}));
+
+/* The terminal section has buttons of its own; these tests assert the CLI panel's button count. */
+vi.mock('@renderer/screens/settings/agent/AgentTerminalSection', () => ({
+  AgentTerminalSection: () => null,
 }));
 
 function show() {
@@ -21,7 +28,7 @@ function show() {
     <QueryClientProvider
       client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
     >
-      <AgentCliPanel />
+      <AgentTab />
     </QueryClientProvider>,
   );
 }
@@ -33,7 +40,7 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('agent cli panel', () => {
+describe('agent tab cli status', () => {
   it('an unknown CLI status shows the reason instead of a blank section', async () => {
     vi.mocked(api.agent.cliStatus).mockResolvedValue({ state: 'unknown', reason: 'timeout' });
     const first = show();

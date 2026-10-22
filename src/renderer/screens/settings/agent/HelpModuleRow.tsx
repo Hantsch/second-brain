@@ -2,9 +2,9 @@
    with the setup files, so its state sits next to theirs. */
 
 import type { HelpModuleState, HelpModuleStatus } from '@shared/help-module';
-import { Badge } from '../../atoms/Badge';
-import type { BadgeProps } from '../../atoms/Badge';
-import { useT } from '../../i18n';
+import { Badge } from '../../../atoms/Badge';
+import type { BadgeProps } from '../../../atoms/Badge';
+import { useT } from '../../../i18n';
 
 const STATUS_VARIANT: Record<HelpModuleStatus, NonNullable<BadgeProps['variant']>> = {
   current: 'success',

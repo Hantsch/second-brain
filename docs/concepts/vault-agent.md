@@ -331,9 +331,8 @@ The slug is reserved; a user module with the same slug is open point O9.
 
 ## 12. The Agent tab
 
-> Since then the tab has become its own rail screen, `#/agent`, with the button that opens
-> Claude in the vault and a list of the commands the session knows; the panels below are
-> unchanged. `#/settings?tab=agent` redirects there.
+> Opening Claude and the list of commands it knows have since moved to their own rail screen,
+> `#/agent`, which links back to this tab when the setup needs installing or updating.
 
 Settings gets a seventh tab, **Agent**, after Customization and before About, following
 the tab pattern in `SettingsScreen.tsx` (tab id, icon, i18n label, panel):

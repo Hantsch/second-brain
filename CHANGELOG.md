@@ -15,16 +15,16 @@ All notable changes to Gaston are recorded here. The format follows
   leaves every file you changed alone unless you tick it.
 - Imports: a new source no longer appends itself to a module's overview. Imports no longer touch it;
   it changes only when you confirm a condensation. The catalog does the bookkeeping.
-- Agent: Gaston now says whether Claude Code is on this machine and where. Gaston looks,
+- Agent tab: Settings now says whether Claude Code is on this machine and where. Gaston looks,
   points you to the install guide if it is missing, and never plays host.
-- Agent: a Protection section reads the guard rules back from the vault's own settings file
+- Agent tab: a Protection section reads the guard rules back from the vault's own settings file
   and tells you which ones hold. Delete one by hand and it says so, without sulking.
 - Help module: installing the agent setup also writes `gaston-help`, a module in which Gaston
   explains its screens, the vault format and the agent. Pages you add there stay yours, and a
   module of your own with that name blocks the install until you rename it.
 - Agent screen: the agent has its own place in the rail. One button opens plain Claude in your
   vault and says why when it cannot; below it, the commands that session knows, with the modules
-  you can curate, then the CLI status, the setup and the protection rules.
+  you can curate, and a pointer to Settings when the setup needs installing or updating.
 
 ## 0.2.0 — 2026-10-20
 

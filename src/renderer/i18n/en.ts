@@ -60,6 +60,7 @@ export const en: Record<TranslationKey, string> = {
   'rail.tasksRunningAndWaiting': 'Tasks, {count} running or waiting',
   'rail.agent': 'Agent',
   'rail.agent.refused': 'Claude was not opened.',
+  'rail.agent.settings': 'Agent settings',
   'rail.agent.opened.windows-terminal': 'Opened in Windows Terminal.',
   'rail.agent.opened.powershell': 'Opened in PowerShell.',
   'rail.agent.reason.no-vault': 'No vault is open.',
@@ -73,7 +74,7 @@ export const en: Record<TranslationKey, string> = {
   'rail.agent.reason.no-terminal.detail': 'No terminal could be started ({code}).',
   'rail.agent.error': 'The terminal request failed. Nothing was opened.',
   'rail.agent.reason.setup-missing':
-    'Setup files are missing. Install the agent setup further down first.',
+    'Setup files are missing. Install the agent setup under Settings, Agent first.',
 
   'time.today': 'today',
   'time.yesterday': 'yesterday',

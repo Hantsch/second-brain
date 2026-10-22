@@ -6,13 +6,15 @@ export const enAgentScreen = {
   'screen.agent.title': 'Agent',
   'agent.open': 'Open Claude in the vault',
 
+  'agent.notice.install': 'The agent setup is not installed yet.',
+  'agent.notice.update': 'An update is available for the agent setup.',
+  'agent.notice.open': 'Go to agent settings',
+
   'agent.commands.title': 'Commands',
   'agent.commands.intro':
     'The button above opens a terminal with claude running in the vault. Type these commands there.',
   'agent.commands.gaston': 'From Gaston',
   'agent.commands.claude': 'From Claude Code',
-  'agent.commands.notInstalled':
-    'These commands only exist once the agent setup further down is installed.',
   'agent.commands.curateArg': '<module>',
   'agent.commands.curate':
     "Curates one module's wiki: checks its pages, fixes them directly in its wiki/ and adds every change to wiki/log.md.",
