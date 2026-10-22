@@ -1,7 +1,7 @@
 ---
 sprint: S20
-status: planned # planned | in-progress | done
-branch: # set by /sprint
+status: in-progress # planned | in-progress | done
+branch: sprint/S20
 milestone: M20 — An agent curates the vault
 ---
 
