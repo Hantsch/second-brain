@@ -47,10 +47,15 @@ them in Gaston; nothing is applied silently.
 
 ## Never
 
-- Read \`journal/\`.
+- Read \`journal/\`, \`.secondbrain/index/\` or \`.secondbrain/chats/\` (the derived index and the chats
+  hold journal text).
 - Write \`raw/\`, \`CLAUDE.md\`, \`.claude/\` or \`.ingest.json\` files.
 - Write anything in \`.secondbrain/\` except \`results/\`, \`proposals/\` and \`runs/\` under
   \`.secondbrain/agent/\`.
+
+Searches and listings name a folder (\`modules/\`, \`projects/\`, \`areas/\`, \`inbox/\`,
+\`.secondbrain/agent/\`). A search, recursive listing or glob that would reach \`journal/\` or the
+derived index is blocked, and so is a shell write to \`raw/\`, \`.claude/\` or \`CLAUDE.md\`.
 
 ## Jobs, results and reports
 

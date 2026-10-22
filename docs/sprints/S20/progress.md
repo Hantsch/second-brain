@@ -84,3 +84,35 @@
 - 2026-10-22 10:33 · 084 · verify · started
 - 2026-10-22 10:38 · 084 · verify · done
 - 2026-10-22 10:38 · 084 · story · done
+- 2026-10-22T10:38:46 · 085 · build · started
+- 2026-10-22 10:39 · 085 · D1 protection rules + settings template + docs · started
+- 2026-10-22 10:43 · 085 · D1 protection rules + settings template + docs · done
+- 2026-10-22 10:43 · 085 · D2 pre-tool guard (hard) · started
+- 2026-10-22 11:21 · 085 · D2 pre-tool guard (hard) · done
+- 2026-10-22 11:21 · 085 · D3 wiki-check hook · started
+- 2026-10-22 11:24 · 085 · D3 wiki-check hook · done
+- 2026-10-22 11:24 · 085 · D4 protection status reader · started
+- 2026-10-22 11:25 · 085 · D4 protection status reader · done
+- 2026-10-22 11:25 · 085 · D5 agent:protectionStatus IPC · started
+- 2026-10-22 11:27 · 085 · D5 agent:protectionStatus IPC · done
+- 2026-10-22 11:27 · 085 · D6 protection panel + e2e · started
+- 2026-10-22 11:31 · 085 · D6 protection panel + e2e · done
+- 2026-10-22 11:31 · 085 · verify · started
+- 2026-10-22 11:36 · 085 · verify · blocked: tests/main/module-lifecycle-ipc.test.ts timed out under the load of the hook spawn matrix (green alone), capping spawn concurrency
+- 2026-10-22 11:37 · 085 · verify · started
+- 2026-10-22 11:41 · 085 · verify · blocked: tests/renderer/journal.test.tsx timed out under load, spawn cap lowered to 3
+- 2026-10-22 11:41 · 085 · verify · started
+- 2026-10-22 11:44 · 085 · verify · done
+- 2026-10-22 11:44 · 085 · review 1 · started
+- 2026-10-22 11:54 · 085 · review 1 · done
+- 2026-10-22 11:54 · 085 · review-fix 1 · started
+- 2026-10-22 12:03 · 085 · review-fix 1 · done
+- 2026-10-22 12:03 · 085 · verify · started
+- 2026-10-22 12:05 · 085 · verify · done
+- 2026-10-22 12:06 · 085 · review 2 (hard) · started
+- 2026-10-22 12:12 · 085 · review 2 (hard) · done
+- 2026-10-22 12:12 · 085 · review-fix 2 · started
+- 2026-10-22 12:14 · 085 · review-fix 2 · done
+- 2026-10-22 12:14 · 085 · verify · started
+- 2026-10-22 12:16 · 085 · verify · done
+- 2026-10-22 12:16 · 085 · story · done

@@ -8,8 +8,8 @@ import type { AgentSetupState } from '@shared/types';
 const PATHS = [
   'CLAUDE.md',
   '.claude/settings.json',
-  '.claude/hooks/gaston-shell-guard.sh',
-  '.claude/hooks/gaston-wiki-check.sh',
+  '.claude/hooks/gaston-shell-guard.ps1',
+  '.claude/hooks/gaston-wiki-check.ps1',
   `.claude/skills/${AGENT_SKILLS.jobs}/SKILL.md`,
   `.claude/skills/${AGENT_SKILLS.curate}/SKILL.md`,
   `.claude/skills/${AGENT_SKILLS.propose}/SKILL.md`,

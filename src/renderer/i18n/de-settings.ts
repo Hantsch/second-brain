@@ -55,6 +55,29 @@ const own = {
   'settings.agent.setup.plan.result.conflict':
     'Seit dem Plan auf der Platte geändert: {path}. Nichts darauf geschrieben.',
   'settings.agent.setup.plan.result.refused': 'Nicht geschrieben: {path}.',
+  'settings.agent.protection.title': 'Schutz',
+  'settings.agent.protection.loading': 'Schutzregeln werden gelesen',
+  'settings.agent.protection.none':
+    'Noch schützt nichts diesen Vault vor dem Agenten. Installiere oben die Einrichtung, um die Regeln hinzuzufügen.',
+  'settings.agent.protection.unreadable':
+    '.claude/settings.json konnte nicht gelesen werden: {reason}. Der Stand der Regeln ist unbekannt.',
+  'settings.agent.protection.status.installed': 'Installiert',
+  'settings.agent.protection.status.missing': 'Fehlt',
+  'settings.agent.protection.rule.journal-read':
+    'journal/ und sein abgeleiteter Index können von den Datei-Werkzeugen von Claude weder gelesen noch geändert werden.',
+  'settings.agent.protection.rule.raw-write': 'raw/ ist schreibgeschützt.',
+  'settings.agent.protection.rule.setup-write': 'CLAUDE.md und .claude/ sind schreibgeschützt.',
+  'settings.agent.protection.rule.overview-write':
+    'wiki/overview.md ändert sich nur über einen Vorschlag.',
+  'settings.agent.protection.rule.internal-write':
+    '{dir}/ ist schreibgeschützt, außer Ergebnisse, Vorschläge und Läufe.',
+  'settings.agent.protection.rule.pre-tool-guard':
+    'Eine Prüfung vor jedem Werkzeugaufruf blockiert Shell-Zugriff auf journal/, Shell-Schreibzugriffe auf raw/ und Schreibzugriffe außerhalb der Wiki-Ebene.',
+  'settings.agent.protection.rule.wiki-check':
+    'Wiki-Schreibzugriffe werden auf Frontmatter und einen Eintrag in log.md geprüft.',
+  'settings.agent.protection.extra': 'Regeln, die du hinzugefügt hast',
+  'settings.agent.protection.limit':
+    'Die Shell-Prüfung liest den Befehlstext. Ein Pfad, der aus Variablen gebaut wird, oder ein Skript, das Dateien selbst öffnet, wird nicht erkannt.',
   'settings.agent.about.title': 'Worum es geht',
   'settings.agent.about.body':
     'Der Agent ist Claude Code, das du selbst in einem Terminal mit dem Vault als Arbeitsordner öffnest. Er darf die Wiki-Ebene eines Moduls pflegen, für alles andere Vorschläge schreiben und die Aufträge abarbeiten, die du ihm übergibst. Er liest nie journal/, schreibt nie raw/, und Gaston startet ihn nie ohne Terminal.',

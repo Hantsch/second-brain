@@ -55,6 +55,29 @@ const own = {
   'settings.agent.setup.plan.result.conflict':
     'Changed on disk since the plan: {path}. Nothing written to it.',
   'settings.agent.setup.plan.result.refused': 'Not written: {path}.',
+  'settings.agent.protection.title': 'Protection',
+  'settings.agent.protection.loading': 'Reading the protection rules',
+  'settings.agent.protection.none':
+    'Nothing protects this vault from the agent yet. Install the setup above to add the rules.',
+  'settings.agent.protection.unreadable':
+    '.claude/settings.json could not be read: {reason}. The state of the rules is unknown.',
+  'settings.agent.protection.status.installed': 'Installed',
+  'settings.agent.protection.status.missing': 'Missing',
+  'settings.agent.protection.rule.journal-read':
+    "journal/ and its derived index cannot be read or changed by Claude's file tools.",
+  'settings.agent.protection.rule.raw-write': 'raw/ is read-only.',
+  'settings.agent.protection.rule.setup-write': 'CLAUDE.md and .claude/ are read-only.',
+  'settings.agent.protection.rule.overview-write':
+    'wiki/overview.md changes only through a proposal.',
+  'settings.agent.protection.rule.internal-write':
+    '{dir}/ is read-only except results, proposals and runs.',
+  'settings.agent.protection.rule.pre-tool-guard':
+    'A check before each tool call blocks shell access to journal/, shell writes to raw/, and writes outside the wiki layer.',
+  'settings.agent.protection.rule.wiki-check':
+    'Wiki writes are checked for frontmatter and a log.md entry.',
+  'settings.agent.protection.extra': 'Rules you added',
+  'settings.agent.protection.limit':
+    'The shell check reads the command text. A path built from variables, or a script that opens files itself, is not caught.',
   'settings.agent.about.title': 'About this',
   'settings.agent.about.body':
     'The agent is Claude Code, which you open yourself in a terminal with the vault as its working folder. It may curate the wiki layer of a module, write proposals for everything else, and work the jobs you hand to it. It never reads journal/, never writes raw/, and Gaston never starts it without a terminal.',

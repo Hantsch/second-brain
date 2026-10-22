@@ -10,6 +10,7 @@ import { qk } from './keys';
 
 export type AgentCliStatusResult = IpcResponse<'agent:cliStatus'>;
 export type AgentSetupStateResult = IpcResponse<'agent:setupStatus'>;
+export type AgentProtectionStateResult = IpcResponse<'agent:protectionStatus'>;
 export type AgentSetupApplyResponse = IpcResponse<'agent:setupApply'>;
 
 export function useAgentCliStatus(): UseQueryResult<AgentCliStatusResult> {
@@ -34,6 +35,18 @@ export function useAgentSetupState(): UseQueryResult<AgentSetupStateResult> {
   });
 }
 
+export function useAgentProtection(): UseQueryResult<AgentProtectionStateResult> {
+  const ready = useVaultReady();
+  return useQuery({
+    queryKey: qk.agent.protection(),
+    queryFn: api.agent.protectionStatus,
+    enabled: ready,
+    retry: false,
+    /* The settings file may be edited outside the app at any time. */
+    staleTime: 0,
+  });
+}
+
 /** Writes the confirmed part of a plan. The state is refetched even when some files were
     refused or in conflict: what is on disk now is what the panel must show. */
 export function useApplyAgentSetup(): UseMutationResult<
@@ -44,6 +57,11 @@ export function useApplyAgentSetup(): UseMutationResult<
   const client = useQueryClient();
   return useMutation({
     mutationFn: api.agent.setupApply,
-    onSettled: () => client.invalidateQueries({ queryKey: qk.agent.setupState() }),
+    onSettled: () =>
+      Promise.all([
+        client.invalidateQueries({ queryKey: qk.agent.setupState() }),
+        /* Applying can write the settings file the protection state is read from. */
+        client.invalidateQueries({ queryKey: qk.agent.protection() }),
+      ]),
   });
 }

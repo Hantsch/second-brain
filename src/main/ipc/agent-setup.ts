@@ -4,6 +4,7 @@
    The apply request comes from the renderer, so its shape is checked here
    before `@core/agent` sees any of it — the core trusts its input. */
 
+import { readProtection } from '@core/agent/protection-status';
 import { applySetup } from '@core/agent/setup-apply';
 import { readSetupState } from '@core/agent/setup-status';
 import { isSafeVaultPath } from '@core/vault/paths';
@@ -35,6 +36,7 @@ function requireApplyRequest(value: unknown): AgentSetupApplyRequest {
 export function agentSetupHandlers(services: Services): HandlerMap {
   return defineHandlers({
     'agent:setupStatus': async () => readSetupState(services.requireStore()),
+    'agent:protectionStatus': async () => readProtection(services.requireStore()),
     'agent:setupApply': async (request) =>
       applySetup(services.requireStore(), requireApplyRequest(request)),
   });

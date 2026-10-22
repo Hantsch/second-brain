@@ -17,8 +17,8 @@ const MANIFEST = '.claude/gaston-manifest.json';
 const MANAGED_PATHS = [
   'CLAUDE.md',
   '.claude/settings.json',
-  '.claude/hooks/gaston-shell-guard.sh',
-  '.claude/hooks/gaston-wiki-check.sh',
+  '.claude/hooks/gaston-shell-guard.ps1',
+  '.claude/hooks/gaston-wiki-check.ps1',
   '.claude/skills/gaston-jobs/SKILL.md',
   CURATE,
   PROPOSE,

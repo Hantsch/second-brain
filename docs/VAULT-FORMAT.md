@@ -649,6 +649,55 @@ indexed, neither by a full build nor by a path refresh. A nested `.claude/` anyw
 else in the vault is ordinary content. The root `CLAUDE.md` is indexed like
 `README.md`.
 
+### Protection
+
+`.claude/settings.json` carries the permission rules and hook registrations that keep
+the agent out of the journal and away from files only Gaston writes. `Read(...)` rules
+deny reading, `Edit(...)` rules deny every file write (Write, Edit, MultiEdit,
+NotebookEdit). Paths start at the vault root.
+
+| Rule             | Denied entries                                                                                           |
+| ---------------- | -------------------------------------------------------------------------------------------------------- |
+| `journal-read`   | `Read(/journal/**)`, `Edit(/journal/**)`, `Read(/.secondbrain/index/**)`, `Read(/.secondbrain/chats/**)` |
+| `raw-write`      | `Edit(/raw/**)`                                                                                          |
+| `setup-write`    | `Edit(/CLAUDE.md)`, `Edit(/.claude/**)`                                                                  |
+| `overview-write` | `Edit(/modules/*/wiki/overview.md)`                                                                      |
+| `internal-write` | `Edit(/.secondbrain/*.json)`, the internal folders, `agent/jobs/`                                        |
+| `pre-tool-guard` | no deny entry; a `PreToolUse` hook on the shell, read, search and write tools                            |
+| `wiki-check`     | no deny entry; a `PostToolUse` and a `Stop` hook that check the wiki                                     |
+
+The internal folders are `index/`, `chats/`, `logs/` and `trash/` under `.secondbrain/`.
+`agent/results/`, `agent/proposals/` and `agent/runs/` stay writable. `index/` and `chats/`
+are also unreadable, like `journal/`: the derived index stores every document body,
+journal entries included, and the chat sessions hold journal text. `agent/` stays readable,
+so the hand-over folders work.
+
+Hook runtime:
+
+- The hooks run on Windows PowerShell (`powershell.exe`), registered in exec form: a
+  command plus an argument list, so no shell parses the script path.
+- The scripts are addressed as `${CLAUDE_PROJECT_DIR}/.claude/hooks/<name>.ps1`; the
+  placeholder is written literally and Claude Code resolves it.
+- The guard fails closed: if it errors, times out or cannot start, the tool call is
+  blocked (`onFailure: block`, needs Claude Code CLI 2.1.295 or newer). The wiki check
+  fails open; it only reports.
+
+Limits. The protection narrows what the agent does by accident; it is not a sandbox.
+
+- Indirection gets past the guard: variables, command substitution, and scripts that
+  open files themselves.
+- Shell writes are only guarded for `raw/`, `.claude/` and `CLAUDE.md`. A shell write
+  anywhere else is not checked.
+- Glob can show journal file names (never content); the guard does not block that.
+- The guard treats `.secondbrain/index/` and `.secondbrain/chats/` like `journal/` for
+  every read, including a search from `.secondbrain/` or the vault root. A git command
+  that prints file content or history (`diff`, `show`, `blame`, `log -p`, ...) is blocked
+  unless a path after `--` scopes it away from the vault root, because git reads the whole
+  repository whatever the working directory is.
+- On macOS and Linux there is no `powershell.exe`, so the guard cannot start and fails
+  closed: every guarded tool call is blocked.
+- A session started in a subfolder of the vault does not load the vault's rules.
+
 ## What the app never does
 
 - Change or delete an ingested source payload under `raw/`; bookkeeping in

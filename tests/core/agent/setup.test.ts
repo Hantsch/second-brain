@@ -24,7 +24,7 @@ import { createTempVault } from '../../helpers/vault';
 const SETTINGS = '.claude/settings.json';
 const JOBS_SKILL = `.claude/skills/${AGENT_SKILLS.jobs}/SKILL.md`;
 const CURATE_SKILL = `.claude/skills/${AGENT_SKILLS.curate}/SKILL.md`;
-const WIKI_HOOK = '.claude/hooks/gaston-wiki-check.sh';
+const WIKI_HOOK = '.claude/hooks/gaston-wiki-check.ps1';
 
 function template(path: string): SetupTemplate {
   const found = SETUP_TEMPLATES.find((candidate) => candidate.path === path);
@@ -287,17 +287,31 @@ My note.
     }
   });
 
-  it('the marker of a script sits after the shebang and parses back', () => {
+  it('the marker of a script sits after a shebang when there is one and parses back', () => {
     const script = SETUP_TEMPLATES.find((t) => t.format === 'script');
     expect(script).toBeDefined();
     if (script === undefined) return;
-    expect(script.body.startsWith('#!')).toBe(true);
+    const shebang = { ...script, body: `#!/usr/bin/env bash\n${script.body}` };
 
-    const lines = renderSetupFile(script).split('\n');
+    const lines = renderSetupFile(shebang).split('\n');
 
     expect(lines[0]?.startsWith('#!')).toBe(true);
     expect(lines[1]).toBe(`# gaston:managed id=${script.id} version=${script.version}`);
     expect(parseMarker(lines.join('\n'))).toEqual({ id: script.id, version: script.version });
+  });
+
+  it('the marker of a script without a shebang is its first line and parses back', () => {
+    const script = SETUP_TEMPLATES.find((t) => t.format === 'script');
+    expect(script).toBeDefined();
+    if (script === undefined) return;
+    expect(script.body.startsWith('#!')).toBe(false);
+
+    const rendered = renderSetupFile(script);
+
+    expect(rendered.split('\n')[0]).toBe(
+      `# gaston:managed id=${script.id} version=${script.version}`,
+    );
+    expect(parseMarker(rendered)).toEqual({ id: script.id, version: script.version });
   });
 
   it('the marker of a markdown file is its first line and parses back', () => {

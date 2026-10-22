@@ -15,6 +15,7 @@ import type {
   AgentKind,
   AgentProject,
   AgentCliStatus,
+  AgentProtectionState,
   AgentSessionSummary,
   AgentSetupApplyRequest,
   AgentSetupApplyResult,
@@ -1282,6 +1283,8 @@ export interface IpcRoutes {
   'agent:cliStatus': { req: void; res: AgentCliStatus };
   /** Which of the agent setup files in the vault are current, outdated, missing or the user's own. */
   'agent:setupStatus': { req: void; res: AgentSetupState };
+  /** Which of the protection rules in the vault's agent settings are in place; read-only. */
+  'agent:protectionStatus': { req: void; res: AgentProtectionState };
   /**
    * Writes the confirmed setup files. Each entry carries the hash the user saw;
    * a file changed since then comes back as `conflict`, never overwritten.
@@ -1514,6 +1517,7 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'agents:link',
   'agent:cliStatus',
   'agent:setupStatus',
+  'agent:protectionStatus',
   'agent:setupApply',
   'settings:get',
   'settings:setApp',

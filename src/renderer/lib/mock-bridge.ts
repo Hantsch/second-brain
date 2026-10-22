@@ -900,6 +900,7 @@ const RESPONSES: MockResponses = {
   'agents:link': () => undefined,
   'agent:cliStatus': () => ({ state: 'absent' }),
   'agent:setupStatus': () => agentSetupNotInstalled,
+  'agent:protectionStatus': () => ({ state: 'none' }),
   'agent:setupApply': ({ confirmed }) => ({
     results: confirmed.map(({ path }) => ({ path, outcome: 'written' as const })),
   }),

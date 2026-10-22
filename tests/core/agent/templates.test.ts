@@ -24,6 +24,17 @@ describe('setup templates', () => {
     }
   });
 
+  // PowerShell 5.1 reads a BOM-less script as ANSI, and the bodies are String.raw literals.
+  it('the hook script templates are ASCII and safe to embed', () => {
+    const scripts = SETUP_TEMPLATES.filter((template) => template.path.endsWith('.ps1'));
+    expect(scripts.length).toBeGreaterThan(0);
+    for (const { id, body } of scripts) {
+      expect(body, id).toMatch(/^[\n\x20-\x7e]+$/);
+      expect(body, id).not.toContain('`');
+      expect(body, id).not.toContain('${');
+    }
+  });
+
   it('the vault CLAUDE.md names the only direct write target, the log rule, proposals and the protected files', () => {
     const body = VAULT_CLAUDE_TEMPLATE.body;
     const expected = [

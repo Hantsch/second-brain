@@ -49,3 +49,25 @@ export interface AgentSetupApplyRequest {
 export interface AgentSetupApplyResult {
   results: { path: string; outcome: 'written' | 'conflict' | 'refused' }[];
 }
+
+/** The protection rules the installed settings.json is checked against. */
+export type AgentProtectionRuleId =
+  | 'journal-read'
+  | 'raw-write'
+  | 'setup-write'
+  | 'overview-write'
+  | 'internal-write'
+  | 'pre-tool-guard'
+  | 'wiki-check';
+
+export interface AgentProtectionRule {
+  id: AgentProtectionRuleId;
+  status: 'installed' | 'missing';
+  /** The deny entries or hook registrations the settings file lacks. */
+  missing: string[];
+}
+
+export type AgentProtectionState =
+  | { state: 'none' }
+  | { state: 'unreadable'; reason: string }
+  | { state: 'read'; rules: AgentProtectionRule[]; extraDeny: string[] };

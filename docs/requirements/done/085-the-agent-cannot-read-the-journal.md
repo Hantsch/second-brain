@@ -1,7 +1,7 @@
 ---
 id: 085
 title: The agent cannot read the journal or touch raw
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-10-22
 ---
 
@@ -23,18 +23,18 @@ not as Gaston thinks they should be.
 
 ## Acceptance Criteria
 
-- [ ] **AC1** — The installed `settings.json` denies reading `journal/**` and writing `raw/**`,
+- [x] **AC1** — The installed `settings.json` denies reading `journal/**` and writing `raw/**`,
       `CLAUDE.md`, `.claude/**`, `modules/*/wiki/overview.md` and `.secondbrain/**` outside the
       hand-over folders.
-- [ ] **AC2** — The pre-tool hook, given a shell command that reads a file under `journal/`, blocks
+- [x] **AC2** — The pre-tool hook, given a shell command that reads a file under `journal/`, blocks
       it with a reason; given one that only reads under `raw/`, it allows it.
-- [ ] **AC3** — The pre-tool hook blocks a shell command that writes, moves or deletes under `raw/`.
-- [ ] **AC4** — The post-write hook reports a wiki page written without valid frontmatter.
-- [ ] **AC5** — The post-write hook reports a wiki page change in a module whose `log.md` got no new
+- [x] **AC3** — The pre-tool hook blocks a shell command that writes, moves or deletes under `raw/`.
+- [x] **AC4** — The post-write hook reports a wiki page written without valid frontmatter.
+- [x] **AC5** — The post-write hook reports a wiki page change in a module whose `log.md` got no new
       entry, and stays silent when it did.
-- [ ] **AC6** — The Protection section lists each rule as read from the installed files; a rule
+- [x] **AC6** — The Protection section lists each rule as read from the installed files; a rule
       removed by hand from `settings.json` shows as missing there.
-- [ ] **AC7** — Without a setup, the Protection section says that nothing protects the vault yet
+- [x] **AC7** — Without a setup, the Protection section says that nothing protects the vault yet
       and points to "Install".
 
 ## Open Questions
@@ -623,7 +623,8 @@ Spawn-based hook tests run on win32, the only packaged platform and the CI runne
 - AC4 → unit `tests/core/agent/hook-wiki-check.test.ts` › "a wiki page written without valid
   frontmatter is reported"
 - AC5 → unit `tests/core/agent/hook-wiki-check.test.ts` › "a wiki change without a new log entry is
-  reported when the session stops" + "a wiki change with its log entry stays silent"
+  reported when the session stops" + "a wiki change whose log.md was written through the tool stays
+  silent" + "a wiki change whose log.md grew by a heading on disk stays silent"
 - AC6 → e2e `tests/e2e/agent-protection.spec.ts` › "the protection section reads the rules back
   from the vault"; unit `tests/core/agent/protection-status.test.ts` › "a rule removed by hand reads
   as missing"
@@ -647,3 +648,25 @@ One new e2e flow: the protection read-back is its own user-facing path. Its inst
 084's buttons and does not re-prove them.
 
 ## Done
+
+Summary: the vault agent can no longer read `journal/` (nor the derived index and chats) and cannot write
+`raw/`, `CLAUDE.md`, `.claude/`, `overview.md` or `.secondbrain/` beyond the hand-over folders. Deny rules
+come from one `PROTECTION_RULES` list; a fail-closed PowerShell pre-tool guard and a wiki post-write/Stop
+check ship as templates; the Agent tab gets a Protection panel read back from the installed files.
+
+Commit message: `085: agent protection — deny rules, fail-closed PowerShell shell guard, wiki post-write check, protection reader + IPC + Agent tab panel`
+
+Verification (narrow gate): format:check, lint, typecheck, build green; `npx vitest run --changed HEAD` 269 files / 3736 tests green, 0 skipped (hook tests spawn the real script via `powershell.exe`, 163 + 13 cases); `npx playwright test tests/e2e/agent-protection.spec.ts` green. Review: stage 1 default PASS (F1-F3, F5, F6 fixed), stage 2 hard UNCLEAR on the adversarial battery (see open point).
+AC -> test: AC1 `protection.test.ts`; AC2/AC3 `hook-shell-guard.test.ts`; AC4/AC5 `hook-wiki-check.test.ts`; AC6/AC7 `agent-protection.spec.ts` + `protection-status.test.ts`. All ran and passed. No manual residue.
+
+Decisions:
+- The derived index (`.secondbrain/index/`, `.secondbrain/chats/`) holds journal bodies, so it is protected like `journal/` (guard + `Read` deny entries on `journal-read`, panel sentence, docs). Beyond the spec text, by review finding.
+- `git log -p|diff|show|blame|cat-file|archive|…` are blocked unless a path after `--` scopes them; a cwd inside a protected folder blocks; unknown path-like `tool_input` fields are scanned as a fallback (content-like fields are not).
+- Guard reads stdin via a UTF-8 StreamReader (no console input encoding in a hook process); also blocks a shell fed from a pipe, `Start-Process`/`xargs` wrappers and recursive deletes at the root.
+- `setup.test.ts` marker test split in two (shebang vs `.ps1`, marker on line 1); not weakened. Hook spawn helper `tests/helpers/hook.ts` caps spawns at 3 and the two hook describes carry a 60 s timeout, because 135 concurrent spawns made unrelated tests (module-lifecycle-ipc, journal renderer) time out under `--changed HEAD`.
+- `hook-shell-guard.ts` is ~800 lines, one PowerShell script in one string; not split (a split into fragments would hurt reading the script).
+- Not fixed: `[char[]]` indirection (documented limit), reader shows a hook as installed from path + existence only (the script body is not compared; setup panel tracks modified files), `disableAllHooks`, heading regex looser than `log-md.ts` (spec's own).
+- Known plan gap: the guard's write allowlist lets the agent write `modules/gaston-help/wiki/**`, which the vault CLAUDE.md calls read-only.
+Open point: the hard review's adversarial probe battery was stopped by a safety classifier and never ran; AC verdicts there were PASS from reading. Coverage rests on the guard author's 198 and the stage-1 reviewer's ~100 probes through the real script. Run a hard adversarial pass before release.
+
+tiers: D 6 / hard 1 · review default+hard · cycles 2 · agents 16

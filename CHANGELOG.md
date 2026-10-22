@@ -50,3 +50,5 @@ All notable changes to Gaston are recorded here. The format follows
   it changes only when you confirm a condensation. The catalog does the bookkeeping.
 - Agent tab: Settings now says whether Claude Code is on this machine and where. Gaston looks,
   points you to the install guide if it is missing, and never plays host.
+- Agent tab: a Protection section reads the guard rules back from the vault's own settings file
+  and tells you which ones hold. Delete one by hand and it says so, without sulking.

@@ -12,6 +12,7 @@ import { Skeleton } from '../../components/Skeleton';
 import { useT } from '../../i18n';
 import { api } from '../../lib/api';
 import { useAgentCliStatus } from '../../lib/queries/agent';
+import { AgentProtectionPanel } from './agent/AgentProtectionPanel';
 import { AgentSetupPanel } from './agent/AgentSetupPanel';
 
 export function AgentTab() {
@@ -67,6 +68,8 @@ export function AgentTab() {
       </Panel>
 
       <AgentSetupPanel />
+
+      <AgentProtectionPanel />
 
       <Panel title={t('settings.agent.about.title')}>
         <p>{t('settings.agent.about.body')}</p>
