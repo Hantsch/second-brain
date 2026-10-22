@@ -2,6 +2,9 @@
  * Fragen beantworten — nur aus dem Vault, mit Beleg und Fundstelle.
  *
  * Der Weg ist immer derselbe, und er endet nie in einem toten Zustand:
+ * 0. **Statusfragen** („was ist offen?“) holen ihre Belege zusaetzlich aus den offenen
+ *    Todos (`status.ts`) — die Volltextsuche findet sie nicht, weil keine Checkbox
+ *    die Woerter der Frage enthaelt.
  * 1. **Kandidaten** aus der Volltextsuche, optional vom Modell sortiert. Modul,
  *    Scope und Projekt gehen als Filter in die Suchanfrage selbst hinein — die
  *    Kandidaten kommen also schon eingeschraenkt zurueck, statt hinterher
@@ -25,6 +28,7 @@ import { citationsFromExcerpts, validateCitations, type CitationSource } from '.
 import { evidenceSourceOf, evidenceTypesFor, isEvidenceExcludedPath } from './evidence';
 import { buildExcerpt, questionTerms } from './excerpts';
 import { QUERY_RERANK_SCHEMA, applyOrder, rerankPrompt } from './rerank';
+import { statusExcerpts } from './status';
 import { phrases } from './text';
 import { WikiError } from './types';
 import type { WikiAnswer, WikiDeps, WikiExcerpt, WikiIndexView } from './types';
@@ -203,8 +207,13 @@ export async function askQuestion(deps: WikiDeps, input: AskInput): Promise<Wiki
     ...input,
     limit: Math.min(MAX_CANDIDATES, limit * CANDIDATE_FACTOR),
   });
+  // A knowledge module holds no todos — a question there is never a status question.
+  const status =
+    input.module === undefined || input.module === null
+      ? statusExcerpts(deps.index, question, { scope: input.scope, project: input.project })
+      : [];
 
-  if (candidates.length === 0) {
+  if (candidates.length === 0 && status.length === 0) {
     // Kein Beleg, kein Modellaufruf: die App raet nicht.
     return {
       question,
@@ -217,7 +226,9 @@ export async function askQuestion(deps: WikiDeps, input: AskInput): Promise<Wiki
     };
   }
 
-  const ranked = (await rerank(deps, question, candidates)).slice(0, limit);
+  /* Todo lines go first and past the rerank: they answer a status question by what
+     they are, not by how well they share its words. */
+  const ranked = [...status, ...(await rerank(deps, question, candidates)).slice(0, limit)];
   const fallback: WikiAnswer = {
     question,
     answer: passagesAnswer(deps, ranked),

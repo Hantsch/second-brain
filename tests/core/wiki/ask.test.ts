@@ -332,6 +332,8 @@ function watchIndex(inner: WikiIndexView): { view: WikiIndexView; queries: Searc
     },
     pages: () => inner.pages(),
     modules: () => inner.modules(),
+    todos: () => inner.todos(),
+    projects: () => inner.projects(),
   };
   return { view, queries };
 }

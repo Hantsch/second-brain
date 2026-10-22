@@ -13,8 +13,10 @@ import type {
   DocLanguage,
   KnowledgeModule,
   ModelRef,
+  Project,
   SearchHit,
   SearchQuery,
+  Todo,
   VaultDoc,
   WikiPage,
   WikiPageType,
@@ -79,6 +81,9 @@ export interface WikiIndexView {
   searchPassages(query: SearchQuery, options?: PassageOptions): PassageHit[];
   pages(): readonly WikiPage[];
   modules(): readonly KnowledgeModule[];
+  /** Status questions ("what is open?") are answered from these, not from full text. */
+  todos(): readonly Todo[];
+  projects(): readonly Project[];
 }
 
 /** Gemeinsame Optionen aller schreibenden Ablaeufe. */
