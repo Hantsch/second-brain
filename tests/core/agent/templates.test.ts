@@ -1,0 +1,67 @@
+/* The templates are the shipped text; docs/agent-setup/ mirrors them byte for byte so the
+ * text can be reviewed (and diffed) without reading TypeScript. */
+
+import { readFileSync } from 'node:fs';
+import { describe, expect, it } from 'vitest';
+import { SETUP_TEMPLATES } from '@core/agent/setup-templates';
+import { VAULT_CLAUDE_TEMPLATE } from '@core/agent/templates/vault-claude';
+import { parse } from '@core/vault/frontmatter';
+import { AGENT_DIRS, AGENT_SKILLS } from '../../../src/shared/types/agent-setup';
+
+function mirrorOf(id: string, vaultPath: string): string {
+  const extension = vaultPath.slice(vaultPath.lastIndexOf('.'));
+  return readFileSync(
+    new URL(`../../../docs/agent-setup/${id}${extension}`, import.meta.url),
+    'utf8',
+  );
+}
+
+describe('setup templates', () => {
+  it('every setup template matches its docs mirror', () => {
+    expect(SETUP_TEMPLATES.length).toBeGreaterThan(0);
+    for (const template of SETUP_TEMPLATES) {
+      expect(template.body, template.id).toBe(mirrorOf(template.id, template.path));
+    }
+  });
+
+  it('the vault CLAUDE.md names the only direct write target, the log rule, proposals and the protected files', () => {
+    const body = VAULT_CLAUDE_TEMPLATE.body;
+    const expected = [
+      'modules/<slug>/wiki/',
+      'wiki/log.md',
+      AGENT_DIRS.proposals,
+      'wiki/overview.md',
+      'modules/gaston-help/',
+      'journal/',
+      'raw/',
+      '.claude/',
+      ...Object.values(AGENT_SKILLS),
+    ];
+    for (const needle of expected) {
+      expect(body, needle).toContain(needle);
+    }
+
+    // Naming a path is not enough: it has to sit in the sentences that forbid writing it.
+    const [writable = '', rest = ''] = body.split('Not directly writable');
+    const blocked = rest.split('\n## ')[0] ?? '';
+    expect(writable).toMatch(/only direct write target is `modules\/<slug>\/wiki\/`/);
+    expect(writable).not.toContain('wiki/overview.md');
+    expect(writable).not.toContain('modules/gaston-help/');
+    expect(blocked).toMatch(/`wiki\/overview\.md`[^\n]*changes only through a proposal/);
+    expect(blocked).toMatch(/`modules\/gaston-help\/`[^\n]*read-only/);
+    expect(body).toMatch(/Write `raw\/`, `CLAUDE\.md`, `\.claude\/`/);
+  });
+
+  it('every Gaston skill opens with frontmatter naming it and saying when to use it', () => {
+    for (const name of Object.values(AGENT_SKILLS)) {
+      const template = SETUP_TEMPLATES.find((candidate) => candidate.id === `skill-${name}`);
+      expect(template, name).toBeDefined();
+      expect(template?.path).toBe(`.claude/skills/${name}/SKILL.md`);
+      expect(template?.format).toBe('markdown-frontmatter');
+      const { frontmatter, hadFrontmatter } = parse(template?.body ?? '');
+      expect(hadFrontmatter, name).toBe(true);
+      expect(frontmatter.name, name).toBe(name);
+      expect(String(frontmatter.description ?? ''), name).toMatch(/\bUse (when|for)\b/);
+    }
+  });
+});

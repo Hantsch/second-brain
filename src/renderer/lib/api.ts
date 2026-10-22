@@ -284,6 +284,8 @@ export const api = {
   },
   agent: {
     cliStatus: () => call('agent:cliStatus'),
+    setupStatus: () => call('agent:setupStatus'),
+    setupApply: (request: IpcRequest<'agent:setupApply'>) => call('agent:setupApply', request),
   },
   settings: {
     get: () => call('settings:get'),

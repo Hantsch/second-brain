@@ -1,7 +1,7 @@
 ---
 id: 084
 title: Gaston installs and updates the agent setup
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-10-22
 ---
 
@@ -26,25 +26,25 @@ story delivers the mechanism (templates, marker, version, plan, write) and the s
 
 ## Acceptance Criteria
 
-- [ ] **AC1** — Without a setup, the Agent tab lists every managed file as missing and offers
+- [x] **AC1** — Without a setup, the Agent tab lists every managed file as missing and offers
       "Install".
-- [ ] **AC2** — "Install" first shows the list of files it will write; nothing is written until the
+- [x] **AC2** — "Install" first shows the list of files it will write; nothing is written until the
       user confirms.
-- [ ] **AC3** — After confirming, `CLAUDE.md`, `.claude/settings.json`, the Gaston skills and the
+- [x] **AC3** — After confirming, `CLAUDE.md`, `.claude/settings.json`, the Gaston skills and the
       hook scripts exist in the vault, each carrying the Gaston marker and its template version.
-- [ ] **AC4** — When a shipped template is newer than the installed file, the tab shows that file as
+- [x] **AC4** — When a shipped template is newer than the installed file, the tab shows that file as
       "outdated" and offers "Update"; Update rewrites only marked files that are outdated or
       missing.
-- [ ] **AC5** — A file under `.claude/` without the marker is listed as the user's and is
+- [x] **AC5** — A file under `.claude/` without the marker is listed as the user's and is
       byte-identical after Install and after Update.
-- [ ] **AC6** — Each template is a constant in `src/core/`, pinned by a test to its mirror under
+- [x] **AC6** — Each template is a constant in `src/core/`, pinned by a test to its mirror under
       `docs/` (the `agents-md.ts` pattern).
-- [ ] **AC7** — `CLAUDE.md` names the wiki layer as the only direct write target, requires a
+- [x] **AC7** — `CLAUDE.md` names the wiki layer as the only direct write target, requires a
       `log.md` entry per direct write, names proposals as the path for everything else, and names
       `wiki/overview.md` and the help module as not directly writable.
-- [ ] **AC8** — The setup works on a vault on a removable drive: no absolute machine path appears in
+- [x] **AC8** — The setup works on a vault on a removable drive: no absolute machine path appears in
       any installed file.
-- [ ] **AC9** — A managed file the user edited shows as "modified"; Update lists it as not written
+- [x] **AC9** — A managed file the user edited shows as "modified"; Update lists it as not written
       unless the user ticks it, and a ticked overwrite leaves an undo copy in `.secondbrain/trash/`.
       _(Added at refine to make the (User) decision on Q1 testable.)_
 
@@ -474,3 +474,30 @@ D4 adds no criterion. It guards against a regression: skills in the index would 
 the gardener.
 
 ## Done
+
+**Summary.** Gaston installs and updates the vault's agent setup: root `CLAUDE.md`, `.claude/settings.json`,
+two hook placeholders and the three skills (`gaston-jobs`, `gaston-curate`, `gaston-propose`). Core
+(`src/core/agent/setup-*.ts`) derives status and plan from the manifest/marker and applies it
+hash-guarded with undo copies; IPC `agent:setupStatus` / `agent:setupApply`; the Agent tab gets a Setup
+panel and a plan dialog with opt-in for modified files. `.claude/` is kept out of the index and out of
+section migration; `docs/VAULT-FORMAT.md` documents the format.
+
+**Commit message:** `084: agent setup — templates + marker/manifest, status/plan/apply, agent:setup IPC, setup panel + plan dialog, .claude out of index`
+
+**Verification (narrow gate).** build, lint, typecheck, format:check green. `npx vitest run --changed HEAD`:
+3549 tests; one load-dependent timeout in `tests/renderer/journal.test.tsx` (untouched by this story, passed alone
+in 1.0 min, 77/77, in both verification runs). e2e: `npx playwright test tests/e2e/agent-setup.spec.ts tests/e2e/settings-agent-tab.spec.ts`
+5/5. Review: default stage PASS, 6 findings fixed in one cycle, re-verified.
+AC → test (all passed): AC1/AC2/AC3/AC4/AC5/AC9 → e2e `agent-setup.spec.ts` (both tests); AC3/AC4/AC5/AC8/AC9 →
+`tests/core/agent/setup.test.ts` (names as in Acceptance Tests); AC6/AC7 → `tests/core/agent/templates.test.ts`.
+No manual residue.
+
+**Decisions.**
+- `SETUP_TEMPLATES` has 7 entries (CLAUDE.md, settings, 2 hooks, 3 skills). A `SetupStore` type in `setup-types.ts` and `snapshot`/`mkdir` on `VaultStoreLike` let core accept `requireStore()`.
+- Renderer mock paths (`src/renderer/lib/mock-agent-setup.ts`) are literal, since the web tsconfig cannot reach core; `tests/renderer/mock-agent-setup.test.ts` pins them to `SETUP_TEMPLATES` (core template files added to `tsconfig.web.json` include).
+- Section migration now skips `.claude/` and root `CLAUDE.md` (review finding): managed files must not turn `modified` by a heading rewrite.
+- German badge labels for modified/newer carry no „…“ quotes (badge text); Install/Update/"Setup is current." translated to German.
+- Confirm is disabled at 0 selected files; an empty result says "Nothing was written."
+- Known, unfixed (low risk): a `modified` file from a newer Gaston is an opt-in and ticking it downgrades it after a snapshot; a hard write error mid-apply throws away earlier per-file results and skips the manifest (marker fallback recovers); `docs/ARCHITECTURE.md` has no `agent/` row (module predates this story).
+
+tiers: D 7 / hard 1 · review default · cycles 1 · agents 11

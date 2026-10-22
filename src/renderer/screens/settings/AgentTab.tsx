@@ -12,6 +12,7 @@ import { Skeleton } from '../../components/Skeleton';
 import { useT } from '../../i18n';
 import { api } from '../../lib/api';
 import { useAgentCliStatus } from '../../lib/queries/agent';
+import { AgentSetupPanel } from './agent/AgentSetupPanel';
 
 export function AgentTab() {
   const t = useT();
@@ -64,6 +65,8 @@ export function AgentTab() {
           <Skeleton lines={2} height={20} />
         )}
       </Panel>
+
+      <AgentSetupPanel />
 
       <Panel title={t('settings.agent.about.title')}>
         <p>{t('settings.agent.about.body')}</p>

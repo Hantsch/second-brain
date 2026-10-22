@@ -18,6 +18,7 @@ import type {
 } from '@shared/types';
 import type { SbBridge } from './bridge';
 import { encodeIpcError } from './ipc-error';
+import { agentSetupNotInstalled } from './mock-agent-setup';
 import * as fx from './mock-fixtures';
 import * as st from './mock-settings';
 
@@ -898,6 +899,10 @@ const RESPONSES: MockResponses = {
   'agents:transcript': () => ({ entries: [], nextCursor: null, totalKnown: true }),
   'agents:link': () => undefined,
   'agent:cliStatus': () => ({ state: 'absent' }),
+  'agent:setupStatus': () => agentSetupNotInstalled,
+  'agent:setupApply': ({ confirmed }) => ({
+    results: confirmed.map(({ path }) => ({ path, outcome: 'written' as const })),
+  }),
 
   'settings:get': () => st.settingsSnapshot,
   'settings:setApp': () => st.settingsSnapshot,

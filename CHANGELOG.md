@@ -28,6 +28,8 @@ All notable changes to Gaston are recorded here. The format follows
 - Gardener: maintenance runs you can see, stop and continue, with findings you can act on and
   a health score that admits when it is partial.
 - Claude sessions: Claude Code and Codex sessions count as work on a project.
+- Agent setup: Gaston writes the vault's setup for Claude Code, shows you the plan first, and
+  leaves every file you changed alone unless you tick it.
 - Work in flight: one list for condensations, day closes, imports and maintenance, with a queue
   for the model.
 - Local models: a machine scan, per-task recommendations in money, guided Ollama and llama.cpp

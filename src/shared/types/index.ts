@@ -13,3 +13,4 @@ export * from './journal';
 export * from './tasks';
 export * from './update';
 export * from './agent';
+export * from './agent-setup';

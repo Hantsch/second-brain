@@ -283,3 +283,4 @@ second roadmap.
 - 081 — A module condenses itself · S20 · overview.md is a condensed module artifact: condense-module run from a module condensed tab, diff confirm, due finding in maintenance
 - 082 — The ingest leaves the overview alone · S20 · digestion no longer writes overview.md or asks for overviewChange, catalog counts against orphan, legacy overview replaced whole by its first condensation
 - 083 — Settings has an Agent tab · S20 · Settings gets an Agent tab: pure PATH lookup shows whether Claude Code is installed (path, absent with install-guide link, unknown with reason) plus an About this panel
+- 084 — Gaston installs and updates the agent setup · S20 · Agent tab installs/updates CLAUDE.md, .claude settings, hooks and three skills with marker/manifest, plan dialog and undo copies; .claude kept out of the index

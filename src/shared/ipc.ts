@@ -16,6 +16,9 @@ import type {
   AgentProject,
   AgentCliStatus,
   AgentSessionSummary,
+  AgentSetupApplyRequest,
+  AgentSetupApplyResult,
+  AgentSetupState,
   AppSettings,
   Area,
   AreaNote,
@@ -1277,6 +1280,13 @@ export interface IpcRoutes {
   'agents:link': { req: { agent: AgentKind; projectKey: string; project: string }; res: void };
   /** Is the `claude` CLI on this machine? Only looked up on PATH, never started. */
   'agent:cliStatus': { req: void; res: AgentCliStatus };
+  /** Which of the agent setup files in the vault are current, outdated, missing or the user's own. */
+  'agent:setupStatus': { req: void; res: AgentSetupState };
+  /**
+   * Writes the confirmed setup files. Each entry carries the hash the user saw;
+   * a file changed since then comes back as `conflict`, never overwritten.
+   */
+  'agent:setupApply': { req: AgentSetupApplyRequest; res: AgentSetupApplyResult };
 
   // ── Settings ──────────────────────────────────────────────────────────────
   'settings:get': { req: void; res: SettingsSnapshot };
@@ -1503,6 +1513,8 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'agents:transcript',
   'agents:link',
   'agent:cliStatus',
+  'agent:setupStatus',
+  'agent:setupApply',
   'settings:get',
   'settings:setApp',
   'settings:setVault',

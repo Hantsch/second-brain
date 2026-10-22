@@ -11,7 +11,9 @@ import { AgentTab } from '@renderer/screens/settings/AgentTab';
 
 vi.mock('@renderer/lib/api', () => ({
   api: {
-    agent: { cliStatus: vi.fn() },
+    agent: { cliStatus: vi.fn(), setupStatus: vi.fn() },
+    /* Not ready: the setup panel stays on its skeleton and these tests keep to the CLI panel. */
+    vault: { status: vi.fn().mockResolvedValue({ ready: false, indexing: false }) },
     shell: { openExternal: vi.fn() },
   },
 }));

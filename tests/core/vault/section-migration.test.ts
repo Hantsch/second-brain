@@ -128,6 +128,22 @@ describe('planSectionMigration', () => {
     expect(isMigratablePath('areas/gesundheit.md')).toBe(true);
     expect(isMigratablePath('modules/identity/module.md')).toBe(true);
   });
+
+  it('never plans a heading inside the Gaston-managed agent setup files', () => {
+    const body = ['## Notizen', '', 'Text.', ''].join('\n');
+    const docs = [
+      { path: '.claude/skills/x/SKILL.md', body, hash: 'h1' },
+      { path: 'CLAUDE.md', body, hash: 'h2' },
+      { path: 'areas/gesundheit.md', body, hash: 'h3' },
+    ];
+
+    expect(planSectionMigration(docs, 'en').map((entry) => entry.path)).toEqual([
+      'areas/gesundheit.md',
+    ]);
+    expect(isMigratablePath('.claude/skills/x/SKILL.md')).toBe(false);
+    expect(isMigratablePath('CLAUDE.md')).toBe(false);
+    expect(isMigratablePath('modules/identity/CLAUDE.md')).toBe(true);
+  });
 });
 
 describe('migrateSectionHeadings', () => {
@@ -348,5 +364,17 @@ describe('applySectionMigration', () => {
       'en',
     );
     expect(results[0]?.outcome).toBe('skipped');
+  });
+
+  it('leaves the managed agent setup files untouched even when a plan names them', async () => {
+    const text = '## Notizen\n\nText.\n';
+    const paths = ['.claude/skills/x/SKILL.md', 'CLAUDE.md'];
+    const store = new MemoryVaultStore({ files: Object.fromEntries(paths.map((p) => [p, text])) });
+    const entries = paths.map((path) => ({ path, hash: 'h', renames: [], folds: [] }));
+
+    const results = await applySectionMigration(store, entries, 'en');
+
+    expect(results.map((result) => result.outcome)).toEqual(['skipped', 'skipped']);
+    for (const path of paths) expect((await docOf(store, path)).body).toBe(text);
   });
 });

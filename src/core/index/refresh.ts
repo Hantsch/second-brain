@@ -7,7 +7,7 @@
  */
 
 import type { RawSource } from '@shared/types';
-import { extName, isInside } from '@core/vault/paths';
+import { extName, isAgentConfigPath, isInside } from '@core/vault/paths';
 import type { VaultStat, VaultStore } from '@core/vault/types';
 import { collectIngest, indexOne } from './build';
 import { deriveSources } from './pages';
@@ -96,7 +96,9 @@ async function refreshDirectory(
 ): Promise<void> {
   const known = [...previous.byPath.keys()].filter((path) => isInside(dir, path));
   const files: VaultStat[] = [];
-  for await (const entry of store.walk({ dir, ext: '.md' })) files.push(entry);
+  for await (const entry of store.walk({ dir, ext: '.md' })) {
+    if (!isAgentConfigPath(entry.path)) files.push(entry);
+  }
   if (known.length === 0 && files.length === 0) return; // not a directory at all
 
   const found = new Set<string>();
@@ -138,6 +140,7 @@ export async function refreshPaths(
   let sourcesChanged = false;
 
   for (const path of new Set(paths)) {
+    if (isAgentConfigPath(path)) continue;
     const ext = extName(path);
     if (ext === '.md') {
       await refreshFile(store, path, previous, docsByPath, touched, passageThreshold);

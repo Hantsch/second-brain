@@ -30,7 +30,7 @@
 import { fold } from '@core/index/text';
 import type { DocLanguage, VaultDoc, WriteResult } from '@shared/types';
 import { VAULT_DIRS } from '@shared/types';
-import { extName, isInside, isInternalPath } from './paths';
+import { extName, isAgentConfigPath, isInside, isInternalPath } from './paths';
 import { sectionKindOf, sectionNameFor } from './section-names';
 import type { SectionKind } from './section-names';
 import { appendToSection, findSections } from './sections';
@@ -94,8 +94,10 @@ export interface SectionMigrationStore {
 /**
  * May this path be rewritten by the migration?
  *
- * Markdown outside `raw/` (immutable source payloads, CLAUDE.md), outside
- * `.secondbrain/` (derived) and outside `modules/<slug>/wiki/` (wiki pages carry
+ * Markdown outside `raw/` (immutable source payloads), outside `.secondbrain/`
+ * (derived), outside `.claude/` and the vault-root `CLAUDE.md` (Gaston-managed
+ * agent setup — a rewritten heading would turn them `modified`) and outside
+ * `modules/<slug>/wiki/` (wiki pages carry
  * their own schema headings from docs/MODULE-SCHEMA.md, with their own language
  * table — story 023 owns those). Checked in both `planSectionMigration` and
  * `applySectionMigration`, because in between the plan crosses IPC.
@@ -104,6 +106,7 @@ export function isMigratablePath(path: string): boolean {
   if (extName(path) !== '.md') return false;
   if (isInternalPath(path)) return false;
   if (isInside(VAULT_DIRS.raw, path)) return false;
+  if (isAgentConfigPath(path) || path === 'CLAUDE.md') return false;
   return !new RegExp(`^${VAULT_DIRS.modules}/[^/]+/wiki/`).test(path);
 }
 

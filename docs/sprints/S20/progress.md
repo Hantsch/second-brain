@@ -60,3 +60,27 @@
 - 2026-10-22 09:56 · 083 · review 1 · started
 - 2026-10-22 09:57 · 083 · review 1 · done
 - 2026-10-22 09:58 · 083 · story · done
+- 2026-10-22T09:58:16 · 084 · build · started
+- 2026-10-22 09:58 · 084 · D1 constants, registry, vault CLAUDE.md, protection placeholders · started
+- 2026-10-22 10:02 · 084 · D1 constants, registry, vault CLAUDE.md, protection placeholders · done
+- 2026-10-22 10:02 · 084 · D2 three Gaston skills · started
+- 2026-10-22 10:05 · 084 · D2 three Gaston skills · done
+- 2026-10-22 10:05 · 084 · D3 status, plan and apply over the store (hard) · started
+- 2026-10-22 10:05 · 084 · D4 keep .claude out of index, document format · started
+- 2026-10-22 10:10 · 084 · D3 status, plan and apply over the store (hard) · done
+- 2026-10-22 10:10 · 084 · D4 keep .claude out of index, document format · done
+- 2026-10-22 10:10 · 084 · D5 IPC setupStatus and setupApply · started
+- 2026-10-22 10:15 · 084 · D5 IPC setupStatus and setupApply · done
+- 2026-10-22 10:15 · 084 · D6 setup panel in agent tab · started
+- 2026-10-22 10:17 · 084 · D6 setup panel in agent tab · done
+- 2026-10-22 10:17 · 084 · D7 plan dialog and write · started
+- 2026-10-22 10:21 · 084 · D7 plan dialog and write · done
+- 2026-10-22 10:21 · 084 · verify · started
+- 2026-10-22 10:25 · 084 · verify · done
+- 2026-10-22 10:25 · 084 · review 1 · started
+- 2026-10-22 10:28 · 084 · review 1 · done
+- 2026-10-22 10:28 · 084 · review-fix 1 · started
+- 2026-10-22 10:33 · 084 · review-fix 1 · done
+- 2026-10-22 10:33 · 084 · verify · started
+- 2026-10-22 10:38 · 084 · verify · done
+- 2026-10-22 10:38 · 084 · story · done

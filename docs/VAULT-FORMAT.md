@@ -582,6 +582,73 @@ nothing is written at all.
 Files under `raw/` index as type `raw`, derived from the path, without any
 frontmatter change.
 
+## Agent setup
+
+Gaston can install a setup that lets a coding agent (Claude Code) work on the vault
+from outside the app. The setup is plain files in the vault root; the app writes it
+only on request.
+
+```
+<vault>/
+  CLAUDE.md                          instructions for the agent, indexed like README.md
+  .claude/
+    gaston-manifest.json             ownership record for every managed file
+    skills/gaston-jobs/SKILL.md      work through jobs from Gaston
+    skills/gaston-curate/SKILL.md    curate the vault
+    skills/gaston-propose/SKILL.md   write proposals instead of editing
+    hooks/                           hook scripts the agent runs
+  .secondbrain/agent/
+    jobs/                            written by Gaston, read by the agent
+    results/                         written by the agent; same file name as its job
+    proposals/                       written by the agent
+    runs/                            written by the agent
+```
+
+### Marker and manifest
+
+A managed file carries a marker with the template it came from:
+
+```
+gaston:managed id=<template-id> version=<n>
+```
+
+Where the marker sits depends on the file type:
+
+| File                | Marker position                                          |
+| ------------------- | -------------------------------------------------------- |
+| Markdown            | first line, as an HTML comment                           |
+| `SKILL.md`          | the line directly after the closing `---` of frontmatter |
+| Script              | a `# …` line right after the shebang                     |
+| JSON (the manifest) | none                                                     |
+
+`.claude/gaston-manifest.json` is the single source of ownership. For each managed
+file it records the template id, the template version, and the hash of what was
+written. The rules that follow:
+
+- A file with neither marker nor manifest entry belongs to the user. The app never
+  writes it.
+- A managed file whose hash no longer matches the manifest was modified by the user.
+  The app overwrites it only after explicit confirmation, and first copies the
+  current content to `.secondbrain/trash/` so the change can be undone.
+- A managed file whose hash still matches may be updated to a newer template version
+  without asking.
+
+### Who writes what under `.secondbrain/agent/`
+
+| Folder       | Writer | Reader | Content                                                |
+| ------------ | ------ | ------ | ------------------------------------------------------ |
+| `jobs/`      | Gaston | agent  | one job per file                                       |
+| `results/`   | agent  | Gaston | the outcome of a job, with the same file name as it    |
+| `proposals/` | agent  | Gaston | suggested changes; nothing applies until the user says |
+| `runs/`      | agent  | Gaston | a record of each agent run                             |
+
+### Indexing
+
+`.claude/` at the vault root is agent configuration, not knowledge: it is never
+indexed, neither by a full build nor by a path refresh. A nested `.claude/` anywhere
+else in the vault is ordinary content. The root `CLAUDE.md` is indexed like
+`README.md`.
+
 ## What the app never does
 
 - Change or delete an ingested source payload under `raw/`; bookkeeping in

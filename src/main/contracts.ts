@@ -58,6 +58,10 @@ export interface VaultStoreLike {
     options?: { expectedHash?: string },
   ): Promise<{ path: string; hash: string }>;
   exists(path: string): Promise<boolean>;
+  /** Copies the file's current state into the trash without touching it; `null` if there is no file. */
+  snapshot(path: string): Promise<string | null>;
+  /** Creates a directory (recursive, idempotent). */
+  mkdir(dir: string): Promise<void>;
   delete(path: string): Promise<{ path: string; undoToken: string }>;
   /** Restores what's in the trash under this marker. Returns the paths. */
   undo(token: string): Promise<string[]>;
