@@ -1,14 +1,12 @@
 # Roadmap
 
 **The** one source of status and planning: where we stand, what comes next, what is not planned
-at all yet. As of: 2026-10-20.
+at all yet. As of: 2026-10-22.
 
-Where we stand: M19 just finished (S19, `done`) — a push to `main` with a filled `## Unreleased`
-publishes the installer, portable exe and `latest.yml`; an installed Gaston notices a release
-daily, downloads and restarts only on request, About shows the notes. Next: nothing is cut yet
-beyond "Open / unprioritised" below — a `/roadmap plan` picks the next milestone. Waiting on the
-user: the `sprint/S17`, `S18` and `S19` → `dev` merges, and the first real release (unverified
-against github.com).
+Where we stand: M19 finished (S19, `done`). M20 (vault agent, with the condensed layer's module
+level) is cut into S20 and S21, both `planned`. Next: `/sprint S20`. Waiting on the user: the
+`sprint/S17`, `S18` and `S19` → `dev` merges, and the first real release (unverified against
+github.com).
 
 Rules (so this document does not drift):
 
@@ -1102,16 +1100,28 @@ Sprints:
 - [sprints/S19/sprint.md](sprints/S19/sprint.md) — Gaston ships and updates itself (076, 077,
   078, 079), `done` ([review](sprints/S19/review.md))
 
+### M20 — An agent curates the vault — planned
+
+Concept: [concepts/vault-agent.md](concepts/vault-agent.md), plus the module level of
+[concepts/condensed-layer.md](concepts/condensed-layer.md). Cut 2026-10-22 into as few sprints as
+possible; the user chose to build the module level here rather than defer the condense-module job
+(vault-agent O7).
+
+Sprints:
+
+- [sprints/S20/sprint.md](sprints/S20/sprint.md) — a module condenses itself, and Claude Code works
+  safely in the vault (081–087), `planned`
+- [sprints/S21/sprint.md](sprints/S21/sprint.md) — work goes to the agent and comes back
+  (088–092), `planned`
+
 ---
 
 ## Open / unprioritised
 
-| Topic                                                         | State                                                                                                                                                                                                                                                                                                                                               | Next step                                                                                                                                         |
-| ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Condensed layer (module level)                                | Concept written 2026-08-18: [concepts/condensed-layer.md](concepts/condensed-layer.md). The **area** level was built in M12 (S10, done 2026-09-02); the **project** level was built as M14 (S12, done 2026-09-02). The **module** level — CND-2, CND-17 (agent-session citation), CND-35/36 (retiring the ingest's overview append) — is still open | Own `/roadmap plan` for the module level. The concept's §7 reversal trigger was evaluated at M14's refine and did not flip (see M14's Gaps/notes) |
-| MCP interface for projects, knowledge and the condensed layer | Named as an outlook in [concepts/condensed-layer.md](concepts/condensed-layer.md) §14, deliberately without requirements                                                                                                                                                                                                                            | Own `/ai-scrum:concept` once the condensed artifacts exist                                                                                        |
-| German docs migrated to English                               | Decided in `.claude/ai-scrum.md`; only `docs/MODULE-SCHEMA.md` is still German now — and story 023 pinned it `eol=lf` and byte-exact against `MODULE_SCHEMA_TEMPLATE`, so migrating it means changing code too                                                                                                                                      | Own story once it stops being cosmetic                                                                                                            |
-| Medication tracker                                            | Named in the user's journal feedback (2026-09-03) and postponed at the M15 cut by the user: the idea is not ripe enough to cut. Open shape questions: preparations, dose, schedule, adherence, correlation with mood/energy, own screen or a day section                                                                                            | Own `/ai-scrum:concept` once the user wants it — no story until then                                                                              |
-| Data import merges into an existing day                       | Rule agreed at the M15 cut (2026-09-03): an import must add to a day that already has content, never replace it. But no import path exists in the code, so the story has no subject yet                                                                                                                                                             | Name the source (old journal files, another app's export, a folder of Markdown), then cut one story with the merge rule as its acceptance         |
-| Vault agent (Claude Code in the vault)                        | Concept drafted 2026-10-22: [concepts/vault-agent.md](concepts/vault-agent.md), 11 open points                                                                                                                                                                                                                                                      | `/roadmap plan`                                                                                                                                   |
-| Phase 2                                                       | Not defined                                                                                                                                                                                                                                                                                                                                         | Cut after phase 1 has been used                                                                                                                   |
+| Topic                                                         | State                                                                                                                                                                                                                                                    | Next step                                                                                                                                 |
+| ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| MCP interface for projects, knowledge and the condensed layer | Named as an outlook in [concepts/condensed-layer.md](concepts/condensed-layer.md) §14, deliberately without requirements                                                                                                                                 | Own `/ai-scrum:concept` once the condensed artifacts exist                                                                                |
+| German docs migrated to English                               | Decided in `.claude/ai-scrum.md`; only `docs/MODULE-SCHEMA.md` is still German now — and story 023 pinned it `eol=lf` and byte-exact against `MODULE_SCHEMA_TEMPLATE`, so migrating it means changing code too                                           | Own story once it stops being cosmetic                                                                                                    |
+| Medication tracker                                            | Named in the user's journal feedback (2026-09-03) and postponed at the M15 cut by the user: the idea is not ripe enough to cut. Open shape questions: preparations, dose, schedule, adherence, correlation with mood/energy, own screen or a day section | Own `/ai-scrum:concept` once the user wants it — no story until then                                                                      |
+| Data import merges into an existing day                       | Rule agreed at the M15 cut (2026-09-03): an import must add to a day that already has content, never replace it. But no import path exists in the code, so the story has no subject yet                                                                  | Name the source (old journal files, another app's export, a folder of Markdown), then cut one story with the merge rule as its acceptance |
+| Phase 2                                                       | Not defined                                                                                                                                                                                                                                              | Cut after phase 1 has been used                                                                                                           |

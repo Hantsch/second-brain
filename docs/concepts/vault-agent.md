@@ -1,6 +1,6 @@
 # Vault agent — Concept
 
-Status: **Draft** (vision + requirements, no stories yet). This document fixes how an
+Status: **Draft** (vision + requirements; cut into stories, see [ROADMAP](../ROADMAP.md)). This document fixes how an
 agent CLI — Claude Code in v1 — works _inside_ the vault folder as a curator and as a
 worker for LLM jobs that Gaston hands over as files, how Gaston installs and manages that
 setup from a new settings tab, which parts of the vault the agent may read, write or only
