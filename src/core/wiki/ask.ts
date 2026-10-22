@@ -22,7 +22,7 @@ import { LlmUnavailableError, isAbortError, parseJsonLoose } from '@core/llm';
 import { queryAnswerPrompt } from '@core/llm';
 import type { IndexedDoc } from '@core/index/types';
 import { citationsFromExcerpts, validateCitations, type CitationSource } from './citations';
-import { evidenceTypesFor } from './evidence';
+import { evidenceSourceOf, evidenceTypesFor, isEvidenceExcludedPath } from './evidence';
 import { buildExcerpt, questionTerms } from './excerpts';
 import { QUERY_RERANK_SCHEMA, applyOrder, rerankPrompt } from './rerank';
 import { phrases } from './text';
@@ -36,8 +36,9 @@ export const CANDIDATE_FACTOR = 3;
 /** Obergrenze der Kandidatenliste — mehr kostet nur Tokens. */
 export const MAX_CANDIDATES = 24;
 /**
- * Hoechstzahl Ausschnitte je Datei (053): ein langes Dokument darf mehrere
- * Passagen beisteuern, aber nicht die ganze Antwort mit sich selbst fuellen.
+ * Hoechstzahl Ausschnitte je Quelle (053): ein langes Dokument darf mehrere
+ * Passagen beisteuern, aber nicht die ganze Antwort mit sich selbst fuellen. Eine
+ * Rohquelle als Ordner (Metadaten, Transcript) zaehlt als eine Quelle.
  */
 export const MAX_PASSAGES_PER_DOC = 3;
 
@@ -58,9 +59,9 @@ export interface RetrieveOptions {
  * Ausschnitt mit Zeilennummer. Leere Frage und leerer Vault liefern eine leere
  * Liste — das ist ein Ergebnis, kein Fehler.
  *
- * Gesucht wird immer nur in den Typen, die als Beleg taugen (`evidenceTypesFor`):
- * hier haengt der Ausschluss maschinengeschriebener Zusammenfassungen, damit er
- * fuer jeden Weg dahinter gilt — mit Modell, ohne Modell, mit und ohne Filter.
+ * Gesucht wird immer nur in den Typen und Dateien, die als Beleg taugen
+ * (`evidenceTypesFor`, `isEvidenceExcludedPath`): hier haengt der Ausschluss, damit
+ * er fuer jeden Weg dahinter gilt — mit Modell, ohne Modell, mit und ohne Filter.
  */
 export function retrieve(
   index: WikiIndexView,
@@ -75,17 +76,23 @@ export function retrieve(
      (`matchesTypes`), das Durchreichen wuerde die Einschraenkung umdrehen. */
   if (types.length === 0) return [];
   const limit = Math.max(1, options.limit ?? DEFAULT_RETRIEVE_LIMIT);
-  const hits = index.searchPassages({
-    text,
-    limit: Math.min(MAX_CANDIDATES, limit),
-    ...(options.module === undefined || options.module === null ? {} : { module: options.module }),
-    ...(options.scope === undefined || options.scope === null ? {} : { scope: options.scope }),
-    ...(options.project === undefined || options.project === null
-      ? {}
-      : { project: options.project }),
-    types,
-  });
   const byPath = index.index().byPath;
+  const exists = (path: string): boolean => byPath.has(path);
+  const hits = index.searchPassages(
+    {
+      text,
+      limit: Math.min(MAX_CANDIDATES, limit),
+      ...(options.module === undefined || options.module === null
+        ? {}
+        : { module: options.module }),
+      ...(options.scope === undefined || options.scope === null ? {} : { scope: options.scope }),
+      ...(options.project === undefined || options.project === null
+        ? {}
+        : { project: options.project }),
+      types,
+    },
+    { exclude: (path) => isEvidenceExcludedPath(path, exists) },
+  );
   const terms = questionTerms(text);
   const excerpts: WikiExcerpt[] = [];
   const perDoc = new Map<string, number>();
@@ -93,8 +100,9 @@ export function retrieve(
   for (const hit of hits) {
     const doc = byPath.get(hit.path);
     if (doc === undefined) continue;
-    const usedForPath = perDoc.get(hit.path) ?? 0;
-    if (usedForPath >= MAX_PASSAGES_PER_DOC) continue;
+    const source = evidenceSourceOf(hit.path);
+    const usedForSource = perDoc.get(source) ?? 0;
+    if (usedForSource >= MAX_PASSAGES_PER_DOC) continue;
     const lines = doc.body.replace(/\r\n/g, '\n').split('\n');
     const startIndex = Math.max(0, hit.startLine - doc.bodyLine);
     const endIndex = Math.max(startIndex, hit.endLine - doc.bodyLine);
@@ -109,7 +117,7 @@ export function retrieve(
       line: slice.line,
       score: hit.score,
     });
-    perDoc.set(hit.path, usedForPath + 1);
+    perDoc.set(source, usedForSource + 1);
     if (excerpts.length >= limit) break;
   }
   return excerpts;

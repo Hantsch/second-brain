@@ -5,7 +5,9 @@
  * 1. **Folded terms.** Document and query are both brought into an ASCII form
  *    ('Rückmeldung' → 'rueckmeldung'). Both spellings meet in the middle.
  * 2. **Prefix and fuzzy.** 'dokum' finds 'dokumentieren'; a typo doesn't cost
- *    a hit (fuzzy 0.2). Search runs with AND first, then with OR.
+ *    a hit (fuzzy 0.2, from five letters on). Search runs with AND first, then with
+ *    OR; passages for answers run with OR and a relevance floor. Stopwords
+ *    ('was', 'und', 'the') never reach MiniSearch (`stopwords.ts`).
  * 3. **Substring as a fallback.** German compound words ('Rollenkonzept')
  *    won't be found by prefix matching if the user types the second half. If
  *    the hit list stays thin, the text is also searched directly — with a
@@ -27,6 +29,7 @@ import type { SearchEntry } from './search-entries';
 import { filterFor } from './search-filter';
 import type { Keep } from './search-filter';
 import { makeSnippet } from './snippet';
+import { contentTerms } from './stopwords';
 import { fold } from './text';
 import { DEFAULT_SEARCH_LIMIT } from './types';
 import type { IndexedDoc, PassageHit, SerializedSearch } from './types';
@@ -35,6 +38,8 @@ import { YIELD_EVERY, yieldToEventLoop } from './yield';
 /** The title carries a lot of weight: whoever matches it means the document. */
 const BOOST = { title: 6, tags: 3, text: 1 };
 const FUZZY = 0.2;
+/* Below this, one edit is a different word: 'sie' would meet 'die', 'api' 'app'. */
+const MIN_FUZZY_LENGTH = 5;
 
 /** Full matches sit at this floor and above; substring matches below it — visibly second choice. */
 const FULL_HIT_FLOOR = 0.4;
@@ -42,6 +47,18 @@ const SUBSTRING_SCORE = 0.3;
 
 /** Shorter fragments would match everything and say nothing. */
 const MIN_SUBSTRING_LENGTH = 3;
+
+/**
+ * Evidence floor (`searchPassages` only): the long tail below this share of the best
+ * score is noise. Kept low on purpose — the title boost puts a title match far above
+ * a passage that answers in its body, and that passage must survive.
+ */
+const MIN_PASSAGE_SHARE = 0.1;
+
+/** What `searchPassages` takes beyond the query: files that must never be evidence. */
+export interface PassageOptions {
+  exclude?: (path: string) => boolean;
+}
 
 export type DocLookup = ReadonlyMap<string, IndexedDoc>;
 
@@ -62,14 +79,6 @@ function searchOptions(): Options<SearchEntry> {
 /** The file a MiniSearch result belongs to — a stored field of every entry. */
 function pathOf(result: SearchResult): string {
   return String(result['path']);
-}
-
-/** Query terms as the user typed them — the basis for highlighting. */
-function queryTerms(text: string): string[] {
-  return text
-    .split(/[^\p{L}\p{N}_]+/u)
-    .map((term) => term.trim())
-    .filter((term) => term.length > 0);
 }
 
 function substringNeedles(terms: readonly string[]): string[] {
@@ -94,6 +103,19 @@ function hitFor(doc: IndexedDoc, score: number, terms: readonly string[]): Searc
 function byUpdatedDesc(a: IndexedDoc, b: IndexedDoc): number {
   if (a.updated === b.updated) return a.path.localeCompare(b.path);
   return a.updated < b.updated ? 1 : -1;
+}
+
+/**
+ * The passages that answer rather than brush the question: each must match at least
+ * half of the query's words — a single shared word out of four is a coincidence,
+ * not a match — and stand above the long tail.
+ */
+function relevantPassages(results: SearchResult[], termCount: number): SearchResult[] {
+  const best = results[0]?.score ?? 0;
+  const needed = Math.ceil(termCount / 2);
+  return results.filter(
+    (result) => result.score >= best * MIN_PASSAGE_SHARE && result.queryTerms.length >= needed,
+  );
 }
 
 /** A MiniSearch score as a share of the best one, lifted above the substring floor. */
@@ -211,9 +233,9 @@ export class SearchEngine {
     const text = (query.text ?? '').trim();
     if (text.length === 0) return this.recent(docs, keep, limit);
 
-    const matched = this.matched(text, keep, docs);
+    const terms = contentTerms(text);
+    const matched = this.matched(terms, keep, docs);
     const best = matched[0]?.score ?? 1;
-    const terms = queryTerms(text);
     const hits: SearchHit[] = [];
     const taken = new Set<string>();
 
@@ -238,15 +260,22 @@ export class SearchEngine {
   /**
    * Matching passages with their file lines, descending by score, not collapsed:
    * one file may appear several times. `limit` counts passages. Same filters,
-   * applied before the cut, as `search()`. An empty query has no passages.
+   * applied before the cut, as `search()`, plus `options.exclude`. Passages too weak
+   * to count as evidence are dropped (`relevantPassages`). An empty query has no passages.
    */
-  searchPassages(query: SearchQuery, docs: DocLookup): PassageHit[] {
+  searchPassages(query: SearchQuery, docs: DocLookup, options: PassageOptions = {}): PassageHit[] {
     const limit = Math.max(1, query.limit ?? DEFAULT_SEARCH_LIMIT);
-    const keep = filterFor(query);
+    const filters = filterFor(query);
+    const exclude = options.exclude;
+    const keep: Keep =
+      exclude === undefined ? filters : (doc) => filters(doc) && !exclude(doc?.path ?? '');
     const text = (query.text ?? '').trim();
     if (text.length === 0) return [];
 
-    const matched = this.matched(text, keep, docs);
+    const terms = contentTerms(text);
+    /* OR, not AND-first: a passage matching three of four words is evidence too, and
+       `relevantPassages` drops the ones that match too little. */
+    const matched = relevantPassages(this.query(terms, 'OR', keep, docs), terms.length);
     const best = matched[0]?.score ?? 1;
     const hits: PassageHit[] = [];
     const taken = new Set<string>();
@@ -265,21 +294,26 @@ export class SearchEngine {
     }
 
     if (hits.length < limit) {
-      const terms = queryTerms(text);
       hits.push(...this.substringPassages(terms, docs, keep, limit - hits.length, taken));
     }
     return hits;
   }
 
   /** Query MiniSearch twice: AND first, then OR — never come back empty-handed. */
-  private matched(text: string, keep: Keep, docs: DocLookup): SearchResult[] {
-    const common = { prefix: true, fuzzy: FUZZY, boost: BOOST };
-    const strict = this.mini
-      .search(text, { ...common, combineWith: 'AND' })
-      .filter((result) => keep(docs.get(pathOf(result))));
-    if (strict.length > 0) return strict;
+  private matched(terms: readonly string[], keep: Keep, docs: DocLookup): SearchResult[] {
+    const strict = this.query(terms, 'AND', keep, docs);
+    return strict.length > 0 ? strict : this.query(terms, 'OR', keep, docs);
+  }
+
+  private query(
+    terms: readonly string[],
+    combineWith: 'AND' | 'OR',
+    keep: Keep,
+    docs: DocLookup,
+  ): SearchResult[] {
+    const fuzzy = (term: string): number | false => term.length >= MIN_FUZZY_LENGTH && FUZZY;
     return this.mini
-      .search(text, { ...common, combineWith: 'OR' })
+      .search(terms.join(' '), { prefix: true, fuzzy, boost: BOOST, combineWith })
       .filter((result) => keep(docs.get(pathOf(result))));
   }
 

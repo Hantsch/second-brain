@@ -6,9 +6,9 @@
  * sondern nur als Reihenfolge. Wer die Prompts der App durchgeht, findet ihn ueber
  * `core/wiki/ask.ts`.
  *
- * Die Aufgabe ist billig gehalten: das Modell gibt nur Nummern zurueck. Faellt sie
- * aus, bleibt die Reihenfolge der Volltextsuche — ein Rerank ist eine Verbesserung,
- * keine Voraussetzung.
+ * Die Aufgabe ist billig gehalten: das Modell gibt nur Nummern zurueck und laesst
+ * weg, was nichts zur Frage sagt. Faellt sie aus, bleibt die Reihenfolge der
+ * Volltextsuche — ein Rerank ist eine Verbesserung, keine Voraussetzung.
  */
 
 import type { ChatTurn, DocLanguage } from '@shared/types';
@@ -62,9 +62,10 @@ export function rerankPrompt(
 }
 
 /**
- * Eine Reihenfolge anwenden. Unbekannte und doppelte Nummern fallen weg; was das
- * Modell nicht nennt, kommt hinten dran — ein Rerank darf sortieren, aber nichts
- * verschwinden lassen.
+ * Eine Reihenfolge anwenden. Unbekannte und doppelte Nummern fallen weg, und was das
+ * Modell nicht nennt, ebenso — darum bittet der Prompt: ein Ausschnitt ohne Bezug
+ * ist kein Beleg, nur Laerm im Antwort-Prompt. Nennt es keine einzige gueltige
+ * Nummer, ist das ein Ausfall und kein Urteil: dann bleibt die Reihenfolge der Suche.
  */
 export function applyOrder<T>(items: readonly T[], order: unknown): T[] {
   if (!Array.isArray(order)) return [...items];
@@ -78,10 +79,5 @@ export function applyOrder<T>(items: readonly T[], order: unknown): T[] {
     const item = items[position];
     if (item !== undefined) result.push(item);
   }
-  for (let index = 0; index < items.length; index += 1) {
-    if (taken.has(index)) continue;
-    const item = items[index];
-    if (item !== undefined) result.push(item);
-  }
-  return result;
+  return result.length > 0 ? result : [...items];
 }

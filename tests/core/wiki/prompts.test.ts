@@ -202,10 +202,14 @@ describe('rerankPrompt', () => {
     expect(QUERY_RERANK_SCHEMA).toMatchObject({ required: ['order'] });
   });
 
-  it('sortiert, ohne einen Treffer zu verlieren', () => {
-    expect(applyOrder(['a', 'b', 'c'], [3, 1])).toEqual(['c', 'a', 'b']);
-    expect(applyOrder(['a', 'b'], [2, 2, 99, -1, 'x'])).toEqual(['b', 'a']);
+  it('sortiert und laesst weg, was das Modell nicht nennt', () => {
+    expect(applyOrder(['a', 'b', 'c'], [3, 1])).toEqual(['c', 'a']);
+    expect(applyOrder(['a', 'b'], [2, 2, 99, -1, 'x'])).toEqual(['b']);
+  });
+
+  it('behaelt die Reihenfolge der Suche, wenn die Antwort kein Urteil ist', () => {
     expect(applyOrder(['a', 'b'], 'kaputt')).toEqual(['a', 'b']);
     expect(applyOrder(['a', 'b'], [])).toEqual(['a', 'b']);
+    expect(applyOrder(['a', 'b'], [99, -1, 'x'])).toEqual(['a', 'b']);
   });
 });

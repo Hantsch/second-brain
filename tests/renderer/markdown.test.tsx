@@ -53,3 +53,18 @@ describe('Markdown: Verweise', () => {
     expect(onOpenPath).toHaveBeenCalledWith(PATH);
   });
 });
+
+describe('plainExcerpt', () => {
+  it('drops inline marks and keeps the text of links', async () => {
+    const { plainExcerpt } = await import('@renderer/components/markdown-render');
+    expect(plainExcerpt('**Kanal:** [Better Stack](https://www.youtube.com/channel/x)')).toBe(
+      'Kanal: Better Stack',
+    );
+    expect(
+      plainExcerpt('[`00:04:23`](https://youtu.be/f4mI3d-nTrI?t=263) the second question'),
+    ).toBe('00:04:23 the second question');
+    expect(plainExcerpt('Dateinamen wie `auth0.md`, __klein__ geschrieben')).toBe(
+      'Dateinamen wie auth0.md, klein geschrieben',
+    );
+  });
+});

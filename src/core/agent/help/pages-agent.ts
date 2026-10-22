@@ -6,6 +6,7 @@ import type { HelpPageDef } from './types';
 
 export const AGENT_PAGE: HelpPageDef = {
   slug: 'agent',
+  tags: ['agent', 'einrichtung', 'schutz', 'vorschläge', 'befehle'],
   title: 'The agent: setup, protection and proposals',
   summary:
     'How Claude Code works on the vault: setup files, protection, wiki writes and proposals.',

@@ -87,11 +87,17 @@ function indexFile(): string {
   return markedMarkdown(`${ROOT}/wiki/index.md`, body);
 }
 
-function pageFile(type: 'concept' | 'overview', title: string, body: string): string {
+function pageFile(
+  type: 'concept' | 'overview',
+  title: string,
+  body: string,
+  tags: readonly string[] = [],
+): string {
   return serialize(
     pageFrontmatter({
       type,
       title,
+      tags,
       module: HELP_MODULE_SLUG,
       day: PAGE_DAY,
       language: 'en',
@@ -113,7 +119,7 @@ export function renderHelpModule(): ReadonlyArray<{ path: string; content: strin
     },
     ...HELP_PAGES.map((page) => ({
       path: `${ROOT}/wiki/concepts/${page.slug}.md`,
-      content: pageFile('concept', page.title, page.body),
+      content: pageFile('concept', page.title, page.body, page.tags),
     })),
   ];
 }

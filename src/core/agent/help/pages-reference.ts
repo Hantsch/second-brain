@@ -8,6 +8,7 @@ import type { HelpPageDef } from './types';
 
 export const VAULT_FORMAT_PAGE: HelpPageDef = {
   slug: 'vault-format',
+  tags: ['dateiformat', 'ordner', 'frontmatter', 'ablage'],
   title: 'The vault format',
   summary:
     'The vault is a folder of Markdown files with YAML frontmatter; the files are the truth.',

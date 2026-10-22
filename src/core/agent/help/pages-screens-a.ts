@@ -5,6 +5,7 @@ import type { HelpPageDef } from './types';
 
 export const DASHBOARD_PAGE: HelpPageDef = {
   slug: 'screen-dashboard',
+  tags: ['übersicht', 'startseite', 'fällig', 'zuletzt'],
   title: 'Dashboard',
   summary: 'The movable modules that show what you worked on, what is due and who you wait for.',
   body: `# Dashboard
@@ -44,6 +45,7 @@ loaded, the screen says so instead of guessing a layout.
 
 export const CHATS_PAGE: HelpPageDef = {
   slug: 'screen-chats',
+  tags: ['fragen', 'verlauf', 'antworten', 'belege'],
   title: 'Chats',
   summary: 'The history of every question you asked Gaston, readable on its own.',
   body: `# Chats
@@ -73,6 +75,7 @@ With no chat the screen says "No chat yet" and that the first question starts th
 
 export const PROJECTS_PAGE: HelpPageDef = {
   slug: 'screen-projects',
+  tags: ['projekte', 'aufgaben', 'todos', 'fristen'],
   title: 'Projects',
   summary: 'Where did you leave off: the project list, its detail, and all todos.',
   body: `# Projects
@@ -120,6 +123,7 @@ and you attach it to a project in the project detail.
 
 export const JOURNAL_PAGE: HelpPageDef = {
   slug: 'screen-journal',
+  tags: ['tagebuch', 'coach', 'tagesabschluss'],
   title: 'Journal',
   summary: 'One file per day: write it, talk to the coach, close the day.',
   body: `# Journal

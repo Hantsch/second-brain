@@ -4,6 +4,7 @@ import type { HelpPageDef } from './types';
 
 export const KNOWLEDGE_PAGE: HelpPageDef = {
   slug: 'screen-knowledge',
+  tags: ['wissen', 'wissensmodule', 'quellen'],
   title: 'Knowledge',
   summary: 'Knowledge modules (wikis) and the sources that feed them.',
   body: `# Knowledge
@@ -40,6 +41,7 @@ rail entry of their own.
 
 export const NOTES_PAGE: HelpPageDef = {
   slug: 'screen-notes',
+  tags: ['notizen', 'eingang', 'bereiche', 'ablegen'],
   title: 'Notes',
   summary: 'Notes sorted by area, the unfiled inbox, and condensed areas.',
   body: `# Notes
@@ -71,6 +73,7 @@ grouped in areas, which are ongoing responsibilities with no end, one file each 
 
 export const TASKS_PAGE: HelpPageDef = {
   slug: 'screen-tasks',
+  tags: ['aufträge', 'hintergrund', 'warteschlange'],
   title: 'Tasks',
   summary: 'The queue of background work Gaston runs: running, waiting and finished.',
   body: `# Tasks
@@ -110,6 +113,7 @@ answered once, so it never claims "nothing" before it knows.
 
 export const AGENT_SCREEN_PAGE: HelpPageDef = {
   slug: 'screen-agent',
+  tags: ['befehle', 'kommandos', 'claude', 'terminal'],
   title: 'Agent',
   summary: 'Open Claude Code in the vault, and the commands it knows there.',
   body: `# Agent
@@ -135,6 +139,7 @@ agent page of this module explains what it may do.
 
 export const GARDEN_PAGE: HelpPageDef = {
   slug: 'screen-garden',
+  tags: ['pflege', 'garten', 'wartung', 'befunde'],
   title: 'Care (garden)',
   summary: 'Maintenance against knowledge rot: checks, a health score, and findings.',
   body: `# Care (garden)
@@ -168,6 +173,7 @@ vault and lists what they find.
 
 export const SETTINGS_PAGE: HelpPageDef = {
   slug: 'screen-settings',
+  tags: ['einstellungen', 'modelle', 'sprachen', 'routing'],
   title: 'Settings',
   summary: 'Vault, languages, models, behaviour, customization, agent and about.',
   body: `# Settings

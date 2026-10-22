@@ -268,8 +268,9 @@ export function renderMarkdown(
  * Make vault syntax readable from a short excerpt — for previews (citations
  * in the ask screen, list rows) that show no structure, just running text.
  * No rendering, text only: `[[target|text]]` becomes `text` (otherwise
- * `target`), leading markers (`#`, `-`, `>`, `1.`) are dropped, a trailing
- * `(source: …)` disappears. The same `REF` the renderer above uses to
+ * `target`), `[text](url)` becomes `text`, bold and code marks go, leading
+ * markers (`#`, `-`, `>`, `1.`) are dropped, a trailing `(source: …)`
+ * disappears. The same `REF` the renderer above uses to
  * recognize wikilinks — maintaining a second pattern here would be the
  * mistake of forgetting to update one of them on the next syntax change.
  */
@@ -286,6 +287,9 @@ export function plainExcerpt(text: string): string {
       const trimmedLabel = (label ?? '').trim();
       return trimmedLabel.length > 0 ? trimmedLabel : target.trim();
     })
+    .replace(/`([^`\n]*)`/g, '$1')
+    .replace(/!?\[([^\]\n]*)\]\([^)\n]*\)/g, '$1')
+    .replace(/(\*\*|__)(?=\S)([^\n]*?\S)\1/g, '$2')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 }
