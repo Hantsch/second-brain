@@ -56,7 +56,7 @@ interface Candidate {
   sourceSlug: string;
   /** Die eine Wissensseite, die „das Modell" zu dieser Quelle vorschlaegt. */
   page: { slug: string; title: string };
-  /** Zeile, die in `overview.md` landet — je Lauf eine eigene. */
+  /** Antwortfeld des „Modells", das der Ingest ignoriert (er schreibt nicht in `overview.md`). */
   overviewChange: string;
 }
 
@@ -205,16 +205,13 @@ describe('zwei Verdichtungen in dasselbe Modul, gleichzeitig', () => {
     expect(new Set(slugs).size).toBe(slugs.length);
   });
 
-  it('ziehen beide Synthese-Zeilen nach und vermerken beide Protokolle', async () => {
+  it('lassen overview.md unberuehrt und vermerken beide Protokolle', async () => {
     const fixture = await wikiFixture(secondRawFiles());
+    const before = await fixture.text(OVERVIEW_PATH);
 
-    const [first, second] = await bothAtOnce(fixture);
+    await bothAtOnce(fixture);
 
-    expect(first.overviewUpdated).toBe(true);
-    expect(second.overviewUpdated).toBe(true);
-    const overview = await fixture.text(OVERVIEW_PATH);
-    expect(overview).toContain(FIRST.overviewChange);
-    expect(overview).toContain(SECOND.overviewChange);
+    expect(await fixture.text(OVERVIEW_PATH)).toBe(before);
 
     const firstProtocol: unknown = JSON.parse(await fixture.text(PROTOCOL_PATH));
     const secondProtocol: unknown = JSON.parse(await fixture.text(SECOND_PROTOCOL));
@@ -352,38 +349,45 @@ describe('appendLog gegen einen fremden Schreiber', () => {
 });
 
 /**
- * Ein Store, der genau beim ersten Schreiben von `overview.md` dazwischenfunkt: er
- * haengt selbst einen Absatz an und meldet dann den Konflikt, den ein echter Store
- * in dieser Lage meldet — dieselbe Lage wie bei `log.md`, nur ueber `write` statt
- * `writeText`, weil `overview.md` eine Seite mit Frontmatter ist.
+ * Ein Store, der waehrend der Verdichtung selbst einen Absatz an `overview.md`
+ * haengt — beim ersten Katalog- oder Chronik-Schreiben, also mitten im gesperrten
+ * Abschnitt. So sieht man, ob die Verdichtung die Datei danach noch anfasst; `seen`
+ * haelt den Stand fest, den der fremde Schreiber hinterliess.
  */
-function storeWithForeignOverviewWriter(store: WikiTxStore, path: string): WikiTxStore {
+function storeWithForeignOverviewWriter(
+  store: WikiTxStore,
+  path: string,
+  seen: { text: string | null },
+): WikiTxStore {
   let struck = false;
   return {
     read: (target) => store.read(target),
     readText: (target) => store.readText(target),
     exists: (target) => store.exists(target),
-    write: async (input) => {
-      if (input.path !== path || struck) return store.write(input);
-      struck = true;
-      await writePage(store, path, { appendBody: FOREIGN_OVERVIEW_PARAGRAPH });
-      throw new VaultConflictError({ path, expectedHash: '', actualHash: '' });
-    },
+    write: (input) => store.write(input),
     create: (target, frontmatter, body) => store.create(target, frontmatter, body),
     append: (target, section, content, options) => store.append(target, section, content, options),
-    writeText: (target, content, options) => store.writeText(target, content, options),
+    writeText: async (target, content, options) => {
+      if (!struck) {
+        struck = true;
+        await writePage(store, path, { appendBody: FOREIGN_OVERVIEW_PARAGRAPH });
+        seen.text = await store.readText(path);
+      }
+      return store.writeText(target, content, options);
+    },
     delete: (target) => store.delete(target),
   };
 }
 
 const FOREIGN_OVERVIEW_PARAGRAPH = 'Von aussen ergaenzt, waehrend die Verdichtung lief.';
 
-describe('updateOverview gegen einen fremden Schreiber', () => {
-  it('liest neu und schreibt gegen den frischen Stand, statt am Konflikt zu scheitern', async () => {
+describe('overview.md gegen einen fremden Schreiber', () => {
+  it('a foreign edit to overview.md during a digestion survives byte-identical', async () => {
     const fixture = await wikiFixture();
-    const store = storeWithForeignOverviewWriter(fixture.store, OVERVIEW_PATH);
+    const seen: { text: string | null } = { text: null };
+    const store = storeWithForeignOverviewWriter(fixture.store, OVERVIEW_PATH, seen);
 
-    const result = await ingestSource(
+    await ingestSource(
       {
         ...fixture.deps(
           gatewayWithReplies({
@@ -410,12 +414,10 @@ describe('updateOverview gegen einen fremden Schreiber', () => {
       },
     );
 
-    expect(result.overviewUpdated).toBe(true);
     const overview = await fixture.text(OVERVIEW_PATH);
-    // Der fremde Absatz ist nicht verschwunden — die Wiederholung schrieb gegen
-    // den frischen (den fremden Absatz einschliessenden) Stand, nicht darueber
-    // hinweg (Story 050, D-e).
+    expect(seen.text).not.toBeNull();
+    expect(overview).toBe(seen.text);
     expect(overview).toContain(FOREIGN_OVERVIEW_PARAGRAPH);
-    expect(overview).toContain(FIRST.overviewChange);
+    expect(overview).not.toContain(FIRST.overviewChange);
   });
 });

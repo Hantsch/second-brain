@@ -88,8 +88,9 @@ async function readCurrent(store: WikiStore, path: string): Promise<CurrentText 
  *
  * Exported so a caller that cannot use `writeTextWithRetry` itself — because it
  * writes through `writePage`'s frontmatter merge, not a raw text `build` — can
- * still bound its own re-read loop on the same "is this worth retrying?" check
- * (`updateOverview` in `ingest.ts`, story 050, D-e).
+ * still bound its own re-read loop on the same "is this worth retrying?" check.
+ * Invariant: only a `conflict` (the file changed under us) is retried; any other
+ * error would fail again and must reach the caller.
  */
 export function isConflict(error: unknown): boolean {
   return (

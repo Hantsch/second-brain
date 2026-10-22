@@ -116,22 +116,22 @@ only `navigation.md`; no route changes).
       (new), `src/shared/agent/terminal-readiness.ts` (new), `src/core/agent/terminal.ts` (new),
       `tests/core/agent/terminal.test.ts` (new), `tests/shared/agent-terminal-readiness.test.ts`
       (new). Types: `TerminalIntent = { kind: 'open' } | { kind: 'jobs' } | { kind: 'curate';
-    module: string }`; `TerminalLaunchPlan = { terminal: 'windows-terminal' | 'powershell';
-    command: string; args: string[]; cwd: string; windowsVerbatimArguments: boolean }`;
+module: string }`; `TerminalLaunchPlan = { terminal: 'windows-terminal' | 'powershell';
+command: string; args: string[]; cwd: string; windowsVerbatimArguments: boolean }`;
       `TerminalBlock = 'no-vault' | 'cli-absent' | 'cli-unknown' | 'setup-missing'`;
       `TerminalLaunchResult = { ok: true; terminal } | { ok: false; reason: TerminalBlock |
-    'unsupported-platform' | 'invalid-module' | 'no-terminal'; detail?: string }` (detail = errno
+'unsupported-platform' | 'invalid-module' | 'no-terminal'; detail?: string }` (detail = errno
       code only, never a path or content). `terminalReadiness({ vaultOpen, cli: 'installed' |
-    'absent' | 'unknown', setupComplete }) → { ready: true } | { ready: false; reason:
-    TerminalBlock }`, checked in that order. Core: `firstPrompt(intent)` → `null` (open),
+'absent' | 'unknown', setupComplete }) → { ready: true } | { ready: false; reason:
+TerminalBlock }`, checked in that order. Core: `firstPrompt(intent)` → `null` (open),
       `/<queueSkill>` (jobs), `/<curatorSkill> <slug>` (curate) — import the queue and curator
       skill names from 084's skill templates under `src/core/agent/`, never redeclare the strings;
       a curate slug with `slugify(slug) !== slug` (`src/core/vault/slug.ts`) throws a typed
       `invalid-module` error. `claudeLine` = `claude` or `claude '<prompt>'`. `buildLaunchPlans
-    (intent, vaultRoot)` returns `[wt, powershell]`: wt = `wt.exe`, args `['-d',
-    vaultRoot.replaceAll(';', '\\;'), 'powershell.exe', '-NoExit', '-Command', claudeLine]`,
+(intent, vaultRoot)` returns `[wt, powershell]`: wt = `wt.exe`, args `['-d',
+vaultRoot.replaceAll(';', '\\;'), 'powershell.exe', '-NoExit', '-Command', claudeLine]`,
       `cwd: vaultRoot`, verbatim `false`; powershell = `cmd.exe`, args `['/d', '/s', '/c',
-    '"start "" powershell.exe -NoExit -Command "' + claudeLine + '""']`, `cwd: vaultRoot`,
+'"start "" powershell.exe -NoExit -Command "' + claudeLine + '""']`, `cwd: vaultRoot`,
       verbatim `true`. The vault path appears nowhere except `cwd` and the wt `-d` element. Tests
       in both test files as listed under Acceptance Tests.
 - [ ] **D2 — Launcher and `agent:launchTerminal`.** Files: `src/shared/ipc.ts` (route + entry in
@@ -141,7 +141,7 @@ only `navigation.md`; no route changes).
       `src/main/ipc/register-all.ts`, `src/renderer/lib/api.ts` (`api.agent.launchTerminal` or a
       sibling group), `src/renderer/lib/mock-bridge.ts`, `tests/fakes/terminal.ts` (new),
       `tests/main/ipc/agent-terminal.test.ts` (new). Launcher: own narrow `SpawnFn` (`file, args,
-    { cwd, stdio: 'ignore', windowsHide: true, windowsVerbatimArguments, shell: false }` →
+{ cwd, stdio: 'ignore', windowsHide: true, windowsVerbatimArguments, shell: false }` →
       `{ once('spawn' | 'error'), unref() }`) — model it on `SpawnFn`/`nodeSpawn` in
       `src/main/ipc/ollama-runtime.ts:40-60`, but do not merge with it or with
       `llamacpp-spawn.ts`; no `env`, no `detached`. For each plan in order: spawn, await the first

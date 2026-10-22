@@ -82,7 +82,6 @@ const INGEST_REPLY = {
       contradicts: null,
     },
   ],
-  overviewChange: null,
 };
 
 async function createHarness(userDataDir: string) {

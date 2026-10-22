@@ -155,8 +155,6 @@ export interface WikiIngestResult {
   contradictions: WikiContradiction[];
   /** Hat ein Modell verdichtet? */
   usedLlm: boolean;
-  /** Wurde `overview.md` nachgezogen? */
-  overviewUpdated: boolean;
   /** Modell, das verdichtet hat. */
   model: ModelRef | null;
 }

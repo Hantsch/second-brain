@@ -341,7 +341,7 @@ describe('Quellen- und Modul-Kanäle im Main', () => {
       if (hold !== undefined) await hold;
       const structured = call.body?.['response_format'] !== undefined;
       const content = structured
-        ? JSON.stringify({ suggestions: [], overviewChange: null })
+        ? JSON.stringify({ suggestions: [] })
         : '## Worum es geht\n\nKurze Token senken den Schaden eines Lecks.';
       return jsonResponse({ choices: [{ message: { content } }] });
     });

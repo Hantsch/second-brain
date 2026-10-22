@@ -189,9 +189,10 @@ export async function condenseModule(
   const condensedAt = isoStamp(now);
   const sourceHashes = sourceHashesOf(inventory);
   const notice = promptClampNotice(promptItemsClampedChars(pages), docLanguage);
-  const kept = preambleWithoutNotice(current.preamble);
+  const base = carriedOver(current);
+  const kept = preambleWithoutNotice(base.preamble);
   const artifact: CondensedModuleArtifact = {
-    ...current,
+    ...base,
     // An overview that already has a title keeps it: the human may have renamed it.
     title:
       current.title.length > 0
@@ -214,6 +215,21 @@ export async function condenseModule(
     sources: paths,
     sourceHashes,
   };
+}
+
+/**
+ * What of the overview on disk a proposal carries forward. An overview without
+ * `condensed_at` was never condensed: it is the legacy bullet-list page (or the
+ * creation stub) this run replaces whole, so its preamble and foreign sections —
+ * the old `## Seiten` list among them — are not hand-added text to keep. Its
+ * unknown frontmatter keys and its directives belong to the human and survive.
+ * Once `condensed_at` is set, `./artifact`'s lossless carry-through applies in
+ * full. Module level only: area and project runs never take this step, so their
+ * hand-added sections are kept unconditionally. (story 082)
+ */
+function carriedOver(current: CondensedModuleArtifact): CondensedModuleArtifact {
+  if (current.condensedAt.length > 0) return current;
+  return { ...current, preamble: '', extraSections: [] };
 }
 
 /** An error's message, without ever quoting vault content back (Guardrail 6). */

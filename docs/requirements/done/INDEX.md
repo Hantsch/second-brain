@@ -281,3 +281,4 @@ second roadmap.
 - 078 — I update when I choose to · S19 · title-bar update control: download with progress, cancel, guarded second-confirm restart, portable opens release page
 - 079 — About tells me what changed · S19 · About shows the running and pending release notes, last check with Check now, and links out.
 - 081 — A module condenses itself · S20 · overview.md is a condensed module artifact: condense-module run from a module condensed tab, diff confirm, due finding in maintenance
+- 082 — The ingest leaves the overview alone · S20 · digestion no longer writes overview.md or asks for overviewChange, catalog counts against orphan, legacy overview replaced whole by its first condensation

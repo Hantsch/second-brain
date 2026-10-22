@@ -25,3 +25,24 @@
 - 2026-10-22 09:17 · 081 · verify · started
 - 2026-10-22 09:21 · 081 · verify · done
 - 2026-10-22 09:23 · 081 · story · done
+- 2026-10-22T09:23:54 · 082 · build · started
+- 2026-10-22 09:24 · 082 · D1 digestion leaves overview untouched · started
+- 2026-10-22 09:24 · 082 · D3 catalog counts against orphan · started
+- 2026-10-22 09:24 · 082 · D4 module schema describes overview · started
+- 2026-10-22 09:26 · 082 · D1 digestion leaves overview untouched · done
+- 2026-10-22 09:26 · 082 · D3 catalog counts against orphan · done
+- 2026-10-22 09:26 · 082 · D4 module schema describes overview · done
+- 2026-10-22 09:27 · 082 · D2 overviewChange leaves contract · started
+- 2026-10-22 09:29 · 082 · D2 overviewChange leaves contract · done
+- 2026-10-22 09:29 · 082 · D5 legacy overview replaced whole · started
+- 2026-10-22 09:32 · 082 · D5 legacy overview replaced whole · done
+- 2026-10-22 09:32 · 082 · D6 e2e legacy overview flow · started
+- 2026-10-22 09:34 · 082 · D6 e2e legacy overview flow · done
+- 2026-10-22 09:34 · 082 · verify · started
+- 2026-10-22 09:37 · 082 · verify · done
+- 2026-10-22 09:37 · 082 · review 1 · started
+- 2026-10-22 09:41 · 082 · review 1 · done
+- 2026-10-22 09:41 · 082 · review 1 fixes · started
+- 2026-10-22 09:42 · 082 · review 1 fixes · done
+- 2026-10-22 09:42 · 082 · verify · started
+- 2026-10-22 09:45 · 082 · story · done

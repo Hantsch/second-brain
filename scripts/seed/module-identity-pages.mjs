@@ -88,6 +88,8 @@ prüft am falschen Papier.`,
       slug: 'scim',
       title: 'SCIM 2.0',
       summary: 'Schnittstelle für Nutzerabgleich — bisher nirgends verlinkt',
+      /* Nicht im Katalog: eine dort gelistete Seite gilt nicht mehr als verwaist. */
+      unlisted: true,
       tags: ['auth', 'provisionierung'],
       sources: [whitepaper],
       created: -118,

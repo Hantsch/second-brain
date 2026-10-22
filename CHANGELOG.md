@@ -44,3 +44,5 @@ All notable changes to Gaston are recorded here. The format follows
   middle of a running task or a streaming answer.
 - About: this version's release notes, what a waiting update would bring, when Gaston last
   checked, and a "Check now" button — plus links to the project and the full changelog.
+- Imports: a new source no longer appends itself to a module's overview. Imports no longer touch it;
+  it changes only when you confirm a condensation. The catalog does the bookkeeping.

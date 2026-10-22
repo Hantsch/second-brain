@@ -33,7 +33,7 @@ modules/<slug>/
   wiki/
     index.md         Katalog jeder Seite mit Einzeiler
     log.md           append-only Chronik (ingest | query | lint)
-    overview.md      Synthese über das ganze Modul
+    overview.md      verdichtete Synthese — ändert sich nur durch eine bestätigte Verdichtung
     sources/         s-YYYY-MM-DD-<slug>.md — eine Seite je aufgenommener Quelle
     entities/        Personen, Firmen, Produkte, Systeme, Werkzeuge, Projekte
     concepts/        Muster, Verfahren, Begriffe, Techniken
@@ -71,7 +71,8 @@ modules/<slug>/
    Für jede: Neues einarbeiten, Querverweise setzen, Widersprüche und Überholtes benennen.
 4. `wiki/index.md` aktualisieren (berührte Einträge neu schreiben).
 5. Einen Eintrag an `wiki/log.md` anhängen.
-6. `wiki/overview.md` nachziehen, wenn sich die Synthese wirklich geändert hat.
+6. `wiki/overview.md` bleibt unangetastet: Der Ingest ändert sie nie. Sie ändert sich nur,
+   wenn der Nutzer im Modul eine Verdichtung bestätigt.
 
 **Vor jeder neuen Seite im Wiki suchen.** Eine bestehende Seite ergänzen ist fast immer
 besser als eine Beinahe-Dublette anzulegen.

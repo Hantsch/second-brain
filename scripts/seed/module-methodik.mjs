@@ -232,6 +232,8 @@ verdichtete Seiten, 12 Seiten, die tatsächlich wiederverwendet wurden.
         slug: interview,
         title: 'Interview: Warum Notiz-Communities ihre Wikis nicht pflegen',
         summary: 'Gespräch mit einer Forums-Moderatorin über die Ursachen des Verfalls',
+        /* Nicht im Katalog: eine dort gelistete Seite gilt nicht mehr als verwaist. */
+        unlisted: true,
         tags: ['wissen', 'community'],
         created: -2,
         updated: -2,

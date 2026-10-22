@@ -9,6 +9,9 @@ import { SETTINGS, moduleFixture } from './fixtures';
 
 const OVERVIEW = 'modules/wissen/wiki/overview.md';
 
+/* Ohne Katalog: eine im Katalog gelistete Seite wäre keine Waise. */
+const UNLISTED = { catalog: null };
+
 const PAGES = [
   {
     type: 'concept' as const,
@@ -35,7 +38,7 @@ const PAGES = [
 
 describe('linkOrphansIntoOverview', () => {
   it('trägt alle Seiten in einem Schreibvorgang ein und dreht sie mit einer Marke zurück', async () => {
-    const fixture = await moduleFixture('wissen', PAGES);
+    const fixture = await moduleFixture('wissen', PAGES, UNLISTED);
     const findings = orphanCheck.run(fixture.ctx({ settings: SETTINGS }));
     expect(findings).toHaveLength(2);
     const before = (await fixture.store.readText(OVERVIEW)) ?? '';
@@ -60,7 +63,7 @@ describe('linkOrphansIntoOverview', () => {
   });
 
   it('lässt weg, was die Overview schon verlinkt, und sagt ehrlich, wenn nichts übrig bleibt', async () => {
-    const fixture = await moduleFixture('wissen', PAGES);
+    const fixture = await moduleFixture('wissen', PAGES, UNLISTED);
     const findings = orphanCheck.run(fixture.ctx({ settings: SETTINGS }));
     const deps = { store: fixture.store, docLanguage: 'de' as const, now: NOW_MS };
 
@@ -72,7 +75,7 @@ describe('linkOrphansIntoOverview', () => {
   });
 
   it('weist einen Befund ab, dessen Fix keine Overview ist', async () => {
-    const fixture = await moduleFixture('wissen', PAGES);
+    const fixture = await moduleFixture('wissen', PAGES, UNLISTED);
     const [finding] = orphanCheck.run(fixture.ctx({ settings: SETTINGS }));
     if (finding === undefined) throw new Error('Kein Befund.');
     const wrong = { ...finding, paths: [finding.paths[0] ?? '', finding.paths[0] ?? ''] };

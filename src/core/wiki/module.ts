@@ -86,8 +86,9 @@ function indexBody(title: string, language: DocLanguage): string {
 
 /**
  * Startinhalt von `wiki/overview.md`: die beiden Fragen, die eine Synthese traegt —
- * und sonst nichts. Ein Platzhaltersatz („noch nichts verdichtet") waere nach dem
- * ersten Ingest falsch, und die App schreibt ihren eigenen Text nicht um.
+ * und sonst nichts. Ein Platzhaltersatz („noch nichts verdichtet") waere falsch,
+ * sobald Wissen da ist; der Ingest schreibt hier nicht mehr, erst die erste
+ * Verdichtung ersetzt den Inhalt — und die bestaetigt der Mensch.
  */
 function overviewBody(language: DocLanguage): string {
   const text = phrases(language);

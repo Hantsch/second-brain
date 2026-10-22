@@ -31,7 +31,8 @@ describe('runGardener über den Demo-Bestand', () => {
     expect(kinds(report.findings)).toEqual({
       orphan: 1,
       'broken-link': 1,
-      'index-drift': 1,
+      /* `jit` fehlt im Katalog — und `scim`, denn eine gelistete Seite ist keine Waise. */
+      'index-drift': 2,
       'stale-page': 1,
       'unfiled-dump': 1,
       'unprocessed-source': 1,
@@ -43,7 +44,9 @@ describe('runGardener über den Demo-Bestand', () => {
     });
     expect(of(report.findings, 'orphan')[0]?.paths).toContain(DEMO.scim);
     expect(of(report.findings, 'broken-link')[0]?.title).toContain('device-code-flow');
-    expect(of(report.findings, 'index-drift')[0]?.paths).toContain(DEMO.jit);
+    expect(of(report.findings, 'index-drift').flatMap((finding) => finding.paths)).toEqual(
+      expect.arrayContaining([DEMO.jit, DEMO.scim]),
+    );
     expect(of(report.findings, 'stale-page')[0]?.paths).toEqual([DEMO.tenants]);
     expect(of(report.findings, 'unfiled-dump')[0]?.paths).toEqual([DEMO.oldDump]);
     expect(of(report.findings, 'unprocessed-source')[0]?.paths).toEqual([DEMO.rawWeb]);

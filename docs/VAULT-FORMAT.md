@@ -407,7 +407,12 @@ an overview carried before it became a condensed artifact — `Was entschieden
 ist`/`What is settled` and `Was offen ist`/`What is open` — are read as aliases
 of `Entschieden` and `Offen`, so an existing overview's content is kept rather
 than duplicated. Any other section (`Seiten`, a hand-written note) and any text
-above the first heading are foreign to the digest and carried over verbatim.
+above the first heading are foreign to the digest and carried over verbatim — with
+one exception: an overview without `condensed_at` (a bullet list from before the
+condensed layer, or the stub a new module starts with) is replaced whole by its
+first condensation, so its old bullets show up as removals in the diff. Only its
+unknown frontmatter keys and the directives section survive. The previous file is
+in `.secondbrain/trash/` once the condensation is accepted.
 
 ## Todos
 

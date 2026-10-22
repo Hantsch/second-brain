@@ -29,8 +29,6 @@ export interface WikiSuggestion {
 
 export interface IngestReply {
   suggestions: WikiSuggestion[];
-  /** Nur gesetzt, wenn das Modell eine wesentliche Aenderung der Synthese meldet. */
-  overviewChange: string | null;
 }
 
 /** Hoechstzahl an Seiten, die aus einer Antwort uebernommen werden. */
@@ -156,7 +154,7 @@ export function readIngestReply(
   maxPages = MAX_SUGGESTIONS,
 ): IngestReply {
   if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
-    return { suggestions: [], overviewChange: null };
+    return { suggestions: [] };
   }
   const record = raw as Record<string, unknown>;
   const list = Array.isArray(record['pages']) ? record['pages'] : [];
@@ -168,5 +166,6 @@ export function readIngestReply(
     suggestions.push(suggestion);
     if (suggestions.length >= Math.max(1, maxPages)) break;
   }
-  return { suggestions, overviewChange: asText(record['overviewChange'], 600) };
+  // A leftover `overviewChange` key from older models is deliberately not read.
+  return { suggestions };
 }

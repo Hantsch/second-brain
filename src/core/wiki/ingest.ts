@@ -6,14 +6,16 @@
  *    Belegstellen, was neu ist, was dem Bestand widerspricht.
  * 2. Entitaeten und Konzepte anlegen oder ergaenzen, Widersprueche benennen.
  * 3. `wiki/index.md` nachziehen, `wiki/log.md` ergaenzen.
- * 4. `wiki/overview.md` nur, wenn sich die Synthese wirklich geaendert hat.
+ *
+ * `wiki/overview.md` bleibt unangetastet: die Synthese gehoert dem Modul, nicht dem
+ * einzelnen Import — eine Quelle haengt dort nichts an.
  *
  * **Ohne Modell geht nichts verloren.** Dann entsteht die Source-Seite trotzdem —
  * mit Kopf, erstem Absatz und dem Hinweis „noch nicht verdichtet"; sie steht im
  * Katalog und in der Chronik, traegt `condensed: false` und wartet auf ein Modell.
  * Ein Pflegelauf kann sie spaeter aufgreifen.
  *
- * **The write phase is one unit.** Steps 1 to 4 touch six files through five
+ * **The write phase is one unit.** Steps 1 to 3 touch five files through five
  * collaborators; a step that throws halfway used to leave pages written while the
  * raw protocol still called the source undigested — the badge lying in the worst
  * direction. Everything from the source page to the protocol therefore writes
@@ -21,7 +23,7 @@
  * caller sees the original error (story 050, D-a).
  *
  * **And one module at a time.** The import queue digests two sources at once, and
- * `index.md`, `log.md` and `overview.md` belong to the module, not to one run —
+ * `index.md` and `log.md` belong to the module, not to one run —
  * read-modify-write from two sides loses whichever entry was written first. The
  * two writing stretches therefore run under `withModuleLock`; the model call
  * between them stays outside it, because AC2 asks both digestions to *complete*
@@ -42,12 +44,11 @@ import {
   wikiIndexPath,
 } from '@core/vault/paths';
 import type { DateLike } from '@core/vault/paths';
-import { applySuggestions, sourceRef } from './apply-suggestions';
+import { applySuggestions } from './apply-suggestions';
 import { upsertEntries, type WikiIndexEntry } from './index-md';
 import { appendLog } from './log-md';
 import { withModuleLock } from './module-lock';
-import { linkIntoOverview } from './overview-links';
-import { appendUnderSection, createPage, findSourcePageForRaw, pagePath, writePage } from './pages';
+import { createPage, findSourcePageForRaw, writePage } from './pages';
 import { isRawDigestedInto, markRawProtocol } from './raw-protocol';
 import { condenseSource, type CondenseResult } from './summarize';
 import { readIngestReply, type IngestReply } from './suggestions';
@@ -55,7 +56,7 @@ import { phrases } from './text';
 import { WikiTransaction } from './transaction';
 import { WikiError } from './types';
 import type { PageRef, WikiDeps, WikiIndexView, WikiIngestDeps, WikiIngestResult } from './types';
-import { MAX_WRITE_ATTEMPTS, isConflict, writeTextWithRetry } from './write-retry';
+import { writeTextWithRetry } from './write-retry';
 
 /** Laenge des Katalog-Einzeilers. */
 const SUMMARY_CHARS = 120;
@@ -123,7 +124,7 @@ async function askForPages(
   deps: WikiDeps,
   input: { module: string; sourceSlug: string; sourceTitle: string; summary: string },
 ): Promise<IngestReply> {
-  const empty: IngestReply = { suggestions: [], overviewChange: null };
+  const empty: IngestReply = { suggestions: [] };
   if (!deps.gateway.isAvailable('wiki-ingest')) return empty;
   try {
     const result = await deps.gateway.complete({
@@ -261,7 +262,7 @@ async function writeDigestion(
 
   const reply =
     condensed.markdown === null
-      ? { suggestions: [], overviewChange: null }
+      ? { suggestions: [] }
       : await askForPages(deps, {
           module,
           sourceSlug: source.ref.slug,
@@ -275,7 +276,7 @@ async function writeDigestion(
 }
 
 /**
- * Der zweite gesperrte Abschnitt: Entitaeten und Konzepte, `overview.md`,
+ * Der zweite gesperrte Abschnitt: Entitaeten und Konzepte,
  * Katalog, Chronik, Protokollvermerk. Genau die Dateien, die sich zwei
  * Verdichtungen desselben Moduls teilen — deshalb liegt hier die Sperre.
  */
@@ -295,18 +296,7 @@ async function finishDigestion(
     suggestions: reply.suggestions,
   });
 
-  const overviewUpdated = await updateOverview(deps, module, source.ref.slug, reply.overviewChange);
-  /* Jede neue Seite bekommt hier ihren ersten Verweis — sonst steht sie nur im
-     Katalog, und der zaehlt nicht. Erweiterte Seiten haben ihren schon. */
-  const overviewLinked = await linkIntoOverview(deps, module, [
-    source.ref,
-    ...applied.pages.filter((page) => page.action === 'create').map((page) => page.ref),
-  ]);
-  const touched = [
-    source.ref.path,
-    ...applied.written,
-    ...(overviewUpdated || overviewLinked ? [pagePath(module, 'overview', 'overview')] : []),
-  ];
+  const touched = [source.ref.path, ...applied.written];
 
   const entries: WikiIndexEntry[] = [
     {
@@ -370,7 +360,6 @@ async function finishDigestion(
     ],
     contradictions: applied.contradictions,
     usedLlm: condensed.usedLlm,
-    overviewUpdated,
     model: condensed.model,
   };
 }
@@ -455,51 +444,4 @@ async function writeSourcePage(
     extra: { ...extra, ...(plan.condensed ? {} : { condensed: false }) },
   });
   return { ref: created.ref, created: true };
-}
-
-/**
- * `overview.md` nachziehen — nur wenn das Modell eine wesentliche Aenderung meldet.
- * Eine Quelle allein verschiebt die Synthese selten; jeder Ingest wuerde sie sonst
- * zu einer zweiten Chronik machen.
- *
- * `overview.md` ist wie `index.md` und `log.md` modul-gemeinsam und von aussen
- * erreichbar — durch einen Pflegelauf oder eine Hand-Bearbeitung, die am
- * Modul-Lock vorbeigeht, weil dieses Lock nur innerhalb dieses Prozesses gilt.
- * Der Hash, den diese Funktion selbst liest, wird darum wie bei der Chronik und
- * dem Katalog erneut gelesen und der Schreibversuch wiederholt — hoechstens
- * `MAX_WRITE_ATTEMPTS`-mal (Story 050, D-e).
- */
-async function updateOverview(
-  deps: WikiDeps,
-  module: string,
-  slug: string,
-  change: string | null,
-): Promise<boolean> {
-  if (change === null || change.trim().length === 0) return false;
-  const path = pagePath(module, 'overview', 'overview');
-  const trimmed = change.trim();
-  const text = phrases(deps.docLanguage ?? 'de');
-  const line = `- ${trimmed} ${sourceRef(slug)}`;
-
-  for (let attempt = 1; ; attempt += 1) {
-    const doc = await deps.store.read(path);
-    if (doc === null) return false;
-    if (doc.body.includes(trimmed)) return false;
-    try {
-      await writePage(
-        deps.store,
-        path,
-        {
-          body: appendUnderSection(doc.body, text.decided, line),
-          addSources: [slug],
-          expectedHash: doc.hash,
-          ...(deps.now === undefined ? {} : { now: deps.now }),
-        },
-        deps.docLanguage ?? 'de',
-      );
-      return true;
-    } catch (error) {
-      if (attempt >= MAX_WRITE_ATTEMPTS || !isConflict(error)) throw error;
-    }
-  }
 }

@@ -158,7 +158,14 @@ describe('wikiIngestPrompt', () => {
   it('sagt ausdruecklich, dass extend nur anhaengt', () => {
     const system = systemOf(wikiIngestPrompt(input, 'de'));
     expect(system).toContain('Schreibe nichts um, wiederhole nichts, loesche nichts');
-    expect(system).toContain('overviewChange nur, wenn');
+  });
+
+  it('the ingest prompt and schema no longer ask for an overview change', () => {
+    expect(JSON.stringify(WIKI_INGEST_SCHEMA)).not.toContain('overviewChange');
+    const rendered = wikiIngestPrompt(input, 'de')
+      .map((turn) => turn.content)
+      .join('\n');
+    expect(rendered).not.toContain('overviewChange');
   });
 
   it('reicht Bestand und Verdichtung durch, nicht den Rohtext', () => {

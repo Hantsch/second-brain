@@ -1,7 +1,7 @@
 ---
 id: 082
 title: The ingest leaves the overview alone
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-10-22
 ---
 
@@ -22,18 +22,18 @@ has to change too, because the vault agent ([[084]]) reads it.
 
 ## Acceptance Criteria
 
-- [ ] **AC1** — After a digestion, `wiki/overview.md` of the target module is byte-identical to
+- [x] **AC1** — After a digestion, `wiki/overview.md` of the target module is byte-identical to
       before.
-- [ ] **AC2** — The ingest prompt and reply schema no longer contain `overviewChange`; a reply that
+- [x] **AC2** — The ingest prompt and reply schema no longer contain `overviewChange`; a reply that
       still carries it is accepted and the field ignored.
-- [ ] **AC3** — A module with a bullet-list `overview.md` in the old format shows it in the module
+- [x] **AC3** — A module with a bullet-list `overview.md` in the old format shows it in the module
       view and finds it through search as before.
-- [ ] **AC4** — The first condensation of such a module shows the old bullets as removals in the
+- [x] **AC4** — The first condensation of such a module shows the old bullets as removals in the
       diff; after accepting, `.secondbrain/trash/` holds the old file byte-identical.
-- [ ] **AC5** — The module schema template and its `docs/` mirror describe `overview.md` as the
+- [x] **AC5** — The module schema template and its `docs/` mirror describe `overview.md` as the
       condensed artifact that changes only through a confirmed condensation, not through an
       ingest.
-- [ ] **AC6** — An existing module's `AGENTS.md` is not rewritten by this change.
+- [x] **AC6** — An existing module's `AGENTS.md` is not rewritten by this change.
 
 ## Open Questions
 
@@ -241,3 +241,29 @@ Review: → default
   listed in its module's index.md is not an orphan" (D3)
 
 ## Done
+
+The digestion no longer writes `wiki/overview.md` (`updateOverview`, `linkIntoOverview`, `overviewUpdated` gone) and
+`overviewChange` left the prompt, schema and reply (an old reply carrying it is read and the field ignored). The orphan check
+counts a page listed in its module's `index.md` as referenced, the module schema template and its `docs/` mirror describe the
+overview as the condensed artifact, and `condense-module` replaces an overview without `condensed_at` whole (no preamble, no
+foreign sections; unknown frontmatter keys and directives survive).
+
+**Commit message:** `082: ingest leaves overview.md alone — no overviewChange, catalog counts against orphan, legacy overview replaced whole. Tests changed because CND-35 removes the behaviour they pinned`
+
+**Verification** (narrow gate, run twice: after D6 and after the review fixes; step 6b not run, full gate is the sprint's):
+
+- `npm run lint`, `typecheck`, `build`: green. `npx vitest run --changed HEAD`: 2695/2695 green. `npx playwright test tests/e2e/module-legacy-overview.spec.ts`: 1/1.
+- `prettier --check .`: red only for `docs/requirements/087-open-claude-in-the-vault.md`, already red at HEAD (committed by 087's refine; prettier is not idempotent on its continuation lines). Not this story's change; flagged for the sprint gate.
+- AC → test, all passed: AC1 `ingest.test.ts` (two byte-identical tests) + `concurrency.test.ts` "a foreign edit to overview.md during a digestion survives byte-identical"; AC2 `prompts.test.ts` + `suggestions.test.ts` named tests; AC3 e2e `module-legacy-overview.spec.ts` (read + search); AC4 `module-legacy-overview.test.ts` + same e2e (removed rows, trash bytes equal); AC5 `module.test.ts` schema test + mirror test; AC6 existing `module.test.ts` AGENTS.md test (no refresh path added); catalog decision `checks-links.test.ts` (two tests). No manual residue.
+- Review: default stage PASS, 1 cycle. Fixed: the e2e did not prove the legacy rule (seeded overview has no `## Seiten`), so it now appends a `## Seiten` bullet before condensing and asserts it as a removed row; five stale comments; CHANGELOG wording.
+
+**Decisions:**
+
+- Spec'd the legacy rule in `run-module.ts` (`carriedOver`, module level only); `artifact.ts` untouched, so area/project runs keep their lossless carry-through (pinned by `artifact-project.test.ts`). 081's Done did not implement it; this story owns and tests it. The creation stub (no `condensed_at`) is replaced whole too.
+- Seed vault: `scim` and the methodik interview source are now `unlisted` and `EXPECTED_FINDINGS.missingFromIndex` is 3, otherwise the catalog rule would silently remove the seeded orphan findings. `tests/core/gardener/demo-pages.ts` and `report.test.ts` (index-drift 1 → 2) changed alike; existing orphan fixtures pass `{ catalog: null }`, assertions unchanged.
+- `docs/VAULT-FORMAT.md` condensed-artifact paragraph now states the legacy exception (it said foreign sections are always carried over).
+- CHANGELOG entry sits under `## Unreleased` / `### Added` (no `# Features` heading exists).
+- Left as is: the orphan fix still appends `## Seiten` to a condensed overview (becomes a foreign section; follow-up per decisions); an overview whose `condensed_at` was removed by hand counts as legacy and is replaced whole (diff + trash protect it); `checks-links.test.ts` was already over 300 lines.
+- 087 file: an attempted scoped `prettier --write` reformatted continuation lines in `docs/requirements/087-open-claude-in-the-vault.md` without making the check green; the revert was denied by the permission system, so that whitespace-only diff is still in the tree for the orchestrator to drop.
+
+tiers: D 6 / hard 1 · review default · cycles 1 · agents 10

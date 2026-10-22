@@ -210,9 +210,12 @@ export const EXPECTED_FINDINGS = {
      mention — the regression case for the unchanged one-click fix) and
      `notiz-communities-interview` (second-brain-methodik, zero mention
      candidates — 016 D8's picker fixture). See the comment in
-     module-methodik.mjs for why the second one stays at zero candidates. */
+     module-methodik.mjs for why the second one stays at zero candidates.
+     Both are also kept out of their module's catalog (a catalog entry counts
+     as a reference), so they add to `missingFromIndex`. */
   orphans: 2,
-  missingFromIndex: 1,
+  /* Three: `just-in-time-provisionierung`, `scim` and the interview source. */
+  missingFromIndex: 3,
   stalePages: 1,
   contradictions: 2,
   /* Two: `raw/web/<day>-digital-gardening-ueberblick.md` (never condensed) and
