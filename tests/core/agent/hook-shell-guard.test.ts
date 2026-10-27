@@ -16,7 +16,7 @@ import { createTempVault, type TempVault } from '../../helpers/vault';
 const GUARD_PATH = '.claude/hooks/gaston-shell-guard.ps1';
 /** Replaced by the temp vault's absolute Windows path when a case runs. */
 const ROOT = '<root>';
-const TIMEOUT = 30_000;
+const TIMEOUT = 120_000;
 
 function guardTemplate() {
   const found = SETUP_TEMPLATES.find((candidate) => candidate.path === GUARD_PATH);
@@ -55,7 +55,7 @@ const HELP_PAGE = `${HELP_DIR}/wiki/concepts/agent.md`;
 
 // The hook runtime is Windows PowerShell (powershell.exe), and the CI runner is Windows.
 // 60 s: queued spawns (see runHook's concurrency cap) wait inside the test timeout.
-describe.runIf(process.platform === 'win32')('pre-tool guard', { timeout: 60_000 }, () => {
+describe.runIf(process.platform === 'win32')('pre-tool guard', { timeout: TIMEOUT }, () => {
   let vault: TempVault;
   let hook: HookCommand;
 

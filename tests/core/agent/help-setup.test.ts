@@ -53,8 +53,10 @@ async function vaultFiles(vault: TempVault): Promise<string[]> {
 }
 
 /* Every test installs 22 files through atomic writes; with the whole suite running in parallel
-   on Windows a single install has stalled past the 5 s default on file-system contention. */
-describe('help module setup', { timeout: 20_000 }, () => {
+   on Windows a single install has stalled for seconds on file-system contention — past the old
+   5 s default, and past a 20 s override here under three parallel suites. The central timeout
+   (vitest.config.ts) is the hang detector for it. */
+describe('help module setup', () => {
   let vault: TempVault;
   beforeEach(async () => {
     vault = await createTempVault();

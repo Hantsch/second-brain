@@ -2,15 +2,18 @@
  * Realistic-scale perf test with real persistence (D7, story 054).
  *
  * Uses a real folder under `os.tmpdir()` and real disk I/O throughout — no
- * `MemoryVaultStore`, no fakes. This is what `tests/core/index/build.test.ts`'s
- * 5,000-doc test does not cover: it never persists, so it says nothing about
+ * `MemoryVaultStore`, no fakes. This is what the 5,000-note build at the end of
+ * this file does not cover: it never persists, so it says nothing about
  * `IndexService.open()`'s warm-start skip or a path-scoped `refresh()`'s actual
  * write volume. Both are pinned here against a vault shaped like a real one:
  * a year of journal days, two hundred longer transcripts, a few hundred notes
  * and todos.
  *
- * Budgets are ~3x the locally measured numbers (see the comment next to each) —
- * enough headroom for a slower CI box without hiding a real regression.
+ * Budgets are ~3x the locally measured numbers (see the comment next to each).
+ * That was not enough headroom for the GitHub runner, and no factor is: this
+ * file runs in the perf lane, where an overrun is a warning (tests/helpers/perf.ts).
+ * The cost the gate does assert — what a warm open and a scoped refresh read and
+ * write — is pinned byte-exact in `service-open.test.ts` and `refresh-paths.test.ts`.
  */
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -23,8 +26,11 @@ import { refreshPaths } from '@core/index/refresh';
 import { SearchEngine } from '@core/index/search';
 import { IndexService } from '@core/index/service';
 import { byteLength, ensureStructure, FsVaultStore } from '@core/vault';
+import { MemoryVaultStore } from '@core/vault/memory-store';
 import type { WriteResult } from '@shared/types';
 import type { WriteTextOptions } from '@core/vault/types';
+import { reportBudget } from '../../helpers/perf';
+import { TODAY } from './fixtures';
 
 // measured locally: 15 046ms
 const COLD_OPEN_BUDGET_MS = 45_000;
@@ -196,13 +202,13 @@ describe('IndexService: realistic perf budget', () => {
     for (let i = 0; i < NOTES; i += 1) {
       await writeDirect(root, notePath(i), noteContent(i));
     }
-  }, 120_000);
+  });
 
   afterAll(async () => {
     await rm(root, { recursive: true, force: true });
   });
 
-  it('a realistic vault stays within the index budget', async () => {
+  it('a realistic vault stays within the index budget', async ({ annotate }) => {
     // ── Cold open: build + persist, with a max-event-loop-gap probe. ────────
     let lastTick = Date.now();
     let maxGap = 0;
@@ -251,13 +257,13 @@ describe('IndexService: realistic perf budget', () => {
     await warmService.dispose();
 
     // ── Assertions ───────────────────────────────────────────────────────────
-    expect(coldOpenMs).toBeLessThan(COLD_OPEN_BUDGET_MS);
-    expect(warmOpenMs).toBeLessThan(WARM_OPEN_BUDGET_MS);
-    expect(refreshMs).toBeLessThan(REFRESH_BUDGET_MS);
-    expect(maxGap).toBeLessThan(MAX_EVENT_LOOP_GAP_BUDGET_MS);
     expect(refreshBytes).toBeGreaterThan(0);
     expect(refreshBytes).toBeLessThan(totalBodyBytes * 0.01);
-  }, 120_000);
+    await reportBudget({ annotate }, 'cold open', coldOpenMs, COLD_OPEN_BUDGET_MS);
+    await reportBudget({ annotate }, 'warm open', warmOpenMs, WARM_OPEN_BUDGET_MS);
+    await reportBudget({ annotate }, 'scoped refresh', refreshMs, REFRESH_BUDGET_MS);
+    await reportBudget({ annotate }, 'max event-loop gap', maxGap, MAX_EVENT_LOOP_GAP_BUDGET_MS);
+  });
 });
 
 // ── D5 (053): passage indexing cost at realistic sizes ────────────────────────
@@ -323,13 +329,13 @@ describe('passage indexing at realistic sizes (D5, 053)', () => {
     for (let i = 0; i < PASSAGE_NOTES; i += 1) {
       await writeDirect(root, notePath(i), passageNoteContent(i));
     }
-  }, 120_000);
+  });
 
   afterAll(async () => {
     await rm(root, { recursive: true, force: true });
   });
 
-  it('passage indexing stays proportional at realistic sizes', async () => {
+  it('passage indexing stays proportional at realistic sizes', async ({ annotate }) => {
     async function measure(
       passageThreshold: number,
       editIndex: number,
@@ -365,9 +371,51 @@ describe('passage indexing at realistic sizes (D5, 053)', () => {
 
     process.stdout.write(`D5 passage perf: ${JSON.stringify({ withPassages, wholeDocument })}\n`);
 
-    expect(withPassages.buildMs).toBeLessThanOrEqual(wholeDocument.buildMs * 2);
-    expect(withPassages.buildMs).toBeLessThan(COLD_OPEN_BUDGET_MS);
     expect(withPassages.stateSize).toBeLessThanOrEqual(wholeDocument.stateSize * 3);
-    expect(withPassages.refreshMs).toBeLessThan(REFRESH_BUDGET_MS);
-  }, 180_000);
+    await reportBudget(
+      { annotate },
+      'passage build vs. 2x whole-document build',
+      withPassages.buildMs,
+      wholeDocument.buildMs * 2,
+    );
+    await reportBudget({ annotate }, 'passage build', withPassages.buildMs, COLD_OPEN_BUDGET_MS);
+    await reportBudget(
+      { annotate },
+      'single-transcript refresh',
+      withPassages.refreshMs,
+      REFRESH_BUDGET_MS,
+    );
+  });
+});
+
+// ── 5,000 notes in memory: build plus search index ─────────────────────────────
+
+describe('buildIndex: Tempo', () => {
+  it('schafft 5000 Dokumente samt Suchindex in unter 10 Sekunden', async ({ annotate }) => {
+    const files: Record<string, string> = {};
+    for (let i = 0; i < 5000; i += 1) {
+      files[`areas/notiz-${i}.md`] = [
+        '---',
+        'type: note',
+        `title: Notiz ${i} über Rollen und Zugriff`,
+        'tags: [rollen, zugriff]',
+        '---',
+        '',
+        `Das Rollenkonzept in Notiz ${i} beschreibt, wie Rechte an Rollen haengen`,
+        'und welche Rückmeldung dafür noch fehlt.',
+        '',
+        '- [ ] Notiz durchsehen @due:2026-08-15 !!',
+        '',
+      ].join('\n');
+    }
+    const store = new MemoryVaultStore({ files, now: new Date('2026-08-09T08:00:00.000Z') });
+    const started = Date.now();
+    const index = await buildIndex(store, { now: TODAY });
+    const engine = SearchEngine.from(index.docs);
+    const elapsed = Date.now() - started;
+    expect(index.docs).toHaveLength(5000);
+    expect(index.todos).toHaveLength(5000);
+    expect(engine.search({ text: 'Rückmeldung', limit: 5 }, index.byPath)).toHaveLength(5);
+    await reportBudget({ annotate }, '5,000-note build', elapsed, 10_000);
+  });
 });

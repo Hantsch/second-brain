@@ -307,15 +307,13 @@ describe('RoutingGateway: Retry', () => {
       provider,
     });
 
-    const startedAt = Date.now();
     await expect(gateway.complete(ask)).rejects.toMatchObject({
       name: 'LlmUnavailableError',
       info: { reason: 'unreachable' },
     });
-    // Bounded: the fake `sleep` never actually waits, and every attempt here
-    // fails synchronously — a real hang would not finish within a test
-    // timeout at all, let alone within one second of wall-clock time.
-    expect(Date.now() - startedAt).toBeLessThan(1000);
+    // Bounded: both backoffs went through the injected `sleep`, which never
+    // waits, and every attempt fails synchronously — a real hang would not
+    // finish within the test timeout at all.
     expect(sleeps).toHaveLength(2);
   });
 

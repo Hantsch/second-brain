@@ -116,9 +116,8 @@ describe('Schnell erfassen', () => {
     /* Geschrieben heißt: der Entwurf ist erledigt. */
     expect(window.localStorage.getItem(DRAFT_KEY)).toBeNull();
 
-    await waitFor(
-      () => expect(sb.calls.some((call) => call.channel === 'capture:window')).toBe(true),
-      { timeout: 3000 },
+    await waitFor(() =>
+      expect(sb.calls.some((call) => call.channel === 'capture:window')).toBe(true),
     );
   });
 

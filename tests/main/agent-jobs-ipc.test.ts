@@ -164,7 +164,7 @@ describe('agent job channels in main', () => {
           expect.objectContaining({ id: job.id, state: 'done', finishedAt: expect.any(String) }),
         ]);
       },
-      { timeout: 5000, interval: 20 },
+      { interval: 20 },
     );
     const protocol = JSON.parse((await vault.read(PROTOCOL)) ?? '{}') as { sourcePage?: string };
     expect(protocol.sourcePage).toBe('s-2026-10-27-digital-gardening');
@@ -203,7 +203,7 @@ describe('agent job channels in main', () => {
       async () => {
         expect(await readdir(join(vault.root, AGENT_DIRS.results))).not.toContain(`${job.id}.md`);
       },
-      { timeout: 5000, interval: 20 },
+      { interval: 20 },
     );
 
     expect(await vault.read(PROTOCOL)).toBe(protocolBefore);

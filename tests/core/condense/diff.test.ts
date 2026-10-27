@@ -39,27 +39,6 @@ describe('diffLines', () => {
     const contextRows = result.rows.filter((row) => row.kind === 'context');
     expect(contextRows.map((row) => row.text)).toEqual(['# Area', 'Some content']);
   });
-
-  it('diffs a ~2000-word artifact with scattered changes well under a second', () => {
-    const beforeLines: string[] = [];
-    const afterLines: string[] = [];
-    for (let i = 0; i < 180; i++) {
-      const words = Array.from({ length: 11 }, (_, w) => `word${i}_${w}`).join(' ');
-      beforeLines.push(`line ${i}: ${words}`);
-      // Change every 7th line so both removals and additions occur scattered
-      // throughout the document, not just at the edges.
-      afterLines.push(i % 7 === 0 ? `line ${i}: CHANGED ${words}` : `line ${i}: ${words}`);
-    }
-    const before = beforeLines.join('\n');
-    const after = afterLines.join('\n');
-
-    const start = Date.now();
-    const result = diffLines(before, after);
-    const elapsed = Date.now() - start;
-
-    expect(elapsed).toBeLessThan(1000);
-    expect(result.hasChanges).toBe(true);
-    expect(result.rows.filter((row) => row.kind === 'removed').length).toBeGreaterThan(0);
-    expect(result.rows.filter((row) => row.kind === 'added').length).toBeGreaterThan(0);
-  });
 });
+
+/* The ~2000-word speed check lives in `diff.perf.test.ts` (perf lane). */

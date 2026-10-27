@@ -46,4 +46,24 @@ export default tseslint.config(
     },
     rules: { 'no-console': 'off' },
   },
+  {
+    /* A gate test never times the code: the GitHub runner is ~5x slower than the
+       dev machine, so `Date.now() - start` against a number fails a release for the
+       runner's speed. Prove cost deterministically (bytes, calls — see
+       tests/core/index/counting-store.ts) or put the budget in a `*.perf.test.ts`
+       file, whose lane only warns (tests/helpers/perf.ts). */
+    files: ['tests/**/*.{ts,tsx}'],
+    ignores: ['tests/**/*.perf.test.ts', 'tests/helpers/perf.ts', 'tests/e2e/**'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            "BinaryExpression[operator='-'][right.type='Identifier'][left.type='CallExpression'][left.callee.object.name=/^(Date|performance)$/][left.callee.property.name='now']",
+          message:
+            'Elapsed wall-clock time in a gate test. Assert a deterministic cost instead, or move the budget into a *.perf.test.ts file (perf lane, warns only).',
+        },
+      ],
+    },
+  },
 );

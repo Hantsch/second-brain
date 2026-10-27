@@ -147,7 +147,7 @@ describe('Services: Vault, Index und Watcher', () => {
     expect(services.status().docCount).toBe(before + 1);
     const hits = await services.requireIndex().search({ text: 'federweisser' });
     expect(hits[0]?.path).toBe('inbox/2026-08-10-1500-zwiebelkuchen.md');
-  }, 20_000);
+  });
 
   it('schließt den Vault und fällt auf den Leerzustand zurück', async () => {
     await services.openVault(vault.root);

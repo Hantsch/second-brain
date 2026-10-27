@@ -17,7 +17,7 @@ import { registeredHook, runHook, type HookCommand } from '../../helpers/hook';
 import { createTempVault, type TempVault } from '../../helpers/vault';
 
 const CHECK_PATH = '.claude/hooks/gaston-wiki-check.ps1';
-const TIMEOUT = 30_000;
+const TIMEOUT = 120_000;
 
 function checkTemplate() {
   const found = SETUP_TEMPLATES.find((candidate) => candidate.path === CHECK_PATH);
@@ -36,7 +36,7 @@ const validPage = (module: string, overrides: Record<string, unknown> = {}) =>
 
 // The hook runtime is Windows PowerShell (powershell.exe), and the CI runner is Windows.
 // 60 s: queued spawns (see runHook's concurrency cap) wait inside the test timeout.
-describe.runIf(process.platform === 'win32')('post-write wiki check', { timeout: 60_000 }, () => {
+describe.runIf(process.platform === 'win32')('post-write wiki check', { timeout: TIMEOUT }, () => {
   let vault: TempVault;
   let postHook: HookCommand;
   let stopHook: HookCommand;

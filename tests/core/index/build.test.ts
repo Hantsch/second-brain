@@ -6,10 +6,8 @@ import {
   docTypeFromPath,
   toIndexedDoc,
 } from '@core/index/build';
-import { SearchEngine } from '@core/index/search';
 import type { IndexedDoc } from '@core/index/types';
 import { YIELD_EVERY } from '@core/index/yield';
-import { MemoryVaultStore } from '@core/vault/memory-store';
 import type { VaultStat } from '@core/vault/types';
 import { ALL_DOC_TYPES } from '@shared/types';
 import { CountingStore, NYOTA_PROJECT, TODAY, makeDoc, vaultFiles, vaultStore } from './fixtures';
@@ -382,32 +380,4 @@ describe('deriveIndexIncremental', () => {
   });
 });
 
-describe('buildIndex: Tempo', () => {
-  it('schafft 5000 Dokumente samt Suchindex in unter 10 Sekunden', async () => {
-    const files: Record<string, string> = {};
-    for (let i = 0; i < 5000; i += 1) {
-      files[`areas/notiz-${i}.md`] = [
-        '---',
-        'type: note',
-        `title: Notiz ${i} über Rollen und Zugriff`,
-        'tags: [rollen, zugriff]',
-        '---',
-        '',
-        `Das Rollenkonzept in Notiz ${i} beschreibt, wie Rechte an Rollen haengen`,
-        'und welche Rückmeldung dafür noch fehlt.',
-        '',
-        '- [ ] Notiz durchsehen @due:2026-08-15 !!',
-        '',
-      ].join('\n');
-    }
-    const store = new MemoryVaultStore({ files, now: new Date('2026-08-09T08:00:00.000Z') });
-    const started = Date.now();
-    const index = await buildIndex(store, { now: TODAY });
-    const engine = SearchEngine.from(index.docs);
-    const elapsed = Date.now() - started;
-    expect(index.docs).toHaveLength(5000);
-    expect(index.todos).toHaveLength(5000);
-    expect(engine.search({ text: 'Rückmeldung', limit: 5 }, index.byPath)).toHaveLength(5);
-    expect(elapsed).toBeLessThan(10_000);
-  }, 30_000);
-});
+/* The 5,000-note speed check lives in `scale.perf.test.ts` (perf lane). */

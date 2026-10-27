@@ -111,7 +111,7 @@ describe('Quellen- und Modul-Kanäle im Main', () => {
         job = (await harness.call('ingest:jobs', undefined)).find((entry) => entry.id === id);
         expect(job?.stage).toMatch(/done|error|awaiting-llm/);
       },
-      { timeout: 5000, interval: 20 },
+      { interval: 20 },
     );
     if (job === undefined) throw new Error('Auftrag verschwunden');
     return job;
@@ -203,7 +203,7 @@ describe('Quellen- und Modul-Kanäle im Main', () => {
         const sources = await harness.call('modules:sources', {});
         expect(sources.map((source) => source.path)).toContain(job.rawPath);
       },
-      { timeout: 5000, interval: 25 },
+      { interval: 25 },
     );
   });
 
@@ -422,7 +422,7 @@ describe('Quellen- und Modul-Kanäle im Main', () => {
         expect(raws).toHaveLength(1);
         expect(raws[0]?.sourcePage).not.toBeNull();
       },
-      { timeout: 5000, interval: 25 },
+      { interval: 25 },
     );
   });
 

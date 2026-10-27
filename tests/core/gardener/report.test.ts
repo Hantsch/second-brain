@@ -1,7 +1,8 @@
 /* Der ganze Lauf. Drei Fragen:
    1. Findet er im Demo-Vault genau die absichtlichen Mängel — und nichts dazu?
    2. Halten Sortierung, Ausblenden und die Ehrlichkeit über `usedLlm`?
-   3. Bleibt er auf 1000 Seiten unter drei Sekunden? */
+   Die dritte — bleibt er auf 1000 Seiten unter drei Sekunden? — misst
+   `report.perf.test.ts` in der Perf-Spur. */
 
 import { describe, expect, it, vi } from 'vitest';
 import { runGardener, sortFindings } from '@core/gardener';
@@ -247,32 +248,5 @@ describe('condensation-due (Projekt-Arm) über einen echten Bestand (046, D2)', 
 
     expect(of(report.findings, 'condensation-due')).toHaveLength(1);
     for (const spy of spies) expect(spy).not.toHaveBeenCalled();
-  });
-});
-
-describe('Laufzeit', () => {
-  it('läuft über 1000 Seiten in unter drei Sekunden', async () => {
-    const files: Record<string, string> = {
-      'modules/gross/wiki/index.md': '# Katalog\n\n## Begriffe\n',
-      'modules/gross/wiki/log.md': '# Chronik\n',
-    };
-    for (let at = 0; at < 1000; at += 1) {
-      const slug = `seite-${String(at).padStart(4, '0')}`;
-      const link = `seite-${String((at + 1) % 1000).padStart(4, '0')}`;
-      files[`modules/gross/wiki/concepts/${slug}.md`] =
-        `---\ntype: concept\ntitle: Seite ${at}\nmodule: gross\ncreated: ${day(-40)}\n` +
-        `updated: ${day(-10)}\nreviewed: ${day(-10)}\ntags: []\nsources: []\n---\n\n` +
-        `Abschnitt ${at} beschreibt Vorgang ${at} mit Kennung ${at * 7} und Schwelle ${at % 13}.\n` +
-        `Verwandt ist [[${link}]]; die Messreihe ${at % 29} lag bei ${at % 97} Prozent.\n` +
-        `Notiert wurde das am Tag ${at % 31} von Person ${at % 17} im Raum ${at % 11}.\n`;
-    }
-    const fixture = await gardenerFixture(files);
-
-    const started = Date.now();
-    const report = await runGardener(fixture.deps(), { settings: SETTINGS });
-    const elapsed = Date.now() - started;
-
-    expect(report.findings.length).toBeGreaterThan(0);
-    expect(elapsed).toBeLessThan(3000);
   });
 });

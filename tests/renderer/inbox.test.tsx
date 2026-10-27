@@ -266,7 +266,7 @@ function renderInbox(extra: Handlers = {}): Rendered {
 
 /** Wartet, bis der Vorschlag steht — er kommt verzögert, damit j/k nichts kostet. */
 async function waitForProposal(): Promise<HTMLElement> {
-  return screen.findByRole('heading', { name: /Projekt Kundenportal Relaunch/ }, { timeout: 3000 });
+  return screen.findByRole('heading', { name: /Projekt Kundenportal Relaunch/ });
 }
 
 function applyCall(sb: Mock): { proposal: FilingProposal } {

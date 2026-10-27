@@ -308,7 +308,7 @@ describe('a queued digestion blocks a module plan and apply (063, D4)', () => {
         const job = jobs.find((entry) => entry.id === started.id);
         expect(job?.stage).toBe('summarizing');
       },
-      { timeout: 5000, interval: 10 },
+      { interval: 10 },
     );
 
     const renamePlanResult = await harness.call('modules:renamePlan', {

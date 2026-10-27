@@ -28,13 +28,13 @@ describe('release workflow', () => {
     expect(workflow.concurrency).toEqual({ group: 'release', 'cancel-in-progress': false });
   });
 
-  it('runs on Windows only, with full history and Node 20', () => {
+  it('runs on Windows only, with full history and the Node from .nvmrc', () => {
     expect(Object.keys(workflow.jobs)).toEqual(['release']);
     expect(job['runs-on']).toBe('windows-latest');
     const checkout = steps.find((s) => String(s.uses).startsWith('actions/checkout'));
     expect(checkout.with['fetch-depth']).toBe(0);
     const node = steps.find((s) => String(s.uses).startsWith('actions/setup-node'));
-    expect(node.with['node-version']).toBe('20.x');
+    expect(node.with['node-version-file']).toBe('.nvmrc');
   });
 
   it('installs and verifies before releasing, then sets the bot identity', () => {

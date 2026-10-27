@@ -195,9 +195,7 @@ describe('RenameModuleDialog (Story 063, D5)', () => {
     await userEvent.type(screen.getByLabelText('Title'), 'Identity platform');
 
     const confirm = screen.getByRole('button', { name: 'Rename' });
-    await waitFor(() => expect((confirm as HTMLButtonElement).disabled).toBe(false), {
-      timeout: 1000,
-    });
+    await waitFor(() => expect((confirm as HTMLButtonElement).disabled).toBe(false));
   });
 
   it('disables confirm for a no-op title, and while a re-plan is still pending (findings 3, 4)', async () => {
@@ -216,12 +214,10 @@ describe('RenameModuleDialog (Story 063, D5)', () => {
       true,
     );
 
-    await waitFor(
-      () =>
-        expect((screen.getByRole('button', { name: 'Rename' }) as HTMLButtonElement).disabled).toBe(
-          false,
-        ),
-      { timeout: 1000 },
+    await waitFor(() =>
+      expect((screen.getByRole('button', { name: 'Rename' }) as HTMLButtonElement).disabled).toBe(
+        false,
+      ),
     );
     expect(sb.calls.some((call) => call.channel === 'modules:rename')).toBe(false);
   });
@@ -280,7 +276,7 @@ describe('RenameModuleDialog (Story 063, D5)', () => {
     await userEvent.clear(screen.getByLabelText('Title'));
     await userEvent.type(screen.getByLabelText('Title'), 'Identity platform');
     const confirm = screen.getByRole('button', { name: 'Rename' }) as HTMLButtonElement;
-    await waitFor(() => expect(confirm.disabled).toBe(false), { timeout: 1000 });
+    await waitFor(() => expect(confirm.disabled).toBe(false));
     await userEvent.click(confirm);
 
     await waitFor(() =>
@@ -307,7 +303,7 @@ describe('RenameModuleDialog (Story 063, D5)', () => {
     await userEvent.clear(screen.getByLabelText('Title'));
     await userEvent.type(screen.getByLabelText('Title'), 'Identity platform');
     const confirm = screen.getByRole('button', { name: 'Rename' }) as HTMLButtonElement;
-    await waitFor(() => expect(confirm.disabled).toBe(false), { timeout: 1000 });
+    await waitFor(() => expect(confirm.disabled).toBe(false));
     await userEvent.click(confirm);
 
     expect(
@@ -329,7 +325,7 @@ describe('RenameModuleDialog (Story 063, D5)', () => {
     await userEvent.clear(screen.getByLabelText('Title'));
     await userEvent.type(screen.getByLabelText('Title'), 'Identity platform');
     const confirm = screen.getByRole('button', { name: 'Rename' }) as HTMLButtonElement;
-    await waitFor(() => expect(confirm.disabled).toBe(false), { timeout: 1000 });
+    await waitFor(() => expect(confirm.disabled).toBe(false));
     await userEvent.click(confirm);
 
     await userEvent.click(await screen.findByRole('button', { name: 'Undo' }));
@@ -345,7 +341,7 @@ describe('RenameModuleDialog (Story 063, D5)', () => {
     await userEvent.clear(screen.getByLabelText('Title'));
     await userEvent.type(screen.getByLabelText('Title'), 'Identity platform');
     const confirm = screen.getByRole('button', { name: 'Rename' }) as HTMLButtonElement;
-    await waitFor(() => expect(confirm.disabled).toBe(false), { timeout: 1000 });
+    await waitFor(() => expect(confirm.disabled).toBe(false));
     await userEvent.click(confirm);
 
     await userEvent.click(await screen.findByRole('button', { name: 'Undo' }));

@@ -16,7 +16,7 @@ import { registeredHook, runHook, type HookCommand } from '../../helpers/hook';
 import { createTempVault, type TempVault } from '../../helpers/vault';
 
 const SCRIPT_PATH = '.claude/hooks/gaston-run-report.ps1';
-const TIMEOUT = 60_000;
+const TIMEOUT = 120_000;
 
 function reportTemplate() {
   const found = SETUP_TEMPLATES.find((candidate) => candidate.path === SCRIPT_PATH);

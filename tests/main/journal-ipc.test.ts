@@ -192,7 +192,7 @@ describe('Tagebuch-Kanäle im Main', () => {
         expect(done, 'kein Abschluss-Ereignis').toBeDefined();
         return done as IpcEvents['event:llm-stream'];
       },
-      { timeout: 8000, interval: 20 },
+      { interval: 20 },
     );
   }
 
