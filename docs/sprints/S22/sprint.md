@@ -1,7 +1,7 @@
 ---
 sprint: S22
-status: planned # planned | in-progress | done
-branch: # set by /sprint
+status: in-progress
+branch: dev # no sprint branch, built directly on dev (user decision)
 milestone: M21 — Release hardening
 ---
 
