@@ -14,7 +14,8 @@
       "Edit(/.secondbrain/chats/**)",
       "Edit(/.secondbrain/logs/**)",
       "Edit(/.secondbrain/trash/**)",
-      "Edit(/.secondbrain/agent/jobs/**)"
+      "Edit(/.secondbrain/agent/jobs/**)",
+      "Edit(/.secondbrain/agent/resolved/**)"
     ]
   },
   "hooks": {

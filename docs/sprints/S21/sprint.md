@@ -19,7 +19,7 @@ run.
 
 <!-- Order = the order the build phase works through. Dependent stories go last. -->
 
-- [ ] 088 — The agent's proposals wait in Maintenance
+- [x] 088 — The agent's proposals wait in Maintenance
 - [ ] 089 — Every agent run leaves a report
 - [ ] 090 — I hand a waiting source to the agent
 - [ ] 091 — I hand a module or a gardener run to the agent

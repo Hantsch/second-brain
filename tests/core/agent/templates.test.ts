@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { SETUP_TEMPLATES } from '@core/agent/setup-templates';
 import { VAULT_CLAUDE_TEMPLATE } from '@core/agent/templates/vault-claude';
 import { parse } from '@core/vault/frontmatter';
+import { PROPOSAL_FIELDS, PROPOSAL_FILING_FIELDS } from '../../../src/shared/types/agent-proposals';
 import { AGENT_DIRS, AGENT_SKILLS } from '../../../src/shared/types/agent-setup';
 
 function mirrorOf(id: string, vaultPath: string): string {
@@ -61,6 +62,27 @@ describe('setup templates', () => {
     expect(blocked).toMatch(/`wiki\/overview\.md`[^\n]*changes only through a proposal/);
     expect(blocked).toMatch(/`modules\/gaston-help\/`[^\n]*read-only/);
     expect(body).toMatch(/Write `raw\/`, `CLAUDE\.md`, `\.claude\/`/);
+  });
+
+  it('the propose skill describes every field Gaston reads', () => {
+    const template = SETUP_TEMPLATES.find((candidate) => candidate.id === 'skill-gaston-propose');
+    expect(template).toBeDefined();
+    const body = template?.body ?? '';
+    for (const needle of [
+      ...PROPOSAL_FIELDS,
+      ...PROPOSAL_FILING_FIELDS,
+      AGENT_DIRS.proposals,
+      'kind: edit',
+      'kind: filing',
+    ]) {
+      expect(body, needle).toContain(needle);
+    }
+    // Unquoted colons or ` #` make a proposal unreadable or truncate it, so the skill must say so
+    // and show a quoted reason.
+    expect(body).toMatch(/^reason: "/m);
+    expect(body).toMatch(/Double-quote every frontmatter value that contains a colon/);
+    // An S20 setup installed version 1, which has to show as outdated.
+    expect(template?.version).toBeGreaterThan(1);
   });
 
   it('every Gaston skill opens with frontmatter naming it and saying when to use it', () => {

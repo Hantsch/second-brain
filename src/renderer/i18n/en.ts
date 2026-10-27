@@ -9,6 +9,7 @@ import { enAgentScreen } from './en-agent-screen';
 import { enAgents } from './en-agents';
 import { enDashboard } from './en-dashboard';
 import { enGarden } from './en-garden';
+import { enGardenProposals } from './en-garden-proposals';
 import { enJournal } from './en-journal';
 import { enJournalCalendar } from './en-journal-calendar';
 import { enNotes } from './en-notes';
@@ -58,6 +59,7 @@ export const en: Record<TranslationKey, string> = {
   'rail.settings': 'Settings',
   'rail.journalOpenDays': 'Journal, {count} open days',
   'rail.tasksRunningAndWaiting': 'Tasks, {count} running or waiting',
+  'rail.gardenProposals': 'Care, {count} waiting proposals',
   'rail.agent': 'Agent',
   'rail.agent.refused': 'Claude was not opened.',
   'rail.agent.settings': 'Agent settings',
@@ -269,6 +271,7 @@ export const en: Record<TranslationKey, string> = {
   ...enAgents,
   ...enDashboard,
   ...enGarden,
+  ...enGardenProposals,
   ...enJournal,
   ...enJournalCalendar,
   ...enNotes,

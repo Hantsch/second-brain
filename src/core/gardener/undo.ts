@@ -46,12 +46,23 @@ export interface UndoStore extends WikiStore {
 
 /**
  * A journal can also come from an action no finding triggered. `module-rename` and
- * `module-delete` are story 063's: the whole module under one mark.
+ * `module-delete` are story 063's: the whole module under one mark. `agent-proposal` is
+ * an accepted edit the coding agent proposed.
  */
 export type FixJournalKind =
-  GardenerFindingKind | 'discard' | 'supersede' | 'module-rename' | 'module-delete';
+  | GardenerFindingKind
+  | 'discard'
+  | 'supersede'
+  | 'module-rename'
+  | 'module-delete'
+  | 'agent-proposal';
 export type FixJournalAction =
-  GardenerFix['action'] | 'discard' | 'supersede' | 'module-rename' | 'module-delete';
+  | GardenerFix['action']
+  | 'discard'
+  | 'supersede'
+  | 'module-rename'
+  | 'module-delete'
+  | 'agent-proposal';
 
 /**
  * Ein geaenderter Pfad mit seinem Zustand davor — dieselbe Form wie

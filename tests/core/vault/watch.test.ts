@@ -117,6 +117,11 @@ describe('isIgnoredPath', () => {
     expect(isIgnoredPath('C:/vault/node_modules/x/index.js')).toBe(true);
     expect(isIgnoredPath('C:\\vault\\.git\\HEAD')).toBe(true);
   });
+
+  it('meldet Vorschlaege des Agenten, damit sie ohne Neustart erscheinen', () => {
+    expect(isIgnoredPath('.secondbrain/agent/proposals/20261027-a.md')).toBe(false);
+    expect(isIgnoredPath('.secondbrain/agent/resolved/20261027-a.md')).toBe(false);
+  });
 });
 
 describe('watchVault', () => {

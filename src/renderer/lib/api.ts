@@ -288,6 +288,9 @@ export const api = {
     protectionStatus: () => call('agent:protectionStatus'),
     setupApply: (request: IpcRequest<'agent:setupApply'>) => call('agent:setupApply', request),
     launchTerminal: () => call('agent:launchTerminal'),
+    proposals: () => call('agent:proposals'),
+    proposalAccept: (id: string) => call('agent:proposalAccept', { id }),
+    proposalReject: (id: string) => call('agent:proposalReject', { id }),
   },
   settings: {
     get: () => call('settings:get'),

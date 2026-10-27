@@ -8,6 +8,7 @@ import { Icon } from '../atoms/Icon';
 import { useT } from '../i18n';
 import { useGardenerProgress } from '../lib/gardener-progress';
 import { countOpenDays } from '../lib/journal-open';
+import { useAgentProposals } from '../lib/queries/agent';
 import { useJournalDays } from '../lib/queries/data';
 import { useWorkTasks } from '../lib/queries/tasks';
 import { SCREENS, type ScreenDef, type ScreenId } from '../lib/screens';
@@ -38,6 +39,10 @@ export function Rail() {
   const gardenerProgress = useGardenerProgress();
   const tasksCount = tasksBadgeCount(workTasks, gardenerProgress);
 
+  /* Proposals the agent left waiting; maintenance is where they are decided. */
+  const proposals = useAgentProposals();
+  const proposalsCount = proposals.data?.length ?? 0;
+
   /* Per-screen badge count — a lookup, not a hardcoded branch per screen.
      Story 072, D1 generalises what used to be a single `isJournal` special
      case: every screen id maps to a count here, and a screen with nothing to
@@ -45,6 +50,7 @@ export function Rail() {
   const badgeCounts: Partial<Record<ScreenId, number>> = {
     journal: openDaysCount,
     tasks: tasksCount,
+    garden: proposalsCount,
   };
 
   /* 072 review, finding 2: one sentence per screen that carries a count, not
@@ -55,6 +61,7 @@ export function Rail() {
   const ariaLabelWithCount: Partial<Record<ScreenId, (count: number) => string>> = {
     journal: (count) => t('rail.journalOpenDays', { count }),
     tasks: (count) => t('rail.tasksRunningAndWaiting', { count }),
+    garden: (count) => t('rail.gardenProposals', { count }),
   };
 
   const renderItem = (screen: ScreenDef) => {

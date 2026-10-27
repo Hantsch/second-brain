@@ -7,7 +7,7 @@
  */
 
 import type { RawSource } from '@shared/types';
-import { extName, isAgentConfigPath, isInside } from '@core/vault/paths';
+import { extName, isAgentConfigPath, isInternalPath, isInside } from '@core/vault/paths';
 import type { VaultStat, VaultStore } from '@core/vault/types';
 import { collectIngest, indexOne } from './build';
 import { deriveSources } from './pages';
@@ -140,7 +140,8 @@ export async function refreshPaths(
   let sourcesChanged = false;
 
   for (const path of new Set(paths)) {
-    if (isAgentConfigPath(path)) continue;
+    // `.secondbrain/` holds the derived index and the agent's exchange files, never knowledge.
+    if (isAgentConfigPath(path) || isInternalPath(path)) continue;
     const ext = extName(path);
     if (ext === '.md') {
       await refreshFile(store, path, previous, docsByPath, touched, passageThreshold);

@@ -145,6 +145,26 @@ describe('IndexService: pfadgezielter Refresh', () => {
     }
   });
 
+  it('a markdown file under .secondbrain/agent never enters the index', async () => {
+    const proposal = '.secondbrain/agent/proposals/x.md';
+    const vault = new CountingVaultStore({
+      files: {
+        ...vaultFiles(),
+        [proposal]: '---\nkind: edit\n---\n\nNot knowledge.\n',
+      },
+      now: new Date('2026-08-09T08:00:00.000Z'),
+    });
+
+    const built = await buildIndex(vault);
+    expect(built.byPath.has(proposal)).toBe(false);
+
+    for (const path of [proposal, '.secondbrain/agent/proposals', '.secondbrain/agent']) {
+      const refreshed = await refreshPaths(vault, [path], built);
+      expect(refreshed.docs.some((doc) => doc.path.startsWith('.secondbrain/'))).toBe(false);
+      expect(refreshed.changed).toBe(false);
+    }
+  });
+
   it('a touched-but-unchanged file persists nothing', async () => {
     const vault = fixtureStore();
     const service = await IndexService.open(vault, OPTIONS);

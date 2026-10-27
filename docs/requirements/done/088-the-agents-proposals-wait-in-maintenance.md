@@ -1,7 +1,7 @@
 ---
 id: 088
 title: The agent's proposals wait in Maintenance
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-10-22
 ---
 
@@ -24,20 +24,20 @@ an installed setup shows "outdated".
 
 ## Acceptance Criteria
 
-- [ ] **AC1** — A proposal file placed in the proposals folder while Gaston is open appears in
+- [x] **AC1** — A proposal file placed in the proposals folder while Gaston is open appears in
       Maintenance, without a restart, as a finding showing target, diff and reasoning.
-- [ ] **AC2** — The Maintenance rail entry shows the number of waiting proposals and updates when
+- [x] **AC2** — The Maintenance rail entry shows the number of waiting proposals and updates when
       one is added or resolved.
-- [ ] **AC3** — Accepting writes the target hash-guarded, leaves an undo copy in
+- [x] **AC3** — Accepting writes the target hash-guarded, leaves an undo copy in
       `.secondbrain/trash/`, and removes the proposal.
-- [ ] **AC4** — Accepting after the target changed since the agent read it reports a conflict and
+- [x] **AC4** — Accepting after the target changed since the agent read it reports a conflict and
       leaves the target unchanged.
-- [ ] **AC5** — Rejecting removes the proposal and leaves the target unchanged.
-- [ ] **AC6** — A proposal targeting `journal/`, `raw/`, or a path outside the vault is never
+- [x] **AC5** — Rejecting removes the proposal and leaves the target unchanged.
+- [x] **AC6** — A proposal targeting `journal/`, `raw/`, or a path outside the vault is never
       offered for accepting; it shows as invalid with the reason.
-- [ ] **AC7** — A proposal file with missing fields shows as invalid with the reason, not as a
+- [x] **AC7** — A proposal file with missing fields shows as invalid with the reason, not as a
       crash or an empty card.
-- [ ] **AC8** — The installed proposal skill describes the format Gaston reads, and the template
+- [x] **AC8** — The installed proposal skill describes the format Gaston reads, and the template
       test pins it.
 
 ## Open Questions
@@ -116,7 +116,7 @@ event → list shrinks.
 
 ## Deliverables
 
-- **D1 — Read and validate proposals (core).**
+- [x] **D1 — Read and validate proposals (core).**
   - **New `src/shared/types/agent-proposals.ts`**, re-exported from `src/shared/types/index.ts`:
     - `AGENT_RESOLVED_DIR = '.secondbrain/agent/resolved'`
     - `PROPOSAL_FIELDS = ['gaston', 'version', 'kind', 'target', 'base_hash', 'run', 'reason']`,
@@ -154,9 +154,9 @@ event → list shrinks.
     - "a proposal targeting journal, raw, internal folders or outside the vault is invalid with its
       reason"
     - "a proposal with missing fields or unreadable frontmatter is invalid with its reason"
-- **D2 — Accept and reject an edit proposal (core).** New file
-  `src/core/agent/proposal-resolve.ts`. Mirror the journal-before-write order of `commit()` in
-  `src/core/gardener/fixes.ts:132`.
+- [x] **D2 — Accept and reject an edit proposal (core).** New file
+      `src/core/agent/proposal-resolve.ts`. Mirror the journal-before-write order of `commit()` in
+      `src/core/gardener/fixes.ts:132`.
   - **`acceptProposal(store, id, now?)`:**
     1. Re-read and re-validate the proposal with `readProposal` from D1. If it is gone, or invalid,
        throw `GardenerError`-style `invalid` and write nothing. Never trust anything but the id.
@@ -180,8 +180,8 @@ event → list shrinks.
     - "rejecting moves the proposal aside and leaves the target unchanged"
     - "accepting an invalid proposal is refused and writes nothing". It covers a `journal/` target
       and a missing field, with no journal, no write and no move.
-- **D3 — Filing proposals through the capture flow (core).** Extend
-  `src/core/agent/proposal-resolve.ts` and `src/core/agent/proposals.ts`.
+- [x] **D3 — Filing proposals through the capture flow (core).** Extend
+      `src/core/agent/proposal-resolve.ts` and `src/core/agent/proposals.ts`.
   - **Validation.** A `filing` proposal builds a `FilingAction` with `filingAction` from
     `src/core/capture/actions.ts`, using `path = file_into`, `section` and `content`. It checks the
     action with `verifyFilingAction` (`src/core/capture/verify-action.ts`, plus
@@ -196,7 +196,7 @@ event → list shrinks.
   - **Tests** in `tests/core/agent/proposal-resolve.test.ts`:
     - "a filing proposal files the dump through the capture flow"
     - "a filing proposal into the journal is invalid"
-- **D4 — IPC.**
+- [x] **D4 — IPC.**
   - **Channels.** In `src/shared/ipc.ts`, add to the route map and `IPC_CHANNELS`:
     - `agent:proposals`: req `void`, res `AgentProposalView[]`
     - `agent:proposalAccept`: req `{id}`, res `{undo: {via: 'gardener'|'capture'; token}}`
@@ -210,7 +210,7 @@ event → list shrinks.
     `src/renderer/lib/mock-bridge.ts` (an empty list).
   - **Test.** New `tests/main/ipc/agent-proposals.test.ts`: "an accept with a path-like id is
     refused before core sees it". `tests/main/ipc-coverage.test.ts` proves the wiring.
-- **D5 — Proposal cards in the garden screen.**
+- [x] **D5 — Proposal cards in the garden screen.**
   - **Data.** In `src/renderer/lib/queries/agent.ts`:
     - `useAgentProposals()` with key `qk.agent.proposals()` under the existing `agent` root in
       `src/renderer/lib/queries/keys.ts` (already in `VAULT_DEPENDENT_ROOTS`, so
@@ -228,6 +228,7 @@ event → list shrinks.
     An invalid card shows the file path, the translated reason (`garden.proposal.invalid.<code>`,
     with the detail) and only Reject. A conflict shows "Changed since the agent read it. Nothing was
     written."
+
   - **Section.** New `src/renderer/screens/garden/ProposalSection.tsx`: a heading with the count
     and the cards, hidden when the list is empty. After an accept it shows `OutcomeStrip`
     (`./OutcomeStrip.tsx`) with Undo. Undo calls the gardener `undoFix` mutation from
@@ -249,14 +250,14 @@ event → list shrinks.
         target keeps the spec's edit
       - Reject on a second one removes it, and its target is byte-identical
       - a `journal/` target and a file without `reason` show their reasons and no Accept button
-- **D6 — Rail badge for waiting proposals.**
+- [x] **D6 — Rail badge for waiting proposals.**
   - **Rail.** In `src/renderer/components/Rail.tsx`, add a `garden` entry to `badgeCounts` and to
     `ariaLabelWithCount`, from `useAgentProposals().data?.length`. Show nothing at 0.
   - **Text.** Add an i18n key `rail.gardenProposals` (en/de), following `rail.journalOpenDays`.
   - **e2e** in `tests/e2e/agent-proposals.spec.ts`: "the maintenance rail counts waiting proposals".
     Write one proposal → the garden rail badge shows 1. Write a second one → 2. Reject one in
     Maintenance → 1.
-- **D7 — The propose skill learns the format; protection guards `resolved/`.**
+- [x] **D7 — The propose skill learns the format; protection guards `resolved/`.**
   - **Skill.** In `src/core/agent/templates/skills.ts`, `skill-gaston-propose` goes to version 2.
     The body describes:
     - the folder `.secondbrain/agent/proposals/` and the file name `<YYYYMMDD-HHMMSS>-<short-slug>.md`
@@ -270,6 +271,7 @@ event → list shrinks.
 
     Remove the "exact formats follow later" line for proposals. Update the mirror
     `docs/agent-setup/skill-gaston-propose.md` (prettier on that file only, then copy back exactly).
+
   - **Protection.** In `src/core/agent/templates/protection.ts`, add
     `Edit(/${AGENT_RESOLVED_DIR}/**)` to the `internal-write` rule and bump the settings template
     version. Update `docs/agent-setup/settings.json` and whatever protection test enumerates the
@@ -335,3 +337,32 @@ Coverage gate:
 D3 implements the (User) filing decision. Its own unit tests prove it, and no criterion names it.
 
 ## Done
+
+The agent's proposals are now files under `.secondbrain/agent/proposals/` that Gaston lists in the
+Maintenance screen. Edit proposals accept hash-guarded with a gardener undo copy, filing proposals
+go through the capture flow, invalid ones show their reason and only offer Reject, and the garden
+rail entry carries a badge with the waiting count. The propose skill (v2) and the settings template
+(v2, `resolved/` deny rule) describe and protect the format.
+
+Commit message: `088: agent proposals wait in Maintenance (list, accept/reject, filing, rail badge, skill v2)`
+
+Verification (narrow gate): `npm run build`, `lint`, `typecheck`, scoped `prettier --check` green;
+`npx vitest run --changed HEAD` green (307 files, 4193 tests); `npx playwright test
+tests/e2e/agent-proposals.spec.ts` green (3/3). AC → test as verified: AC1, AC3 first e2e + unit
+`proposals`/`proposal-resolve`; AC2 rail e2e; AC4, AC5, AC6, AC7 second e2e + the named unit tests;
+AC8 `templates.test.ts` (all passed). No manual residue. Review: stage 1 (default) PASS, one fix
+cycle (skill YAML-quoting advice, `.ingest.json` and case tests, two weak IPC tests dropped,
+refreshPaths pin), narrow gate re-run green.
+
+Decisions: `kind: filing` validation infers the target as an existing project, area or module file,
+anything else is `filing-invalid` (`unknown-target`). Handlers use `wikiStore(services)` because
+`requireStore()` returns the narrower `VaultStoreLike`. New i18n bundles `{en,de}-garden-proposals.ts`
+because the garden bundles sit at the file limit. `DiffRow` moved to shared (re-exported from core).
+Unfixed, deliberately: `gaston`/`version` values are only checked for presence (a `version: 2` file
+is read as v1); a failed archive after a successful write leaves the proposal showing as a conflict
+(undo and Reject still work); symlinks inside the vault are not resolved by any store (predates the
+story). Timing note: `tests/core/index/perf.test.ts` and two `journal.test.tsx` tests time out under a
+parallel full-changed run but pass alone. Format red outside this story: `089-*.md` and `095-*.md`
+in docs/requirements fail `prettier --check`.
+
+tiers: D 7 / hard 1 · review default · cycles 1 · agents 11

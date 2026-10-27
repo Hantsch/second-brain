@@ -17,6 +17,7 @@ import type {
   AgentCliStatus,
   AgentProtectionState,
   AgentSessionSummary,
+  AgentProposalView,
   AgentSetupApplyRequest,
   AgentSetupApplyResult,
   AgentSetupState,
@@ -1296,6 +1297,15 @@ export interface IpcRoutes {
    * part of the result, not errors; main does the launch, nothing else.
    */
   'agent:launchTerminal': { req: void; res: TerminalLaunchResult };
+  /** The agent's proposals waiting in the vault, valid or not; read-only. */
+  'agent:proposals': { req: void; res: AgentProposalView[] };
+  /** Applies one proposal; only the id travels, target and content are re-read in main. A stale target comes back as `conflict`. */
+  'agent:proposalAccept': {
+    req: { id: string };
+    res: { undo: { via: 'gardener' | 'capture'; token: string } };
+  };
+  /** Archives a proposal unapplied. */
+  'agent:proposalReject': { req: { id: string }; res: void };
 
   // ── Settings ──────────────────────────────────────────────────────────────
   'settings:get': { req: void; res: SettingsSnapshot };
@@ -1526,6 +1536,9 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'agent:protectionStatus',
   'agent:setupApply',
   'agent:launchTerminal',
+  'agent:proposals',
+  'agent:proposalAccept',
+  'agent:proposalReject',
   'settings:get',
   'settings:setApp',
   'settings:setVault',

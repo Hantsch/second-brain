@@ -9,6 +9,7 @@ import { deAgentScreen } from './de-agent-screen';
 import { deAgents } from './de-agents';
 import { deDashboard } from './de-dashboard';
 import { deGarden } from './de-garden';
+import { deGardenProposals } from './de-garden-proposals';
 import { deJournal } from './de-journal';
 import { deJournalCalendar } from './de-journal-calendar';
 import { deNotes } from './de-notes';
@@ -58,6 +59,7 @@ export const de = {
   'rail.settings': 'Einstellungen',
   'rail.journalOpenDays': 'Tagebuch, {count} offene Tage',
   'rail.tasksRunningAndWaiting': 'Aufgaben, {count} laufen oder warten',
+  'rail.gardenProposals': 'Pflege, {count} wartende Vorschläge',
   'rail.agent': 'Agent',
   'rail.agent.refused': 'Claude wurde nicht geöffnet.',
   'rail.agent.settings': 'Agent-Einstellungen',
@@ -278,6 +280,7 @@ export const de = {
   ...deAgents,
   ...deDashboard,
   ...deGarden,
+  ...deGardenProposals,
   ...deJournal,
   ...deJournalCalendar,
   ...deNotes,

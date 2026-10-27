@@ -11,7 +11,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { IpcChannel, IpcRequest, IpcResponse } from '@shared/ipc';
-import type { VaultStatus } from '@shared/types';
+import type { AgentProposalView, VaultStatus } from '@shared/types';
 import { Rail } from '@renderer/components/Rail';
 import type { SbBridge } from '@renderer/lib/bridge';
 import { setLanguage } from '@renderer/i18n';
@@ -192,5 +192,43 @@ describe('Rail', () => {
 
     expect(await screen.findByRole('link', { name: 'Tasks' })).toBeTruthy();
     expect(screen.queryByRole('link', { name: /running or waiting/ })).toBeNull();
+  });
+
+  it('counts waiting proposals on the maintenance entry and shows nothing at zero', async () => {
+    setLanguage('en');
+    const proposal = (id: string): AgentProposalView => ({
+      id,
+      path: `.secondbrain/agent/proposals/${id}.md`,
+      kind: 'edit',
+      target: 'projects/a/project.md',
+      reason: 'Reason.',
+      run: null,
+      fileInto: null,
+      section: null,
+      valid: true,
+      invalid: null,
+      diff: [],
+    });
+    installMock({
+      'vault:status': () => READY_STATUS,
+      'journal:list': () => [],
+      'work:list': () => [],
+      'agent:proposals': () => [proposal('a'), proposal('b')],
+    });
+
+    const { unmount } = renderRail('/dashboard');
+    const waiting = await screen.findByRole('link', { name: 'Care, 2 waiting proposals' });
+    expect(waiting.querySelector('.sb-rail-count')?.textContent).toBe('2');
+    unmount();
+
+    installMock({
+      'vault:status': () => READY_STATUS,
+      'journal:list': () => [],
+      'work:list': () => [],
+      'agent:proposals': () => [],
+    });
+    renderRail('/dashboard');
+    const plain = await screen.findByRole('link', { name: 'Care' });
+    expect(plain.querySelector('.sb-rail-count')).toBeNull();
   });
 });

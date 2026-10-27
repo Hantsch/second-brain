@@ -4,6 +4,7 @@
 import { describe, expect, it } from 'vitest';
 import { SETUP_TEMPLATES } from '@core/agent/setup-templates';
 import { SETTINGS_TEMPLATE } from '@core/agent/templates/protection';
+import { AGENT_RESOLVED_DIR } from '../../../src/shared/types/agent-proposals';
 import { AGENT_DIRS } from '../../../src/shared/types/agent-setup';
 import { INTERNAL_DIRS } from '../../../src/shared/types/vault';
 
@@ -39,7 +40,7 @@ describe('agent protection settings', () => {
     ]) {
       expect(deny, entry).toContain(entry);
     }
-    for (const dir of [...Object.values(INTERNAL_DIRS), AGENT_DIRS.jobs]) {
+    for (const dir of [...Object.values(INTERNAL_DIRS), AGENT_DIRS.jobs, AGENT_RESOLVED_DIR]) {
       expect(deny, dir).toContain(`Edit(/${dir}/**)`);
     }
     for (const dir of [AGENT_DIRS.results, AGENT_DIRS.proposals, AGENT_DIRS.runs]) {

@@ -12,6 +12,8 @@ export type AgentCliStatusResult = IpcResponse<'agent:cliStatus'>;
 export type AgentSetupStateResult = IpcResponse<'agent:setupStatus'>;
 export type AgentProtectionStateResult = IpcResponse<'agent:protectionStatus'>;
 export type AgentSetupApplyResponse = IpcResponse<'agent:setupApply'>;
+export type AgentProposalsResult = IpcResponse<'agent:proposals'>;
+export type AcceptProposalResult = IpcResponse<'agent:proposalAccept'>;
 
 export function useAgentCliStatus(): UseQueryResult<AgentCliStatusResult> {
   return useQuery({
@@ -64,4 +66,41 @@ export function useApplyAgentSetup(): UseMutationResult<
         client.invalidateQueries({ queryKey: qk.agent.protection() }),
       ]),
   });
+}
+
+export function useAgentProposals(): UseQueryResult<AgentProposalsResult> {
+  const ready = useVaultReady();
+  return useQuery({
+    queryKey: qk.agent.proposals(),
+    queryFn: api.agent.proposals,
+    enabled: ready,
+    retry: false,
+    /* The agent writes these files while the app is open. */
+    staleTime: 0,
+  });
+}
+
+/* Both end in a refetch even on failure: a refused accept (`conflict`) or a proposal
+   that vanished must show what is on disk now, not the list the user clicked on. */
+function useProposalMutation<TResult>(
+  mutationFn: (id: string) => Promise<TResult>,
+): UseMutationResult<TResult, unknown, string> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn,
+    retry: false,
+    onSettled: () =>
+      Promise.all([
+        client.invalidateQueries({ queryKey: qk.agent.proposals() }),
+        client.invalidateQueries({ queryKey: ['agent'] }),
+      ]),
+  });
+}
+
+export function useAcceptProposal(): UseMutationResult<AcceptProposalResult, unknown, string> {
+  return useProposalMutation(api.agent.proposalAccept);
+}
+
+export function useRejectProposal(): UseMutationResult<void, unknown, string> {
+  return useProposalMutation(api.agent.proposalReject);
 }

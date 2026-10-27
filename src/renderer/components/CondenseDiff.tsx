@@ -4,7 +4,7 @@
    added/removed distinction, colour is only reinforcement (accessibility:
    colour-blind users must still be able to tell the rows apart). */
 
-import type { DiffRow } from '@core/condense/diff';
+import type { DiffRow } from '@shared/types';
 import { Icon } from '../atoms/Icon';
 import { useT } from '../i18n';
 

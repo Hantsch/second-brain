@@ -25,6 +25,8 @@ All notable changes to Gaston are recorded here. The format follows
 - Agent screen: the agent has its own place in the rail. One button opens plain Claude in your
   vault and says why when it cannot; below it, the commands that session knows, with the modules
   you can curate, and a pointer to Settings when the setup needs installing or updating.
+- Maintenance: edits the agent proposes wait there as cards with a diff. You accept or reject each
+  one, and an accepted edit can be undone.
 
 ## 0.2.0 — 2026-10-20
 

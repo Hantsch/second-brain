@@ -1,2 +1,26 @@
 - 10:04:06 · refine · 088 089 090 091 092 · started
 - 10:10:11 · refine · 088 089 090 091 092 · done
+- 10:10:11 · 088 · build · started
+- 2026-10-27 10:10 · 088 · D1 Read and validate proposals · started
+- 2026-10-27 10:15 · 088 · D1 Read and validate proposals · done
+- 2026-10-27 10:15 · 088 · D2 Accept and reject edit proposal (hard) · started
+- 2026-10-27 10:20 · 088 · D2 Accept and reject edit proposal (hard) · done
+- 2026-10-27 10:20 · 088 · D3 Filing proposals via capture flow · started
+- 2026-10-27 10:24 · 088 · D3 Filing proposals via capture flow · done
+- 2026-10-27 10:24 · 088 · D4 IPC · started
+- 2026-10-27 10:24 · 088 · D7 Propose skill and protection · started
+- 2026-10-27 10:29 · 088 · D4 IPC · done
+- 2026-10-27 10:29 · 088 · D7 Propose skill and protection · done
+- 2026-10-27 10:29 · 088 · D5 Proposal cards in garden screen · started
+- 2026-10-27 10:37 · 088 · D5 Proposal cards in garden screen · done
+- 2026-10-27 10:37 · 088 · D6 Rail badge · started
+- 2026-10-27 10:43 · 088 · D6 Rail badge · done
+- 2026-10-27 10:43 · 088 · verify · started
+- 2026-10-27 10:53 · 088 · verify · done
+- 2026-10-27 10:53 · 088 · review 1 · started
+- 2026-10-27 10:55 · 088 · review 1 · done
+- 2026-10-27 10:55 · 088 · review-fix 1 · started
+- 2026-10-27 10:58 · 088 · review-fix 1 · done
+- 2026-10-27 10:58 · 088 · verify 2 · started
+- 2026-10-27 11:03 · 088 · verify 2 · done
+- 2026-10-27 11:03 · 088 · story · done

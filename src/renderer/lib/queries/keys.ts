@@ -152,6 +152,7 @@ export const qk = {
     cliStatus: () => ['agent', 'cliStatus'] as const,
     setupState: () => ['agent', 'setupState'] as const,
     protection: () => ['agent', 'protection'] as const,
+    proposals: () => ['agent', 'proposals'] as const,
   },
   settings: {
     snapshot: () => ['settings', 'snapshot'] as const,

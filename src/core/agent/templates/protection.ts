@@ -3,6 +3,7 @@
  * the rules, the installed file and the status check read one list. */
 
 import { AGENT_DIRS, type AgentProtectionRuleId } from '../../../shared/types/agent-setup';
+import { AGENT_RESOLVED_DIR } from '../../../shared/types/agent-proposals';
 import { INTERNAL_DIRS, VAULT_DIRS } from '../../../shared/types/vault';
 import type { SetupTemplate } from '../setup-types';
 import { SHELL_GUARD_BODY } from './hook-shell-guard';
@@ -44,12 +45,13 @@ export const PROTECTION_RULES: readonly ProtectionRule[] = [
   { id: 'overview-write', deny: ['Edit(/modules/*/wiki/overview.md)'], hooks: [] },
   {
     id: 'internal-write',
-    // Results, proposals and runs under .secondbrain/agent/ stay writable; jobs are
-    // Gaston's alone, and everything else in .secondbrain/ is internal state.
+    // Results, proposals and runs under .secondbrain/agent/ stay writable; jobs and resolved
+    // proposals are Gaston's alone, and everything else in .secondbrain/ is internal state.
     deny: [
       'Edit(/.secondbrain/*.json)',
       ...Object.values(INTERNAL_DIRS).map((dir) => `Edit(/${dir}/**)`),
       `Edit(/${AGENT_DIRS.jobs}/**)`,
+      `Edit(/${AGENT_RESOLVED_DIR}/**)`,
     ],
     hooks: [],
   },
@@ -132,7 +134,7 @@ export function renderSettings(rules: readonly ProtectionRule[]): object {
 export const SETTINGS_TEMPLATE: SetupTemplate = {
   id: 'settings',
   path: '.claude/settings.json',
-  version: 1,
+  version: 2,
   format: 'json',
   body: JSON.stringify(renderSettings(PROTECTION_RULES), null, 2) + '\n',
 };

@@ -153,8 +153,7 @@ root invalidated → `agent:lastRun` → core reader → panel.
       `docs/VAULT-FORMAT.md` "Run reports", fields as in D1's `AgentRunReport` plus
       `gaston: run-report`, `version: 1`) to `.secondbrain/agent/runs/` under the ledger's file name,
       fixed at the first Stop as `<yyyyMMddTHHmmssZ of start>-<skill>.md` (`-2`, `-3` … if taken);
-      later Stops of the same run rewrite that file. Then delete the oldest `runs/*.md` by name beyond
-      50. LF line endings, UTF-8 without BOM, no absolute path in the file.
+      later Stops of the same run rewrite that file. Then delete the oldest `runs/*.md` by name beyond 50. LF line endings, UTF-8 without BOM, no absolute path in the file.
   - `src/core/agent/templates/protection.ts`: widen `HookRequirement['event']` with
     `'UserPromptSubmit'`; add exported `REPORT_HOOKS: readonly HookRequirement[]` (the three
     registrations, `failClosed: false`, `Stop` and `UserPromptSubmit` without matcher, `PostToolUse`

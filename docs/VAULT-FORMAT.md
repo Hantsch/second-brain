@@ -601,6 +601,7 @@ only on request.
     jobs/                            written by Gaston, read by the agent
     results/                         written by the agent; same file name as its job
     proposals/                       written by the agent
+    resolved/                        written by Gaston: accepted and rejected proposals
     runs/                            written by the agent
 ```
 
@@ -670,7 +671,63 @@ the rules above, recorded in the same manifest. On top of that:
 | `jobs/`      | Gaston | agent  | one job per file                                       |
 | `results/`   | agent  | Gaston | the outcome of a job, with the same file name as it    |
 | `proposals/` | agent  | Gaston | suggested changes; nothing applies until the user says |
+| `resolved/`  | Gaston | Gaston | proposals after the user accepted or rejected them     |
 | `runs/`      | agent  | Gaston | a record of each agent run                             |
+
+### Proposals
+
+A proposal is one `.md` file directly in `.secondbrain/agent/proposals/`, named
+`<YYYYMMDD-HHMMSS>-<short-slug>.md`. Frontmatter, then the content verbatim:
+
+```markdown
+---
+gaston: proposal
+version: 1
+kind: edit
+target: projects/website-relaunch/project.md
+base_hash: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+run: 2026-10-27T09:12:00.000Z
+reason: The launch date moved to 14 November.
+---
+
+(the whole new content of the target)
+```
+
+| Field       | Meaning                                                                   |
+| ----------- | ------------------------------------------------------------------------- |
+| `gaston`    | always `proposal`                                                         |
+| `version`   | always `1`                                                                |
+| `kind`      | `edit` or `filing`                                                        |
+| `target`    | vault-relative path the proposal is about                                 |
+| `base_hash` | sha256 of the target exactly as the agent read it, 64 hex characters      |
+| `run`       | start time of the run that wrote it                                       |
+| `reason`    | why the change is right                                                   |
+| `file_into` | `filing` only: the existing project, area or module file receiving a dump |
+| `section`   | `filing` only, optional: the section of `file_into` the text goes under   |
+
+Everything after the closing `---` line is the content, taken verbatim. For an `edit` it is the
+target's whole new content, and the target must exist: new files only come in through a
+`filing`, whose `target` is a dump under `inbox/`. A proposal whose target changed since
+`base_hash` was taken is stale and is not applied.
+
+Frontmatter is YAML: double-quote any value that contains a colon or ` #`, or that starts with a
+special character, `reason` and `run` especially (`reason: "Launch moved: now 14 November"`).
+An unquoted `a: b` makes the proposal unreadable, and an unquoted ` # …` silently truncates it.
+
+Forbidden targets, whatever the `kind`: `journal/`, `raw/`, `.secondbrain/`, `.claude/`, the
+root `CLAUDE.md`, and any `.ingest.json`.
+
+When the user accepts or rejects a proposal, Gaston moves it to
+`.secondbrain/agent/resolved/<id>.md`, under the same file name, and adds fields to its
+frontmatter:
+
+| Field         | Meaning                                                       |
+| ------------- | ------------------------------------------------------------- |
+| `resolution`  | `accepted` or `rejected`                                      |
+| `resolved_at` | ISO timestamp of the decision                                 |
+| `undo`        | `accepted` only: the token that takes the applied change back |
+
+`resolved/` is Gaston's alone: the agent may not write there (`internal-write`).
 
 ### Indexing
 
@@ -692,7 +749,7 @@ NotebookEdit). Paths start at the vault root.
 | `raw-write`      | `Edit(/raw/**)`                                                                                          |
 | `setup-write`    | `Edit(/CLAUDE.md)`, `Edit(/.claude/**)`                                                                  |
 | `overview-write` | `Edit(/modules/*/wiki/overview.md)`                                                                      |
-| `internal-write` | `Edit(/.secondbrain/*.json)`, the internal folders, `agent/jobs/`                                        |
+| `internal-write` | `Edit(/.secondbrain/*.json)`, the internal folders, `agent/jobs/`, `agent/resolved/`                     |
 | `pre-tool-guard` | no deny entry; a `PreToolUse` hook on the shell, read, search and write tools                            |
 | `wiki-check`     | no deny entry; a `PostToolUse` and a `Stop` hook that check the wiki                                     |
 

@@ -43,6 +43,7 @@ import { useModuleMutations } from '../../lib/queries/modules';
 import { FindingList } from './FindingList';
 import { HealthCard } from './HealthCard';
 import { OutcomeStrip } from './OutcomeStrip';
+import { ProposalSection } from './ProposalSection';
 import { useFindingActions } from './useFindingActions';
 import { ALL_FILTERS } from './filter';
 import type { FindingFilterState } from './filter';
@@ -199,6 +200,7 @@ export function GardenScreen() {
 
   const notes = (
     <>
+      <ProposalSection />
       {outcome === null ? null : (
         <OutcomeStrip
           outcome={outcome}

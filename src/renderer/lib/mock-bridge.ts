@@ -905,6 +905,9 @@ const RESPONSES: MockResponses = {
     results: confirmed.map(({ path }) => ({ path, outcome: 'written' as const })),
   }),
   'agent:launchTerminal': () => ({ ok: false, reason: 'cli-absent' }),
+  'agent:proposals': () => [],
+  'agent:proposalAccept': () => ({ undo: { via: 'gardener' as const, token: 'mock-undo-token' } }),
+  'agent:proposalReject': () => undefined,
 
   'settings:get': () => st.settingsSnapshot,
   'settings:setApp': () => st.settingsSnapshot,

@@ -31,3 +31,14 @@ export interface CondenseProposal {
   /** A human-readable truncation notice, or absent when nothing was left out. */
   partialInputs?: string;
 }
+
+export type DiffRowKind = 'context' | 'added' | 'removed';
+
+export interface DiffRow {
+  kind: DiffRowKind;
+  text: string;
+  /** 1-based line number in "before"; present for 'context' and 'removed'. */
+  beforeLine?: number;
+  /** 1-based line number in "after"; present for 'context' and 'added'. */
+  afterLine?: number;
+}
