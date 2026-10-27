@@ -46,6 +46,11 @@ All notable changes to Gaston are recorded here. The format follows
   Its answer comes back as the same diff you accept or reject, and a page it cites from outside the
   module fails with the path instead. Gaston holds the pen back until you say yes, as before.
 
+### Fixed
+
+- Agent setup: a file from a newer Gaston is never overwritten, and a file that cannot be written
+  is named while the rest is still written and recorded.
+
 ## 0.2.0 — 2026-10-20
 
 ### Added

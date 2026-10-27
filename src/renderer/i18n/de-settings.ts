@@ -63,6 +63,7 @@ const own = {
   'settings.agent.setup.plan.result.conflict':
     'Seit dem Plan auf der Platte geändert: {path}. Nichts darauf geschrieben.',
   'settings.agent.setup.plan.result.refused': 'Nicht geschrieben: {path}.',
+  'settings.agent.setup.plan.result.failed': 'Nicht geschrieben: {path} ({reason}).',
   'settings.agent.protection.title': 'Schutz',
   'settings.agent.protection.loading': 'Schutzregeln werden gelesen',
   'settings.agent.protection.none':

@@ -52,14 +52,14 @@ function Outcome({ results }: { results: Outcomes }) {
               { count: written },
             )}
       </p>
-      {problems.map(({ path, outcome }) => (
+      {problems.map(({ path, outcome, reason }) => (
         <p key={path} className="sb-note-detail sb-note-bad">
-          {t(
-            `settings.agent.setup.plan.result.${outcome === 'conflict' ? 'conflict' : 'refused'}`,
-            {
-              path,
-            },
-          )}
+          {outcome === 'failed'
+            ? t('settings.agent.setup.plan.result.failed', { path, reason: reason ?? '' })
+            : t(
+                `settings.agent.setup.plan.result.${outcome === 'conflict' ? 'conflict' : 'refused'}`,
+                { path },
+              )}
         </p>
       ))}
     </>

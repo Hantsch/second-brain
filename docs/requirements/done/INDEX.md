@@ -293,3 +293,4 @@ second roadmap.
 - 091 — I hand a module or a gardener run to the agent · S21 · A module (not the help module) or an unaudited gardener run is handed to the agent as a job; curate shows counts from the run report, an agent audit is validated by the shared check and booked into gardener.json only when valid.
 - 092 — I hand a module's condensation to the agent · S21 · A module's condensation can be handed to the agent from the module view; a valid result becomes the in-app diff proposal, confirmed as in 081.
 - 093 — The agent's guard holds under an adversarial pass · S22 · guard blocks [char[]] and help-module writes, disableAllHooks shows Off, wiki check shares parseLog's heading pattern
+- 094 — The agent setup apply never loses a result and never downgrades · S22 · edited newer files are left alone and a hard write error becomes a failed row while the rest is written and recorded

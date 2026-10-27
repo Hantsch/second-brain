@@ -92,7 +92,16 @@ export interface AgentSetupApplyRequest {
 }
 
 export interface AgentSetupApplyResult {
-  results: { path: string; outcome: 'written' | 'conflict' | 'refused' }[];
+  /**
+   * One row per confirmed path, plus a row for each folder, the manifest or the help
+   * chronicle that could not be written. `failed` is a hard write error; `reason` is set
+   * only then and holds the errno code (`EPERM`, …) or `unknown`, never a message.
+   */
+  results: {
+    path: string;
+    outcome: 'written' | 'conflict' | 'refused' | 'failed';
+    reason?: string;
+  }[];
 }
 
 /** The protection rules the installed settings.json is checked against. */

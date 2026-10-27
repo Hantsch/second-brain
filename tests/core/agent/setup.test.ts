@@ -10,16 +10,13 @@ import { applySetup } from '@core/agent/setup-apply';
 import { parseMarker, renderSetupFile } from '@core/agent/setup-marker';
 import { readSetupState } from '@core/agent/setup-status';
 import { SETUP_TEMPLATES } from '@core/agent/setup-templates';
-import type { SetupTemplate } from '@core/agent/setup-types';
 import { parse } from '@core/vault/frontmatter';
 import { sha256 } from '@core/vault/hash';
 import { MemoryVaultStore } from '@core/vault/memory-store';
-import type { VaultStore } from '@core/vault/types';
 import {
   AGENT_DIRS,
   AGENT_SETUP_MANIFEST,
   AGENT_SKILLS,
-  type AgentSetupState,
 } from '../../../src/shared/types/agent-setup';
 import { createTempVault } from '../../helpers/vault';
 
@@ -28,42 +25,14 @@ const JOBS_SKILL = `.claude/skills/${AGENT_SKILLS.jobs}/SKILL.md`;
 const CURATE_SKILL = `.claude/skills/${AGENT_SKILLS.curate}/SKILL.md`;
 const WIKI_HOOK = '.claude/hooks/gaston-wiki-check.ps1';
 
-function template(path: string): SetupTemplate {
-  const found = SETUP_TEMPLATES.find((candidate) => candidate.path === path);
-  if (found === undefined) throw new Error(`no template at ${path}`);
-  return found;
-}
-
-/** The shipped templates with `path` raised to `version` and a changed body. */
-function shippedWith(path: string, version: number): SetupTemplate[] {
-  return SETUP_TEMPLATES.map((t) =>
-    t.path === path ? { ...t, version, body: `${t.body}\nAdded in version ${version}.\n` } : t,
-  );
-}
-
-function confirmEverything(state: AgentSetupState) {
-  return {
-    confirmed: [...state.plan.write, ...state.plan.optIn].map(({ path, expectedHash }) => ({
-      path,
-      expectedHash,
-    })),
-  };
-}
-
-async function install(store: VaultStore, templates = SETUP_TEMPLATES) {
-  const state = await readSetupState(store, templates);
-  return applySetup(store, confirmEverything(state), templates);
-}
-
-function statusOf(state: AgentSetupState, path: string) {
-  return state.files.find((file) => file.path === path);
-}
-
-async function manifestEntries(store: VaultStore) {
-  const text = await store.readText(AGENT_SETUP_MANIFEST);
-  return (JSON.parse(text ?? '{}') as { files: { path: string; version: number; hash: string }[] })
-    .files;
-}
+import {
+  confirmEverything,
+  install,
+  manifestEntries,
+  shippedWith,
+  statusOf,
+  template,
+} from '../../helpers/agent-setup';
 
 describe('agent setup', () => {
   it('a vault without a setup reports every managed file missing and plans an install', async () => {

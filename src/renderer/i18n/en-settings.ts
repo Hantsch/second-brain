@@ -63,6 +63,7 @@ const own = {
   'settings.agent.setup.plan.result.conflict':
     'Changed on disk since the plan: {path}. Nothing written to it.',
   'settings.agent.setup.plan.result.refused': 'Not written: {path}.',
+  'settings.agent.setup.plan.result.failed': 'Not written: {path} ({reason}).',
   'settings.agent.protection.title': 'Protection',
   'settings.agent.protection.loading': 'Reading the protection rules',
   'settings.agent.protection.none':

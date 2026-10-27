@@ -1,7 +1,7 @@
 ---
 id: 094
 title: The agent setup apply never loses a result and never downgrades
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-10-22
 ---
 
@@ -19,15 +19,15 @@ Two edges of the setup apply from story [[084]] that the S20 review left open
 
 ## Acceptance Criteria
 
-- [ ] **AC1** — A managed file that the user edited and whose installed version (manifest entry or the
+- [x] **AC1** — A managed file that the user edited and whose installed version (manifest entry or the
       file's own marker) is above the shipped one shows as "From a newer Gaston" in the Agent tab, is
       listed under "Left alone" in the plan without a checkbox, is refused if confirmed anyway, and is
       byte-identical after an apply.
-- [ ] **AC2** — When writing one file fails with a non-conflict error, the apply still returns: every
+- [x] **AC2** — When writing one file fails with a non-conflict error, the apply still returns: every
       file written before (and after) it has outcome `written`, the failed file has outcome `failed`
       with the error code as reason, and the manifest records exactly the files that were written. The
       plan dialog names the failed file and its reason.
-- [ ] **AC3** — After such a partial apply the Agent tab shows the real state (the written files
+- [x] **AC3** — After such a partial apply the Agent tab shows the real state (the written files
       current, the failed one still due) and offers an update; once the cause is gone, a second apply
       writes the rest and the tab is current.
 
@@ -174,3 +174,18 @@ Order: D1 → D2 → D3. No systems doc exists for the agent setup (`docs/system
 Coverage: AC1 → D1 (+ D3 e2e), AC2 → D2 (+ D3 dialog/e2e), AC3 → D2 (+ D3 e2e).
 
 ## Done
+
+Summary: `classify` now keeps an edited file `newer` when manifest or marker version exceeds the shipped one, so apply leaves it alone. `applySetup` turns non-conflict errors (file, undo copy, dirs, manifest, help log) into `failed` rows with the errno code, continues, and records only landed files. The plan dialog names failed files; the e2e flow walks both edges on the real app.
+
+Commit message: `094: edited newer agent files never downgraded, apply reports failed files instead of throwing`
+
+Verification (narrow gate): format:check, lint, typecheck, build green; `npx vitest run --changed HEAD` 4345 passed, 2 load timeouts (module-lifecycle-ipc, journal) green on rerun; `npx playwright test tests/e2e/agent-setup.spec.ts` 3/3. Full gate pending (sprint runs it).
+AC → test (all ran and passed): AC1 → setup-edges "an edited file from a newer Gaston is left alone and never downgraded" + e2e "an apply never downgrades a newer file and never loses a result"; AC2 → setup-edges "a failed write keeps…", "a failing undo copy…", "a manifest that cannot be written…" + e2e; AC3 → setup-edges "a second apply after a partial one writes the rest" + e2e. No manual residue. Review: PASS, no findings to fix.
+
+Decisions:
+- An extra unit test covers the status half of AC3 (partial apply leaves the failed file due, offers an update).
+- A second manifest conflict after the retry now yields a `conflict` row for the manifest instead of throwing; the help log step runs even if the manifest write failed.
+- `errnoOf` accepts only a string `code`, else `unknown`.
+- e2e "none written for PROPOSE" asserts its manifest entry is unchanged by the apply.
+
+tiers: D 3 / hard 1 · review default · cycles 0 · agents 5

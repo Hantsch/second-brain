@@ -67,9 +67,20 @@ function classify(
   if (entry !== undefined) {
     const hash = sha256(content);
     const untouched = hash === entry.hash || hash === sha256(rendered);
+    if (untouched) {
+      return {
+        status: byVersion(entry.version, template.version),
+        installedVersion: entry.version,
+      };
+    }
+    // An edit must not hide that a newer Gaston wrote the file: opting in would downgrade it.
+    const installedVersion = Math.max(
+      entry.version,
+      templateMarker(template, content)?.version ?? entry.version,
+    );
     return {
-      status: untouched ? byVersion(entry.version, template.version) : 'modified',
-      installedVersion: entry.version,
+      status: installedVersion > template.version ? 'newer' : 'modified',
+      installedVersion,
     };
   }
   const marker = templateMarker(template, content);

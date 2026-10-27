@@ -175,3 +175,70 @@ test("install and update write only what the plan shows and leave the user's fil
     expect(read(MINE)).toBe(edited.mine);
   });
 });
+
+test('an apply never downgrades a newer file and never loses a result', async ({
+  app,
+  vaultPath,
+}) => {
+  const { page } = app;
+  const JOBS = '.claude/skills/gaston-jobs/SKILL.md';
+  const at = (path: string): string => join(vaultPath, ...path.split('/'));
+  const read = (path: string): string => readFileSync(at(path), 'utf8');
+  type Manifest = { files: { path: string; version: number; hash: string }[] };
+  const manifest = (): Manifest => JSON.parse(read(MANIFEST)) as Manifest;
+  const entry = (path: string) => manifest().files.find((file) => file.path === path);
+  const dialog = page.getByRole('dialog');
+  let editedCurate = '';
+  const proposeBefore = entry(PROPOSE);
+
+  await test.step('the vault holds a newer file, a missing one that cannot be written, and a gap', async () => {
+    rmSync(at(JOBS));
+    rmSync(at(PROPOSE));
+    mkdirSync(at(PROPOSE), { recursive: true });
+    writeFileSync(at(CURATE), `${read(CURATE)}\nWritten by a newer Gaston.\n`);
+    editedCurate = read(CURATE);
+    const current = manifest();
+    const curate = current.files.find((file) => file.path === CURATE);
+    if (!curate) throw new Error('CURATE is not in the manifest');
+    curate.version = 4;
+    writeFileSync(at(MANIFEST), `${JSON.stringify(current, null, 2)}\n`);
+  });
+
+  await test.step('the plan leaves the newer file alone and offers no checkbox for it', async () => {
+    await openAgentTab(page);
+    await expect(row(page, CURATE).getByText('From a newer Gaston')).toBeVisible();
+    await page.getByRole('button', { name: 'Update', exact: true }).click();
+    await expect(dialog).toBeVisible();
+    await expect(planSection(page, 'Left alone').getByText(CURATE, { exact: true })).toBeVisible();
+    await expect(dialog.getByRole('checkbox')).toHaveCount(0);
+    const writes = planSection(page, 'Will write');
+    await expect(writes.getByText(JOBS, { exact: true })).toBeVisible();
+    await expect(writes.getByText(PROPOSE, { exact: true })).toBeVisible();
+  });
+
+  await test.step('a file that fails is named while the other is written and recorded', async () => {
+    await dialog.getByRole('button', { name: 'Write 2 files' }).click();
+    await expect(dialog.getByRole('status')).toHaveText('Setup written. 1 file.');
+    await expect(dialog.getByText(`Not written: ${PROPOSE}`)).toBeVisible();
+    expect(entry(JOBS)?.hash).toBe(sha256(read(JOBS)));
+    expect(entry(PROPOSE)).toEqual(proposeBefore);
+    expect(read(CURATE)).toBe(editedCurate);
+  });
+
+  await test.step('the tab shows the real state afterwards', async () => {
+    await dialog.getByRole('button', { name: 'Close', exact: true }).last().click();
+    await expect(dialog).toHaveCount(0);
+    await openAgentTab(page);
+    await expect(row(page, JOBS).getByText('Current')).toBeVisible();
+    await expect(row(page, PROPOSE).getByText('Missing')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Update', exact: true })).toBeVisible();
+  });
+
+  await test.step('a second apply completes the setup and the newer file stays untouched', async () => {
+    rmSync(at(PROPOSE), { recursive: true });
+    await page.getByRole('button', { name: 'Update', exact: true }).click();
+    await confirmAndClose(page, 'Write 1 file');
+    expect(existsSync(at(PROPOSE))).toBe(true);
+    expect(read(CURATE)).toBe(editedCurate);
+  });
+});

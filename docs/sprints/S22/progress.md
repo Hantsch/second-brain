@@ -17,3 +17,15 @@
 - 2026-10-27 16:09 · 093 · review 1 · started
 - 2026-10-27 16:11 · 093 · review 1 · done
 - 2026-10-27 16:11 · 093 · story · done
+- 2026-10-27T16:11:38 · 094 · build · started
+- 2026-10-27 16:11 · 094 · D1 newer wins · started
+- 2026-10-27 16:13 · 094 · D1 newer wins · done
+- 2026-10-27 16:13 · 094 · D2 apply never throws · started
+- 2026-10-27 16:16 · 094 · D2 apply never throws · done
+- 2026-10-27 16:16 · 094 · D3 dialog + e2e · started
+- 2026-10-27 16:19 · 094 · D3 dialog + e2e · done
+- 2026-10-27 16:19 · 094 · verify · started
+- 2026-10-27 16:24 · 094 · verify · done
+- 2026-10-27 16:24 · 094 · review 1 · started
+- 2026-10-27 16:24 · 094 · review 1 · done
+- 2026-10-27 16:24 · 094 · story · done
