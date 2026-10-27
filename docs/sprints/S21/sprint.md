@@ -1,7 +1,7 @@
 ---
 sprint: S21
-status: planned # planned | in-progress | done
-branch: # set by /sprint
+status: in-progress # planned | in-progress | done
+branch: dev # user decision: no sprint branch, commits go straight to dev
 milestone: M20 — An agent curates the vault
 ---
 
