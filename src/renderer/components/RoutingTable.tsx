@@ -33,7 +33,7 @@ const REASONS: readonly string[] = [
   'no-key',
   'unreachable',
   'no-vault',
-  'agent-route',
+  'agent-setup-missing',
   'error',
 ];
 
@@ -204,26 +204,26 @@ export function RoutingTable({
                 ) : null}
               </td>
               <td>
-                {viaAgent ? null : (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    icon="zap"
-                    loading={testingTask === task.kind}
-                    onClick={() => onTest(task.kind)}
-                  >
-                    {t('settings.routing.test')}
-                  </Button>
-                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  icon="zap"
+                  loading={testingTask === task.kind}
+                  onClick={() => onTest(task.kind)}
+                >
+                  {t('settings.routing.test')}
+                </Button>
                 {result ? (
                   <span className="sb-routing-result">
                     <span className={result.ok ? undefined : 'sb-note-bad'}>
                       {result.ok
-                        ? t('settings.routing.testOk', { ms: result.latencyMs })
+                        ? viaAgent
+                          ? t('settings.routing.agentReady')
+                          : t('settings.routing.testOk', { ms: result.latencyMs })
                         : t('settings.routing.testFailed')}
                     </span>
                     <span className="sb-note-detail">
-                      {result.ok ? result.sample : t(reasonKey(result.error))}
+                      {result.ok ? (viaAgent ? '' : result.sample) : t(reasonKey(result.error))}
                     </span>
                   </span>
                 ) : null}

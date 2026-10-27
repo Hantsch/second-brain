@@ -162,12 +162,47 @@ describe('RoutingTable: agent route', () => {
     expect(onSetRoute).toHaveBeenCalledWith('classify-dump', AGENT_ROUTE);
   });
 
-  it('a row routed to the agent explains the job, drops the model test and the sensitivity warning', () => {
-    renderTable({ tasks: { 'classify-dump': AGENT_ROUTE }, defaults: {} });
+  it('a row routed to the agent explains the job, offers the setup test and drops the sensitivity warning', async () => {
+    const routing: Routing = { tasks: { 'classify-dump': AGENT_ROUTE }, defaults: {} };
+    const onTest = vi.fn();
+    const view = render(
+      <RoutingTable
+        tasks={TASKS}
+        routing={routing}
+        providers={providers()}
+        results={{ 'classify-dump': { ok: true, latencyMs: 0, sample: '' } }}
+        onSetRoute={vi.fn()}
+        onTest={onTest}
+      />,
+    );
 
     expect(screen.getByText(/Goes to the agent as a job/)).toBeTruthy();
-    expect(screen.getAllByRole('button', { name: 'Test' })).toHaveLength(1);
     expect(screen.queryByText(/not fit for a task that reads personal content/)).toBeNull();
+    expect(screen.getAllByRole('button', { name: 'Test' })).toHaveLength(2);
+    await userEvent.click(screen.getAllByRole('button', { name: 'Test' })[0]!);
+    expect(onTest).toHaveBeenCalledWith('classify-dump');
+    expect(
+      screen.getByText(
+        'The agent setup is installed. The job waits for its next /gaston-jobs run.',
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText(/Answer after/)).toBeNull();
+
+    view.rerender(
+      <RoutingTable
+        tasks={TASKS}
+        routing={routing}
+        providers={providers()}
+        results={{
+          'classify-dump': { ok: false, latencyMs: 0, sample: '', error: 'agent-setup-missing' },
+        }}
+        onSetRoute={vi.fn()}
+        onTest={onTest}
+      />,
+    );
+    expect(
+      screen.getByText('The agent setup is not installed. Install it under Settings → Agent.'),
+    ).toBeTruthy();
   });
 });
 

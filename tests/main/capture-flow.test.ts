@@ -20,12 +20,12 @@
  * OpenAI-kompatible Adresse mit injiziertem `fetch`.
  */
 
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readdir, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, sep } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { IpcChannel, IpcRequest, IpcResponse } from '@shared/ipc';
-import type { FilingAction } from '@shared/types';
+import { AGENT_ROUTE, type FilingAction } from '@shared/types';
 import { createFetchFake, jsonResponse } from '../fakes/llm';
 import { createTempVault } from '../helpers/vault';
 import type { TempVault } from '../helpers/vault';
@@ -300,6 +300,65 @@ describe('Der Weg eines Gedanken durch die echten Handler', () => {
     const result = await app.call('capture:apply', { proposal });
     expect((await vault.read(PROJECT)) ?? '').toContain('Bis morgen die Ladezeiten messen.');
     expect(result.undoToken).not.toBeNull();
+  });
+
+  it("a dump routed to the agent is filed by heuristic, then by the agent's answer once it is accepted", async () => {
+    const verdict = {
+      title: 'Angebotsliste lädt zu langsam',
+      scope: 'work',
+      tags: ['kundenportal'],
+      target: 'project',
+      targetKey: 'kundenportal-relaunch',
+      section: 'Notizen',
+      reason: 'Der Agent ordnet den Text dem Kundenportal zu.',
+      confidence: 0.9,
+      todos: [],
+      waitingOn: [],
+      entities: [],
+    };
+    const fake = createFetchFake(() => jsonResponse({}));
+    vi.stubGlobal('fetch', fake.fetch);
+    await app.call('llm:setRoute', { task: 'classify-dump', ref: { ...AGENT_ROUTE } });
+    const dump = await app.call('capture:dump', { text: DUMP_TEXT, origin: 'window' });
+
+    const vaultFiles = async (): Promise<Record<string, string>> => {
+      const found: Record<string, string> = {};
+      const entries = await readdir(vault.root, { recursive: true, withFileTypes: true });
+      for (const entry of entries) {
+        const full = join(entry.parentPath, entry.name);
+        const rel = full.slice(vault.root.length + 1).replaceAll(sep, '/');
+        if (!entry.isFile() || rel.startsWith('.secondbrain/')) continue;
+        found[rel] = await readFile(full, 'utf8');
+      }
+      return found;
+    };
+    const jobsDir = join(vault.root, '.secondbrain', 'agent', 'jobs');
+    const before = await vaultFiles();
+
+    // While the job waits, the heuristic answers and exactly one job is filed.
+    const waiting = await app.call('capture:classify', { path: dump.path });
+    expect(waiting.heuristic).toBe(true);
+    expect(waiting.primary.path).toBe(PROJECT);
+    const jobs = await readdir(jobsDir);
+    expect(jobs).toHaveLength(1);
+    expect(fake.calls).toHaveLength(0);
+
+    // The agent's result turns into the proposal; nothing outside the dump moved.
+    const id = (jobs[0] as string).replace(/\.json$/, '');
+    await vault.write(
+      `.secondbrain/agent/results/${id}.json`,
+      JSON.stringify({ status: 'done', text: JSON.stringify(verdict) }),
+    );
+    const proposal = await app.call('capture:classify', { path: dump.path });
+    expect(proposal.heuristic).toBe(false);
+    expect(proposal.primary.path).toBe(PROJECT);
+    expect(proposal.reason).toBe(verdict.reason);
+    expect(await vaultFiles()).toEqual(before);
+    expect(fake.calls).toHaveLength(0);
+
+    // Accepting files it into the agent's target.
+    await app.call('capture:apply', { proposal });
+    expect((await vault.read(PROJECT)) ?? '').toContain(DUMP_TEXT);
   });
 
   it('nimmt mit dem Provider auch seine Route mit — keine Route zeigt ins Leere', async () => {

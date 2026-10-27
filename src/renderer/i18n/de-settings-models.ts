@@ -119,6 +119,8 @@ const own = {
   'settings.routing.note': 'Aufgaben ohne eigene Wahl nehmen den Standard ihrer Klasse.',
   'settings.routing.test': 'Testen',
   'settings.routing.testOk': 'Antwort nach {ms} ms',
+  'settings.routing.agentReady':
+    'Das Agent-Setup ist installiert. Der Job wartet auf den nächsten Lauf von /gaston-jobs.',
   'settings.routing.testFailed': 'Kein Ergebnis',
   /* Reasons from `LlmUnavailable.reason` — spelled out, not as a code. */
   'settings.routing.reason.no-route': 'Für diese Aufgabe ist kein Modell zugeordnet.',
@@ -126,8 +128,8 @@ const own = {
   'settings.routing.reason.no-key': 'Für den zugeordneten Provider fehlt der Schlüssel.',
   'settings.routing.reason.unreachable': 'Der zugeordnete Provider war nicht erreichbar.',
   'settings.routing.reason.no-vault': 'Es ist kein Vault geöffnet.',
-  'settings.routing.reason.agent-route':
-    'Diese Aufgabe läuft über den Agenten — es gibt kein Modell zu testen.',
+  'settings.routing.reason.agent-setup-missing':
+    'Das Agent-Setup ist nicht installiert. Installiere es unter Einstellungen → Agent.',
   'settings.routing.reason.error': 'Der Aufruf ist fehlgeschlagen.',
 
   /* Der Ausweg aus einer Empfehlungszeile ohne Treffer (067, D2, AC1): sonst

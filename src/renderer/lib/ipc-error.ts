@@ -70,14 +70,24 @@ const NAMES_PROVIDER: readonly string[] = ['no-key', 'provider-disabled'];
  */
 export function llmUnavailableCause(
   error: IpcError,
-): { reason: string; task: string; provider: string } | null {
+): { reason: string; task: string; provider: string; detail: string } | null {
   if (error.code !== 'llm-unavailable') return null;
   if (typeof error.detail !== 'object' || error.detail === null) return null;
-  const detail = error.detail as { reason?: unknown; task?: unknown; provider?: unknown };
+  const detail = error.detail as {
+    reason?: unknown;
+    task?: unknown;
+    provider?: unknown;
+    detail?: unknown;
+  };
   if (typeof detail.reason !== 'string' || !LLM_REASONS.includes(detail.reason)) return null;
   if (typeof detail.task !== 'string') return null;
   const provider = typeof detail.provider === 'string' ? detail.provider : '';
   // Without a provider name the key and disabled sentences would have a hole in them.
   if (NAMES_PROVIDER.includes(detail.reason) && provider.length === 0) return null;
-  return { reason: detail.reason, task: detail.task, provider };
+  return {
+    reason: detail.reason,
+    task: detail.task,
+    provider,
+    detail: typeof detail.detail === 'string' ? detail.detail : '',
+  };
 }

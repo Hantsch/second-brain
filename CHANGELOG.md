@@ -9,6 +9,8 @@ All notable changes to Gaston are recorded here. The format follows
 
 ### Added
 
+- Models: a task can be routed to the agent as a job. Its reply waits for the next /gaston-jobs run
+  instead of a model, and Test on that row checks the agent setup rather than poking a provider.
 - Sources: a source that waits for a model can be handed to the agent from Sources or Tasks. Tasks
   lists what the agent holds and how each job ended, with the reason when it did not finish, and
   you can withdraw an open job and hand the source over again.

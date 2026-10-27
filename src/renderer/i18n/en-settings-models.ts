@@ -111,14 +111,16 @@ const own = {
   'settings.routing.note': 'Tasks without a choice of their own take their class default.',
   'settings.routing.test': 'Test',
   'settings.routing.testOk': 'Answer after {ms} ms',
+  'settings.routing.agentReady':
+    'The agent setup is installed. The job waits for its next /gaston-jobs run.',
   'settings.routing.testFailed': 'No result',
   'settings.routing.reason.no-route': 'No model is assigned to this task.',
   'settings.routing.reason.provider-disabled': 'The assigned provider is switched off.',
   'settings.routing.reason.no-key': 'The key for the assigned provider is missing.',
   'settings.routing.reason.unreachable': 'The assigned provider was not reachable.',
   'settings.routing.reason.no-vault': 'No vault is open.',
-  'settings.routing.reason.agent-route':
-    'This task runs through the agent — there is no model to test.',
+  'settings.routing.reason.agent-setup-missing':
+    'The agent setup is not installed. Install it under Settings → Agent.',
   'settings.routing.reason.error': 'The call failed.',
 
   /* The way out of a `pick === null` recommendation row (067, D2, AC1): a

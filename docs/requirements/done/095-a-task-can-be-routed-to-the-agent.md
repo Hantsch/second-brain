@@ -1,7 +1,7 @@
 ---
 id: 095
 title: A task can be routed to the agent instead of a model
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-10-27
 ---
 
@@ -18,26 +18,26 @@ result formats are announced there as "follow in later versions" — this story 
 
 ## Acceptance Criteria
 
-- [ ] **AC1** — Every task row in the routing table offers "Agent (job)" next to the providers and
+- [x] **AC1** — Every task row in the routing table offers "Agent (job)" next to the providers and
       "no model"; picking it stores the agent route in the vault settings, and it is still the
       task's route after the vault is opened again.
-- [ ] **AC2** — Triggering a task routed to the agent writes exactly one job file
+- [x] **AC2** — Triggering a task routed to the agent writes exactly one job file
       `.secondbrain/agent/jobs/<task>-<hash>.json` with `version`, `kind: "llm-task"`, `task`,
       `createdAt` and the task's prompt messages (plus `schema` for structured tasks) — nothing beyond
       what a model would have received; triggering the same request again files no second job; no
       provider is called.
-- [ ] **AC3** — While the job waits, the screen is never dead: a caller that reports the failure shows
+- [x] **AC3** — While the job waits, the screen is never dead: a caller that reports the failure shows
       "waiting as a job for the agent" (journal coach line, shared error sentence), and a caller with a
       heuristic fallback (e.g. filing a dump) shows its heuristic result.
-- [ ] **AC4** — Once `results/<id>.json` holds `status: "done"`, the next trigger of the same request
+- [x] **AC4** — Once `results/<id>.json` holds `status: "done"`, the next trigger of the same request
       shows the agent's answer as a proposal; nothing is written to the vault before the user accepts
       it. A `failed` / `skipped` result surfaces with the agent's reason quoted in the error sentence.
-- [ ] **AC5** — The shipped `gaston-jobs` skill documents the `llm-task` job kind, its fields and the
+- [x] **AC5** — The shipped `gaston-jobs` skill documents the `llm-task` job kind, its fields and the
       result format (`done` / `failed` / `skipped`); its template version is higher than the v1 that
       vaults have installed, so the Agent tab offers the update.
-- [ ] **AC6** — "Test" on an agent-routed row checks whether the agent setup (`gaston-jobs` skill) is
+- [x] **AC6** — "Test" on an agent-routed row checks whether the agent setup (`gaston-jobs` skill) is
       installed and says so — it calls no model and files no job.
-- [ ] **AC7** — "Automatisch zuordnen" never proposes "Agent" and never proposes replacing a task's
+- [x] **AC7** — "Automatisch zuordnen" never proposes "Agent" and never proposes replacing a task's
       agent route.
 
 ## Open Questions
@@ -188,8 +188,16 @@ AC6 D1+D2+D5 · AC7 c90c483.
 
 ## Done
 
-- `src/core/agent/jobs.ts` — job/result format, job id, fs store; `RoutingGateway` takes `agentJobs`.
-- Routing table: "Agent (job)" in every row, hint line, no model test; auto-assign skips agent rows.
-- New `LlmUnavailable` reasons `agent-pending` / `agent-failed` with their own sentences.
-- `gaston-jobs` skill v2 documents the `llm-task` job kind and the result format.
-- Tests: `tests/core/agent/jobs.test.ts`, `tests/renderer/routing-table.test.tsx`.
+- Job store, gateway branch, routing table "Agent (job)", skill v2 landed in c90c483; this pass adds the rest: "Test" on an agent row checks the `gaston-jobs` install state (no model, no job), the agent's `failed`/`skipped` reason is quoted in the error sentence, proof tests through the real handlers, an e2e flow and a CHANGELOG entry.
+- `ProposalCache.resolve` (`src/main/ipc/capture.ts`) no longer caches a heuristic proposal while `classify-dump` is routed to the agent, so the next propose can pick up the agent's result (AC4).
+
+Commit message: `095: agent route - setup test on agent rows, agent reason in error sentence, no heuristic caching while a job waits, e2e flow`
+
+Verification (narrow gate): format:check, lint, typecheck, build green; `npx vitest run --changed HEAD` green (107 files, 1566 tests); `npx playwright test tests/e2e/agent-task-route.spec.ts` green. AC -> test mapping verified as in `## Acceptance Tests`, all named tests ran and passed. No manual residue. Review (default tier, 1 cycle): PASS.
+
+Decisions:
+- The planned "no production code" D4 needed one production fix in `capture.ts` (see above); the reviewer judged it needed and correct.
+- The CHANGELOG has `### Added` only, no Features/Fixes headings; entry placed first, matching the newest-first order.
+- Unfixed review notes (minor, accepted): the skill-content test's generic `toContain` terms are weak but 'llm-task', 'createdAt', 'messages', 'schema', 'failed', 'skipped' carry the proof; the llm-bridge test mocks `readSetupState` (e2e covers the missing branch against a real vault); an `agent-failed` without a reason renders empty quotes, unreachable because core always sets the reason.
+
+tiers: D 5 / hard 0 · review default · cycles 1 · agents 7

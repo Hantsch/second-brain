@@ -149,7 +149,7 @@ export const de = {
   'error.code.llm-unavailable.agent-pending':
     'Die Aufgabe „{task}“ liegt als Auftrag beim Agenten. Lass ihn /gaston-jobs ausführen und versuch es danach noch einmal.',
   'error.code.llm-unavailable.agent-failed':
-    'Der Agent hat den Auftrag für „{task}“ nicht erledigt. Der Grund steht in seinem Ergebnis im Agent-Ordner des Vaults.',
+    'Der Agent hat den Auftrag für „{task}“ nicht erledigt: „{reason}“',
   'error.about.llm-unavailable.no-route':
     '„{subject}“ lässt sich nicht verarbeiten: Der Aufgabe „{task}“ ist kein Modell zugeordnet. Ordne unter Einstellungen → Modelle eines zu.',
   'error.about.llm-unavailable.no-key':
@@ -159,7 +159,7 @@ export const de = {
   'error.about.llm-unavailable.agent-pending':
     '„{subject}“ liegt als Auftrag beim Agenten. Lass ihn /gaston-jobs ausführen und versuch es danach noch einmal.',
   'error.about.llm-unavailable.agent-failed':
-    '„{subject}“ lässt sich nicht verarbeiten: Der Agent hat den Auftrag für „{task}“ nicht erledigt.',
+    '„{subject}“ lässt sich nicht verarbeiten: Der Agent hat den Auftrag für „{task}“ nicht erledigt: „{reason}“',
   'error.about.invalid': '„{subject}“ passt nicht.',
   'error.about.io': '„{subject}“ ließ sich nicht öffnen — der Ordner ist nicht beschreibbar.',
   'error.about.cancelled': '„{subject}“ wurde abgebrochen.',

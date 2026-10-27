@@ -29,3 +29,19 @@
 - 2026-10-27 16:24 · 094 · review 1 · started
 - 2026-10-27 16:24 · 094 · review 1 · done
 - 2026-10-27 16:24 · 094 · story · done
+- 2026-10-27T16:25:02 · 095 · build · started
+- 2026-10-27 16:25 · 095 · D1 agent-route test · started
+- 2026-10-27 16:25 · 095 · D3 agent reason · started
+- 2026-10-27 16:25 · 095 · D4 proof tests · started
+- 2026-10-27 16:28 · 095 · D1 agent-route test · done
+- 2026-10-27 16:28 · 095 · D3 agent reason · done
+- 2026-10-27 16:28 · 095 · D4 proof tests · done
+- 2026-10-27 16:28 · 095 · D2 routing table test button · started
+- 2026-10-27 16:29 · 095 · D2 routing table test button · done
+- 2026-10-27 16:29 · 095 · D5 e2e flow + changelog · started
+- 2026-10-27 16:31 · 095 · D5 e2e flow + changelog · done
+- 2026-10-27 16:31 · 095 · verify · started
+- 2026-10-27 16:33 · 095 · verify · done
+- 2026-10-27 16:33 · 095 · review 1 · started
+- 2026-10-27 16:34 · 095 · review 1 · done
+- 2026-10-27 16:34 · 095 · story · done

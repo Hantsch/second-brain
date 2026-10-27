@@ -5,10 +5,14 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { readSetupState } from '@core/agent/setup-status';
+import { SKILL_GASTON_JOBS_TEMPLATE } from '@core/agent/templates/skills';
+import { MemoryVaultStore } from '@core/vault/memory-store';
 import { agentJobId, createFsAgentJobStore, parseAgentJobResult } from '@core/agent/jobs';
 import { FakeProvider, LlmUnavailableError, MemoryKeyStore, RoutingGateway } from '@core/llm';
 import { AGENT_ROUTE, type CompletionRequest, type Routing } from '@shared/types';
 import { AGENT_DIRS } from '../../../src/shared/types/agent-setup';
+import { install, shippedWith, statusOf } from '../../helpers/agent-setup';
 import { createTempVault, type TempVault } from '../../helpers/vault';
 
 const classify: CompletionRequest = {
@@ -145,5 +149,36 @@ describe('parseAgentJobResult', () => {
     expect(parseAgentJobResult('{"status":"done"}')).toBeNull();
     expect(parseAgentJobResult('{"status":"maybe","text":"x"}')).toBeNull();
     expect(parseAgentJobResult('{"status":"do')).toBeNull();
+  });
+});
+
+describe('the shipped gaston-jobs skill', () => {
+  it('the shipped gaston-jobs skill documents the llm-task job and every result status, and a v1 install is offered the update', async () => {
+    const body = SKILL_GASTON_JOBS_TEMPLATE.body;
+    for (const term of [
+      'llm-task',
+      'version',
+      'kind',
+      'task',
+      'createdAt',
+      'messages',
+      'schema',
+      'done',
+      'failed',
+      'skipped',
+    ]) {
+      expect(body).toContain(term);
+    }
+
+    const store = new MemoryVaultStore();
+    await install(store, shippedWith(SKILL_GASTON_JOBS_TEMPLATE.path, 1));
+    const state = await readSetupState(store);
+
+    expect(statusOf(state, SKILL_GASTON_JOBS_TEMPLATE.path)).toMatchObject({
+      status: 'outdated',
+      installedVersion: 1,
+      shippedVersion: SKILL_GASTON_JOBS_TEMPLATE.version,
+    });
+    expect(state.action).toBe('update');
   });
 });

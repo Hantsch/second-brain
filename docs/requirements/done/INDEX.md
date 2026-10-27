@@ -294,3 +294,4 @@ second roadmap.
 - 092 — I hand a module's condensation to the agent · S21 · A module's condensation can be handed to the agent from the module view; a valid result becomes the in-app diff proposal, confirmed as in 081.
 - 093 — The agent's guard holds under an adversarial pass · S22 · guard blocks [char[]] and help-module writes, disableAllHooks shows Off, wiki check shares parseLog's heading pattern
 - 094 — The agent setup apply never loses a result and never downgrades · S22 · edited newer files are left alone and a hard write error becomes a failed row while the rest is written and recorded
+- 095 — A task can be routed to the agent instead of a model · S22 · Tasks routed to the agent are filed as jobs, answered through results as proposals; Test on an agent row checks the agent setup.

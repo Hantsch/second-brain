@@ -7,6 +7,7 @@
 
 import { readFileSync } from 'node:fs';
 import { createFsAgentJobStore } from '@core/agent/jobs';
+import { readSetupState } from '@core/agent/setup-status';
 import {
   FakeProvider,
   LlmUnavailableError,
@@ -21,7 +22,7 @@ import {
 } from '@core/llm';
 import type { FakeProviderOptions, KeyStore as CoreKeyStore, ProviderFactory } from '@core/llm';
 import type { LlmGateway } from '@core/llm';
-import { isAgentRoute } from '@shared/types';
+import { AGENT_SKILLS, isAgentRoute } from '@shared/types';
 import type { LlmUnavailable, ProviderConfig, RecommendationSet, TaskKind } from '@shared/types';
 import type { LlmBridge } from './contracts';
 import { scanCapacityVerdict } from './ipc/machine-scan';
@@ -255,9 +256,15 @@ async function runTestTask(
 ): Promise<{ ok: boolean; latencyMs: number; sample: string; error?: string }> {
   if (!services.settings.vault()) return { ok: false, latencyMs: 0, sample: '', error: 'no-vault' };
   const gateway = createGateway(services);
-  // There is no model to probe, and a test prompt must not land in the agent's job queue.
+  // There is no model to probe, and a test prompt must not land in the agent's job queue:
+  // the check is whether the skill that works the queue is installed.
   if (isAgentRoute(gateway.routeFor(task))) {
-    return { ok: false, latencyMs: 0, sample: '', error: 'agent-route' };
+    const { files } = await readSetupState(services.requireStore());
+    const skillPath = `.claude/skills/${AGENT_SKILLS.jobs}/SKILL.md`;
+    const installed = files.some((file) => file.path === skillPath && file.status !== 'missing');
+    return installed
+      ? { ok: true, latencyMs: 0, sample: '' }
+      : { ok: false, latencyMs: 0, sample: '', error: 'agent-setup-missing' };
   }
   try {
     const result = await gateway.complete({

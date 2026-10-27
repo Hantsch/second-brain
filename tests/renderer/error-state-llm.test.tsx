@@ -69,6 +69,25 @@ describe('ErrorState — llm-unavailable names its cause', () => {
     ).toBeTruthy();
   });
 
+  it("a failed agent job quotes the agent's reason", () => {
+    setLanguage('en');
+    render(
+      <ErrorState
+        error={unavailable({
+          reason: 'agent-failed',
+          task: 'condense-project',
+          detail: 'the note was empty',
+        })}
+        subject="Gaston"
+      />,
+    );
+    expect(
+      screen.getByText(
+        '“Gaston” cannot be processed: the agent did not finish the job for “Condense project”: “the note was empty”',
+      ),
+    ).toBeTruthy();
+  });
+
   it('keeps the generic sentence when main sent no cause', () => {
     setLanguage('de');
     render(<ErrorState error={unavailable()} subject="Gaston" />);
