@@ -70,23 +70,30 @@ test('a proposal written while Gaston is open waits in maintenance and is accept
 
   await openMaintenance(page);
   const proposal = card(page, reason);
-  await expect(proposal).toHaveCount(1);
-  await expect(proposal.locator('.sb-finding-title')).toHaveText(RECHNUNG);
-  await expect(proposal.locator('.sb-condensediff-row--added', { hasText: reason })).toHaveCount(1);
 
-  await proposal.getByRole('button', { name: 'Accept', exact: true }).click();
-  await expect(page.locator('.sb-undostrip')).toContainText(RECHNUNG);
-  await expect(proposal).toHaveCount(0);
+  await test.step('a proposal written while Gaston is open waits in maintenance with its diff', async () => {
+    await expect(proposal).toHaveCount(1);
+    await expect(proposal.locator('.sb-finding-title')).toHaveText(RECHNUNG);
+    await expect(proposal.locator('.sb-condensediff-row--added', { hasText: reason })).toHaveCount(
+      1,
+    );
+  });
 
-  expect(readFileSync(join(vaultPath, RECHNUNG), 'utf8')).toBe(content);
-  const trash = join(vaultPath, '.secondbrain', 'trash');
-  const journals = readdirSync(trash).filter((entry) =>
-    existsSync(join(trash, entry, 'gardener.json')),
-  );
-  expect(journals.length).toBeGreaterThan(0);
-  expect(readdirSync(join(vaultPath, '.secondbrain', 'agent', 'resolved'))).toContain(
-    '20261027-091200-invoice.md',
-  );
+  await test.step('accepting writes the target, offers undo and leaves an undo copy', async () => {
+    await proposal.getByRole('button', { name: 'Accept', exact: true }).click();
+    await expect(page.locator('.sb-undostrip')).toContainText(RECHNUNG);
+    await expect(proposal).toHaveCount(0);
+
+    expect(readFileSync(join(vaultPath, RECHNUNG), 'utf8')).toBe(content);
+    const trash = join(vaultPath, '.secondbrain', 'trash');
+    const journals = readdirSync(trash).filter((entry) =>
+      existsSync(join(trash, entry, 'gardener.json')),
+    );
+    expect(journals.length).toBeGreaterThan(0);
+    expect(readdirSync(join(vaultPath, '.secondbrain', 'agent', 'resolved'))).toContain(
+      '20261027-091200-invoice.md',
+    );
+  });
 });
 
 test('a stale, a rejected and an invalid proposal leave their targets unchanged', async ({
@@ -158,14 +165,19 @@ test('the maintenance rail counts waiting proposals', async ({ app, vaultPath })
   const firstReason = 'The rail counts the first proposal.';
   /* No colon in a reason: it is a plain YAML scalar in the frontmatter. */
   const secondReason = 'The rail counts the second proposal.';
-  editProposal(vaultPath, '20261027-110000-rail-first', RECHNUNG, firstReason);
-  await expect(gardenBadge(page)).toHaveText('1');
-  editProposal(vaultPath, '20261027-110100-rail-second', KUNDENPORTAL, secondReason);
-  await expect(gardenBadge(page)).toHaveText('2');
 
-  await openMaintenance(page);
-  const rejected = card(page, secondReason);
-  await rejected.getByRole('button', { name: 'Reject', exact: true }).click();
-  await expect(rejected).toHaveCount(0);
-  await expect(gardenBadge(page)).toHaveText('1');
+  await test.step('the rail badge follows each proposal that arrives', async () => {
+    editProposal(vaultPath, '20261027-110000-rail-first', RECHNUNG, firstReason);
+    await expect(gardenBadge(page)).toHaveText('1');
+    editProposal(vaultPath, '20261027-110100-rail-second', KUNDENPORTAL, secondReason);
+    await expect(gardenBadge(page)).toHaveText('2');
+  });
+
+  await test.step('rejecting a proposal lowers the badge', async () => {
+    await openMaintenance(page);
+    const rejected = card(page, secondReason);
+    await rejected.getByRole('button', { name: 'Reject', exact: true }).click();
+    await expect(rejected).toHaveCount(0);
+    await expect(gardenBadge(page)).toHaveText('1');
+  });
 });

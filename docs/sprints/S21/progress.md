@@ -111,3 +111,5 @@
 - 2026-10-27 14:15 · 092 · verify 2 · started
 - 2026-10-27 14:21 · 092 · verify 2 · done
 - 2026-10-27 14:21 · 092 · story · done
+- 14:22:10 · gate · short suites · started
+- 14:31:23 · gate · short suites · done (red: wiring test, tasks-screen e2e, update-installed e2e, load flakes) · attribution started
