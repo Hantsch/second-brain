@@ -14,6 +14,31 @@ export const AGENT_DIRS = {
 /** Format version of a job file in `jobs/`; the `gaston-jobs` skill documents the same number. */
 export const AGENT_JOB_VERSION = 1;
 
+/** `gaston:` value, format version and retention of a run report in `runs/`. */
+export const RUN_REPORT_FORMAT = 'run-report';
+export const RUN_REPORT_VERSION = 1;
+export const RUN_REPORTS_KEPT = 50;
+
+/** What one agent run left behind, as its stop hook recorded it. */
+export interface AgentRunReport {
+  skill: string;
+  argument: string | null;
+  started: string;
+  finished: string;
+  /** Vault-relative paths of the pages the run wrote. */
+  pages: string[];
+  /** File names, not paths, of the proposals the run wrote. */
+  proposals: string[];
+  jobsDone: string[];
+  jobsFailed: string[];
+  jobsSkipped: string[];
+}
+
+export type AgentLastRun =
+  | { state: 'none' }
+  | { state: 'read'; path: string; report: AgentRunReport }
+  | { state: 'unreadable'; path: string; reason: string };
+
 /** Skill folder names under `.claude/skills/`; each is also the slash command. */
 export const AGENT_SKILLS = {
   jobs: 'gaston-jobs',

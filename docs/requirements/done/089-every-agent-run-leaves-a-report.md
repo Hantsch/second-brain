@@ -1,7 +1,7 @@
 ---
 id: 089
 title: Every agent run leaves a report
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-10-22
 ---
 
@@ -14,16 +14,16 @@ links to Maintenance when proposals wait ([[088]]).
 
 ## Acceptance Criteria
 
-- [ ] **AC1** — Every run of an installed Gaston skill ends with one report file in the reports
+- [x] **AC1** — Every run of an installed Gaston skill ends with one report file in the reports
       folder, written by the setup's stop hook in the format Gaston reads; a test runs the installed
       hook and parses its report with Gaston's reader, and the template test pins the hook.
       _(Reworded at refine to the (User) decision that a stop hook, not the skill, writes it.)_
-- [ ] **AC2** — The Agent tab shows the newest report: time, skill, pages changed, proposals
+- [x] **AC2** — The Agent tab shows the newest report: time, skill, pages changed, proposals
       written, jobs finished and failed.
-- [ ] **AC3** — A report written while Gaston is open updates the tab without a restart.
-- [ ] **AC4** — With no report yet, the section says no run has happened.
-- [ ] **AC5** — An unreadable report shows as unreadable with its path; the tab still renders.
-- [ ] **AC6** — When proposals are waiting, the section links to Maintenance.
+- [x] **AC3** — A report written while Gaston is open updates the tab without a restart.
+- [x] **AC4** — With no report yet, the section says no run has happened.
+- [x] **AC5** — An unreadable report shows as unreadable with its path; the tab still renders.
+- [x] **AC6** — When proposals are waiting, the section links to Maintenance.
 
 ## Open Questions
 
@@ -285,3 +285,32 @@ Coverage gate:
 | AC6 | D5 (088's count)   |
 
 ## Done
+
+Every Gaston skill run now ends with one report in `.secondbrain/agent/runs/`, written by a new setup
+stop hook (`gaston-run-report.ps1`, template v1) and not by the model. Gaston reads the newest report
+(`readLastRun`, `agent:lastRun`) and the Agent tab shows it in a Last run section with a Maintenance
+link when proposals wait. Settings template v3, skills and vault `CLAUDE.md` bumped to say the hook
+writes the report.
+
+Commit message: `089: every agent run leaves a report (stop hook, reader, Last run section)`
+
+Verification (narrow gate): `npm run build`, `lint`, `typecheck`, scoped `prettier --check` green;
+`npx vitest run --changed HEAD` green (308 files, 4210 tests); `npx playwright test
+tests/e2e/agent-last-run.spec.ts tests/e2e/agent-setup.spec.ts tests/e2e/agent-protection.spec.ts`
+green (4/4). AC → test as verified: AC1 `hook-run-report.test.ts` first test + `templates.test.ts`
+(mirror, no-own-report); AC2-AC6 the e2e plus `run-reports.test.ts` (read, none, unreadable);
+retention `hook-run-report.test.ts` 50 reports. No manual residue. Review: stage 1 (default) PASS, one
+fix cycle (AC6 link and `finished` time asserted in the e2e, pruning test separates name from write
+time, redundant row dropped, `Format-List` helper renamed, stale `runs/ stays writable` wording fixed,
+FAT/exFAT limit documented), narrow gate re-run green.
+
+Decisions: the Skill tool's `tool_input` fields are undocumented, so the hook accepts `skill`,
+`command` or `name` and takes the argument from `args`. YAML values are single-quoted. Handlers use
+`wikiStore(services)` (`requireStore()` has no `list`). `tests/e2e/agent-setup.spec.ts` was stale
+(settings manifest version 1 against template v2 since 088) and now expects 3, plus 24 files and
+vault-claude v2; `protection.test.ts` now asserts the exact script list per event. Known limits: a
+page Gaston wrote during a run counts as the run's; ledger files stay in the temp folder until the
+next prompt. Timing note: `tests/main/ipc/agent-terminal.test.ts` timed out once under a parallel
+run and passes alone and in the re-run.
+
+tiers: D 5 / hard 1 · review default · cycles 1 · agents 10

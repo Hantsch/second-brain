@@ -75,8 +75,9 @@ says nothing protects the vault yet. The rules:
 - **setup-write**: \`CLAUDE.md\` and \`.claude/\` cannot be written.
 - **overview-write**: \`modules/*/wiki/overview.md\` cannot be written.
 - **internal-write**: the \`.secondbrain/*.json\` files and the internal folders \`index/\`,
-  \`chats/\`, \`logs/\` and \`trash/\` cannot be written, nor can \`agent/jobs/\`. \`agent/results/\`,
-  \`agent/proposals/\` and \`agent/runs/\` stay writable, and \`agent/\` stays readable.
+  \`chats/\`, \`logs/\` and \`trash/\` cannot be written, nor can \`agent/jobs/\`. \`agent/results/\`
+  and \`agent/proposals/\` stay writable, and \`agent/\` stays readable. Gaston's hook writes one
+  report per skill run to \`agent/runs/\`; the agent never writes there, though no rule denies it.
 - **pre-tool-guard**: a PreToolUse hook on the shell, read, search and write tools. It fails
   closed: if it errors, times out or cannot start, the tool call is blocked.
 - **wiki-check**: a PostToolUse hook after a write or edit and a Stop hook. A wiki page under

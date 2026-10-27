@@ -16,7 +16,8 @@ reports back through `.secondbrain/agent/results/`.
    `.secondbrain/agent/results/`.
 4. For each remaining job, in that order, do the work the job asks for, then write exactly one
    result to `.secondbrain/agent/results/` under the job's file name.
-5. End the run with one report in `.secondbrain/agent/runs/`.
+5. Gaston's hook writes the run report when the turn ends; never write to
+   `.secondbrain/agent/runs/` yourself.
 
 ## Job kinds
 

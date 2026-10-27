@@ -9,6 +9,9 @@ All notable changes to Gaston are recorded here. The format follows
 
 ### Added
 
+- Agent tab: a Last run section shows when the agent last finished, which skill ran and what it
+  left behind, and counts the proposals waiting in Maintenance. A broken report is flagged, not
+  guessed at.
 - Condensed layer: a module gathers itself into what is decided, what is open and where pages
   contradict, which you read as a diff before anything is written.
 - Agent setup: Gaston writes the vault's setup for Claude Code, shows you the plan first, and

@@ -6,6 +6,7 @@ import type { AgentProtectionRule, AgentProtectionState } from '../../shared/typ
 import type { VaultStore } from '../vault/types';
 import {
   PROTECTION_RULES,
+  hookHasMatcher,
   type HookRequirement,
   type ProtectionRule,
 } from './templates/protection';
@@ -41,9 +42,9 @@ function runsScript(group: Record<string, unknown>, hook: HookRequirement): bool
   });
 }
 
-/** `Stop` has no matcher, so any group counts; the other events must name every required tool. */
+/** An event without a matcher counts any group; the others must name every required tool. */
 function coversTools(group: Record<string, unknown>, hook: HookRequirement): boolean {
-  if (hook.event === 'Stop') return true;
+  if (!hookHasMatcher(hook.event)) return true;
   const matched = typeof group.matcher === 'string' ? group.matcher.split('|') : [];
   return hook.tools.every((tool) => matched.includes(tool));
 }

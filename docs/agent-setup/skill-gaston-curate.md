@@ -15,7 +15,8 @@ directly.
 2. Work through the checklist below against the pages in `modules/<slug>/wiki/`.
 3. Fix what you find directly in the wiki. Add exactly one entry to `modules/<slug>/wiki/log.md`
    for each change, naming the skill, the pages touched and the reason.
-4. End the run with one report in `.secondbrain/agent/runs/`.
+4. Gaston's hook writes the run report when the turn ends; never write to
+   `.secondbrain/agent/runs/` yourself.
 
 ## Checklist
 
@@ -34,5 +35,3 @@ directly.
 
 Anything outside the wiki goes through `/gaston-propose`, which writes a proposal to
 `.secondbrain/agent/proposals/` for the person to confirm.
-
-The exact report format follows in later versions of this skill.

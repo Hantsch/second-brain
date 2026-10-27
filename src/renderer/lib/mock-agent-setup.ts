@@ -7,13 +7,14 @@ import type { AgentSetupState } from '@shared/types';
 
 /** Path → shipped template version, mirroring the core's templates. */
 const SHIPPED: Record<string, number> = {
-  'CLAUDE.md': 1,
-  '.claude/settings.json': 2,
+  'CLAUDE.md': 2,
+  '.claude/settings.json': 3,
   '.claude/hooks/gaston-shell-guard.ps1': 1,
   '.claude/hooks/gaston-wiki-check.ps1': 1,
-  [`.claude/skills/${AGENT_SKILLS.jobs}/SKILL.md`]: 2,
-  [`.claude/skills/${AGENT_SKILLS.curate}/SKILL.md`]: 1,
-  [`.claude/skills/${AGENT_SKILLS.propose}/SKILL.md`]: 2,
+  '.claude/hooks/gaston-run-report.ps1': 1,
+  [`.claude/skills/${AGENT_SKILLS.jobs}/SKILL.md`]: 3,
+  [`.claude/skills/${AGENT_SKILLS.curate}/SKILL.md`]: 2,
+  [`.claude/skills/${AGENT_SKILLS.propose}/SKILL.md`]: 3,
 };
 const PATHS = Object.keys(SHIPPED);
 

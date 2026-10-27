@@ -13,6 +13,7 @@ import { useT } from '../../i18n';
 import { api } from '../../lib/api';
 import { homeOf } from '../../lib/doc-home';
 import { useAgentCliStatus, useAgentSetupState } from '../../lib/queries/agent';
+import { AgentLastRunPanel } from './agent/AgentLastRunPanel';
 import { AgentProtectionPanel } from './agent/AgentProtectionPanel';
 import { AgentSetupPanel } from './agent/AgentSetupPanel';
 
@@ -74,6 +75,8 @@ export function AgentTab() {
       <AgentSetupPanel />
 
       <AgentProtectionPanel />
+
+      <AgentLastRunPanel />
 
       <Panel title={t('settings.agent.about.title')}>
         <div className="sb-setting-block">

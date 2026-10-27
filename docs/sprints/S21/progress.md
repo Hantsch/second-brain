@@ -24,3 +24,25 @@
 - 2026-10-27 10:58 · 088 · verify 2 · started
 - 2026-10-27 11:03 · 088 · verify 2 · done
 - 2026-10-27 11:03 · 088 · story · done
+- 11:03:46 · 089 · build · started
+- 2026-10-27 11:04 · 089 · D1 run report format and reader · started
+- 2026-10-27 11:07 · 089 · D1 run report format and reader · done
+- 2026-10-27 11:07 · 089 · D2 run-report hook · started
+- 2026-10-27 11:14 · 089 · D2 run-report hook · done
+- 2026-10-27 11:14 · 089 · D3 skills and vault CLAUDE.md · started
+- 2026-10-27 11:14 · 089 · D4 IPC agent:lastRun · started
+- 2026-10-27 11:18 · 089 · D3 skills and vault CLAUDE.md · done
+- 2026-10-27 11:18 · 089 · D4 IPC agent:lastRun · done
+- 2026-10-27 11:18 · 089 · D5 last run panel · started
+- 2026-10-27 11:21 · 089 · D5 last run panel · done
+- 2026-10-27 11:21 · 089 · verify · started
+- 2026-10-27 11:25 · 089 · verify · blocked: agent-setup.spec.ts:112 settings version stale
+- 2026-10-27 11:25 · 089 · verify 2 · started
+- 2026-10-27 11:26 · 089 · verify 2 · done
+- 2026-10-27 11:26 · 089 · review 1 · started
+- 2026-10-27 11:29 · 089 · review 1 · done
+- 2026-10-27 11:29 · 089 · review-fix 1 · started
+- 2026-10-27 11:34 · 089 · review-fix 1 · done
+- 2026-10-27 11:34 · 089 · verify 3 · started
+- 2026-10-27 11:37 · 089 · verify 3 · done
+- 2026-10-27 11:37 · 089 · story · done

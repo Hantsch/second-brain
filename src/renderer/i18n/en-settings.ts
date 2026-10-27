@@ -3,6 +3,7 @@
    `en.ts` needs a single import. Same key set as `de-settings.ts`. */
 
 import type { SettingsKey } from './de-settings';
+import { enSettingsAgent } from './en-settings-agent';
 import { enSettingsModels } from './en-settings-models';
 
 const own = {
@@ -283,4 +284,8 @@ const own = {
   'settings.about.update.pending.badge': 'Not yet installed',
 };
 
-export const enSettings: Record<SettingsKey, string> = { ...own, ...enSettingsModels };
+export const enSettings: Record<SettingsKey, string> = {
+  ...own,
+  ...enSettingsAgent,
+  ...enSettingsModels,
+};

@@ -62,6 +62,34 @@ describe('setup templates', () => {
     expect(blocked).toMatch(/`wiki\/overview\.md`[^\n]*changes only through a proposal/);
     expect(blocked).toMatch(/`modules\/gaston-help\/`[^\n]*read-only/);
     expect(body).toMatch(/Write `raw\/`, `CLAUDE\.md`, `\.claude\/`/);
+    // `runs/` is written by Gaston's hook, so it is not on the agent's list of writable folders.
+    expect(body).toMatch(
+      /except `results\/` and `proposals\/` under\n {2}`\.secondbrain\/agent\/`/,
+    );
+  });
+
+  // The run report is written by Gaston's stop hook; an agent that also writes one would race it.
+  it('no Gaston skill tells the agent to write its own run report', () => {
+    const skills = Object.values(AGENT_SKILLS).map((name) => {
+      const template = SETUP_TEMPLATES.find((candidate) => candidate.id === `skill-${name}`);
+      return { id: `skill-${name}`, body: template?.body ?? '' };
+    });
+    for (const { id, body } of [...skills, VAULT_CLAUDE_TEMPLATE]) {
+      expect(body, id).not.toContain('End the run with one report');
+      expect(body, id).not.toMatch(/report format follows/);
+      // Wrapped list items are one sentence, so continuation lines are joined first.
+      const lines = body.replace(/\n {2,}/g, ' ').split('\n');
+      for (const line of lines.filter((l) => l.includes(AGENT_DIRS.runs))) {
+        expect(line, id).toMatch(/never/i);
+      }
+    }
+    for (const { id, body } of skills) {
+      expect(body, id).toContain(AGENT_DIRS.runs);
+      expect(body, id).toContain("Gaston's hook writes the run report when the turn ends");
+    }
+    expect(VAULT_CLAUDE_TEMPLATE.body).toMatch(
+      /Gaston's hook writes one report per skill run to `runs\/`; the agent\nnever writes there\./,
+    );
   });
 
   it('the propose skill describes every field Gaston reads', () => {

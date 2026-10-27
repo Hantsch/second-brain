@@ -11,6 +11,7 @@ import { qk } from './keys';
 export type AgentCliStatusResult = IpcResponse<'agent:cliStatus'>;
 export type AgentSetupStateResult = IpcResponse<'agent:setupStatus'>;
 export type AgentProtectionStateResult = IpcResponse<'agent:protectionStatus'>;
+export type AgentLastRunResult = IpcResponse<'agent:lastRun'>;
 export type AgentSetupApplyResponse = IpcResponse<'agent:setupApply'>;
 export type AgentProposalsResult = IpcResponse<'agent:proposals'>;
 export type AcceptProposalResult = IpcResponse<'agent:proposalAccept'>;
@@ -45,6 +46,18 @@ export function useAgentProtection(): UseQueryResult<AgentProtectionStateResult>
     enabled: ready,
     retry: false,
     /* The settings file may be edited outside the app at any time. */
+    staleTime: 0,
+  });
+}
+
+export function useAgentLastRun(): UseQueryResult<AgentLastRunResult> {
+  const ready = useVaultReady();
+  return useQuery({
+    queryKey: qk.agent.lastRun(),
+    queryFn: api.agent.lastRun,
+    enabled: ready,
+    retry: false,
+    /* The agent writes its run reports while the app is open. */
     staleTime: 0,
   });
 }

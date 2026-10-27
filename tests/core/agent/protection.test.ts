@@ -83,11 +83,18 @@ describe('agent protection settings', () => {
     }
 
     expect(guard?.hooks[0]?.onFailure).toBe('block');
-    expect(settings.hooks.PostToolUse).toHaveLength(1);
-    expect(settings.hooks.Stop).toHaveLength(1);
-    for (const group of [...(settings.hooks.PostToolUse ?? []), ...(settings.hooks.Stop ?? [])]) {
-      expect(group.hooks[0]?.args.at(-1)).toContain('gaston-wiki-check');
-      expect(group.hooks[0]?.onFailure).toBeUndefined();
+    const scripts = (event: string) =>
+      (settings.hooks[event] ?? []).map((group) => group.hooks[0]?.args.at(-1)?.split('/').at(-1));
+    expect(scripts('PostToolUse')).toEqual(['gaston-wiki-check.ps1', 'gaston-run-report.ps1']);
+    expect(scripts('Stop')).toEqual(['gaston-wiki-check.ps1', 'gaston-run-report.ps1']);
+    expect(scripts('UserPromptSubmit')).toEqual(['gaston-run-report.ps1']);
+    expect(settings.hooks.PostToolUse?.[1]?.matcher).toBe('Skill');
+    const reportOnly = ['PostToolUse', 'Stop', 'UserPromptSubmit'].flatMap(
+      (event) => settings.hooks[event] ?? [],
+    );
+    for (const group of reportOnly) expect(group.hooks[0]?.onFailure).toBeUndefined();
+    for (const event of ['Stop', 'UserPromptSubmit']) {
+      for (const group of settings.hooks[event] ?? []) expect(group.matcher).toBeUndefined();
     }
   });
 });

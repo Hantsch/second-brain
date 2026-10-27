@@ -6,11 +6,12 @@ import { AGENT_DIRS, type AgentProtectionRuleId } from '../../../shared/types/ag
 import { AGENT_RESOLVED_DIR } from '../../../shared/types/agent-proposals';
 import { INTERNAL_DIRS, VAULT_DIRS } from '../../../shared/types/vault';
 import type { SetupTemplate } from '../setup-types';
+import { RUN_REPORT_BODY } from './hook-run-report';
 import { SHELL_GUARD_BODY } from './hook-shell-guard';
 import { WIKI_CHECK_BODY } from './hook-wiki-check';
 
 export interface HookRequirement {
-  event: 'PreToolUse' | 'PostToolUse' | 'Stop';
+  event: 'PreToolUse' | 'PostToolUse' | 'Stop' | 'UserPromptSubmit';
   tools: readonly string[];
   /** Vault-relative path of the hook script. */
   script: string;
@@ -26,6 +27,12 @@ export interface ProtectionRule {
 
 const SHELL_GUARD_PATH = '.claude/hooks/gaston-shell-guard.ps1';
 const WIKI_CHECK_PATH = '.claude/hooks/gaston-wiki-check.ps1';
+const RUN_REPORT_PATH = '.claude/hooks/gaston-run-report.ps1';
+
+/** Claude Code fires these on every occurrence and ignores a matcher, so none is written. */
+export function hookHasMatcher(event: HookRequirement['event']): boolean {
+  return event !== 'Stop' && event !== 'UserPromptSubmit';
+}
 
 export const PROTECTION_RULES: readonly ProtectionRule[] = [
   {
@@ -45,8 +52,8 @@ export const PROTECTION_RULES: readonly ProtectionRule[] = [
   { id: 'overview-write', deny: ['Edit(/modules/*/wiki/overview.md)'], hooks: [] },
   {
     id: 'internal-write',
-    // Results, proposals and runs under .secondbrain/agent/ stay writable; jobs and resolved
-    // proposals are Gaston's alone, and everything else in .secondbrain/ is internal state.
+    // Results and proposals under .secondbrain/agent/ stay writable, and runs/ has no rule (the
+    // hook writes it, the agent never does); jobs and resolved proposals are Gaston's alone, and everything else in .secondbrain/ is internal state.
     deny: [
       'Edit(/.secondbrain/*.json)',
       ...Object.values(INTERNAL_DIRS).map((dir) => `Edit(/${dir}/**)`),
@@ -92,6 +99,14 @@ export const PROTECTION_RULES: readonly ProtectionRule[] = [
   },
 ];
 
+/** The run-report registrations. They record and protect nothing, so they stay out of
+ * PROTECTION_RULES and the protection status does not list them. */
+export const REPORT_HOOKS: readonly HookRequirement[] = [
+  { event: 'UserPromptSubmit', tools: [], script: RUN_REPORT_PATH, failClosed: false },
+  { event: 'PostToolUse', tools: ['Skill'], script: RUN_REPORT_PATH, failClosed: false },
+  { event: 'Stop', tools: [], script: RUN_REPORT_PATH, failClosed: false },
+];
+
 interface HookGroup {
   matcher?: string;
   hooks: {
@@ -103,12 +118,16 @@ interface HookGroup {
   }[];
 }
 
-/** The settings object for a set of rules. `${CLAUDE_PROJECT_DIR}` stays literal: Claude Code resolves it. */
-export function renderSettings(rules: readonly ProtectionRule[]): object {
+/** The settings object for a set of rules plus the report hooks; an event registered by both
+ * gets one group per script. `${CLAUDE_PROJECT_DIR}` stays literal: Claude Code resolves it. */
+export function renderSettings(
+  rules: readonly ProtectionRule[],
+  reportHooks: readonly HookRequirement[] = REPORT_HOOKS,
+): object {
   const hooks: Partial<Record<HookRequirement['event'], HookGroup[]>> = {};
-  for (const hook of rules.flatMap((rule) => rule.hooks)) {
+  for (const hook of [...rules.flatMap((rule) => rule.hooks), ...reportHooks]) {
     const group: HookGroup = {
-      ...(hook.event === 'Stop' ? {} : { matcher: hook.tools.join('|') }),
+      ...(hookHasMatcher(hook.event) ? { matcher: hook.tools.join('|') } : {}),
       hooks: [
         {
           type: 'command',
@@ -134,7 +153,7 @@ export function renderSettings(rules: readonly ProtectionRule[]): object {
 export const SETTINGS_TEMPLATE: SetupTemplate = {
   id: 'settings',
   path: '.claude/settings.json',
-  version: 2,
+  version: 3,
   format: 'json',
   body: JSON.stringify(renderSettings(PROTECTION_RULES), null, 2) + '\n',
 };
@@ -153,4 +172,12 @@ export const HOOK_WIKI_CHECK_TEMPLATE: SetupTemplate = {
   version: 1,
   format: 'script',
   body: WIKI_CHECK_BODY,
+};
+
+export const HOOK_RUN_REPORT_TEMPLATE: SetupTemplate = {
+  id: 'hook-gaston-run-report',
+  path: RUN_REPORT_PATH,
+  version: 1,
+  format: 'script',
+  body: RUN_REPORT_BODY,
 };

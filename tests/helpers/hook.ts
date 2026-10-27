@@ -14,16 +14,20 @@ export interface HookCommand {
   args: string[];
 }
 
-/** The first command registered for `event` in a rendered settings.json, with the vault substituted. */
+/** The command registered for `event` in a rendered settings.json, with the vault substituted:
+ * the first one, or the one running `script` when an event has several. */
 export function registeredHook(
   settingsBody: string,
-  event: 'PreToolUse' | 'PostToolUse' | 'Stop',
+  event: 'PreToolUse' | 'PostToolUse' | 'Stop' | 'UserPromptSubmit',
   vaultRoot: string,
+  script?: string,
 ): HookCommand {
   const settings = JSON.parse(settingsBody) as {
     hooks: Record<string, { hooks: HookCommand[] }[]>;
   };
-  const hook = settings.hooks[event]?.[0]?.hooks[0];
+  const hook = (settings.hooks[event] ?? [])
+    .map((group) => group.hooks[0])
+    .find((command) => script === undefined || command?.args.some((arg) => arg.endsWith(script)));
   if (hook === undefined) throw new Error(`no ${event} hook registered`);
   return {
     command: hook.command,

@@ -15,7 +15,8 @@ person, who accepts or rejects it. Nothing is applied silently.
 3. Write one file per change to `.secondbrain/agent/proposals/`, named
    `<YYYYMMDD-HHMMSS>-<short-slug>.md` (for example `20261027-091200-fix-todo-dates.md`).
    Never bundle several changes into one file.
-4. End the run with one report in `.secondbrain/agent/runs/`.
+4. Gaston's hook writes the run report when the turn ends; never write to
+   `.secondbrain/agent/runs/` yourself.
 
 ## Proposal file
 
@@ -88,5 +89,3 @@ into an existing file instead of creating a new one.
 - Target an `.ingest.json` file.
 - Write the target itself. Only the proposal file is written.
 - Propose a change you cannot justify from the vault.
-
-The exact report format follows in later versions of this skill.

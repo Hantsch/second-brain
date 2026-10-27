@@ -19,6 +19,7 @@ const MANAGED_PATHS = [
   '.claude/settings.json',
   '.claude/hooks/gaston-shell-guard.ps1',
   '.claude/hooks/gaston-wiki-check.ps1',
+  '.claude/hooks/gaston-run-report.ps1',
   '.claude/skills/gaston-jobs/SKILL.md',
   CURATE,
   PROPOSE,
@@ -101,14 +102,14 @@ test("install and update write only what the plan shows and leave the user's fil
   });
 
   await test.step('confirm writes every file with its marker and records the manifest', async () => {
-    await confirmAndClose(page, 'Write 23 files');
+    await confirmAndClose(page, 'Write 24 files');
     for (const path of MANAGED_PATHS) expect(existsSync(at(path))).toBe(true);
     expect(read('CLAUDE.md').split('\n')[0]).toContain('gaston:managed');
     for (const skill of MANAGED_PATHS.filter((path) => path.endsWith('SKILL.md'))) {
       expect(read(skill)).toContain('gaston:managed');
     }
     const manifest = JSON.parse(read(MANIFEST)) as { files: { path: string; version: number }[] };
-    expect(manifest.files.find((file) => file.path === '.claude/settings.json')?.version).toBe(1);
+    expect(manifest.files.find((file) => file.path === '.claude/settings.json')?.version).toBe(3);
     for (const path of MANAGED_PATHS) {
       await expect(row(page, path).getByText('Current')).toBeVisible();
     }
@@ -154,7 +155,7 @@ test("install and update write only what the plan shows and leave the user's fil
     await expect(planSection(page, 'Left alone').getByText(MINE, { exact: true })).toBeVisible();
     await confirmAndClose(page, 'Write 2 files');
     expect(read('CLAUDE.md').split('\n')[0]).toBe(
-      '<!-- gaston:managed id=vault-claude version=1 -->',
+      '<!-- gaston:managed id=vault-claude version=2 -->',
     );
     expect(existsSync(at(PROPOSE))).toBe(true);
     expect(read(CURATE)).toBe(edited.curate);

@@ -8,7 +8,7 @@ import type { SetupTemplate } from '../setup-types';
 export const VAULT_CLAUDE_TEMPLATE: SetupTemplate = {
   id: 'vault-claude',
   path: 'CLAUDE.md',
-  version: 1,
+  version: 2,
   format: 'markdown',
   body: `# This vault
 
@@ -50,7 +50,7 @@ them in Gaston; nothing is applied silently.
 - Read \`journal/\`, \`.secondbrain/index/\` or \`.secondbrain/chats/\` (the derived index and the chats
   hold journal text).
 - Write \`raw/\`, \`CLAUDE.md\`, \`.claude/\` or \`.ingest.json\` files.
-- Write anything in \`.secondbrain/\` except \`results/\`, \`proposals/\` and \`runs/\` under
+- Write anything in \`.secondbrain/\` except \`results/\` and \`proposals/\` under
   \`.secondbrain/agent/\`.
 
 Searches and listings name a folder (\`modules/\`, \`projects/\`, \`areas/\`, \`inbox/\`,
@@ -60,7 +60,8 @@ derived index is blocked, and so is a shell write to \`raw/\`, \`.claude/\` or \
 ## Jobs, results and reports
 
 Jobs are read from \`${AGENT_DIRS.jobs}/\`. Each result goes into \`${AGENT_DIRS.results}/\`
-under the job's file name. Every skill run ends with one report in \`${AGENT_DIRS.runs}/\`.
+under the job's file name. Gaston's hook writes one report per skill run to \`runs/\`; the agent
+never writes there.
 
 ## Skills
 

@@ -8,7 +8,7 @@ import type { SetupTemplate } from '../setup-types';
 export const SKILL_GASTON_JOBS_TEMPLATE: SetupTemplate = {
   id: `skill-${AGENT_SKILLS.jobs}`,
   path: `.claude/skills/${AGENT_SKILLS.jobs}/SKILL.md`,
-  version: 2,
+  version: 3,
   format: 'markdown-frontmatter',
   body: `---
 name: gaston-jobs
@@ -28,7 +28,8 @@ reports back through \`${AGENT_DIRS.results}/\`.
    \`${AGENT_DIRS.results}/\`.
 4. For each remaining job, in that order, do the work the job asks for, then write exactly one
    result to \`${AGENT_DIRS.results}/\` under the job's file name.
-5. End the run with one report in \`${AGENT_DIRS.runs}/\`.
+5. Gaston's hook writes the run report when the turn ends; never write to
+   \`${AGENT_DIRS.runs}/\` yourself.
 
 ## Job kinds
 
@@ -79,7 +80,7 @@ Do not guess what such a job wants.
 export const SKILL_GASTON_CURATE_TEMPLATE: SetupTemplate = {
   id: `skill-${AGENT_SKILLS.curate}`,
   path: `.claude/skills/${AGENT_SKILLS.curate}/SKILL.md`,
-  version: 1,
+  version: 2,
   format: 'markdown-frontmatter',
   body: `---
 name: gaston-curate
@@ -98,7 +99,8 @@ directly.
 2. Work through the checklist below against the pages in \`modules/<slug>/wiki/\`.
 3. Fix what you find directly in the wiki. Add exactly one entry to \`modules/<slug>/wiki/log.md\`
    for each change, naming the skill, the pages touched and the reason.
-4. End the run with one report in \`${AGENT_DIRS.runs}/\`.
+4. Gaston's hook writes the run report when the turn ends; never write to
+   \`${AGENT_DIRS.runs}/\` yourself.
 
 ## Checklist
 
@@ -117,15 +119,13 @@ directly.
 
 Anything outside the wiki goes through \`/gaston-propose\`, which writes a proposal to
 \`${AGENT_DIRS.proposals}/\` for the person to confirm.
-
-The exact report format follows in later versions of this skill.
 `,
 };
 
 export const SKILL_GASTON_PROPOSE_TEMPLATE: SetupTemplate = {
   id: `skill-${AGENT_SKILLS.propose}`,
   path: `.claude/skills/${AGENT_SKILLS.propose}/SKILL.md`,
-  version: 2,
+  version: 3,
   format: 'markdown-frontmatter',
   body: `---
 name: gaston-propose
@@ -144,7 +144,8 @@ person, who accepts or rejects it. Nothing is applied silently.
 3. Write one file per change to \`${AGENT_DIRS.proposals}/\`, named
    \`<YYYYMMDD-HHMMSS>-<short-slug>.md\` (for example \`20261027-091200-fix-todo-dates.md\`).
    Never bundle several changes into one file.
-4. End the run with one report in \`${AGENT_DIRS.runs}/\`.
+4. Gaston's hook writes the run report when the turn ends; never write to
+   \`${AGENT_DIRS.runs}/\` yourself.
 
 ## Proposal file
 
@@ -217,7 +218,5 @@ into an existing file instead of creating a new one.
 - Target an \`.ingest.json\` file.
 - Write the target itself. Only the proposal file is written.
 - Propose a change you cannot justify from the vault.
-
-The exact report format follows in later versions of this skill.
 `,
 };

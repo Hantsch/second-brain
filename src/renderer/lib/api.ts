@@ -286,6 +286,7 @@ export const api = {
     cliStatus: () => call('agent:cliStatus'),
     setupStatus: () => call('agent:setupStatus'),
     protectionStatus: () => call('agent:protectionStatus'),
+    lastRun: () => call('agent:lastRun'),
     setupApply: (request: IpcRequest<'agent:setupApply'>) => call('agent:setupApply', request),
     launchTerminal: () => call('agent:launchTerminal'),
     proposals: () => call('agent:proposals'),

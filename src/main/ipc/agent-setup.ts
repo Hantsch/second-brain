@@ -5,6 +5,7 @@
    before `@core/agent` sees any of it — the core trusts its input. */
 
 import { readProtection } from '@core/agent/protection-status';
+import { readLastRun } from '@core/agent/run-reports';
 import { applySetup } from '@core/agent/setup-apply';
 import { readSetupState } from '@core/agent/setup-status';
 import { isSafeVaultPath, wikiLogPath } from '@core/vault/paths';
@@ -12,6 +13,7 @@ import { HELP_MODULE_SLUG } from '@shared/help-module';
 import type { AgentSetupApplyRequest, AgentSetupApplyResult } from '@shared/types';
 import type { HandlerMap } from './registry';
 import { defineHandlers, fail } from './registry';
+import { wikiStore } from './wiki-bridge';
 import type { Services } from '../services';
 
 const MAX_CONFIRMED = 64;
@@ -58,6 +60,7 @@ export function agentSetupHandlers(services: Services): HandlerMap {
   return defineHandlers({
     'agent:setupStatus': async () => readSetupState(services.requireStore()),
     'agent:protectionStatus': async () => readProtection(services.requireStore()),
+    'agent:lastRun': async () => readLastRun(wikiStore(services)),
     'agent:setupApply': async (request) => {
       const result = await applySetup(services.requireStore(), requireApplyRequest(request));
       await settle(services, result);

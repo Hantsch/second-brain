@@ -2,6 +2,7 @@
    Der Modelle-Tab hat wegen seines Umfangs eine eigene Datei und wird hier
    eingehängt, damit `de.ts` nur einen Import braucht. */
 
+import { deSettingsAgent } from './de-settings-agent';
 import { deSettingsModels } from './de-settings-models';
 
 const own = {
@@ -284,6 +285,6 @@ const own = {
   'settings.about.update.pending.badge': 'Noch nicht installiert',
 } as const;
 
-export const deSettings = { ...own, ...deSettingsModels } as const;
+export const deSettings = { ...own, ...deSettingsAgent, ...deSettingsModels } as const;
 
 export type SettingsKey = keyof typeof deSettings;

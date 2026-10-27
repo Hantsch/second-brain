@@ -38,7 +38,7 @@ them in Gaston; nothing is applied silently.
 - Read `journal/`, `.secondbrain/index/` or `.secondbrain/chats/` (the derived index and the chats
   hold journal text).
 - Write `raw/`, `CLAUDE.md`, `.claude/` or `.ingest.json` files.
-- Write anything in `.secondbrain/` except `results/`, `proposals/` and `runs/` under
+- Write anything in `.secondbrain/` except `results/` and `proposals/` under
   `.secondbrain/agent/`.
 
 Searches and listings name a folder (`modules/`, `projects/`, `areas/`, `inbox/`,
@@ -48,7 +48,8 @@ derived index is blocked, and so is a shell write to `raw/`, `.claude/` or `CLAU
 ## Jobs, results and reports
 
 Jobs are read from `.secondbrain/agent/jobs/`. Each result goes into `.secondbrain/agent/results/`
-under the job's file name. Every skill run ends with one report in `.secondbrain/agent/runs/`.
+under the job's file name. Gaston's hook writes one report per skill run to `runs/`; the agent
+never writes there.
 
 ## Skills
 

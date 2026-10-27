@@ -729,6 +729,55 @@ frontmatter:
 
 `resolved/` is Gaston's alone: the agent may not write there (`internal-write`).
 
+### Run reports
+
+The setup's stop hook writes one report per agent run to `.secondbrain/agent/runs/`, named
+`<yyyyMMddTHHmmssZ>-<skill>.md` after the run's start in UTC (`-2`, `-3` … is appended before
+`.md` when the name is already taken). Names therefore sort by start time. Frontmatter only:
+
+```markdown
+---
+gaston: run-report
+version: 1
+skill: gaston-curate
+argument: website-relaunch
+started: 2026-10-27T09:12:00Z
+finished: 2026-10-27T09:20:00Z
+pages: [projects/website-relaunch/project.md]
+proposals: [20261027-091500-plan.md]
+jobsDone: [job-1]
+jobsFailed: []
+jobsSkipped: []
+---
+```
+
+| Field         | Meaning                                                                    |
+| ------------- | -------------------------------------------------------------------------- |
+| `gaston`      | always `run-report`                                                        |
+| `version`     | `1`; a higher number is shown as unreadable ("written by a newer Gaston")  |
+| `skill`       | the skill that ran, a non-empty string                                     |
+| `argument`    | optional; kept only when it is a slug (`[a-z0-9-]`, at most 64 characters) |
+| `started`     | ISO timestamp, UTC                                                         |
+| `finished`    | ISO timestamp, UTC                                                         |
+| `pages`       | vault-relative paths of the pages the run wrote                            |
+| `proposals`   | file names, not paths, of the proposals the run wrote                      |
+| `jobsDone`    | ids of the jobs the run completed                                          |
+| `jobsFailed`  | ids of the jobs that failed                                                |
+| `jobsSkipped` | ids of the jobs the run left alone                                         |
+
+The five lists are written even when empty (`[]`); a reader treats an absent list as empty.
+
+- A run's report is rewritten at every `Stop` while the run is open, so it grows with the run
+  and the last write carries `finished`.
+- A page Gaston itself wrote during a run counts as that run's page: the report cannot tell the
+  writer apart.
+- A page counts when its last write time is at or after the run's start. On filesystems with
+  coarse write-time granularity (FAT/exFAT, 2 seconds), a page written within about 2 seconds of
+  the run start can be wrongly counted or missed.
+- Only the newest 50 reports are kept; the hook prunes the older ones after writing.
+- A report that is missing a required field, has broken frontmatter or a wrong `gaston` value is
+  unreadable. Gaston shows it as such, with its path, and does not fall back to an older report.
+
 ### Indexing
 
 `.claude/` at the vault root is agent configuration, not knowledge: it is never
@@ -754,8 +803,9 @@ NotebookEdit). Paths start at the vault root.
 | `wiki-check`     | no deny entry; a `PostToolUse` and a `Stop` hook that check the wiki                                     |
 
 The internal folders are `index/`, `chats/`, `logs/` and `trash/` under `.secondbrain/`.
-`agent/results/`, `agent/proposals/` and `agent/runs/` stay writable. `index/` and `chats/`
-are also unreadable, like `journal/`: the derived index stores every document body,
+`agent/results/` and `agent/proposals/` stay writable. Gaston's hook writes one report per
+skill run to `agent/runs/`; the agent never writes there, though no deny rule covers it.
+`index/` and `chats/` are also unreadable, like `journal/`: the derived index stores every document body,
 journal entries included, and the chat sessions hold journal text. `agent/` stays readable,
 so the hand-over folders work.
 
