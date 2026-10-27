@@ -12,6 +12,7 @@ import {
 } from './templates/protection';
 
 const SETTINGS_PATH = '.claude/settings.json';
+const LOCAL_SETTINGS_PATH = '.claude/settings.local.json';
 const REASON_LIMIT = 200;
 
 type ProtectionStore = Pick<VaultStore, 'readText' | 'exists'>;
@@ -62,7 +63,13 @@ async function checkRule(
   settings: Record<string, unknown>,
   denied: ReadonlySet<string>,
   rule: ProtectionRule,
+  hooksDisabled: boolean,
 ): Promise<AgentProtectionRule> {
+  // The flag silences every hook regardless of registration, so hook rules cannot count as
+  // installed; deny rules are enforced by the permission system and stay unaffected.
+  if (hooksDisabled && rule.hooks.length > 0) {
+    return { id: rule.id, status: 'off', missing: ['disableAllHooks'] };
+  }
   const missing = rule.deny.filter((entry) => !denied.has(entry));
   for (const hook of rule.hooks) {
     if (!hookRegistered(settings, hook)) missing.push(`hook:${hook.event}`);
@@ -70,6 +77,17 @@ async function checkRule(
     if (!(await store.exists(hook.script)) && !missing.includes(script)) missing.push(script);
   }
   return { id: rule.id, status: missing.length === 0 ? 'installed' : 'missing', missing };
+}
+
+/** The personal override file; absent or broken means it contributes nothing. */
+async function readLocalSettings(store: ProtectionStore): Promise<Record<string, unknown>> {
+  try {
+    const text = await store.readText(LOCAL_SETTINGS_PATH);
+    const parsed: unknown = text === null ? null : JSON.parse(text);
+    return isRecord(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
 }
 
 export async function readProtection(
@@ -91,8 +109,12 @@ export async function readProtection(
   const entries = denyEntries(parsed).map((entry) => entry.trim());
   const denied = new Set(entries);
   const known = new Set(rules.flatMap((rule) => rule.deny));
+  const hooksDisabled =
+    parsed.disableAllHooks === true || (await readLocalSettings(store)).disableAllHooks === true;
   const checked: AgentProtectionRule[] = [];
-  for (const rule of rules) checked.push(await checkRule(store, parsed, denied, rule));
+  for (const rule of rules) {
+    checked.push(await checkRule(store, parsed, denied, rule, hooksDisabled));
+  }
   return {
     state: 'read',
     rules: checked,

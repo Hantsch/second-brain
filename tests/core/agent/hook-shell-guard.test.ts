@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { renderSetupFile } from '@core/agent/setup-marker';
+import { HELP_MODULE_SLUG } from '@shared/help-module';
 import { SETUP_TEMPLATES } from '@core/agent/setup-templates';
 import { SETTINGS_TEMPLATE } from '@core/agent/templates/protection';
 import { registeredHook, runHook, type HookCommand } from '../../helpers/hook';
@@ -49,6 +50,8 @@ const tool = (name: string, input: Record<string, string>): GuardCase => ({
 });
 
 const JOURNAL_FILE = 'journal/2026/10/2026-10-01.md';
+const HELP_DIR = `modules/${HELP_MODULE_SLUG}`;
+const HELP_PAGE = `${HELP_DIR}/wiki/concepts/agent.md`;
 
 // The hook runtime is Windows PowerShell (powershell.exe), and the CI runner is Windows.
 // 60 s: queued spawns (see runHook's concurrency cap) wait inside the test timeout.
@@ -97,6 +100,15 @@ describe.runIf(process.platform === 'win32')('pre-tool guard', { timeout: 60_000
     expect(result.stderr.trim(), c.name).not.toBe('');
     // A crash inside the guard also exits 2; a case only counts when the guard decided.
     expect(result.stderr, c.name).not.toContain('guard error');
+  }
+
+  /** Blocked for the named reason, not merely by some earlier, unrelated check. */
+  function expectBlockedWith(reason: string) {
+    return async (c: GuardCase) => {
+      const result = await decide(c);
+      expect(result.code, c.name).toBe(2);
+      expect(result.stderr, c.name).toContain(reason);
+    };
   }
 
   async function expectAllowed(c: GuardCase) {
@@ -217,6 +229,16 @@ describe.runIf(process.platform === 'win32')('pre-tool guard', { timeout: 60_000
   ])('an encoded or dynamic command is blocked: $name', expectBlocked, TIMEOUT);
 
   it.concurrent.each([
+    ps('$p = -join [char[]](106,111,117,114,110,97,108); gc $p'),
+    ps('-join [ CHAR [ ] ](106,111)'),
+    ps('[System.Char[]]"journal" -join ""'),
+  ])(
+    'a char array cast is blocked as a dynamic command: $name',
+    expectBlockedWith('encoded or dynamic'),
+    TIMEOUT,
+  );
+
+  it.concurrent.each([
     bash('cat raw/web/page.md'),
     bash('head -20 raw/web/page.md | wc -l'),
     bash('grep -n mood raw/web/page.md'),
@@ -313,6 +335,26 @@ describe.runIf(process.platform === 'win32')('pre-tool guard', { timeout: 60_000
     expectAllowed,
     TIMEOUT,
   );
+
+  it.concurrent.each([
+    tool('Write', { file_path: HELP_PAGE, content: 'x' }),
+    tool('Edit', { file_path: HELP_PAGE, old_string: 'a', new_string: 'b' }),
+    tool('MultiEdit', { file_path: HELP_PAGE }),
+    tool('NotebookEdit', { notebook_path: `${HELP_DIR}/wiki/n.ipynb` }),
+    bash(`echo x > ${HELP_DIR}/wiki/a.md`),
+    ps(`Set-Content ${HELP_DIR}/module.md x`),
+    bash(`cp a.md ${HELP_DIR}/wiki/`),
+  ])(
+    'the help module is read-only for the agent (blocked): $name',
+    expectBlockedWith('help module'),
+    TIMEOUT,
+  );
+
+  it.concurrent.each([
+    tool('Read', { file_path: HELP_PAGE }),
+    bash(`cat ${HELP_PAGE}`),
+    tool('Write', { file_path: 'modules/other/wiki/a.md', content: 'x' }),
+  ])('the help module is read-only for the agent (allowed): $name', expectAllowed, TIMEOUT);
 
   it.concurrent.each([
     bash('cat 2026/10/2026-10-01.md', 'journal'),

@@ -28,6 +28,9 @@ All notable changes to Gaston are recorded here. The format follows
 - Help module: installing the agent setup also writes `gaston-help`, a module in which Gaston
   explains its screens, the vault format and the agent. Pages you add there stay yours, and a
   module of your own with that name blocks the install until you rename it.
+- Agent protection: the shell guard also blocks `[char[]]` and every write to the help module, and
+  the Protection panel names the derived index and chat sessions among what the agent cannot read.
+  The rules show as Off when the vault's settings disable all hooks.
 - Agent screen: the agent has its own place in the rail. One button opens plain Claude in your
   vault and says why when it cannot; below it, the commands that session knows, with the modules
   you can curate, and a pointer to Settings when the setup needs installing or updating.

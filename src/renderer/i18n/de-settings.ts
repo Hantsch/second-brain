@@ -71,8 +71,9 @@ const own = {
     '.claude/settings.json konnte nicht gelesen werden: {reason}. Der Stand der Regeln ist unbekannt.',
   'settings.agent.protection.status.installed': 'Installiert',
   'settings.agent.protection.status.missing': 'Fehlt',
+  'settings.agent.protection.status.off': 'Aus',
   'settings.agent.protection.rule.journal-read':
-    'journal/ und sein abgeleiteter Index können von den Datei-Werkzeugen von Claude weder gelesen noch geändert werden.',
+    'journal/, der abgeleitete Index und die Chat-Sitzungen können von den Datei-Werkzeugen von Claude nicht gelesen werden, journal/ auch nicht geändert.',
   'settings.agent.protection.rule.raw-write': 'raw/ ist schreibgeschützt.',
   'settings.agent.protection.rule.setup-write': 'CLAUDE.md und .claude/ sind schreibgeschützt.',
   'settings.agent.protection.rule.overview-write':
@@ -80,7 +81,7 @@ const own = {
   'settings.agent.protection.rule.internal-write':
     '{dir}/ ist schreibgeschützt, außer Ergebnisse, Vorschläge und Läufe.',
   'settings.agent.protection.rule.pre-tool-guard':
-    'Eine Prüfung vor jedem Werkzeugaufruf blockiert Shell-Zugriff auf journal/, Shell-Schreibzugriffe auf raw/ und Schreibzugriffe außerhalb der Wiki-Ebene.',
+    'Eine Prüfung vor jedem Werkzeugaufruf blockiert Shell-Zugriff auf journal/, Shell-Schreibzugriffe auf raw/, Schreibzugriffe außerhalb der Wiki-Ebene und jeden Schreibzugriff auf das Hilfemodul.',
   'settings.agent.protection.rule.wiki-check':
     'Wiki-Schreibzugriffe werden auf Frontmatter und einen Eintrag in log.md geprüft.',
   'settings.agent.protection.extra': 'Regeln, die du hinzugefügt hast',

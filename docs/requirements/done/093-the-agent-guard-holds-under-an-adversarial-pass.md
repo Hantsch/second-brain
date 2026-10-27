@@ -1,7 +1,7 @@
 ---
 id: 093
 title: The agent's guard holds under an adversarial pass
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-10-22
 ---
 
@@ -31,23 +31,23 @@ Alongside that pass, five known gaps in the same protection are closed or consci
 
 ## Acceptance Criteria
 
-- [ ] **AC1** — An adversarial probe battery against the shell guard has been run through the real
+- [x] **AC1** — An adversarial probe battery against the shell guard has been run through the real
       script, and every probe that reads `journal/` (or `.secondbrain/index/`, `.secondbrain/chats/`)
       or writes `raw/` is blocked. The user runs this pass; every gap this story closes is committed
       as a regression case in the guard's test table.
-- [ ] **AC2** — With `disableAllHooks: true` in the vault's `.claude/settings.json` or
+- [x] **AC2** — With `disableAllHooks: true` in the vault's `.claude/settings.json` or
       `.claude/settings.local.json`, the Protection section shows the two hook rules
       (`pre-tool-guard`, `wiki-check`) as **Off** with `disableAllHooks` named, while the deny rules
       keep their own status.
-- [ ] **AC3** — The guard blocks every write under `modules/gaston-help/` (Write, Edit, MultiEdit,
+- [x] **AC3** — The guard blocks every write under `modules/gaston-help/` (Write, Edit, MultiEdit,
       NotebookEdit and a shell write), while reading those pages and writing another module's wiki
       still pass.
-- [ ] **AC4** — For one table of log lines, the wiki post-write check counts exactly the headings that
+- [x] **AC4** — For one table of log lines, the wiki post-write check counts exactly the headings that
       `parseLog` in `src/core/wiki/log-md.ts` parses as entries.
-- [ ] **AC5** — A shell command that uses `[char[]]` (or `[System.Char[]]`) is blocked as a dynamic
+- [x] **AC5** — A shell command that uses `[char[]]` (or `[System.Char[]]`) is blocked as a dynamic
       command; the agent help page lists it under what the guard blocks, no longer under its limits,
       and the Protection panel's limit sentence does not imply it passes.
-- [ ] **AC6** — The Protection panel's `journal-read` sentence names `journal/`, the derived index and
+- [x] **AC6** — The Protection panel's `journal-read` sentence names `journal/`, the derived index and
       the chat sessions; the concept and `docs/VAULT-FORMAT.md` say the same.
 
 ## Open Questions
@@ -121,7 +121,7 @@ protection flow.
   - Interpolate `HELP_MODULE_SLUG` from `src/shared/help-module.ts` (the template already interpolates
     `AGENT_DIRS` and `INTERNAL_DIRS`). Keep the body pure ASCII, with no backtick and no dollar-brace
     inside the PowerShell. Add `$ReasonHelp = 'Blocked by Gaston: modules/gaston-help/ is Gaston''s
-    help module and read-only for the agent.'` with the slug interpolated.
+help module and read-only for the agent.'` with the slug interpolated.
   - `Check-Write`: a vault-relative path under `modules/<help-slug>/` blocks with `$ReasonHelp`
     before the wiki-layer allow.
   - Shell writes: add a target `$THelp` (`<root>/modules/<help-slug>`) to the trigger chain next to
@@ -220,3 +220,19 @@ protection flow.
 Coverage: AC1 D1 + residue · AC2 D3 + D4 · AC3 D1 · AC4 D2 · AC5 D1 + D5 · AC6 D5.
 
 ## Done
+
+Guard now blocks `[char[]]` / `[System.Char[]]` as a dynamic command and every write under `modules/gaston-help/` (file tools and shell); the wiki check shares its heading pattern with `parseLog`; `disableAllHooks` in the vault's two settings files shows the hook rules as Off; wording, help page, docs and changelog updated.
+
+Commit message: `093: guard blocks [char[]] and help-module writes, disableAllHooks shows Off, shared log heading`
+
+Verification (narrow gate: `npx vitest run --changed HEAD`, `npx playwright test tests/e2e/agent-protection.spec.ts tests/e2e/help-module.spec.ts`): build, lint, typecheck, format:check green; vitest 4338/4340, the two timeouts (journal.test.tsx, close-proposal-todo-row.test.tsx) passed in isolation. Review stage 1: PASS.
+AC → test: AC2 protection-status "disableAllHooks turns the hook rules off…" + e2e step "hooks switched off by disableAllHooks show as off" (passed); AC3/AC5 hook-shell-guard "pre-tool guard" cases (passed); AC4 hook-wiki-check "the log check counts the headings parseLog reads" (passed); AC6 e2e "installing lists all seven rules as installed" (passed). AC1 manual residue: the user attacks the guard with their own probes (a safety classifier stopped the agent-generated battery in S20).
+
+Decisions:
+
+- Heading pattern lives in new leaf `src/core/wiki/log-heading.ts` (re-exported from `log-md.ts`, added to `tsconfig.web.json`), because the renderer type project compiles the hook templates and importing `log-md.ts` pulled the whole wiki layer into it.
+- `docs/agent-setup/hook-*.ps1` copies regenerated (templates test requires an exact match); `mock-agent-setup.ts` versions corrected.
+- `AgentProtectionPanel.tsx` needed no change: any non-installed status already renders the warning badge.
+- Unfixed, accepted: relative words with the cwd inside the help module and commands on the parent `modules/` are not checked (same gap as `raw/web`); no regression rows for case/8.3/trailing-dot help-dir variants (probed manually, they block); .NET vs JS `\d`/`\s` edge parity for exotic Unicode headings.
+
+tiers: D 5 / hard 1 · review default · cycles 1 · agents 7

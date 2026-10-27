@@ -119,6 +119,44 @@ describe('agent protection status', () => {
     expect(state.rules.every((rule) => rule.status === 'installed')).toBe(true);
   });
 
+  it('disableAllHooks turns the hook rules off and leaves the deny rules installed', async () => {
+    const store = await installedVault((settings) => {
+      (settings as unknown as Record<string, unknown>).disableAllHooks = true;
+    });
+
+    const { rules } = read(await readProtection(store));
+    const byId = Object.fromEntries(rules.map((rule) => [rule.id, rule]));
+    for (const id of ['pre-tool-guard', 'wiki-check']) {
+      expect(byId[id], id).toMatchObject({ status: 'off', missing: ['disableAllHooks'] });
+    }
+    for (const id of ['journal-read', 'raw-write', 'setup-write']) {
+      expect(byId[id], id).toMatchObject({ status: 'installed', missing: [] });
+    }
+  });
+
+  it('disableAllHooks in the local settings file turns the hook rules off too', async () => {
+    const store = await installedVault();
+    await store.writeText('.claude/settings.local.json', '{ "disableAllHooks": true }');
+
+    const { rules } = read(await readProtection(store));
+    expect(rules.find((rule) => rule.id === 'pre-tool-guard')?.status).toBe('off');
+    expect(rules.find((rule) => rule.id === 'journal-read')?.status).toBe('installed');
+  });
+
+  it('a disableAllHooks that is not the boolean true changes nothing', async () => {
+    for (const value of [false, 'true']) {
+      const store = await installedVault((settings) => {
+        (settings as unknown as Record<string, unknown>).disableAllHooks = value;
+      });
+      await store.writeText('.claude/settings.local.json', '{ broken');
+      const { rules } = read(await readProtection(store));
+      expect(
+        rules.every((rule) => rule.status === 'installed'),
+        String(value),
+      ).toBe(true);
+    }
+  });
+
   it('an unreadable settings file is reported, not shown as unprotected', async () => {
     const broken = new MemoryVaultStore();
     await broken.writeText(SETTINGS, '{ "permissions": ');

@@ -1,3 +1,19 @@
 - 2026-10-27T15:35:06 · S22 · refine · 093 094 095 080 · started
 - 2026-10-27T15:37:45 · refine · 093 094 095 080 · started
 - 2026-10-27T15:42:24 · refine · 093 094 095 080 · done
+- 2026-10-27T15:42:24 · 093 · build · started
+- 2026-10-27 15:42 · 093 · D1 guard blocks char[] and help module writes · started
+- 2026-10-27 15:47 · 093 · D1 guard blocks char[] and help module writes · done
+- 2026-10-27 15:47 · 093 · D2 wiki check heading parity · started
+- 2026-10-27 15:47 · 093 · D3 disableAllHooks in core · started
+- 2026-10-27 15:48 · 093 · D2 wiki check heading parity · done
+- 2026-10-27 15:48 · 093 · D3 disableAllHooks in core · done
+- 2026-10-27 15:48 · 093 · D4 panel shows Off · started
+- 2026-10-27 15:52 · 093 · D4 panel shows Off · done
+- 2026-10-27 15:52 · 093 · D5 wording help page docs · started
+- 2026-10-27 16:00 · 093 · D5 wording help page docs · done
+- 2026-10-27 16:00 · 093 · verify · started
+- 2026-10-27 16:09 · 093 · verify · done
+- 2026-10-27 16:09 · 093 · review 1 · started
+- 2026-10-27 16:11 · 093 · review 1 · done
+- 2026-10-27 16:11 · 093 · story · done

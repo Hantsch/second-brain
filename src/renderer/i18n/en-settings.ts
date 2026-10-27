@@ -71,8 +71,9 @@ const own = {
     '.claude/settings.json could not be read: {reason}. The state of the rules is unknown.',
   'settings.agent.protection.status.installed': 'Installed',
   'settings.agent.protection.status.missing': 'Missing',
+  'settings.agent.protection.status.off': 'Off',
   'settings.agent.protection.rule.journal-read':
-    "journal/ and its derived index cannot be read or changed by Claude's file tools.",
+    "journal/, the derived index and the chat sessions cannot be read by Claude's file tools, and journal/ cannot be changed.",
   'settings.agent.protection.rule.raw-write': 'raw/ is read-only.',
   'settings.agent.protection.rule.setup-write': 'CLAUDE.md and .claude/ are read-only.',
   'settings.agent.protection.rule.overview-write':
@@ -80,7 +81,7 @@ const own = {
   'settings.agent.protection.rule.internal-write':
     '{dir}/ is read-only except results, proposals and runs.',
   'settings.agent.protection.rule.pre-tool-guard':
-    'A check before each tool call blocks shell access to journal/, shell writes to raw/, and writes outside the wiki layer.',
+    'A check before each tool call blocks shell access to journal/, shell writes to raw/, writes outside the wiki layer, and any write to the help module.',
   'settings.agent.protection.rule.wiki-check':
     'Wiki writes are checked for frontmatter and a log.md entry.',
   'settings.agent.protection.extra': 'Rules you added',

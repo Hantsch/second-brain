@@ -9,8 +9,8 @@ import type { AgentSetupState } from '@shared/types';
 const SHIPPED: Record<string, number> = {
   'CLAUDE.md': 2,
   '.claude/settings.json': 3,
-  '.claude/hooks/gaston-shell-guard.ps1': 1,
-  '.claude/hooks/gaston-wiki-check.ps1': 1,
+  '.claude/hooks/gaston-shell-guard.ps1': 2,
+  '.claude/hooks/gaston-wiki-check.ps1': 2,
   '.claude/hooks/gaston-run-report.ps1': 1,
   [`.claude/skills/${AGENT_SKILLS.jobs}/SKILL.md`]: 6,
   [`.claude/skills/${AGENT_SKILLS.curate}/SKILL.md`]: 3,
@@ -32,5 +32,5 @@ export const agentSetupNotInstalled: AgentSetupState = {
     leave: [],
     dirs: Object.values(AGENT_DIRS),
   },
-  help: { status: 'missing', installedVersion: null, shippedVersion: 6 },
+  help: { status: 'missing', installedVersion: null, shippedVersion: 7 },
 };

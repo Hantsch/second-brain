@@ -161,7 +161,7 @@ export const SETTINGS_TEMPLATE: SetupTemplate = {
 export const HOOK_SHELL_GUARD_TEMPLATE: SetupTemplate = {
   id: 'hook-gaston-shell-guard',
   path: SHELL_GUARD_PATH,
-  version: 1,
+  version: 2,
   format: 'script',
   body: SHELL_GUARD_BODY,
 };
@@ -169,7 +169,7 @@ export const HOOK_SHELL_GUARD_TEMPLATE: SetupTemplate = {
 export const HOOK_WIKI_CHECK_TEMPLATE: SetupTemplate = {
   id: 'hook-gaston-wiki-check',
   path: WIKI_CHECK_PATH,
-  version: 1,
+  version: 2,
   format: 'script',
   body: WIKI_CHECK_BODY,
 };

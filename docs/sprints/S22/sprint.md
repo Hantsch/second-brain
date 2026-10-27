@@ -15,7 +15,7 @@ criterion proven by a test and a changelog entry, and the S19 update/release gap
 
 ## Stories (in build order)
 
-- [ ] 093 — The agent's guard holds under an adversarial pass
+- [x] 093 — The agent's guard holds under an adversarial pass
 - [ ] 094 — The agent setup apply never loses a result and never downgrades
 - [ ] 095 — A task can be routed to the agent instead of a model
 - [ ] 080 — Update and release follow-ups from S19

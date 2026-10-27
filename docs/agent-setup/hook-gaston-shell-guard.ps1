@@ -16,6 +16,7 @@ try {
   $ReasonSetup = 'Blocked by Gaston: .claude/ and CLAUDE.md are read-only for the agent; this command may change them.'
   $ReasonRoot = 'Blocked by Gaston: this command may change raw/ or the agent setup; run it on a folder such as modules/.'
   $ReasonWrite = 'Write outside the wiki layer: use /gaston-propose.'
+  $ReasonHelp = 'Blocked by Gaston: modules/gaston-help/ is Gaston''s help module and read-only for the agent.'
   $AgentWritable = @('.secondbrain/agent/results', '.secondbrain/agent/proposals', '.secondbrain/agent/runs')
   $NamesJournal = @('journal')
   $InternalSecret = @('.secondbrain/index', '.secondbrain/chats')
@@ -540,6 +541,8 @@ try {
   function Check-Shell([string]$cmd) {
     if ($cmd -match '(?s)(?<![\w.-])(powershell|pwsh)(\.exe)?(?![\w.-]).*?\s[-/](e|ec|en\w*)(?![\w-])') { Block $ReasonDynamic }
     if ($cmd -match 'frombase64string|scriptblock\]::create|newscriptblock|invokescript') { Block $ReasonDynamic }
+    # A [char[]] cast builds a word from codes or splits one into letters the token scan cannot read.
+    if ($cmd -match '\[\s*(system\.)?char\s*\[\s*\]\s*\]') { Block $ReasonDynamic }
     if ($cmd -match '(?s)(?<![\w.-])(eval|iex|invoke-expression)(?![\w.-])(.*)$') {
       $after = $matches[2]
       if ($after.Trim() -eq '' -or $after -match '^\s*[|;&)]' -or $after.Contains('$') -or $after.Contains('(') -or $after.Contains($BT)) { Block $ReasonDynamic }
@@ -618,13 +621,13 @@ try {
     }
 
     # Any word naming a protected folder blocks, literally or as a path or glob that resolves
-    # into it. A word naming raw/, .claude/, CLAUDE.md, or the vault root or above only arms
-    # the read-only check at the end.
+    # into it. A word naming raw/, the help module, .claude/, CLAUDE.md, or the vault root or
+    # above only arms the read-only check at the end.
     $trigger = $null
     foreach ($tok in $tokens) {
       # Speed for long heredocs: from a cwd inside the vault, a relative word without a
       # protected name, glob, 8.3 tilde, '..', variable, drive or escape stays inside the cwd.
-      if ($candsInside -and (Clean $tok) -notmatch 'journal|secondbrain|raw|claude|~|[*?\[]|\.\.|[:%$\\]|^[/.]|,[/.]') { continue }
+      if ($candsInside -and (Clean $tok) -notmatch 'journal|secondbrain|raw|claude|gaston-help|~|[*?\[]|\.\.|[:%$\\]|^[/.]|,[/.]') { continue }
       foreach ($v in (Variants $tok $true)) {
         if (SecretLiteral $v) { Block $ReasonJournal }
         $lit = LiteralHit $v $NamesProtected
@@ -636,6 +639,7 @@ try {
           if (Hits-Secret $segs $true) { Block $ReasonJournal }
           if ($null -ne $trigger) { continue }
           if (Reaches $segs $TRaw $true) { $trigger = 'raw' }
+          elseif (Reaches $segs $THelp $true) { $trigger = 'help' }
           elseif ((Reaches $segs $TClaude $true) -or (Reaches $segs $TClaudeMd $true)) { $trigger = 'setup' }
           elseif (AtOrAbove $segs $VRoot $true) { $trigger = 'root' }
         }
@@ -682,13 +686,14 @@ try {
       foreach ($c in $Cands) { if ($null -eq $trigger -and (AtOrAbove (Get-Segs '.' $c) $VRoot $false)) { $trigger = 'root' } }
     }
 
-    # Near raw/, the setup or the root, only read-only verbs and no output redirect.
+    # Near raw/, the help module, the setup or the root, only read-only verbs and no output redirect.
     if ($null -eq $trigger) { return }
     $methods = ($cmd -match '\.[a-z_]\w*\s*\(|::')
     $allReadOnly = -not (Has-Redirect $cmd)
     foreach ($seg in $parsed) { if (-not (Seg-ReadOnly $seg $methods)) { $allReadOnly = $false } }
     if ($allReadOnly) { return }
     if ($trigger -eq 'raw') { Block $ReasonRaw }
+    if ($trigger -eq 'help') { Block $ReasonHelp }
     if ($trigger -eq 'setup') { Block $ReasonSetup }
     Block $ReasonRoot
   }
@@ -706,14 +711,17 @@ try {
     foreach ($v in (Variants $text $false)) { if (SecretLiteral $v) { Block $ReasonJournal } }
   }
 
-  # Inside the vault the agent writes only the wiki layer (not a module overview) and its
-  # hand-over folders. Outside the vault Claude Code's own working-directory rules apply.
+  # Inside the vault the agent writes only the wiki layer (not a module overview, nothing in the
+  # help module Gaston owns) and its hand-over folders. Outside the vault Claude Code's own
+  # working-directory rules apply.
   function Check-Write([string]$path) {
     Check-JournalPath $path
     foreach ($v in (Variants $path $false)) {
       $segs = Get-Segs $v $WorkDir
       if (-not (Reaches $segs $VRoot $false)) { continue }
       if ($segs.Count -le $VRoot.Count) { Block $ReasonWrite }
+      # Segment-wise, so an 8.3 short name or a trailing dot cannot pass for another module.
+      if (Reaches $segs $THelp $false) { Block $ReasonHelp }
       $rel = [string]::Join('/', $segs, $VRoot.Count, $segs.Count - $VRoot.Count)
       if ($rel -match '^modules/[^/]+/wiki/.' -and $rel -notmatch '^modules/[^/]+/wiki/overview\.md$') { continue }
       $handOver = $false
@@ -737,6 +745,7 @@ try {
   $VRoot = Get-Segs $VRootStr $VRootStr
   $TJournal = Get-Segs ($VRootStr + '/journal') $VRootStr
   $TRaw = Get-Segs ($VRootStr + '/raw') $VRootStr
+  $THelp = Get-Segs ($VRootStr + '/modules/gaston-help') $VRootStr
   $TClaude = Get-Segs ($VRootStr + '/.claude') $VRootStr
   $TClaudeMd = Get-Segs ($VRootStr + '/claude.md') $VRootStr
   $TSecret = New-Object 'System.Collections.Generic.List[object]'

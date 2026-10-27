@@ -101,14 +101,20 @@ What the shell guard blocks:
 - Git commands that print file content or history (\`diff\`, \`show\`, \`blame\`, \`log -p\`, ...)
   are blocked unless a path after \`--\` scopes them away from the vault root, because git reads
   the whole repository whatever the working directory is.
+- \`[char[]]\` and \`[System.Char[]]\` in a command, because they build a path from character
+  codes. Legitimate uses such as \`Split([char[]]',')\` are blocked too.
+- Every write under \`modules/gaston-help/\`, from the file tools and from the shell. Reads
+  still pass; other modules' wiki stays writable.
 - The file tools too: reading or searching the protected folders, and writing a file in the
   vault outside the wiki layer and the hand-over folders.
 
 What it does not catch:
 
 - Indirection gets past the guard: variables, command substitution, and scripts that open
-  files themselves. Building a path with \`[char[]]\` is one example. This is a documented
-  limit.
+  files themselves. This is a documented limit.
+- \`disableAllHooks\` is honoured only in the vault's \`.claude/settings.json\` and
+  \`settings.local.json\`, where the panel shows the rules as Off. One set in user-level or
+  managed settings outside the vault is not seen.
 - Shell writes are only guarded for \`raw/\`, \`.claude/\` and \`CLAUDE.md\`. A shell write to
   \`projects/\`, \`areas/\`, \`inbox/\` or \`.secondbrain/\` (apart from \`index/\` and \`chats/\`,
   which the guard blocks for any command that names them) is not checked.

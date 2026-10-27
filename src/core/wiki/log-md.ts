@@ -19,6 +19,7 @@
 import type { DocLanguage } from '@shared/types';
 import { isoDay, wikiLogPath } from '@core/vault/paths';
 import type { DateLike } from '@core/vault/paths';
+import { LOG_HEADING_SOURCE } from './log-heading';
 import { phrases } from './text';
 import { type TextStore, writeTextWithRetry } from './write-retry';
 
@@ -56,7 +57,8 @@ export interface ParsedLogEntry {
   lines: string[];
 }
 
-const HEADING = /^##\s*\[(\d{4}-\d{2}-\d{2})\]\s*(ingest|query|lint)\s*(?:\|\s*(.*))?$/;
+export { LOG_HEADING_SOURCE };
+const HEADING = new RegExp(LOG_HEADING_SOURCE);
 const FIELD = /^-\s*([a-z][a-z ]*):\s*(.*)$/i;
 
 function oneLine(value: string): string {

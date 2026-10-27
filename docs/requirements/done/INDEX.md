@@ -292,3 +292,4 @@ second roadmap.
 - 090 — I hand a waiting source to the agent · S21 · A waiting source is handed to the agent per click as one Markdown job, its result is validated and booked like a digestion, and Tasks and Sources show and withdraw it.
 - 091 — I hand a module or a gardener run to the agent · S21 · A module (not the help module) or an unaudited gardener run is handed to the agent as a job; curate shows counts from the run report, an agent audit is validated by the shared check and booked into gardener.json only when valid.
 - 092 — I hand a module's condensation to the agent · S21 · A module's condensation can be handed to the agent from the module view; a valid result becomes the in-app diff proposal, confirmed as in 081.
+- 093 — The agent's guard holds under an adversarial pass · S22 · guard blocks [char[]] and help-module writes, disableAllHooks shows Off, wiki check shares parseLog's heading pattern

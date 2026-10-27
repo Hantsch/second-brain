@@ -107,7 +107,8 @@ export type AgentProtectionRuleId =
 
 export interface AgentProtectionRule {
   id: AgentProtectionRuleId;
-  status: 'installed' | 'missing';
+  /** `off`: the hooks are registered but `disableAllHooks` switches every hook off. */
+  status: 'installed' | 'missing' | 'off';
   /** The deny entries or hook registrations the settings file lacks. */
   missing: string[];
 }

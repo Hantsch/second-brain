@@ -9,13 +9,14 @@ import { expect, test } from './fixtures/app';
 test.use({ specId: 'agent-protection' });
 
 const RULES = {
-  journal: "journal/ and its derived index cannot be read or changed by Claude's file tools.",
+  journal:
+    "journal/, the derived index and the chat sessions cannot be read by Claude's file tools, and journal/ cannot be changed.",
   raw: 'raw/ is read-only.',
   setup: 'CLAUDE.md and .claude/ are read-only.',
   overview: 'wiki/overview.md changes only through a proposal.',
   internal: '.secondbrain/ is read-only except results, proposals and runs.',
   guard:
-    'A check before each tool call blocks shell access to journal/, shell writes to raw/, and writes outside the wiki layer.',
+    'A check before each tool call blocks shell access to journal/, shell writes to raw/, writes outside the wiki layer, and any write to the help module.',
   wiki: 'Wiki writes are checked for frontmatter and a log.md entry.',
 };
 const REMOVED = 'Read(/journal/**)';
@@ -70,5 +71,22 @@ test('the protection section reads the rules back from the vault', async ({ app,
       if (name === 'journal') continue;
       await expect(rule(page, sentence).getByText('Installed', { exact: true })).toBeVisible();
     }
+  });
+
+  await test.step('hooks switched off by disableAllHooks show as off', async () => {
+    const file = join(vaultPath, '.claude', 'settings.json');
+    const settings = JSON.parse(readFileSync(file, 'utf8')) as Record<string, unknown>;
+    writeFileSync(file, `${JSON.stringify({ ...settings, disableAllHooks: true }, null, 2)}\n`);
+
+    await openAgentTab(page);
+    for (const name of ['guard', 'wiki'] as const) {
+      const row = rule(page, RULES[name]);
+      await expect(row.getByText('Off', { exact: true })).toBeVisible();
+      await expect(row.getByText('disableAllHooks', { exact: true })).toBeVisible();
+    }
+    for (const name of ['raw', 'setup', 'overview', 'internal'] as const) {
+      await expect(rule(page, RULES[name]).getByText('Installed', { exact: true })).toBeVisible();
+    }
+    await expect(rule(page, RULES.journal).getByText('Missing', { exact: true })).toBeVisible();
   });
 });

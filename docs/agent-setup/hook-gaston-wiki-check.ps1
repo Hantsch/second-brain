@@ -23,7 +23,7 @@ try {
     if (-not [IO.File]::Exists($log)) { return 0 }
     $n = 0
     foreach ($line in [IO.File]::ReadAllLines($log, $Utf8)) {
-      if ($line -match '^##\s*\[\d{4}-\d{2}-\d{2}\]') { $n++ }
+      if ($line.TrimEnd() -cmatch '^##\s*\[(\d{4}-\d{2}-\d{2})\]\s*(ingest|query|lint)\s*(?:\|\s*(.*))?$') { $n++ }
     }
     return $n
   }

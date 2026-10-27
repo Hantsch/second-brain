@@ -42,6 +42,7 @@
     "src/core/condense/paths.ts",
     "src/core/vault/paths.ts",
     "src/core/vault/slug.ts",
-    "src/core/vault/types.ts"
+    "src/core/vault/types.ts",
+    "src/core/wiki/log-heading.ts"
   ]
 }

@@ -1,7 +1,14 @@
+import { LOG_HEADING_SOURCE } from '@core/wiki/log-heading';
+
 /* The post-write check Gaston installs as .claude/hooks/gaston-wiki-check.ps1. Windows
  * PowerShell 5.1 reads a BOM-less script as ANSI, so the body stays pure ASCII. It is a
  * String.raw literal: the PowerShell holds no backtick and no dollar-brace. It reports and never
  * guards: any internal error exits 0 without output. */
+
+// The heading goes into a single-quoted PowerShell string; a quote would end it early.
+if (LOG_HEADING_SOURCE.includes("'")) {
+  throw new Error('LOG_HEADING_SOURCE must not contain a single quote');
+}
 
 export const WIKI_CHECK_BODY = String.raw`# Gaston wiki check for Claude Code (Windows PowerShell 5.1).
 # PostToolUse: a wiki page under modules/<slug>/wiki/ must carry the schema's frontmatter.
@@ -28,7 +35,7 @@ try {
     if (-not [IO.File]::Exists($log)) { return 0 }
     $n = 0
     foreach ($line in [IO.File]::ReadAllLines($log, $Utf8)) {
-      if ($line -match '^##\s*\[\d{4}-\d{2}-\d{2}\]') { $n++ }
+      if ($line.TrimEnd() -cmatch '${LOG_HEADING_SOURCE}') { $n++ }
     }
     return $n
   }

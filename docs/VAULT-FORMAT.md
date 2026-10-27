@@ -903,6 +903,12 @@ Limits. The protection narrows what the agent does by accident; it is not a sand
 
 - Indirection gets past the guard: variables, command substitution, and scripts that
   open files themselves.
+- The guard blocks `[char[]]` and `[System.Char[]]` as a dynamic command, legitimate uses such
+  as `Split([char[]]',')` included, and every write (file tools and shell) under
+  `modules/gaston-help/`. Reads still pass; other modules' wiki stays writable.
+- A `disableAllHooks` is only seen in the vault's `.claude/settings.json` and
+  `.claude/settings.local.json` (the rules then show as Off). One set in user-level or managed
+  settings outside the vault is not seen.
 - Shell writes are only guarded for `raw/`, `.claude/` and `CLAUDE.md`. A shell write to
   `projects/`, `areas/`, `inbox/` or `.secondbrain/` (apart from `index/` and `chats/`, which
   the guard blocks for any command that names them) is not checked.

@@ -11,6 +11,7 @@ import { renderSetupFile } from '@core/agent/setup-marker';
 import { SETUP_TEMPLATES } from '@core/agent/setup-templates';
 import { SETTINGS_TEMPLATE } from '@core/agent/templates/protection';
 import { serialize } from '@core/vault/frontmatter';
+import { parseLog } from '@core/wiki/log-md';
 import { pageFrontmatter } from '@core/wiki/pages';
 import { registeredHook, runHook, type HookCommand } from '../../helpers/hook';
 import { createTempVault, type TempVault } from '../../helpers/vault';
@@ -187,6 +188,41 @@ describe.runIf(process.platform === 'win32')('post-write wiki check', { timeout:
       expect({ code: stop.code, stderr: stop.stderr }).toEqual({ code: 0, stderr: '' });
     },
     TIMEOUT,
+  );
+
+  it(
+    'the log check counts the headings parseLog reads',
+    async () => {
+      const cases: [line: string, counted: boolean][] = [
+        ['## [2026-10-22] ingest | a', true],
+        ['## [2026-10-22] lint', true],
+        ['##[2026-10-22]query', true],
+        ['## [2026-10-22] ingest | a   ', true],
+        ['## [2026-10-22] note', false],
+        ['## [2026-10-22]', false],
+        ['## [2026-10-22] INGEST', false],
+        ['### [2026-10-22] ingest', false],
+        ['## [26-10-22] ingest', false],
+      ];
+      for (const [line, counted] of cases) {
+        const s = await session();
+        await s.write(s.path('concepts/habits.md'), validPage(s.module));
+        await vault.write(
+          s.path('log.md'),
+          `# Log
+
+${line}
+`,
+        );
+        const stop = await s.stop();
+        const parsed =
+          parseLog(`${line}
+`).length > 0;
+        expect({ line, parsed }, line).toEqual({ line, parsed: counted });
+        expect({ line, code: stop.code }, line).toEqual({ line, code: parsed ? 0 : 2 });
+      }
+    },
+    TIMEOUT * 3,
   );
 
   it(
