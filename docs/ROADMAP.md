@@ -1,13 +1,13 @@
 # Roadmap
 
 **The** one source of status and planning: where we stand, what comes next, what is not planned
-at all yet. As of: 2026-10-22.
+at all yet. As of: 2026-10-27.
 
-Where we stand: S20 finished (`done 2026-10-22`; 081–087, regression gate green). M20 stays open: S21
-(088–092) is `planned` and is next (`/sprint S21`). Before any release, story 093 has to run the
-shell guard's adversarial pass, which S20's review never got to. Waiting on the user: the
-`sprint/S17`, `S18`, `S19` and `S20` → `dev` merges, and the first real release (unverified against
-github.com).
+Where we stand: S21 finished (`done 2026-10-27`; 088–092, built on `dev`, no sprint branch). M20 is
+complete. Before any release, story 093 has to run the shell guard's adversarial pass, which S20's
+review never got to. Two e2e flows have been red on `dev` since before S21 (`tasks-screen.spec.ts`,
+`update-installed.spec.ts`). Waiting on the user: the `sprint/S17`–`S20` → `dev` merges and the first
+real release (unverified against github.com).
 
 Rules (so this document does not drift):
 
@@ -1101,7 +1101,7 @@ Sprints:
 - [sprints/S19/sprint.md](sprints/S19/sprint.md) — Gaston ships and updates itself (076, 077,
   078, 079), `done` ([review](sprints/S19/review.md))
 
-### M20 — An agent curates the vault — in progress
+### M20 — An agent curates the vault — done 2026-10-27
 
 Concept: [concepts/vault-agent.md](concepts/vault-agent.md), plus the module level of
 [concepts/condensed-layer.md](concepts/condensed-layer.md). Cut 2026-10-22 into as few sprints as
@@ -1112,8 +1112,8 @@ Sprints:
 
 - [sprints/S20/sprint.md](sprints/S20/sprint.md) — a module condenses itself, and Claude Code works
   safely in the vault (081–087), `done 2026-10-22` ([review](sprints/S20/review.md))
-- [sprints/S21/sprint.md](sprints/S21/sprint.md) — work goes to the agent and comes back
-  (088–092), `planned`
+- [sprints/S21/sprint.md](sprints/done/S21/sprint.md) — work goes to the agent and comes back
+  (088–092), `done 2026-10-27` ([review](sprints/done/S21/review.md))
 
 ---
 
@@ -1130,6 +1130,15 @@ Sprints:
 ---
 
 ## Follow-ups worth doing
+
+- Update the stale `tasks-screen.spec.ts` rail-order assertion (Agent sits between Tasks and
+  Maintenance) and find why `update-installed.spec.ts` "a streaming reply refuses the install" times
+  out — both red since before S21 — [S21 review](sprints/done/S21/review.md)
+- Pull the repeated `isRecord` / non-empty-string helpers in `src/core/agent/` into one module and
+  split `condense-source-job.ts` and `CondensedUnitPanel.tsx` under 300 lines —
+  [S21 review](sprints/done/S21/review.md)
+- Give agent job ids sub-second resolution, and show an agent `skipped` result's reason in the
+  condensed panel — [S21 review](sprints/done/S21/review.md)
 
 - Split `src/main/ipc/condense.ts` (312 lines), extract the third copy of `reasonOf` (condense `run.ts`,
   `run-project.ts`, `run-module.ts`) and drop the unused `moduleSlugFromOverviewPath` —

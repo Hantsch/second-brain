@@ -1,6 +1,6 @@
 ---
 sprint: S21
-status: in-progress # planned | in-progress | done
+status: done # planned | in-progress | done
 branch: dev # user decision: no sprint branch, commits go straight to dev
 milestone: M20 — An agent curates the vault
 ---
@@ -40,3 +40,16 @@ run.
 ## Regression gate
 
 <!-- Filled by `/sprint` phase 2b: the commands run, minutes taken, result, commit, and a verdict per failure. -->
+
+- Ran on `65fd02b` (HEAD after story 092), 2026-10-27, **red, then fixed**:
+  - `npm run build` — green, 0.3 min
+  - `npm test` — red, 2.8 min (12 files / 15 tests failed, 5050 passed)
+  - `npm run test:e2e` — red, 5.7 min (115 passed, 2 failed, 3 not run)
+  - `e2e-all` is `none` (the e2e command is the full suite), so no long-suite launch.
+- Verdicts (attribution agent, failing tests only):
+  - `tests/scripts/e2e-wiring.test.ts` "agent-proposals.spec.ts: every test( names its steps" — story 088, `42ebacc`; fixed in `67cc764` (two e2e tests wrapped in `test.step`; wiring test 65/65, spec 3/3).
+  - `tests/e2e/tasks-screen.spec.ts:14` "rail opens tasks directly above maintenance" — pre-existing: commit `1459397` put the Agent entry between Tasks and Maintenance and the spec from story 072 is stale. Red at the merge-base too. Not fixed here.
+  - `tests/e2e/update-installed.spec.ts:191` "a streaming reply refuses the install" — pre-existing, red at the merge-base `c90c483`, spec byte-identical. Cause not investigated. Not fixed here.
+  - Vitest timeouts (perf, IPC tests for areas/capture/chat/gardener/ingest/journal/projects, `condense-task`, renderer `journal` and `settings`) — flaky under full-suite load; 482/483 green on re-run, the one red being the wiring test above.
+- Quarantine: `e2e-quarantine` is `none`, so nothing was written; the two pre-existing e2e reds are follow-ups in the roadmap.
+- Note: removing the attribution agent's merge-base worktree emptied the main checkout's `node_modules` (junction followed); restored with `npm ci`. No source or test file was affected.
