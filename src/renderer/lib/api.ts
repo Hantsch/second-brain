@@ -296,6 +296,8 @@ export const api = {
     handOverSource: (rawPath: string, module: string | null) =>
       call('agent:handOverSource', { rawPath, module }),
     handOverModule: (module: string) => call('agent:handOverModule', { module }),
+    handOverCondense: (slug: string) =>
+      call('agent:handOverCondense', { kind: 'condense-module', slug }),
     handOverGardenerRun: () => call('agent:handOverGardenerRun'),
     withdrawJob: (id: string) => call('agent:withdrawJob', { id }),
   },

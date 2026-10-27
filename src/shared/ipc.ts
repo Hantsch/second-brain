@@ -1320,6 +1320,11 @@ export interface IpcRoutes {
   };
   /** Files a curate-module job for a knowledge module (slug); the help module is refused. */
   'agent:handOverModule': { req: { module: string }; res: AgentHandOverResult };
+  /** Hands a module's overview condensation to the agent and starts its task; handing over twice answers `exists`. */
+  'agent:handOverCondense': {
+    req: { kind: 'condense-module'; slug: string };
+    res: AgentHandOverResult;
+  };
   /** Files a gardener-audit job for the stored maintenance run; refused when it has no audit to ask for. */
   'agent:handOverGardenerRun': { req: void; res: AgentHandOverResult };
   /** Takes an open job back; a page the agent already wrote stays, a late result books nothing. */
@@ -1561,6 +1566,7 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'agent:jobs',
   'agent:handOverSource',
   'agent:handOverModule',
+  'agent:handOverCondense',
   'agent:handOverGardenerRun',
   'agent:withdrawJob',
   'settings:get',

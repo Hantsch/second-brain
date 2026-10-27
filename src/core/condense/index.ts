@@ -127,6 +127,11 @@ export {
   type CondenseModuleResult,
 } from './run-module';
 export {
+  proposalFromModuleReply,
+  type ModuleReplyInput,
+  type ModuleReplyResult,
+} from './module-reply';
+export {
   writeCondensedArea,
   writeCondensedArtifact,
   writeCondensedProject,

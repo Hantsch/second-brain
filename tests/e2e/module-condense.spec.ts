@@ -140,7 +140,7 @@ test('a module condensation is proposed as a diff, rejected with a reason, refus
     expect(await added.count()).toBeGreaterThan(0);
     // The seeded overview's recorded sources are replaced by the module's pages.
     await expect(
-      removed.filter({ hasText: 's-2026-10-13-ai-second-brain-rotting' }),
+      removed.filter({ hasText: /s-\d{4}-\d{2}-\d{2}-ai-second-brain-rotting/ }),
     ).not.toHaveCount(0);
     await expect(added.filter({ hasText: CITED.decided[0] as string })).not.toHaveCount(0);
     expect(read()).toBe(original);

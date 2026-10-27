@@ -115,6 +115,33 @@ and its fields are:
 3. Take paths only from the vault and ids only from the job. One path that is not in the vault,
    or one id that is not in the job, makes Gaston fail the whole result and book nothing.
 
+### `condense-module`
+
+A module whose overview waits to be condensed from its wiki pages. The job is Markdown; its
+`subject` is the module slug, and its fields are:
+
+- `module`: the module slug.
+- `inputs`: the wiki pages of the module at hand-over, relative to the vault root.
+- `baseHash`: the hash of `modules/<slug>/wiki/overview.md` when the job was written, or
+  null when there was none. Do not change it.
+
+1. Read every page in `inputs`, in full, and `modules/<slug>/wiki/overview.md` when it exists.
+   Its directives section is an instruction to follow when you condense. It is never written,
+   and neither is `overview.md` itself: Gaston turns your result into a proposal the person
+   confirms. Change no file other than the result.
+2. Write the result with `status: done` and, after the frontmatter, one fenced `json` block:
+   `{ "decided": …, "open": …, "contradictions": … }`. Each section is
+   `{ "text": string, "sources": string[] }`.
+   - `decided`: what the pages settle.
+   - `open`: what is still unanswered.
+   - `contradictions`: where pages disagree. Name each contradiction and both pages; never
+     resolve it.
+3. Compress, do not append: the sections state the module as it stands now and replace the old
+   overview text, in the language of the pages.
+4. Every section with text cites only paths from `inputs` in its `sources`. One section that
+   cites another path makes Gaston fail the whole result and propose nothing.
+5. When it cannot be done, write the result with `status: failed` and a `reason`.
+
 ## Result format
 
 A `condense-source` job gets a Markdown result: frontmatter, nothing required after it.
@@ -166,6 +193,32 @@ advice:
   - Settle the launch date before the next review.
 ---
 ```
+
+A `condense-module` job gets a Markdown result whose body is the json block:
+
+````markdown
+---
+job: condense-module-1a2b3c4d5e6f7a8b
+status: done
+---
+
+```json
+{
+  "decided": {
+    "text": "The relaunch is set for 14 November.",
+    "sources": ["modules/website-relaunch/wiki/launch-plan.md"]
+  },
+  "open": { "text": "", "sources": [] },
+  "contradictions": {
+    "text": "The plan says 14 November, the brief says 21 November.",
+    "sources": [
+      "modules/website-relaunch/wiki/launch-plan.md",
+      "modules/website-relaunch/wiki/sources/launch-brief.md"
+    ]
+  }
+}
+```
+````
 
 A job kind this skill does not describe gets `skipped` with the reason "unknown job kind".
 Do not guess what such a job wants.

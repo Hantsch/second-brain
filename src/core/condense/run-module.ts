@@ -32,24 +32,16 @@ import {
 } from '@core/llm';
 import type { CondenseModuleSourceItem, LlmGateway } from '@core/llm';
 import type { IndexedDoc } from '@core/index/types';
-import { isoStamp } from '@core/ingest/raw';
-import { phrases } from '@core/wiki/text';
-import { sha256 } from '@core/vault/hash';
 import type { DateLike } from '@core/vault/paths';
-import { composeArtifact, emptyArtifact, MODULE_SECTIONS, parseArtifact } from './artifact';
-import type { CondensedModuleArtifact, CondensedModuleSectionKind } from './artifact';
-import { attributionProblems, readReplySections } from './attribution';
+import type { CondensedModuleSectionKind } from './artifact';
 import type { AttributionProblem } from './attribution';
 import { moduleInputs } from './inputs-module';
-import { preambleWithoutNotice, promptClampNotice } from './notice';
-import { moduleOverviewPath } from './paths';
-import { sourceHashesOf } from './sources';
+import { currentModuleArtifact, moduleTitleOf, proposalFromModuleReply } from './module-reply';
+
+export { MODULE_OVERVIEW_TYPE } from './module-reply';
 
 /** The one task kind this run needs. Named in the `no-model` result. */
 export const CONDENSE_MODULE_TASK: TaskKind = 'condense-module';
-
-/** The `type:` of the file this run writes: a module overview is a wiki page. */
-export const MODULE_OVERVIEW_TYPE = 'overview';
 
 export interface CondenseModuleDeps {
   /** The indexed docs — the same `readonly IndexedDoc[]` the selector takes. */
@@ -123,12 +115,6 @@ export type CondenseModuleResult =
   | CondenseModuleAttributionFailure
   | CondenseModuleFailed;
 
-/** The module's own title (`module.md`), else its slug. */
-function moduleTitleOf(docs: readonly IndexedDoc[], slug: string): string {
-  const file = docs.find((doc) => doc.path === `modules/${slug}/module.md`);
-  return file !== undefined && file.title.length > 0 ? file.title : slug;
-}
-
 /**
  * Condenses one module's pages into a proposed `modules/<slug>/wiki/overview.md`,
  * or says why it cannot. Writes nothing, ever.
@@ -155,12 +141,8 @@ export async function condenseModule(
     path: input.path,
     text: byPath.get(input.path)?.body ?? '',
   }));
-  const paths = inventory.map((input) => input.path);
 
-  const current: CondensedModuleArtifact =
-    deps.existing === undefined
-      ? emptyArtifact(MODULE_SECTIONS)
-      : parseArtifact(deps.existing, MODULE_SECTIONS);
+  const current = currentModuleArtifact(deps.existing);
   const moduleTitle = moduleTitleOf(deps.docs, slug);
 
   let reply: Record<string, unknown>;
@@ -178,58 +160,16 @@ export async function condenseModule(
     return { kind: 'failed', slug, reason: reasonOf(error) };
   }
 
-  const read = readReplySections(reply, MODULE_SECTIONS);
-  if ('missing' in read) {
-    return { kind: 'failed', slug, reason: `The reply has no usable "${read.missing}" section.` };
-  }
-
-  const problems = attributionProblems(read.sections, MODULE_SECTIONS, paths);
-  if (problems.length > 0) return { kind: 'attribution-failure', slug, problems };
-
-  const condensedAt = isoStamp(now);
-  const sourceHashes = sourceHashesOf(inventory);
-  const notice = promptClampNotice(promptItemsClampedChars(pages), docLanguage);
-  const base = carriedOver(current);
-  const kept = preambleWithoutNotice(base.preamble);
-  const artifact: CondensedModuleArtifact = {
-    ...base,
-    // An overview that already has a title keeps it: the human may have renamed it.
-    title:
-      current.title.length > 0
-        ? current.title
-        : `${moduleTitle} — ${phrases(docLanguage).synthesis}`,
-    condensedAt,
-    sources: paths,
-    sourceHashes,
-    sections: read.sections,
-    preamble: [notice, kept].filter((part) => part.length > 0).join('\n\n'),
-  };
-
-  return {
-    kind: 'proposal',
+  return proposalFromModuleReply({
+    reply,
+    inventory,
+    docs: deps.docs,
     slug,
-    path: moduleOverviewPath(slug),
-    content: composeArtifact(artifact, MODULE_SECTIONS, docLanguage, MODULE_OVERVIEW_TYPE),
-    condensedAt,
-    baseHash: deps.existing === undefined ? null : sha256(deps.existing),
-    sources: paths,
-    sourceHashes,
-  };
-}
-
-/**
- * What of the overview on disk a proposal carries forward. An overview without
- * `condensed_at` was never condensed: it is the legacy bullet-list page (or the
- * creation stub) this run replaces whole, so its preamble and foreign sections —
- * the old `## Seiten` list among them — are not hand-added text to keep. Its
- * unknown frontmatter keys and its directives belong to the human and survive.
- * Once `condensed_at` is set, `./artifact`'s lossless carry-through applies in
- * full. Module level only: area and project runs never take this step, so their
- * hand-added sections are kept unconditionally. (story 082)
- */
-function carriedOver(current: CondensedModuleArtifact): CondensedModuleArtifact {
-  if (current.condensedAt.length > 0) return current;
-  return { ...current, preamble: '', extraSections: [] };
+    existing: deps.existing,
+    docLanguage,
+    now,
+    clampedChars: promptItemsClampedChars(pages),
+  });
 }
 
 /** An error's message, without ever quoting vault content back (Guardrail 6). */

@@ -93,3 +93,21 @@
 - 2026-10-27 13:20 · 091 · verify 2 · started
 - 2026-10-27 13:31 · 091 · verify 2 · done
 - 2026-10-27 13:31 · 091 · story · done
+- 13:32:12 · 092 · build · started
+- 2026-10-27 13:32 · 092 · D1 core condense-module result · started
+- 2026-10-27 13:36 · 092 · D1 core condense-module result · done
+- 2026-10-27 13:36 · 092 · D2 main hand-over + pickup · started
+- 2026-10-27 13:37 · 092 · D4 jobs skill condense-module · started
+- 2026-10-27 13:42 · 092 · D2 main hand-over + pickup · done
+- 2026-10-27 13:42 · 092 · D4 jobs skill condense-module · done
+- 2026-10-27 13:43 · 092 · D3 renderer, e2e, changelog · started
+- 2026-10-27 13:51 · 092 · D3 renderer, e2e, changelog · done
+- 2026-10-27 13:52 · 092 · verify · started
+- 2026-10-27 13:58 · 092 · verify · done
+- 2026-10-27 13:58 · 092 · review 1 · started
+- 2026-10-27 14:06 · 092 · review 1 · done
+- 2026-10-27 14:06 · 092 · review-fix 1 · started
+- 2026-10-27 14:15 · 092 · review-fix 1 · done
+- 2026-10-27 14:15 · 092 · verify 2 · started
+- 2026-10-27 14:21 · 092 · verify 2 · done
+- 2026-10-27 14:21 · 092 · story · done

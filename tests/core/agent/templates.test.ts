@@ -157,6 +157,32 @@ describe('setup templates', () => {
     expect(body).toContain('at most three short sentences');
   });
 
+  it('the jobs skill describes the condense-module job and never writes the directives section', () => {
+    const template = SETUP_TEMPLATES.find((candidate) => candidate.id === 'skill-gaston-jobs');
+    // Line wrapping in the template must not decide whether a sentence counts.
+    const body = (template?.body ?? '').replace(/\s+/g, ' ');
+    for (const needle of [
+      '### `condense-module`',
+      '`baseHash`',
+      '"decided"',
+      '"open"',
+      '"contradictions"',
+      '"text": string, "sources": string[]',
+      'job: condense-module-',
+      'Compress, do not append',
+      'never resolve it',
+      '`status: failed`',
+    ]) {
+      expect(body, needle).toContain(needle);
+    }
+    expect(body).toContain(
+      'Its directives section is an instruction to follow when you condense. It is never written,',
+    );
+    expect(body).toContain('and neither is `overview.md` itself');
+    // An install from before this kind existed has to show as outdated.
+    expect(template?.version).toBeGreaterThan(5);
+  });
+
   it('the curator skill lists its four-point checklist', () => {
     const template = SETUP_TEMPLATES.find((candidate) => candidate.id === 'skill-gaston-curate');
     const body = template?.body ?? '';

@@ -44,7 +44,6 @@ import { diffLines } from '@core/condense/diff';
 import type { IpcError } from '@shared/ipc';
 import type { CondenseUnit, TaskKind } from '@shared/types';
 import { Button } from '../../atoms/Button';
-import { Spinner } from '../../atoms/Spinner';
 import { CondenseDeleteDialog } from '../CondenseDeleteDialog';
 import { CondenseDiff } from '../CondenseDiff';
 import { CondenseRejectDialog } from '../CondenseRejectDialog';
@@ -52,6 +51,7 @@ import { EmptyState } from '../EmptyState';
 import { ErrorState } from '../ErrorState';
 import { LlmMissing } from '../LlmMissing';
 import { renderMarkdown } from '../markdown-render';
+import { CondensedUnitActions } from './CondensedUnitActions';
 import { Skeleton } from '../Skeleton';
 import { useLanguage, useT } from '../../i18n';
 import { IpcCallError } from '../../lib/api';
@@ -63,7 +63,7 @@ import {
   useCondenseRun,
   useCondensedArea,
 } from '../../lib/queries/condense';
-import { taskFailure, useTaskForSubject } from '../../lib/hooks/use-task-for-subject';
+import { isWithAgent, taskFailure, useTaskForSubject } from '../../lib/hooks/use-task-for-subject';
 import { qk } from '../../lib/queries/keys';
 import { useTaskRouted } from '../../lib/queries/llm';
 import { pushToast } from '../../lib/toast';
@@ -80,6 +80,10 @@ export interface CondensedUnitPanelProps {
   keyPrefix: string;
   /** Whether the artifact offers a delete; the module level has none (`condense:delete` refuses it). */
   canDelete?: boolean;
+  /** A hand-over to the agent, shown next to Condense and, with no model routed, under the notice. */
+  agentAction?: ReactNode;
+  /** An agent job for this unit is open — true even when this session holds no task for it. */
+  agentOpen?: boolean;
 }
 
 /** A wikilink in a condensed page renders as its label, not a link — this
@@ -96,6 +100,8 @@ export function CondensedUnitPanel({
   task,
   keyPrefix,
   canDelete = true,
+  agentAction,
+  agentOpen = false,
 }: CondensedUnitPanelProps) {
   const t = useT();
   const language = useLanguage();
@@ -116,7 +122,8 @@ export function CondensedUnitPanel({
      `condense:run` enqueues with (`src/main/ipc/condense.ts`); the two must
      stay literally identical or nothing here ever finds its task. */
   const current = useTaskForSubject('condense', `${unit}:${slug}`);
-  const busy = current.status === 'running' || current.status === 'queued';
+  const withAgent = agentOpen || isWithAgent(current);
+  const busy = withAgent || current.status === 'running' || current.status === 'queued';
   const proposal =
     current.status === 'done' && current.result?.kind === 'condense'
       ? current.result.proposal
@@ -255,26 +262,6 @@ export function CondensedUnitPanel({
     </div>
   );
 
-  // ── State 1: no model routed ─────────────────────────────────────────────
-  if (modelRouted === false) {
-    return (
-      <div className="sb-condensed">
-        <LlmMissing task={task} tone="card" />
-        {artifact.isError ? (
-          <ErrorState error={artifact.error} variant="secondary" subject={title} scrollIntoView />
-        ) : artifact.data ? (
-          artifactBlock(artifact.data)
-        ) : null}
-      </div>
-    );
-  }
-
-  // Still working out whether a model is routed — a loading state, not "no
-  // model" (the `useTaskRouted` contract: `undefined` means "still unknown").
-  if (modelRouted === undefined) {
-    return <Skeleton lines={2} height={20} />;
-  }
-
   /* A run the queue itself failed. `ErrorState` speaks `IpcError`, and that is
      exactly what the task carries in pieces — `error` is the code
      `describeFailure` assigned, `message` the sentence it came with — so the
@@ -282,26 +269,9 @@ export function CondensedUnitPanel({
   const failure: IpcError | null =
     current.status === 'failed' ? taskFailure(current.task.error, current.reason) : null;
 
-  return (
-    <div className="sb-condensed">
-      {artifact.isPending ? (
-        <Skeleton lines={2} height={20} />
-      ) : artifact.isError ? (
-        // The main process refused to resolve this unit (e.g. a project's
-        // frontmatter disagrees with its folder) — an honest error, never
-        // the "not condensed yet" empty state, which would claim nothing was
-        // ever condensed when a real artifact may sit on disk unreadable.
-        <ErrorState error={artifact.error} variant="secondary" subject={title} scrollIntoView />
-      ) : artifact.data ? (
-        artifactBlock(artifact.data)
-      ) : (
-        <EmptyState icon="layers" title={t(key('empty.title'))} body={t(key('empty.body'))} />
-      )}
-
-      {run.isError ? (
-        <ErrorState error={run.error} variant="secondary" subject={title} scrollIntoView />
-      ) : null}
-
+  // A failure with its reason or a proposal to decide: shown with or without a model.
+  const outcome = (
+    <>
       {/* A run that got queued and then failed (AC8) — stated here, where it
           was started, not only in the task list. The reason stands as its own
           line because `ErrorState` keeps the technical text behind "Show
@@ -349,27 +319,66 @@ export function CondensedUnitPanel({
         }}
         onSubmit={rejectProposal}
       />
+    </>
+  );
 
-      <div className="sb-condensed-actions">
-        <Button icon="sparkles" loading={busy} disabled={busy} onClick={trigger}>
-          {artifact.data ? t(key('triggerAgain')) : t(key('trigger'))}
-        </Button>
-        {current.status === 'running' ? (
-          <span className="sb-condensed-running">
-            <Spinner size={14} />
-            {t(key('running'))}
-          </span>
+  const actions = (canTrigger: boolean): ReactNode => (
+    <CondensedUnitActions
+      keyPrefix={keyPrefix}
+      current={current}
+      withAgent={withAgent}
+      hasArtifact={Boolean(artifact.data)}
+      onTrigger={trigger}
+      agentAction={agentAction}
+      canTrigger={canTrigger}
+    />
+  );
+
+  // ── State 1: no model routed ─────────────────────────────────────────────
+  if (modelRouted === false) {
+    return (
+      <div className="sb-condensed">
+        <LlmMissing task={task} tone="card" />
+        {agentAction !== undefined ? actions(false) : null}
+        {artifact.isError ? (
+          <ErrorState error={artifact.error} variant="secondary" subject={title} scrollIntoView />
+        ) : artifact.data ? (
+          artifactBlock(artifact.data)
         ) : null}
-        {/* Waiting for the model lane, not running (AC6) — no spinner, because
-            nothing is turning yet. `queuePosition` is only null for a task
-            that is no longer queued (`WorkTask`), so there is nothing to say
-            in that case that the disabled trigger doesn't already say. */}
-        {current.status === 'queued' && current.queuePosition !== null ? (
-          <span className="sb-condensed-running">
-            {t(key('waiting'), { position: current.queuePosition })}
-          </span>
-        ) : null}
+        {outcome}
       </div>
+    );
+  }
+
+  // Still working out whether a model is routed — a loading state, not "no
+  // model" (the `useTaskRouted` contract: `undefined` means "still unknown").
+  if (modelRouted === undefined) {
+    return <Skeleton lines={2} height={20} />;
+  }
+
+  return (
+    <div className="sb-condensed">
+      {artifact.isPending ? (
+        <Skeleton lines={2} height={20} />
+      ) : artifact.isError ? (
+        // The main process refused to resolve this unit (e.g. a project's
+        // frontmatter disagrees with its folder) — an honest error, never
+        // the "not condensed yet" empty state, which would claim nothing was
+        // ever condensed when a real artifact may sit on disk unreadable.
+        <ErrorState error={artifact.error} variant="secondary" subject={title} scrollIntoView />
+      ) : artifact.data ? (
+        artifactBlock(artifact.data)
+      ) : (
+        <EmptyState icon="layers" title={t(key('empty.title'))} body={t(key('empty.body'))} />
+      )}
+
+      {run.isError ? (
+        <ErrorState error={run.error} variant="secondary" subject={title} scrollIntoView />
+      ) : null}
+
+      {outcome}
+
+      {actions(true)}
     </div>
   );
 }

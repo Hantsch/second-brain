@@ -1,7 +1,7 @@
 ---
 id: 092
 title: I hand a module's condensation to the agent
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-10-22
 ---
 
@@ -20,18 +20,18 @@ reject-with-reason as [[081]] (CND-37), not in Maintenance. Job format and valid
 
 ## Acceptance Criteria
 
-- [ ] **AC1** — The module view offers "Hand to agent" next to "Condense"; one click writes exactly
+- [x] **AC1** — The module view offers "Hand to agent" next to "Condense"; one click writes exactly
       one condense-module job.
-- [ ] **AC2** — "Hand to agent" is available when no model is configured for `condense-module`.
-- [ ] **AC3** — A valid result appears in the module view as the same diff an in-app run produces;
+- [x] **AC2** — "Hand to agent" is available when no model is configured for `condense-module`.
+- [x] **AC3** — A valid result appears in the module view as the same diff an in-app run produces;
       nothing is written before the user accepts.
-- [ ] **AC4** — Accepting and rejecting behave exactly as in [[081]]: hash guard, undo copy,
+- [x] **AC4** — Accepting and rejecting behave exactly as in [[081]]: hash guard, undo copy,
       reason appended to the directives section.
-- [ ] **AC5** — A result missing a section, a section's source line, or citing a path that is not a
+- [x] **AC5** — A result missing a section, a section's source line, or citing a path that is not a
       page of the module shows the job as failed with the reason, and no diff is offered.
-- [ ] **AC6** — If `overview.md` changed between handing over and the result, the job shows as
+- [x] **AC6** — If `overview.md` changed between handing over and the result, the job shows as
       failed with that reason.
-- [ ] **AC7** — The installed job-queue skill describes the condense-module kind, including the
+- [x] **AC7** — The installed job-queue skill describes the condense-module kind, including the
       directives section as an instruction it never writes to; the template test pins it.
 
 ## Open Questions
@@ -100,7 +100,7 @@ curate-module at the module (091).
 
 ## Deliverables
 
-- [ ] **D1 — An agent's condensation result becomes the in-app proposal (core).** Files:
+- [x] **D1 — An agent's condensation result becomes the in-app proposal (core).** Files:
       `src/core/condense/run-module.ts`, new `src/core/condense/module-reply.ts`,
       `src/core/condense/index.ts`, new `src/core/agent/job-condense-module.ts` (next to 090's
       per-kind job code in `src/core/agent/`). Tests: new
@@ -129,7 +129,7 @@ now, clampedChars })` = `run-module.ts` l.181-217 moved verbatim (missing sectio
     "a result after overview.md changed since the hand-over fails with that reason"; "a page added
     after the hand-over is not recorded as read".
 
-- [ ] **D2 — Main hands a module's condensation over and picks the result up.** Files: 090's agent
+- [x] **D2 — Main hands a module's condensation over and picks the result up.** Files: 090's agent
       job IPC file under `src/main/ipc/` and its shared request type (add `{ kind: 'condense-module',
 slug }`), 090's result-pickup dispatch in main, `src/main/ipc/condense.ts`,
       `src/main/ipc/condense-module-target.ts` (reuse `moduleTarget()`, no second slug check). Test:
@@ -155,7 +155,7 @@ proposal }, { ref })` and the task done with `hasResult`; failed → task failed
     byte-identical"; "rejecting an agent proposal appends the reason to the directives section and
     changes nothing else".
 
-- [ ] **D3 — "Hand to agent" in the module's condensed tab.** Renderer + changelog. Files:
+- [x] **D3 — "Hand to agent" in the module's condensed tab.** Renderer + changelog. Files:
       `src/renderer/screens/modules/ModuleCondensedTab.tsx`,
       `src/renderer/components/condensed/CondensedUnitPanel.tsx` (optional `agentAction?: ReactNode`,
       rendered in the actions row next to Condense **and** under `LlmMissing` in the no-model state;
@@ -178,7 +178,7 @@ proposal }, { ref })` and the task done with `hasResult`; failed → task failed
     diff": hand over, write a result citing `wiki/sources/x.md` of another module → failed reason
     names the path, no diff rows, `overview.md` unchanged, Condense enabled again.
 
-- [ ] **D4 — The jobs skill describes the condense-module kind.** Files:
+- [x] **D4 — The jobs skill describes the condense-module kind.** Files:
       `src/core/agent/templates/skills.ts` (`gaston-jobs` body: a `### condense-module` section under
       "Job kinds"; `version` +1), `docs/agent-setup/skill-gaston-jobs.md` (byte-identical mirror),
       `docs/VAULT-FORMAT.md` (the agent jobs section 090 adds: the kind and its fields),
@@ -234,3 +234,34 @@ Coverage gate: AC1 D2/D3 · AC2 D3 · AC3 D1/D2/D3 · AC4 D2/D3 (081's accept/re
 D1/D2/D3 · AC6 D1/D2 · AC7 D4 — every criterion has a deliverable and a test.
 
 ## Done
+
+A module's condensation can be handed to the agent from the module's condensed tab (also with no model
+configured). Gaston files a `condense-module` job (slug, page paths, overview hash), validates the agent's
+fenced `json` result with the in-app code (`proposalFromModuleReply`, shared with `condenseModule()`), and
+stores the proposal as the module's `condense` task result, so diff, accept and reject are 081's, unchanged.
+Skill `gaston-jobs` 5 -> 6 describes the kind.
+
+Commit message: `092: hand a module's condensation to the agent (condense-module job, shared reply validation, module view button, skill v6)`
+
+Verification (narrow gate, run twice around one review-fix cycle): `npm run build`, `lint`, `typecheck`, scoped
+`prettier --check` green; `npx vitest run --changed HEAD` green (~4320 tests) apart from known load flakes
+(`journal.test.tsx`, `settings.test.tsx` a11y, `perf.test.ts`) that pass on re-run; `npx playwright test
+tests/e2e/module-condense-agent.spec.ts tests/e2e/module-condense.spec.ts` green (4/4). AC -> test as verified (all
+passed): AC1-AC3 e2e test 1 + `condense-module-agent.test.ts` + `job-condense-module.test.ts`; AC4 e2e test 1 +
+main accept-conflict / reject tests; AC5 e2e test 2 + three core tests; AC6 main + core overview-changed tests; AC7
+`templates.test.ts` (both named tests); block decision main "in-app condensation is refused" + renderer open-job
+test. No manual residue. Review: stage 1 (default) PASS, one fix cycle, narrow gate re-run green.
+
+Decisions: channel `agent:handOverCondense` (request `{ kind: 'condense-module', slug }`); settler
+`settleCondenseModule` (`condense-module-job.ts`), validator `validateCondenseModuleResult`
+(`job-condense-module.ts`); job fields `module`, `title`, `language`, `inputs`, `baseHash`. 090/091 start no work
+task, so `src/main/agent-condense-tasks.ts` starts a `free`-lane `condense` task (subject `module:<slug>`) that ends with the
+job. The "with the agent" state in the panel is `agentOpen` (open condense-module job, survives restart) or the task.
+In the no-model state the panel has no Condense button (pre-existing), so e2e asserts zero Condense buttons and the
+failure/proposal blocks now also render there. Extra fail: no handed-over page still in the module. Stale flow fixed:
+`module-condense.spec.ts` hardcoded a seed date (regex now). Mock pin `mock-agent-setup.ts` gaston-jobs 6. Unfixed,
+deliberately: check-then-enqueue in `condense:run` is not inside the exclusive agent-jobs section (tiny race); an
+agent `skipped` cancels the task without the reason there; an empty module can be handed over and then fails at
+settle; `CondensedUnitPanel.tsx` is 384 lines; `(story 092)` pointers in file headers.
+
+tiers: D 4 / hard 1 · review default · cycles 1 · agents 8

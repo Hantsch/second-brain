@@ -2,8 +2,9 @@
    checks the agent's done result against the vault and books it, or says why not. */
 
 import type { AuditResult, GardenerContext, StoredRun } from '@core/gardener';
+import type { IndexedDoc } from '@core/index/types';
 import type { WikiTxStore } from '@core/wiki/types';
-import type { AgentJobFile, AgentResultFile, DocLanguage } from '@shared/types';
+import type { AgentJobFile, AgentResultFile, CondenseProposal, DocLanguage } from '@shared/types';
 import type { AgentJobFiles } from './job-files';
 
 export interface AgentJobDeps {
@@ -20,6 +21,11 @@ export interface AgentJobDeps {
     checkContext(): Promise<GardenerContext>;
     /** Merges a checked audit into the stored run. */
     book(audit: AuditResult, at: string): Promise<void>;
+  };
+  /** A module condensation's proposal waits in main, like an in-app run's; absent where none can. */
+  condenseModule?: {
+    docs(): readonly IndexedDoc[];
+    propose(job: AgentJobFile, proposal: CondenseProposal): void;
   };
 }
 

@@ -12,6 +12,8 @@ export const deModulesCondensed = {
   'modules.condensed.triggerAgain': 'Erneut verdichten',
   'modules.condensed.running': 'Verdichtung läuft',
   'modules.condensed.waiting': 'Wartet auf das Modell — Platz {position} in der Warteschlange',
+  'modules.condensed.handToAgent': 'An den Agenten übergeben',
+  'modules.condensed.withAgent': 'Die Verdichtung dieses Moduls liegt beim Agenten.',
   'modules.condensed.failed.reason': 'Grund: {reason}',
   'modules.condensed.meta.condensedAt': 'Verdichtet am {date}',
   'modules.condensed.meta.sources': '{count} Quellen',

@@ -12,6 +12,8 @@ export const enModulesCondensed = {
   'modules.condensed.triggerAgain': 'Condense again',
   'modules.condensed.running': 'Condensation running',
   'modules.condensed.waiting': 'Waiting for the model — queue position {position}',
+  'modules.condensed.handToAgent': 'Hand to agent',
+  'modules.condensed.withAgent': "This module's condensation is with the agent.",
   'modules.condensed.failed.reason': 'Reason: {reason}',
   'modules.condensed.meta.condensedAt': 'Condensed {date}',
   'modules.condensed.meta.sources': '{count} sources',

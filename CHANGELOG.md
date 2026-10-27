@@ -39,6 +39,9 @@ All notable changes to Gaston are recorded here. The format follows
 - Tasks: a module job lists the pages changed and proposals written, read from the agent's run
   report, or says the report is still pending. An interpretation of a maintenance run that the
   vault cannot accept fails with the offending path, books nothing and offers the hand-over again.
+- Condensed layer: with no model set up, a module can still be condensed by handing it to the agent.
+  Its answer comes back as the same diff you accept or reject, and a page it cites from outside the
+  module fails with the path instead. Gaston holds the pen back until you say yes, as before.
 
 ## 0.2.0 — 2026-10-20
 

@@ -5,6 +5,7 @@
 
 import type { AgentJobFile, AgentJobKind } from '@shared/types';
 import { settleGardenerAudit } from './audit-job';
+import { settleCondenseModule } from './condense-module-job';
 import { settleCondenseSource } from './condense-source-job';
 import { settleCurateModule } from './curate-job';
 import type { AgentJobDeps, Settler } from './settler';
@@ -16,6 +17,7 @@ export const AGENT_JOB_SETTLERS: Record<AgentJobKind, Settler> = {
   'condense-source': settleCondenseSource,
   'curate-module': settleCurateModule,
   'gardener-audit': settleGardenerAudit,
+  'condense-module': settleCondenseModule,
 };
 
 const UNKNOWN_KIND = 'Gaston does not know this kind of job.';

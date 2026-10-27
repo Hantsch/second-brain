@@ -9,6 +9,7 @@ import { readRecentRuns } from '@core/agent/run-reports';
 import { settleAgentJobs, type AgentJobDeps } from '@core/agent/settle-jobs';
 import { FsVaultStore } from '@core/vault';
 import { AGENT_DIRS, type AgentJobView } from '@shared/types';
+import { withCondenseModuleTasks } from './agent-condense-tasks';
 import { gardenerContext, gardenerStateFor, wakeGardener } from './ipc/gardener-deps';
 import type { Services } from './services';
 
@@ -54,13 +55,13 @@ function gardenerAuditDep(services: Services): NonNullable<AgentJobDeps['gardene
 
 export function agentJobDeps(services: Services): AgentJobDeps {
   const vaultRoot = services.requireVaultRoot();
-  return {
+  return withCondenseModuleTasks(services, {
     vaultRoot,
     store: new FsVaultStore(vaultRoot),
     jobs: createAgentJobFiles(vaultRoot),
     docLanguage: services.settings.vault()?.languages.documents ?? 'de',
     gardenerAudit: gardenerAuditDep(services),
-  };
+  });
 }
 
 /** The jobs as the renderer lists them, finished curate jobs with what their run did. */

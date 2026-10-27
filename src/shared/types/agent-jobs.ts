@@ -2,7 +2,8 @@
  * `.secondbrain/agent/jobs/` and `.secondbrain/agent/results/` (format: docs/VAULT-FORMAT.md). */
 
 /** What a job asks of the agent. Later stories extend the union. */
-export type AgentJobKind = 'condense-source' | 'curate-module' | 'gardener-audit';
+export type AgentJobKind =
+  'condense-source' | 'curate-module' | 'gardener-audit' | 'condense-module';
 
 /** How a job ended. `withdrawn` is the human taking it back; the other three are the agent's. */
 export type AgentJobOutcome = 'done' | 'failed' | 'skipped' | 'withdrawn';

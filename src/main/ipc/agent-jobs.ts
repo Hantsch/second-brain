@@ -7,6 +7,7 @@
    (story 090) */
 
 import { HandOverError, handOverSource } from '@core/agent/condense-source-job';
+import { fileCondenseModuleJob } from '@core/agent/condense-module-job';
 import { fileCurateJob } from '@core/agent/curate-job';
 import { buildAuditJob } from '@core/agent/audit-job';
 import { openJobView } from '@core/agent/job-views';
@@ -22,6 +23,9 @@ import {
   runAgentJobsExclusive,
 } from '../agent-jobs-settle';
 import { auditCandidate } from './gardener-agent-audit';
+import { moduleTarget } from './condense-module-target';
+import { condenseDocs } from './condense-docs';
+import { inAppCondenseActive, startCondenseTask } from '../agent-condense-tasks';
 
 const JOB_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/;
 const WITHDRAWN = 'Withdrawn by the user';
@@ -102,6 +106,32 @@ export function agentJobsHandlers(services: Services): HandlerMap {
           if (error instanceof HandOverError) throw fail(REFUSAL_CODES[error.code], error.message);
           throw error;
         }
+      });
+    },
+    'agent:handOverCondense': async (request) => {
+      const { kind, slug } = (request ?? {}) as { kind?: unknown; slug?: unknown };
+      if (kind !== 'condense-module')
+        throw fail('invalid', 'kind: not a condensation to hand over');
+      // The one module check the condense channels use: an unknown slug is `invalid`, nothing is written.
+      const target = moduleTarget(services, typeof slug === 'string' ? slug : '');
+      return runAgentJobsExclusive(services, async () => {
+        const deps = agentJobDeps(services);
+        // The open job answers first: a second click must not meet the first one's own task.
+        const open = (await deps.jobs.open()).find(
+          (job) => job.kind === 'condense-module' && job.subject === target.slug,
+        );
+        if (open === undefined && inAppCondenseActive(services, target.slug)) {
+          throw fail('invalid', "This module's condensation is running in the app.");
+        }
+        const { status, job } = await fileCondenseModuleJob(deps, {
+          slug: target.slug,
+          title: target.label,
+          docs: condenseDocs(services),
+        });
+        // `exists` re-attaches the task a restart dropped; a tracked job keeps its own.
+        startCondenseTask(services, job);
+        if (status === 'filed') await emitAgentJobs(services, deps);
+        return { outcome: status, job: openJobView(job) };
       });
     },
     'agent:handOverGardenerRun': async () =>

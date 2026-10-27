@@ -9,9 +9,12 @@ import { useT } from '../i18n';
 import {
   openJob,
   useAgentJobs,
+  useCondenseWithAgent,
+  useHandOverCondense,
   useHandOverGardenerRun,
   useHandOverModule,
 } from '../lib/queries/agent-jobs';
+import { isWithAgent, useTaskForSubject } from '../lib/hooks/use-task-for-subject';
 import { ErrorState } from './ErrorState';
 
 interface HandToAgentProps {
@@ -22,6 +25,10 @@ interface HandToAgentProps {
   subject: string;
   testId: string;
   variant: 'secondary' | 'ghost';
+  /** Disables the button without saying the agent holds anything (e.g. an in-app run is going). */
+  disabled?: boolean;
+  /** Already translated; replaces the generic label while nothing is handed over. */
+  label?: string;
   onHandOver: () => void;
 }
 
@@ -32,6 +39,8 @@ function HandToAgent({
   subject,
   testId,
   variant,
+  disabled = false,
+  label,
   onHandOver,
 }: HandToAgentProps) {
   const t = useT();
@@ -42,10 +51,10 @@ function HandToAgent({
         size="sm"
         icon="bot"
         data-testid={testId}
-        disabled={open || pending}
+        disabled={open || pending || disabled}
         onClick={onHandOver}
       >
-        {t(open ? 'sources.agent.with' : 'sources.agent.hand')}
+        {open ? t('sources.agent.with') : (label ?? t('sources.agent.hand'))}
       </Button>
       {error ? <ErrorState error={error} subject={subject} variant="secondary" /> : null}
     </div>
@@ -71,6 +80,29 @@ export function HandOverModuleButton({
       subject={slug}
       testId={`hand-module-${slug}`}
       variant={variant}
+      onHandOver={() => handOver.mutate(slug)}
+    />
+  );
+}
+
+/** In the module's condensed tab. Disabled while any condensation of the module is queued or
+    running, so a hand-over cannot start next to an in-app run; main refuses that case too. */
+export function HandOverCondenseButton({ slug }: { slug: string }) {
+  const t = useT();
+  const handOver = useHandOverCondense();
+  const current = useTaskForSubject('condense', `module:${slug}`);
+  const agentOpen = useCondenseWithAgent(slug);
+  const active = current.status === 'running' || current.status === 'queued';
+  return (
+    <HandToAgent
+      open={agentOpen || isWithAgent(current)}
+      pending={handOver.isPending}
+      error={handOver.error}
+      subject={slug}
+      testId={`hand-condense-${slug}`}
+      variant="secondary"
+      disabled={active || agentOpen}
+      label={t('modules.condensed.handToAgent')}
       onHandOver={() => handOver.mutate(slug)}
     />
   );

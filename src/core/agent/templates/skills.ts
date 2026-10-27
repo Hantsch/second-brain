@@ -5,15 +5,17 @@
 import { AGENT_DIRS, AGENT_JOB_VERSION, AGENT_SKILLS } from '../../../shared/types/agent-setup';
 import type { SetupTemplate } from '../setup-types';
 import {
+  JOB_KIND_CONDENSE_MODULE,
   JOB_KIND_CURATE_MODULE,
   JOB_KIND_GARDENER_AUDIT,
+  RESULT_CONDENSE_MODULE,
   RESULT_CURATE_AND_AUDIT,
 } from './skills-jobs-kinds';
 
 export const SKILL_GASTON_JOBS_TEMPLATE: SetupTemplate = {
   id: `skill-${AGENT_SKILLS.jobs}`,
   path: `.claude/skills/${AGENT_SKILLS.jobs}/SKILL.md`,
-  version: 5,
+  version: 6,
   format: 'markdown-frontmatter',
   body: `---
 name: gaston-jobs
@@ -101,6 +103,7 @@ fields besides the common ones:
 
 ${JOB_KIND_CURATE_MODULE}
 ${JOB_KIND_GARDENER_AUDIT}
+${JOB_KIND_CONDENSE_MODULE}
 ## Result format
 
 A \`condense-source\` job gets a Markdown result: frontmatter, nothing required after it.
@@ -125,6 +128,7 @@ An \`llm-task\` job keeps a JSON result with one status:
 - \`{ "status": "skipped", "reason": "<why>" }\` when you chose not to do the job.
 
 ${RESULT_CURATE_AND_AUDIT}
+${RESULT_CONDENSE_MODULE}
 A job kind this skill does not describe gets \`skipped\` with the reason "unknown job kind".
 Do not guess what such a job wants.
 

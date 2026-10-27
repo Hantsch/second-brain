@@ -685,7 +685,8 @@ the rules above, recorded in the same manifest. On top of that:
 A job is one `.md` file directly in `jobs/`, named `<kind>-<YYYYMMDDTHHmmss>-<hash>.md`: the kind,
 the hand-over time in UTC, and the first 8 hex characters of the sha256 of the subject. The agent
 answers with `results/<same name>.md`. A `.json` file in `jobs/` is an `llm-task` job and is not
-described here. Kinds so far: `condense-source`, `curate-module` and `gardener-audit`.
+described here. Kinds so far: `condense-source`, `curate-module`, `gardener-audit` and
+`condense-module`.
 
 ```markdown
 ---
@@ -724,6 +725,16 @@ and `pages` (the wiki pages it may name). A `done` result lists `contradictions`
 `pathA`, `pathB` and `note`), `confirmed`, `rejected` and `advice`; every field is optional.
 Gaston fails the whole result when any path is not an indexed wiki page or any id is not a
 candidate of the run, and a result for a run that has been replaced since the hand-over.
+
+`condense-module` asks the agent to condense a module's wiki pages into its overview. Its `subject`
+is the module slug, and its fields are `module` (the same slug), `inputs` (the module's wiki pages at
+hand-over, the only paths a section may cite) and `baseHash` (the hash of
+`modules/<slug>/wiki/overview.md` at hand-over, null when there was none). The agent writes neither
+`overview.md` nor its directives section. A `done` result carries one fenced `json` block in its
+body, `{ "decided": …, "open": …, "contradictions": … }`, each section being
+`{ "text": string, "sources": string[] }`. Gaston turns it into an overview proposal for the person
+to confirm. It fails the whole result when a section with text cites a path that is not in `inputs`,
+and a result for an overview that has changed since the hand-over.
 
 | `status`  | Further fields                   |
 | --------- | -------------------------------- |

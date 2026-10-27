@@ -924,6 +924,20 @@ const RESPONSES: MockResponses = {
       finishedAt: null,
     },
   }),
+  'agent:handOverCondense': ({ slug }) => ({
+    outcome: 'filed' as const,
+    job: {
+      id: 'condense-module-mock',
+      kind: 'condense-module' as const,
+      subject: slug,
+      label: slug,
+      module: slug,
+      state: 'with-agent' as const,
+      reason: null,
+      createdAt: new Date(0).toISOString(),
+      finishedAt: null,
+    },
+  }),
   'agent:handOverModule': ({ module }) => ({
     outcome: 'filed' as const,
     job: {

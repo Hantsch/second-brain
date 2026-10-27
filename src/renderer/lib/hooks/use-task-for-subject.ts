@@ -96,6 +96,14 @@ export function useTaskForSubject(kind: WorkTaskKind, ref: string): TaskForSubje
   }
 }
 
+/** A condensation that is waiting on the agent rather than on the model. Main starts it in the
+    `free` lane (`src/main/agent-condense-tasks.ts`); an in-app run is always in the `model` lane. */
+export function isWithAgent(current: TaskForSubject): boolean {
+  return (
+    (current.status === 'running' || current.status === 'queued') && current.task.lane === 'free'
+  );
+}
+
 /** A failed task's two halves put back together as the `IpcError` `ErrorState`
     reads. `WorkTask.error` is typed as a plain string (`describeFailure` in
     `@core/ingest/job`), so an unrecognised one falls back to `unknown` — the

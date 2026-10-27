@@ -31,8 +31,8 @@ import { sha256 } from '@core/vault/hash';
 import { VaultConflictError } from '@core/vault/types';
 import type { VaultStore } from '@core/vault/types';
 import { appendDirective, MODULE_OVERVIEW_TYPE, partialInputsNote } from '@core/condense';
-import type { IndexedDoc } from '@core/index/types';
 import type { CondenseProposal } from '@shared/types';
+import { condenseDocs } from './condense-docs';
 import { artifactHeader, resolveCondenseUnit, runCondenseUnit } from './condense-unit';
 import type { HandlerMap } from './registry';
 import { defineHandlers, fail, llmUnavailable } from './registry';
@@ -40,27 +40,8 @@ import { docLanguage, settle } from './wiki-bridge';
 import { createGateway, llmUnavailableReason } from '../llm-bridge';
 import { getTaskResults } from '../task-results';
 import { getWorkQueue } from '../work-queue';
-import type { IndexLike } from '../contracts';
+import { condenseWithAgent } from '../agent-condense-tasks';
 import type { Services } from '../services';
-
-/** What this channel group needs from the index — the raw doc list only. */
-const CONDENSE_INDEX_METHODS: readonly string[] = ['index'];
-
-interface DocsView {
-  index(): { docs: readonly IndexedDoc[] };
-}
-
-function knowsDocs(index: IndexLike): index is IndexLike & DocsView {
-  const record = index as unknown as Record<string, unknown>;
-  return CONDENSE_INDEX_METHODS.every((method) => typeof record[method] === 'function');
-}
-
-/** Every indexed doc of the open vault — the same list `deriveAreas()` reads. */
-function condenseDocs(services: Services): readonly IndexedDoc[] {
-  const index = services.requireIndex();
-  if (!knowsDocs(index)) throw fail('io', 'der Index liefert keine Dokumentliste');
-  return index.index().docs;
-}
 
 /** A full `VaultStore` (not the shell's narrower `VaultStoreLike`): condense
     needs `snapshot()`/`writeText()` with hash guards, same as `wikiStore()`. */
@@ -93,6 +74,10 @@ export function condenseHandlers(services: Services): HandlerMap {
 
     'condense:run': async ({ unit, slug }) => {
       const target = await resolveCondenseUnit(services, unit, slug);
+      // Before the model check: a module with the agent has nothing for the app to run.
+      if (target.unit === 'module' && (await condenseWithAgent(services, target.slug))) {
+        throw fail('invalid', "This module's condensation is with the agent.");
+      }
       const store = condenseStore(services);
       const existingText = await store.readText(target.path);
       const language = docLanguage(services);

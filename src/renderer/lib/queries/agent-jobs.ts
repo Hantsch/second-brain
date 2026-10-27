@@ -67,6 +67,11 @@ export function useAgentJobs(): UseQueryResult<AgentJobView[]> {
   return result;
 }
 
+/** The agent holds this module's condensation: an open job, whatever this session's tasks say. */
+export function useCondenseWithAgent(slug: string): boolean {
+  return openJob(useAgentJobs().data, 'condense-module', slug) !== null;
+}
+
 export interface AgentJobMutations {
   handOver: UseMutationResult<
     IpcResponse<'agent:handOverSource'>,
@@ -101,6 +106,19 @@ export function useHandOverModule(): UseMutationResult<
   const client = useQueryClient();
   return useMutation({
     mutationFn: api.agent.handOverModule,
+    onSuccess: () => client.invalidateQueries({ queryKey: qk.agent.jobs() }),
+  });
+}
+
+/** Handing a module's overview condensation over; the proposal arrives as a `condense` task result. */
+export function useHandOverCondense(): UseMutationResult<
+  IpcResponse<'agent:handOverCondense'>,
+  unknown,
+  string
+> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: api.agent.handOverCondense,
     onSuccess: () => client.invalidateQueries({ queryKey: qk.agent.jobs() }),
   });
 }
