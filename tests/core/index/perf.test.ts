@@ -59,13 +59,17 @@ class CountingFsVaultStore extends FsVaultStore {
 
 /** Pads `base` with filler words until the text reaches roughly `targetBytes`. */
 function padTo(base: string, targetBytes: number): string {
-  let text = base;
-  let word = 0;
-  while (byteLength(text) < targetBytes) {
-    text += ` wort${word} zum thema und seinen einzelheiten und randbemerkungen`;
-    word += 1;
+  // The filler is ASCII, so its byte length is its string length. Counting as it goes keeps this
+  // linear: re-measuring the whole text per word made the 250 KB transcripts quadratic, and the
+  // setup alone outran its timeout on the CI runner.
+  const parts = [base];
+  let bytes = byteLength(base);
+  for (let word = 0; bytes < targetBytes; word += 1) {
+    const filler = ` wort${word} zum thema und seinen einzelheiten und randbemerkungen`;
+    parts.push(filler);
+    bytes += filler.length;
   }
-  return text;
+  return parts.join('');
 }
 
 function pad2(value: number): string {
