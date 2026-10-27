@@ -1,7 +1,7 @@
 ---
 id: 095
 title: A task can be routed to the agent instead of a model
-status: done # draft -> ready -> in-progress -> done
+status: draft # draft -> ready -> in-progress -> done
 created: 2026-10-27
 ---
 
