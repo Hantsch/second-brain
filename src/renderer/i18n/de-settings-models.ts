@@ -112,6 +112,9 @@ const own = {
   'settings.routing.sensitiveShort': 'Persönlich',
   'settings.routing.inherit': 'Standard: {model}',
   'settings.routing.noModel': 'ohne Modell',
+  'settings.routing.agent': 'Agent (Auftrag)',
+  'settings.routing.agentHint':
+    'Geht als Auftrag an den Agenten. Er erledigt ihn beim nächsten Lauf von /gaston-jobs; bis dahin gilt, was ohne Modell geht.',
   'settings.routing.selectAria': 'Modell für {task}',
   'settings.routing.note': 'Aufgaben ohne eigene Wahl nehmen den Standard ihrer Klasse.',
   'settings.routing.test': 'Testen',
@@ -123,6 +126,8 @@ const own = {
   'settings.routing.reason.no-key': 'Für den zugeordneten Provider fehlt der Schlüssel.',
   'settings.routing.reason.unreachable': 'Der zugeordnete Provider war nicht erreichbar.',
   'settings.routing.reason.no-vault': 'Es ist kein Vault geöffnet.',
+  'settings.routing.reason.agent-route':
+    'Diese Aufgabe läuft über den Agenten — es gibt kein Modell zu testen.',
   'settings.routing.reason.error': 'Der Aufruf ist fehlgeschlagen.',
 
   /* Der Ausweg aus einer Empfehlungszeile ohne Treffer (067, D2, AC1): sonst

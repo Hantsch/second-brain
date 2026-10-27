@@ -192,6 +192,7 @@ describe('withAutoStart waits only for a call routed to llama.cpp', () => {
         snapshot: () => ({ app: { machine: { llamaAutoStart: 'on-demand' } }, vault: null }),
       },
       keys: { get: () => 'key', set: () => undefined, remove: () => undefined },
+      vaultRoot: () => null,
     } as unknown as Services;
   }
 

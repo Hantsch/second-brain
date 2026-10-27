@@ -197,13 +197,13 @@ export function RoutingSection({
                   <span className="sb-diff-name">{changeLabel(change, tasks, t)}</span>
                   <span className="sb-mono">
                     {change.before
-                      ? describeRef(change.before, providers)
+                      ? describeRef(change.before, providers, t('settings.routing.agent'))
                       : t('settings.routing.noModel')}
                   </span>
                   <span className="sb-diff-arrow">{t('settings.routing.preview.arrow')}</span>
                   <span className="sb-mono sb-diff-after">
                     {change.after
-                      ? describeRef(change.after, providers)
+                      ? describeRef(change.after, providers, t('settings.routing.agent'))
                       : t('settings.routing.noModel')}
                   </span>
                 </li>

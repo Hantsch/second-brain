@@ -6,6 +6,7 @@
    source of truth that could go stale. */
 
 import { readFileSync } from 'node:fs';
+import { createFsAgentJobStore } from '@core/agent/jobs';
 import {
   FakeProvider,
   LlmUnavailableError,
@@ -20,6 +21,7 @@ import {
 } from '@core/llm';
 import type { FakeProviderOptions, KeyStore as CoreKeyStore, ProviderFactory } from '@core/llm';
 import type { LlmGateway } from '@core/llm';
+import { isAgentRoute } from '@shared/types';
 import type { LlmUnavailable, ProviderConfig, RecommendationSet, TaskKind } from '@shared/types';
 import type { LlmBridge } from './contracts';
 import { scanCapacityVerdict } from './ipc/machine-scan';
@@ -119,7 +121,9 @@ export function createGateway(services: Services): LlmGateway {
 
 function routingGatewayOf(services: Services): RoutingGateway {
   const settings = services.settings.vault();
+  const root = services.vaultRoot();
   return new RoutingGateway({
+    ...(root ? { agentJobs: createFsAgentJobStore(root) } : {}),
     routing: settings?.routing ?? { tasks: {}, defaults: {} },
     providers: providersOf(services),
     keys: coreKeys(services.keys),
@@ -251,6 +255,10 @@ async function runTestTask(
 ): Promise<{ ok: boolean; latencyMs: number; sample: string; error?: string }> {
   if (!services.settings.vault()) return { ok: false, latencyMs: 0, sample: '', error: 'no-vault' };
   const gateway = createGateway(services);
+  // There is no model to probe, and a test prompt must not land in the agent's job queue.
+  if (isAgentRoute(gateway.routeFor(task))) {
+    return { ok: false, latencyMs: 0, sample: '', error: 'agent-route' };
+  }
   try {
     const result = await gateway.complete({
       task,

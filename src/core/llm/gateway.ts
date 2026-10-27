@@ -7,6 +7,7 @@
      reason comes back — the UI can turn that into an honest state.
    - It doesn't talk. No key ever ends up in a message or a log. */
 
+import { isAgentRoute } from '@shared/types';
 import type {
   CompletionRequest,
   CompletionResult,
@@ -16,6 +17,7 @@ import type {
   Routing,
   TaskKind,
 } from '@shared/types';
+import { AGENT_JOB_VERSION, agentJobId, type AgentJobStore } from '../agent/jobs';
 import { throwIfAborted } from './abort';
 import { createProviderFactory, type ProviderFactory } from './factory';
 import { describeError } from './http';
@@ -52,6 +54,8 @@ export interface RoutingGatewayOptions {
   backoffMs?: (attempt: number) => number;
   sleep?: (ms: number) => Promise<void>;
   now?: () => number;
+  /** Where tasks routed to the agent are filed. Without it, an agent route counts as no route. */
+  agentJobs?: AgentJobStore;
 }
 
 interface Resolved {
@@ -71,6 +75,7 @@ export class RoutingGateway implements LlmGateway {
   private readonly sleep: (ms: number) => Promise<void>;
   private readonly now: () => number;
   private readonly cache = new Map<string, LlmProvider>();
+  private readonly agentJobs: AgentJobStore | undefined;
 
   constructor(options: RoutingGatewayOptions) {
     this.routing = options.routing;
@@ -84,6 +89,7 @@ export class RoutingGateway implements LlmGateway {
     this.backoffMs = options.backoffMs ?? ((attempt) => 500 * 2 ** attempt);
     this.sleep = options.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
     this.now = options.now ?? ((): number => Date.now());
+    this.agentJobs = options.agentJobs;
   }
 
   /** After a change to settings: new routing, new providers. */
@@ -94,6 +100,8 @@ export class RoutingGateway implements LlmGateway {
   }
 
   routeFor(task: TaskKind): ModelRef | null {
+    const ref = this.agentRoute(task);
+    if (ref) return ref;
     const resolved = this.resolve(task);
     return 'ref' in resolved ? resolved.ref : null;
   }
@@ -108,6 +116,7 @@ export class RoutingGateway implements LlmGateway {
    * was routed and only its provider's key was missing.
    */
   unavailable(task: TaskKind): LlmUnavailable | null {
+    if (this.agentRoute(task)) return null;
     const resolved = this.resolve(task);
     return 'error' in resolved ? resolved.error : null;
   }
@@ -129,7 +138,7 @@ export class RoutingGateway implements LlmGateway {
    * has to be usable (present, enabled, key available).
    */
   private resolve(task: TaskKind): Resolved | { error: LlmUnavailable } {
-    const ref = this.routing.tasks[task] ?? this.routing.defaults[taskDefinition(task).suggested];
+    const ref = this.refFor(task);
     if (!ref) return { error: { reason: 'no-route', task } };
 
     const config = this.providers.find((provider) => provider.id === ref.providerId);
@@ -154,11 +163,23 @@ export class RoutingGateway implements LlmGateway {
     return { ref, config, key };
   }
 
+  private refFor(task: TaskKind): ModelRef | undefined {
+    return this.routing.tasks[task] ?? this.routing.defaults[taskDefinition(task).suggested];
+  }
+
+  /** The agent route for this task, when it has one and a job store to file into. */
+  private agentRoute(task: TaskKind): ModelRef | null {
+    const ref = this.refFor(task);
+    return this.agentJobs && isAgentRoute(ref) ? (ref ?? null) : null;
+  }
+
   private async run(
     req: CompletionRequest,
     onDelta?: (delta: string) => void,
   ): Promise<CompletionResult> {
     throwIfAborted(req.signal);
+    const agentRef = this.agentRoute(req.task);
+    if (agentRef && this.agentJobs) return this.runAgent(req, agentRef, this.agentJobs, onDelta);
     const resolved = this.resolve(req.task);
     if ('error' in resolved) throw new LlmUnavailableError(resolved.error);
 
@@ -201,6 +222,44 @@ export class RoutingGateway implements LlmGateway {
         throw this.toUnavailable(req.task, error, key);
       }
     }
+  }
+
+  /**
+   * The agent answers asynchronously: the first call files the job and reports
+   * `agent-pending`, so the caller shows its honest waiting state or heuristic
+   * fallback. A later call with the same request finds the agent's result and
+   * returns it like any model answer — the caller still presents it as a
+   * proposal.
+   */
+  private async runAgent(
+    req: CompletionRequest,
+    ref: ModelRef,
+    jobs: AgentJobStore,
+    onDelta?: (delta: string) => void,
+  ): Promise<CompletionResult> {
+    const id = agentJobId(req);
+    const result = await jobs.result(id);
+    if (result?.status === 'done') {
+      onDelta?.(result.text);
+      return { text: result.text, model: ref, latencyMs: 0 };
+    }
+    if (result) {
+      throw new LlmUnavailableError({
+        reason: 'agent-failed',
+        task: req.task,
+        detail: sanitize(result.reason, null, 200),
+      });
+    }
+    await jobs.file({
+      version: AGENT_JOB_VERSION,
+      id,
+      kind: 'llm-task',
+      task: req.task,
+      createdAt: new Date(this.now()).toISOString(),
+      messages: req.messages,
+      ...(req.schema !== undefined ? { schema: req.schema } : {}),
+    });
+    throw new LlmUnavailableError({ reason: 'agent-pending', task: req.task });
   }
 
   /** One attempt, with its own timeout and the caller's abort passed through. */

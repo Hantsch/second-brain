@@ -13,6 +13,7 @@
 
 import { randomUUID } from 'node:crypto';
 import { PROVIDER_PRESETS, TASK_DEFINITIONS } from '@core/llm';
+import { AGENT_ROUTE, isAgentRoute } from '@shared/types';
 import type { ProviderConfig, ProviderKind, Routing, VaultSettings } from '@shared/types';
 import type { HandlerMap } from './registry';
 import { defineHandlers, fail } from './registry';
@@ -205,6 +206,7 @@ function requireRef(
   settings: VaultSettings,
   ref: { providerId: string; model: string },
 ): { providerId: string; model: string } {
+  if (isAgentRoute(ref)) return { ...AGENT_ROUTE };
   findProvider(settings, ref.providerId);
   const model = ref.model.trim();
   if (!model) throw fail('invalid', 'ohne Modellnamen gibt es keine Route');

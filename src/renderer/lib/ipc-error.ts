@@ -52,7 +52,16 @@ export function decodeIpcError(error: unknown): IpcError {
 }
 
 /** The `llm-unavailable` causes that get their own sentence — each one names a different fix. */
-const LLM_REASONS: readonly string[] = ['no-route', 'no-key', 'provider-disabled'];
+const LLM_REASONS: readonly string[] = [
+  'no-route',
+  'no-key',
+  'provider-disabled',
+  'agent-pending',
+  'agent-failed',
+];
+
+/** Causes whose sentence names the provider — useless without its label. */
+const NAMES_PROVIDER: readonly string[] = ['no-key', 'provider-disabled'];
 
 /**
  * The cause behind an `llm-unavailable` error, when main sent one along
@@ -69,6 +78,6 @@ export function llmUnavailableCause(
   if (typeof detail.task !== 'string') return null;
   const provider = typeof detail.provider === 'string' ? detail.provider : '';
   // Without a provider name the key and disabled sentences would have a hole in them.
-  if (detail.reason !== 'no-route' && provider.length === 0) return null;
+  if (NAMES_PROVIDER.includes(detail.reason) && provider.length === 0) return null;
   return { reason: detail.reason, task: detail.task, provider };
 }

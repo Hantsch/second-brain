@@ -11,6 +11,9 @@ export const AGENT_DIRS = {
   runs: '.secondbrain/agent/runs',
 } as const;
 
+/** Format version of a job file in `jobs/`; the `gaston-jobs` skill documents the same number. */
+export const AGENT_JOB_VERSION = 1;
+
 /** Skill folder names under `.claude/skills/`; each is also the slash command. */
 export const AGENT_SKILLS = {
   jobs: 'gaston-jobs',

@@ -139,12 +139,20 @@ export const en: Record<TranslationKey, string> = {
     'No API key is stored for {provider}. Enter it under Settings → Models.',
   'error.code.llm-unavailable.provider-disabled':
     'The provider {provider} is switched off. Switch it on under Settings → Models.',
+  'error.code.llm-unavailable.agent-pending':
+    'The task “{task}” is waiting as a job for the agent. Have it run /gaston-jobs, then try again.',
+  'error.code.llm-unavailable.agent-failed':
+    'The agent did not finish the job for “{task}”. Its reason is in its result in the agent folder of the vault.',
   'error.about.llm-unavailable.no-route':
     '“{subject}” cannot be processed: no model is assigned to the task “{task}”. Assign one under Settings → Models.',
   'error.about.llm-unavailable.no-key':
     '“{subject}” cannot be processed: no API key is stored for {provider}. Enter it under Settings → Models.',
   'error.about.llm-unavailable.provider-disabled':
     '“{subject}” cannot be processed: the provider {provider} is switched off. Switch it on under Settings → Models.',
+  'error.about.llm-unavailable.agent-pending':
+    '“{subject}” is waiting as a job for the agent. Have it run /gaston-jobs, then try again.',
+  'error.about.llm-unavailable.agent-failed':
+    '“{subject}” cannot be processed: the agent did not finish the job for “{task}”.',
   'error.about.invalid': '“{subject}” does not fit.',
   'error.about.io': '“{subject}” could not be opened — the folder is not writable.',
   'error.about.cancelled': '“{subject}” was cancelled.',

@@ -126,6 +126,9 @@ export const deJournal = {
   'journal.failure.no-key': 'Aufgeschrieben. Für das zugeordnete Modell fehlt der Schlüssel.',
   'journal.failure.unreachable': 'Aufgeschrieben. Das Modell war nicht erreichbar.',
   'journal.failure.error': 'Aufgeschrieben. Das Modell hat nichts zurückgegeben.',
+  'journal.failure.agent-pending':
+    'Aufgeschrieben. Die Antwort liegt als Auftrag beim Agenten (/gaston-jobs).',
+  'journal.failure.agent-failed': 'Aufgeschrieben. Der Agent hat den Auftrag nicht erledigt.',
   'journal.failure.cancelled': 'Aufgeschrieben. Die Antwort hast du abgebrochen.',
   'journal.failure.other': 'Aufgeschrieben. Eine Antwort kam nicht.',
   'journal.evidence.title': 'Ähnlich klang es an diesen Tagen',

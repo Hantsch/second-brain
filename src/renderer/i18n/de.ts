@@ -143,12 +143,20 @@ export const de = {
     'Für {provider} ist kein API-Schlüssel hinterlegt. Trag ihn unter Einstellungen → Modelle ein.',
   'error.code.llm-unavailable.provider-disabled':
     'Der Provider {provider} ist abgeschaltet. Schalte ihn unter Einstellungen → Modelle ein.',
+  'error.code.llm-unavailable.agent-pending':
+    'Die Aufgabe „{task}“ liegt als Auftrag beim Agenten. Lass ihn /gaston-jobs ausführen und versuch es danach noch einmal.',
+  'error.code.llm-unavailable.agent-failed':
+    'Der Agent hat den Auftrag für „{task}“ nicht erledigt. Der Grund steht in seinem Ergebnis im Agent-Ordner des Vaults.',
   'error.about.llm-unavailable.no-route':
     '„{subject}“ lässt sich nicht verarbeiten: Der Aufgabe „{task}“ ist kein Modell zugeordnet. Ordne unter Einstellungen → Modelle eines zu.',
   'error.about.llm-unavailable.no-key':
     '„{subject}“ lässt sich nicht verarbeiten: Für {provider} ist kein API-Schlüssel hinterlegt. Trag ihn unter Einstellungen → Modelle ein.',
   'error.about.llm-unavailable.provider-disabled':
     '„{subject}“ lässt sich nicht verarbeiten: Der Provider {provider} ist abgeschaltet. Schalte ihn unter Einstellungen → Modelle ein.',
+  'error.about.llm-unavailable.agent-pending':
+    '„{subject}“ liegt als Auftrag beim Agenten. Lass ihn /gaston-jobs ausführen und versuch es danach noch einmal.',
+  'error.about.llm-unavailable.agent-failed':
+    '„{subject}“ lässt sich nicht verarbeiten: Der Agent hat den Auftrag für „{task}“ nicht erledigt.',
   'error.about.invalid': '„{subject}“ passt nicht.',
   'error.about.io': '„{subject}“ ließ sich nicht öffnen — der Ordner ist nicht beschreibbar.',
   'error.about.cancelled': '„{subject}“ wurde abgebrochen.',

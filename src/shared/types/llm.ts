@@ -124,6 +124,18 @@ export interface ModelRef {
 }
 
 /**
+ * The route that hands a task to the coding agent instead of a model: the
+ * gateway files it as a job in `.secondbrain/agent/jobs/` and answers with the
+ * agent's result once one exists. A reserved provider id rather than a new
+ * routing shape, so settings, IPC and the routing table carry it unchanged.
+ */
+export const AGENT_ROUTE: ModelRef = { providerId: 'agent', model: 'agent' };
+
+export function isAgentRoute(ref: ModelRef | null | undefined): boolean {
+  return ref?.providerId === AGENT_ROUTE.providerId;
+}
+
+/**
  * Mapping task → model. If an entry is missing, `defaults[tier]` applies;
  * if that's missing too, the task runs without an LLM — the app stays usable.
  */
@@ -161,7 +173,16 @@ export interface CompletionResult {
 
 /** Why an LLM task couldn't run — as a state, not a crash. */
 export interface LlmUnavailable {
-  reason: 'no-route' | 'provider-disabled' | 'no-key' | 'unreachable' | 'error';
+  reason:
+    | 'no-route'
+    | 'provider-disabled'
+    | 'no-key'
+    | 'unreachable'
+    | 'error'
+    /* Routed to the agent: the job is filed and waits for its result. */
+    | 'agent-pending'
+    /* The agent answered the job with `failed` or `skipped`; `detail` carries its reason. */
+    | 'agent-failed';
   task: TaskKind;
   /** Label of the provider the route points at, when the provider is the cause. */
   provider?: string;

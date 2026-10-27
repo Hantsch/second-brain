@@ -4,6 +4,7 @@
 
    Reine Rechnung, kein React: so ist sie einzeln prüfbar. */
 
+import { isAgentRoute } from '@shared/types';
 import type { ModelRef, ModelTier, Routing, TaskDefinition, TaskKind } from '@shared/types';
 
 export interface RouteChange {
@@ -39,7 +40,8 @@ export function routingDiff(
   for (const task of tasks) {
     const before = current.tasks[task.kind];
     const after = suggested.tasks[task.kind];
-    if (same(before, after)) continue;
+    // Handing a task to the agent is a deliberate choice; a model proposal never undoes it.
+    if (isAgentRoute(before) || same(before, after)) continue;
     changes.push({ kind: 'task', task: task.kind, before: before ?? null, after: after ?? null });
   }
   for (const tier of TIERS) {

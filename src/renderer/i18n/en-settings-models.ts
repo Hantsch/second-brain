@@ -104,6 +104,9 @@ const own = {
   'settings.routing.sensitiveShort': 'Personal',
   'settings.routing.inherit': 'Default: {model}',
   'settings.routing.noModel': 'no model',
+  'settings.routing.agent': 'Agent (job)',
+  'settings.routing.agentHint':
+    'Goes to the agent as a job. It is done on the next run of /gaston-jobs; until then, what works without a model applies.',
   'settings.routing.selectAria': 'Model for {task}',
   'settings.routing.note': 'Tasks without a choice of their own take their class default.',
   'settings.routing.test': 'Test',
@@ -114,6 +117,8 @@ const own = {
   'settings.routing.reason.no-key': 'The key for the assigned provider is missing.',
   'settings.routing.reason.unreachable': 'The assigned provider was not reachable.',
   'settings.routing.reason.no-vault': 'No vault is open.',
+  'settings.routing.reason.agent-route':
+    'This task runs through the agent — there is no model to test.',
   'settings.routing.reason.error': 'The call failed.',
 
   /* The way out of a `pick === null` recommendation row (067, D2, AC1): a

@@ -18,15 +18,42 @@ reports back through `.secondbrain/agent/results/`.
    result to `.secondbrain/agent/results/` under the job's file name.
 5. End the run with one report in `.secondbrain/agent/runs/`.
 
-## Result status
+## Job kinds
 
-Every result carries one status:
+### `llm-task`
 
-- `done` when the work is finished.
-- `failed` with a reason when you tried and could not finish.
-- `skipped` with a reason when you chose not to do the job.
+A task the user routed to you instead of a language model. The job is JSON:
 
-A job kind this skill does not describe yet gets `skipped` with the reason "unknown job kind".
+```json
+{
+  "version": 1,
+  "id": "classify-dump-1a2b3c4d5e6f7a8b",
+  "kind": "llm-task",
+  "task": "classify-dump",
+  "createdAt": "2026-10-27T09:12:00.000Z",
+  "messages": [
+    { "role": "system", "content": "..." },
+    { "role": "user", "content": "..." }
+  ],
+  "schema": { "type": "object" }
+}
+```
+
+Answer the conversation in `messages` as the assistant would: follow the system message, use
+only what the messages contain, and do not change any vault file for it — Gaston turns your
+answer into a proposal the user confirms. When `schema` is set, the answer must be JSON that
+matches it.
+
+## Result format
+
+Every result is JSON with one status:
+
+- `{ "status": "done", "text": "<the answer>" }` when the work is finished. For a job with a
+  `schema`, `text` is the JSON answer, as a string or as the object itself.
+- `{ "status": "failed", "reason": "<why>" }` when you tried and could not finish.
+- `{ "status": "skipped", "reason": "<why>" }` when you chose not to do the job.
+
+A job kind this skill does not describe gets `skipped` with the reason "unknown job kind".
 Do not guess what such a job wants.
 
 ## Never
@@ -34,5 +61,3 @@ Do not guess what such a job wants.
 - Edit or delete a job file. Jobs belong to Gaston.
 - Write `.ingest.json` files.
 - Write a second result for a job, or a result under a different file name.
-
-The exact result and report formats follow in later versions of this skill.

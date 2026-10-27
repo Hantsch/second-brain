@@ -117,7 +117,8 @@ describe('agent setup', () => {
     await install(store);
     await store.delete(WIKI_HOOK);
     const before = store.allFiles();
-    const shipped = shippedWith(JOBS_SKILL, 2);
+    const installed = template(JOBS_SKILL).version;
+    const shipped = shippedWith(JOBS_SKILL, installed + 1);
 
     const state = await readSetupState(store, shipped);
     expect(state.action).toBe('update');
@@ -125,18 +126,24 @@ describe('agent setup', () => {
       [WIKI_HOOK, 'missing'],
       [JOBS_SKILL, 'outdated'],
     ]);
-    expect(statusOf(state, JOBS_SKILL)).toMatchObject({ installedVersion: 1, shippedVersion: 2 });
+    expect(statusOf(state, JOBS_SKILL)).toMatchObject({
+      installedVersion: installed,
+      shippedVersion: installed + 1,
+    });
 
     await applySetup(store, confirmEverything(state), shipped);
 
-    expect(await store.readText(JOBS_SKILL)).toContain('Added in version 2.');
+    expect(await store.readText(JOBS_SKILL)).toContain(`Added in version ${installed + 1}.`);
     expect(await store.exists(WIKI_HOOK)).toBe(true);
     for (const t of SETUP_TEMPLATES.filter((t) => t.path !== JOBS_SKILL && t.path !== WIKI_HOOK)) {
       expect(await store.readText(t.path)).toBe(before[t.path]);
     }
     const after = await readSetupState(store, shipped);
     expect(after.action).toBe('none');
-    expect(statusOf(after, JOBS_SKILL)).toMatchObject({ status: 'current', installedVersion: 2 });
+    expect(statusOf(after, JOBS_SKILL)).toMatchObject({
+      status: 'current',
+      installedVersion: installed + 1,
+    });
   });
 
   it("a file without the marker is the user's and stays byte-identical through install and update", async () => {
@@ -227,7 +234,8 @@ My note.
     const store = new MemoryVaultStore();
     await install(store);
     await store.delete(WIKI_HOOK);
-    const shipped = shippedWith(JOBS_SKILL, 2);
+    const installed = template(JOBS_SKILL).version;
+    const shipped = shippedWith(JOBS_SKILL, installed + 1);
     const state = await readSetupState(store, shipped);
 
     const changed = `${await store.readText(JOBS_SKILL)}\nEdited while the dialog was open.\n`;
@@ -240,7 +248,7 @@ My note.
     ]);
     expect(await store.readText(JOBS_SKILL)).toBe(changed);
     const entry = (await manifestEntries(store)).find((e) => e.path === JOBS_SKILL);
-    expect(entry?.version).toBe(1);
+    expect(entry?.version).toBe(installed);
   });
 
   it('a file from a newer Gaston is never downgraded', async () => {

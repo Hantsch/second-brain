@@ -12,9 +12,11 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { AGENT_ROUTE } from '@shared/types';
 import type { ProviderConfig, Routing, TaskDefinition, TaskKind } from '@shared/types';
 import { RoutingTable } from '@renderer/components/RoutingTable';
 import { setLanguage } from '@renderer/i18n';
+import { routingDiff } from '@renderer/screens/settings/routing-diff';
 
 const TASKS: TaskDefinition[] = [
   {
@@ -144,5 +146,47 @@ describe('RoutingTable: sensitive-task warning in the manual table', () => {
         'This provider trains on submitted content — not fit for a task that reads personal content.',
       ),
     ).toBeNull();
+  });
+});
+
+describe('RoutingTable: agent route', () => {
+  it('offers the agent in every row and hands it back as the agent route', async () => {
+    const onSetRoute = renderTable({ tasks: {}, defaults: {} });
+
+    for (const name of ['Model for Sort a dump', 'Model for Title and tags']) {
+      const select = screen.getByRole('combobox', { name });
+      expect(within(select).getByRole('option', { name: 'Agent (job)' })).toBeTruthy();
+    }
+    const select = screen.getByRole('combobox', { name: 'Model for Sort a dump' });
+    await userEvent.selectOptions(select, 'agent|agent');
+    expect(onSetRoute).toHaveBeenCalledWith('classify-dump', AGENT_ROUTE);
+  });
+
+  it('a row routed to the agent explains the job, drops the model test and the sensitivity warning', () => {
+    renderTable({ tasks: { 'classify-dump': AGENT_ROUTE }, defaults: {} });
+
+    expect(screen.getByText(/Goes to the agent as a job/)).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: 'Test' })).toHaveLength(1);
+    expect(screen.queryByText(/not fit for a task that reads personal content/)).toBeNull();
+  });
+});
+
+describe('routingDiff: agent route', () => {
+  it('a model proposal never replaces a task routed to the agent', () => {
+    const suggested: Routing = {
+      tasks: {
+        'classify-dump': { providerId: 'anthropic-1', model: 'anthropic/claude-haiku-4-5' },
+        'title-tags': { providerId: 'anthropic-1', model: 'anthropic/claude-haiku-4-5' },
+      },
+      defaults: {},
+    };
+    const changes = routingDiff(
+      { tasks: { 'classify-dump': AGENT_ROUTE }, defaults: {} },
+      suggested,
+      TASKS,
+    );
+    expect(changes.map((change) => (change.kind === 'task' ? change.task : change.tier))).toEqual([
+      'title-tags',
+    ]);
   });
 });

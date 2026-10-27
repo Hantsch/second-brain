@@ -2,13 +2,13 @@
  * directories come from the shared constants so the text cannot drift from the folders Gaston
  * reads. Mirrored in docs/agent-setup/skill-gaston-<name>.md. */
 
-import { AGENT_DIRS, AGENT_SKILLS } from '../../../shared/types/agent-setup';
+import { AGENT_DIRS, AGENT_JOB_VERSION, AGENT_SKILLS } from '../../../shared/types/agent-setup';
 import type { SetupTemplate } from '../setup-types';
 
 export const SKILL_GASTON_JOBS_TEMPLATE: SetupTemplate = {
   id: `skill-${AGENT_SKILLS.jobs}`,
   path: `.claude/skills/${AGENT_SKILLS.jobs}/SKILL.md`,
-  version: 1,
+  version: 2,
   format: 'markdown-frontmatter',
   body: `---
 name: gaston-jobs
@@ -30,15 +30,42 @@ reports back through \`${AGENT_DIRS.results}/\`.
    result to \`${AGENT_DIRS.results}/\` under the job's file name.
 5. End the run with one report in \`${AGENT_DIRS.runs}/\`.
 
-## Result status
+## Job kinds
 
-Every result carries one status:
+### \`llm-task\`
 
-- \`done\` when the work is finished.
-- \`failed\` with a reason when you tried and could not finish.
-- \`skipped\` with a reason when you chose not to do the job.
+A task the user routed to you instead of a language model. The job is JSON:
 
-A job kind this skill does not describe yet gets \`skipped\` with the reason "unknown job kind".
+\`\`\`json
+{
+  "version": ${AGENT_JOB_VERSION},
+  "id": "classify-dump-1a2b3c4d5e6f7a8b",
+  "kind": "llm-task",
+  "task": "classify-dump",
+  "createdAt": "2026-10-27T09:12:00.000Z",
+  "messages": [
+    { "role": "system", "content": "..." },
+    { "role": "user", "content": "..." }
+  ],
+  "schema": { "type": "object" }
+}
+\`\`\`
+
+Answer the conversation in \`messages\` as the assistant would: follow the system message, use
+only what the messages contain, and do not change any vault file for it — Gaston turns your
+answer into a proposal the user confirms. When \`schema\` is set, the answer must be JSON that
+matches it.
+
+## Result format
+
+Every result is JSON with one status:
+
+- \`{ "status": "done", "text": "<the answer>" }\` when the work is finished. For a job with a
+  \`schema\`, \`text\` is the JSON answer, as a string or as the object itself.
+- \`{ "status": "failed", "reason": "<why>" }\` when you tried and could not finish.
+- \`{ "status": "skipped", "reason": "<why>" }\` when you chose not to do the job.
+
+A job kind this skill does not describe gets \`skipped\` with the reason "unknown job kind".
 Do not guess what such a job wants.
 
 ## Never
@@ -46,8 +73,6 @@ Do not guess what such a job wants.
 - Edit or delete a job file. Jobs belong to Gaston.
 - Write \`.ingest.json\` files.
 - Write a second result for a job, or a result under a different file name.
-
-The exact result and report formats follow in later versions of this skill.
 `,
 };
 
