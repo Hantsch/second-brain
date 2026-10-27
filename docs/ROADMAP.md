@@ -6,10 +6,10 @@ As of: 2026-10-27.
 
 ## Where we stand
 
-- S21 done 2026-10-27 (M20 complete). Next is S22 "Release hardening" (stories 093, 094, 095, 080, in that order) — [sprints/S22/sprint.md](sprints/S22/sprint.md).
-- 093 (adversarial guard pass) is the release blocker.
-- The two stale e2e specs were fixed in commit `d9fd25c`.
+- S22 done 2026-10-27 (M21 complete): 093, 094, 095 and 080 are built on `dev`; the gate's only red is a flaky perf test — [S22 review](sprints/S22/review.md).
+- Waiting on the user: the adversarial pass on the shell guard (093 AC1, [testplan](sprints/S22/testplan.md)) before any release.
 - Waiting on the user: the `sprint/S17`–`S20` → `dev` merges and the first real release.
+- Next: nothing cut yet; plan from the follow-ups below or the open topics.
 
 Rules:
 
@@ -21,34 +21,34 @@ Rules:
 
 | Phase                | Milestones done / total | Status      |
 | -------------------- | ----------------------- | ----------- |
-| 1 — Usable every day | 19 / 21                 | in progress |
+| 1 — Usable every day | 20 / 21                 | in progress |
 | 2                    | —                       | not defined |
 
 ## Current phase: 1 — Usable every day
 
-| #   | Milestone                                                      | Status          | Sprints                                                               | Note                                                |
-| --- | -------------------------------------------------------------- | --------------- | --------------------------------------------------------------------- | --------------------------------------------------- |
-| M1  | Navigation: places, actions, systems                           | accepted        | [S01](sprints/done/S01/review.md) · [S02](sprints/done/S02/review.md) | Rail down to seven entries.                         |
-| M2  | Projects answer where I left off                               | accepted        | [S03](sprints/done/S03/review.md)                                     |                                                     |
-| M3  | The journal becomes one thing                                  | accepted        | [S04](sprints/done/S04/review.md)                                     |                                                     |
-| M4  | A finding can be acted on                                      | done            | [S05](sprints/done/S05/review.md)                                     |                                                     |
-| M5  | Models without expertise                                       | accepted        | [S06](sprints/done/S06/review.md)                                     | 019d (subscription providers) rejected.             |
-| M6  | Journal loose ends                                             | done            | [S05](sprints/done/S05/review.md)                                     | Rode along in the M4 sprint.                        |
-| M7  | A maintenance run I can see, stop and continue                 | accepted        | none                                                                  | Built on `dev` without a sprint.                    |
-| M8  | A loose end is its own thing, not a wait                       | accepted        | none                                                                  | Built on `dev` without a sprint.                    |
-| M9  | The gate is green and the small things are right               | done            | [S07](sprints/done/S07/review.md)                                     |                                                     |
-| M10 | A model that fits this machine, and an app I can hand on       | done            | [S08](sprints/done/S08/review.md)                                     |                                                     |
-| M11 | A local engine for a machine that is not mine                  | done            | [S09](sprints/done/S09/review.md)                                     | Story 034 live check waits for a weak test machine. |
-| M12 | An area gathers itself                                         | done            | [S10](sprints/done/S10/review.md)                                     |                                                     |
-| M13 | Evidence stays primary, and the gate turns green               | done            | [S11](sprints/done/S11/review.md)                                     |                                                     |
-| M14 | A project gathers itself                                       | done            | [S12](sprints/done/S12/review.md)                                     |                                                     |
-| M15 | The day is one text field                                      | in progress     | [S13](sprints/done/S13/review.md) · [S14](sprints/done/S14/review.md) | Date picker year/month drill-down not cut.          |
-| M16 | Work in flight is visible, and what it proposes is correctable | done            | [S15](sprints/done/S15/review.md)                                     |                                                     |
-| M17 | Nothing enters half-true, and nothing trusts more than it must | done 2026-09-25 | [S16](sprints/done/S16/review.md) · [S17](sprints/done/S17/review.md) |                                                     |
-| M18 | The vault can grow, and an answer finds its evidence           | done 2026-09-25 | [S18](sprints/done/S18/review.md)                                     |                                                     |
-| M19 | Gaston ships and updates itself                                | done 2026-10-20 | [S19](sprints/done/S19/review.md)                                     |                                                     |
-| M20 | An agent curates the vault                                     | done 2026-10-27 | [S20](sprints/done/S20/review.md) · [S21](sprints/done/S21/review.md) |                                                     |
-| M21 | Release hardening                                              | planned         | [S22](sprints/S22/sprint.md)                                          |                                                     |
+| #   | Milestone                                                      | Status          | Sprints                                                               | Note                                                       |
+| --- | -------------------------------------------------------------- | --------------- | --------------------------------------------------------------------- | ---------------------------------------------------------- |
+| M1  | Navigation: places, actions, systems                           | accepted        | [S01](sprints/done/S01/review.md) · [S02](sprints/done/S02/review.md) | Rail down to seven entries.                                |
+| M2  | Projects answer where I left off                               | accepted        | [S03](sprints/done/S03/review.md)                                     |                                                            |
+| M3  | The journal becomes one thing                                  | accepted        | [S04](sprints/done/S04/review.md)                                     |                                                            |
+| M4  | A finding can be acted on                                      | done            | [S05](sprints/done/S05/review.md)                                     |                                                            |
+| M5  | Models without expertise                                       | accepted        | [S06](sprints/done/S06/review.md)                                     | 019d (subscription providers) rejected.                    |
+| M6  | Journal loose ends                                             | done            | [S05](sprints/done/S05/review.md)                                     | Rode along in the M4 sprint.                               |
+| M7  | A maintenance run I can see, stop and continue                 | accepted        | none                                                                  | Built on `dev` without a sprint.                           |
+| M8  | A loose end is its own thing, not a wait                       | accepted        | none                                                                  | Built on `dev` without a sprint.                           |
+| M9  | The gate is green and the small things are right               | done            | [S07](sprints/done/S07/review.md)                                     |                                                            |
+| M10 | A model that fits this machine, and an app I can hand on       | done            | [S08](sprints/done/S08/review.md)                                     |                                                            |
+| M11 | A local engine for a machine that is not mine                  | done            | [S09](sprints/done/S09/review.md)                                     | Story 034 live check waits for a weak test machine.        |
+| M12 | An area gathers itself                                         | done            | [S10](sprints/done/S10/review.md)                                     |                                                            |
+| M13 | Evidence stays primary, and the gate turns green               | done            | [S11](sprints/done/S11/review.md)                                     |                                                            |
+| M14 | A project gathers itself                                       | done            | [S12](sprints/done/S12/review.md)                                     |                                                            |
+| M15 | The day is one text field                                      | in progress     | [S13](sprints/done/S13/review.md) · [S14](sprints/done/S14/review.md) | Date picker year/month drill-down not cut.                 |
+| M16 | Work in flight is visible, and what it proposes is correctable | done            | [S15](sprints/done/S15/review.md)                                     |                                                            |
+| M17 | Nothing enters half-true, and nothing trusts more than it must | done 2026-09-25 | [S16](sprints/done/S16/review.md) · [S17](sprints/done/S17/review.md) |                                                            |
+| M18 | The vault can grow, and an answer finds its evidence           | done 2026-09-25 | [S18](sprints/done/S18/review.md)                                     |                                                            |
+| M19 | Gaston ships and updates itself                                | done 2026-10-20 | [S19](sprints/done/S19/review.md)                                     |                                                            |
+| M20 | An agent curates the vault                                     | done 2026-10-27 | [S20](sprints/done/S20/review.md) · [S21](sprints/done/S21/review.md) |                                                            |
+| M21 | Release hardening                                              | done 2026-10-27 | [S22](sprints/S22/review.md)                                          | Adversarial guard pass by the user pending before release. |
 
 ## Open / unprioritised
 
@@ -62,6 +62,10 @@ Rules:
 
 ## Follow-ups worth doing
 
+- Close the guard gaps 093 left: relative paths with the cwd inside `modules/gaston-help/`, commands on the parent `modules/` (same for `raw/web`), regression rows for help-dir case / 8.3 / trailing-dot variants, and the .NET vs JS `\d` / `\s` Unicode edge in the wiki heading regex — [S22 review](sprints/S22/review.md)
+- Tighten 095's tests: concrete terms in the skill-content test, and let the llm-bridge test use a real `readSetupState` instead of a mock — [S22 review](sprints/S22/review.md)
+- Update install: revoke the quit grant after a successful `quitAndInstall`, treat a missing or differently formatted feed version as unknown rather than superseded, stop a stale `check.isError` overriding later event state, and bring `close-guard.ts` (~312 lines) under 300 — [S22 review](sprints/S22/review.md)
+- Make `tests/core/index/perf.test.ts` stable under full-suite load (isolate the budget from CPU contention, do not raise it) — [S22 review](sprints/S22/review.md)
 - `tray.spec.ts:134` "quit from the tray ends the app" failed once in a full e2e run on 2026-10-27 and passed alone — find the race, do not lengthen a timeout — [S21 review](sprints/done/S21/review.md)
 - Pull the repeated `isRecord` / non-empty-string helpers in `src/core/agent/` into one module and split `condense-source-job.ts` and `CondensedUnitPanel.tsx` under 300 lines — [S21 review](sprints/done/S21/review.md)
 - Give agent job ids sub-second resolution, and show an agent `skipped` result's reason in the condensed panel — [S21 review](sprints/done/S21/review.md)

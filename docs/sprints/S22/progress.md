@@ -63,3 +63,6 @@
 - 2026-10-27 16:49 · 080 · review 1 · started
 - 2026-10-27 16:51 · 080 · review 1 · done
 - 2026-10-27 16:51 · 080 · story · done
+- 2026-10-27T16:51:12 · gate · short suites · started
+- 2026-10-27T16:58:06 · gate · done
+- 2026-10-27T16:59:54 · review · done

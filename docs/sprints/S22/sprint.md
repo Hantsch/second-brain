@@ -1,6 +1,6 @@
 ---
 sprint: S22
-status: in-progress
+status: done
 branch: dev # no sprint branch, built directly on dev (user decision)
 milestone: M21 — Release hardening
 ---
@@ -33,4 +33,10 @@ criterion proven by a test and a changelog entry, and the S19 update/release gap
 
 ## Regression gate
 
-<!-- Filled by `/sprint` phase 2b: the commands run, minutes taken, result, commit, and a verdict per failure. -->
+Ran on `145cb95` (dev), 2026-10-27 16:51–16:57, one launch each:
+
+- `npm run build` — green, <1 min
+- `npm test` — red: 1 failed / 5110 passed, 1.7 min
+- `npm run test:e2e` — green, 122 passed, 3.5 min
+
+Failure: `tests/core/index/perf.test.ts` › "a realistic vault stays within the index budget" (warm open 13191 ms vs. 1700 ms budget). Verdict: **flaky** — green when run alone on the same `HEAD` (54 s); the wall-clock budget fails under the full parallel suite's CPU load, and no sprint story touched `src/core/index/`. Not quarantined (`e2e-quarantine: none`); roadmap follow-up.
