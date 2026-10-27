@@ -4,7 +4,9 @@
    finished) is moved aside and books nothing. One bad job never stops the others. */
 
 import type { AgentJobFile, AgentJobKind } from '@shared/types';
+import { settleGardenerAudit } from './audit-job';
 import { settleCondenseSource } from './condense-source-job';
+import { settleCurateModule } from './curate-job';
 import type { AgentJobDeps, Settler } from './settler';
 
 export type { AgentJobDeps, Settler } from './settler';
@@ -12,6 +14,8 @@ export type { AgentJobDeps, Settler } from './settler';
 /** One settler per job kind; a new kind registers here. */
 export const AGENT_JOB_SETTLERS: Record<AgentJobKind, Settler> = {
   'condense-source': settleCondenseSource,
+  'curate-module': settleCurateModule,
+  'gardener-audit': settleGardenerAudit,
 };
 
 const UNKNOWN_KIND = 'Gaston does not know this kind of job.';

@@ -19,6 +19,7 @@
  *   `run-read`    liest und validiert die rohe JSON-Form aus `gardener.json`
  *   `run-merge`   die Zusammenfuehrung beim Speichern: was ein Teil-Lauf ueberlebt
  *                 (`applySavedRun` ueber `mergeScoped`/`keptFixed`/`outlivesRun`)
+ *   `run-audit-apply` books an agent audit into the stored run, pruning no decision
  *   `run-present` baut den Bericht fuer den Bildschirm, samt eingefrorenem
  *                 Gesundheitswert (`presentRun`)
  *
@@ -33,8 +34,11 @@ export {
   MAX_NOTE_CHARS,
   auditFindings,
   auditPages,
+  checkAuditAnswer,
+  type AuditAnswerCheck,
   type AuditOptions,
   type AuditResult,
+  type AuditViolation,
 } from './audit';
 export {
   MAX_SUMMARY_CHARS,
@@ -178,7 +182,14 @@ export {
   type UndoStore,
 } from './undo';
 export { WordIndex } from './word-index';
-export { empty, type FixedFinding, type StoredGardener, type StoredRun } from './run-record';
+export {
+  empty,
+  type FixedFinding,
+  type RunAudit,
+  type StoredGardener,
+  type StoredRun,
+} from './run-record';
+export { applyAgentAudit, bookAgentAudit, hasAudit } from './run-audit-apply';
 export { inScope, isRunComplete, narrowedScope, scopeAdmits } from './run-scope';
 export { readStoredGardener } from './run-read';
 export { applySavedRun, type SaveRunOptions } from './run-merge';

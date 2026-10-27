@@ -72,17 +72,36 @@ export function parseRunReport(content: string): AgentRunReport | { error: strin
   };
 }
 
-/** The newest report in `runs/` (file names sort by start time); `none` without one. */
-export async function readLastRun(
-  store: Pick<VaultStore, 'list' | 'readText'>,
-): Promise<AgentLastRun> {
+/** The report files in `runs/`, oldest first (file names sort by start time). */
+async function runPaths(store: Pick<VaultStore, 'list'>): Promise<string[]> {
   const paths = await store.list({
     dir: AGENT_DIRS.runs,
     ext: '.md',
     recursive: false,
     includeInternal: true,
   });
-  const newest = [...paths].sort((a, b) => (baseName(a) < baseName(b) ? -1 : 1)).at(-1);
+  return [...paths].sort((a, b) => (baseName(a) < baseName(b) ? -1 : 1));
+}
+
+/** The newest `limit` readable reports, newest first; an unreadable file is skipped. */
+export async function readRecentRuns(
+  store: Pick<VaultStore, 'list' | 'readText'>,
+  limit: number,
+): Promise<AgentRunReport[]> {
+  const reports: AgentRunReport[] = [];
+  for (const path of (await runPaths(store)).reverse().slice(0, limit)) {
+    const raw = await store.readText(path).catch(() => null);
+    const report = raw === null ? null : parseRunReport(raw);
+    if (report !== null && !('error' in report)) reports.push(report);
+  }
+  return reports;
+}
+
+/** The newest report in `runs/`; `none` without one. */
+export async function readLastRun(
+  store: Pick<VaultStore, 'list' | 'readText'>,
+): Promise<AgentLastRun> {
+  const newest = (await runPaths(store)).at(-1);
   if (newest === undefined) return { state: 'none' };
 
   const unreadable = (reason: string): AgentLastRun => ({

@@ -44,3 +44,39 @@ describe('AgentJobRow', () => {
     expect(onWithdraw).toHaveBeenCalledWith('job-1');
   });
 });
+
+describe('AgentJobRow for module and maintenance jobs', () => {
+  it('a finished curate job states its counts', () => {
+    setLanguage('en');
+    render(
+      <AgentJobRow
+        job={job({
+          kind: 'curate-module',
+          state: 'done',
+          reason: null,
+          curate: { pagesChanged: 3, proposalsWritten: 2 },
+        })}
+        onWithdraw={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('Pages changed: 3 · proposals written: 2')).toBeTruthy();
+  });
+
+  it('a finished curate job without a report says the report is pending', () => {
+    setLanguage('en');
+    render(
+      <AgentJobRow
+        job={job({
+          kind: 'curate-module',
+          state: 'done',
+          reason: null,
+          curate: { reportPending: true },
+        })}
+        onWithdraw={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('Report pending')).toBeTruthy();
+  });
+});

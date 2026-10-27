@@ -40,7 +40,12 @@ export const deTasks = {
 
   // ── Die Aufträge des Agenten (Story 090) ─────────────────────────────────
   'tasks.agent.kind.condense-source': 'Quelle verdichten',
+  'tasks.agent.kind.curate-module': 'Modul pflegen',
+  'tasks.agent.kind.gardener-audit': 'Pflegelauf deuten',
   'tasks.agent.state.skipped': 'Übersprungen',
   'tasks.agent.state.withdrawn': 'Zurückgezogen',
   'tasks.agent.reason': 'Grund: {reason}',
+  'tasks.agent.label.gardener-audit': 'Pflegelauf vom {date}',
+  'tasks.agent.curate.done': 'Geänderte Seiten: {pages} · geschriebene Vorschläge: {proposals}',
+  'tasks.agent.curate.pending': 'Bericht steht noch aus',
 } as const;

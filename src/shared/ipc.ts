@@ -18,6 +18,7 @@ import type {
   AgentCliStatus,
   AgentProtectionState,
   AgentSessionSummary,
+  AgentHandOverResult,
   AgentJobView,
   AgentProposalView,
   AgentSetupApplyRequest,
@@ -1315,8 +1316,12 @@ export interface IpcRoutes {
   /** Files a condense-source job for a raw source; handing over twice answers `exists` with the open job. */
   'agent:handOverSource': {
     req: { rawPath: string; module: string | null };
-    res: { outcome: 'filed' | 'exists'; job: AgentJobView };
+    res: AgentHandOverResult;
   };
+  /** Files a curate-module job for a knowledge module (slug); the help module is refused. */
+  'agent:handOverModule': { req: { module: string }; res: AgentHandOverResult };
+  /** Files a gardener-audit job for the stored maintenance run; refused when it has no audit to ask for. */
+  'agent:handOverGardenerRun': { req: void; res: AgentHandOverResult };
   /** Takes an open job back; a page the agent already wrote stays, a late result books nothing. */
   'agent:withdrawJob': { req: { id: string }; res: AgentJobView[] };
 
@@ -1555,6 +1560,8 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'agent:proposalReject',
   'agent:jobs',
   'agent:handOverSource',
+  'agent:handOverModule',
+  'agent:handOverGardenerRun',
   'agent:withdrawJob',
   'settings:get',
   'settings:setApp',

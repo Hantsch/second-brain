@@ -33,6 +33,12 @@ All notable changes to Gaston are recorded here. The format follows
   you can curate, and a pointer to Settings when the setup needs installing or updating.
 - Maintenance: edits the agent proposes wait there as cards with a diff. You accept or reject each
   one, and an accepted edit can be undone.
+- Modules and maintenance: a module, or the last maintenance run, can be handed to the agent from
+  its header, the Agent tab or the Maintenance health card. The button reads as taken while the
+  agent holds the job, so nothing gets handed over twice.
+- Tasks: a module job lists the pages changed and proposals written, read from the agent's run
+  report, or says the report is still pending. An interpretation of a maintenance run that the
+  vault cannot accept fails with the offending path, books nothing and offers the hand-over again.
 
 ## 0.2.0 — 2026-10-20
 

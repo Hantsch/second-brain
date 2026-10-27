@@ -23,7 +23,7 @@ import type {
 } from './contracts';
 import type { KeyStore } from './secrets';
 import type { SettingsService } from './settings';
-import { isAgentJobPath, settleAgentJobsQueued } from './agent-jobs-settle';
+import { isAgentJobPath, isAgentRunPath, settleAgentJobsQueued } from './agent-jobs-settle';
 import { fail, noVault } from './ipc/errors';
 import { ensureStructure, isVault } from './vault-layout';
 import { getWorkQueue } from './work-queue';
@@ -391,7 +391,9 @@ export class Services {
      paths are remembered and folded into the next successful refresh's
      report, so nothing gets lost — only delayed. */
   private handleVaultChange(paths: string[], external: boolean): void {
-    if (paths.some(isAgentJobPath)) void settleAgentJobsQueued(this);
+    if (paths.some(isAgentJobPath) || paths.some(isAgentRunPath)) {
+      void settleAgentJobsQueued(this, { alwaysEmit: paths.some(isAgentRunPath) });
+    }
     const index = this.index();
     if (!index?.refresh) {
       this.sendEvent('event:vault-changed', { paths, external });

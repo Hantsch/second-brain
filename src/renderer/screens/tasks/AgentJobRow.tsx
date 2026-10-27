@@ -49,6 +49,16 @@ export function AgentJobRow({ job, onWithdraw }: AgentJobRowProps) {
           {t(STATE_LABEL_KEY[job.state])}
         </Badge>
       </div>
+      {job.curate !== undefined ? (
+        <div className="sb-trow-reason">
+          {'reportPending' in job.curate
+            ? t('tasks.agent.curate.pending')
+            : t('tasks.agent.curate.done', {
+                pages: job.curate.pagesChanged,
+                proposals: job.curate.proposalsWritten,
+              })}
+        </div>
+      ) : null}
       {job.reason !== null ? (
         <div className="sb-trow-reason">{t('tasks.agent.reason', { reason: job.reason })}</div>
       ) : null}

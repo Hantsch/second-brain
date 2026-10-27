@@ -6,7 +6,8 @@ description: Curate one module's wiki, given the module slug as the argument. Us
 # Curate a module wiki
 
 The argument is the module slug. This skill maintains `modules/<slug>/wiki/` and nothing else
-directly.
+directly. A `curate-module` job from Gaston may start it too; then you write the job's result
+file when you are done, as the `gaston-jobs` skill describes.
 
 ## Steps
 

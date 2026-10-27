@@ -1,7 +1,7 @@
 ---
 id: 091
 title: I hand a module or a gardener run to the agent
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-10-22
 ---
 
@@ -21,17 +21,17 @@ completeness and contradictions.
 
 ## Acceptance Criteria
 
-- [ ] **AC1** — A module in Knowledge offers "Hand to agent"; one click writes exactly one
+- [x] **AC1** — A module in Knowledge offers "Hand to agent"; one click writes exactly one
       curate-module job.
-- [ ] **AC2** — A gardener run without an audit offers "Hand to agent" in Maintenance; one click
+- [x] **AC2** — A gardener run without an audit offers "Hand to agent" in Maintenance; one click
       writes exactly one gardener-audit job.
-- [ ] **AC3** — A finished curate job shows as done in the Tasks screen with the number of pages
+- [x] **AC3** — A finished curate job shows as done in the Tasks screen with the number of pages
       changed and proposals written, taken from its run report.
-- [ ] **AC4** — A valid audit result passes the `audit.ts` check, is stored in `gardener.json`, and
+- [x] **AC4** — A valid audit result passes the `audit.ts` check, is stored in `gardener.json`, and
       Maintenance shows it like a model audit.
-- [ ] **AC5** — An audit result naming a path not in the index or a finding not in the run shows
+- [x] **AC5** — An audit result naming a path not in the index or a finding not in the run shows
       the job as failed with the reason, and `gardener.json` is unchanged.
-- [ ] **AC6** — The installed curator skill lists its checklist (filing, links, index completeness,
+- [x] **AC6** — The installed curator skill lists its checklist (filing, links, index completeness,
       contradictions); the template test pins it.
 
 ## Open Questions
@@ -228,3 +228,40 @@ but D7 is cheap and keeps the template test green before the last UI D).
   never filed"
 
 ## Done
+
+A module (Knowledge header, Agent commands panel; never the help module) and a gardener run without an
+audit (Maintenance health card) can be handed to the agent as `curate-module` / `gardener-audit` jobs on
+090's format. A finished curate job shows pages changed and proposals written from the run report (or
+"report pending"). An agent audit is validated by the shared `checkAuditAnswer`, booked into
+`gardener.json` only when valid (any violation fails the whole job, file byte-identical).
+
+Commit message: `091: hand a module or a gardener run to the agent (curate + audit jobs, strict audit booking, buttons, Tasks rows, skills v5/v3)`
+
+Verification (narrow gate): `npm run build`, `lint`, `typecheck`, scoped `prettier --check` green;
+`npx vitest run --changed HEAD` (~320 files, ~4300 tests) green apart from load-dependent timing flakes
+(`journal.test.tsx`, `settings.test.tsx` a11y, `perf.test.ts`, `capture-ipc.test.ts`, `overview-flow`,
+`agent-terminal`) that all pass alone; `npx playwright test tests/e2e/agent-module-jobs.spec.ts
+agent-setup agent-screen agent-source-job` green (7/7). AC -> test as verified (all passed): AC1-AC3 e2e
+first test + `curate-job.test.ts`; AC2, AC4, AC5 e2e second test + `audit-job.test.ts`,
+`run-audit-apply.test.ts`, `tests/main/agent-module-jobs.test.ts`; AC6 `templates.test.ts`; help-module
+decision `hand-to-agent-places.test.tsx` + `curate-job.test.ts`. No manual residue. Review: stage 1
+(default) PASS, one fix cycle (see Decisions), narrow gate re-run green.
+
+Decisions: names for 092: `fileCurateJob`/`curateOutcome`/`settleCurateModule` (`curate-job.ts`),
+`buildAuditJob`/`validateAuditResult`/`settleGardenerAudit` (`audit-job.ts`), optional
+`AgentJobDeps.gardenerAudit` (`settler.ts`), `checkAuditAnswer` (`gardener/audit.ts`), `hasAudit`/
+`applyAgentAudit`/`bookAgentAudit` (`run-audit-apply.ts`, `GardenerState.bookAgentAudit`), channels
+`agent:handOverModule` / `agent:handOverGardenerRun`, `AgentHandOverResult`, `AgentJobView.curate`,
+`GardenerReport.agentAudit`, `readRecentRuns` (`run-reports.ts`). `StoredRun.audit` is `RunAudit | null`
+(null = new run without audit, absent = legacy; legacy counts as audited when `usedLlm`), because a new
+run's `usedLlm` also turns true from loose ends. `'audit'` joins `completed` only when `isRunComplete`
+stays unchanged; `checkedKinds` gets `'contradiction'` only when the run recorded a list. Agent audit fails
+on over-long advice, not just bad paths/ids. Skills: `gaston-jobs` 4->5, `gaston-curate` 2->3 (new
+`skills-jobs-kinds.ts`); mock bridge pins updated. Open-job lookups match the stored run's `ranAt`.
+Unfixed, deliberately: `agentJobId` has second resolution (same-second re-hand-over of one subject reuses
+the id; inherited from 090); `isRecord` is a fifth local copy; `slugify(x) !== x` vs a regex slug check;
+e2e relies on the automatic maintenance run after vault open; e2e pins "Interpreted by the model." for an
+agent audit (story decision: shown like a model audit). The orchestrator fixed the stale mock-bridge skill
+versions directly (two-line pin change). Format red outside this story: `docs/requirements/*.md`.
+
+tiers: D 7 / hard 1 · review default · cycles 1 · agents 11

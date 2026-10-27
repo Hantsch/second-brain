@@ -41,7 +41,8 @@ const SUMMARY_CHARS = 120;
 /** One slug segment; it also rules out `..`, backslashes, drive letters and empty segments. */
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
-export type HandOverRefusalCode = 'not-a-source' | 'already-condensed' | 'unknown-module';
+export type HandOverRefusalCode =
+  'not-a-source' | 'already-condensed' | 'unknown-module' | 'help-module';
 
 export class HandOverError extends Error {
   readonly code: HandOverRefusalCode;

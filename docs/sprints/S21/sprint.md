@@ -22,7 +22,7 @@ run.
 - [x] 088 — The agent's proposals wait in Maintenance
 - [x] 089 — Every agent run leaves a report
 - [x] 090 — I hand a waiting source to the agent
-- [ ] 091 — I hand a module or a gardener run to the agent
+- [x] 091 — I hand a module or a gardener run to the agent
 - [ ] 092 — I hand a module's condensation to the agent
 
 ## Notes

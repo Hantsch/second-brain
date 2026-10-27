@@ -32,11 +32,16 @@ import { shiftDay } from '@core/overview';
 import type { HandlerMap } from './registry';
 import { defineHandlers, fail } from './registry';
 import { assertActionable, findingOf, linkOrphan, orphanPick } from './gardener-actions';
-import { gardenerReport, gardenerStateFor, gardenerToday } from './gardener-deps';
+import { withAgentAudit } from './gardener-agent-audit';
+import {
+  gardenerReport,
+  gardenerStateFor,
+  gardenerToday,
+  wakeGardener as wake,
+} from './gardener-deps';
 import { runGardener } from './gardener-run';
 import { docLanguage, settle, wikiIndex, wikiStore } from './wiki-bridge';
 import { cancelGardenerRun } from '../gardener-run-state';
-import { GARDENER_STATE_FILE } from '../gardener-state';
 import { getWorkQueue } from '../work-queue';
 import type { Services } from '../services';
 import type { GardenerRunProgress } from '@shared/types';
@@ -46,17 +51,9 @@ import type { GardenerRunProgress } from '@shared/types';
     same reason, on a different kind of thing being put away. */
 const MAX_SNOOZE_DAYS = 365;
 
-/** The report has changed: same wake-up as with the reminders. */
-function wake(services: Services): void {
-  services.sendEvent('event:vault-changed', {
-    paths: [GARDENER_STATE_FILE],
-    external: false,
-  });
-}
-
 export function gardenerHandlers(services: Services): HandlerMap {
   return defineHandlers({
-    'gardener:report': async () => gardenerReport(services),
+    'gardener:report': async () => withAgentAudit(services, await gardenerReport(services)),
 
     /* A thin read of the one place that knows whether a run is going — now
        the work queue every long-running task is listed in (074, D2), so the
@@ -75,7 +72,8 @@ export function gardenerHandlers(services: Services): HandlerMap {
     /* The run flow itself (slot claim, resume/scope inheritance, cancel
        reason, save, report) lives in `gardener-run.ts` (027, D5) — this
        channel file only wires the request through. */
-    'gardener:run': async (request) => runGardener(services, request),
+    'gardener:run': async (request) =>
+      withAgentAudit(services, await runGardener(services, request)),
 
     'gardener:cancel': () => {
       /* A stop the user asked for — the only reason that leaves something

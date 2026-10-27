@@ -295,6 +295,8 @@ export const api = {
     jobs: () => call('agent:jobs'),
     handOverSource: (rawPath: string, module: string | null) =>
       call('agent:handOverSource', { rawPath, module }),
+    handOverModule: (module: string) => call('agent:handOverModule', { module }),
+    handOverGardenerRun: () => call('agent:handOverGardenerRun'),
     withdrawJob: (id: string) => call('agent:withdrawJob', { id }),
   },
   settings: {

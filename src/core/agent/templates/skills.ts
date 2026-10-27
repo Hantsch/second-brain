@@ -4,11 +4,16 @@
 
 import { AGENT_DIRS, AGENT_JOB_VERSION, AGENT_SKILLS } from '../../../shared/types/agent-setup';
 import type { SetupTemplate } from '../setup-types';
+import {
+  JOB_KIND_CURATE_MODULE,
+  JOB_KIND_GARDENER_AUDIT,
+  RESULT_CURATE_AND_AUDIT,
+} from './skills-jobs-kinds';
 
 export const SKILL_GASTON_JOBS_TEMPLATE: SetupTemplate = {
   id: `skill-${AGENT_SKILLS.jobs}`,
   path: `.claude/skills/${AGENT_SKILLS.jobs}/SKILL.md`,
-  version: 4,
+  version: 5,
   format: 'markdown-frontmatter',
   body: `---
 name: gaston-jobs
@@ -94,6 +99,8 @@ fields besides the common ones:
    \`modules/<module>/wiki/log.md\`, as the module schema in \`modules/<module>/AGENTS.md\` asks.
 5. Write the result with \`status: done\` and \`sourcePage\`, the path of the page you wrote.
 
+${JOB_KIND_CURATE_MODULE}
+${JOB_KIND_GARDENER_AUDIT}
 ## Result format
 
 A \`condense-source\` job gets a Markdown result: frontmatter, nothing required after it.
@@ -117,6 +124,7 @@ An \`llm-task\` job keeps a JSON result with one status:
 - \`{ "status": "failed", "reason": "<why>" }\` when you tried and could not finish.
 - \`{ "status": "skipped", "reason": "<why>" }\` when you chose not to do the job.
 
+${RESULT_CURATE_AND_AUDIT}
 A job kind this skill does not describe gets \`skipped\` with the reason "unknown job kind".
 Do not guess what such a job wants.
 
@@ -131,7 +139,7 @@ Do not guess what such a job wants.
 export const SKILL_GASTON_CURATE_TEMPLATE: SetupTemplate = {
   id: `skill-${AGENT_SKILLS.curate}`,
   path: `.claude/skills/${AGENT_SKILLS.curate}/SKILL.md`,
-  version: 2,
+  version: 3,
   format: 'markdown-frontmatter',
   body: `---
 name: gaston-curate
@@ -141,7 +149,8 @@ description: Curate one module's wiki, given the module slug as the argument. Us
 # Curate a module wiki
 
 The argument is the module slug. This skill maintains \`modules/<slug>/wiki/\` and nothing else
-directly.
+directly. A \`curate-module\` job from Gaston may start it too; then you write the job's result
+file when you are done, as the \`gaston-jobs\` skill describes.
 
 ## Steps
 

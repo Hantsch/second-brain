@@ -12,17 +12,28 @@ import { bridge } from '../bridge';
 import { useVaultReady } from './data';
 import { qk } from './keys';
 
+/** The open job of a kind, if the agent holds one; `subject` narrows it to one module or source. */
+export function openJob(
+  jobs: readonly AgentJobView[] | undefined,
+  kind: AgentJobView['kind'],
+  subject?: string,
+): AgentJobView | null {
+  return (
+    (jobs ?? []).find(
+      (job) =>
+        job.kind === kind &&
+        job.state === 'with-agent' &&
+        (subject === undefined || job.subject === subject),
+    ) ?? null
+  );
+}
+
 /** The open condense-source job for a raw source, if the agent holds one. */
 export function openSourceJob(
   jobs: readonly AgentJobView[] | undefined,
   rawPath: string,
 ): AgentJobView | null {
-  return (
-    (jobs ?? []).find(
-      (job) =>
-        job.kind === 'condense-source' && job.state === 'with-agent' && job.subject === rawPath,
-    ) ?? null
-  );
+  return openJob(jobs, 'condense-source', rawPath);
 }
 
 /** The agent has condensed this raw source: a finished `done` job names it. */
@@ -79,4 +90,34 @@ export function useAgentJobMutations(): AgentJobMutations {
       onSuccess: (jobs) => client.setQueryData(qk.agent.jobs(), jobs),
     }),
   };
+}
+
+/** Handing a module or the last gardener run over; `exists` answers with the open job too. */
+export function useHandOverModule(): UseMutationResult<
+  IpcResponse<'agent:handOverModule'>,
+  unknown,
+  string
+> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: api.agent.handOverModule,
+    onSuccess: () => client.invalidateQueries({ queryKey: qk.agent.jobs() }),
+  });
+}
+
+export function useHandOverGardenerRun(): UseMutationResult<
+  IpcResponse<'agent:handOverGardenerRun'>,
+  unknown,
+  void
+> {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.agent.handOverGardenerRun(),
+    /* The report says whether a job is open; awaiting it keeps the button disabled until it does. */
+    onSuccess: () =>
+      Promise.all([
+        client.invalidateQueries({ queryKey: qk.agent.jobs() }),
+        client.invalidateQueries({ queryKey: qk.gardener.report() }),
+      ]),
+  });
 }

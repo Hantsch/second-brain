@@ -25,8 +25,14 @@
    next to it. */
 
 import { join } from 'node:path';
-import { applySavedRun, empty, presentRun, readStoredGardener } from '@core/gardener';
-import type { SaveRunOptions, StoredGardener, StoredRun } from '@core/gardener';
+import {
+  applySavedRun,
+  bookAgentAudit,
+  empty,
+  presentRun,
+  readStoredGardener,
+} from '@core/gardener';
+import type { AuditResult, SaveRunOptions, StoredGardener, StoredRun } from '@core/gardener';
 import type { GardenerReport } from '@shared/types';
 import { readJson, writeJsonAtomic } from './fs-json';
 
@@ -121,6 +127,21 @@ export class GardenerState {
   async save(run: StoredRun, options: SaveRunOptions = {}): Promise<void> {
     this.data = applySavedRun(this.data, run, options);
     await this.write();
+  }
+
+  /**
+   * Books an agent's audit into the stored run it was asked about — the run
+   * stored at `ranAt`. Deliberately not `save`: an audit re-derives nothing, so
+   * it must not pass through the pruning a new run applies to "fine as is" and
+   * snoozes (`bookAgentAudit`). `false`, and nothing written, when that run is
+   * gone or was replaced since.
+   */
+  async bookAgentAudit(ranAt: string, audit: AuditResult, at: string): Promise<boolean> {
+    const next = bookAgentAudit(this.data, ranAt, audit, at);
+    if (next === null) return false;
+    this.data = next;
+    await this.write();
+    return true;
   }
 
   /**

@@ -253,7 +253,8 @@ My note.
 
   it('a file from a newer Gaston is never downgraded', async () => {
     const store = new MemoryVaultStore();
-    const newer = shippedWith(CURATE_SKILL, 3);
+    const newerVersion = template(CURATE_SKILL).version + 1;
+    const newer = shippedWith(CURATE_SKILL, newerVersion);
     await install(store, newer);
     const written = await store.readText(CURATE_SKILL);
 
@@ -261,7 +262,7 @@ My note.
     expect(statusOf(viaManifest, CURATE_SKILL)).toEqual({
       path: CURATE_SKILL,
       status: 'newer',
-      installedVersion: 3,
+      installedVersion: newerVersion,
       shippedVersion: template(CURATE_SKILL).version,
     });
     expect(viaManifest.action).toBe('none');

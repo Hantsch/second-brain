@@ -2,7 +2,7 @@
  * `.secondbrain/agent/jobs/` and `.secondbrain/agent/results/` (format: docs/VAULT-FORMAT.md). */
 
 /** What a job asks of the agent. Later stories extend the union. */
-export type AgentJobKind = 'condense-source';
+export type AgentJobKind = 'condense-source' | 'curate-module' | 'gardener-audit';
 
 /** How a job ended. `withdrawn` is the human taking it back; the other three are the agent's. */
 export type AgentJobOutcome = 'done' | 'failed' | 'skipped' | 'withdrawn';
@@ -39,4 +39,12 @@ export interface AgentJobView {
   reason: string | null;
   createdAt: string;
   finishedAt: string | null;
+  /** What a finished curate-module job did, read back from the agent's run report. */
+  curate?: { pagesChanged: number; proposalsWritten: number } | { reportPending: true };
+}
+
+/** The answer to a hand-over: `exists` carries the job that is already open for the same subject. */
+export interface AgentHandOverResult {
+  outcome: 'filed' | 'exists';
+  job: AgentJobView;
 }

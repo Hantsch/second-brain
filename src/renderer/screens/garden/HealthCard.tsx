@@ -26,6 +26,7 @@
 import type { GardenerHiddenFinding, GardenerReport } from '@shared/types';
 import { Button } from '../../atoms/Button';
 import { Card } from '../../atoms/Card';
+import { HandOverGardenerRunButton } from '../../components/AgentHandOverActions';
 import { HealthMeter } from '../../components/HealthMeter';
 import { useLanguage, useT } from '../../i18n';
 import { formatDate, locale, plural } from '../../lib/format';
@@ -136,6 +137,12 @@ export function HealthCard({ report, onShowHidden }: HealthCardProps) {
           {t(report.usedLlm ? 'garden.health.withModel' : 'garden.health.withoutModel')}
         </span>
       </p>
+
+      {/* Main decides whether a run is worth handing over (no audit yet, something to
+          interpret); this card only shows what it was told. */}
+      {report.agentAudit?.offered === true ? (
+        <HandOverGardenerRunButton open={report.agentAudit.open} />
+      ) : null}
 
       {/* 021c, D4: next to the frozen-score stamp above — not instead of it —
           names the part of the vault the last run actually looked at, so the

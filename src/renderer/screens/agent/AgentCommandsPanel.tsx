@@ -4,6 +4,7 @@
 
 import { HELP_MODULE_SLUG } from '@shared/help-module';
 import { AGENT_DIRS, AGENT_SKILLS } from '@shared/types';
+import { HandOverModuleButton } from '../../components/AgentHandOverActions';
 import { Panel } from '../../components/Panel';
 import { useT } from '../../i18n';
 import { useModules } from '../../lib/queries/data';
@@ -58,6 +59,16 @@ export function AgentCommandsPanel() {
               <span className="sb-agent-command-modules">
                 {t('agent.commands.modules')} <span className="sb-mono">{slugs.join(', ')}</span>
               </span>
+            ) : null}
+            {row.argKey !== undefined && slugs.length > 0 ? (
+              <ul className="sb-agent-command-hand">
+                {slugs.map((slug) => (
+                  <li key={slug}>
+                    <span className="sb-mono">{slug}</span>
+                    <HandOverModuleButton slug={slug} variant="ghost" />
+                  </li>
+                ))}
+              </ul>
             ) : null}
           </dd>
         </div>

@@ -67,6 +67,12 @@ carries `version`, `name`, and `createdAt`; the app creates missing folders on
 open, without touching existing content. It only writes `README.md` if none
 exists.
 
+The stored run in `gardener.json` carries an optional `audit` field saying who interpreted it:
+`{ "by": "model" | "agent", "at": <ISO timestamp> }`, the model during the run or the agent
+booked in afterwards. `null` is a run written without an audit, for example when only the
+loose-ends stage got an answer from a model. An absent field is a run written by an older
+version, where `usedLlm` stands in for it.
+
 Two files under `modules/` are structure, not knowledge, and therefore carry
 **no** frontmatter: `wiki/index.md` (catalog) and `wiki/log.md` (chronicle).
 Links to them count neither as incoming nor as broken. `module.md` carries
@@ -679,7 +685,7 @@ the rules above, recorded in the same manifest. On top of that:
 A job is one `.md` file directly in `jobs/`, named `<kind>-<YYYYMMDDTHHmmss>-<hash>.md`: the kind,
 the hand-over time in UTC, and the first 8 hex characters of the sha256 of the subject. The agent
 answers with `results/<same name>.md`. A `.json` file in `jobs/` is an `llm-task` job and is not
-described here. Kinds so far: `condense-source`.
+described here. Kinds so far: `condense-source`, `curate-module` and `gardener-audit`.
 
 ```markdown
 ---
@@ -705,6 +711,19 @@ subject: raw/articles/bread.md
 
 The result carries `job: <id>`, `status`, and the kind's own fields (for example `sourcePage`);
 the body is free text.
+
+`curate-module` hands a whole module to the agent. Its `subject` is the module slug, and its one
+field is `module` (the same slug). The agent changes the module's wiki directly and leaves
+decisions for the human as proposals, so a `done` result needs nothing beyond `status`; what the
+run did is read from its run report.
+
+`gardener-audit` asks the agent to interpret the stored maintenance run in `gardener.json`. Its
+`subject` is the run's `ranAt`, and its fields are `ranAt`, `findings` (a list of `id`, `kind`,
+`title` and `paths` per finding), `candidateIds` (the finding ids the agent may confirm or reject)
+and `pages` (the wiki pages it may name). A `done` result lists `contradictions` (entries with
+`pathA`, `pathB` and `note`), `confirmed`, `rejected` and `advice`; every field is optional.
+Gaston fails the whole result when any path is not an indexed wiki page or any id is not a
+candidate of the run, and a result for a run that has been replaced since the hand-over.
 
 | `status`  | Further fields                   |
 | --------- | -------------------------------- |

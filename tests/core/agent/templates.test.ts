@@ -3,6 +3,7 @@
 
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { MAX_ADVICE } from '@core/llm';
 import { SETUP_TEMPLATES } from '@core/agent/setup-templates';
 import { VAULT_CLAUDE_TEMPLATE } from '@core/agent/templates/vault-claude';
 import { parse } from '@core/vault/frontmatter';
@@ -131,6 +132,45 @@ describe('setup templates', () => {
     }
     // The ingest marker belongs to Gaston, and the skill has to keep saying so.
     expect(body).toMatch(/^- Write `\.ingest\.json` files\.$/m);
+  });
+
+  it('the jobs skill describes the curate and audit kinds', () => {
+    const body =
+      SETUP_TEMPLATES.find((candidate) => candidate.id === 'skill-gaston-jobs')?.body ?? '';
+    for (const needle of [
+      '### `curate-module`',
+      '### `gardener-audit`',
+      '`candidateIds`',
+      'contradictions',
+      'confirmed',
+      'rejected',
+      'advice',
+      'pathA',
+      'pathB',
+      'fail the whole result and book nothing',
+      'job: curate-module-',
+      'job: gardener-audit-',
+    ]) {
+      expect(body, needle).toContain(needle);
+    }
+    expect(MAX_ADVICE).toBe(3);
+    expect(body).toContain('at most three short sentences');
+  });
+
+  it('the curator skill lists its four-point checklist', () => {
+    const template = SETUP_TEMPLATES.find((candidate) => candidate.id === 'skill-gaston-curate');
+    const body = template?.body ?? '';
+    const checklist = (body.split('## Checklist')[1] ?? '').split('\n## ')[0] ?? '';
+    const points = checklist.split('\n').filter((line) => line.startsWith('- '));
+    expect(points.map((line) => line.slice(2).split(':')[0])).toEqual([
+      'Filing',
+      'Links',
+      'Index completeness',
+      'Contradictions',
+    ]);
+    // A job from Gaston may start the skill; the older install has to show as outdated.
+    expect(body).toContain('`curate-module` job');
+    expect(template?.version).toBeGreaterThan(2);
   });
 
   it('every Gaston skill opens with frontmatter naming it and saying when to use it', () => {

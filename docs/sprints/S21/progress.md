@@ -68,3 +68,28 @@
 - 2026-10-27 12:27 · 090 · verify 2 · started
 - 2026-10-27 12:32 · 090 · verify 2 · done
 - 2026-10-27 12:32 · 090 · story · done
+- 12:32:45 · 091 · build · started
+- 2026-10-27 12:33 · 091 · D1 curate-module job kind · started
+- 2026-10-27 12:36 · 091 · D1 curate-module job kind · done
+- 2026-10-27 12:36 · 091 · D2 gardener-audit job kind + shared check · started
+- 2026-10-27 12:40 · 091 · D2 gardener-audit job kind + shared check · done
+- 2026-10-27 12:40 · 091 · D3 booking agent audit into gardener.json (hard) · started
+- 2026-10-27 12:44 · 091 · D3 booking agent audit into gardener.json (hard) · done
+- 2026-10-27 12:44 · 091 · D4 main wiring · started
+- 2026-10-27 12:51 · 091 · D4 main wiring · done
+- 2026-10-27 12:51 · 091 · D5 hand-to-agent buttons · started
+- 2026-10-27 12:55 · 091 · D5 hand-to-agent buttons · done
+- 2026-10-27 12:55 · 091 · D7 skill templates · started
+- 2026-10-27 12:59 · 091 · D7 skill templates · done
+- 2026-10-27 12:59 · 091 · D6 Tasks rows, e2e, changelog · started
+- 2026-10-27 13:09 · 091 · D6 Tasks rows, e2e, changelog · done
+- 2026-10-27 13:09 · 091 · verify · started
+- 2026-10-27 13:12 · 091 · verify · blocked: mock-agent-setup version pin (fixing)
+- 2026-10-27 13:13 · 091 · verify · done
+- 2026-10-27 13:13 · 091 · review 1 · started
+- 2026-10-27 13:17 · 091 · review 1 · done
+- 2026-10-27 13:17 · 091 · review-fix 1 · started
+- 2026-10-27 13:20 · 091 · review-fix 1 · done
+- 2026-10-27 13:20 · 091 · verify 2 · started
+- 2026-10-27 13:31 · 091 · verify 2 · done
+- 2026-10-27 13:31 · 091 · story · done

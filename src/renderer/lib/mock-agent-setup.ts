@@ -12,8 +12,8 @@ const SHIPPED: Record<string, number> = {
   '.claude/hooks/gaston-shell-guard.ps1': 1,
   '.claude/hooks/gaston-wiki-check.ps1': 1,
   '.claude/hooks/gaston-run-report.ps1': 1,
-  [`.claude/skills/${AGENT_SKILLS.jobs}/SKILL.md`]: 4,
-  [`.claude/skills/${AGENT_SKILLS.curate}/SKILL.md`]: 2,
+  [`.claude/skills/${AGENT_SKILLS.jobs}/SKILL.md`]: 5,
+  [`.claude/skills/${AGENT_SKILLS.curate}/SKILL.md`]: 3,
   [`.claude/skills/${AGENT_SKILLS.propose}/SKILL.md`]: 3,
 };
 const PATHS = Object.keys(SHIPPED);

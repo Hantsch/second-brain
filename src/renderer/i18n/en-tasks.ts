@@ -35,7 +35,12 @@ export const enTasks = {
 
   // ── The agent's jobs (story 090) ─────────────────────────────────────────
   'tasks.agent.kind.condense-source': 'Condense source',
+  'tasks.agent.kind.curate-module': 'Curate module',
+  'tasks.agent.kind.gardener-audit': 'Interpret maintenance run',
   'tasks.agent.state.skipped': 'Skipped',
   'tasks.agent.state.withdrawn': 'Withdrawn',
   'tasks.agent.reason': 'Reason: {reason}',
+  'tasks.agent.label.gardener-audit': 'Maintenance run of {date}',
+  'tasks.agent.curate.done': 'Pages changed: {pages} · proposals written: {proposals}',
+  'tasks.agent.curate.pending': 'Report pending',
 } as const;

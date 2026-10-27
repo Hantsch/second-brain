@@ -41,6 +41,7 @@ import {
   vaultSize,
 } from '@core/gardener';
 import type {
+  GardenerContext,
   GardenerDeps,
   GardenerIndexView,
   GardenerStageId,
@@ -63,7 +64,7 @@ import { fail } from './errors';
 import { docLanguage, replyLanguage } from './wiki-bridge';
 import { createGateway } from '../llm-bridge';
 import { gardenerLabels } from '../gardener-labels';
-import { gardenerState } from '../gardener-state';
+import { GARDENER_STATE_FILE, gardenerState } from '../gardener-state';
 import type { GardenerState, StoredRun } from '../gardener-state';
 import { looseEndState } from '../loose-end-state';
 import type { IndexLike } from '../contracts';
@@ -151,6 +152,17 @@ function deps(services: Services, signal?: AbortSignal): GardenerDeps {
     now: new Date(),
     ...(signal === undefined ? {} : { signal }),
   };
+}
+
+/** The context a maintenance check or a model audit runs against: today's index and settings. */
+export function gardenerContext(services: Services): GardenerContext {
+  const settings = services.settings.vault();
+  return buildContext(deps(services), { ...(settings === null ? {} : { settings }) });
+}
+
+/** The stored report changed: the same wake-up the reminders use. */
+export function wakeGardener(services: Services): void {
+  services.sendEvent('event:vault-changed', { paths: [GARDENER_STATE_FILE], external: false });
 }
 
 /** What a run reports, one step at a time. The shape itself lives in
@@ -586,6 +598,16 @@ export async function runWithProgress(
        (`gardener-state.ts`, `rederivedBy`): without it, a scope naming a kind no
        stage of this run could produce would read as "that kind is gone now". */
     checkedKinds: [...checkedKinds],
+    /* Who interpreted the run (story 091): this call's model if it answered,
+       otherwise whatever mark the call it continues already carried. Explicitly
+       `null` when nobody did — `usedLlm` also turns true from loose-ends alone,
+       so its absence would read as a legacy run that was audited. */
+    audit:
+      audit?.usedLlm === true
+        ? { by: 'model' as const, at: new Date().toISOString() }
+        : alreadyDone.has('audit')
+          ? (resumeFrom?.audit ?? null)
+          : null,
   };
   /* Not `!stopped`: the storage contract decides what complete means (021b,
      D1), so the run and everyone who later reads it from the file answer the
