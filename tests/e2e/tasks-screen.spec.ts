@@ -11,7 +11,7 @@ import { expect, test } from './fixtures/app';
 
 test.use({ specId: 'tasks-screen' });
 
-test('the rail opens tasks directly above maintenance, by click and by key', async ({ app }) => {
+test('the rail opens tasks above agent and maintenance, by click and by key', async ({ app }) => {
   const { page } = app;
 
   await test.step('by click', async () => {
@@ -22,14 +22,15 @@ test('the rail opens tasks directly above maintenance, by click and by key', asy
     await expect(page.locator('.sb-screen h1').first()).toHaveText('Tasks');
   });
 
-  await test.step('directly above maintenance', async () => {
+  await test.step('above agent and maintenance', async () => {
     /* Same rail-foot list as garden — adjacency is a DOM fact, not a claim
        about the fixture's screen list. */
     const systemItems = await page.locator('.sb-rail-foot .sb-rail-item').all();
     const hrefs = await Promise.all(systemItems.map((item) => item.getAttribute('href')));
     const tasksIndex = hrefs.indexOf('#/tasks');
     expect(tasksIndex).toBeGreaterThanOrEqual(0);
-    expect(hrefs[tasksIndex + 1]).toBe('#/garden');
+    /* The agent entry sits between tasks and maintenance since commit 1459397. */
+    expect(hrefs.slice(tasksIndex + 1, tasksIndex + 3)).toEqual(['#/agent', '#/garden']);
   });
 
   await test.step('by keyboard', async () => {

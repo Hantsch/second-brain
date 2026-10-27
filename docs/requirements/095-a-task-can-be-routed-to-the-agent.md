@@ -46,7 +46,7 @@ result formats are announced there as "follow in later versions" — this story 
 ## Decisions (Sprint)
 
 - **Q1** — Same task on the same input reuses the open job: the job id is `<task>-<sha256 of task,
-  messages, schema>`.
+messages, schema>`.
 - **Q2** — No expiry and no cancel button in this story. A finished job stays answered; a result the
   user does not want is deleted from `results/` by hand.
 - **Q3** — Generic, no per-task code: the first call files the job and reports `agent-pending`, so every

@@ -231,7 +231,9 @@ test('install is refused while a task runs or an LLM response streams', async ({
 
   await test.step('a streaming reply refuses the install', async () => {
     await page.evaluate(
-      "window.sb.invoke('chat:ask', { question: 'What do I know about the update fixture?' })",
+      /* The question must find evidence in the demo vault: without any, the answer is
+         the honest no-evidence reply and no model (and no stream) is ever started. */
+      "window.sb.invoke('chat:ask', { question: 'What do I know about Keycloak?' })",
     );
     await expect.poll(async () => (await refusal()).error).toBe('update.error.llmStreaming');
     await openDialog(page);
