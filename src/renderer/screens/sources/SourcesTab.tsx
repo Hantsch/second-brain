@@ -33,6 +33,7 @@ import { api } from '../../lib/api';
 import { plural } from '../../lib/format';
 import { runningJobFor } from '../../lib/jobs';
 import { useModules, useSources } from '../../lib/queries/data';
+import { openSourceJob, useAgentJobMutations, useAgentJobs } from '../../lib/queries/agent-jobs';
 import { useIngestJobs, useIngestMutations, useYtdlpStatus } from '../../lib/queries/ingest';
 import { pushToast } from '../../lib/toast';
 import { JobList } from './JobList';
@@ -54,6 +55,8 @@ export function SourcesTab({ initialModule = null }: SourcesTabProps) {
   const jobs = useIngestJobs();
   const ytdlp = useYtdlpStatus();
   const mutations = useIngestMutations();
+  const agentJobs = useAgentJobs();
+  const agentMutations = useAgentJobMutations();
 
   const [input, setInput] = useState('');
   /* A seed, not a binding: `initialModule` only decides where the picker
@@ -119,7 +122,13 @@ export function SourcesTab({ initialModule = null }: SourcesTabProps) {
     );
   };
 
-  const failure = mutations.start.error ?? mutations.retry.error ?? mutations.install.error ?? null;
+  const failure =
+    mutations.start.error ??
+    mutations.retry.error ??
+    mutations.install.error ??
+    agentMutations.handOver.error ??
+    agentMutations.withdraw.error ??
+    null;
   const list = sources.data ?? [];
   const visibleList = hideSuccessful ? list.filter((source) => source.sourcePage === null) : list;
 
@@ -174,6 +183,11 @@ export function SourcesTab({ initialModule = null }: SourcesTabProps) {
             ingestAgainPending={mutations.start.isPending}
             onOpenRaw={openRaw}
             onOpenPage={openPage}
+            agentJobs={agentJobs.data ?? []}
+            onHandOver={(rawPath, target) =>
+              agentMutations.handOver.mutate({ rawPath, module: target })
+            }
+            onWithdraw={(id) => agentMutations.withdraw.mutate(id)}
           />
         </Panel>
       )}
@@ -227,6 +241,11 @@ export function SourcesTab({ initialModule = null }: SourcesTabProps) {
                     openSourcePage(slug, target);
                   }}
                   modules={modules.data ?? []}
+                  agentJob={openSourceJob(agentJobs.data, source.path)}
+                  onHandOver={(path, targetModule) =>
+                    agentMutations.handOver.mutate({ rawPath: path, module: targetModule })
+                  }
+                  onWithdraw={(id) => agentMutations.withdraw.mutate(id)}
                   onCondense={(path, targetModule) =>
                     mutations.condense.mutate({ path, module: targetModule })
                   }

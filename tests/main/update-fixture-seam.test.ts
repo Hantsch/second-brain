@@ -85,16 +85,16 @@ describe('the update-fixture file mode', () => {
     write(script({ latest: { version: '1.0.0', notes: '' } }));
     expect(await wiring.check()).toEqual({ kind: 'up-to-date' });
 
-    expect(await wiring.backend.download(new AbortController().signal, () => {})).toEqual({
+    expect(await wiring.backend.download(new AbortController().signal, () => {}, '9.9.9')).toEqual({
       kind: 'done',
     });
     write(script({ download: { ticks: 1, tickMs: 1, outcome: 'checksum' } }));
-    expect(await wiring.backend.download(new AbortController().signal, () => {})).toEqual({
+    expect(await wiring.backend.download(new AbortController().signal, () => {}, '9.9.9')).toEqual({
       kind: 'failed',
       reason: 'checksum',
     });
     write(script({ download: { ticks: 0, tickMs: 1, outcome: 'offline' } }));
-    expect(await wiring.backend.download(new AbortController().signal, () => {})).toEqual({
+    expect(await wiring.backend.download(new AbortController().signal, () => {}, '9.9.9')).toEqual({
       kind: 'failed',
       reason: 'offline',
     });
@@ -114,10 +114,14 @@ describe('the update-fixture file mode', () => {
     const { backend } = updateFileFixtureFor('1.0.0')!;
     const controller = new AbortController();
     const ratios: Array<number | null> = [];
-    const result = await backend.download(controller.signal, (progress) => {
-      ratios.push(progress.ratio);
-      if (ratios.length === 2) controller.abort();
-    });
+    const result = await backend.download(
+      controller.signal,
+      (progress) => {
+        ratios.push(progress.ratio);
+        if (ratios.length === 2) controller.abort();
+      },
+      '9.9.9',
+    );
     expect(result).toEqual({ kind: 'failed', reason: 'cancelled' });
     expect(ratios).toEqual([0.02, 0.04]);
   });

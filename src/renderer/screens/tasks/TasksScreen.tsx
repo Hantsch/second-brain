@@ -18,8 +18,11 @@
 
 import { EmptyState } from '../../components/EmptyState';
 import { ScreenHeader } from '../../components/ScreenHeader';
-import { useT } from '../../i18n';
+import { useLanguage, useT } from '../../i18n';
+import { labelAgentJobs } from '../../lib/agent-job-label';
 import { useGardenerProgress } from '../../lib/gardener-progress';
+import { useAgentJobMutations, useAgentJobs } from '../../lib/queries/agent-jobs';
+import { useModules } from '../../lib/queries/data';
 import { useTaskCancel, useTaskRemove, useTaskRetry } from '../../lib/queries/tasks';
 import { useWorkTasks, useWorkTasksLoaded } from '../../lib/tasks-store';
 import { buildTasksView } from '../../lib/tasks-view';
@@ -27,14 +30,19 @@ import { TaskGroup } from './TaskGroup';
 
 export function TasksScreen() {
   const t = useT();
+  const language = useLanguage();
   const tasks = useWorkTasks();
   const loaded = useWorkTasksLoaded();
   const progress = useGardenerProgress();
   const cancel = useTaskCancel();
   const remove = useTaskRemove();
   const retry = useTaskRetry();
+  const agentJobs = useAgentJobs();
+  const { withdraw } = useAgentJobMutations();
+  const modules = useModules();
 
-  const groups = buildTasksView(tasks, progress, t);
+  const jobs = agentJobs.data && labelAgentJobs(agentJobs.data, modules.data, language);
+  const groups = buildTasksView(tasks, progress, t, jobs);
   const showEmpty = loaded && groups.length === 0;
 
   return (
@@ -53,6 +61,8 @@ export function TasksScreen() {
               key={group.kind}
               kind={group.kind}
               tasks={group.tasks}
+              jobs={group.jobs}
+              onWithdrawJob={(id) => withdraw.mutate(id)}
               cancel={cancel}
               remove={remove}
               retry={retry}

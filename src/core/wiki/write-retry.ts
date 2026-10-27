@@ -25,6 +25,9 @@
 import { sha256 } from '@core/vault/hash';
 import type { WikiStore } from './types';
 
+/** All a text rewrite needs, so a store narrower than `WikiStore` can use it too. */
+export type TextStore = Pick<WikiStore, 'readText' | 'writeText'>;
+
 /** Attempts including the first one — three, per story 050, D-e. */
 export const MAX_WRITE_ATTEMPTS = 3;
 
@@ -50,7 +53,7 @@ export interface WriteRetryOptions {
  * keep nothing from the attempt before.
  */
 export async function writeTextWithRetry(
-  store: WikiStore,
+  store: TextStore,
   path: string,
   build: (current: CurrentText | null) => string,
   options: WriteRetryOptions = {},
@@ -75,7 +78,7 @@ export async function writeTextWithRetry(
 }
 
 /** Content plus the hash the store will compare against — `null` if there is no file. */
-async function readCurrent(store: WikiStore, path: string): Promise<CurrentText | null> {
+async function readCurrent(store: TextStore, path: string): Promise<CurrentText | null> {
   const content = await store.readText(path);
   return content === null ? null : { content, hash: sha256(content) };
 }
@@ -88,8 +91,9 @@ async function readCurrent(store: WikiStore, path: string): Promise<CurrentText 
  *
  * Exported so a caller that cannot use `writeTextWithRetry` itself — because it
  * writes through `writePage`'s frontmatter merge, not a raw text `build` — can
- * still bound its own re-read loop on the same "is this worth retrying?" check
- * (`updateOverview` in `ingest.ts`, story 050, D-e).
+ * still bound its own re-read loop on the same "is this worth retrying?" check.
+ * Invariant: only a `conflict` (the file changed under us) is retried; any other
+ * error would fail again and must reach the caller.
  */
 export function isConflict(error: unknown): boolean {
   return (

@@ -3,6 +3,7 @@
    `en.ts` needs a single import. Same key set as `de-settings.ts`. */
 
 import type { SettingsKey } from './de-settings';
+import { enSettingsAgent } from './en-settings-agent';
 import { enSettingsModels } from './en-settings-models';
 
 const own = {
@@ -10,7 +11,88 @@ const own = {
   'settings.tab.models': 'Models',
   'settings.tab.behavior': 'Behaviour',
   'settings.tab.customization': 'Customization',
+  'settings.tab.agent': 'Agent',
   'settings.tab.about': 'About',
+
+  'settings.agent.cli.title': 'Claude Code',
+  'settings.agent.cli.installed': 'Claude Code is installed.',
+  'settings.agent.cli.foundAt': 'Found at',
+  'settings.agent.cli.absent':
+    "Claude Code was not found on this machine's PATH. Gaston does not install it.",
+  'settings.agent.cli.guide': 'Open installation guide',
+  'settings.agent.cli.unknown.timeout': 'Status unknown: the lookup timed out.',
+  'settings.agent.cli.unknown.error': 'Status unknown: the lookup failed ({code}).',
+  'settings.agent.cli.unknown.errorNoCode': 'Status unknown: the lookup failed.',
+  'settings.agent.cli.note':
+    'Gaston only looks for the CLI. It does not start it, so no version is shown.',
+  'settings.agent.setup.title': 'Agent setup',
+  'settings.agent.setup.intro':
+    'Gaston writes these files so Claude Code knows the rules of this vault. Files it did not write are yours and stay untouched.',
+  'settings.agent.setup.loading': 'Reading the setup files',
+  'settings.agent.setup.error': 'The setup could not be read: {reason}',
+  'settings.agent.setup.status.current': 'Current',
+  'settings.agent.setup.status.outdated': 'Outdated',
+  'settings.agent.setup.status.missing': 'Missing',
+  'settings.agent.setup.status.modified': 'Changed by you',
+  'settings.agent.setup.status.newer': 'From a newer Gaston',
+  'settings.agent.setup.status.yours': 'Yours',
+  'settings.agent.setup.install': 'Install',
+  'settings.agent.setup.update': 'Update',
+  'settings.agent.setup.current': 'Setup is current.',
+  'settings.agent.setup.help.title': 'Help module',
+  'settings.agent.setup.help.status.current': 'Current',
+  'settings.agent.setup.help.status.outdated': 'Outdated',
+  'settings.agent.setup.help.status.missing': 'Missing',
+  'settings.agent.setup.help.status.collision': 'Blocked',
+  'settings.agent.setup.help.collision':
+    "A module named gaston-help that is not Gaston's blocks the help module. Renaming that module frees the name. Nothing was written.",
+  'settings.agent.setup.plan.install': 'Install the agent setup',
+  'settings.agent.setup.plan.update': 'Update the agent setup',
+  'settings.agent.setup.plan.intro': 'Gaston writes only what is listed here, after you confirm.',
+  'settings.agent.setup.plan.write': 'Will write',
+  'settings.agent.setup.plan.optIn': 'Changed by you',
+  'settings.agent.setup.plan.optInHint': 'Overwrite. A copy goes to the trash.',
+  'settings.agent.setup.plan.leave': 'Left alone',
+  'settings.agent.setup.plan.leaveManaged': 'Gaston does not write this file.',
+  'settings.agent.setup.plan.dirs': 'Creates folders',
+  'settings.agent.setup.plan.confirm': 'Write {count} files',
+  'settings.agent.setup.plan.confirmOne': 'Write 1 file',
+  'settings.agent.setup.plan.result.written': 'Setup written. {count} files.',
+  'settings.agent.setup.plan.result.writtenOne': 'Setup written. 1 file.',
+  'settings.agent.setup.plan.result.none': 'Nothing was written.',
+  'settings.agent.setup.plan.result.conflict':
+    'Changed on disk since the plan: {path}. Nothing written to it.',
+  'settings.agent.setup.plan.result.refused': 'Not written: {path}.',
+  'settings.agent.setup.plan.result.failed': 'Not written: {path} ({reason}).',
+  'settings.agent.protection.title': 'Protection',
+  'settings.agent.protection.loading': 'Reading the protection rules',
+  'settings.agent.protection.none':
+    'Nothing protects this vault from the agent yet. Install the setup above to add the rules.',
+  'settings.agent.protection.unreadable':
+    '.claude/settings.json could not be read: {reason}. The state of the rules is unknown.',
+  'settings.agent.protection.status.installed': 'Installed',
+  'settings.agent.protection.status.missing': 'Missing',
+  'settings.agent.protection.status.off': 'Off',
+  'settings.agent.protection.rule.journal-read':
+    "journal/, the derived index and the chat sessions cannot be read by Claude's file tools, and journal/ cannot be changed.",
+  'settings.agent.protection.rule.raw-write': 'raw/ is read-only.',
+  'settings.agent.protection.rule.setup-write': 'CLAUDE.md and .claude/ are read-only.',
+  'settings.agent.protection.rule.overview-write':
+    'wiki/overview.md changes only through a proposal.',
+  'settings.agent.protection.rule.internal-write':
+    '{dir}/ is read-only except results, proposals and runs.',
+  'settings.agent.protection.rule.pre-tool-guard':
+    'A check before each tool call blocks shell access to journal/, shell writes to raw/, writes outside the wiki layer, and any write to the help module.',
+  'settings.agent.protection.rule.wiki-check':
+    'Wiki writes are checked for frontmatter and a log.md entry.',
+  'settings.agent.protection.extra': 'Rules you added',
+  'settings.agent.protection.limit':
+    'The shell check reads the command text. A path built from variables, or a script that opens files itself, is not caught.',
+  'settings.agent.about.title': 'About this',
+  'settings.agent.about.open': 'Read the agent page in Knowledge',
+  'settings.agent.about.unavailable': 'Install the help module above to read it here.',
+  'settings.agent.about.body':
+    'The agent is Claude Code, which you open yourself in a terminal with the vault as its working folder. It may curate the wiki layer of a module, write proposals for everything else, and work the jobs you hand to it. It never reads journal/, never writes raw/, and Gaston never starts it without a terminal.',
 
   'settings.customization.background.title': 'Background',
   'settings.customization.background.note':
@@ -204,4 +286,8 @@ const own = {
   'settings.about.update.pending.badge': 'Not yet installed',
 };
 
-export const enSettings: Record<SettingsKey, string> = { ...own, ...enSettingsModels };
+export const enSettings: Record<SettingsKey, string> = {
+  ...own,
+  ...enSettingsAgent,
+  ...enSettingsModels,
+};

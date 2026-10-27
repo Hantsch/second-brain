@@ -52,6 +52,7 @@ const BEYOND_THIS_MACHINE: readonly TaskKind[] = [
   'gardener-audit',
   'condense-area',
   'condense-project',
+  'condense-module',
 ];
 
 describe('a weak machine, from scan facts to recommendation', () => {

@@ -164,6 +164,7 @@ export const api = {
     cancel: (id: string) => call('ingest:cancel', { id }),
     retry: (id: string) => call('ingest:retry', { id }),
     condense: (request: IpcRequest<'ingest:condense'>) => call('ingest:condense', request),
+    refetch: (path: string) => call('ingest:refetch', { path }),
     detail: (path: string) => call('ingest:detail', { path }),
     analyzeResources: (path: string) => call('ingest:analyzeResources', { path }),
     attachFiles: (path: string) => call('ingest:attachFiles', { path }),
@@ -280,6 +281,25 @@ export const api = {
     transcript: (request: IpcRequest<'agents:transcript'>) => call('agents:transcript', request),
     link: (agent: AgentKind, projectKey: string, project: string) =>
       call('agents:link', { agent, projectKey, project }),
+  },
+  agent: {
+    cliStatus: () => call('agent:cliStatus'),
+    setupStatus: () => call('agent:setupStatus'),
+    protectionStatus: () => call('agent:protectionStatus'),
+    lastRun: () => call('agent:lastRun'),
+    setupApply: (request: IpcRequest<'agent:setupApply'>) => call('agent:setupApply', request),
+    launchTerminal: () => call('agent:launchTerminal'),
+    proposals: () => call('agent:proposals'),
+    proposalAccept: (id: string) => call('agent:proposalAccept', { id }),
+    proposalReject: (id: string) => call('agent:proposalReject', { id }),
+    jobs: () => call('agent:jobs'),
+    handOverSource: (rawPath: string, module: string | null) =>
+      call('agent:handOverSource', { rawPath, module }),
+    handOverModule: (module: string) => call('agent:handOverModule', { module }),
+    handOverCondense: (slug: string) =>
+      call('agent:handOverCondense', { kind: 'condense-module', slug }),
+    handOverGardenerRun: () => call('agent:handOverGardenerRun'),
+    withdrawJob: (id: string) => call('agent:withdrawJob', { id }),
   },
   settings: {
     get: () => call('settings:get'),

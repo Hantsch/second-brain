@@ -1,0 +1,168 @@
+- 2026-10-22T08:10:00 · sprint · resumed
+- 2026-10-22T08:14:13 · refine · 081 082 083 084 085 086 087 · started
+- 2026-10-22T08:35:07 · refine · 081 082 083 084 085 086 087 · done
+- 2026-10-22T08:35:07 · 081 · build · started
+- 2026-10-22 08:35 · 081 · D1 module overview format · started
+- 2026-10-22 08:41 · 081 · D1 module overview format · done
+- 2026-10-22 08:41 · 081 · D2 condense-module task kind · started
+- 2026-10-22 08:45 · 081 · D2 condense-module task kind · done
+- 2026-10-22 08:45 · 081 · D3 module run prompt+inputs+proposal · started
+- 2026-10-22 08:50 · 081 · D3 module run prompt+inputs+proposal · done
+- 2026-10-22 08:50 · 081 · D4 condense channels serve module · started
+- 2026-10-22 08:50 · 081 · D5 maintenance condensation due · started
+- 2026-10-22 08:54 · 081 · D4 condense channels serve module · done
+- 2026-10-22 08:54 · 081 · D5 maintenance condensation due · done
+- 2026-10-22 08:54 · 081 · D6 module condensed tab · started
+- 2026-10-22 08:58 · 081 · D6 module condensed tab · done
+- 2026-10-22 08:58 · 081 · D7 routes and module flow · started
+- 2026-10-22 09:03 · 081 · D7 routes and module flow · done
+- 2026-10-22 09:03 · 081 · verify · started
+- 2026-10-22 09:06 · 081 · verify · done
+- 2026-10-22 09:06 · 081 · review 1 · started
+- 2026-10-22 09:12 · 081 · review 1 · done
+- 2026-10-22 09:12 · 081 · review 1 fixes · started
+- 2026-10-22 09:17 · 081 · review 1 fixes · done
+- 2026-10-22 09:17 · 081 · verify · started
+- 2026-10-22 09:21 · 081 · verify · done
+- 2026-10-22 09:23 · 081 · story · done
+- 2026-10-22T09:23:54 · 082 · build · started
+- 2026-10-22 09:24 · 082 · D1 digestion leaves overview untouched · started
+- 2026-10-22 09:24 · 082 · D3 catalog counts against orphan · started
+- 2026-10-22 09:24 · 082 · D4 module schema describes overview · started
+- 2026-10-22 09:26 · 082 · D1 digestion leaves overview untouched · done
+- 2026-10-22 09:26 · 082 · D3 catalog counts against orphan · done
+- 2026-10-22 09:26 · 082 · D4 module schema describes overview · done
+- 2026-10-22 09:27 · 082 · D2 overviewChange leaves contract · started
+- 2026-10-22 09:29 · 082 · D2 overviewChange leaves contract · done
+- 2026-10-22 09:29 · 082 · D5 legacy overview replaced whole · started
+- 2026-10-22 09:32 · 082 · D5 legacy overview replaced whole · done
+- 2026-10-22 09:32 · 082 · D6 e2e legacy overview flow · started
+- 2026-10-22 09:34 · 082 · D6 e2e legacy overview flow · done
+- 2026-10-22 09:34 · 082 · verify · started
+- 2026-10-22 09:37 · 082 · verify · done
+- 2026-10-22 09:37 · 082 · review 1 · started
+- 2026-10-22 09:41 · 082 · review 1 · done
+- 2026-10-22 09:41 · 082 · review 1 fixes · started
+- 2026-10-22 09:42 · 082 · review 1 fixes · done
+- 2026-10-22 09:42 · 082 · verify · started
+- 2026-10-22 09:45 · 082 · story · done
+- 2026-10-22T09:45:35 · 083 · build · started
+- 2026-10-22 09:45 · 083 · D1 CLI presence lookup in core · started
+- 2026-10-22 09:47 · 083 · D1 CLI presence lookup in core · done
+- 2026-10-22 09:47 · 083 · D2 agent:cliStatus over IPC · started
+- 2026-10-22 09:48 · 083 · D2 agent:cliStatus over IPC · done
+- 2026-10-22 09:48 · 083 · D3 The Agent tab · started
+- 2026-10-22 09:51 · 083 · D3 The Agent tab · done
+- 2026-10-22 09:51 · 083 · D4 e2e through the real surface · started
+- 2026-10-22 09:53 · 083 · D4 e2e through the real surface · done
+- 2026-10-22 09:53 · 083 · verify · started
+- 2026-10-22 09:56 · 083 · verify · done
+- 2026-10-22 09:56 · 083 · review 1 · started
+- 2026-10-22 09:57 · 083 · review 1 · done
+- 2026-10-22 09:58 · 083 · story · done
+- 2026-10-22T09:58:16 · 084 · build · started
+- 2026-10-22 09:58 · 084 · D1 constants, registry, vault CLAUDE.md, protection placeholders · started
+- 2026-10-22 10:02 · 084 · D1 constants, registry, vault CLAUDE.md, protection placeholders · done
+- 2026-10-22 10:02 · 084 · D2 three Gaston skills · started
+- 2026-10-22 10:05 · 084 · D2 three Gaston skills · done
+- 2026-10-22 10:05 · 084 · D3 status, plan and apply over the store (hard) · started
+- 2026-10-22 10:05 · 084 · D4 keep .claude out of index, document format · started
+- 2026-10-22 10:10 · 084 · D3 status, plan and apply over the store (hard) · done
+- 2026-10-22 10:10 · 084 · D4 keep .claude out of index, document format · done
+- 2026-10-22 10:10 · 084 · D5 IPC setupStatus and setupApply · started
+- 2026-10-22 10:15 · 084 · D5 IPC setupStatus and setupApply · done
+- 2026-10-22 10:15 · 084 · D6 setup panel in agent tab · started
+- 2026-10-22 10:17 · 084 · D6 setup panel in agent tab · done
+- 2026-10-22 10:17 · 084 · D7 plan dialog and write · started
+- 2026-10-22 10:21 · 084 · D7 plan dialog and write · done
+- 2026-10-22 10:21 · 084 · verify · started
+- 2026-10-22 10:25 · 084 · verify · done
+- 2026-10-22 10:25 · 084 · review 1 · started
+- 2026-10-22 10:28 · 084 · review 1 · done
+- 2026-10-22 10:28 · 084 · review-fix 1 · started
+- 2026-10-22 10:33 · 084 · review-fix 1 · done
+- 2026-10-22 10:33 · 084 · verify · started
+- 2026-10-22 10:38 · 084 · verify · done
+- 2026-10-22 10:38 · 084 · story · done
+- 2026-10-22T10:38:46 · 085 · build · started
+- 2026-10-22 10:39 · 085 · D1 protection rules + settings template + docs · started
+- 2026-10-22 10:43 · 085 · D1 protection rules + settings template + docs · done
+- 2026-10-22 10:43 · 085 · D2 pre-tool guard (hard) · started
+- 2026-10-22 11:21 · 085 · D2 pre-tool guard (hard) · done
+- 2026-10-22 11:21 · 085 · D3 wiki-check hook · started
+- 2026-10-22 11:24 · 085 · D3 wiki-check hook · done
+- 2026-10-22 11:24 · 085 · D4 protection status reader · started
+- 2026-10-22 11:25 · 085 · D4 protection status reader · done
+- 2026-10-22 11:25 · 085 · D5 agent:protectionStatus IPC · started
+- 2026-10-22 11:27 · 085 · D5 agent:protectionStatus IPC · done
+- 2026-10-22 11:27 · 085 · D6 protection panel + e2e · started
+- 2026-10-22 11:31 · 085 · D6 protection panel + e2e · done
+- 2026-10-22 11:31 · 085 · verify · started
+- 2026-10-22 11:36 · 085 · verify · blocked: tests/main/module-lifecycle-ipc.test.ts timed out under the load of the hook spawn matrix (green alone), capping spawn concurrency
+- 2026-10-22 11:37 · 085 · verify · started
+- 2026-10-22 11:41 · 085 · verify · blocked: tests/renderer/journal.test.tsx timed out under load, spawn cap lowered to 3
+- 2026-10-22 11:41 · 085 · verify · started
+- 2026-10-22 11:44 · 085 · verify · done
+- 2026-10-22 11:44 · 085 · review 1 · started
+- 2026-10-22 11:54 · 085 · review 1 · done
+- 2026-10-22 11:54 · 085 · review-fix 1 · started
+- 2026-10-22 12:03 · 085 · review-fix 1 · done
+- 2026-10-22 12:03 · 085 · verify · started
+- 2026-10-22 12:05 · 085 · verify · done
+- 2026-10-22 12:06 · 085 · review 2 (hard) · started
+- 2026-10-22 12:12 · 085 · review 2 (hard) · done
+- 2026-10-22 12:12 · 085 · review-fix 2 · started
+- 2026-10-22 12:14 · 085 · review-fix 2 · done
+- 2026-10-22 12:14 · 085 · verify · started
+- 2026-10-22 12:16 · 085 · verify · done
+- 2026-10-22 12:16 · 085 · story · done
+- 2026-10-22T12:17:11 · 086 · build · started
+- 2026-10-22 12:17 · 086 · D1 Help pages and renderer · started
+- 2026-10-22 12:23 · 086 · D1 Help pages and renderer · done
+- 2026-10-22 12:24 · 086 · D2 Help module joins managed setup · started
+- 2026-10-22 12:34 · 086 · D2 Help module joins managed setup · done
+- 2026-10-22 12:34 · 086 · D3 Gardener skips help module · started
+- 2026-10-22 12:34 · 086 · D4 Agent tab row, About link, e2e · started
+- 2026-10-22 12:41 · 086 · D3 Gardener skips help module · done
+- 2026-10-22 12:41 · 086 · D4 Agent tab row, About link, e2e · done
+- 2026-10-22 12:41 · 086 · verify · started
+- 2026-10-22 12:44 · 086 · verify · done
+- 2026-10-22 12:44 · 086 · review 1 · started
+- 2026-10-22 12:50 · 086 · review 1 · done
+- 2026-10-22 12:50 · 086 · review-fix 1 · started
+- 2026-10-22 12:52 · 086 · review-fix 1 · done
+- 2026-10-22 12:52 · 086 · verify · started
+- 2026-10-22 12:55 · 086 · verify · blocked: help-module e2e and journal.test.tsx red
+- 2026-10-22 12:58 · 086 · review-fix 2 · started
+- 2026-10-22 13:03 · 086 · review-fix 2 · done
+- 2026-10-22 13:03 · 086 · verify · started
+- 2026-10-22 13:05 · 086 · verify · blocked: help-setup.test.ts one test timed out at 5000ms under load
+- 2026-10-22 13:06 · 086 · review 2 (hard) · started
+- 2026-10-22 13:14 · 086 · review 2 (hard) · done
+- 2026-10-22 13:14 · 086 · review-fix 3 content · started
+- 2026-10-22 13:14 · 086 · review-fix 3 collision · started
+- 2026-10-22 13:16 · 086 · review-fix 3 content · done
+- 2026-10-22 13:16 · 086 · review-fix 3 collision · done
+- 2026-10-22 13:16 · 086 · verify · started
+- 2026-10-22 13:19 · 086 · verify · done
+- 2026-10-22 13:19 · 086 · story · done
+- 2026-10-22T13:19:51 · 087 · build · started
+- 2026-10-22 13:20 · 087 · D1 launch plan and readiness · started
+- 2026-10-22 13:22 · 087 · D1 launch plan and readiness · done
+- 2026-10-22 13:22 · 087 · D2 launcher and agent:launchTerminal · started
+- 2026-10-22 13:25 · 087 · D2 launcher and agent:launchTerminal · done
+- 2026-10-22 13:26 · 087 · D3 terminal section in the agent tab · started
+- 2026-10-22 13:28 · 087 · D3 terminal section in the agent tab · done
+- 2026-10-22 13:28 · 087 · D4 e2e seam and flow · started
+- 2026-10-22 13:30 · 087 · D4 e2e seam and flow · done
+- 2026-10-22 13:30 · 087 · verify · started
+- 2026-10-22 13:32 · 087 · verify · done
+- 2026-10-22 13:32 · 087 · review 1 · started
+- 2026-10-22 13:34 · 087 · review 1 · done
+- 2026-10-22 13:34 · 087 · review-fix 1 · started
+- 2026-10-22 13:37 · 087 · review-fix 1 · done
+- 2026-10-22 13:37 · 087 · verify · started
+- 2026-10-22 13:39 · 087 · verify · done
+- 2026-10-22 13:40 · 087 · story · done
+- 2026-10-22T13:40:14 · gate · short suites · started
+- 2026-10-22T13:45:12 · gate · short suites · done

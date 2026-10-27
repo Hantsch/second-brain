@@ -1,9 +1,9 @@
 /* Einstellungen — hier wird die App erst scharf.
 
-   Sechs Tabs, in der Reihenfolge, in der ein Nutzer sie braucht: wo liegen meine
+   Sieben Tabs, in der Reihenfolge, in der ein Nutzer sie braucht: wo liegen meine
    Dateien (Vault), in welcher Sprache (Sprachen), welches Modell macht was
    (Modelle), wie verhält sich die App (Verhalten), wie sieht sie aus
-   (Anpassung), und was läuft hier eigentlich (Info).
+   (Anpassung), ist der Agent da (Agent), und was läuft hier eigentlich (Info).
 
    Der Tab steht in der Adresse (`#/settings?tab=models`), damit ein Hinweis aus
    einem anderen Screen direkt hierher zeigen kann. Geschrieben wird sie erst
@@ -14,13 +14,22 @@ import { Tabs } from '../../atoms/Tabs';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { useT } from '../../i18n';
 import { AboutTab } from './AboutTab';
+import { AgentTab } from './AgentTab';
 import { BehaviorTab } from './BehaviorTab';
 import { CustomizationTab } from './CustomizationTab';
 import { LanguagesTab } from './LanguagesTab';
 import { ModelsTab } from './ModelsTab';
 import { VaultTab } from './VaultTab';
 
-const TAB_IDS = ['vault', 'languages', 'models', 'behavior', 'customization', 'about'] as const;
+const TAB_IDS = [
+  'vault',
+  'languages',
+  'models',
+  'behavior',
+  'customization',
+  'agent',
+  'about',
+] as const;
 
 type TabId = (typeof TAB_IDS)[number];
 
@@ -30,6 +39,7 @@ const TAB_ICONS: Record<TabId, string> = {
   models: 'sparkles',
   behavior: 'sliders-horizontal',
   customization: 'palette',
+  agent: 'bot',
   about: 'info',
 };
 
@@ -39,6 +49,7 @@ const TAB_LABELS: Record<TabId, string> = {
   models: 'settings.tab.models',
   behavior: 'settings.tab.behavior',
   customization: 'settings.tab.customization',
+  agent: 'settings.tab.agent',
   about: 'settings.tab.about',
 };
 
@@ -65,6 +76,7 @@ export function SettingsScreen() {
       {tab === 'models' ? <ModelsTab /> : null}
       {tab === 'behavior' ? <BehaviorTab /> : null}
       {tab === 'customization' ? <CustomizationTab /> : null}
+      {tab === 'agent' ? <AgentTab /> : null}
       {tab === 'about' ? <AboutTab /> : null}
     </div>
   );

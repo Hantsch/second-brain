@@ -2,6 +2,7 @@
    Der Modelle-Tab hat wegen seines Umfangs eine eigene Datei und wird hier
    eingehängt, damit `de.ts` nur einen Import braucht. */
 
+import { deSettingsAgent } from './de-settings-agent';
 import { deSettingsModels } from './de-settings-models';
 
 const own = {
@@ -9,7 +10,89 @@ const own = {
   'settings.tab.models': 'Modelle',
   'settings.tab.behavior': 'Verhalten',
   'settings.tab.customization': 'Anpassung',
+  'settings.tab.agent': 'Agent',
   'settings.tab.about': 'Info',
+
+  'settings.agent.cli.title': 'Claude Code',
+  'settings.agent.cli.installed': 'Claude Code ist installiert.',
+  'settings.agent.cli.foundAt': 'Gefunden unter',
+  'settings.agent.cli.absent':
+    'Claude Code wurde im PATH dieses Rechners nicht gefunden. Gaston installiert es nicht.',
+  'settings.agent.cli.guide': 'Installationsanleitung öffnen',
+  'settings.agent.cli.unknown.timeout': 'Status unbekannt: Die Suche hat zu lange gedauert.',
+  'settings.agent.cli.unknown.error': 'Status unbekannt: Die Suche ist fehlgeschlagen ({code}).',
+  'settings.agent.cli.unknown.errorNoCode': 'Status unbekannt: Die Suche ist fehlgeschlagen.',
+  'settings.agent.cli.note':
+    'Gaston sucht die CLI nur. Es startet sie nicht, deshalb wird keine Version angezeigt.',
+  'settings.agent.setup.title': 'Agent-Einrichtung',
+  'settings.agent.setup.intro':
+    'Gaston schreibt diese Dateien, damit Claude Code die Regeln dieses Vaults kennt. Dateien, die es nicht geschrieben hat, gehören dir und bleiben unberührt.',
+  'settings.agent.setup.loading': 'Einrichtungsdateien werden gelesen',
+  'settings.agent.setup.error': 'Die Einrichtung konnte nicht gelesen werden: {reason}',
+  'settings.agent.setup.status.current': 'Aktuell',
+  'settings.agent.setup.status.outdated': 'Veraltet',
+  'settings.agent.setup.status.missing': 'Fehlt',
+  'settings.agent.setup.status.modified': 'Von dir geändert',
+  'settings.agent.setup.status.newer': 'Von einem neueren Gaston',
+  'settings.agent.setup.status.yours': 'Deine Datei',
+  'settings.agent.setup.install': 'Installieren',
+  'settings.agent.setup.update': 'Aktualisieren',
+  'settings.agent.setup.current': 'Die Einrichtung ist aktuell.',
+  'settings.agent.setup.help.title': 'Hilfemodul',
+  'settings.agent.setup.help.status.current': 'Aktuell',
+  'settings.agent.setup.help.status.outdated': 'Veraltet',
+  'settings.agent.setup.help.status.missing': 'Fehlt',
+  'settings.agent.setup.help.status.collision': 'Blockiert',
+  'settings.agent.setup.help.collision':
+    'Ein Modul namens „gaston-help“, das nicht von Gaston stammt, blockiert das Hilfemodul. Wird dieses Modul umbenannt, ist der Name frei. Es wurde nichts geschrieben.',
+  'settings.agent.setup.plan.install': 'Agent-Einrichtung installieren',
+  'settings.agent.setup.plan.update': 'Agent-Einrichtung aktualisieren',
+  'settings.agent.setup.plan.intro':
+    'Gaston schreibt nur, was hier steht, und erst nach deiner Bestätigung.',
+  'settings.agent.setup.plan.write': 'Wird geschrieben',
+  'settings.agent.setup.plan.optIn': 'Von dir geändert',
+  'settings.agent.setup.plan.optInHint': 'Überschreiben. Eine Kopie landet im Papierkorb.',
+  'settings.agent.setup.plan.leave': 'Bleibt unberührt',
+  'settings.agent.setup.plan.leaveManaged': 'Gaston schreibt diese Datei nicht.',
+  'settings.agent.setup.plan.dirs': 'Legt Ordner an',
+  'settings.agent.setup.plan.confirm': '{count} Dateien schreiben',
+  'settings.agent.setup.plan.confirmOne': '1 Datei schreiben',
+  'settings.agent.setup.plan.result.written': 'Einrichtung geschrieben. {count} Dateien.',
+  'settings.agent.setup.plan.result.writtenOne': 'Einrichtung geschrieben. 1 Datei.',
+  'settings.agent.setup.plan.result.none': 'Es wurde nichts geschrieben.',
+  'settings.agent.setup.plan.result.conflict':
+    'Seit dem Plan auf der Platte geändert: {path}. Nichts darauf geschrieben.',
+  'settings.agent.setup.plan.result.refused': 'Nicht geschrieben: {path}.',
+  'settings.agent.setup.plan.result.failed': 'Nicht geschrieben: {path} ({reason}).',
+  'settings.agent.protection.title': 'Schutz',
+  'settings.agent.protection.loading': 'Schutzregeln werden gelesen',
+  'settings.agent.protection.none':
+    'Noch schützt nichts diesen Vault vor dem Agenten. Installiere oben die Einrichtung, um die Regeln hinzuzufügen.',
+  'settings.agent.protection.unreadable':
+    '.claude/settings.json konnte nicht gelesen werden: {reason}. Der Stand der Regeln ist unbekannt.',
+  'settings.agent.protection.status.installed': 'Installiert',
+  'settings.agent.protection.status.missing': 'Fehlt',
+  'settings.agent.protection.status.off': 'Aus',
+  'settings.agent.protection.rule.journal-read':
+    'journal/, der abgeleitete Index und die Chat-Sitzungen können von den Datei-Werkzeugen von Claude nicht gelesen werden, journal/ auch nicht geändert.',
+  'settings.agent.protection.rule.raw-write': 'raw/ ist schreibgeschützt.',
+  'settings.agent.protection.rule.setup-write': 'CLAUDE.md und .claude/ sind schreibgeschützt.',
+  'settings.agent.protection.rule.overview-write':
+    'wiki/overview.md ändert sich nur über einen Vorschlag.',
+  'settings.agent.protection.rule.internal-write':
+    '{dir}/ ist schreibgeschützt, außer Ergebnisse, Vorschläge und Läufe.',
+  'settings.agent.protection.rule.pre-tool-guard':
+    'Eine Prüfung vor jedem Werkzeugaufruf blockiert Shell-Zugriff auf journal/, Shell-Schreibzugriffe auf raw/, Schreibzugriffe außerhalb der Wiki-Ebene und jeden Schreibzugriff auf das Hilfemodul.',
+  'settings.agent.protection.rule.wiki-check':
+    'Wiki-Schreibzugriffe werden auf Frontmatter und einen Eintrag in log.md geprüft.',
+  'settings.agent.protection.extra': 'Regeln, die du hinzugefügt hast',
+  'settings.agent.protection.limit':
+    'Die Shell-Prüfung liest den Befehlstext. Ein Pfad, der aus Variablen gebaut wird, oder ein Skript, das Dateien selbst öffnet, wird nicht erkannt.',
+  'settings.agent.about.title': 'Worum es geht',
+  'settings.agent.about.open': 'Die Agent-Seite in Wissen lesen',
+  'settings.agent.about.unavailable': 'Installiere oben das Hilfemodul, um es hier zu lesen.',
+  'settings.agent.about.body':
+    'Der Agent ist Claude Code, das du selbst in einem Terminal mit dem Vault als Arbeitsordner öffnest. Er darf die Wiki-Ebene eines Moduls pflegen, für alles andere Vorschläge schreiben und die Aufträge abarbeiten, die du ihm übergibst. Er liest nie journal/, schreibt nie raw/, und Gaston startet ihn nie ohne Terminal.',
 
   'settings.customization.background.title': 'Hintergrund',
   'settings.customization.background.note':
@@ -204,6 +287,6 @@ const own = {
   'settings.about.update.pending.badge': 'Noch nicht installiert',
 } as const;
 
-export const deSettings = { ...own, ...deSettingsModels } as const;
+export const deSettings = { ...own, ...deSettingsAgent, ...deSettingsModels } as const;
 
 export type SettingsKey = keyof typeof deSettings;

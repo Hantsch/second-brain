@@ -28,7 +28,10 @@ export type GardenerFindingKind =
   | 'project-without-next-step'
   /** A day announced something for a later day that never got a follow-up. */
   | 'loose-end'
-  /** An area's condensed artifact is missing or older than its material. */
+  /**
+   * A condensed artifact is missing or older than its material — an area's or
+   * project's condensed file, or a module's overview page.
+   */
   | 'condensation-due';
 
 /**
@@ -243,6 +246,12 @@ export interface GardenerReport {
   healthContributions?: GardenerHealthContribution[];
   /** What the user should do next, at most three sentences. */
   advice: string[];
+  /**
+   * Whether the run can be handed to the agent for interpretation: `offered` when it has
+   * no audit yet and a page to interpret, `open` while such a job waits for the agent.
+   * Filled by main on the report channels; a report built elsewhere has none.
+   */
+  agentAudit?: { offered: boolean; open: boolean };
 }
 
 /**

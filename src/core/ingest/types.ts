@@ -99,6 +99,11 @@ export interface IngestStore {
   readText(path: string): Promise<string | null>;
   writeText(path: string, content: string): Promise<WriteResult>;
   mkdir(dir: string): Promise<void>;
+  /**
+   * Copy the current file into the trash without touching it (`VaultStore.snapshot`).
+   * Only a YouTube refetch needs it — the one path that replaces raw payload.
+   */
+  snapshot?(path: string): Promise<string | null>;
 }
 
 export interface IngestFileStat {
@@ -188,6 +193,8 @@ export interface IngestContext {
   languages?: readonly string[];
   /** Zielmodul der spaeteren Verdichtung — nur fuer das Protokoll. */
   module?: string | null;
+  /** Fetch an already filed YouTube source again instead of reusing it (`youtube/refetch.ts`). */
+  refetch?: boolean;
   onProgress?: IngestProgressFn;
   signal?: AbortSignal;
   fetchImpl?: FetchLike;

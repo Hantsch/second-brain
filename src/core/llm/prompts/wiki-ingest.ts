@@ -65,12 +65,6 @@ export const WIKI_INGEST_SCHEMA: Record<string, unknown> = {
         },
       },
     },
-    overviewChange: {
-      type: ['string', 'null'],
-      description:
-        'Nur wenn sich die Synthese des Moduls wirklich geaendert hat: ein bis zwei Saetze ' +
-        'fuer overview.md. Sonst null — eine Quelle allein aendert die Synthese selten.',
-    },
   },
 };
 
@@ -108,7 +102,6 @@ export function wikiIngestPrompt(input: WikiIngestInput, docLanguage: DocLanguag
       `Jede nicht-triviale Aussage traegt ihren Beleg: (source: [[${input.sourceSlug}]]).`,
       'Widerspricht die Quelle einer bestehenden Seite, setze contradicts mit deren Slug und einem Satz zum Konflikt. Beide Fassungen bleiben stehen; nichts wird geglaettet.',
       `Erfinde keine Slugs, keine Module und keine Quellen. Das Modul ist ${input.module} — ein anderer Modulname existiert fuer dich nicht.`,
-      'overviewChange nur, wenn sich die Synthese des Moduls wirklich verschoben hat. Im Zweifel null.',
       'Keine Einleitung, kein Lob, keine Emoji.',
     ],
     [

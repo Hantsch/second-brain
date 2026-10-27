@@ -112,10 +112,15 @@ const own = {
   'settings.routing.sensitiveShort': 'Persönlich',
   'settings.routing.inherit': 'Standard: {model}',
   'settings.routing.noModel': 'ohne Modell',
+  'settings.routing.agent': 'Agent (Auftrag)',
+  'settings.routing.agentHint':
+    'Geht als Auftrag an den Agenten. Er erledigt ihn beim nächsten Lauf von /gaston-jobs; bis dahin gilt, was ohne Modell geht.',
   'settings.routing.selectAria': 'Modell für {task}',
   'settings.routing.note': 'Aufgaben ohne eigene Wahl nehmen den Standard ihrer Klasse.',
   'settings.routing.test': 'Testen',
   'settings.routing.testOk': 'Antwort nach {ms} ms',
+  'settings.routing.agentReady':
+    'Das Agent-Setup ist installiert. Der Job wartet auf den nächsten Lauf von /gaston-jobs.',
   'settings.routing.testFailed': 'Kein Ergebnis',
   /* Reasons from `LlmUnavailable.reason` — spelled out, not as a code. */
   'settings.routing.reason.no-route': 'Für diese Aufgabe ist kein Modell zugeordnet.',
@@ -123,6 +128,8 @@ const own = {
   'settings.routing.reason.no-key': 'Für den zugeordneten Provider fehlt der Schlüssel.',
   'settings.routing.reason.unreachable': 'Der zugeordnete Provider war nicht erreichbar.',
   'settings.routing.reason.no-vault': 'Es ist kein Vault geöffnet.',
+  'settings.routing.reason.agent-setup-missing':
+    'Das Agent-Setup ist nicht installiert. Installiere es unter Einstellungen → Agent.',
   'settings.routing.reason.error': 'Der Aufruf ist fehlgeschlagen.',
 
   /* Der Ausweg aus einer Empfehlungszeile ohne Treffer (067, D2, AC1): sonst
@@ -180,6 +187,7 @@ const own = {
   'settings.fallback.gardener-audit': 'Die deterministischen Prüfungen laufen weiter',
   'settings.fallback.condense-area': 'Die Bereichsseite bleibt, wie sie ist',
   'settings.fallback.condense-project': 'Die Projektseiten bleiben, wie sie sind',
+  'settings.fallback.condense-module': 'Die Modulseiten bleiben, wie sie sind',
 
   'settings.machine.title': 'Diese Maschine',
   'settings.machine.scan': 'Diesen Rechner scannen',

@@ -159,6 +159,20 @@ describe('AGENTS.md', () => {
     expect(MODULE_SCHEMA_TEMPLATE).toBe(SCHEMA_DOC);
   });
 
+  it('the module schema tells an agent that ingest never touches overview.md', () => {
+    const ingest = /### Ingest[\s\S]*?(?=\n### )/.exec(MODULE_SCHEMA_TEMPLATE)?.[0] ?? '';
+    expect(ingest).not.toBe('');
+    // Every mention in the ingest section must be the "stays untouched" statement.
+    const mentions = ingest.split('\n').filter((line) => line.includes('overview.md'));
+    expect(mentions).toHaveLength(1);
+    expect(ingest).toMatch(/overview\.md` bleibt unangetastet: Der Ingest ändert sie nie/);
+    expect(ingest).not.toMatch(/nachziehen/);
+    // The tree line names the one way the file changes.
+    expect(MODULE_SCHEMA_TEMPLATE).toMatch(
+      /overview\.md\s+verdichtete Synthese.*bestätigte Verdichtung/,
+    );
+  });
+
   it('laesst ein von Hand bearbeitetes AGENTS.md unberuehrt', async () => {
     // Guardrail 2: ein Schema-Text ist Inhalt, nicht abgeleiteter Index — ein
     // zweiter createModule-Aufruf darf ihn nicht durch die Vorlage ersetzen.

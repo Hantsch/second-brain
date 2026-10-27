@@ -6,10 +6,11 @@
  * `closeVault` räumt auf. Kein Netz, kein LLM.
  */
 
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { FsVaultStore, ensureStructure } from '@core/vault';
 import type { IpcEventName } from '@shared/ipc';
 import type { VaultStatus } from '@shared/types';
 import type { KeyStore } from '../../src/main/secrets';
@@ -24,8 +25,15 @@ interface SentEvent {
 /* Electron gibt es im Test nicht. Das eine Fensterattrappe sammelt, was der
    Container an den Renderer schicken würde. */
 const bus = vi.hoisted(() => ({ sent: [] as SentEvent[] }));
+const appState = vi.hoisted(() => ({ isPackaged: false }));
 
 vi.mock('electron', () => ({
+  app: {
+    getVersion: () => '1.0.0-test',
+    get isPackaged() {
+      return appState.isPackaged;
+    },
+  },
   BrowserWindow: {
     getAllWindows: () => [
       {
@@ -139,7 +147,7 @@ describe('Services: Vault, Index und Watcher', () => {
     expect(services.status().docCount).toBe(before + 1);
     const hits = await services.requireIndex().search({ text: 'federweisser' });
     expect(hits[0]?.path).toBe('inbox/2026-08-10-1500-zwiebelkuchen.md');
-  }, 20_000);
+  });
 
   it('schließt den Vault und fällt auf den Leerzustand zurück', async () => {
     await services.openVault(vault.root);
@@ -310,6 +318,55 @@ describe('Services: fehlgeschlagener Index-Nachlauf (D4)', () => {
       expect(allPaths).toContain('inbox/second-vault.md');
     } finally {
       await vault2.cleanup();
+    }
+  });
+});
+
+describe('Services: update wiring', () => {
+  let userDataDir: string;
+  let services: Awaited<ReturnType<typeof createContainer>>;
+  const fixtureEnv = process.env['SB_E2E_UPDATE_FIXTURE'];
+  const demoEnv = process.env['SB_DEMO'];
+
+  beforeEach(async () => {
+    delete process.env['SB_E2E_UPDATE_FIXTURE'];
+    delete process.env['SB_DEMO'];
+    userDataDir = await mkdtemp(join(tmpdir(), 'sb-userdata-upd-'));
+    services = await createContainer(userDataDir);
+  });
+
+  afterEach(async () => {
+    appState.isPackaged = false;
+    if (fixtureEnv !== undefined) process.env['SB_E2E_UPDATE_FIXTURE'] = fixtureEnv;
+    if (demoEnv !== undefined) process.env['SB_DEMO'] = demoEnv;
+    await rm(userDataDir, { recursive: true, force: true });
+  });
+
+  it('the update service is disabled when unpackaged or on the demo vault and enabled otherwise', async () => {
+    const real = await createTempVault({ sample: true });
+    const demoParent = await mkdtemp(join(tmpdir(), 'sb-demo-'));
+    const demoRoot = join(demoParent, '.demo-vault');
+    try {
+      const reason = async (root: string | null) => {
+        await services.closeVault();
+        if (root) await services.openVault(root);
+        const { supported, disabledReason } = await services.updates().getState();
+        return { supported, disabledReason };
+      };
+
+      appState.isPackaged = false;
+      expect(await reason(real.root)).toEqual({ supported: false, disabledReason: 'unpackaged' });
+
+      appState.isPackaged = true;
+      expect(await reason(real.root)).toEqual({ supported: true, disabledReason: null });
+      /* The demo verdict comes from the folder name alone, with SB_DEMO unset. */
+      await mkdir(demoRoot);
+      await ensureStructure(new FsVaultStore(demoRoot), { name: 'Demo' });
+      expect(await reason(demoRoot)).toEqual({ supported: false, disabledReason: 'demo' });
+    } finally {
+      await services.closeVault();
+      await real.cleanup();
+      await rm(demoParent, { recursive: true, force: true });
     }
   });
 });

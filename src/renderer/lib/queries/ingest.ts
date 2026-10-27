@@ -86,6 +86,7 @@ export interface IngestMutations {
   cancel: UseMutationResult<void, unknown, string>;
   retry: UseMutationResult<IngestJob, unknown, string>;
   condense: UseMutationResult<IngestJob, unknown, IpcRequest<'ingest:condense'>>;
+  refetch: UseMutationResult<IngestJob, unknown, string>;
   analyzeResources: UseMutationResult<SourceDetail, unknown, string>;
   attachFiles: UseMutationResult<SourceDetail, unknown, string>;
   install: UseMutationResult<YtdlpStatus, unknown, void>;
@@ -103,6 +104,7 @@ export function useIngestMutations(): IngestMutations {
     cancel: useMutation({ mutationFn: api.ingest.cancel, onSuccess: done }),
     retry: useMutation({ mutationFn: api.ingest.retry, onSuccess: done }),
     condense: useMutation({ mutationFn: api.ingest.condense, onSuccess: done }),
+    refetch: useMutation({ mutationFn: api.ingest.refetch, onSuccess: done }),
     analyzeResources: useMutation({
       mutationFn: api.ingest.analyzeResources,
       onSuccess: updateDetail,

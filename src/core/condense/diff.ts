@@ -8,16 +8,9 @@
  * lines at most), so quadratic time is fine and keeps the implementation obvious.
  */
 
-export type DiffRowKind = 'context' | 'added' | 'removed';
+import type { DiffRow } from '@shared/types';
 
-export interface DiffRow {
-  kind: DiffRowKind;
-  text: string;
-  /** 1-based line number in "before"; present for 'context' and 'removed'. */
-  beforeLine?: number;
-  /** 1-based line number in "after"; present for 'context' and 'added'. */
-  afterLine?: number;
-}
+export type { DiffRow, DiffRowKind } from '@shared/types';
 
 export interface LineDiffResult {
   rows: DiffRow[];

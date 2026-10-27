@@ -16,6 +16,8 @@
  * condensed tab, rather than by asking for a second app.
  */
 
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import type { Locator, Page } from '@playwright/test';
 import { expect, test } from './fixtures/app';
 
@@ -174,5 +176,43 @@ test('with no model configured a condensation creates no task and keeps its hone
   await test.step('condense — the tasks screen never gained a row for it (AC7)', async () => {
     await openTasksScreen(page);
     await expect(rowsFor(page, AREA.slug)).toHaveCount(0);
+  });
+});
+
+test('with no model configured the module view names condense-module and links to its model setting', async ({
+  app,
+  vaultPath,
+}) => {
+  const { page } = app;
+  const MODULE = 'second-brain-methodik';
+  const overview = join(vaultPath, 'modules', MODULE, 'wiki', 'overview.md');
+  const before = readFileSync(overview, 'utf8');
+
+  await test.step('module — open the condensed tab with no model routed', async () => {
+    /* The routing was cleared by the previous test on this shared app (see the
+       file header); clearing again keeps this one independent of test order. */
+    for (const tier of ['cheap', 'balanced', 'strong']) {
+      await page.evaluate(`window.sb.invoke('llm:setDefault', { tier: '${tier}', ref: null })`);
+    }
+    await page.evaluate(`location.hash = "#/knowledge?m=${MODULE}&tab=condensed"`);
+    await page.reload();
+    await expect(page.getByRole('tab', { name: 'Condensed', selected: true })).toBeVisible();
+    await expect(page.getByText('This step needs a model')).toBeVisible();
+    await expect(page.getByText(/Condense module/)).toBeVisible();
+    /* No trigger anywhere, not even disabled. */
+    await expect(page.getByRole('button', { name: /^Condense/ })).toHaveCount(0);
+  });
+
+  await test.step('module — nothing was written to the overview page', async () => {
+    expect(readFileSync(overview, 'utf8')).toBe(before);
+  });
+
+  await test.step('module — the link lands on the models tab, at the task’s own select', async () => {
+    await page.getByRole('button', { name: 'Set up routing' }).click();
+    await expect.poll(() => page.url().split('#')[1] ?? '').toBe('/settings?tab=models');
+    await expect(page.getByRole('tab', { name: 'Models', selected: true })).toBeVisible();
+    const select = page.locator('#routing-select-condense-module');
+    await expect(select).toBeVisible();
+    await expect(select).toBeEnabled();
   });
 });

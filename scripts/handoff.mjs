@@ -30,10 +30,10 @@ import {
   statSync,
   writeFileSync,
 } from 'node:fs';
-import { createRequire } from 'node:module';
-import { dirname, join, resolve } from 'node:path';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ZipArchive } from 'archiver';
+import { electronBuilderCli } from './lib/electron-builder-cli.mjs';
 import { checkBundleContents, checkHandoffContents } from './lib/handoff-check.mjs';
 
 const REPO_ROOT = fileURLToPath(new URL('..', import.meta.url));
@@ -115,15 +115,10 @@ function render(step, template, values) {
   return filled;
 }
 
-/** The electron-builder CLI, resolved through its own manifest rather than a
-    guessed path inside the package. */
-function electronBuilderCli(step) {
-  const require = createRequire(import.meta.url);
+/** The electron-builder CLI, with a failure reported as the step that needed it. */
+function locateElectronBuilder(step) {
   try {
-    const manifestPath = require.resolve('electron-builder/package.json');
-    const bin = JSON.parse(readFileSync(manifestPath, 'utf8')).bin?.['electron-builder'];
-    if (typeof bin !== 'string') throw new Error('its manifest declares no electron-builder bin');
-    return resolve(dirname(manifestPath), bin);
+    return electronBuilderCli();
   } catch (error) {
     throw new HandoffError(
       step,
@@ -274,7 +269,7 @@ async function main() {
 
   /* Not `npm run package`: that would compile a second time. The build from
      the verify run above is what gets packaged. */
-  runStep('package', process.execPath, [electronBuilderCli('package'), '--win', 'portable'], {
+  runStep('package', process.execPath, [locateElectronBuilder('package'), '--win', 'portable'], {
     shell: false,
   });
   if (!existsSync(exePath)) {

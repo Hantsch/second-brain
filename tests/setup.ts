@@ -56,9 +56,22 @@ if (host.window && typeof host.window.matchMedia !== 'function') {
 
 /* Testing-Library nur im DOM laden: im Node-Kontext gibt es kein `document`,
    und der Import würde beim Auswerten scheitern. */
-const cleanupDom = host.document
-  ? await import('@testing-library/react').then((rtl) => rtl.cleanup)
-  : null;
+const rtl = host.document ? await import('@testing-library/react') : null;
+/* `findBy*` and `waitFor` give up after 1 s by default — a speed limit in
+   disguise that a loaded CI runner crosses. A wait only lasts while its
+   condition is false, so a longer ceiling costs a passing test nothing. */
+rtl?.configure({ asyncUtilTimeout: 10_000 });
+const cleanupDom = rtl?.cleanup ?? null;
+
+/* `vi.waitFor` has the same 1 s default and no setting for it; `queue.test.ts`
+   lost it under full-suite load in the S19–S22 gates. An explicit timeout at the
+   call site still wins. */
+const vitestWaitFor = vi.waitFor;
+vi.waitFor = ((callback, options) =>
+  vitestWaitFor(
+    callback,
+    typeof options === 'number' ? options : { timeout: 10_000, ...options },
+  )) as typeof vi.waitFor;
 
 // ── window.sb ────────────────────────────────────────────────────────────────
 

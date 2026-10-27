@@ -87,7 +87,7 @@ export async function isRawDigestedInto(
  * dem eine lesbare Datei liegt. `null`, wenn es keine gibt oder sie kein Objekt
  * enthaelt: dann laesst die App sie in Ruhe, statt Vault-Inhalt zu ueberschreiben.
  */
-async function readProtocol(
+export async function readProtocol(
   store: WikiStore,
   rawPath: string,
 ): Promise<{ path: string; raw: string; record: Record<string, unknown> } | null> {

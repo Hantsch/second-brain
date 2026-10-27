@@ -1,0 +1,116 @@
+- 10:04:06 · refine · 088 089 090 091 092 · started
+- 10:10:11 · refine · 088 089 090 091 092 · done
+- 10:10:11 · 088 · build · started
+- 2026-10-27 10:10 · 088 · D1 Read and validate proposals · started
+- 2026-10-27 10:15 · 088 · D1 Read and validate proposals · done
+- 2026-10-27 10:15 · 088 · D2 Accept and reject edit proposal (hard) · started
+- 2026-10-27 10:20 · 088 · D2 Accept and reject edit proposal (hard) · done
+- 2026-10-27 10:20 · 088 · D3 Filing proposals via capture flow · started
+- 2026-10-27 10:24 · 088 · D3 Filing proposals via capture flow · done
+- 2026-10-27 10:24 · 088 · D4 IPC · started
+- 2026-10-27 10:24 · 088 · D7 Propose skill and protection · started
+- 2026-10-27 10:29 · 088 · D4 IPC · done
+- 2026-10-27 10:29 · 088 · D7 Propose skill and protection · done
+- 2026-10-27 10:29 · 088 · D5 Proposal cards in garden screen · started
+- 2026-10-27 10:37 · 088 · D5 Proposal cards in garden screen · done
+- 2026-10-27 10:37 · 088 · D6 Rail badge · started
+- 2026-10-27 10:43 · 088 · D6 Rail badge · done
+- 2026-10-27 10:43 · 088 · verify · started
+- 2026-10-27 10:53 · 088 · verify · done
+- 2026-10-27 10:53 · 088 · review 1 · started
+- 2026-10-27 10:55 · 088 · review 1 · done
+- 2026-10-27 10:55 · 088 · review-fix 1 · started
+- 2026-10-27 10:58 · 088 · review-fix 1 · done
+- 2026-10-27 10:58 · 088 · verify 2 · started
+- 2026-10-27 11:03 · 088 · verify 2 · done
+- 2026-10-27 11:03 · 088 · story · done
+- 11:03:46 · 089 · build · started
+- 2026-10-27 11:04 · 089 · D1 run report format and reader · started
+- 2026-10-27 11:07 · 089 · D1 run report format and reader · done
+- 2026-10-27 11:07 · 089 · D2 run-report hook · started
+- 2026-10-27 11:14 · 089 · D2 run-report hook · done
+- 2026-10-27 11:14 · 089 · D3 skills and vault CLAUDE.md · started
+- 2026-10-27 11:14 · 089 · D4 IPC agent:lastRun · started
+- 2026-10-27 11:18 · 089 · D3 skills and vault CLAUDE.md · done
+- 2026-10-27 11:18 · 089 · D4 IPC agent:lastRun · done
+- 2026-10-27 11:18 · 089 · D5 last run panel · started
+- 2026-10-27 11:21 · 089 · D5 last run panel · done
+- 2026-10-27 11:21 · 089 · verify · started
+- 2026-10-27 11:25 · 089 · verify · blocked: agent-setup.spec.ts:112 settings version stale
+- 2026-10-27 11:25 · 089 · verify 2 · started
+- 2026-10-27 11:26 · 089 · verify 2 · done
+- 2026-10-27 11:26 · 089 · review 1 · started
+- 2026-10-27 11:29 · 089 · review 1 · done
+- 2026-10-27 11:29 · 089 · review-fix 1 · started
+- 2026-10-27 11:34 · 089 · review-fix 1 · done
+- 2026-10-27 11:34 · 089 · verify 3 · started
+- 2026-10-27 11:37 · 089 · verify 3 · done
+- 2026-10-27 11:37 · 089 · story · done
+- 11:37:28 · 090 · build · started
+- 2026-10-27 11:38 · 090 · D1 job and result file format · started
+- 2026-10-27 11:40 · 090 · D1 job and result file format · done
+- 2026-10-27 11:40 · 090 · D2 condense-source hand-over and validation · started
+- 2026-10-27 11:40 · 090 · D3 gaston-jobs skill v3 · started
+- 2026-10-27 11:46 · 090 · D2 condense-source hand-over and validation · done
+- 2026-10-27 11:46 · 090 · D3 gaston-jobs skill v3 · done
+- 2026-10-27 11:46 · 090 · D4 main and IPC · started
+- 2026-10-27 11:56 · 090 · D4 main and IPC · done
+- 2026-10-27 11:56 · 090 · D5 Sources hand over and withdraw · started
+- 2026-10-27 12:01 · 090 · D5 Sources hand over and withdraw · done
+- 2026-10-27 12:01 · 090 · D6 Tasks screen agent jobs · started
+- 2026-10-27 12:07 · 090 · D6 Tasks screen agent jobs · done
+- 2026-10-27 12:07 · 090 · verify · started
+- 2026-10-27 12:13 · 090 · verify · done
+- 2026-10-27 12:13 · 090 · review 1 · started
+- 2026-10-27 12:16 · 090 · review 1 · done
+- 2026-10-27 12:16 · 090 · review-fix 1 · started
+- 2026-10-27 12:27 · 090 · review-fix 1 · done
+- 2026-10-27 12:27 · 090 · verify 2 · started
+- 2026-10-27 12:32 · 090 · verify 2 · done
+- 2026-10-27 12:32 · 090 · story · done
+- 12:32:45 · 091 · build · started
+- 2026-10-27 12:33 · 091 · D1 curate-module job kind · started
+- 2026-10-27 12:36 · 091 · D1 curate-module job kind · done
+- 2026-10-27 12:36 · 091 · D2 gardener-audit job kind + shared check · started
+- 2026-10-27 12:40 · 091 · D2 gardener-audit job kind + shared check · done
+- 2026-10-27 12:40 · 091 · D3 booking agent audit into gardener.json (hard) · started
+- 2026-10-27 12:44 · 091 · D3 booking agent audit into gardener.json (hard) · done
+- 2026-10-27 12:44 · 091 · D4 main wiring · started
+- 2026-10-27 12:51 · 091 · D4 main wiring · done
+- 2026-10-27 12:51 · 091 · D5 hand-to-agent buttons · started
+- 2026-10-27 12:55 · 091 · D5 hand-to-agent buttons · done
+- 2026-10-27 12:55 · 091 · D7 skill templates · started
+- 2026-10-27 12:59 · 091 · D7 skill templates · done
+- 2026-10-27 12:59 · 091 · D6 Tasks rows, e2e, changelog · started
+- 2026-10-27 13:09 · 091 · D6 Tasks rows, e2e, changelog · done
+- 2026-10-27 13:09 · 091 · verify · started
+- 2026-10-27 13:12 · 091 · verify · blocked: mock-agent-setup version pin (fixing)
+- 2026-10-27 13:13 · 091 · verify · done
+- 2026-10-27 13:13 · 091 · review 1 · started
+- 2026-10-27 13:17 · 091 · review 1 · done
+- 2026-10-27 13:17 · 091 · review-fix 1 · started
+- 2026-10-27 13:20 · 091 · review-fix 1 · done
+- 2026-10-27 13:20 · 091 · verify 2 · started
+- 2026-10-27 13:31 · 091 · verify 2 · done
+- 2026-10-27 13:31 · 091 · story · done
+- 13:32:12 · 092 · build · started
+- 2026-10-27 13:32 · 092 · D1 core condense-module result · started
+- 2026-10-27 13:36 · 092 · D1 core condense-module result · done
+- 2026-10-27 13:36 · 092 · D2 main hand-over + pickup · started
+- 2026-10-27 13:37 · 092 · D4 jobs skill condense-module · started
+- 2026-10-27 13:42 · 092 · D2 main hand-over + pickup · done
+- 2026-10-27 13:42 · 092 · D4 jobs skill condense-module · done
+- 2026-10-27 13:43 · 092 · D3 renderer, e2e, changelog · started
+- 2026-10-27 13:51 · 092 · D3 renderer, e2e, changelog · done
+- 2026-10-27 13:52 · 092 · verify · started
+- 2026-10-27 13:58 · 092 · verify · done
+- 2026-10-27 13:58 · 092 · review 1 · started
+- 2026-10-27 14:06 · 092 · review 1 · done
+- 2026-10-27 14:06 · 092 · review-fix 1 · started
+- 2026-10-27 14:15 · 092 · review-fix 1 · done
+- 2026-10-27 14:15 · 092 · verify 2 · started
+- 2026-10-27 14:21 · 092 · verify 2 · done
+- 2026-10-27 14:21 · 092 · story · done
+- 14:22:10 · gate · short suites · started
+- 14:31:23 · gate · short suites · done (red: wiring test, tasks-screen e2e, update-installed e2e, load flakes) · attribution started
+- 14:39:16 · gate · fix 088 · done

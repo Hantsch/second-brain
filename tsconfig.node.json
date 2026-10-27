@@ -19,7 +19,8 @@
     "noEmit": true,
     "paths": {
       "@core/*": ["./src/core/*"],
-      "@shared/*": ["./src/shared/*"]
+      "@shared/*": ["./src/shared/*"],
+      "@renderer/*": ["./src/renderer/*"]
     }
   },
   "include": [
@@ -27,10 +28,12 @@
     "src/preload/**/*",
     "src/core/**/*",
     "src/shared/**/*",
+    "src/renderer/lib/screens.ts",
     "tests/**/*",
     "electron.vite.config.ts",
     "playwright.config.ts",
-    "vitest.config.ts"
+    "vitest.config.ts",
+    "vitest.perf.config.ts"
   ],
   "exclude": ["tests/renderer/**"]
 }

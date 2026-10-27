@@ -148,6 +148,14 @@ export const qk = {
     transcript: (agent: string, sessionId: string, cursor?: string | null) =>
       ['agents', 'transcript', agent, sessionId, cursor ?? null] as const,
   },
+  agent: {
+    cliStatus: () => ['agent', 'cliStatus'] as const,
+    setupState: () => ['agent', 'setupState'] as const,
+    protection: () => ['agent', 'protection'] as const,
+    lastRun: () => ['agent', 'lastRun'] as const,
+    proposals: () => ['agent', 'proposals'] as const,
+    jobs: () => ['agent', 'jobs'] as const,
+  },
   settings: {
     snapshot: () => ['settings', 'snapshot'] as const,
   },
@@ -182,4 +190,6 @@ export const VAULT_DEPENDENT_ROOTS: readonly string[] = [
   'gardener',
   'claude',
   'agents',
+  /* The agent setup's files, among them the help module's pages, are vault files. */
+  'agent',
 ];

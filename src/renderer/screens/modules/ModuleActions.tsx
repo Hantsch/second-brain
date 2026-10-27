@@ -8,6 +8,7 @@
 import { useState } from 'react';
 import type { KnowledgeModule } from '@shared/types';
 import { Button } from '../../atoms/Button';
+import { HandOverModuleButton } from '../../components/AgentHandOverActions';
 import { useT } from '../../i18n';
 import { DeleteModuleDialog } from './DeleteModuleDialog';
 import { RenameModuleDialog } from './RenameModuleDialog';
@@ -33,6 +34,8 @@ export function ModuleActions({ module, onRenamed, onDeleted }: ModuleActionsPro
       <Button variant="secondary" size="sm" icon="pencil" onClick={() => setRenaming(true)}>
         {t('modules.rename.action')}
       </Button>
+      {/* Hidden for the help module inside the button. */}
+      <HandOverModuleButton slug={module.slug} />
       <Button variant="danger" size="sm" icon="trash-2" onClick={() => setDeleting(true)}>
         {t('modules.delete.action')}
       </Button>

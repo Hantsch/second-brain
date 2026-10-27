@@ -17,7 +17,7 @@ import type { DocType, RawSource, Todo } from '@shared/types';
 import { parse } from '@core/vault/frontmatter';
 import { sha256 } from '@core/vault/hash';
 import { titleFor, wordCount } from '@core/vault/doc';
-import { baseName, dirName, extName, isInside } from '@core/vault/paths';
+import { baseName, dirName, extName, isAgentConfigPath, isInside } from '@core/vault/paths';
 import type { DateLike } from '@core/vault/paths';
 import type { VaultStat, VaultStore } from '@core/vault/types';
 import { deriveAreas } from './areas';
@@ -387,7 +387,9 @@ export async function scanVault(
 ): Promise<ScanResult> {
   const previous = options.previous ?? null;
   const files: VaultStat[] = [];
-  for await (const entry of store.walk()) files.push(entry);
+  for await (const entry of store.walk()) {
+    if (!isAgentConfigPath(entry.path)) files.push(entry);
+  }
 
   const markdown = files.filter((file) => extName(file.path) === '.md');
   const total = markdown.length;

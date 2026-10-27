@@ -1,0 +1,91 @@
+/* The agent screen: a small setup sign, and the command list with the command in mono
+   on the left and what it does beside it. Below the narrow breakpoint the two stack. */
+
+/* Amber, not teal: the one accent belongs to the open button in the header. */
+.sb-agent-notice {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  align-self: flex-start;
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--warning);
+  border-radius: var(--radius-md);
+  background: var(--warning-soft);
+  font-size: var(--text-sm);
+  color: var(--text-body);
+}
+.sb-agent-notice > svg {
+  flex-shrink: 0;
+  color: var(--warning);
+}
+.sb-agent-notice a {
+  color: var(--warning);
+  text-decoration: underline;
+}
+
+.sb-agent-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.sb-agent-commands {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+}
+.sb-agent-command {
+  display: grid;
+  grid-template-columns: minmax(12rem, 16rem) minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: baseline;
+}
+.sb-agent-command dt {
+  font-size: var(--text-sm);
+  color: var(--text-body);
+  overflow-wrap: anywhere;
+}
+.sb-agent-command dd {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  max-width: 64ch;
+}
+.sb-agent-command-modules {
+  font-size: var(--text-xs);
+  color: var(--text-faint);
+}
+@media (max-width: 900px) {
+  .sb-agent-command {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-1);
+  }
+}
+
+/* The hand-to-agent button with its refusal beneath it, and the per-module rows under the
+   curate command. */
+.sb-handtoagent {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+.sb-agent-command-hand {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sb-agent-command-hand li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}

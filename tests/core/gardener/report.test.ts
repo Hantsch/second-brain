@@ -1,7 +1,8 @@
 /* Der ganze Lauf. Drei Fragen:
    1. Findet er im Demo-Vault genau die absichtlichen Mängel — und nichts dazu?
    2. Halten Sortierung, Ausblenden und die Ehrlichkeit über `usedLlm`?
-   3. Bleibt er auf 1000 Seiten unter drei Sekunden? */
+   Die dritte — bleibt er auf 1000 Seiten unter drei Sekunden? — misst
+   `report.perf.test.ts` in der Perf-Spur. */
 
 import { describe, expect, it, vi } from 'vitest';
 import { runGardener, sortFindings } from '@core/gardener';
@@ -31,25 +32,34 @@ describe('runGardener über den Demo-Bestand', () => {
     expect(kinds(report.findings)).toEqual({
       orphan: 1,
       'broken-link': 1,
-      'index-drift': 1,
+      /* `jit` fehlt im Katalog — und `scim`, denn eine gelistete Seite ist keine Waise. */
+      'index-drift': 2,
       'stale-page': 1,
       'unfiled-dump': 1,
       'unprocessed-source': 1,
       'project-without-next-step': 1,
       /* 046: jedes der drei laufenden Demo-Projekte hat Material und noch kein
-         `condensed.md` — die fehlende Variante, einmal je Projekt. */
-      'condensation-due': 3,
+         `condensed.md` — die fehlende Variante, einmal je Projekt; dazu die zwei
+         Module mit Seiten und noch ohne verdichtete Uebersicht. */
+      'condensation-due': 5,
     });
     expect(of(report.findings, 'orphan')[0]?.paths).toContain(DEMO.scim);
     expect(of(report.findings, 'broken-link')[0]?.title).toContain('device-code-flow');
-    expect(of(report.findings, 'index-drift')[0]?.paths).toContain(DEMO.jit);
+    expect(of(report.findings, 'index-drift').flatMap((finding) => finding.paths)).toEqual(
+      expect.arrayContaining([DEMO.jit, DEMO.scim]),
+    );
     expect(of(report.findings, 'stale-page')[0]?.paths).toEqual([DEMO.tenants]);
     expect(of(report.findings, 'unfiled-dump')[0]?.paths).toEqual([DEMO.oldDump]);
     expect(of(report.findings, 'unprocessed-source')[0]?.paths).toEqual([DEMO.rawWeb]);
     expect(of(report.findings, 'project-without-next-step')[0]?.paths).toEqual([
       DEMO.projectWithoutStep,
     ]);
-    const condensation = of(report.findings, 'condensation-due');
+    const condensation = of(report.findings, 'condensation-due').filter(
+      (finding) => finding.module === null,
+    );
+    expect(of(report.findings, 'condensation-due').filter((f) => f.module !== null)).toHaveLength(
+      2,
+    );
     // Das noch nicht existierende Artefakt zuerst, `project.md` dahinter.
     expect(condensation.every((finding) => finding.paths[0]?.endsWith('/condensed.md'))).toBe(true);
     expect(condensation.map((finding) => finding.paths[1]).sort()).toEqual(
@@ -238,32 +248,5 @@ describe('condensation-due (Projekt-Arm) über einen echten Bestand (046, D2)', 
 
     expect(of(report.findings, 'condensation-due')).toHaveLength(1);
     for (const spy of spies) expect(spy).not.toHaveBeenCalled();
-  });
-});
-
-describe('Laufzeit', () => {
-  it('läuft über 1000 Seiten in unter drei Sekunden', async () => {
-    const files: Record<string, string> = {
-      'modules/gross/wiki/index.md': '# Katalog\n\n## Begriffe\n',
-      'modules/gross/wiki/log.md': '# Chronik\n',
-    };
-    for (let at = 0; at < 1000; at += 1) {
-      const slug = `seite-${String(at).padStart(4, '0')}`;
-      const link = `seite-${String((at + 1) % 1000).padStart(4, '0')}`;
-      files[`modules/gross/wiki/concepts/${slug}.md`] =
-        `---\ntype: concept\ntitle: Seite ${at}\nmodule: gross\ncreated: ${day(-40)}\n` +
-        `updated: ${day(-10)}\nreviewed: ${day(-10)}\ntags: []\nsources: []\n---\n\n` +
-        `Abschnitt ${at} beschreibt Vorgang ${at} mit Kennung ${at * 7} und Schwelle ${at % 13}.\n` +
-        `Verwandt ist [[${link}]]; die Messreihe ${at % 29} lag bei ${at % 97} Prozent.\n` +
-        `Notiert wurde das am Tag ${at % 31} von Person ${at % 17} im Raum ${at % 11}.\n`;
-    }
-    const fixture = await gardenerFixture(files);
-
-    const started = Date.now();
-    const report = await runGardener(fixture.deps(), { settings: SETTINGS });
-    const elapsed = Date.now() - started;
-
-    expect(report.findings.length).toBeGreaterThan(0);
-    expect(elapsed).toBeLessThan(3000);
   });
 });

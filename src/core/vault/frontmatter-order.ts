@@ -10,7 +10,7 @@
  * `next_step` hinter `waiting_on` — formal richtig, zum Lesen falsch.
  */
 
-/** Wiki-Seiten (source, entity, concept, overview) tragen dasselbe Schema. */
+/** Wiki-Seiten (source, entity, concept) tragen dasselbe Schema. */
 const WIKI = [
   'type',
   'title',
@@ -20,6 +20,26 @@ const WIKI = [
   'reviewed',
   'tags',
   'sources',
+] as const;
+
+/**
+ * The module overview (`modules/<slug>/wiki/overview.md`) is a wiki page and a
+ * condensed artifact at once: the wiki schema, with `condensed_at` next to the
+ * other timestamps and `source_hashes` right behind the `sources` it annotates.
+ * The wiki fields keep their relative order, so a stub overview places its
+ * fields exactly where it did before (story 081).
+ */
+const OVERVIEW = [
+  'type',
+  'title',
+  'module',
+  'condensed_at',
+  'created',
+  'updated',
+  'reviewed',
+  'tags',
+  'sources',
+  'source_hashes',
 ] as const;
 
 const PROJECT = [
@@ -80,7 +100,7 @@ const CANONICAL: Readonly<Record<string, readonly string[]>> = {
   source: WIKI,
   entity: WIKI,
   concept: WIKI,
-  overview: WIKI,
+  overview: OVERVIEW,
 };
 
 /**

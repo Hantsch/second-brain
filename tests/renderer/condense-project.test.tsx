@@ -15,7 +15,7 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { IpcChannel, IpcError, IpcRequest, IpcResponse } from '@shared/ipc';
-import type { CondenseProposal, WorkTask } from '@shared/types';
+import type { CondenseProposal, CondenseUnit, WorkTask } from '@shared/types';
 import { ProjectKnowledgeTab } from '@renderer/screens/projects/ProjectKnowledgeTab';
 import { AreaCondensedTab } from '@renderer/screens/notes/AreaCondensedTab';
 import { ToastHost } from '@renderer/components/ToastHost';
@@ -339,7 +339,7 @@ describe('Wissen-Tab eines Projekts (Story 045, D4)', () => {
         },
         defaults: {},
       }),
-      'condense:read': ({ unit }: { unit: 'area' | 'project'; slug: string }) =>
+      'condense:read': ({ unit }: { unit: CondenseUnit; slug: string }) =>
         unit === 'area' ? AREA_ARTIFACT : PROJECT_ARTIFACT,
     });
     // One shared QueryClient — this is what a colliding cache key would

@@ -23,11 +23,14 @@ import type {
 } from './contracts';
 import type { KeyStore } from './secrets';
 import type { SettingsService } from './settings';
+import { isAgentJobPath, isAgentRunPath, settleAgentJobsQueued } from './agent-jobs-settle';
 import { fail, noVault } from './ipc/errors';
 import { ensureStructure, isVault } from './vault-layout';
 import { getWorkQueue } from './work-queue';
 import { getTaskResults } from './task-results';
 import { isDemoVault } from './demo';
+// close-guard imports `Services` as a type only, so this import forms no runtime cycle.
+import { authoriseQuit } from './close-guard';
 import { createUpdateBackend } from './update/backend';
 import { createUpdateChecker, detectDistribution } from './update/checker';
 import { restartBlocker } from './update/restart-blocker';
@@ -108,6 +111,7 @@ export class Services {
       // The fixture forbids the network, so with it active nothing real may download.
       backend: file?.backend ?? (fixture ? undefined : createUpdateBackend()),
       restartBlocker: () => restartBlocker(this),
+      authoriseQuit,
     });
     return this.updateService;
   }
@@ -195,6 +199,8 @@ export class Services {
       );
     }
     await this.refreshIndexState();
+    // Answers that arrived while the app was closed are booked now, not at the next change.
+    void settleAgentJobsQueued(this);
     return this.status();
   }
 
@@ -388,6 +394,9 @@ export class Services {
      paths are remembered and folded into the next successful refresh's
      report, so nothing gets lost — only delayed. */
   private handleVaultChange(paths: string[], external: boolean): void {
+    if (paths.some(isAgentJobPath) || paths.some(isAgentRunPath)) {
+      void settleAgentJobsQueued(this, { alwaysEmit: paths.some(isAgentRunPath) });
+    }
     const index = this.index();
     if (!index?.refresh) {
       this.sendEvent('event:vault-changed', { paths, external });

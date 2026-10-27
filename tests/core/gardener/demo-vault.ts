@@ -1,7 +1,8 @@
 /* Der Demo-Vault in Klein — mit **genau** den absichtlichen Mängeln, die
    `npm run seed` einbaut (siehe `scripts/seed/check.mjs`, `EXPECTED_FINDINGS`):
 
-     1. eine verwaiste Seite               entities/scim.md
+     1. eine verwaiste Seite               entities/scim.md (auch nicht im index.md —
+                                           sonst wäre sie keine Waise)
      2. ein kaputter Wikilink              entities/oauth2.md → [[device-code-flow]]
      3. eine im index.md fehlende Seite    concepts/just-in-time-provisionierung.md
      4. + 5. zwei Seiten mit benanntem Widerspruch

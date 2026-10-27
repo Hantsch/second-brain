@@ -67,6 +67,12 @@ carries `version`, `name`, and `createdAt`; the app creates missing folders on
 open, without touching existing content. It only writes `README.md` if none
 exists.
 
+The stored run in `gardener.json` carries an optional `audit` field saying who interpreted it:
+`{ "by": "model" | "agent", "at": <ISO timestamp> }`, the model during the run or the agent
+booked in afterwards. `null` is a run written without an audit, for example when only the
+loose-ends stage got an answer from a model. An absent field is a run written by an older
+version, where `usedLlm` stands in for it.
+
 Two files under `modules/` are structure, not knowledge, and therefore carry
 **no** frontmatter: `wiki/index.md` (catalog) and `wiki/log.md` (chronicle).
 Links to them count neither as incoming nor as broken. `module.md` carries
@@ -344,6 +350,76 @@ section survives filing. Section headings follow the vault's configured
 document language, with the same de/en tolerance on read as the other
 sections in this document.
 
+## Condensed module overview (modules/<slug>/wiki/overview.md)
+
+```markdown
+---
+type: overview
+title: Identity Management
+module: identity-management
+condensed_at: 2026-08-10T09:15:00+02:00
+created: 2026-07-02
+sources:
+  - modules/identity-management/wiki/concepts/rbac.md
+  - modules/identity-management/wiki/sources/s-2026-07-02-auth0-rbac-guide.md
+source_hashes:
+  modules/identity-management/wiki/concepts/rbac.md: 9f2c1b…
+  modules/identity-management/wiki/sources/s-2026-07-02-auth0-rbac-guide.md: 4ad07e…
+---
+
+## Entschieden
+
+Was in diesem Modul belegt und entschieden ist.
+
+Aus: modules/identity-management/wiki/sources/s-2026-07-02-auth0-rbac-guide.md
+
+## Offen
+
+Was noch unklar ist und auf eine Entscheidung wartet.
+
+Aus: modules/identity-management/wiki/concepts/rbac.md
+
+## Widersprüche
+
+Wo sich Seiten des Moduls widersprechen — benannt, nicht geglättet.
+
+Aus: modules/identity-management/wiki/concepts/rbac.md
+
+## Direktiven
+
+Handschriftliche Vorgaben des Nutzers. Ein Kondensationslauf liest sie, schreibt
+sie aber nie.
+```
+
+The module overview is the third condensed level, next to the condensed project
+and the condensed area: a derived digest of the module's own wiki pages, kept at
+the overview's existing path instead of a sibling file. It stays a wiki page —
+`type: overview`, with `module`, `created`, `tags` and the other wiki keys
+carried over — and follows the condensed frontmatter contract on top:
+`condensed_at` is an ISO-8601 timestamp with time zone, `sources` lists the
+pages the run read **as vault paths** (not as slugs, unlike the other wiki
+pages), and `source_hashes` records the sha256 of each of them at digest time.
+The page graph reads a path to a page of the same module as that page's slug,
+so both spellings name the same page. Because the overview is a model-written
+digest, it is never cited as evidence for an answer; the pages it condenses
+are.
+
+The body has four sections, in this order: `Entschieden`/`Decided`,
+`Offen`/`Open`, `Widersprüche`/`Contradictions`, and `Direktiven`/`Directives`,
+the human-owned section a run never writes. Each machine section ends with a
+source line (`Aus:`/`From:` followed by the vault paths it rests on). Headings
+follow the document language and are read with de/en tolerance. The headings
+an overview carried before it became a condensed artifact — `Was entschieden
+ist`/`What is settled` and `Was offen ist`/`What is open` — are read as aliases
+of `Entschieden` and `Offen`, so an existing overview's content is kept rather
+than duplicated. Any other section (`Seiten`, a hand-written note) and any text
+above the first heading are foreign to the digest and carried over verbatim — with
+one exception: an overview without `condensed_at` (a bullet list from before the
+condensed layer, or the stub a new module starts with) is replaced whole by its
+first condensation, so its old bullets show up as removals in the diff. Only its
+unknown frontmatter keys and the directives section survive. The previous file is
+in `.secondbrain/trash/` once the condensation is accepted.
+
 ## Todos
 
 A todo is a GFM checkbox in any vault file — no dedicated format, so Obsidian and
@@ -502,13 +578,355 @@ models, or other files. During condensation, `resourceReport` in `.ingest.json`
 records resources mentioned in the transcript or description and preserves all
 description links. Re-running ingestion never removes or overwrites `sources/`.
 
+One exception replaces payload: a YouTube source whose `.ingest.json` records
+`transcript.available: false` and no `sourcePage` may be fetched again in place
+("fetch again" in the source details, `ingest:refetch`). No citation rests on such
+a payload yet. Every file that gets replaced is snapshotted to
+`.secondbrain/trash/` first, and if the new fetch brings no transcript either,
+nothing is written at all.
+
 Files under `raw/` index as type `raw`, derived from the path, without any
 frontmatter change.
+
+## Agent setup
+
+Gaston can install a setup that lets a coding agent (Claude Code) work on the vault
+from outside the app. The setup is plain files in the vault root; the app writes it
+only on request.
+
+```
+<vault>/
+  CLAUDE.md                          instructions for the agent, indexed like README.md
+  .claude/
+    gaston-manifest.json             ownership record for every managed file
+    skills/gaston-jobs/SKILL.md      work through jobs from Gaston
+    skills/gaston-curate/SKILL.md    curate the vault
+    skills/gaston-propose/SKILL.md   write proposals instead of editing
+    hooks/                           hook scripts the agent runs
+  .secondbrain/agent/
+    jobs/                            written by Gaston, read by the agent
+    results/                         written by the agent; same file name as its job
+    proposals/                       written by the agent
+    resolved/                        written by Gaston: accepted and rejected proposals
+    runs/                            written by the agent
+```
+
+### Marker and manifest
+
+A managed file carries a marker with the template it came from:
+
+```
+gaston:managed id=<template-id> version=<n>
+```
+
+Where the marker sits depends on the file type:
+
+| File                | Marker position                                          |
+| ------------------- | -------------------------------------------------------- |
+| Markdown            | first line, as an HTML comment                           |
+| `SKILL.md`          | the line directly after the closing `---` of frontmatter |
+| Script              | a `# …` line right after the shebang                     |
+| JSON (the manifest) | none                                                     |
+| Help module page    | keys in the leading frontmatter, see below               |
+
+A file that has frontmatter anyway (the help module's `module.md` and wiki pages)
+carries the marker as two frontmatter keys instead of a comment:
+
+```yaml
+managed_by: gaston
+template_version: 1
+```
+
+Both keys count only in a real frontmatter block at the top of the file, and
+`template_version` must be an integer. The same text anywhere in the body marks
+nothing.
+
+`.claude/gaston-manifest.json` is the single source of ownership. For each managed
+file it records the template id, the template version, and the hash of what was
+written. The rules that follow:
+
+- A file with neither marker nor manifest entry belongs to the user. The app never
+  writes it.
+- A managed file whose hash no longer matches the manifest was modified by the user.
+  The app overwrites it only after explicit confirmation, and first copies the
+  current content to `.secondbrain/trash/` so the change can be undone.
+- A managed file whose hash still matches may be updated to a newer template version
+  without asking.
+
+### Help module (`modules/gaston-help/`)
+
+The module slug `gaston-help` is reserved: installing the setup also writes a
+knowledge module in which Gaston explains itself. Its `module.md`, `AGENTS.md`,
+`wiki/index.md`, `wiki/overview.md` and `wiki/concepts/*.md` are managed files under
+the rules above, recorded in the same manifest. On top of that:
+
+- A page without a marker in the folder belongs to the user, like any other file.
+  An update never writes, moves or deletes it.
+- If `modules/gaston-help/` exists and its `module.md` carries no marker (or is
+  missing without a manifest entry), the folder is someone else's module. Install
+  and update then write nothing at all — no help page, no `.claude/` file, no
+  `CLAUDE.md`. Renaming that module frees the slug.
+- `wiki/log.md` is not managed: it is created with its header if missing, and every
+  install or update that writes help pages appends one `ingest` entry naming the
+  version and the pages written.
+
+### Who writes what under `.secondbrain/agent/`
+
+| Folder       | Writer | Reader | Content                                                |
+| ------------ | ------ | ------ | ------------------------------------------------------ |
+| `jobs/`      | Gaston | agent  | one job per file                                       |
+| `results/`   | agent  | Gaston | the outcome of a job, with the same file name as it    |
+| `proposals/` | agent  | Gaston | suggested changes; nothing applies until the user says |
+| `resolved/`  | Gaston | Gaston | proposals after the user accepted or rejected them     |
+| `runs/`      | agent  | Gaston | a record of each agent run                             |
+
+#### Jobs and results
+
+A job is one `.md` file directly in `jobs/`, named `<kind>-<YYYYMMDDTHHmmss>-<hash>.md`: the kind,
+the hand-over time in UTC, and the first 8 hex characters of the sha256 of the subject. The agent
+answers with `results/<same name>.md`. A `.json` file in `jobs/` is an `llm-task` job and is not
+described here. Kinds so far: `condense-source`, `curate-module`, `gardener-audit` and
+`condense-module`.
+
+```markdown
+---
+gaston: agent-job
+version: 1
+id: condense-source-20261027T091205-3fa9c1d2
+kind: condense-source
+created: 2026-10-27T09:12:05.000Z
+subject: raw/articles/bread.md
+---
+
+(English instructions: paths and what to do, never the source's content)
+```
+
+| Field     | Meaning                                                                                    |
+| --------- | ------------------------------------------------------------------------------------------ |
+| `gaston`  | always `agent-job`                                                                         |
+| `version` | always `1`                                                                                 |
+| `id`      | the file name without `.md`                                                                |
+| `kind`    | what is asked; the kind adds its own fields after `subject`                                |
+| `created` | ISO timestamp of the hand-over                                                             |
+| `subject` | what the job is about, usually a vault path; `kind` + `subject` are unique among open jobs |
+
+The result carries `job: <id>`, `status`, and the kind's own fields (for example `sourcePage`);
+the body is free text.
+
+`curate-module` hands a whole module to the agent. Its `subject` is the module slug, and its one
+field is `module` (the same slug). The agent changes the module's wiki directly and leaves
+decisions for the human as proposals, so a `done` result needs nothing beyond `status`; what the
+run did is read from its run report.
+
+`gardener-audit` asks the agent to interpret the stored maintenance run in `gardener.json`. Its
+`subject` is the run's `ranAt`, and its fields are `ranAt`, `findings` (a list of `id`, `kind`,
+`title` and `paths` per finding), `candidateIds` (the finding ids the agent may confirm or reject)
+and `pages` (the wiki pages it may name). A `done` result lists `contradictions` (entries with
+`pathA`, `pathB` and `note`), `confirmed`, `rejected` and `advice`; every field is optional.
+Gaston fails the whole result when any path is not an indexed wiki page or any id is not a
+candidate of the run, and a result for a run that has been replaced since the hand-over.
+
+`condense-module` asks the agent to condense a module's wiki pages into its overview. Its `subject`
+is the module slug, and its fields are `module` (the same slug), `inputs` (the module's wiki pages at
+hand-over, the only paths a section may cite) and `baseHash` (the hash of
+`modules/<slug>/wiki/overview.md` at hand-over, null when there was none). The agent writes neither
+`overview.md` nor its directives section. A `done` result carries one fenced `json` block in its
+body, `{ "decided": …, "open": …, "contradictions": … }`, each section being
+`{ "text": string, "sources": string[] }`. Gaston turns it into an overview proposal for the person
+to confirm. It fails the whole result when a section with text cites a path that is not in `inputs`,
+and a result for an overview that has changed since the hand-over.
+
+| `status`  | Further fields                   |
+| --------- | -------------------------------- |
+| `done`    | the kind's fields                |
+| `failed`  | `reason`, one sentence, required |
+| `skipped` | `reason`, one sentence, required |
+
+A result whose frontmatter does not parse yet counts as not written (the agent may still be
+writing it). A parseable result without a valid `status`, or without `reason` for `failed` or
+`skipped`, is invalid and is shown with the rule it breaks.
+
+When a job ends, Gaston rewrites it into `jobs/done/<id>.md` with `outcome` (`done`, `failed`,
+`skipped` or `withdrawn`), `reason` (when there is one) and `finished` (ISO timestamp) added, moves
+its result to `jobs/done/<id>.result.md`, and deletes the originals. `jobs/done/` is Gaston's
+record, and the agent cannot write anywhere under `jobs/` (`internal-write`). A result that
+arrives for a job that is no longer open is late: it is moved to `jobs/done/<id>.result.md`
+without any further effect. Finished jobs whose `finished` is older than 30 days are deleted
+together with their result.
+
+### Proposals
+
+A proposal is one `.md` file directly in `.secondbrain/agent/proposals/`, named
+`<YYYYMMDD-HHMMSS>-<short-slug>.md`. Frontmatter, then the content verbatim:
+
+```markdown
+---
+gaston: proposal
+version: 1
+kind: edit
+target: projects/website-relaunch/project.md
+base_hash: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+run: 2026-10-27T09:12:00.000Z
+reason: The launch date moved to 14 November.
+---
+
+(the whole new content of the target)
+```
+
+| Field       | Meaning                                                                   |
+| ----------- | ------------------------------------------------------------------------- |
+| `gaston`    | always `proposal`                                                         |
+| `version`   | always `1`                                                                |
+| `kind`      | `edit` or `filing`                                                        |
+| `target`    | vault-relative path the proposal is about                                 |
+| `base_hash` | sha256 of the target exactly as the agent read it, 64 hex characters      |
+| `run`       | start time of the run that wrote it                                       |
+| `reason`    | why the change is right                                                   |
+| `file_into` | `filing` only: the existing project, area or module file receiving a dump |
+| `section`   | `filing` only, optional: the section of `file_into` the text goes under   |
+
+Everything after the closing `---` line is the content, taken verbatim. For an `edit` it is the
+target's whole new content, and the target must exist: new files only come in through a
+`filing`, whose `target` is a dump under `inbox/`. A proposal whose target changed since
+`base_hash` was taken is stale and is not applied.
+
+Frontmatter is YAML: double-quote any value that contains a colon or ` #`, or that starts with a
+special character, `reason` and `run` especially (`reason: "Launch moved: now 14 November"`).
+An unquoted `a: b` makes the proposal unreadable, and an unquoted ` # …` silently truncates it.
+
+Forbidden targets, whatever the `kind`: `journal/`, `raw/`, `.secondbrain/`, `.claude/`, the
+root `CLAUDE.md`, and any `.ingest.json`.
+
+When the user accepts or rejects a proposal, Gaston moves it to
+`.secondbrain/agent/resolved/<id>.md`, under the same file name, and adds fields to its
+frontmatter:
+
+| Field         | Meaning                                                       |
+| ------------- | ------------------------------------------------------------- |
+| `resolution`  | `accepted` or `rejected`                                      |
+| `resolved_at` | ISO timestamp of the decision                                 |
+| `undo`        | `accepted` only: the token that takes the applied change back |
+
+`resolved/` is Gaston's alone: the agent may not write there (`internal-write`).
+
+### Run reports
+
+The setup's stop hook writes one report per agent run to `.secondbrain/agent/runs/`, named
+`<yyyyMMddTHHmmssZ>-<skill>.md` after the run's start in UTC (`-2`, `-3` … is appended before
+`.md` when the name is already taken). Names therefore sort by start time. Frontmatter only:
+
+```markdown
+---
+gaston: run-report
+version: 1
+skill: gaston-curate
+argument: website-relaunch
+started: 2026-10-27T09:12:00Z
+finished: 2026-10-27T09:20:00Z
+pages: [projects/website-relaunch/project.md]
+proposals: [20261027-091500-plan.md]
+jobsDone: [job-1]
+jobsFailed: []
+jobsSkipped: []
+---
+```
+
+| Field         | Meaning                                                                    |
+| ------------- | -------------------------------------------------------------------------- |
+| `gaston`      | always `run-report`                                                        |
+| `version`     | `1`; a higher number is shown as unreadable ("written by a newer Gaston")  |
+| `skill`       | the skill that ran, a non-empty string                                     |
+| `argument`    | optional; kept only when it is a slug (`[a-z0-9-]`, at most 64 characters) |
+| `started`     | ISO timestamp, UTC                                                         |
+| `finished`    | ISO timestamp, UTC                                                         |
+| `pages`       | vault-relative paths of the pages the run wrote                            |
+| `proposals`   | file names, not paths, of the proposals the run wrote                      |
+| `jobsDone`    | ids of the jobs the run completed                                          |
+| `jobsFailed`  | ids of the jobs that failed                                                |
+| `jobsSkipped` | ids of the jobs the run left alone                                         |
+
+The five lists are written even when empty (`[]`); a reader treats an absent list as empty.
+
+- A run's report is rewritten at every `Stop` while the run is open, so it grows with the run
+  and the last write carries `finished`.
+- A page Gaston itself wrote during a run counts as that run's page: the report cannot tell the
+  writer apart.
+- A page counts when its last write time is at or after the run's start. On filesystems with
+  coarse write-time granularity (FAT/exFAT, 2 seconds), a page written within about 2 seconds of
+  the run start can be wrongly counted or missed.
+- Only the newest 50 reports are kept; the hook prunes the older ones after writing.
+- A report that is missing a required field, has broken frontmatter or a wrong `gaston` value is
+  unreadable. Gaston shows it as such, with its path, and does not fall back to an older report.
+
+### Indexing
+
+`.claude/` at the vault root is agent configuration, not knowledge: it is never
+indexed, neither by a full build nor by a path refresh. A nested `.claude/` anywhere
+else in the vault is ordinary content. The root `CLAUDE.md` is indexed like
+`README.md`.
+
+### Protection
+
+`.claude/settings.json` carries the permission rules and hook registrations that keep
+the agent out of the journal and away from files only Gaston writes. `Read(...)` rules
+deny reading, `Edit(...)` rules deny every file write (Write, Edit, MultiEdit,
+NotebookEdit). Paths start at the vault root.
+
+| Rule             | Denied entries                                                                                           |
+| ---------------- | -------------------------------------------------------------------------------------------------------- |
+| `journal-read`   | `Read(/journal/**)`, `Edit(/journal/**)`, `Read(/.secondbrain/index/**)`, `Read(/.secondbrain/chats/**)` |
+| `raw-write`      | `Edit(/raw/**)`                                                                                          |
+| `setup-write`    | `Edit(/CLAUDE.md)`, `Edit(/.claude/**)`                                                                  |
+| `overview-write` | `Edit(/modules/*/wiki/overview.md)`                                                                      |
+| `internal-write` | `Edit(/.secondbrain/*.json)`, the internal folders, `agent/jobs/`, `agent/resolved/`                     |
+| `pre-tool-guard` | no deny entry; a `PreToolUse` hook on the shell, read, search and write tools                            |
+| `wiki-check`     | no deny entry; a `PostToolUse` and a `Stop` hook that check the wiki                                     |
+
+The internal folders are `index/`, `chats/`, `logs/` and `trash/` under `.secondbrain/`.
+`agent/results/` and `agent/proposals/` stay writable. Gaston's hook writes one report per
+skill run to `agent/runs/`; the agent never writes there, though no deny rule covers it.
+`index/` and `chats/` are also unreadable, like `journal/`: the derived index stores every document body,
+journal entries included, and the chat sessions hold journal text. `agent/` stays readable,
+so the hand-over folders work.
+
+Hook runtime:
+
+- The hooks run on Windows PowerShell (`powershell.exe`), registered in exec form: a
+  command plus an argument list, so no shell parses the script path.
+- The scripts are addressed as `${CLAUDE_PROJECT_DIR}/.claude/hooks/<name>.ps1`; the
+  placeholder is written literally and Claude Code resolves it.
+- The guard fails closed: if it errors, times out or cannot start, the tool call is
+  blocked (`onFailure: block`, needs Claude Code CLI 2.1.295 or newer). The wiki check
+  fails open; it only reports.
+
+Limits. The protection narrows what the agent does by accident; it is not a sandbox.
+
+- Indirection gets past the guard: variables, command substitution, and scripts that
+  open files themselves.
+- The guard blocks `[char[]]` and `[System.Char[]]` as a dynamic command, legitimate uses such
+  as `Split([char[]]',')` included, and every write (file tools and shell) under
+  `modules/gaston-help/`. Reads still pass; other modules' wiki stays writable.
+- A `disableAllHooks` is only seen in the vault's `.claude/settings.json` and
+  `.claude/settings.local.json` (the rules then show as Off). One set in user-level or managed
+  settings outside the vault is not seen.
+- Shell writes are only guarded for `raw/`, `.claude/` and `CLAUDE.md`. A shell write to
+  `projects/`, `areas/`, `inbox/` or `.secondbrain/` (apart from `index/` and `chats/`, which
+  the guard blocks for any command that names them) is not checked.
+- Glob can show journal file names (never content); the guard does not block that.
+- The guard treats `.secondbrain/index/` and `.secondbrain/chats/` like `journal/` for
+  every read, including a search from `.secondbrain/` or the vault root. A git command
+  that prints file content or history (`diff`, `show`, `blame`, `log -p`, ...) is blocked
+  unless a path after `--` scopes it away from the vault root, because git reads the whole
+  repository whatever the working directory is.
+- On macOS and Linux there is no `powershell.exe`, so the guard cannot start and fails
+  closed: every guarded tool call is blocked.
+- A session started in a subfolder of the vault does not load the vault's rules.
 
 ## What the app never does
 
 - Change or delete an ingested source payload under `raw/`; bookkeeping in
-  `.ingest.json` and files explicitly added to `sources/` are the two exceptions.
+  `.ingest.json` and files explicitly added to `sources/` are the two exceptions,
+  plus the trash-backed refetch of an uncondensed YouTube source without transcript.
 - Rewrite a user's line in a Markdown file it didn't create itself.
 - Remove frontmatter fields it doesn't recognize.
 - Write without checking the hash first.

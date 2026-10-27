@@ -21,31 +21,38 @@ import {
 
 const SOURCE_SLUG = 's-2026-07-01-vortrag';
 
+/* Ohne Katalog: eine im `index.md` gelistete Seite zählt als verwiesen. */
+const UNLISTED = { catalog: null };
+
 describe('orphanCheck', () => {
   it('meldet eine Seite, auf die niemand verlinkt', async () => {
-    const fixture = await moduleFixture('wissen', [
-      {
-        type: 'concept',
-        slug: 'verbunden',
-        title: 'Verbunden',
-        summary: 'Hat einen Verweis',
-        body: 'Verweist auf nichts, wird aber verlinkt.',
-      },
-      {
-        type: 'concept',
-        slug: 'verwaist',
-        title: 'Verwaiste Seite',
-        summary: 'Niemand verlinkt hierher',
-        body: 'Diese Seite steht für sich allein.',
-      },
-      {
-        type: 'overview',
-        slug: 'overview',
-        title: 'Synthese',
-        summary: 'Der rote Faden',
-        body: 'Der Faden führt über [[verbunden]].',
-      },
-    ]);
+    const fixture = await moduleFixture(
+      'wissen',
+      [
+        {
+          type: 'concept',
+          slug: 'verbunden',
+          title: 'Verbunden',
+          summary: 'Hat einen Verweis',
+          body: 'Verweist auf nichts, wird aber verlinkt.',
+        },
+        {
+          type: 'concept',
+          slug: 'verwaist',
+          title: 'Verwaiste Seite',
+          summary: 'Niemand verlinkt hierher',
+          body: 'Diese Seite steht für sich allein.',
+        },
+        {
+          type: 'overview',
+          slug: 'overview',
+          title: 'Synthese',
+          summary: 'Der rote Faden',
+          body: 'Der Faden führt über [[verbunden]].',
+        },
+      ],
+      UNLISTED,
+    );
 
     const findings = orphanCheck.run(fixture.ctx({ settings: SETTINGS }));
 
@@ -63,15 +70,19 @@ describe('orphanCheck', () => {
   });
 
   it('lässt den Befund ohne Fix, wenn das Modul keine Overview hat und niemand den Namen nennt', async () => {
-    const fixture = await moduleFixture('wissen', [
-      {
-        type: 'concept',
-        slug: 'verwaist',
-        title: 'Verwaiste Seite',
-        summary: 'Niemand verlinkt hierher',
-        body: 'Diese Seite steht für sich allein.',
-      },
-    ]);
+    const fixture = await moduleFixture(
+      'wissen',
+      [
+        {
+          type: 'concept',
+          slug: 'verwaist',
+          title: 'Verwaiste Seite',
+          summary: 'Niemand verlinkt hierher',
+          body: 'Diese Seite steht für sich allein.',
+        },
+      ],
+      UNLISTED,
+    );
 
     const findings = orphanCheck.run(fixture.ctx({ settings: SETTINGS }));
 
@@ -81,22 +92,26 @@ describe('orphanCheck', () => {
   });
 
   it('meldet eine mit dem Fix des Befunds verlinkte Seite in einem frischen Lauf nicht mehr', async () => {
-    const fixture = await moduleFixture('wissen', [
-      {
-        type: 'concept',
-        slug: 'verwaist',
-        title: 'Verwaiste Seite',
-        summary: 'Niemand verlinkt hierher',
-        body: 'Diese Seite steht für sich allein.',
-      },
-      {
-        type: 'overview',
-        slug: 'overview',
-        title: 'Synthese',
-        summary: 'Der rote Faden',
-        body: 'Der Faden führt über nichts Verwandtes.',
-      },
-    ]);
+    const fixture = await moduleFixture(
+      'wissen',
+      [
+        {
+          type: 'concept',
+          slug: 'verwaist',
+          title: 'Verwaiste Seite',
+          summary: 'Niemand verlinkt hierher',
+          body: 'Diese Seite steht für sich allein.',
+        },
+        {
+          type: 'overview',
+          slug: 'overview',
+          title: 'Synthese',
+          summary: 'Der rote Faden',
+          body: 'Der Faden führt über nichts Verwandtes.',
+        },
+      ],
+      UNLISTED,
+    );
     const orphanPath = pagePathOf('wissen', { type: 'concept', slug: 'verwaist' });
 
     const before = orphanCheck.run(fixture.ctx({ settings: SETTINGS }));
@@ -114,22 +129,26 @@ describe('orphanCheck', () => {
   });
 
   it('meldet eine verlinkte Seite in einem Modul ohne Overview nicht mehr — der Picker darf auf ein Ziel zeigen, das den Namen gar nicht nennt', async () => {
-    const fixture = await moduleFixture('wissen', [
-      {
-        type: 'concept',
-        slug: 'verwaist',
-        title: 'Verwaiste Seite',
-        summary: 'Niemand verlinkt hierher',
-        body: 'Diese Seite steht für sich allein.',
-      },
-      {
-        type: 'concept',
-        slug: 'anderes',
-        title: 'Etwas Anderes',
-        summary: 'Hat nichts damit zu tun',
-        body: 'Ganz anderer Inhalt.',
-      },
-    ]);
+    const fixture = await moduleFixture(
+      'wissen',
+      [
+        {
+          type: 'concept',
+          slug: 'verwaist',
+          title: 'Verwaiste Seite',
+          summary: 'Niemand verlinkt hierher',
+          body: 'Diese Seite steht für sich allein.',
+        },
+        {
+          type: 'concept',
+          slug: 'anderes',
+          title: 'Etwas Anderes',
+          summary: 'Hat nichts damit zu tun',
+          body: 'Ganz anderer Inhalt.',
+        },
+      ],
+      UNLISTED,
+    );
     const orphanPath = pagePathOf('wissen', { type: 'concept', slug: 'verwaist' });
 
     const before = orphanCheck
@@ -175,30 +194,34 @@ describe('orphanCheck', () => {
   });
 
   it('meldet weder die Synthese noch eine nur im Frontmatter belegte Quelle', async () => {
-    const fixture = await moduleFixture('wissen', [
-      {
-        type: 'source',
-        slug: SOURCE_SLUG,
-        title: 'Vortrag',
-        summary: 'Die Quelle',
-        body: 'Wortlaut der Quelle.',
-      },
-      {
-        type: 'concept',
-        slug: 'begriff',
-        title: 'Begriff',
-        summary: 'Belegt aus dem Vortrag',
-        sources: [SOURCE_SLUG],
-        body: 'Aussage ohne Wikilink auf die Quelle — der Beleg steht im Frontmatter.',
-      },
-      {
-        type: 'overview',
-        slug: 'overview',
-        title: 'Synthese',
-        summary: 'Der rote Faden',
-        body: 'Führt über [[begriff]].',
-      },
-    ]);
+    const fixture = await moduleFixture(
+      'wissen',
+      [
+        {
+          type: 'source',
+          slug: SOURCE_SLUG,
+          title: 'Vortrag',
+          summary: 'Die Quelle',
+          body: 'Wortlaut der Quelle.',
+        },
+        {
+          type: 'concept',
+          slug: 'begriff',
+          title: 'Begriff',
+          summary: 'Belegt aus dem Vortrag',
+          sources: [SOURCE_SLUG],
+          body: 'Aussage ohne Wikilink auf die Quelle — der Beleg steht im Frontmatter.',
+        },
+        {
+          type: 'overview',
+          slug: 'overview',
+          title: 'Synthese',
+          summary: 'Der rote Faden',
+          body: 'Führt über [[begriff]].',
+        },
+      ],
+      UNLISTED,
+    );
 
     expect(orphanCheck.run(fixture.ctx({ settings: SETTINGS }))).toEqual([]);
   });
@@ -219,36 +242,40 @@ describe('orphanCheck', () => {
   });
 
   it('nimmt die Overview als Ziel, wenn zwei Seiten den Namen nennen', async () => {
-    const fixture = await moduleFixture('wissen', [
-      {
-        type: 'concept',
-        slug: 'kanban',
-        title: 'Kanban',
-        summary: 'Verwaist',
-        body: 'Ein Verfahren mit Karten und Spalten.',
-      },
-      {
-        type: 'concept',
-        slug: 'erste',
-        title: 'Erste Seite',
-        summary: 'Nennt Kanban',
-        body: 'Wir arbeiten seit einem Jahr mit Kanban, ohne es aufzuschreiben.',
-      },
-      {
-        type: 'concept',
-        slug: 'zweite',
-        title: 'Zweite Seite',
-        summary: 'Nennt Kanban auch',
-        body: 'Im Team hat sich Kanban durchgesetzt, aber niemand pflegt die Spalten.',
-      },
-      {
-        type: 'overview',
-        slug: 'overview',
-        title: 'Synthese',
-        summary: 'Der rote Faden',
-        body: 'Führt über [[erste]] und [[zweite]].',
-      },
-    ]);
+    const fixture = await moduleFixture(
+      'wissen',
+      [
+        {
+          type: 'concept',
+          slug: 'kanban',
+          title: 'Kanban',
+          summary: 'Verwaist',
+          body: 'Ein Verfahren mit Karten und Spalten.',
+        },
+        {
+          type: 'concept',
+          slug: 'erste',
+          title: 'Erste Seite',
+          summary: 'Nennt Kanban',
+          body: 'Wir arbeiten seit einem Jahr mit Kanban, ohne es aufzuschreiben.',
+        },
+        {
+          type: 'concept',
+          slug: 'zweite',
+          title: 'Zweite Seite',
+          summary: 'Nennt Kanban auch',
+          body: 'Im Team hat sich Kanban durchgesetzt, aber niemand pflegt die Spalten.',
+        },
+        {
+          type: 'overview',
+          slug: 'overview',
+          title: 'Synthese',
+          summary: 'Der rote Faden',
+          body: 'Führt über [[erste]] und [[zweite]].',
+        },
+      ],
+      UNLISTED,
+    );
 
     const findings = orphanCheck.run(fixture.ctx({ settings: SETTINGS }));
 
@@ -260,6 +287,55 @@ describe('orphanCheck', () => {
     expect(findings[0]?.fix?.preview).toBe('- [[kanban]] — Kanban');
   });
 
+  it("a page listed in its module's index.md is not an orphan", async () => {
+    const fixture = await moduleFixture('wissen', [
+      {
+        type: 'concept',
+        slug: 'gelistet',
+        title: 'Gelistete Seite',
+        summary: 'Steht im Katalog',
+        body: 'Niemand verlinkt hierher, aber der Katalog führt sie.',
+      },
+    ]);
+    const catalog = await fixture.text('modules/wissen/wiki/index.md');
+    expect(catalog).toContain('[[gelistet]]');
+
+    expect(orphanCheck.run(fixture.ctx({ settings: SETTINGS }))).toEqual([]);
+    /* Der Graph bleibt unverändert: der Katalog ist kein Rückverweis. */
+    const page = fixture.index.pages().find((entry) => entry.slug === 'gelistet');
+    expect(page?.inbound).toEqual([]);
+  });
+
+  it('a page neither linked nor listed in index.md is still an orphan', async () => {
+    const fixture = await moduleFixture(
+      'wissen',
+      [
+        {
+          type: 'concept',
+          slug: 'gelistet',
+          title: 'Gelistete Seite',
+          summary: 'Steht im Katalog',
+          body: 'Der Katalog führt sie.',
+        },
+        {
+          type: 'concept',
+          slug: 'handgemacht',
+          title: 'Handgemachte Seite',
+          body: 'Von Hand angelegt, ohne Katalogeintrag.',
+        },
+      ],
+      {},
+    );
+    const catalog = await fixture.text('modules/wissen/wiki/index.md');
+    expect(catalog).not.toContain('[[handgemacht]]');
+
+    const findings = orphanCheck.run(fixture.ctx({ settings: SETTINGS }));
+
+    expect(findings.map((finding) => finding.paths[0])).toEqual([
+      'modules/wissen/wiki/concepts/handgemacht.md',
+    ]);
+  });
+
   it('meldet ein Verdichtungs-Artefakt nicht als Waise, obwohl niemand darauf verlinkt (039, AC7)', async () => {
     // Nichts verlinkt je auf `areas/<slug>.condensed.md` — das ist der normale
     // Zustand eines Artefakts. `orphanCheck` läuft aber ausschliesslich über
@@ -268,15 +344,19 @@ describe('orphanCheck', () => {
     const areaSlug = 'gesundheit';
     const artifactPath = condensedAreaPath(areaSlug);
     const files = {
-      ...moduleFiles('wissen', [
-        {
-          type: 'concept',
-          slug: 'verwaist',
-          title: 'Andere Waise',
-          summary: 'Zeigt, dass echte Waisen weiter erkannt werden',
-          body: 'Diese Seite steht für sich allein.',
-        },
-      ]),
+      ...moduleFiles(
+        'wissen',
+        [
+          {
+            type: 'concept',
+            slug: 'verwaist',
+            title: 'Andere Waise',
+            summary: 'Zeigt, dass echte Waisen weiter erkannt werden',
+            body: 'Diese Seite steht für sich allein.',
+          },
+        ],
+        UNLISTED,
+      ),
       [`areas/${areaSlug}.md`]: serialize(
         { type: 'area', title: 'Gesundheit', created: day(-30), updated: day(0), tags: [] },
         'Laufen, schlafen, weniger Kaffee.\n',
@@ -317,15 +397,19 @@ describe('orphanCheck', () => {
     const projPath = projectPath(scope, slug);
     const artifactPath = condensedProjectPath(scope, slug);
     const files = {
-      ...moduleFiles('wissen', [
-        {
-          type: 'concept',
-          slug: 'verwaist',
-          title: 'Andere Waise',
-          summary: 'Zeigt, dass echte Waisen weiter erkannt werden',
-          body: 'Diese Seite steht für sich allein.',
-        },
-      ]),
+      ...moduleFiles(
+        'wissen',
+        [
+          {
+            type: 'concept',
+            slug: 'verwaist',
+            title: 'Andere Waise',
+            summary: 'Zeigt, dass echte Waisen weiter erkannt werden',
+            body: 'Diese Seite steht für sich allein.',
+          },
+        ],
+        UNLISTED,
+      ),
       [projPath]: serialize(
         {
           type: 'project',

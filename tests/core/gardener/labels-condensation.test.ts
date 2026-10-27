@@ -116,3 +116,42 @@ describe('condensationDue / condensationMissing fuer Projekte (story 046, D1)', 
     );
   });
 });
+
+/* The module level reuses the same sentence pair with a third unit word. */
+describe('condensationDue / condensationMissing for modules', () => {
+  const MODULE = 'identity-management';
+
+  it('names the module, condensed_at and the changed count in German, with low-high quotes', () => {
+    const text = GERMAN_GARDENER_LABELS.condensationDue(MODULE, CONDENSED_AT, 3, 'module');
+    const combined = `${text.title} ${text.detail}`;
+
+    expect(text.title).toContain(`Modul „${MODULE}“`);
+    expect(combined).toContain(CONDENSED_AT);
+    expect(text.detail).toContain('3');
+    expect(combined).not.toMatch(/["”]/);
+    expect(combined).not.toContain('Area');
+  });
+
+  it('speaks of the module, not of an area or project, when no condensation exists in German', () => {
+    const text = GERMAN_GARDENER_LABELS.condensationMissing(MODULE, 'module');
+    const combined = `${text.title} ${text.detail}`;
+
+    expect(text.title).toContain(`Modul „${MODULE}“`);
+    expect(text.detail).toContain('dieses Modul');
+    expect(combined).not.toContain(CONDENSED_AT);
+    expect(combined).not.toMatch(/Area|Projekt|["”]/);
+  });
+
+  it('names the same things in English without U+201E', () => {
+    const due = ENGLISH_GARDENER_LABELS.condensationDue(MODULE, CONDENSED_AT, 3, 'module');
+    const missing = ENGLISH_GARDENER_LABELS.condensationMissing(MODULE, 'module');
+    const combined = `${due.title} ${due.detail} ${missing.title} ${missing.detail}`;
+
+    expect(due.title).toContain(`module "${MODULE}"`);
+    expect(due.detail).toContain(CONDENSED_AT);
+    expect(due.detail).toContain('3');
+    expect(missing.detail).toContain('module');
+    expect(combined).not.toContain('„');
+    expect(combined).not.toMatch(/area|project/);
+  });
+});

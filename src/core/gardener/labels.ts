@@ -43,7 +43,7 @@ export type IndexDriftKind =
  * (`condensation-due`), and a second pair of sentences would have to be kept in
  * step with the first in two languages forever.
  */
-export type CondensationUnit = 'area' | 'project';
+export type CondensationUnit = 'area' | 'project' | 'module';
 
 export interface GardenerLabels {
   orphan(page: string): FindingText;
@@ -111,6 +111,7 @@ function changedInputsCount(count: number): string {
 const GERMAN_UNIT: Record<CondensationUnit, { word: string; demonstrative: string }> = {
   area: { word: 'Area', demonstrative: 'diese Area' },
   project: { word: 'Projekt', demonstrative: 'dieses Projekt' },
+  module: { word: 'Modul', demonstrative: 'dieses Modul' },
 };
 
 const GERMAN_FIX_LABELS: Record<GardenerFix['action'], string> = {

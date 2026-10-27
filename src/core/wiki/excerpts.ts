@@ -55,6 +55,11 @@ function isBlank(line: string | undefined): boolean {
   return (line ?? '').trim().length === 0;
 }
 
+/* The `# Titel` line repeats the title the citation already shows above the quote. */
+function isTitleLine(line: string | undefined): boolean {
+  return /^#\s/.test(line ?? '');
+}
+
 /** Fenster auf `maxChars` kuerzen — nur an Zeilengrenzen, damit es woertlich bleibt. */
 function clampLines(lines: readonly string[], maxChars: number): string[] {
   const kept: string[] = [];
@@ -74,9 +79,10 @@ export interface ExcerptOptions {
 }
 
 /**
- * Der Ausschnitt eines Dokuments, der am meisten zur Frage sagt. Ohne Treffer
- * kommt der Textanfang — nie eine leere Zeichenkette, nie ein Fehler.
- * `null` nur, wenn das Dokument keinen Inhalt hat.
+ * Der Ausschnitt eines Dokuments, der am meisten zur Frage sagt. Er beginnt mit einer
+ * Trefferzeile, nicht bis zu sieben Zeilen davor; die Titelzeile zaehlt nicht als
+ * Treffer. Ohne Treffer kommt der Textanfang nach dem Titel — nie eine leere
+ * Zeichenkette, nie ein Fehler. `null` nur, wenn das Dokument keinen Inhalt hat.
  */
 export function buildExcerpt(
   doc: Pick<IndexedDoc, 'body' | 'bodyLine'>,
@@ -86,12 +92,15 @@ export function buildExcerpt(
   const maxLines = Math.max(1, options.maxLines ?? EXCERPT_LINES);
   const maxChars = Math.max(80, options.maxChars ?? EXCERPT_CHARS);
   const lines = doc.body.replace(/\r\n/g, '\n').split('\n');
-  const scores = lines.map((line) => (isBlank(line) ? 0 : hitsIn(line, terms)));
+  const scores = lines.map((line) =>
+    isBlank(line) || isTitleLine(line) ? 0 : hitsIn(line, terms),
+  );
 
   let bestStart = -1;
   let bestScore = 0;
   for (let start = 0; start < lines.length; start += 1) {
-    if (isBlank(lines[start])) continue;
+    // A window that starts on a hit holds every hit one starting earlier would.
+    if ((scores[start] ?? 0) === 0) continue;
     let score = 0;
     for (let at = start; at < Math.min(lines.length, start + maxLines); at += 1) {
       score += scores[at] ?? 0;
@@ -101,6 +110,7 @@ export function buildExcerpt(
       bestStart = start;
     }
   }
+  if (bestStart < 0) bestStart = lines.findIndex((line) => !isBlank(line) && !isTitleLine(line));
   if (bestStart < 0) bestStart = lines.findIndex((line) => !isBlank(line));
   if (bestStart < 0) return null;
 

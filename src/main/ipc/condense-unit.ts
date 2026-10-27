@@ -1,9 +1,8 @@
-/* Which artifact a condense request addresses, and which run produces it
- * (story 045, D2). The five `condense:*` handlers next door take a
- * `unit: 'area' | 'project'` discriminator (binding Q2 decision of 045) and are
- * otherwise level-agnostic; everything that differs per level lives here, so
- * `condense.ts` keeps one code path for the pre-check, the snapshot, the
- * hash-guarded write and the trash move.
+/* Which artifact a condense request addresses, and which run produces it. The
+ * five `condense:*` handlers next door take a `unit: 'area' | 'project' |
+ * 'module'` discriminator and are otherwise level-agnostic; everything that
+ * differs per level lives here, so `condense.ts` keeps one code path for the
+ * pre-check, the snapshot, the hash-guarded write and the trash move.
  *
  * Three decisions that aren't otherwise visible in the code:
  *
@@ -23,6 +22,7 @@
  *   to another project or to nobody. Such a project is refused rather than
  *   condensed into a foreign folder; refusing costs a vault nothing that a
  *   consistent `slug:` doesn't fix.
+ * - **A module's path is looked up and bounded too** — see `./condense-module-target`.
  * - **The run's own result is normalised here** (`CondenseRunOutcome`).
  *   `condenseArea()` and `condenseProject()` return two distinct unions of the
  *   same five shapes, differing in the fields `condense:run` never reports
@@ -37,16 +37,24 @@ import {
   condenseArea,
   condensedAreaPath,
   condensedProjectPath,
+  condenseModule,
   condenseProject,
+  MODULE_SECTIONS,
   parseArtifact,
   parseCondensedArtifact,
   PROJECT_SECTIONS,
 } from '@core/condense';
-import type { AttributionProblem, CondenseAreaResult, CondenseProjectResult } from '@core/condense';
+import type {
+  AttributionProblem,
+  CondenseAreaResult,
+  CondenseModuleResult,
+  CondenseProjectResult,
+} from '@core/condense';
 import type { IndexedDoc } from '@core/index/types';
 import type { LlmGateway } from '@core/llm';
 import { dirName } from '@core/vault/paths';
 import type { CondenseUnit, DocLanguage, Project, TaskKind, Todo } from '@shared/types';
+import { moduleTarget } from './condense-module-target';
 import { fail } from './errors';
 import { claudeSessions, claudeTranscriptTail, overviewIndex } from './overview-deps';
 import { findProject } from './projects';
@@ -66,7 +74,10 @@ export interface CondenseTarget {
   path: string;
   /** Which routing entry a run of this level needs; named in `no-model`. */
   task: TaskKind;
+  /** The resolved project for `unit: 'project'`, `null` for the other levels. */
   project: Project | null;
+  /** What the work queue shows as the subject: the unit's title, else its slug. */
+  label: string;
 }
 
 /** What a run needs from the shell, level-independent. Assembled by `condense.ts`. */
@@ -111,9 +122,11 @@ export async function resolveCondenseUnit(
       path: condensedAreaPath(slug),
       task: CONDENSE_AREA_TASK,
       project: null,
+      label: slug,
     };
   }
   if (unit === 'project') return projectTarget(services, slug);
+  if (unit === 'module') return moduleTarget(services, slug);
   /* The channel contract types `unit`, but the value crosses from the renderer
      unchecked. An unknown level must not fall through to the area path: for
      `condense:delete` that would delete an area's artifact on a request that
@@ -141,7 +154,14 @@ async function projectTarget(services: Services, slug: string): Promise<Condense
         'slug oder scope im Frontmatter passen nicht zum Ordner',
     );
   }
-  return { unit: 'project', slug, path, task: CONDENSE_PROJECT_TASK, project };
+  return {
+    unit: 'project',
+    slug,
+    path,
+    task: CONDENSE_PROJECT_TASK,
+    project,
+    label: project.title,
+  };
 }
 
 /**
@@ -155,7 +175,11 @@ export function artifactHeader(
   content: string,
 ): { condensedAt: string; sources: string[] } {
   const artifact =
-    unit === 'project' ? parseArtifact(content, PROJECT_SECTIONS) : parseCondensedArtifact(content);
+    unit === 'project'
+      ? parseArtifact(content, PROJECT_SECTIONS)
+      : unit === 'module'
+        ? parseArtifact(content, MODULE_SECTIONS)
+        : parseCondensedArtifact(content);
   return { condensedAt: artifact.condensedAt, sources: [...artifact.sources] };
 }
 
@@ -185,6 +209,19 @@ async function runLevel(
   context: CondenseRunContext,
 ): Promise<CondenseRunOutcome> {
   const existing = context.existing === null ? {} : { existing: context.existing };
+  if (target.unit === 'module') {
+    return outcomeOf(
+      await condenseModule(
+        {
+          docs: context.docs,
+          gateway: context.gateway,
+          docLanguage: context.docLanguage,
+          ...existing,
+        },
+        target.slug,
+      ),
+    );
+  }
   if (target.project === null) {
     return outcomeOf(
       await condenseArea(
@@ -232,7 +269,9 @@ function projectTodos(services: Services): readonly Todo[] {
   return overviewIndex(services).todos();
 }
 
-function outcomeOf(result: CondenseAreaResult | CondenseProjectResult): CondenseRunOutcome {
+function outcomeOf(
+  result: CondenseAreaResult | CondenseProjectResult | CondenseModuleResult,
+): CondenseRunOutcome {
   if (result.kind === 'proposal') {
     return {
       kind: 'proposal',
@@ -240,7 +279,10 @@ function outcomeOf(result: CondenseAreaResult | CondenseProjectResult): Condense
       content: result.content,
       baseHash: result.baseHash,
       sources: result.sources,
-      truncatedCount: result.truncated === null ? null : result.truncated.count,
+      /* A module proposal reports no truncation: `partialInputsNote()` speaks of
+         day entries, and what its prompt clamp cut is stated in the artifact. */
+      truncatedCount:
+        'truncated' in result && result.truncated !== null ? result.truncated.count : null,
     };
   }
   if (result.kind === 'no-model') return { kind: 'no-model', task: result.task };

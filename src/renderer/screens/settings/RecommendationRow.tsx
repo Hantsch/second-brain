@@ -43,7 +43,7 @@ function targetText(
   t: (key: string, vars?: Vars) => string,
 ): string {
   if (row.pick === null) return t('settings.routing.noModel');
-  const name = describeRef(row.pick, providers);
+  const name = describeRef(row.pick, providers, t('settings.routing.agent'));
   if (row.needsDownloadGb !== null) {
     return t('settings.recommend.needsDownload', { model: name, gb: row.needsDownloadGb });
   }
@@ -117,7 +117,9 @@ export function RecommendationRow({
       {row.tradeoffKey ? (
         <p className="sb-routing-hint">
           {t(`settings.recommend.tradeoff.${row.tradeoffKey}`, {
-            alternatives: row.alternatives.map((ref) => describeRef(ref, providers)).join(', '),
+            alternatives: row.alternatives
+              .map((ref) => describeRef(ref, providers, t('settings.routing.agent')))
+              .join(', '),
           })}
         </p>
       ) : null}

@@ -31,6 +31,7 @@ import { deriveModules } from './modules';
 import { VaultIndexStore } from './persist';
 import { refreshPaths } from './refresh';
 import { SearchEngine } from './search';
+import type { PassageOptions } from './search';
 import { indexStats } from './stats';
 import { DEFAULT_STALE_AFTER_DAYS, emptyIndex } from './types';
 import type {
@@ -229,8 +230,8 @@ export class IndexService {
   }
 
   /** Matching passages with their file lines — one file may appear several times. */
-  searchPassages(query: SearchQuery): PassageHit[] {
-    return this.engine.searchPassages(query, this.current.byPath);
+  searchPassages(query: SearchQuery, options?: PassageOptions): PassageHit[] {
+    return this.engine.searchPassages(query, this.current.byPath, options);
   }
 
   // ── Abgeleitete Listen ────────────────────────────────────────────────────

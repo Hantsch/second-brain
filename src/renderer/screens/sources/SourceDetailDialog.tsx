@@ -9,7 +9,7 @@ import { Skeleton } from '../../components/Skeleton';
 import { useLanguage, useT } from '../../i18n';
 import { api } from '../../lib/api';
 import { formatBytes, formatDate } from '../../lib/format';
-import { runningJobFor } from '../../lib/jobs';
+import { isJobRunning, latestRefetchFor, runningJobFor } from '../../lib/jobs';
 import { useIngestMutations, useSourceDetail } from '../../lib/queries/ingest';
 
 export interface SourceDetailDialogProps {
@@ -40,10 +40,13 @@ export function SourceDetailDialog({
 
   const running = source === undefined ? null : runningJobFor(jobs, source.path);
   const condensed = source?.sourcePage !== null;
+  const refetch = source === undefined ? null : latestRefetchFor(jobs, source.path);
+  const refetching = refetch !== null && isJobRunning(refetch);
   const report = detail.data?.resourceReport ?? null;
   const attachments = detail.data?.attachments ?? [];
   const failure =
     mutations.condense.error ??
+    mutations.refetch.error ??
     mutations.analyzeResources.error ??
     mutations.attachFiles.error ??
     null;
@@ -128,6 +131,31 @@ export function SourceDetailDialog({
               />
             )}
           </section>
+
+          {source.blocked === 'no-transcript' && !condensed ? (
+            <section className="sb-source-detail-section">
+              <div className="sb-source-detail-heading">
+                <h3>{t('sources.detail.transcript')}</h3>
+                <Badge variant="warning">{t('sources.stage.blocked.no-transcript')}</Badge>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  icon="refresh-cw"
+                  disabled={running !== null}
+                  loading={mutations.refetch.isPending || refetching}
+                  onClick={() => mutations.refetch.mutate(source.path)}
+                >
+                  {refetching ? t('sources.detail.refetching') : t('sources.detail.refetch')}
+                </Button>
+              </div>
+              <p className="sb-source-detail-empty">{t('sources.detail.refetchHint')}</p>
+              {refetch?.stage === 'no-content' ? (
+                <p className="sb-source-detail-empty">{t('sources.detail.refetchEmpty')}</p>
+              ) : refetch?.stage === 'error' ? (
+                <p className="sb-source-detail-empty">{t('sources.detail.refetchFailed')}</p>
+              ) : null}
+            </section>
+          ) : null}
 
           {source.kind === 'youtube' ? (
             <section className="sb-source-detail-section">

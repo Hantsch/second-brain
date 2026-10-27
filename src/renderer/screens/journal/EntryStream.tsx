@@ -31,6 +31,8 @@ const KNOWN_FAILURES: readonly string[] = [
   'no-key',
   'unreachable',
   'error',
+  'agent-pending',
+  'agent-failed',
   'cancelled',
 ];
 

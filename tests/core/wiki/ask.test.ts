@@ -171,8 +171,10 @@ describe('askQuestion mit Modell', () => {
     expect(answer.unsupported).toBe(true);
   });
 
-  it('laesst die Reihenfolge vom Modell sortieren, ohne einen Treffer zu verlieren', async () => {
+  it('laesst das Modell sortieren und Ausschnitte ohne Bezug weglassen', async () => {
     const fixture = await wikiFixture();
+    const candidates = retrieve(fixture.index, QUESTION, { limit: 12 });
+    expect(candidates.length).toBeGreaterThanOrEqual(3);
     const { gateway, provider } = gatewayWithReplies(
       { 'query-answer': GOOD_ANSWER, 'query-rerank': JSON.stringify({ order: [3, 1, 99] }) },
       ['query-answer', 'query-rerank'],
@@ -181,8 +183,7 @@ describe('askQuestion mit Modell', () => {
     const answer = await askQuestion(fixture.deps(gateway), { question: QUESTION, limit: 4 });
 
     expect(provider.countFor('query-rerank')).toBe(1);
-    expect(answer.excerpts).toHaveLength(4);
-    expect(new Set(answer.excerpts.map((entry) => entry.path)).size).toBe(4);
+    expect(answer.excerpts).toEqual([candidates[2], candidates[0]]);
   });
 
   it('zitiert mit Projektfilter nur Seiten dieses Projekts', async () => {
@@ -331,6 +332,8 @@ function watchIndex(inner: WikiIndexView): { view: WikiIndexView; queries: Searc
     },
     pages: () => inner.pages(),
     modules: () => inner.modules(),
+    todos: () => inner.todos(),
+    projects: () => inner.projects(),
   };
   return { view, queries };
 }

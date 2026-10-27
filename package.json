@@ -65,6 +65,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
+    "test:perf": "vitest run --config vitest.perf.config.ts",
     "test:e2e": "playwright test",
     "test:watch": "vitest",
     "seed": "node scripts/seed-vault.mjs",

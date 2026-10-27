@@ -35,6 +35,7 @@ import type { WikiFixture } from './fixtures';
 const SOURCE_TITLE = 'Mandantentrennung bei Orbit Identity';
 const SOURCE_SLUG = `s-${TODAY}-mandantentrennung-bei-orbit-identity`;
 const SOURCE_PATH = `modules/${MODULE}/wiki/sources/${SOURCE_SLUG}.md`;
+const OVERVIEW_PATH = `modules/${MODULE}/wiki/overview.md`;
 const CONCEPT_PATH = `modules/${MODULE}/wiki/concepts/mandantentrennung.md`;
 const CONFLICT_PATH = `modules/${MODULE}/wiki/concepts/access-token-laufzeit.md`;
 
@@ -282,36 +283,20 @@ describe('ingestSource mit Modell', () => {
     });
   });
 
-  it('zieht overview.md nur nach, wenn das Modell eine Aenderung meldet', async () => {
+  it('a digestion leaves overview.md byte-identical even when the model reports an overview change', async () => {
     const fixture = await wikiFixture();
-    const quiet = await ingest(fixture, setup().gateway);
-    expect(quiet.overviewUpdated).toBe(false);
+    const before = await fixture.text(OVERVIEW_PATH);
 
-    const loud = await wikiFixture();
     const result = await ingest(
-      loud,
+      fixture,
       setup({ ...PAGES, overviewChange: 'Mandanten sind ab jetzt Organisationen.' }).gateway,
     );
 
-    expect(result.overviewUpdated).toBe(true);
-    const overview = await loud.store.read(`modules/${MODULE}/wiki/overview.md`);
-    expect(overview?.body).toContain('Mandanten sind ab jetzt Organisationen.');
-    expect(overview?.body).toContain('## Was entschieden ist');
-    expect(overview?.body).toContain('Tokens leben kurz: 15 Minuten Access');
-  });
-
-  it('verlinkt Source-Seite und neue Seiten aus der Overview, erweiterte nicht', async () => {
-    const fixture = await wikiFixture();
-    const result = await ingest(fixture, setup().gateway);
-
-    const overview = await fixture.store.read(`modules/${MODULE}/wiki/overview.md`);
-    expect(overview?.body).toContain('## Seiten');
-    expect(overview?.body).toContain(`[[${SOURCE_SLUG}]]`);
-    expect(overview?.body).toContain('[[mandantentrennung]]');
-    expect(overview?.body).toContain('[[access-token-laufzeit]]');
-    // oauth2 wird nur ergaenzt und hat seinen Verweis schon.
-    expect(overview?.body).not.toContain('[[oauth2]] —');
-    expect(result.touchedPages).toContain(`modules/${MODULE}/wiki/overview.md`);
+    expect(await fixture.text(OVERVIEW_PATH)).toBe(before);
+    expect(result.touchedPages).not.toContain(OVERVIEW_PATH);
+    const slugs = parseIndex(await fixture.text(INDEX_PATH)).map((entry) => entry.slug);
+    expect(slugs).toContain(SOURCE_SLUG);
+    expect(slugs).toContain('mandantentrennung');
   });
 
   it('verdichtet einen langen Text abschnittsweise und fuehrt ihn zusammen', async () => {
@@ -366,13 +351,15 @@ describe('ingestSource ohne Modell', () => {
     expect(doc?.body).toContain('## Rohquelle');
   });
 
-  it('verlinkt die unverdichtete Source-Seite aus der Overview, damit sie keine Waise ist', async () => {
+  it('without a model the digestion leaves overview.md byte-identical and lists the source in index.md', async () => {
     const fixture = await wikiFixture();
+    const before = await fixture.text(OVERVIEW_PATH);
 
-    await ingest(fixture, emptyGateway());
+    const result = await ingest(fixture, emptyGateway());
 
-    const overview = await fixture.store.read(`modules/${MODULE}/wiki/overview.md`);
-    expect(overview?.body).toContain(`[[${SOURCE_SLUG}]]`);
+    expect(await fixture.text(OVERVIEW_PATH)).toBe(before);
+    expect(result.touchedPages).not.toContain(OVERVIEW_PATH);
+    expect(await fixture.text(INDEX_PATH)).toContain(`[[${SOURCE_SLUG}]]`);
   });
 
   it('nennt die Quelle im Katalog und in der Chronik', async () => {

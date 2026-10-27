@@ -104,16 +104,23 @@ const own = {
   'settings.routing.sensitiveShort': 'Personal',
   'settings.routing.inherit': 'Default: {model}',
   'settings.routing.noModel': 'no model',
+  'settings.routing.agent': 'Agent (job)',
+  'settings.routing.agentHint':
+    'Goes to the agent as a job. It is done on the next run of /gaston-jobs; until then, what works without a model applies.',
   'settings.routing.selectAria': 'Model for {task}',
   'settings.routing.note': 'Tasks without a choice of their own take their class default.',
   'settings.routing.test': 'Test',
   'settings.routing.testOk': 'Answer after {ms} ms',
+  'settings.routing.agentReady':
+    'The agent setup is installed. The job waits for its next /gaston-jobs run.',
   'settings.routing.testFailed': 'No result',
   'settings.routing.reason.no-route': 'No model is assigned to this task.',
   'settings.routing.reason.provider-disabled': 'The assigned provider is switched off.',
   'settings.routing.reason.no-key': 'The key for the assigned provider is missing.',
   'settings.routing.reason.unreachable': 'The assigned provider was not reachable.',
   'settings.routing.reason.no-vault': 'No vault is open.',
+  'settings.routing.reason.agent-setup-missing':
+    'The agent setup is not installed. Install it under Settings → Agent.',
   'settings.routing.reason.error': 'The call failed.',
 
   /* The way out of a `pick === null` recommendation row (067, D2, AC1): a
@@ -170,6 +177,7 @@ const own = {
   'settings.fallback.gardener-audit': 'the deterministic checks keep running',
   'settings.fallback.condense-area': 'the area page stays as it is',
   'settings.fallback.condense-project': 'the project pages stay as they are',
+  'settings.fallback.condense-module': 'the module pages stay as they are',
 
   'settings.machine.title': 'This machine',
   'settings.machine.scan': 'Scan this machine',

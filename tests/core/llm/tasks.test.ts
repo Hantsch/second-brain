@@ -68,6 +68,7 @@ describe('Aufgabenkatalog', () => {
     ).toEqual([
       'classify-dump',
       'condense-area',
+      'condense-module',
       'condense-project',
       'extract-tasks',
       'gardener-audit',
@@ -125,6 +126,17 @@ describe('Aufgabenkatalog', () => {
 
   it('ist ohne Route für condense-project nicht verfügbar', () => {
     expect(createEmptyGateway().isAvailable('condense-project')).toBe(false);
+  });
+
+  it('condense-module is a strong structured task and not sensitive', () => {
+    const task = taskDefinition('condense-module');
+    expect(task.suggested).toBe('strong');
+    expect(task.structured).toBe(true);
+    expect(task.sensitive).toBe(false);
+    expect(task.streams).toBe(false);
+    expect(task.typicalTokens).toEqual({ in: 8000, out: 1200 });
+    expect(sensitiveTasks()).not.toContain('condense-module');
+    expect(createEmptyGateway().isAvailable('condense-module')).toBe(false);
   });
 
   it('wirft bei einer unbekannten Aufgabe', () => {

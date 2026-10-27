@@ -116,6 +116,9 @@ export const enJournal = {
   'journal.failure.no-key': 'Written down. The key for the assigned model is missing.',
   'journal.failure.unreachable': 'Written down. The model could not be reached.',
   'journal.failure.error': 'Written down. The model returned nothing.',
+  'journal.failure.agent-pending':
+    'Written down. The reply is waiting as a job for the agent (/gaston-jobs).',
+  'journal.failure.agent-failed': 'Written down. The agent did not finish the job.',
   'journal.failure.cancelled': 'Written down. You stopped the answer.',
   'journal.failure.other': 'Written down. No answer arrived.',
   'journal.evidence.title': 'It sounded similar on these days',

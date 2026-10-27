@@ -2,9 +2,11 @@
  * Verwaiste Seiten: niemand verlinkt hierher.
  *
  * Der Graph kommt aus dem Index (`core/index/pages.ts`) und wird hier nur
- * ausgezaehlt — `inbound` ist dort schon aus `outbound` invertiert, Katalog und
- * Chronik zaehlen dabei nicht als Verweis. Genau das ist die Absicht: eine Seite,
- * die nur im `index.md` steht, findet niemand ueber Links.
+ * ausgezaehlt — `inbound` ist dort schon aus `outbound` invertiert. Der Katalog
+ * (`index.md`) steht bewusst nicht im Graphen, damit Rueckverweise ihn nicht
+ * zeigen; hier zaehlt er trotzdem als Verweis, denn der Ingest traegt jede neue
+ * Seite dort ein. Eine Seite, die nur ueber die Suche gefunden wird oder von Hand
+ * ohne Katalogeintrag entstand, bleibt verwaist.
  *
  * Drei Ausnahmen, alle begruendet:
  * - **`overview.md`** ist die Synthese eines Moduls. Sie verweist nach unten, nicht
@@ -25,7 +27,8 @@ import type { GardenerFinding, WikiPage } from '@shared/types';
 import { buildFinding, buildFix } from '../types';
 import type { Check, GardenerContext, GardenerModuleView } from '../types';
 import { contentWords } from '../similarity';
-import { overviewEntryLine } from '@core/wiki';
+import { overviewEntryLine, parseIndex } from '@core/wiki';
+import { wikiIndexPath } from '@core/vault/paths';
 import { relatedLine } from '../relations';
 import { WordIndex } from '../word-index';
 
@@ -36,10 +39,22 @@ function citedSources(pages: readonly WikiPage[]): Set<string> {
   return cited;
 }
 
-function isOrphan(page: WikiPage, cited: ReadonlySet<string>): boolean {
+function isOrphan(
+  page: WikiPage,
+  cited: ReadonlySet<string>,
+  listed: ReadonlySet<string>,
+): boolean {
   if (page.type === 'overview') return false;
   if (page.inbound.length > 0) return false;
+  if (listed.has(page.slug)) return false;
   return !(page.type === 'source' && cited.has(page.slug));
+}
+
+/** Slugs im Katalog des Moduls; ohne `index.md` leer. */
+function catalogSlugs(byPath: ReadonlyMap<string, { body: string }>, module: string): Set<string> {
+  const catalog = byPath.get(wikiIndexPath(module));
+  if (catalog === undefined) return new Set();
+  return new Set(parseIndex(catalog.body).map((entry) => entry.slug));
 }
 
 /** Woerter, unter denen eine Seite im Text erwaehnt wird: Titel, sonst Slug. */
@@ -78,7 +93,8 @@ export const orphanCheck: Check = {
 
     for (const module of ctx.modules) {
       const cited = citedSources(module.pages);
-      const orphans = module.pages.filter((page) => isOrphan(page, cited));
+      const listed = catalogSlugs(byPath, module.slug);
+      const orphans = module.pages.filter((page) => isOrphan(page, cited, listed));
       if (orphans.length === 0) continue;
 
       /* Erst jetzt gebaut: ohne verwaiste Seite braucht niemand das Verzeichnis. */

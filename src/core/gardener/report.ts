@@ -32,6 +32,7 @@ import type { DateLike } from '@core/vault/paths';
 import { auditFindings } from './audit';
 import { CHECKS, looseEndFinding, looseEndInput } from './checks';
 import { healthScore, vaultSize } from './health';
+import { withoutHelpModule } from './help-exclusion';
 import { GERMAN_GARDENER_LABELS } from './labels';
 import type { GardenerLabels } from './labels';
 import { SEVERITY_ORDER, limits } from './types';
@@ -100,9 +101,10 @@ export function buildContext(
   options: GardenerRunOptions = {},
 ): GardenerContext {
   const now = deps.now ?? new Date();
+  const index = withoutHelpModule(deps.index);
   return {
-    index: deps.index,
-    modules: moduleViews(deps.index),
+    index,
+    modules: moduleViews(index),
     limits: limits(options.settings),
     today: isoDay(now),
     ranAt: new Date(now instanceof Date ? now.getTime() : now).toISOString(),
@@ -178,7 +180,7 @@ export async function runGardener(
     ),
   );
 
-  const health = healthScore(findings, vaultSize(deps.index));
+  const health = healthScore(findings, vaultSize(ctx.index));
   return {
     ranAt: ctx.ranAt,
     /* Ein Modell hat mitgeredet, wenn **eine** der beiden Stufen geantwortet

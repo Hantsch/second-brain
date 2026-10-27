@@ -6,13 +6,14 @@
    verschwinden — sie ist eine offene Aufgabe, kein Zustand ohne Folgen. */
 
 import { useState } from 'react';
-import type { KnowledgeModule, RawSource } from '@shared/types';
+import type { AgentJobView, KnowledgeModule, RawSource } from '@shared/types';
 import { Badge } from '../../atoms/Badge';
 import { Button } from '../../atoms/Button';
 import { Icon } from '../../atoms/Icon';
 import { Select } from '../../atoms/Select';
 import { useT, useLanguage } from '../../i18n';
 import { formatDate } from '../../lib/format';
+import { AgentHandOver } from './AgentHandOver';
 
 /** Symbol je Quellenart. Das Wort daneben sagt dasselbe — doppelt hält. */
 const ICONS: Record<RawSource['kind'], string> = {
@@ -38,6 +39,12 @@ export interface SourceRowProps {
   onCondenseFromMetadata?: (path: string, module: string) => void;
   /** Diese Zeile verdichtet gerade. */
   condensing?: boolean;
+  /** The open job the agent holds for this source, if any. */
+  agentJob?: AgentJobView | null;
+  /** Hand the source to the agent instead of condensing it here. */
+  onHandOver?: (path: string, module: string) => void;
+  /** Take the agent's open job back. */
+  onWithdraw?: (id: string) => void;
 }
 
 export function SourceRow({
@@ -48,6 +55,9 @@ export function SourceRow({
   onCondense,
   onCondenseFromMetadata,
   condensing = false,
+  agentJob = null,
+  onHandOver,
+  onWithdraw,
 }: SourceRowProps) {
   const t = useT();
   const language = useLanguage();
@@ -90,7 +100,12 @@ export function SourceRow({
           {t('sources.list.page')}
         </button>
       ) : null}
-      {!condensed && onCondense !== undefined && modules !== undefined ? (
+      {!condensed && agentJob !== null && onWithdraw !== undefined ? (
+        <span className="sb-row-condense">
+          <AgentHandOver job={agentJob} onHandOver={() => undefined} onWithdraw={onWithdraw} />
+        </span>
+      ) : null}
+      {!condensed && agentJob === null && onCondense !== undefined && modules !== undefined ? (
         <span className="sb-row-condense">
           <Select
             aria-label={t('sources.list.moduleFor', { title: source.title })}
@@ -109,6 +124,14 @@ export function SourceRow({
           >
             {condensing ? t('sources.detail.condensing') : t('sources.detail.condense')}
           </Button>
+          {onHandOver !== undefined && onWithdraw !== undefined ? (
+            <AgentHandOver
+              job={null}
+              disabled={chosenModule.length === 0 || condensing}
+              onHandOver={() => onHandOver(source.path, chosenModule)}
+              onWithdraw={onWithdraw}
+            />
+          ) : null}
           {source.blocked !== null && onCondenseFromMetadata !== undefined ? (
             <Button
               variant="ghost"

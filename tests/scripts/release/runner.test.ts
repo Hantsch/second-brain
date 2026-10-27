@@ -81,12 +81,6 @@ function recordingFs(): ReleaseFs {
       events.push(`remove ${path}`);
       nodeFs.remove(path);
     },
-    writeTempFile: (name, content) => {
-      const path = join(dir, 'tmp', name);
-      events.push(`write ${path}`);
-      put(join('tmp', name), content);
-      return path;
-    },
   };
 }
 
@@ -195,7 +189,7 @@ describe('release runner', () => {
   it('a real run writes the plan files, then runs git and gh in order with the real notes and assets', () => {
     expect(run(['--version', '1.3.0'], { ci: true })).toBe(0);
 
-    const notesPath = join(dir, 'tmp', 'release-notes.md');
+    const notesPath = join(dir, 'dist', 'release-notes.md');
     const order = events.filter((e) => e.startsWith('write ') || /^exec (git|gh) /.test(e));
     expect(order.slice(0, 5)).toEqual([
       'exec git tag --list',
@@ -228,8 +222,21 @@ describe('release runner', () => {
     expect(output).toContain('v1.3.0 is pushed but not published');
     const manual = lines.find((l) => l.trimStart().startsWith('gh release create v1.3.0'));
     expect(manual).toBeDefined();
-    expect(manual).toContain(join(dir, 'tmp', 'release-notes.md'));
+    expect(manual).toContain('dist/release-notes.md');
     expect(manual).toContain('--notes-file');
+  });
+
+  it('a failed publish after the push points at the uploaded release files, not runner paths', () => {
+    const exec = fakeExec({ fails: (c) => c.cmd === 'gh' });
+
+    expect(run(['--version', '1.3.0'], { ci: true, exec })).toBe(1);
+
+    const manual = lines.find((l) => l.trimStart().startsWith('gh release create v1.3.0'))!;
+    expect(manual).toContain('dist/gaston-1.3.0-portable.exe');
+    expect(manual).toContain('dist/latest.yml');
+    expect(manual).toContain('dist/release-notes.md');
+    expect(manual).not.toContain(dir);
+    expect(lines).toContain('the files are in the "release-files" artifact of this workflow run');
   });
 
   it('a failed push exits 1 without running gh or offering a manual release', () => {

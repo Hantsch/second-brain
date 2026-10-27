@@ -128,6 +128,8 @@ function recordingIndex(inner: WikiIndexView): {
     },
     pages: () => inner.pages(),
     modules: () => inner.modules(),
+    todos: () => inner.todos(),
+    projects: () => inner.projects(),
   };
   return { view, recordedQueries };
 }

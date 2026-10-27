@@ -62,18 +62,26 @@ describe('cleanPatch', () => {
 });
 
 describe('readIngestReply', () => {
-  it('nimmt brauchbare Seiten und meldet die Synthese-Aenderung', () => {
+  it('nimmt brauchbare Seiten', () => {
     const reply = readIngestReply(
       {
         pages: [page(), page({ slug: 'auth0', type: 'entity', title: 'Auth0', action: 'extend' })],
-        overviewChange: 'Mandanten sind Organisationen.',
       },
       MODULE,
     );
 
     expect(reply.suggestions.map((entry) => entry.slug)).toEqual(['mandantentrennung', 'auth0']);
     expect(reply.suggestions[1]?.action).toBe('extend');
-    expect(reply.overviewChange).toBe('Mandanten sind Organisationen.');
+  });
+
+  it('a reply that still carries overviewChange is read and the field ignored', () => {
+    const reply = readIngestReply(
+      { pages: [page()], overviewChange: 'Mandanten sind Organisationen.' },
+      MODULE,
+    );
+
+    expect(reply.suggestions.map((entry) => entry.slug)).toEqual(['mandantentrennung']);
+    expect(reply).not.toHaveProperty('overviewChange');
   });
 
   it('verwirft erfundene Modulnamen, falsche Typen und leere Patches', () => {
@@ -92,7 +100,6 @@ describe('readIngestReply', () => {
     );
 
     expect(reply.suggestions).toEqual([]);
-    expect(reply.overviewChange).toBeNull();
   });
 
   it('nimmt jeden Slug nur einmal und haelt die Obergrenze ein', () => {

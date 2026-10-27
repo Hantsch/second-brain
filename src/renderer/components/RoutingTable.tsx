@@ -10,6 +10,7 @@
 
 import { loadCatalogue } from '@core/llm/catalogue';
 import { judgeRouteForSensitiveTask } from '@core/llm/sensitive';
+import { AGENT_ROUTE, isAgentRoute } from '@shared/types';
 import type { ModelRef, ProviderConfig, Routing, TaskDefinition, TaskKind } from '@shared/types';
 import { Badge } from '../atoms/Badge';
 import { Button } from '../atoms/Button';
@@ -32,6 +33,7 @@ const REASONS: readonly string[] = [
   'no-key',
   'unreachable',
   'no-vault',
+  'agent-setup-missing',
   'error',
 ];
 
@@ -77,8 +79,16 @@ export function parseValue(value: string): ModelRef | null {
   return model ? { providerId, model } : null;
 }
 
-/** "provider / model" — the provider gives the model name its context. */
-export function describeRef(ref: ModelRef, providers: readonly ProviderConfig[]): string {
+/**
+ * "provider / model" — the provider gives the model name its context. The
+ * agent route has no model, so it shows `agentLabel` instead.
+ */
+export function describeRef(
+  ref: ModelRef,
+  providers: readonly ProviderConfig[],
+  agentLabel: string,
+): string {
+  if (isAgentRoute(ref)) return agentLabel;
   const provider = providers.find((entry) => entry.id === ref.providerId);
   return `${provider?.label ?? ref.providerId} / ${ref.model}`;
 }
@@ -94,6 +104,7 @@ export function RoutingTable({
 }: RoutingTableProps) {
   const t = useT();
   const withModels = providers.filter((provider) => provider.models.length > 0);
+  const agentLabel = t('settings.routing.agent');
 
   return (
     <table className="gs-table sb-routing">
@@ -121,8 +132,9 @@ export function RoutingTable({
              a target that would not pass the rule gets a warning; the
              table never blocks or filters on it (067, D3, AC2). */
           const effectiveRef = own ?? inherited;
+          const viaAgent = isAgentRoute(effectiveRef);
           const sensitiveWarning =
-            task.sensitive && effectiveRef
+            task.sensitive && effectiveRef && !viaAgent
               ? judgeRouteForSensitiveTask(task.kind, effectiveRef, providers, CATALOGUE_ENTRIES)
               : null;
           return (
@@ -164,10 +176,11 @@ export function RoutingTable({
                   <option value={INHERIT_VALUE}>
                     {t('settings.routing.inherit', {
                       model: inherited
-                        ? describeRef(inherited, providers)
+                        ? describeRef(inherited, providers, agentLabel)
                         : t('settings.routing.noModel'),
                     })}
                   </option>
+                  <option value={refValue(AGENT_ROUTE)}>{agentLabel}</option>
                   {withModels.map((provider) => (
                     <optgroup key={provider.id} label={provider.label}>
                       {provider.models.map((model) => (
@@ -181,6 +194,9 @@ export function RoutingTable({
                     </optgroup>
                   ))}
                 </Select>
+                {viaAgent ? (
+                  <span className="sb-routing-fallback">{t('settings.routing.agentHint')}</span>
+                ) : null}
                 {sensitiveWarning?.warn ? (
                   <span className="sb-routing-fallback">
                     {t(`settings.routing.sensitiveWarn.${sensitiveWarning.reason}`)}
@@ -201,11 +217,13 @@ export function RoutingTable({
                   <span className="sb-routing-result">
                     <span className={result.ok ? undefined : 'sb-note-bad'}>
                       {result.ok
-                        ? t('settings.routing.testOk', { ms: result.latencyMs })
+                        ? viaAgent
+                          ? t('settings.routing.agentReady')
+                          : t('settings.routing.testOk', { ms: result.latencyMs })
                         : t('settings.routing.testFailed')}
                     </span>
                     <span className="sb-note-detail">
-                      {result.ok ? result.sample : t(reasonKey(result.error))}
+                      {result.ok ? (viaAgent ? '' : result.sample) : t(reasonKey(result.error))}
                     </span>
                   </span>
                 ) : null}

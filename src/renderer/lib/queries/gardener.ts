@@ -22,6 +22,7 @@ import type { QueryClient, UseMutationResult, UseQueryResult } from '@tanstack/r
 import type { IpcRequest, IpcResponse } from '@shared/ipc';
 import type { GardenerFinding, GardenerReport } from '@shared/types';
 import { api } from '../api';
+import { bridge } from '../bridge';
 import { qk } from './keys';
 import { useVaultReady } from './data';
 import type { GardenerProgress } from '../gardener-progress';
@@ -80,6 +81,14 @@ export type AnswerLooseEndResult = IpcResponse<'journal:answerLooseEnd'>;
 /** The last report. `null` means: there is none — not "all fine". */
 export function useGardenerReport(): UseQueryResult<GardenerReport | null> {
   const ready = useVaultReady();
+  const client = useQueryClient();
+  /* `agentAudit.open` is derived from the agent's job files; every change to them (a hand-over,
+     a failed audit that frees the button again) must reach a Maintenance screen that stays open. */
+  useEffect(() => {
+    return bridge().on('event:agent-jobs', () => {
+      void client.invalidateQueries({ queryKey: qk.gardener.report() });
+    });
+  }, [client]);
   return useQuery({
     queryKey: qk.gardener.report(),
     queryFn: api.gardener.report,

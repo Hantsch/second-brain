@@ -19,7 +19,7 @@
    `RunStrip` calls it too, rather than each side keeping its own copy of the
    same translation branch (072 review, finding 1). */
 
-import type { TaskKind, WorkTask, WorkTaskKind, WorkTaskState } from '@shared/types';
+import type { AgentJobView, TaskKind, WorkTask, WorkTaskKind, WorkTaskState } from '@shared/types';
 import type { GardenerProgress } from './gardener-progress';
 
 /** The shape of `useT()`'s return value, kept local rather than imported from
@@ -47,11 +47,14 @@ export function taskKindLabel(kind: WorkTaskKind, t: Translate): string {
   return t(TASK_KIND_LABEL_KEY[kind]);
 }
 
-export type TaskGroupKind = 'running' | 'waiting' | 'finished';
+/** `agent` holds the jobs open with the agent; `groupTasks` never produces it. */
+export type TaskGroupKind = 'running' | 'waiting' | 'agent' | 'finished';
 
 export interface TaskGroup {
   kind: TaskGroupKind;
   tasks: WorkTask[];
+  /** The agent's jobs, in the `agent` group (open) and the `finished` group (settled). */
+  jobs?: AgentJobView[];
 }
 
 /** Which of the three fixed groups a task's state belongs to. */
@@ -68,7 +71,12 @@ function groupKindOf(state: WorkTaskState): TaskGroupKind {
  */
 export function groupTasks(tasks: readonly WorkTask[]): TaskGroup[] {
   const order: TaskGroupKind[] = ['running', 'waiting', 'finished'];
-  const buckets: Record<TaskGroupKind, WorkTask[]> = { running: [], waiting: [], finished: [] };
+  const buckets: Record<TaskGroupKind, WorkTask[]> = {
+    running: [],
+    waiting: [],
+    agent: [],
+    finished: [],
+  };
   for (const task of tasks) buckets[groupKindOf(task.state)].push(task);
   return order
     .filter((kind) => buckets[kind].length > 0)
@@ -217,6 +225,32 @@ export function tasksBadgeCount(
 }
 
 /**
+ * Adds the agent's jobs to the grouped tasks: open ones in their own group between
+ * waiting and finished (they wait on the agent, not on the queue), settled ones in
+ * finished, newest first. Open jobs never reach the badge count — nothing here is
+ * running in the app.
+ */
+function withAgentJobs(groups: TaskGroup[], jobs: readonly AgentJobView[]): TaskGroup[] {
+  if (jobs.length === 0) return groups;
+  const settledAt = (job: AgentJobView): number => Date.parse(job.finishedAt ?? job.createdAt);
+  const jobsOf: Record<TaskGroupKind, AgentJobView[]> = {
+    running: [],
+    waiting: [],
+    agent: jobs.filter((job) => job.state === 'with-agent'),
+    finished: jobs
+      .filter((job) => job.state !== 'with-agent')
+      .sort((a, b) => settledAt(b) - settledAt(a)),
+  };
+  const order: TaskGroupKind[] = ['running', 'waiting', 'agent', 'finished'];
+  return order.flatMap((kind) => {
+    const tasks = groups.find((group) => group.kind === kind)?.tasks ?? [];
+    const own = jobsOf[kind];
+    if (tasks.length === 0 && own.length === 0) return [];
+    return [own.length === 0 ? { kind, tasks } : { kind, tasks, jobs: own }];
+  });
+}
+
+/**
  * The combined view: the registry's tasks plus the synthetic maintenance
  * row (when present), grouped in the one fixed order. The single entry point
  * D4's screen needs — it never has to know the maintenance row exists as a
@@ -238,6 +272,7 @@ export function buildTasksView(
   tasks: readonly WorkTask[],
   progress: GardenerProgress | null,
   t: Translate,
+  jobs: readonly AgentJobView[] = [],
 ): TaskGroup[] {
   const withoutRunningGardenerTask = tasks.filter(
     (task) => !isRunShownAsMaintenanceRow(task, progress),
@@ -247,5 +282,5 @@ export function buildTasksView(
     maintenance === null
       ? withoutRunningGardenerTask
       : [maintenance, ...withoutRunningGardenerTask];
-  return groupTasks(merged);
+  return withAgentJobs(groupTasks(merged), jobs);
 }

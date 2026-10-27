@@ -10,7 +10,7 @@
 
 import { VAULT_DIRS } from '@shared/types';
 import type { Scope } from '@shared/types';
-import { joinVaultPath, projectDir, slugify, toVaultPath } from '@core/vault/paths';
+import { joinVaultPath, modulePagePath, projectDir, slugify, toVaultPath } from '@core/vault/paths';
 
 const CONDENSED_SUFFIX = '.condensed.md';
 
@@ -58,4 +58,16 @@ export function projectRefFromCondensedPath(path: string): CondensedProjectRef |
   const slug = match?.[2];
   if (scope === undefined || slug === undefined) return undefined;
   return { scope, slug };
+}
+
+/** `modules/<slug>/wiki/overview.md` — the module overview, condensed in place. */
+export function moduleOverviewPath(slug: string): string {
+  return modulePagePath(slug, 'overview');
+}
+
+/** Slug from `modules/<slug>/wiki/overview.md`, or `undefined` if the path doesn't match. */
+export function moduleSlugFromOverviewPath(path: string): string | undefined {
+  const normalized = toVaultPath(path);
+  const match = /^modules\/([^/]+)\/wiki\/overview\.md$/.exec(normalized);
+  return match?.[1];
 }

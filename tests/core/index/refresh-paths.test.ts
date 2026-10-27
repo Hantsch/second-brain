@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { buildIndex } from '@core/index/build';
+import { refreshPaths } from '@core/index/refresh';
 import { IndexService } from '@core/index/service';
 import { bodyBucket } from '@core/index/persist';
 import { indexBucketPath, indexFiles, indexPath } from '@core/vault/paths';
@@ -119,6 +121,48 @@ describe('IndexService: pfadgezielter Refresh', () => {
     await service.refresh([protocolPath]);
 
     expect(service.sources()[0]?.title).toBe('Neuer Titel');
+  });
+
+  it('agent config under .claude is never indexed, neither by a build nor by a path refresh', async () => {
+    const skill = '.claude/skills/x/SKILL.md';
+    const vault = new CountingVaultStore({
+      files: {
+        ...vaultFiles(),
+        'CLAUDE.md': '# Agent instructions\n\nRead the jobs folder first.\n',
+        [skill]: '---\nname: x\n---\n\nNot knowledge.\n',
+      },
+      now: new Date('2026-08-09T08:00:00.000Z'),
+    });
+
+    const built = await buildIndex(vault);
+    expect(built.byPath.has('CLAUDE.md')).toBe(true);
+    expect(built.byPath.has(skill)).toBe(false);
+
+    for (const path of [skill, '.claude/skills/x', '.claude']) {
+      const refreshed = await refreshPaths(vault, [path], built);
+      expect(refreshed.docs.some((doc) => doc.path.startsWith('.claude/'))).toBe(false);
+      expect(refreshed.changed).toBe(false);
+    }
+  });
+
+  it('a markdown file under .secondbrain/agent never enters the index', async () => {
+    const proposal = '.secondbrain/agent/proposals/x.md';
+    const vault = new CountingVaultStore({
+      files: {
+        ...vaultFiles(),
+        [proposal]: '---\nkind: edit\n---\n\nNot knowledge.\n',
+      },
+      now: new Date('2026-08-09T08:00:00.000Z'),
+    });
+
+    const built = await buildIndex(vault);
+    expect(built.byPath.has(proposal)).toBe(false);
+
+    for (const path of [proposal, '.secondbrain/agent/proposals', '.secondbrain/agent']) {
+      const refreshed = await refreshPaths(vault, [path], built);
+      expect(refreshed.docs.some((doc) => doc.path.startsWith('.secondbrain/'))).toBe(false);
+      expect(refreshed.changed).toBe(false);
+    }
   });
 
   it('a touched-but-unchanged file persists nothing', async () => {

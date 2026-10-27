@@ -9,6 +9,7 @@ export type ScreenId =
   | 'journal'
   | 'knowledge'
   | 'tasks'
+  | 'agent'
   | 'garden'
   | 'settings';
 
@@ -87,6 +88,15 @@ export const SCREENS: readonly ScreenDef[] = [
     path: '/tasks',
     icon: 'list-checks',
     labelKey: 'rail.tasks',
+    group: 'system',
+  },
+  {
+    /* Claude Code on this vault: right after Tasks, where the work it picks up is
+       listed. No digit hotkey, like Tasks. */
+    id: 'agent',
+    path: '/agent',
+    icon: 'bot',
+    labelKey: 'rail.agent',
     group: 'system',
   },
   {

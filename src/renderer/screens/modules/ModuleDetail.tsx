@@ -29,12 +29,13 @@ import {
   useModuleSources,
 } from '../../lib/queries/modules';
 import { ModuleActions } from './ModuleActions';
+import { ModuleCondensedTab } from './ModuleCondensedTab';
 import { ModuleLog } from './ModuleLog';
 import { PageView } from './PageView';
 import { SourceRow } from '../sources/SourceRow';
 import { SourceDetailDialog } from '../sources/SourceDetailDialog';
 
-export const MODULE_TABS = ['pages', 'graph', 'sources', 'log'] as const;
+export const MODULE_TABS = ['pages', 'graph', 'sources', 'log', 'condensed'] as const;
 
 export type ModuleTab = (typeof MODULE_TABS)[number];
 
@@ -43,6 +44,7 @@ const TAB_ICONS: Record<ModuleTab, string> = {
   graph: 'network',
   sources: 'download',
   log: 'history',
+  condensed: 'layers',
 };
 
 export interface ModuleDetailProps {
@@ -277,6 +279,8 @@ export function ModuleDetail({
           exists={exists}
         />
       ) : null}
+
+      {tab === 'condensed' ? <ModuleCondensedTab module={module} /> : null}
 
       <SourceDetailDialog
         key={selectedSource ?? 'closed'}

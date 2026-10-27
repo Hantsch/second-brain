@@ -85,6 +85,12 @@ sessions, and `?tab=knowledge` rides along with the existing `?p=<slug>` deep li
 seed which one opens first, the same way an area's `?tab=condensed` is addressable
 (`ProjectDetail.tsx`, `ProjectKnowledgeTab.tsx`).
 
+An opened module carries a condensed tab after pages, graph, sources and chronicle, and
+`?tab=condensed` rides along with the existing `?m=<slug>` deep link, the same way an
+area's tab is addressable (`ModuleDetail.tsx`, `ModuleCondensedTab.tsx`). `tab` names a
+module's tab only while `m` is present. The tab offers no delete: the overview page is
+part of the module.
+
 **Capture and Ask** lose their rail entries and keep their screens as overlays. The
 global capture window stays exactly as it is — it is already the better path.
 

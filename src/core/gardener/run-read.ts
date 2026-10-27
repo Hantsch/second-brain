@@ -9,7 +9,7 @@ import type {
   GardenerRunScope,
   GardenerStageId,
 } from '@shared/types';
-import type { FixedFinding, StoredGardener, StoredRun } from './run-record';
+import type { FixedFinding, RunAudit, StoredGardener, StoredRun } from './run-record';
 import { narrowedScope } from './run-scope';
 
 function isFinding(value: unknown): value is GardenerFinding {
@@ -116,6 +116,18 @@ function readCheckedKinds(value: unknown): GardenerFindingKind[] | undefined {
   return value.filter(isFindingKind);
 }
 
+/** `null` (a run without an audit) is kept; a malformed mark reads as absent — the
+ * run itself stays readable. */
+function readAudit(value: unknown): RunAudit | null | undefined {
+  if (value === null) return null;
+  if (typeof value !== 'object') return undefined;
+  const record = value as Record<string, unknown>;
+  const by = record['by'];
+  const at = record['at'];
+  if ((by !== 'model' && by !== 'agent') || typeof at !== 'string') return undefined;
+  return { by, at };
+}
+
 function readFixed(value: unknown): FixedFinding[] {
   if (!Array.isArray(value)) return [];
   const result: FixedFinding[] = [];
@@ -149,6 +161,7 @@ function readRun(value: unknown): StoredRun | null {
     healthAsOf: readHealthAsOf(record['healthAsOf']),
     scope: readScope(record['scope']),
     checkedKinds: readCheckedKinds(record['checkedKinds']),
+    audit: readAudit(record['audit']),
   };
 }
 

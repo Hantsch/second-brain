@@ -137,6 +137,21 @@ export class IngestQueue {
     return copyJob(job);
   }
 
+  /**
+   * Fetch a filed YouTube source again. The raw path is known up front, so the
+   * source's dialog sees the job working on it from the first moment.
+   */
+  addRefetch(input: AddJobInput, rawPath: string): IngestJob {
+    this.sequence += 1;
+    const id = this.deps.newId?.() ?? `ingest-${this.sequence}`;
+    const job = createJob(id, { ...input, refetch: true }, this.stamp());
+    job.rawPath = rawPath;
+    this.entries.push({ job, controller: null, outcome: null });
+    this.emit(job);
+    this.pump();
+    return copyJob(job);
+  }
+
   /** Record a stopped duplicate import without touching or condensing the existing source. */
   addDuplicate(input: AddJobInput, rawPath: string): IngestJob {
     this.sequence += 1;
@@ -281,6 +296,7 @@ export class IngestQueue {
       ...environment,
       store: this.deps.store,
       module: entry.job.module,
+      refetch: entry.job.refetch === true,
       signal,
       onProgress: (event) => {
         this.update(entry, {

@@ -37,3 +37,10 @@ export function captureIndex(services: Services): CaptureIndex {
   if (!knowsTargets(index)) throw fail('io', 'der Index liefert keine Ablageziele');
   return index;
 }
+
+/** The index when it derives filing targets, else null — callers with an in-memory fallback
+    (the proposal handlers) must not fail on a bare index. */
+export function captureIndexOrNull(services: Services): CaptureIndex | null {
+  const index = services.index();
+  return index !== null && knowsTargets(index) ? index : null;
+}

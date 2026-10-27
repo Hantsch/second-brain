@@ -16,6 +16,8 @@ export declare function nextVersion(
   options?: { explicit?: boolean },
 ): string;
 
+export declare const TOP_LEVEL_VERSION: RegExp;
+
 export declare function applyVersion(
   pkgText: string,
   lockText: string,

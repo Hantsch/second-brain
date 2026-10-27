@@ -30,9 +30,9 @@ import { FsVaultStore } from '@core/vault';
 import { sha256 } from '@core/vault/hash';
 import { VaultConflictError } from '@core/vault/types';
 import type { VaultStore } from '@core/vault/types';
-import { appendDirective, partialInputsNote } from '@core/condense';
-import type { IndexedDoc } from '@core/index/types';
+import { appendDirective, MODULE_OVERVIEW_TYPE, partialInputsNote } from '@core/condense';
 import type { CondenseProposal } from '@shared/types';
+import { condenseDocs } from './condense-docs';
 import { artifactHeader, resolveCondenseUnit, runCondenseUnit } from './condense-unit';
 import type { HandlerMap } from './registry';
 import { defineHandlers, fail, llmUnavailable } from './registry';
@@ -40,27 +40,8 @@ import { docLanguage, settle } from './wiki-bridge';
 import { createGateway, llmUnavailableReason } from '../llm-bridge';
 import { getTaskResults } from '../task-results';
 import { getWorkQueue } from '../work-queue';
-import type { IndexLike } from '../contracts';
+import { condenseWithAgent } from '../agent-condense-tasks';
 import type { Services } from '../services';
-
-/** What this channel group needs from the index — the raw doc list only. */
-const CONDENSE_INDEX_METHODS: readonly string[] = ['index'];
-
-interface DocsView {
-  index(): { docs: readonly IndexedDoc[] };
-}
-
-function knowsDocs(index: IndexLike): index is IndexLike & DocsView {
-  const record = index as unknown as Record<string, unknown>;
-  return CONDENSE_INDEX_METHODS.every((method) => typeof record[method] === 'function');
-}
-
-/** Every indexed doc of the open vault — the same list `deriveAreas()` reads. */
-function condenseDocs(services: Services): readonly IndexedDoc[] {
-  const index = services.requireIndex();
-  if (!knowsDocs(index)) throw fail('io', 'der Index liefert keine Dokumentliste');
-  return index.index().docs;
-}
 
 /** A full `VaultStore` (not the shell's narrower `VaultStoreLike`): condense
     needs `snapshot()`/`writeText()` with hash guards, same as `wikiStore()`. */
@@ -75,6 +56,9 @@ export function condenseHandlers(services: Services): HandlerMap {
       const content = await condenseStore(services).readText(target.path);
       if (content === null) return null;
       const header = artifactHeader(target.unit, content);
+      /* An overview exists from the moment its module does (the stub), so for a
+         module the file alone does not mean "condensed" — the stamp does. */
+      if (target.unit === 'module' && header.condensedAt.length === 0) return null;
       // The hash describes exactly the text just read — not a second, independent
       // read of the file, which could observe a different state under a
       // concurrent external edit and return a hash for content that isn't `content`.
@@ -90,6 +74,10 @@ export function condenseHandlers(services: Services): HandlerMap {
 
     'condense:run': async ({ unit, slug }) => {
       const target = await resolveCondenseUnit(services, unit, slug);
+      // Before the model check: a module with the agent has nothing for the app to run.
+      if (target.unit === 'module' && (await condenseWithAgent(services, target.slug))) {
+        throw fail('invalid', "This module's condensation is with the agent.");
+      }
       const store = condenseStore(services);
       const existingText = await store.readText(target.path);
       const language = docLanguage(services);
@@ -114,7 +102,7 @@ export function condenseHandlers(services: Services): HandlerMap {
           llmTask: target.task,
           /* Plain content, no "Verdichtung:" prefix — the tasks screen renders
              the kind itself (`TaskRow`), so a prefix here would say it twice. */
-          subject: { label: target.project?.title ?? target.slug, ref },
+          subject: { label: target.label, ref },
         },
         /* `taskId` is THIS run's own task id (`WorkRegistry.start` hands it in
            directly, see `core/work/registry.ts`) — not a variable captured once
@@ -234,7 +222,7 @@ export function condenseHandlers(services: Services): HandlerMap {
     },
 
     'condense:reject': async ({ unit, slug, reason }) => {
-      const { path } = await resolveCondenseUnit(services, unit, slug);
+      const { path, unit: level } = await resolveCondenseUnit(services, unit, slug);
       if (reason.trim().length === 0) {
         throw fail('invalid', 'eine Begründung ist erforderlich, um abzulehnen');
       }
@@ -243,7 +231,13 @@ export function condenseHandlers(services: Services): HandlerMap {
       /* `appendDirective` splices one line into the human-owned directives
          section of the raw text — it never recomposes the body, so no machine
          section of either level is touched (see `@core/condense/directives`). */
-      const content = appendDirective(existingText, reason, docLanguage(services));
+      const content = appendDirective(
+        existingText,
+        reason,
+        docLanguage(services),
+        /* An overview that is missing is a wiki page, not a condensed artifact. */
+        level === 'module' ? MODULE_OVERVIEW_TYPE : undefined,
+      );
       /* The guard hashes `existingText` itself — the exact bytes `content` was
          built from — instead of re-reading the file a second time. A second,
          independent `hash()` call right before the write would defeat the guard:
@@ -265,6 +259,11 @@ export function condenseHandlers(services: Services): HandlerMap {
     },
 
     'condense:delete': async ({ unit, slug, expectedHash }) => {
+      /* The overview is a wiki page the module owns, condensed in place: deleting
+         it would remove the module's landing page, not a derived artifact. */
+      if (unit === 'module') {
+        throw fail('invalid', 'die Übersicht eines Moduls lässt sich hier nicht löschen');
+      }
       const { path } = await resolveCondenseUnit(services, unit, slug);
       const store = condenseStore(services);
       /* Hashed BEFORE `delete()`, exactly like `condense:accept`'s pre-check

@@ -7,7 +7,8 @@
  *
  * **Liegt die Quelle schon**, wird sie nicht neu geschrieben. Eine Rohquelle ist
  * unveraenderlich (docs/VAULT-FORMAT.md); das vorhandene Transcript ist der Text,
- * den die Verdichtung liest.
+ * den die Verdichtung liest. Die einzige Ausnahme ist `ctx.refetch` — siehe
+ * `refetch.ts`.
  */
 
 import { rawPath } from '@core/vault/paths';
@@ -18,6 +19,7 @@ import { harvestVideo } from './pipeline';
 import type { YoutubeProvider } from './pipeline';
 import { createInnertubeProvider } from './provider-innertube';
 import { createYtDlpProvider } from './provider-ytdlp';
+import { keptOutcome, refetchableLog, snapshotPayload } from './refetch';
 import { parseVideoId, watchUrl } from './video-url';
 import { isTranscriptAvailable, writeYoutubeSource, YOUTUBE_FILES } from './writer';
 
@@ -97,10 +99,12 @@ export function createYoutubeIngestor(): SourceIngestor {
       const dir = rawPath('youtube', videoId, now);
       const origin = watchUrl(videoId);
 
-      if (await ctx.store.exists(`${dir}/.ingest.json`)) {
+      const filed = await ctx.store.exists(`${dir}/.ingest.json`);
+      if (filed && ctx.refetch !== true) {
         ctx.onProgress?.({ stage: 'writing-raw', progress: 1, message: null });
         return reuseExisting(ctx, dir, origin);
       }
+      const previous = filed ? await refetchableLog(ctx.store, dir) : null;
 
       const { providers, notes } = buildProviders(ctx);
       if (providers.length === 0) {
@@ -127,14 +131,18 @@ export function createYoutubeIngestor(): SourceIngestor {
       });
 
       throwIfCancelled(ctx.signal);
+      if (previous !== null && harvest.transcript === null) {
+        return keptOutcome(dir, previous, [...notes, ...harvest.notes]);
+      }
       ctx.onProgress?.({ stage: 'writing-raw', progress: 0.8, message: null });
+      if (previous !== null) await snapshotPayload(ctx.store, dir);
 
       const written = await writeYoutubeSource({
         store: ctx.store,
         dir,
         harvest,
         ingestedAt: isoStamp(now),
-        module: ctx.module ?? null,
+        module: previous?.modules[0] ?? ctx.module ?? null,
         notes,
       });
 

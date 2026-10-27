@@ -31,6 +31,8 @@ const WIKI_INDEX_METHODS: readonly string[] = [
   'searchPassages',
   'pages',
   'modules',
+  'todos',
+  'projects',
 ];
 
 /**

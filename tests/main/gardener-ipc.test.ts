@@ -2013,4 +2013,54 @@ describe('Pflege-Kanäle im Main', () => {
     await running;
     expect(gardenerRunSnapshot()).toBeNull();
   });
+
+  it('a run leaves the help module out of findings and vault size', async () => {
+    const { runWithProgress } = await import('../../src/main/ipc/gardener-deps');
+    const without = await runWithProgress(harness.services);
+
+    await vault.write(
+      'modules/gaston-help/module.md',
+      [
+        '---',
+        'type: note',
+        'title: Hilfe',
+        'slug: gaston-help',
+        'managed_by: gaston',
+        'created: 2026-04-15',
+        'updated: 2026-04-15',
+        'tags: []',
+        'lang: de',
+        '---',
+        '',
+        'Hilfe.',
+        '',
+      ].join('\n'),
+    );
+    /* Reviewed years ago and linked from nowhere: stale and orphaned anywhere else. */
+    await vault.write(
+      'modules/gaston-help/wiki/concepts/veraltet.md',
+      [
+        '---',
+        'type: concept',
+        'title: Veraltet',
+        'module: gaston-help',
+        'created: 2020-01-01',
+        'updated: 2020-01-01',
+        'reviewed: 2020-01-01',
+        'tags: []',
+        'lang: de',
+        '---',
+        '',
+        'Seit langem nicht geprüft.',
+        '',
+      ].join('\n'),
+    );
+    await harness.services.requireIndex().refresh?.();
+    const withHelp = await runWithProgress(harness.services);
+
+    expect(withHelp.run.size).toBe(without.run.size);
+    const paths = withHelp.run.findings.flatMap((finding) => finding.paths);
+    expect(paths.filter((path) => path.startsWith('modules/gaston-help/'))).toEqual([]);
+    expect(withHelp.run.findings.length).toBe(without.run.findings.length);
+  });
 });

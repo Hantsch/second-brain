@@ -56,6 +56,9 @@ export function nextVersion(current, bump, options = {}) {
   throw new Error(`nextVersion: unknown bump "${bump}"`);
 }
 
+/** The project's own top-level `version` field (one indent level); nested ones are dependencies. */
+export const TOP_LEVEL_VERSION = /^((?: {2}|\t)"version":\s*")[^"]*(")/m;
+
 /**
  * Rewrites only the project's own version fields by regex, so formatting and line endings stay
  * byte-identical (no JSON round-trip). Own fields are the top-level `version` (indent of one

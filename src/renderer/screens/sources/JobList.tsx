@@ -12,11 +12,14 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { IngestJob } from '@shared/types';
+import type { AgentJobView, IngestJob } from '@shared/types';
 import { Badge } from '../../atoms/Badge';
 import { Button } from '../../atoms/Button';
+import { ProgressBar } from '../../atoms/ProgressBar';
 import { useT } from '../../i18n';
 import { isJobRunning } from '../../lib/jobs';
+import { isSourceCondensedByAgent, openSourceJob } from '../../lib/queries/agent-jobs';
+import { AgentHandOver } from './AgentHandOver';
 
 /** The models tab: the route for "condense source" is set there. */
 const ROUTING_ROUTE = '/settings?tab=models';
@@ -52,6 +55,12 @@ export interface JobListProps {
   onOpenRaw: (path: string) => void;
   /** Jump to the wiki page (path of a touched page). */
   onOpenPage: (path: string) => void;
+  /** Jobs the agent holds, to tell a waiting source that is already with it. */
+  agentJobs: readonly AgentJobView[];
+  /** Hand a waiting source to the agent. */
+  onHandOver: (rawPath: string, module: string | null) => void;
+  /** Take the agent's open job back. */
+  onWithdraw: (id: string) => void;
 }
 
 function percent(job: IngestJob): number {
@@ -71,6 +80,9 @@ function JobRow({
   ingestAgainPending,
   onOpenRaw,
   onOpenPage,
+  agentJobs,
+  onHandOver,
+  onWithdraw,
 }: JobListProps & { job: IngestJob }) {
   const t = useT();
   /** A note as a sentence, a detail as a detail. */
@@ -115,16 +127,12 @@ function JobRow({
       </div>
 
       {running ? (
-        <div
+        <ProgressBar
+          value={percent(job)}
+          label={t(`sources.stage.${job.stage}`)}
           className="sb-job-bar"
-          role="progressbar"
-          aria-label={t(`sources.stage.${job.stage}`)}
-          aria-valuenow={percent(job)}
-          aria-valuemin={0}
-          aria-valuemax={100}
-        >
-          <span className="sb-job-fill" style={{ width: `${percent(job)}%` }} />
-        </div>
+          fillClassName="sb-job-fill"
+        />
       ) : null}
 
       {job.stage === 'error' ? (
@@ -153,6 +161,13 @@ function JobRow({
             >
               {t('sources.awaiting.model')}
             </Button>
+            {job.rawPath === null || isSourceCondensedByAgent(agentJobs, job.rawPath) ? null : (
+              <AgentHandOver
+                job={openSourceJob(agentJobs, job.rawPath)}
+                onHandOver={() => onHandOver(job.rawPath ?? '', job.module)}
+                onWithdraw={onWithdraw}
+              />
+            )}
             {job.rawPath === null ? null : (
               <Button
                 variant="ghost"

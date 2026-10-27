@@ -9,7 +9,7 @@
   the commands read both.
 -->
 
-ai-scrum-version: 4.5.0
+ai-scrum-version: 4.5.1
 project: Gaston
 
 ## Verify
@@ -33,6 +33,7 @@ e2e: npm run test:e2e
 
 test-story: npx vitest run --changed HEAD
 e2e-story: npx playwright test {files}
+e2e-story-slices: 1 <!-- 1 = one call; n > 1 only when e2e-story carries {shard} and one call could exceed ten minutes — /build then runs {shard} = 1/n … n/n in sequence -->
 e2e-all: none
 e2e-cleanup: none
 <!--

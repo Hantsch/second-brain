@@ -299,6 +299,15 @@ export function indexBucketPath(files: IndexFiles, bucket: string): string {
 export const chatPath = (id: string): string => joinVaultPath(INTERNAL_DIRS.chats, `${id}.json`);
 export const trashDir = (): string => INTERNAL_DIRS.trash;
 
+/* Only the vault-root `.claude`: Claude Code reads it from the project root, so a
+   nested `.claude` (inside a module, say) is ordinary user content. */
+const AGENT_CONFIG_DIR = '.claude';
+
+/** Is the path the vault-root `.claude` folder or inside it? Agent config, not knowledge. */
+export function isAgentConfigPath(path: string): boolean {
+  return isInside(AGENT_CONFIG_DIR, path);
+}
+
 /** Liegt der Pfad im ableitbaren Teil des Vaults? */
 export function isInternalPath(path: string): boolean {
   return isInside(VAULT_DIRS.internal, path);

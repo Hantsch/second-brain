@@ -2,7 +2,8 @@
    früheren Kundenprojekt gewachsen und deshalb mit Altlasten.
 
    Absichtliche Befunde für den Pflege-Screen:
-   - [[scim]] ist verwaist: keine andere Seite verlinkt darauf.
+   - [[scim]] ist verwaist: keine andere Seite verlinkt darauf. Sie ist auch `unlisted`
+     (ebenfalls ein Index-Drift-Befund), denn ein Katalogeintrag zählt als Verweis.
    - [[just-in-time-provisionierung]] fehlt im Katalog (`unlisted`).
    - [[oauth2]] verlinkt auf [[device-code-flow]] — die Seite gibt es nicht.
    - [[token-lebensdauer]] und [[altes-token-konzept]] widersprechen sich benannt.

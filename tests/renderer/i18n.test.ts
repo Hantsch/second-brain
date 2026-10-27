@@ -154,9 +154,14 @@ describe('i18n', () => {
       'journal-chat',
       'project-status',
       'gardener-audit',
+      'condense-module',
     ]) {
       expect(deKeys).toContain(`task.${task}.label`);
       expect(deKeys).toContain(`task.${task}.hint`);
+      expect(deKeys).toContain(`settings.fallback.${task}`);
+      expect(enKeys).toContain(`task.${task}.label`);
+      expect(enKeys).toContain(`task.${task}.hint`);
+      expect(enKeys).toContain(`settings.fallback.${task}`);
     }
   });
 

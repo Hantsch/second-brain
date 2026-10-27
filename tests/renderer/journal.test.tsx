@@ -731,18 +731,23 @@ describe('Tagebuch: der Tagestext', () => {
     const field = (await screen.findByLabelText('Tagestext')) as HTMLTextAreaElement;
     await userEvent.clear(field);
 
-    await userEvent.type(field, 'Erste Zeile{Enter}zweite Zeile');
+    field.focus();
+    await userEvent.paste('Erste Zeile');
+    await userEvent.keyboard('{Enter}');
+    await userEvent.paste('zweite Zeile');
     expect(field.value).toBe('Erste Zeile\nzweite Zeile');
     expect(sb.payloadsOf('journal:setDay')).toEqual([]);
 
-    await userEvent.type(field, '{Shift>}{Enter}{/Shift}dritte Zeile');
+    await userEvent.keyboard('{Shift>}{Enter}{/Shift}');
+    await userEvent.paste('dritte Zeile');
     expect(field.value).toBe('Erste Zeile\nzweite Zeile\ndritte Zeile');
     expect(sb.payloadsOf('journal:setDay')).toEqual([]);
 
     /* Ctrl+Enter fällt in jsdom nicht auf einen Zeilenumbruch zurück (kein
        echtes `contenteditable`-Verhalten) — entscheidend ist hier nur, dass
        kein Speichern ausgelöst wird. */
-    await userEvent.type(field, '{Control>}{Enter}{/Control}vierte Zeile');
+    await userEvent.keyboard('{Control>}{Enter}{/Control}');
+    await userEvent.paste('vierte Zeile');
     expect(sb.payloadsOf('journal:setDay')).toEqual([]);
     const draft = field.value;
 
@@ -1017,18 +1022,23 @@ describe('Tagebuch: das Gespräch', () => {
     const { sb } = open();
     const field = (await screen.findByLabelText('Mit dem Coach sprechen')) as HTMLTextAreaElement;
 
-    await userEvent.type(field, 'Erste Zeile{Enter}zweite Zeile');
+    field.focus();
+    await userEvent.paste('Erste Zeile');
+    await userEvent.keyboard('{Enter}');
+    await userEvent.paste('zweite Zeile');
     expect(field.value).toBe('Erste Zeile\nzweite Zeile');
     expect(sb.payloadsOf('journal:append')).toEqual([]);
 
-    await userEvent.type(field, '{Shift>}{Enter}{/Shift}dritte Zeile');
+    await userEvent.keyboard('{Shift>}{Enter}{/Shift}');
+    await userEvent.paste('dritte Zeile');
     expect(field.value).toBe('Erste Zeile\nzweite Zeile\ndritte Zeile');
     expect(sb.payloadsOf('journal:append')).toEqual([]);
 
     /* Ctrl+Enter fällt in jsdom nicht auf einen Zeilenumbruch zurück (kein
        echtes `contenteditable`-Verhalten) — entscheidend ist hier nur, dass
        kein Ablegen ausgelöst wird, nicht die genaue Umbruchstelle. */
-    await userEvent.type(field, '{Control>}{Enter}{/Control}vierte Zeile');
+    await userEvent.keyboard('{Control>}{Enter}{/Control}');
+    await userEvent.paste('vierte Zeile');
     expect(sb.payloadsOf('journal:append')).toEqual([]);
     const finalValue = field.value;
 

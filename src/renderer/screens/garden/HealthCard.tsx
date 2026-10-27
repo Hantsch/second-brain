@@ -26,9 +26,10 @@
 import type { GardenerHiddenFinding, GardenerReport } from '@shared/types';
 import { Button } from '../../atoms/Button';
 import { Card } from '../../atoms/Card';
+import { HandOverGardenerRunButton } from '../../components/AgentHandOverActions';
 import { HealthMeter } from '../../components/HealthMeter';
 import { useLanguage, useT } from '../../i18n';
-import { formatDate, locale, plural } from '../../lib/format';
+import { formatDateTime, plural } from '../../lib/format';
 import { adviceFor } from './advice';
 import { scopeLabel } from './scope';
 
@@ -39,17 +40,6 @@ function hiddenNote(hidden: readonly GardenerHiddenFinding[], t: ReturnType<type
   return hidden.length === 1
     ? t('garden.health.hiddenOne', { dismissed, snoozed })
     : t('garden.health.hidden', { total: hidden.length, dismissed, snoozed });
-}
-
-/** Timestamp in mono: date plus time, without seconds. */
-function stamp(iso: string, language: 'de' | 'en'): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return iso;
-  const time = new Intl.DateTimeFormat(locale(language), {
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(date);
-  return `${formatDate(iso, language)}, ${time}`;
 }
 
 export interface HealthCardProps {
@@ -123,19 +113,25 @@ export function HealthCard({ report, onShowHidden }: HealthCardProps) {
         {!partial ? (
           <>
             <span>{t('garden.health.ranAt')}</span>
-            <span className="sb-mono">{stamp(report.ranAt, language)}</span>
+            <span className="sb-mono">{formatDateTime(report.ranAt, language)}</span>
           </>
         ) : frozenAt === undefined ? (
           <span>{t('garden.health.noComplete')}</span>
         ) : (
           <span className="sb-mono">
-            {t('garden.health.asOf', { when: stamp(frozenAt, language) })}
+            {t('garden.health.asOf', { when: formatDateTime(frozenAt, language) })}
           </span>
         )}
         <span className="sb-ghealth-model">
           {t(report.usedLlm ? 'garden.health.withModel' : 'garden.health.withoutModel')}
         </span>
       </p>
+
+      {/* Main decides whether a run is worth handing over (no audit yet, something to
+          interpret); this card only shows what it was told. */}
+      {report.agentAudit?.offered === true ? (
+        <HandOverGardenerRunButton open={report.agentAudit.open} />
+      ) : null}
 
       {/* 021c, D4: next to the frozen-score stamp above — not instead of it —
           names the part of the vault the last run actually looked at, so the

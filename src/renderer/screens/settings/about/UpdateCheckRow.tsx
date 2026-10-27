@@ -11,9 +11,15 @@ import { useCheckForUpdates } from '../../../lib/queries/update';
 
 type Translate = ReturnType<typeof useT>;
 
-function outcomeLine(state: UpdateState, t: Translate): string {
+function outcomeLine(state: UpdateState, callFailed: boolean, t: Translate): string {
   if (!state.supported) {
     return t(`settings.about.updates.status.disabled.${state.disabledReason ?? 'unpackaged'}`);
+  }
+  // A rejected call never reaches main's state, so the state alone would stay silent.
+  if (callFailed && state.status !== 'checking') {
+    return t('settings.about.updates.status.error', {
+      reason: t('settings.about.updates.error.unknown'),
+    });
   }
   switch (state.status) {
     case 'checking':
@@ -43,7 +49,7 @@ export function UpdateCheckRow({ state }: { state: UpdateState }) {
     <>
       <div data-testid="about-update-outcome">
         <p role="status" data-testid="update-status">
-          {outcomeLine(state, t)}
+          {outcomeLine(state, check.isError, t)}
         </p>
         {state.status === 'available' && state.update ? (
           <p className="sb-mono" data-testid="update-version">

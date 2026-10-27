@@ -1,9 +1,10 @@
 /**
- * The two condensable levels (story 045): an area or a project. The five
- * `condense:*` channels take this discriminator instead of each level
- * duplicating its own set of channels.
+ * The condensable levels: an area, a project or a module. The five `condense:*`
+ * channels take this discriminator instead of each level duplicating its own set
+ * of channels. A module's artifact is its `overview.md`, which is condensed in
+ * place and therefore cannot be deleted through `condense:delete`.
  */
-export type CondenseUnit = 'area' | 'project';
+export type CondenseUnit = 'area' | 'project' | 'module';
 
 /**
  * The wire shape of a condensation proposal (story 038, D4).
@@ -29,4 +30,15 @@ export interface CondenseProposal {
   sources: string[];
   /** A human-readable truncation notice, or absent when nothing was left out. */
   partialInputs?: string;
+}
+
+export type DiffRowKind = 'context' | 'added' | 'removed';
+
+export interface DiffRow {
+  kind: DiffRowKind;
+  text: string;
+  /** 1-based line number in "before"; present for 'context' and 'removed'. */
+  beforeLine?: number;
+  /** 1-based line number in "after"; present for 'context' and 'added'. */
+  afterLine?: number;
 }

@@ -13,8 +13,17 @@
 
 import type {
   AgentKind,
+  AgentLastRun,
   AgentProject,
+  AgentCliStatus,
+  AgentProtectionState,
   AgentSessionSummary,
+  AgentHandOverResult,
+  AgentJobView,
+  AgentProposalView,
+  AgentSetupApplyRequest,
+  AgentSetupApplyResult,
+  AgentSetupState,
   AppSettings,
   Area,
   AreaNote,
@@ -77,6 +86,7 @@ import type {
   TaskDefinition,
   TaskKind,
   TaskResult,
+  TerminalLaunchResult,
   Todo,
   TranscriptPage,
   VaultDoc,
@@ -775,6 +785,11 @@ export interface IpcRoutes {
     };
     res: IngestJob;
   };
+  /**
+   * Fetch an uncondensed YouTube source without a transcript again, in place. The
+   * replaced files go to the trash first; without a new transcript nothing is written.
+   */
+  'ingest:refetch': { req: { path: string }; res: IngestJob };
   /** Read the persistent state shown by the source detail window. */
   'ingest:detail': { req: { path: string }; res: SourceDetail };
   /** Re-run the YouTube resource check without re-condensing the wiki source. */
@@ -1269,6 +1284,51 @@ export interface IpcRoutes {
    * names the directory, so every session in it shares the link.
    */
   'agents:link': { req: { agent: AgentKind; projectKey: string; project: string }; res: void };
+  /** Is the `claude` CLI on this machine? Only looked up on PATH, never started. */
+  'agent:cliStatus': { req: void; res: AgentCliStatus };
+  /** Which of the agent setup files in the vault are current, outdated, missing or the user's own. */
+  'agent:setupStatus': { req: void; res: AgentSetupState };
+  /** Which of the protection rules in the vault's agent settings are in place; read-only. */
+  'agent:protectionStatus': { req: void; res: AgentProtectionState };
+  /** The newest run report the vault's agent left behind, or why there is none; read-only. */
+  'agent:lastRun': { req: void; res: AgentLastRun };
+  /**
+   * Writes the confirmed setup files. Each entry carries the hash the user saw;
+   * a file changed since then comes back as `conflict`, never overwritten.
+   */
+  'agent:setupApply': { req: AgentSetupApplyRequest; res: AgentSetupApplyResult };
+  /**
+   * Opens a terminal in the vault with plain `claude` started, no first prompt. Refusals are
+   * part of the result, not errors; main does the launch, nothing else.
+   */
+  'agent:launchTerminal': { req: void; res: TerminalLaunchResult };
+  /** The agent's proposals waiting in the vault, valid or not; read-only. */
+  'agent:proposals': { req: void; res: AgentProposalView[] };
+  /** Applies one proposal; only the id travels, target and content are re-read in main. A stale target comes back as `conflict`. */
+  'agent:proposalAccept': {
+    req: { id: string };
+    res: { undo: { via: 'gardener' | 'capture'; token: string } };
+  };
+  /** Archives a proposal unapplied. */
+  'agent:proposalReject': { req: { id: string }; res: void };
+  /** The jobs handed to the agent: open ones first, then finished ones, newest first. */
+  'agent:jobs': { req: void; res: AgentJobView[] };
+  /** Files a condense-source job for a raw source; handing over twice answers `exists` with the open job. */
+  'agent:handOverSource': {
+    req: { rawPath: string; module: string | null };
+    res: AgentHandOverResult;
+  };
+  /** Files a curate-module job for a knowledge module (slug); the help module is refused. */
+  'agent:handOverModule': { req: { module: string }; res: AgentHandOverResult };
+  /** Hands a module's overview condensation to the agent and starts its task; handing over twice answers `exists`. */
+  'agent:handOverCondense': {
+    req: { kind: 'condense-module'; slug: string };
+    res: AgentHandOverResult;
+  };
+  /** Files a gardener-audit job for the stored maintenance run; refused when it has no audit to ask for. */
+  'agent:handOverGardenerRun': { req: void; res: AgentHandOverResult };
+  /** Takes an open job back; a page the agent already wrote stays, a late result books nothing. */
+  'agent:withdrawJob': { req: { id: string }; res: AgentJobView[] };
 
   // ── Settings ──────────────────────────────────────────────────────────────
   'settings:get': { req: void; res: SettingsSnapshot };
@@ -1421,6 +1481,7 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'ingest:cancel',
   'ingest:retry',
   'ingest:condense',
+  'ingest:refetch',
   'ingest:detail',
   'ingest:analyzeResources',
   'ingest:attachFiles',
@@ -1493,6 +1554,21 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'agents:sessions',
   'agents:transcript',
   'agents:link',
+  'agent:cliStatus',
+  'agent:setupStatus',
+  'agent:protectionStatus',
+  'agent:lastRun',
+  'agent:setupApply',
+  'agent:launchTerminal',
+  'agent:proposals',
+  'agent:proposalAccept',
+  'agent:proposalReject',
+  'agent:jobs',
+  'agent:handOverSource',
+  'agent:handOverModule',
+  'agent:handOverCondense',
+  'agent:handOverGardenerRun',
+  'agent:withdrawJob',
   'settings:get',
   'settings:setApp',
   'settings:setVault',
@@ -1595,6 +1671,8 @@ export interface IpcEvents {
   'event:work-tasks': WorkTask[];
   /** Every change of the update state, including the end of a check. */
   'event:update': UpdateState;
+  /** The agent's jobs, full list, after a settle changed any of them. */
+  'event:agent-jobs': AgentJobView[];
 }
 
 export type IpcEventName = keyof IpcEvents;
@@ -1613,6 +1691,7 @@ export const IPC_EVENTS: readonly IpcEventName[] = [
   'event:close-requested',
   'event:work-tasks',
   'event:update',
+  'event:agent-jobs',
 ];
 
 /** Errors that come back over IPC carry this shape. */

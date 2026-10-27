@@ -174,20 +174,21 @@ describe('AppShell', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Dashboard' })).toBeTruthy();
   });
 
-  it('führt in neun Screens, jeder mit aria-label', async () => {
+  it('führt in zehn Screens, jeder mit aria-label', async () => {
     renderApp();
     const nav = await screen.findByRole('navigation', { name: 'Hauptnavigation' });
     const links = nav.querySelectorAll('a');
     expect(links.length).toBe(SCREENS.length);
-    /* Neun Screens: sieben durchgehend nummeriert von 1 bis 7, keine Lücke —
+    /* Zehn Screens: sieben durchgehend nummeriert von 1 bis 7, keine Lücke —
        Inbox ist kein Rail-Eintrag mehr (die Inbox wird ein Filter auf
        „Notizen"), „Quellen" ist ein Tab unter „Wissen", Erfassen und Fragen
        sind Overlays, „Agents" ist seit story 008 kein Rail-Eintrag mehr: die
-       Sitzungen hängen unter „Projekte". Dazu „Aufgaben" (072, D1) und
-       „Chats" (der Verlauf der Fragen, direkt unter dem Dashboard) ohne
-       eigene Ziffer — erreichbar per Klick und per Fokus, wie jeder Eintrag
-       ohne Taste. */
-    expect(SCREENS.length).toBe(9);
+       Sitzungen hängen unter „Projekte". Dazu „Aufgaben" (072, D1),
+       „Agent" (Claude Code im Vault, direkt unter „Aufgaben") und „Chats"
+       (der Verlauf der Fragen, direkt unter dem Dashboard) ohne eigene
+       Ziffer — erreichbar per Klick und per Fokus, wie jeder Eintrag ohne
+       Taste. */
+    expect(SCREENS.length).toBe(10);
     for (const link of links) {
       expect(link.getAttribute('aria-label')?.length ?? 0).toBeGreaterThan(0);
     }
@@ -204,7 +205,7 @@ describe('AppShell', () => {
     const nav = await screen.findByRole('navigation', { name: 'Hauptnavigation' });
 
     for (const definition of SCREENS.filter(
-      (screen) => screen.id !== 'tasks' && screen.id !== 'chats',
+      (screen) => screen.id !== 'tasks' && screen.id !== 'chats' && screen.id !== 'agent',
     )) {
       const link = within(nav).getByRole('link', { name: t(definition.labelKey) });
       expect(definition.hotkey, `Rail-Eintrag ${definition.id}`).toBeDefined();
@@ -217,6 +218,10 @@ describe('AppShell', () => {
     const tasksLink = within(nav).getByRole('link', { name: t('rail.tasks') });
     expect(tasksLink.getAttribute('aria-keyshortcuts')).toBeNull();
     expect(tasksLink.querySelector('.sb-rail-key')).toBeNull();
+
+    const agentLink = within(nav).getByRole('link', { name: t('rail.agent') });
+    expect(agentLink.getAttribute('aria-keyshortcuts')).toBeNull();
+    expect(agentLink.querySelector('.sb-rail-key')).toBeNull();
   });
 
   /* 009, D7: die Zahl offener Tage kommt ausschließlich aus `journal:list` +

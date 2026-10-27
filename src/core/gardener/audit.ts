@@ -152,41 +152,86 @@ interface RawContradiction {
   note: string;
 }
 
-function readContradictions(value: unknown): RawContradiction[] {
-  if (!Array.isArray(value)) return [];
+/** One thing an answer got wrong. `ref` names the offending path, id or list position. */
+export interface AuditViolation {
+  ref: string;
+  reason: string;
+}
+
+/** The cleaned parts of an answer, plus everything the check had to drop. */
+export interface AuditAnswerCheck {
+  contradictions: GardenerFinding[];
+  confirmed: string[];
+  rejected: string[];
+  advice: string[];
+  violations: AuditViolation[];
+}
+
+/** An absent field is an empty list; a present field of another shape is a violation. */
+function listOf(value: unknown, field: string, violations: AuditViolation[]): unknown[] {
+  if (value === undefined || value === null) return [];
+  if (Array.isArray(value)) return value;
+  violations.push({ ref: field, reason: 'is not a list' });
+  return [];
+}
+
+function readContradictions(value: unknown, violations: AuditViolation[]): RawContradiction[] {
   const result: RawContradiction[] = [];
-  for (const entry of value) {
-    if (entry === null || typeof entry !== 'object') continue;
-    const record = entry as Record<string, unknown>;
+  listOf(value, 'contradictions', violations).forEach((entry, position) => {
+    const record =
+      entry !== null && typeof entry === 'object' ? (entry as Record<string, unknown>) : {};
     const pathA = typeof record['pathA'] === 'string' ? record['pathA'].trim() : '';
     const pathB = typeof record['pathB'] === 'string' ? record['pathB'].trim() : '';
     const note = typeof record['note'] === 'string' ? collapse(record['note']) : '';
-    if (pathA.length === 0 || pathB.length === 0 || note.length === 0) continue;
+    if (pathA.length === 0 || pathB.length === 0 || note.length === 0) {
+      violations.push({
+        ref: `contradictions[${position}]`,
+        reason: 'needs pathA, pathB and a note',
+      });
+      return;
+    }
     result.push({ pathA, pathB, note: note.slice(0, MAX_NOTE_CHARS) });
-  }
+  });
   return result;
 }
 
-function readIds(value: unknown, allowed: ReadonlySet<string>): string[] {
-  if (!Array.isArray(value)) return [];
+function readIds(
+  value: unknown,
+  field: string,
+  allowed: ReadonlySet<string>,
+  violations: AuditViolation[],
+): string[] {
   const ids: string[] = [];
-  for (const entry of value) {
-    if (typeof entry !== 'string') continue;
+  listOf(value, field, violations).forEach((entry, position) => {
+    if (typeof entry !== 'string') {
+      violations.push({ ref: `${field}[${position}]`, reason: 'is not an id' });
+      return;
+    }
     const id = entry.trim();
-    if (allowed.has(id) && !ids.includes(id)) ids.push(id);
-  }
+    if (!allowed.has(id)) {
+      violations.push({ ref: id, reason: 'is not a candidate of this run' });
+    } else if (!ids.includes(id)) {
+      ids.push(id);
+    }
+  });
   return ids;
 }
 
-function readAdvice(value: unknown): string[] {
-  if (!Array.isArray(value)) return [];
+function readAdvice(value: unknown, violations: AuditViolation[]): string[] {
   const advice: string[] = [];
-  for (const entry of value) {
-    if (typeof entry !== 'string') continue;
+  listOf(value, 'advice', violations).forEach((entry, position) => {
+    if (typeof entry !== 'string') {
+      violations.push({ ref: `advice[${position}]`, reason: 'is not text' });
+      return;
+    }
     const text = collapse(entry).slice(0, MAX_ADVICE_CHARS);
-    if (text.length > 0 && !advice.includes(text)) advice.push(text);
-    if (advice.length >= MAX_ADVICE) break;
-  }
+    if (text.length === 0 || advice.includes(text)) return;
+    if (advice.length >= MAX_ADVICE) {
+      violations.push({ ref: `advice[${position}]`, reason: `exceeds ${MAX_ADVICE} sentences` });
+      return;
+    }
+    advice.push(text);
+  });
   return advice;
 }
 
@@ -198,18 +243,26 @@ function toFinding(
   ctx: GardenerContext,
   raw: RawContradiction,
   pages: ReadonlyMap<string, WikiPage>,
-): GardenerFinding | null {
+): { finding: GardenerFinding } | { violation: AuditViolation } {
   const first = pages.get(raw.pathA);
   const second = pages.get(raw.pathB);
-  if (first === undefined || second === undefined || first.path === second.path) return null;
+  const notAPage = (ref: string) => ({
+    violation: { ref, reason: 'is not a wiki page in the index' },
+  });
+  if (first === undefined) return notAPage(raw.pathA);
+  if (second === undefined) return notAPage(raw.pathB);
+  if (first.path === second.path) {
+    return { violation: { ref: first.path, reason: 'is named as both sides of a contradiction' } };
+  }
   const [a, b] = first.path <= second.path ? [first, second] : [second, first];
   const { byPath } = ctx.index.index();
   const docA = byPath.get(a.path);
   const docB = byPath.get(b.path);
-  if (docA === undefined || docB === undefined) return null;
+  if (docA === undefined) return notAPage(a.path);
+  if (docB === undefined) return notAPage(b.path);
   const named = namesContradiction(docA, b.slug) || namesContradiction(docB, a.slug);
   const text = ctx.labels.contradiction(a.title, b.title, raw.note, named);
-  return buildFinding(ctx, {
+  const finding = buildFinding(ctx, {
     kind: 'contradiction',
     /* Ein benannter Konflikt ist der gewuenschte Endzustand — er wird gezeigt,
        aber er zieht die Gesundheit nicht nach unten. */
@@ -231,6 +284,39 @@ function toFinding(
           'contradiction',
         ),
   });
+  return { finding };
+}
+
+/**
+ * The hard check every audit answer passes, whoever wrote it: contradiction paths must be
+ * two distinct wiki pages of the index, ids must come from the candidate list, advice is
+ * capped. Returns the cleaned parts and what it dropped; the caller picks the policy — the
+ * model path ignores the violations, the agent path fails on any of them.
+ */
+export function checkAuditAnswer(
+  ctx: GardenerContext,
+  answer: Record<string, unknown>,
+  candidateIds: readonly string[],
+): AuditAnswerCheck {
+  const violations: AuditViolation[] = [];
+  const allowed = new Set(candidateIds);
+  const known = pagesByPath(ctx);
+  const contradictions: GardenerFinding[] = [];
+  for (const raw of readContradictions(answer['contradictions'], violations)) {
+    const checked = toFinding(ctx, raw, known);
+    if ('violation' in checked) {
+      violations.push(checked.violation);
+    } else if (!contradictions.some((existing) => existing.id === checked.finding.id)) {
+      contradictions.push(checked.finding);
+    }
+  }
+  return {
+    contradictions,
+    confirmed: readIds(answer['confirmed'], 'confirmed', allowed, violations),
+    rejected: readIds(answer['rejected'], 'rejected', allowed, violations),
+    advice: readAdvice(answer['advice'], violations),
+    violations,
+  };
 }
 
 /**
@@ -275,22 +361,14 @@ export async function auditFindings(
     });
 
     const parsed = parseJsonLoose<Record<string, unknown>>(result.text);
-    const allowed = new Set(candidateIds);
-    const known = pagesByPath(ctx);
-    const contradictions: GardenerFinding[] = [];
-    for (const raw of readContradictions(parsed['contradictions'])) {
-      const finding = toFinding(ctx, raw, known);
-      if (finding === null) continue;
-      if (contradictions.some((existing) => existing.id === finding.id)) continue;
-      contradictions.push(finding);
-    }
-
+    // Bad entries are dropped silently here; the run stays useful with what is left.
+    const checked = checkAuditAnswer(ctx, parsed, candidateIds);
     return {
       usedLlm: true,
-      contradictions,
-      confirmed: readIds(parsed['confirmed'], allowed),
-      rejected: readIds(parsed['rejected'], allowed),
-      advice: readAdvice(parsed['advice']),
+      contradictions: checked.contradictions,
+      confirmed: checked.confirmed,
+      rejected: checked.rejected,
+      advice: checked.advice,
       model: result.model,
     };
   } catch (error) {

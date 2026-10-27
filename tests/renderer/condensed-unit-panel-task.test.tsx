@@ -20,12 +20,14 @@
  */
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import type { ReactElement } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { IpcChannel, IpcRequest, IpcResponse } from '@shared/ipc';
-import type { CondenseProposal, WorkTask } from '@shared/types';
+import type { AgentJobView, CondenseProposal, WorkTask } from '@shared/types';
 import { AreaCondensedTab } from '@renderer/screens/notes/AreaCondensedTab';
+import { ModuleCondensedTab } from '@renderer/screens/modules/ModuleCondensedTab';
 import type { SbBridge } from '@renderer/lib/bridge';
 import { setLanguage } from '@renderer/i18n';
 import { resetWorkTasksStoreForTests } from '@renderer/lib/tasks-store';
@@ -98,7 +100,11 @@ const ROUTED: Handlers = {
 
 /** Renders the panel with a queue that already holds `tasks` — the state a
     panel mounting after a run was started elsewhere has to read. */
-function renderWithQueue(tasks: WorkTask[], extra: Handlers = {}): Mock {
+function renderWithQueue(
+  tasks: WorkTask[],
+  extra: Handlers = {},
+  element: ReactElement = <AreaCondensedTab area={AREA} />,
+): Mock {
   const sb = installMock({
     'vault:status': () => ({
       root: 'C:/vaults/demo',
@@ -117,9 +123,7 @@ function renderWithQueue(tasks: WorkTask[], extra: Handlers = {}): Mock {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={client}>
-      <MemoryRouter>
-        <AreaCondensedTab area={AREA} />
-      </MemoryRouter>
+      <MemoryRouter>{element}</MemoryRouter>
     </QueryClientProvider>,
   );
   return sb;
@@ -208,5 +212,77 @@ describe('CondensedUnitPanel liest seinen Lauf aus der Warteschlange (073, D5)',
     expect(sb.calls.some((entry) => entry.channel === 'condense:run')).toBe(false);
     expect(sb.calls.some((entry) => entry.channel === 'condense:accept')).toBe(false);
     expect(sb.calls.filter((entry) => entry.channel === 'tasks:result').length).toBe(1);
+  });
+
+  it('zeigt eine Verdichtung beim Agenten ohne Spinner und ohne laufende Verdichtung', async () => {
+    const MODULE = { slug: 'second-brain-methodik', title: 'Second-Brain-Methodik' };
+    const sb = renderWithQueue(
+      [
+        {
+          ...BASE_TASK,
+          lane: 'free',
+          subject: { label: MODULE.title, ref: `module:${MODULE.slug}` },
+        },
+      ],
+      {
+        'llm:routing': () => ({
+          tasks: { 'condense-module': { providerId: 'local', model: 'qwen' } },
+          defaults: {},
+        }),
+      },
+      <ModuleCondensedTab module={MODULE} />,
+    );
+
+    expect(
+      await screen.findByText('Die Verdichtung dieses Moduls liegt beim Agenten.'),
+    ).toBeTruthy();
+    expect(screen.queryByText('Verdichtung läuft')).toBeNull();
+    expect(
+      (screen.getByRole('button', { name: 'Dieses Modul verdichten' }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
+    expect(
+      (screen.getByTestId('hand-condense-second-brain-methodik') as HTMLButtonElement).disabled,
+    ).toBe(true);
+    expect(sb.calls.some((entry) => entry.channel === 'condense:run')).toBe(false);
+  });
+
+  it('zeigt eine Verdichtung beim Agenten auch ohne Task dieser Sitzung, solange ihr Job offen ist', async () => {
+    const MODULE = { slug: 'second-brain-methodik', title: 'Second-Brain-Methodik' };
+    const job: AgentJobView = {
+      id: 'condense-module-1',
+      kind: 'condense-module',
+      subject: MODULE.slug,
+      state: 'with-agent',
+      createdAt: '2026-08-10T09:00:00.000Z',
+      label: MODULE.title,
+      module: MODULE.slug,
+      reason: null,
+      finishedAt: null,
+    };
+    const sb = renderWithQueue(
+      [],
+      {
+        'llm:routing': () => ({
+          tasks: { 'condense-module': { providerId: 'local', model: 'qwen' } },
+          defaults: {},
+        }),
+        'agent:jobs': () => [job],
+      },
+      <ModuleCondensedTab module={MODULE} />,
+    );
+
+    expect(
+      await screen.findByText('Die Verdichtung dieses Moduls liegt beim Agenten.'),
+    ).toBeTruthy();
+    expect(screen.queryByText('Verdichtung läuft')).toBeNull();
+    expect(
+      (screen.getByRole('button', { name: 'Dieses Modul verdichten' }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
+    expect(
+      (screen.getByTestId('hand-condense-second-brain-methodik') as HTMLButtonElement).disabled,
+    ).toBe(true);
+    expect(sb.calls.some((entry) => entry.channel === 'condense:run')).toBe(false);
   });
 });

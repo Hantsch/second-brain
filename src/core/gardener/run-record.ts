@@ -74,6 +74,20 @@ export interface StoredRun {
    * a different statement: it looked for nothing.
    */
   checkedKinds?: GardenerFindingKind[];
+  /**
+   * Who interpreted this run, and when: the model during the run, or the agent
+   * booked in afterwards (story 091). `null` is a run written by a version that
+   * knows the field and has no audit: `usedLlm` alone cannot say so, because the
+   * loose-ends stage sets it too. Absent is a run stored before the field
+   * existed, where `usedLlm` stands in (`hasAudit`).
+   */
+  audit?: RunAudit | null;
+}
+
+/** The interpretation a stored run carries. */
+export interface RunAudit {
+  by: 'model' | 'agent';
+  at: string;
 }
 
 /** A resolved finding with the token used to undo its fix. */

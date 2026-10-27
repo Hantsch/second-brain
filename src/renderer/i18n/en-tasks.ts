@@ -12,6 +12,7 @@ export const enTasks = {
   'tasks.group.running': 'Running',
   'tasks.group.waiting': 'Waiting',
   'tasks.group.finished': 'Finished',
+  'tasks.group.agent': 'With the agent',
 
   'tasks.kind.condense': 'Condense',
   'tasks.kind.close-day': 'Close day',
@@ -31,4 +32,15 @@ export const enTasks = {
   'tasks.action.remove': 'Remove',
   'tasks.action.retry': 'Retry',
   'tasks.action.viewResult': 'View result',
+
+  // ── The agent's jobs (story 090) ─────────────────────────────────────────
+  'tasks.agent.kind.condense-source': 'Condense source',
+  'tasks.agent.kind.curate-module': 'Curate module',
+  'tasks.agent.kind.gardener-audit': 'Interpret maintenance run',
+  'tasks.agent.state.skipped': 'Skipped',
+  'tasks.agent.state.withdrawn': 'Withdrawn',
+  'tasks.agent.reason': 'Reason: {reason}',
+  'tasks.agent.label.gardener-audit': 'Maintenance run of {date}',
+  'tasks.agent.curate.done': 'Pages changed: {pages} · proposals written: {proposals}',
+  'tasks.agent.curate.pending': 'Report pending',
 } as const;

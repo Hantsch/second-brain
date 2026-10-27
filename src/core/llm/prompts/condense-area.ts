@@ -24,6 +24,7 @@ import {
   CONDENSE_SOFT_CAP_CHARS,
   CONDENSE_SOFT_CAP_WORDS,
   clamp,
+  condenseSectionSchema,
   documentLanguageRule,
   turns,
 } from './shared';
@@ -60,19 +61,10 @@ export interface CondenseAreaInput {
 }
 
 function sectionSchema(description: string): Record<string, unknown> {
-  return {
-    type: 'object',
-    additionalProperties: false,
-    required: ['text', 'sources'],
-    properties: {
-      text: { type: 'string', description },
-      sources: {
-        type: 'array',
-        items: { type: 'string' },
-        description: 'Teilmenge der mitgeschickten Eingabepfade, aus denen dieser Text stammt.',
-      },
-    },
-  };
+  return condenseSectionSchema(
+    description,
+    'Teilmenge der mitgeschickten Eingabepfade, aus denen dieser Text stammt.',
+  );
 }
 
 /** Erwartete Antwortform. Wird als `schema` mitgeschickt. */

@@ -192,3 +192,42 @@ export function toolResult(at: string, forUuid: string): ClaudeRecord {
 export function bookkeeping(at: string): ClaudeRecord {
   return { type: 'last-prompt', timestamp: at, leafUuid: `u-${at}` };
 }
+
+/** A ~5 MB transcript, built once and shared by every file of `scaleFiles()`. */
+function hugeTranscript(): string {
+  const head = jsonl([
+    prompt('Grosse Sitzung mit viel Werkzeugverkehr', { at: '2026-08-01T08:00:00.000Z' }),
+  ]);
+  const filler = line(
+    assistant('Zwischenschritt mit reichlich Text, damit die Zeile realistisch lang wird.', {
+      at: '2026-08-01T08:30:00.000Z',
+      file: 'c:\\development\\Hantsch\\second-brain\\src\\core\\index\\build.ts',
+    }),
+  );
+  const parts: string[] = [head];
+  let bytes = head.length;
+  while (bytes < 5_000_000) {
+    parts.push(filler);
+    bytes += filler.length + 1;
+  }
+  parts.push(line(assistant('Ende', { at: '2026-08-01T09:00:00.000Z' })));
+  return `${parts.join('\n')}\n`;
+}
+
+/** A real-sized history (`../claude-control/docs/RESEARCH.md` §2 measured 290 files,
+ *  ~247 MB): 29 project folders with three 5 MB files each — 435 MB nobody may load. */
+export function scaleFiles(): { text: string; files: FakeFile[] } {
+  const text = hugeTranscript();
+  const files: FakeFile[] = [];
+  for (let project = 0; project < 29; project += 1) {
+    for (let session = 0; session < 3; session += 1) {
+      files.push({
+        dir: `c--development-projekt-${String(project).padStart(2, '0')}`,
+        name: `s-${session}.jsonl`,
+        text,
+        modified: `2026-08-${String((project % 28) + 1).padStart(2, '0')}T0${session}:00:00.000Z`,
+      });
+    }
+  }
+  return { text, files };
+}

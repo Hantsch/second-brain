@@ -373,3 +373,43 @@ describe('SearchEngine: passages (053)', () => {
     ]);
   });
 });
+
+describe('SearchEngine: evidence passages', () => {
+  const GARDEN = 'notes/garten.md';
+  const COMPOST = 'notes/kompost.md';
+  const WATER = 'notes/wasser.md';
+
+  it('drops a passage that shares only one of four words with the query', () => {
+    const docs = [
+      makeDoc({ path: GARDEN, body: 'Kompost und Erde für das Hochbeet im Garten.' }),
+      makeDoc({ path: COMPOST, body: 'Der Kompost braucht Zeit.' }),
+    ];
+    const hits = SearchEngine.from(docs).searchPassages(
+      { text: 'Kompost Erde Hochbeet Regen' },
+      lookupOf(docs),
+    );
+    expect(hits.map((hit) => hit.path)).toEqual([GARDEN]);
+  });
+
+  it('does not match function words fuzzily', () => {
+    const docs = [makeDoc({ path: WATER, body: 'Die sieben Wasser, die sie sah.' })];
+    expect(
+      SearchEngine.from(docs).searchPassages({ text: 'was sind agents?' }, lookupOf(docs)),
+    ).toEqual([]);
+  });
+
+  it('leaves out excluded files before the cut', () => {
+    const docs = [
+      makeDoc({ path: GARDEN, body: 'Kompost.' }),
+      makeDoc({ path: COMPOST, body: 'Kompost.' }),
+    ];
+    const hits = SearchEngine.from(docs).searchPassages(
+      { text: 'Kompost', limit: 1 },
+      lookupOf(docs),
+      {
+        exclude: (path) => path === GARDEN,
+      },
+    );
+    expect(hits.map((hit) => hit.path)).toEqual([COMPOST]);
+  });
+});

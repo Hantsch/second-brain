@@ -128,6 +128,21 @@ npm run build          # electron-vite build
 LF is this repository's canonical line ending, enforced by `.gitattributes`; `format:check`
 is therefore expected to be green on Windows too, not just Linux/macOS.
 
+The gate holds only tests whose result depends on the code, never on the machine: a green
+`npm run verify` here must mean a green run on GitHub.
+
+- **No wall-clock assertions in `npm test`** (ESLint enforces it). The GitHub runner is ~5x
+  slower than the dev machine. Prove cost deterministically — bytes written, files read, calls
+  (`tests/core/index/counting-store.ts`). A speed budget goes into a `*.perf.test.ts` file:
+  `npm run test:perf` and the advisory `perf` workflow run them, and an overrun is a warning
+  (`tests/helpers/perf.ts`), never a blocked release.
+- **Timeouts catch hangs, not slowness.** They are set centrally (`vitest.config.ts`,
+  `tests/setup.ts`); never tighten one to express a speed expectation.
+- **One Node version**: `.nvmrc` (the Node Electron ships). Every workflow reads it; vitest warns
+  when the local major differs.
+- **Red on CI, green here** means a test depends on its environment (clock, zone, path, speed,
+  order). Fix that dependency; never raise a number until it passes.
+
 Plus, for every UI change:
 
 ```

@@ -23,6 +23,7 @@
 @import './styles/app/sources.css';
 @import './styles/app/garden.css';
 @import './styles/app/tasks.css';
+@import './styles/app/agent.css';
 @import './styles/app/agents.css';
 @import './styles/app/settings.css';
 @import './styles/app/overlays.css';
@@ -58,6 +59,24 @@
   min-height: var(--sb-hit);
   align-items: center;
   justify-content: center;
+}
+
+/* The vendored dialog has no height bound, so a long body (the agent setup plan
+   lists 22 files) pushes the footer past the window edge and out of reach. Bound
+   the dialog to the scrim's content box and let only the body scroll, so header
+   and footer stay visible. Overridden here, like `.gs-dialog-x` above. */
+.gs-dialog {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 2 * var(--space-6));
+}
+.gs-dialog-head,
+.gs-dialog-foot {
+  flex-shrink: 0;
+}
+.gs-dialog-body {
+  min-height: 0;
+  overflow-y: auto;
 }
 
 html,

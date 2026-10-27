@@ -66,6 +66,7 @@ describe('createBatcher', () => {
     const flushTimes: number[] = [];
     const batcher = createBatcher(
       (paths) => {
+        // eslint-disable-next-line no-restricted-syntax -- fake timers: Date.now() is the test's own clock here
         flushTimes.push(Date.now() - start);
         calls.push(paths);
       },
@@ -117,6 +118,11 @@ describe('isIgnoredPath', () => {
     expect(isIgnoredPath('C:/vault/node_modules/x/index.js')).toBe(true);
     expect(isIgnoredPath('C:\\vault\\.git\\HEAD')).toBe(true);
   });
+
+  it('meldet Vorschlaege des Agenten, damit sie ohne Neustart erscheinen', () => {
+    expect(isIgnoredPath('.secondbrain/agent/proposals/20261027-a.md')).toBe(false);
+    expect(isIgnoredPath('.secondbrain/agent/resolved/20261027-a.md')).toBe(false);
+  });
 });
 
 describe('watchVault', () => {
@@ -149,7 +155,7 @@ describe('watchVault', () => {
         expect(batches.length).toBeGreaterThan(0);
         expect(batches.flat()).toContain('inbox/zwei.md');
       },
-      { timeout: 8000, interval: 40 },
+      { interval: 40 },
     );
 
     const seen = batches.flat();
@@ -164,7 +170,7 @@ describe('watchVault', () => {
     await writeFile(join(root, 'inbox', 'vier.md'), 'vier\n', 'utf8');
     await new Promise((resolve) => setTimeout(resolve, 200));
     expect(batches.length).toBe(countAfterDispose);
-  }, 15000);
+  });
 
   it('reports a file written in chunks only once it is complete', async () => {
     const root = await mkdtemp(join(tmpdir(), 'sb-watch-'));
@@ -200,7 +206,7 @@ describe('watchVault', () => {
       () => {
         expect(reportsForFile.length).toBeGreaterThan(0);
       },
-      { timeout: 8000, interval: 40 },
+      { interval: 40 },
     );
 
     expect(reportsForFile).toHaveLength(1);
@@ -208,10 +214,10 @@ describe('watchVault', () => {
       () => {
         expect(contentsWhenReported).toHaveLength(1);
       },
-      { timeout: 2000, interval: 20 },
+      { interval: 20 },
     );
     expect(contentsWhenReported[0]).toBe(chunks.join(''));
 
     await watcher.dispose();
-  }, 15000);
+  });
 });

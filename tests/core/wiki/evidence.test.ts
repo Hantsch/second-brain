@@ -10,8 +10,8 @@ import { ALL_DOC_TYPES } from '@shared/types/vault';
 import type { DocType } from '@shared/types/vault';
 
 describe('EVIDENCE_EXCLUDED_TYPES', () => {
-  it('contains exactly condensed', () => {
-    expect(EVIDENCE_EXCLUDED_TYPES).toEqual(['condensed']);
+  it('contains exactly condensed and overview', () => {
+    expect(EVIDENCE_EXCLUDED_TYPES).toEqual(['condensed', 'overview']);
   });
 });
 
@@ -62,7 +62,7 @@ describe('evidenceTypesFor', () => {
     expect(isEvidenceExcluded('source')).toBe(false);
     expect(isEvidenceExcluded('entity')).toBe(false);
     expect(isEvidenceExcluded('concept')).toBe(false);
-    expect(isEvidenceExcluded('overview')).toBe(false);
+    expect(isEvidenceExcluded('overview')).toBe(true);
     expect(isEvidenceExcluded('raw')).toBe(false);
 
     const result = evidenceTypesFor(ALL_DOC_TYPES);
@@ -75,8 +75,14 @@ describe('evidenceTypesFor', () => {
       'source',
       'entity',
       'concept',
-      'overview',
       'raw',
     ]);
+  });
+
+  it('a module overview is never offered as evidence', () => {
+    // The overview is a condensed digest of its module's pages; the pages are the evidence.
+    expect(evidenceTypesFor(undefined)).not.toContain('overview');
+    expect(evidenceTypesFor(['overview'])).toEqual([]);
+    expect(evidenceTypesFor(['concept', 'overview', 'source'])).toEqual(['concept', 'source']);
   });
 });

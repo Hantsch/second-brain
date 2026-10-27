@@ -25,7 +25,7 @@ import {
   writeDump,
 } from '@core/capture';
 import { dumpFromDoc } from '@core/index';
-import type { DumpItem, FilingProposal, Project } from '@shared/types';
+import { isAgentRoute, type DumpItem, type FilingProposal, type Project } from '@shared/types';
 import type { HandlerMap } from './registry';
 import { defineHandlers, fail } from './registry';
 import { captureIndex, captureStore } from './capture-deps';
@@ -90,11 +90,12 @@ class ProposalCache {
     const index = captureIndex(services);
     const now = new Date();
     const docLanguage = services.settings.vault()?.languages.documents ?? 'de';
+    const gateway = createGateway(services);
     const work = classifyDump(
       {
         store,
         index,
-        gateway: createGateway(services),
+        gateway,
         docLanguage,
         now,
       },
@@ -104,7 +105,10 @@ class ProposalCache {
     this.pending.set(path, work);
     try {
       const proposal = await work;
-      this.remember(path, doc.hash, proposal);
+      /* An agent route answers later: a heuristic stand-in must not hide its result
+         from the next request for the same unchanged dump. */
+      const awaitsAgent = proposal.heuristic && isAgentRoute(gateway.routeFor('classify-dump'));
+      if (!awaitsAgent) this.remember(path, doc.hash, proposal);
       return proposal;
     } finally {
       this.pending.delete(path);

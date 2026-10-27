@@ -175,7 +175,6 @@ export const identityCatalog = `# Katalog — Identitätsmanagement
 ## Entitäten
 
 - [[oauth2]] — Das Protokoll, auf dem alles aufsetzt
-- [[scim]] — Schnittstelle für den Nutzerabgleich, bisher unbenutzt
 
 ## Begriffe
 

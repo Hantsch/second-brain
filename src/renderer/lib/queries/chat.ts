@@ -12,6 +12,7 @@ import type { QueryClient, UseMutationResult, UseQueryResult } from '@tanstack/r
 import type { AskAnswer, IpcRequest } from '@shared/ipc';
 import type { ChatThread, WriteResult } from '@shared/types';
 import { api } from '../api';
+import { forgetThread, trackAnswer } from '../chat-session';
 import { clearStream } from '../llm-stream';
 import { qk } from './keys';
 import { useVaultReady } from './data';
@@ -60,8 +61,16 @@ export function useChatMutations(): ChatMutations {
 
   return {
     /* The question exists as a file immediately — that's why the list
-       refetches right away instead of waiting for the end of the stream. */
-    ask: useMutation({ mutationFn: api.chat.ask, onSuccess: () => refreshThreads(client) }),
+       refetches right away instead of waiting for the end of the stream.
+       Tracking happens here rather than in the caller's `mutate` callbacks:
+       these run even when the panel that asked has been left meanwhile. */
+    ask: useMutation({
+      mutationFn: api.chat.ask,
+      onSuccess: (answer) => {
+        trackAnswer(answer);
+        refreshThreads(client);
+      },
+    }),
 
     abort: useMutation({ mutationFn: api.chat.abort }),
 
@@ -69,6 +78,7 @@ export function useChatMutations(): ChatMutations {
       mutationFn: api.chat.remove,
       onSuccess: (_result, id) => {
         clearStream(id);
+        forgetThread(id);
         void client.removeQueries({ queryKey: qk.chat.thread(id) });
         refreshThreads(client);
       },

@@ -18,6 +18,7 @@ import type {
 } from '@shared/types';
 import type { SbBridge } from './bridge';
 import { encodeIpcError } from './ipc-error';
+import { agentSetupNotInstalled } from './mock-agent-setup';
 import * as fx from './mock-fixtures';
 import * as st from './mock-settings';
 
@@ -591,6 +592,14 @@ const RESPONSES: MockResponses = {
     stage: 'queued',
     progress: 0,
   }),
+  'ingest:refetch': ({ path }) => ({
+    ...fx.ingestJob,
+    rawPath: path,
+    module: null,
+    refetch: true,
+    stage: 'queued',
+    progress: 0,
+  }),
   'ingest:detail': () => ({ source: rawSource, resourceReport: null, attachments: [] }),
   'ingest:analyzeResources': () => ({
     source: rawSource,
@@ -889,6 +898,75 @@ const RESPONSES: MockResponses = {
   'agents:sessions': () => [],
   'agents:transcript': () => ({ entries: [], nextCursor: null, totalKnown: true }),
   'agents:link': () => undefined,
+  'agent:cliStatus': () => ({ state: 'absent' }),
+  'agent:setupStatus': () => agentSetupNotInstalled,
+  'agent:protectionStatus': () => ({ state: 'none' }),
+  'agent:lastRun': () => ({ state: 'none' }),
+  'agent:setupApply': ({ confirmed }) => ({
+    results: confirmed.map(({ path }) => ({ path, outcome: 'written' as const })),
+  }),
+  'agent:launchTerminal': () => ({ ok: false, reason: 'cli-absent' }),
+  'agent:proposals': () => [],
+  'agent:proposalAccept': () => ({ undo: { via: 'gardener' as const, token: 'mock-undo-token' } }),
+  'agent:proposalReject': () => undefined,
+  'agent:jobs': () => [],
+  'agent:handOverSource': ({ rawPath, module }) => ({
+    outcome: 'filed' as const,
+    job: {
+      id: 'condense-source-mock',
+      kind: 'condense-source' as const,
+      subject: rawPath,
+      label: rawPath,
+      module,
+      state: 'with-agent' as const,
+      reason: null,
+      createdAt: new Date(0).toISOString(),
+      finishedAt: null,
+    },
+  }),
+  'agent:handOverCondense': ({ slug }) => ({
+    outcome: 'filed' as const,
+    job: {
+      id: 'condense-module-mock',
+      kind: 'condense-module' as const,
+      subject: slug,
+      label: slug,
+      module: slug,
+      state: 'with-agent' as const,
+      reason: null,
+      createdAt: new Date(0).toISOString(),
+      finishedAt: null,
+    },
+  }),
+  'agent:handOverModule': ({ module }) => ({
+    outcome: 'filed' as const,
+    job: {
+      id: 'curate-module-mock',
+      kind: 'curate-module' as const,
+      subject: module,
+      label: module,
+      module,
+      state: 'with-agent' as const,
+      reason: null,
+      createdAt: new Date(0).toISOString(),
+      finishedAt: null,
+    },
+  }),
+  'agent:handOverGardenerRun': () => ({
+    outcome: 'filed' as const,
+    job: {
+      id: 'gardener-audit-mock',
+      kind: 'gardener-audit' as const,
+      subject: new Date(0).toISOString(),
+      label: new Date(0).toISOString(),
+      module: null,
+      state: 'with-agent' as const,
+      reason: null,
+      createdAt: new Date(0).toISOString(),
+      finishedAt: null,
+    },
+  }),
+  'agent:withdrawJob': () => [],
 
   'settings:get': () => st.settingsSnapshot,
   'settings:setApp': () => st.settingsSnapshot,

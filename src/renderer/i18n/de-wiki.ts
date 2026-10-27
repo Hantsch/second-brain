@@ -99,6 +99,7 @@ export const deWiki = {
   'modules.tab.graph': 'Graph',
   'modules.tab.sources': 'Quellen',
   'modules.tab.log': 'Protokoll',
+  'modules.tab.condensed': 'Verdichtet',
 
   'modules.category.source': 'Quellen',
   'modules.category.entity': 'Entitäten',
@@ -292,6 +293,14 @@ export const deWiki = {
   'sources.detail.inVideo': 'im Video',
   'sources.detail.inVideoAt': 'im Video bei {time}',
   'sources.detail.descriptionLinks': '{count} Links in der Description',
+  'sources.detail.transcript': 'Transcript',
+  'sources.detail.refetch': 'Erneut abrufen',
+  'sources.detail.refetching': 'Wird abgerufen',
+  'sources.detail.refetchHint':
+    'Beim Aufnehmen kam kein Transcript zurück. „Erneut abrufen“ holt Metadaten und Transcript neu, wenn möglich über yt-dlp. Die bisherigen Dateien wandern vorher in den Papierkorb; kommt wieder kein Transcript, bleibt die Quelle unverändert.',
+  'sources.detail.refetchEmpty': 'Erneut abgerufen: wieder kein Transcript erhalten.',
+  'sources.detail.refetchFailed':
+    'Erneutes Abrufen gescheitert. Details stehen in der Auftragsliste.',
   'sources.detail.attachments': 'Nachgereichte Quellen',
   'sources.detail.upload': 'Dateien hinzufügen',
   'sources.detail.noAttachments': 'Noch keine Datei nachgereicht.',

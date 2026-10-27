@@ -84,6 +84,8 @@ const REASON_TEXT: Record<LlmUnavailable['reason'], string> = {
   'no-key': 'Für den zugeordneten Provider fehlt der Schlüssel',
   unreachable: 'Der zugeordnete Provider war nicht erreichbar',
   error: 'Der Provider hat die Anfrage abgelehnt',
+  'agent-pending': 'Die Aufgabe liegt als Auftrag beim Agenten',
+  'agent-failed': 'Der Agent hat den Auftrag nicht erledigt',
 };
 
 /**

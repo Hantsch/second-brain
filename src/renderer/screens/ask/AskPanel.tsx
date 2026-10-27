@@ -28,11 +28,15 @@
 
    The stream doesn't run over TanStack Query: the chunks land in the buffer from
    `lib/llm-stream.ts`, and only at the end does `lib/events.ts` invalidate the
-   conversation. Then the answer exists as a file — with verified citations. */
+   conversation. Then the answer exists as a file — with verified citations.
+   Which answer of a thread is still running is kept in `lib/chat-session.ts`,
+   not in this panel: leaving the panel mid-answer and opening the thread again
+   shows the answer growing on, not a question without one. */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { ChatMessage, Citation, Scope } from '@shared/types';
+import { useTrackedAnswer } from '../../lib/chat-session';
 import { ChatComposer } from '../../components/ChatComposer';
 import { CitationPanel } from '../../components/CitationPanel';
 import { citationDomId } from '../../components/CitationList';
@@ -51,11 +55,6 @@ import { AnswerFeed } from './AnswerFeed';
 import { Examples } from './Examples';
 import { FileBack } from './FileBack';
 import { ThreadList } from './ThreadList';
-
-interface Pending {
-  threadId: string;
-  messageId: string;
-}
 
 /** Where the panel starts. A seed, not a binding — the user may change all of it. */
 export interface AskPrefill {
@@ -86,18 +85,40 @@ export interface AskPanelControls {
 
 export interface AskPanelProps {
   prefill?: AskPrefill;
+  /** With `onThread`, the open conversation is the embedder's (the chats screen
+      keeps it in the address); `prefill.threadId` is then ignored. */
+  threadId?: string | null;
+  onThread?: (threadId: string | null) => void;
   /** Hands the controls out, so a header outside the panel can drive it. */
   onControls?: (controls: AskPanelControls) => void;
   /** What Escape in the field does. Without it the field is only left (see `ChatComposer`). */
   onEscape?: () => void;
 }
 
-export function AskPanel({ prefill = {}, onControls, onEscape }: AskPanelProps) {
+export function AskPanel({
+  prefill = {},
+  threadId: shownThread = null,
+  onThread,
+  onControls,
+  onEscape,
+}: AskPanelProps) {
   const t = useT();
   const client = useQueryClient();
   const field = useRef<HTMLTextAreaElement>(null);
 
-  const [threadId, setThreadId] = useState<string | null>(prefill.threadId ?? null);
+  const [ownThread, setOwnThread] = useState<string | null>(prefill.threadId ?? null);
+  const threadId = onThread === undefined ? ownThread : shownThread;
+  /* Held in a ref so `newThread` below can stay stable while the embedder's
+     callback changes with every address it writes. */
+  const latestOnThread = useRef(onThread);
+  useEffect(() => {
+    latestOnThread.current = onThread;
+  });
+  const setThreadId = useCallback((id: string | null): void => {
+    const external = latestOnThread.current;
+    if (external === undefined) setOwnThread(id);
+    else external(id);
+  }, []);
   /* A question coming from elsewhere (dashboard tile: `#/ask?q=…`) is only the
      field's initial value — nothing more. It gets submitted here, by the user:
      a URL that triggers a model call by itself would be an action without a handle. */
@@ -106,7 +127,6 @@ export function AskPanel({ prefill = {}, onControls, onEscape }: AskPanelProps) 
   const [project, setProject] = useState<string | null>(prefill.project ?? null);
   const [scope, setScope] = useState<Scope | null>(prefill.scope ?? null);
   const [search, setSearch] = useState('');
-  const [pending, setPending] = useState<Pending | null>(null);
   const [active, setActive] = useState<{ messageId: string; index: number } | null>(null);
   const [panel, setPanel] = useState<{ citation: Citation; index: number } | null>(null);
   const [fileBackFor, setFileBackFor] = useState<ChatMessage | null>(null);
@@ -117,6 +137,7 @@ export function AskPanel({ prefill = {}, onControls, onEscape }: AskPanelProps) 
   const projects = useProjects();
   const routed = useTaskRouted('query-answer');
   const mutations = useChatMutations();
+  const pending = useTrackedAnswer(threadId);
   const stream = useLlmStream(pending?.messageId ?? null);
 
   const messages = thread.data?.messages ?? [];
@@ -147,7 +168,6 @@ export function AskPanel({ prefill = {}, onControls, onEscape }: AskPanelProps) 
         onSuccess: (answer) => {
           setDraft('');
           setThreadId(answer.threadId);
-          setPending(answer);
           setActive(null);
           /* The question already exists as a file — reload so it shows up immediately. */
           void client.invalidateQueries({ queryKey: qk.chat.thread(answer.threadId) });
@@ -184,11 +204,10 @@ export function AskPanel({ prefill = {}, onControls, onEscape }: AskPanelProps) 
      registration below runs once instead of on every render. */
   const newThread = useCallback((): void => {
     setThreadId(null);
-    setPending(null);
     setActive(null);
     setDraft('');
     field.current?.focus();
-  }, []);
+  }, [setThreadId]);
 
   /* `ask` closes over thread, filters and pending state, so it is a different
      function on every render. The controls therefore hand out a stable wrapper
@@ -243,7 +262,6 @@ export function AskPanel({ prefill = {}, onControls, onEscape }: AskPanelProps) 
             onSelect={(id) => {
               setThreadId(id);
               setActive(null);
-              setPending(null);
             }}
             onDelete={remove}
             pending={threads.isPending}

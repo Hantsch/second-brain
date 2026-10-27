@@ -59,7 +59,9 @@ export function ErrorState({
   const cause = llmUnavailableCause(failure);
   const key = cause === null ? failure.code : `${failure.code}.${cause.reason}`;
   const values: Record<string, string> =
-    cause === null ? {} : { task: t(`task.${cause.task}.label`), provider: cause.provider };
+    cause === null
+      ? {}
+      : { task: t(`task.${cause.task}.label`), provider: cause.provider, reason: cause.detail };
   const sentence =
     subject === undefined || subject.length === 0
       ? t(`error.code.${key}`, values)

@@ -8,7 +8,7 @@
    deliverables (D2/D3) are expected to add further `describe` blocks here rather
    than opening new files, so don't assume this is the only guard it will ever hold. */
 
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 
@@ -120,8 +120,33 @@ describe('dependencies are cached — npm cache via setup-node and the electron 
     const setupNodeStep = verifySteps.find((step) => step.uses?.startsWith('actions/setup-node'));
     expect(setupNodeStep, 'no actions/setup-node step found').toBeTruthy();
     expect(setupNodeStep!.with?.cache).toBe('npm');
-    expect(setupNodeStep!.with?.['node-version']).toBe('20.x');
   });
+});
+
+/* Local and CI run the same Node: every workflow reads `.nvmrc`, and vitest warns
+   locally when the running major differs from it. A second, hand-written version
+   in a workflow is how the gate drifted to Node 20 while the machine ran 25. */
+describe('every workflow takes its Node version from .nvmrc', () => {
+  const workflowDir = new URL('../../.github/workflows/', import.meta.url);
+
+  it('.nvmrc names a major version', () => {
+    const pinned = readFileSync(new URL('../../.nvmrc', import.meta.url), 'utf8').trim();
+    expect(pinned).toMatch(/^\d+(\.\d+){0,2}$/);
+  });
+
+  it.each(readdirSync(workflowDir).filter((name) => name.endsWith('.yml')))(
+    '%s sets up Node with node-version-file: .nvmrc and no node-version',
+    (name) => {
+      const workflow = parse(readFileSync(new URL(name, workflowDir), 'utf8')) as Workflow;
+      const setupSteps = Object.values(workflow.jobs ?? {})
+        .flatMap((job) => job.steps ?? [])
+        .filter((step) => step.uses?.startsWith('actions/setup-node'));
+      for (const step of setupSteps) {
+        expect(step.with?.['node-version-file']).toBe('.nvmrc');
+        expect(step.with?.['node-version']).toBeUndefined();
+      }
+    },
+  );
 
   it('a separate actions/cache step keys on package-lock.json', () => {
     const cacheStep = verifySteps.find((step) => step.uses?.startsWith('actions/cache'));
@@ -203,5 +228,37 @@ describe('ui-smoke.yml triggers only on pull_request targeting main', () => {
     expect(Object.keys(triggers)).toEqual(['pull_request']);
     const pullRequestTrigger = triggers.pull_request as { branches?: string[] } | null;
     expect(pullRequestTrigger?.branches).toEqual(['main']);
+  });
+});
+
+/* The perf lane: wall-clock budgets warn, they never block. Its own workflow with
+   continue-on-error, and no gate (verify, release, `npm test`) ever runs it. */
+describe('the perf lane is advisory and outside every gate', () => {
+  const perfWorkflow = parse(
+    readFileSync(new URL('../../.github/workflows/perf.yml', import.meta.url), 'utf8'),
+  ) as Workflow & { jobs?: Record<string, WorkflowJob & { 'continue-on-error'?: boolean }> };
+  const releaseWorkflowRaw = readFileSync(
+    new URL('../../.github/workflows/release.yml', import.meta.url),
+    'utf8',
+  );
+  const scripts = (JSON.parse(packageJsonRaw) as { scripts: Record<string, string> }).scripts;
+
+  it('perf.yml runs npm run test:perf in a continue-on-error job', () => {
+    const jobs = Object.values(perfWorkflow.jobs ?? {});
+    expect(jobs.length).toBeGreaterThan(0);
+    for (const job of jobs) expect(job['continue-on-error']).toBe(true);
+    const steps = jobs.flatMap((job) => job.steps ?? []);
+    expect(steps.some((step) => step.run?.trim() === 'npm run test:perf')).toBe(true);
+  });
+
+  it('neither verify.yml nor release.yml runs the perf lane', () => {
+    expect(verifyWorkflowRaw).not.toMatch(/test:perf/);
+    expect(releaseWorkflowRaw).not.toMatch(/test:perf/);
+  });
+
+  it('npm test and npm run verify leave the perf lane out', () => {
+    expect(scripts['test']).toBe('vitest run');
+    expect(scripts['verify']).not.toMatch(/test:perf/);
+    expect(scripts['test:perf']).toBe('vitest run --config vitest.perf.config.ts');
   });
 });

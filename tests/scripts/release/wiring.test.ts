@@ -28,13 +28,13 @@ describe('release workflow', () => {
     expect(workflow.concurrency).toEqual({ group: 'release', 'cancel-in-progress': false });
   });
 
-  it('runs on Windows only, with full history and Node 20', () => {
+  it('runs on Windows only, with full history and the Node from .nvmrc', () => {
     expect(Object.keys(workflow.jobs)).toEqual(['release']);
     expect(job['runs-on']).toBe('windows-latest');
     const checkout = steps.find((s) => String(s.uses).startsWith('actions/checkout'));
     expect(checkout.with['fetch-depth']).toBe(0);
     const node = steps.find((s) => String(s.uses).startsWith('actions/setup-node'));
-    expect(node.with['node-version']).toBe('20.x');
+    expect(node.with['node-version-file']).toBe('.nvmrc');
   });
 
   it('installs and verifies before releasing, then sets the bot identity', () => {
@@ -47,6 +47,21 @@ describe('release workflow', () => {
       'git config user.email "41898282+github-actions[bot]@users.noreply.github.com"',
     );
     expect(at('scripts/release.mjs')).toBeGreaterThan(at('git config user.name'));
+  });
+
+  it('a failed release run uploads its assets and notes', () => {
+    const upload = steps.find((s) => String(s.uses).startsWith('actions/upload-artifact@v4'));
+    expect(steps.indexOf(upload)).toBeGreaterThan(steps.indexOf(releaseStep));
+    expect(upload.if).toBe('failure()');
+    expect(upload.name).toBe('release-files');
+    expect(upload.with.name).toBe('release-files');
+    expect(String(upload.with.path).split('\n').map((l) => l.trim()).filter(Boolean)).toEqual([
+      'dist/*.exe',
+      'dist/*.blockmap',
+      'dist/latest.yml',
+      'dist/release-notes.md',
+    ]);
+    expect(upload.with['if-no-files-found']).toBe('ignore');
   });
 
   it('maps push to --if-pending and the dispatch inputs to flags, through env vars', () => {
@@ -62,6 +77,18 @@ describe('release workflow', () => {
     expect(releaseStep.env.RELEASE_VERSION_INPUT).toBe('${{ inputs.version }}');
     expect(releaseStep.env.RELEASE_BUMP_INPUT).toBe('${{ inputs.bump }}');
     expect(releaseStep.env.RELEASE_DRY_RUN_INPUT).toBe('${{ inputs.dry_run }}');
+  });
+
+  it('fast-forwards dev to the release commit after releasing, never merging into it', () => {
+    const at = (needle: string) => steps.findIndex((s) => (s.run ?? '').includes(needle));
+    const sync = steps[at('HEAD:dev')];
+    expect(at('HEAD:dev')).toBeGreaterThan(at('scripts/release.mjs'));
+    expect(sync.if).toContain("github.ref_name == 'main'");
+    expect(sync.if).toContain('inputs.dry_run != true');
+    expect(sync.run).toContain('git merge-base --is-ancestor origin/dev HEAD');
+    // The warnings name `git merge origin/main` as advice; only an executed line would be a bug.
+    const lines: string[] = sync.run.split('\n').map((l: string) => l.trim());
+    expect(lines.some((l) => l.startsWith('git merge '))).toBe(false);
   });
 
   it('only passes flags the runner parses', () => {

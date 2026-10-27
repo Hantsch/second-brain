@@ -13,7 +13,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { VAULT_SETTINGS_FILE } from '@shared/types';
+import { AGENT_ROUTE, VAULT_SETTINGS_FILE } from '@shared/types';
 import type { IpcChannel, IpcRequest, IpcResponse } from '@shared/ipc';
 import { createFetchFake, jsonResponse, textResponse } from '../fakes/llm';
 import { createTempVault } from '../helpers/vault';
@@ -310,5 +310,19 @@ describe('LLM-Kanäle im Main', () => {
     await expect(harness.call('llm:providers', undefined)).rejects.toMatchObject({
       code: 'no-vault',
     });
+  });
+
+  it('keeps a route to the agent through a reopen of the vault', async () => {
+    await harness.call('llm:setRoute', { task: 'classify-dump', ref: { ...AGENT_ROUTE } });
+    await harness.services.closeVault();
+
+    const fresh = await createHarness(await mkdtemp(join(tmpdir(), 'sb-userdata-llm-')));
+    try {
+      await fresh.services.openVault(vault.root);
+      const routing = await fresh.call('llm:routing', undefined);
+      expect(routing.tasks['classify-dump']).toEqual(AGENT_ROUTE);
+    } finally {
+      await fresh.services.closeVault();
+    }
   });
 });

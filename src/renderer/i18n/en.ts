@@ -5,9 +5,11 @@
    tests/renderer/i18n.test.ts. Sentence case, no emoji. */
 
 import type { TranslationKey } from './de';
+import { enAgentScreen } from './en-agent-screen';
 import { enAgents } from './en-agents';
 import { enDashboard } from './en-dashboard';
 import { enGarden } from './en-garden';
+import { enGardenProposals } from './en-garden-proposals';
 import { enJournal } from './en-journal';
 import { enJournalCalendar } from './en-journal-calendar';
 import { enNotes } from './en-notes';
@@ -18,6 +20,8 @@ import { enSettings } from './en-settings';
 import { enChats } from './en-chats';
 import { enTasks } from './en-tasks';
 import { enUpdate } from './en-update';
+import { enModulesCondensed } from './en-modules-condensed';
+import { enSourcesAgent } from './en-sources-agent';
 import { enWiki } from './en-wiki';
 
 export const en: Record<TranslationKey, string> = {
@@ -56,6 +60,24 @@ export const en: Record<TranslationKey, string> = {
   'rail.settings': 'Settings',
   'rail.journalOpenDays': 'Journal, {count} open days',
   'rail.tasksRunningAndWaiting': 'Tasks, {count} running or waiting',
+  'rail.gardenProposals': 'Care, {count} waiting proposals',
+  'rail.agent': 'Agent',
+  'rail.agent.refused': 'Claude was not opened.',
+  'rail.agent.settings': 'Agent settings',
+  'rail.agent.opened.windows-terminal': 'Opened in Windows Terminal.',
+  'rail.agent.opened.powershell': 'Opened in PowerShell.',
+  'rail.agent.reason.no-vault': 'No vault is open.',
+  'rail.agent.reason.cli-absent':
+    'Claude Code was not found on this machine, so no terminal is opened.',
+  'rail.agent.reason.cli-unknown':
+    'Whether Claude Code is installed is unknown, so no terminal is opened.',
+  'rail.agent.reason.unsupported-platform':
+    'Opening a terminal from Gaston is only supported on Windows.',
+  'rail.agent.reason.no-terminal': 'No terminal could be started.',
+  'rail.agent.reason.no-terminal.detail': 'No terminal could be started ({code}).',
+  'rail.agent.error': 'The terminal request failed. Nothing was opened.',
+  'rail.agent.reason.setup-missing':
+    'Setup files are missing. Install the agent setup under Settings, Agent first.',
 
   'time.today': 'today',
   'time.yesterday': 'yesterday',
@@ -120,12 +142,20 @@ export const en: Record<TranslationKey, string> = {
     'No API key is stored for {provider}. Enter it under Settings → Models.',
   'error.code.llm-unavailable.provider-disabled':
     'The provider {provider} is switched off. Switch it on under Settings → Models.',
+  'error.code.llm-unavailable.agent-pending':
+    'The task “{task}” is waiting as a job for the agent. Have it run /gaston-jobs, then try again.',
+  'error.code.llm-unavailable.agent-failed':
+    'The agent did not finish the job for “{task}”: “{reason}”',
   'error.about.llm-unavailable.no-route':
     '“{subject}” cannot be processed: no model is assigned to the task “{task}”. Assign one under Settings → Models.',
   'error.about.llm-unavailable.no-key':
     '“{subject}” cannot be processed: no API key is stored for {provider}. Enter it under Settings → Models.',
   'error.about.llm-unavailable.provider-disabled':
     '“{subject}” cannot be processed: the provider {provider} is switched off. Switch it on under Settings → Models.',
+  'error.about.llm-unavailable.agent-pending':
+    '“{subject}” is waiting as a job for the agent. Have it run /gaston-jobs, then try again.',
+  'error.about.llm-unavailable.agent-failed':
+    '“{subject}” cannot be processed: the agent did not finish the job for “{task}”: “{reason}”',
   'error.about.invalid': '“{subject}” does not fit.',
   'error.about.io': '“{subject}” could not be opened — the folder is not writable.',
   'error.about.cancelled': '“{subject}” was cancelled.',
@@ -212,6 +242,9 @@ export const en: Record<TranslationKey, string> = {
   'task.condense-project.label': 'Condense project',
   'task.condense-project.hint':
     "Reads a project's notes, todos and day entries and writes a condensed file. Personal content — a local model is explicitly recommended.",
+  'task.condense-module.label': 'Condense module',
+  'task.condense-module.hint':
+    "Reads a module's wiki pages and writes an overview: what is decided, what is open, and contradictions. Runs on module content, not journal content — a local model is not required.",
 
   /* Notes from ingesting. The core knows no language and sends a code
      (`IngestNoteCode`); the sentence lives here. Every refusal states something about
@@ -235,9 +268,12 @@ export const en: Record<TranslationKey, string> = {
   'ingest.note.no-content': 'There is nothing to condense from this source.',
 
   ...enScreens,
+  ...enAgentScreen,
   ...enAgents,
   ...enDashboard,
   ...enGarden,
+  ...enGardenProposals,
+  ...enSourcesAgent,
   ...enJournal,
   ...enJournalCalendar,
   ...enNotes,
@@ -248,4 +284,5 @@ export const en: Record<TranslationKey, string> = {
   ...enTasks,
   ...enUpdate,
   ...enWiki,
+  ...enModulesCondensed,
 };

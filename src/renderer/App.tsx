@@ -14,6 +14,7 @@ import { backgroundImage } from './lib/customization-assets';
 import { qk } from './lib/queries/keys';
 import type { ShellOverlay } from './lib/shell-overlays';
 import { useShellOverlays } from './lib/shell-overlays';
+import { AgentScreen } from './screens/agent/AgentScreen';
 import { ChatsScreen } from './screens/chats/ChatsScreen';
 import { DashboardScreen } from './screens/dashboard/DashboardScreen';
 import { GardenScreen } from './screens/garden/GardenScreen';
@@ -187,6 +188,7 @@ export function App() {
         <Route path="/sources" element={<KnowledgeRedirect tab="sources" />} />
         {/* Sits directly above maintenance in the rail's system group. */}
         <Route path="/tasks" element={<TasksScreen />} />
+        <Route path="/agent" element={<AgentScreen />} />
         <Route path="/garden" element={<GardenScreen />} />
         <Route path="/agents" element={<AgentsRedirect />} />
         <Route path="/settings" element={<SettingsScreen />} />

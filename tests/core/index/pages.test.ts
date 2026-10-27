@@ -136,6 +136,35 @@ describe('derivePages: Graph', () => {
     expect(counts.has('projects')).toBe(false);
   });
 
+  it('an overview citing a page by path lists it by slug', () => {
+    const docs = [
+      makeDoc({
+        path: 'modules/m/wiki/overview.md',
+        docType: 'overview',
+        frontmatter: {
+          type: 'overview',
+          title: 'M',
+          sources: [
+            'modules/m/wiki/concepts/a.md',
+            'modules/m/wiki/sources/s-2026-07-02-guide.md',
+            's-2026-08-01-paper',
+            'modules/other/wiki/concepts/b.md',
+            'journal/2026/08/2026-08-10.md',
+          ],
+        },
+        body: 'Was entschieden ist.',
+      }),
+    ];
+    const { pages } = derivePages(docs);
+    expect(pages[0]?.sources).toEqual([
+      'a',
+      's-2026-07-02-guide',
+      's-2026-08-01-paper',
+      'modules/other/wiki/concepts/b.md',
+      'journal/2026/08/2026-08-10.md',
+    ]);
+  });
+
   it('nimmt einen Selbstverweis nicht in den Graphen', () => {
     const docs = [
       makeDoc({

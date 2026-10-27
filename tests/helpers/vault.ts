@@ -17,7 +17,7 @@
  * Katalog, unverdichtete Quelle) — siehe `tests/fixtures/index.ts`.
  */
 
-import { mkdir, mkdtemp, readFile, rm, stat, utimes, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, realpath, rm, stat, utimes, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { FsVaultStore, ensureStructure } from '@core/vault';
@@ -51,7 +51,9 @@ export interface TempVault {
 const DAY_MS = 86_400_000;
 
 export async function createTempVault(options: TempVaultOptions = {}): Promise<TempVault> {
-  const root = await mkdtemp(join(tmpdir(), 'sb-vault-'));
+  // realpath löst 8.3-Kurznamen auf (CI-Runner: C:\Users\RUNNER~1\…): PowerShell-Hooks sehen
+  // ihr $PSScriptRoot in Langform, ein Kurzname im Testpfad läge dann „außerhalb“ des Vaults.
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'sb-vault-')));
   const store = new FsVaultStore(root);
   await ensureStructure(store, { name: options.name ?? 'Testvault', now: new Date(NOW_MS) });
 

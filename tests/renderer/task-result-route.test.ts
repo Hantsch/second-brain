@@ -52,9 +52,29 @@ describe('taskResultRoute — condense', () => {
     ).toBe(`/notes?a=${encodeURIComponent('health & fitness')}&tab=condensed`);
   });
 
-  it('is null when the ref names neither area nor project', () => {
+  it('routes a module condensation to the knowledge screen, condensed tab', () => {
     expect(
-      taskResultRoute(task({ kind: 'condense', subject: { label: 'l', ref: 'module:foo' } })),
+      taskResultRoute(
+        task({ kind: 'condense', subject: { label: 'l', ref: 'module:second-brain-methodik' } }),
+      ),
+    ).toBe('/knowledge?m=second-brain-methodik&tab=condensed');
+  });
+
+  it('escapes a module slug the same way', () => {
+    expect(
+      taskResultRoute(task({ kind: 'condense', subject: { label: 'l', ref: 'module:a & b' } })),
+    ).toBe(`/knowledge?m=${encodeURIComponent('a & b')}&tab=condensed`);
+  });
+
+  it('is null when the ref names no condensable unit', () => {
+    expect(
+      taskResultRoute(task({ kind: 'condense', subject: { label: 'l', ref: 'topic:foo' } })),
+    ).toBeNull();
+  });
+
+  it('is null when a module ref carries no slug', () => {
+    expect(
+      taskResultRoute(task({ kind: 'condense', subject: { label: 'l', ref: 'module:' } })),
     ).toBeNull();
   });
 

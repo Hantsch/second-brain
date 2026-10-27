@@ -1,0 +1,214 @@
+/* The templates are the shipped text; docs/agent-setup/ mirrors them byte for byte so the
+ * text can be reviewed (and diffed) without reading TypeScript. */
+
+import { readFileSync } from 'node:fs';
+import { describe, expect, it } from 'vitest';
+import { MAX_ADVICE } from '@core/llm';
+import { SETUP_TEMPLATES } from '@core/agent/setup-templates';
+import { VAULT_CLAUDE_TEMPLATE } from '@core/agent/templates/vault-claude';
+import { parse } from '@core/vault/frontmatter';
+import { PROPOSAL_FIELDS, PROPOSAL_FILING_FIELDS } from '../../../src/shared/types/agent-proposals';
+import { AGENT_DIRS, AGENT_SKILLS } from '../../../src/shared/types/agent-setup';
+
+function mirrorOf(id: string, vaultPath: string): string {
+  const extension = vaultPath.slice(vaultPath.lastIndexOf('.'));
+  return readFileSync(
+    new URL(`../../../docs/agent-setup/${id}${extension}`, import.meta.url),
+    'utf8',
+  );
+}
+
+describe('setup templates', () => {
+  it('every setup template matches its docs mirror', () => {
+    expect(SETUP_TEMPLATES.length).toBeGreaterThan(0);
+    for (const template of SETUP_TEMPLATES) {
+      expect(template.body, template.id).toBe(mirrorOf(template.id, template.path));
+    }
+  });
+
+  // PowerShell 5.1 reads a BOM-less script as ANSI, and the bodies are String.raw literals.
+  it('the hook script templates are ASCII and safe to embed', () => {
+    const scripts = SETUP_TEMPLATES.filter((template) => template.path.endsWith('.ps1'));
+    expect(scripts.length).toBeGreaterThan(0);
+    for (const { id, body } of scripts) {
+      expect(body, id).toMatch(/^[\n\x20-\x7e]+$/);
+      expect(body, id).not.toContain('`');
+      expect(body, id).not.toContain('${');
+    }
+  });
+
+  it('the vault CLAUDE.md names the only direct write target, the log rule, proposals and the protected files', () => {
+    const body = VAULT_CLAUDE_TEMPLATE.body;
+    const expected = [
+      'modules/<slug>/wiki/',
+      'wiki/log.md',
+      AGENT_DIRS.proposals,
+      'wiki/overview.md',
+      'modules/gaston-help/',
+      'journal/',
+      'raw/',
+      '.claude/',
+      ...Object.values(AGENT_SKILLS),
+    ];
+    for (const needle of expected) {
+      expect(body, needle).toContain(needle);
+    }
+
+    // Naming a path is not enough: it has to sit in the sentences that forbid writing it.
+    const [writable = '', rest = ''] = body.split('Not directly writable');
+    const blocked = rest.split('\n## ')[0] ?? '';
+    expect(writable).toMatch(/only direct write target is `modules\/<slug>\/wiki\/`/);
+    expect(writable).not.toContain('wiki/overview.md');
+    expect(writable).not.toContain('modules/gaston-help/');
+    expect(blocked).toMatch(/`wiki\/overview\.md`[^\n]*changes only through a proposal/);
+    expect(blocked).toMatch(/`modules\/gaston-help\/`[^\n]*read-only/);
+    expect(body).toMatch(/Write `raw\/`, `CLAUDE\.md`, `\.claude\/`/);
+    // `runs/` is written by Gaston's hook, so it is not on the agent's list of writable folders.
+    expect(body).toMatch(
+      /except `results\/` and `proposals\/` under\n {2}`\.secondbrain\/agent\/`/,
+    );
+  });
+
+  // The run report is written by Gaston's stop hook; an agent that also writes one would race it.
+  it('no Gaston skill tells the agent to write its own run report', () => {
+    const skills = Object.values(AGENT_SKILLS).map((name) => {
+      const template = SETUP_TEMPLATES.find((candidate) => candidate.id === `skill-${name}`);
+      return { id: `skill-${name}`, body: template?.body ?? '' };
+    });
+    for (const { id, body } of [...skills, VAULT_CLAUDE_TEMPLATE]) {
+      expect(body, id).not.toContain('End the run with one report');
+      expect(body, id).not.toMatch(/report format follows/);
+      // Wrapped list items are one sentence, so continuation lines are joined first.
+      const lines = body.replace(/\n {2,}/g, ' ').split('\n');
+      for (const line of lines.filter((l) => l.includes(AGENT_DIRS.runs))) {
+        expect(line, id).toMatch(/never/i);
+      }
+    }
+    for (const { id, body } of skills) {
+      expect(body, id).toContain(AGENT_DIRS.runs);
+      expect(body, id).toContain("Gaston's hook writes the run report when the turn ends");
+    }
+    expect(VAULT_CLAUDE_TEMPLATE.body).toMatch(
+      /Gaston's hook writes one report per skill run to `runs\/`; the agent\nnever writes there\./,
+    );
+  });
+
+  it('the propose skill describes every field Gaston reads', () => {
+    const template = SETUP_TEMPLATES.find((candidate) => candidate.id === 'skill-gaston-propose');
+    expect(template).toBeDefined();
+    const body = template?.body ?? '';
+    for (const needle of [
+      ...PROPOSAL_FIELDS,
+      ...PROPOSAL_FILING_FIELDS,
+      AGENT_DIRS.proposals,
+      'kind: edit',
+      'kind: filing',
+    ]) {
+      expect(body, needle).toContain(needle);
+    }
+    // Unquoted colons or ` #` make a proposal unreadable or truncate it, so the skill must say so
+    // and show a quoted reason.
+    expect(body).toMatch(/^reason: "/m);
+    expect(body).toMatch(/Double-quote every frontmatter value that contains a colon/);
+    // An S20 setup installed version 1, which has to show as outdated.
+    expect(template?.version).toBeGreaterThan(1);
+  });
+
+  it('the jobs skill describes the condense-source job and the Markdown result Gaston reads', () => {
+    const template = SETUP_TEMPLATES.find((candidate) => candidate.id === 'skill-gaston-jobs');
+    expect(template).toBeDefined();
+    const body = template?.body ?? '';
+    for (const needle of [
+      '### `condense-source`',
+      'sourcePage',
+      'wiki/sources/',
+      `${AGENT_DIRS.jobs}/done/`,
+      'status: done',
+      'status: failed',
+      'status: skipped',
+      'type: source',
+    ]) {
+      expect(body, needle).toContain(needle);
+    }
+    // The ingest marker belongs to Gaston, and the skill has to keep saying so.
+    expect(body).toMatch(/^- Write `\.ingest\.json` files\.$/m);
+  });
+
+  it('the jobs skill describes the curate and audit kinds', () => {
+    const body =
+      SETUP_TEMPLATES.find((candidate) => candidate.id === 'skill-gaston-jobs')?.body ?? '';
+    for (const needle of [
+      '### `curate-module`',
+      '### `gardener-audit`',
+      '`candidateIds`',
+      'contradictions',
+      'confirmed',
+      'rejected',
+      'advice',
+      'pathA',
+      'pathB',
+      'fail the whole result and book nothing',
+      'job: curate-module-',
+      'job: gardener-audit-',
+    ]) {
+      expect(body, needle).toContain(needle);
+    }
+    expect(MAX_ADVICE).toBe(3);
+    expect(body).toContain('at most three short sentences');
+  });
+
+  it('the jobs skill describes the condense-module job and never writes the directives section', () => {
+    const template = SETUP_TEMPLATES.find((candidate) => candidate.id === 'skill-gaston-jobs');
+    // Line wrapping in the template must not decide whether a sentence counts.
+    const body = (template?.body ?? '').replace(/\s+/g, ' ');
+    for (const needle of [
+      '### `condense-module`',
+      '`baseHash`',
+      '"decided"',
+      '"open"',
+      '"contradictions"',
+      '"text": string, "sources": string[]',
+      'job: condense-module-',
+      'Compress, do not append',
+      'never resolve it',
+      '`status: failed`',
+    ]) {
+      expect(body, needle).toContain(needle);
+    }
+    expect(body).toContain(
+      'Its directives section is an instruction to follow when you condense. It is never written,',
+    );
+    expect(body).toContain('and neither is `overview.md` itself');
+    // An install from before this kind existed has to show as outdated.
+    expect(template?.version).toBeGreaterThan(5);
+  });
+
+  it('the curator skill lists its four-point checklist', () => {
+    const template = SETUP_TEMPLATES.find((candidate) => candidate.id === 'skill-gaston-curate');
+    const body = template?.body ?? '';
+    const checklist = (body.split('## Checklist')[1] ?? '').split('\n## ')[0] ?? '';
+    const points = checklist.split('\n').filter((line) => line.startsWith('- '));
+    expect(points.map((line) => line.slice(2).split(':')[0])).toEqual([
+      'Filing',
+      'Links',
+      'Index completeness',
+      'Contradictions',
+    ]);
+    // A job from Gaston may start the skill; the older install has to show as outdated.
+    expect(body).toContain('`curate-module` job');
+    expect(template?.version).toBeGreaterThan(2);
+  });
+
+  it('every Gaston skill opens with frontmatter naming it and saying when to use it', () => {
+    for (const name of Object.values(AGENT_SKILLS)) {
+      const template = SETUP_TEMPLATES.find((candidate) => candidate.id === `skill-${name}`);
+      expect(template, name).toBeDefined();
+      expect(template?.path).toBe(`.claude/skills/${name}/SKILL.md`);
+      expect(template?.format).toBe('markdown-frontmatter');
+      const { frontmatter, hadFrontmatter } = parse(template?.body ?? '');
+      expect(hadFrontmatter, name).toBe(true);
+      expect(frontmatter.name, name).toBe(name);
+      expect(String(frontmatter.description ?? ''), name).toMatch(/\bUse (when|for)\b/);
+    }
+  });
+});

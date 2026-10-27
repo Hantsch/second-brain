@@ -34,10 +34,15 @@
     "src/core/llm/catalogue/index.ts",
     "src/core/llm/catalogue/openrouter.ts",
     "src/core/llm/catalogue/models.json",
+    "src/core/agent/help/version.ts",
+    "src/core/agent/setup-templates.ts",
+    "src/core/agent/setup-types.ts",
+    "src/core/agent/templates/*.ts",
     "src/core/condense/diff.ts",
     "src/core/condense/paths.ts",
     "src/core/vault/paths.ts",
     "src/core/vault/slug.ts",
-    "src/core/vault/types.ts"
+    "src/core/vault/types.ts",
+    "src/core/wiki/log-heading.ts"
   ]
 }

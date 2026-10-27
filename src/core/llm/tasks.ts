@@ -23,6 +23,7 @@ export const TASK_KINDS: readonly TaskKind[] = [
   'gardener-audit',
   'condense-area',
   'condense-project',
+  'condense-module',
 ];
 
 function definition(
@@ -138,6 +139,10 @@ export const TASK_DEFINITIONS: readonly TaskDefinition[] = [
     { in: 8000, out: 1200 },
     { sensitive: true, structured: true },
   ),
+  // Reads the wiki pages of one module — knowledge derived from sources, not
+  // journal prose — and condenses them into an overview. Deliberately not
+  // `sensitive`: a hosted model is an acceptable route here.
+  definition('condense-module', 'strong', { in: 8000, out: 1200 }, { structured: true }),
 ];
 
 const BY_KIND = new Map<TaskKind, TaskDefinition>(TASK_DEFINITIONS.map((t) => [t.kind, t]));

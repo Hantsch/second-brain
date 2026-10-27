@@ -39,6 +39,11 @@ export type PathTarget = RouteTarget | FileTarget;
    the plain one here to match. */
 const AREA = /^areas\/([^/]+?)(?:\.condensed)?\.md$/;
 
+/* A module's overview is the artifact a module condensation writes, and a
+   `condensation-due` finding lists it first (`modules/<slug>/wiki/overview.md`).
+   Every other page of a module keeps the generic route `homeOf` gives it. */
+const MODULE_OVERVIEW = /^modules\/([^/]+)\/wiki\/overview\.md$/;
+
 /** The place where this path is visible in the app — otherwise the file itself. */
 export function targetFor(path: string): PathTarget {
   const area = AREA.exec(path);
@@ -46,6 +51,13 @@ export function targetFor(path: string): PathTarget {
     return {
       kind: 'route',
       to: `/notes?a=${encodeURIComponent(area[1] ?? '')}&tab=condensed`,
+    };
+  }
+  const moduleOverview = MODULE_OVERVIEW.exec(path);
+  if (moduleOverview !== null) {
+    return {
+      kind: 'route',
+      to: `/knowledge?m=${encodeURIComponent(moduleOverview[1] ?? '')}&tab=condensed`,
     };
   }
   if (path.startsWith('inbox/')) return { kind: 'route', to: '/notes?filter=unfiled' };

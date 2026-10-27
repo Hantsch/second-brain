@@ -14,15 +14,19 @@ import { describe, expect, it, vi } from 'vitest';
 
 const electron = vi.hoisted(() => {
   const started: { promise: Promise<void> | null } = { promise: null };
+  const handlers = new Map<string, () => void>();
   return {
     started,
+    handlers,
     app: {
       requestSingleInstanceLock: () => true,
       quit: vi.fn(),
       setAppUserModelId: vi.fn(),
       getPath: () => '',
       isPackaged: false,
-      on: vi.fn(),
+      on: (event: string, listener: () => void) => {
+        handlers.set(event, listener);
+      },
       whenReady: () => ({
         then: (start: () => Promise<void>) => {
           started.promise = start();
@@ -44,6 +48,9 @@ vi.mock('electron', () => ({
 }));
 
 const window = { on: vi.fn() };
+/* One shared object: the startup check and the quit-time stop must hit the same
+   service, or the assertions would pass against two unrelated fakes. */
+const updateService = { scheduleStartupCheck: vi.fn(), stop: vi.fn() };
 const services = {
   settings: {
     app: () => ({
@@ -57,7 +64,8 @@ const services = {
   },
   setMainWindow: vi.fn(),
   mainWindow: () => window,
-  updates: () => ({ scheduleStartupCheck: vi.fn(), stop: vi.fn() }),
+  updates: () => updateService,
+  index: () => null,
 };
 
 vi.mock('../../src/main/settings', () => ({ SettingsService: { load: async () => ({}) } }));
@@ -86,7 +94,9 @@ vi.mock('../../src/main/reminder-notify', () => ({
 }));
 vi.mock('../../src/main/ipc/tasks-e2e-fixture', () => ({ runTasksFixture: vi.fn() }));
 vi.mock('../../src/main/vault-layout', () => ({ isVault: async () => false }));
-vi.mock('../../src/main/work-queue', () => ({ getWorkQueue: vi.fn() }));
+vi.mock('../../src/main/work-queue', () => ({
+  getWorkQueue: vi.fn(() => ({ cancelAll: vi.fn(), clear: vi.fn() })),
+}));
 
 describe('start() without a tray', () => {
   it('a throwing Tray constructor still opens a window that never starts hidden', async () => {
@@ -105,5 +115,19 @@ describe('start() without a tray', () => {
     expect(startReminderNotifier).toHaveBeenCalledWith(services);
     expect(warn).toHaveBeenCalledWith('[start] tray could not be created:', expect.any(Error));
     warn.mockRestore();
+  });
+
+  it('start schedules the one startup update check and will-quit stops it', async () => {
+    await import('../../src/main/index');
+    if (!electron.started.promise) throw new Error('start() was never invoked');
+    await electron.started.promise;
+
+    expect(updateService.scheduleStartupCheck).toHaveBeenCalledTimes(1);
+    expect(updateService.stop).not.toHaveBeenCalled();
+
+    const quit = electron.handlers.get('will-quit');
+    if (!quit) throw new Error('no will-quit handler registered');
+    quit();
+    expect(updateService.stop).toHaveBeenCalledTimes(1);
   });
 });

@@ -10,7 +10,10 @@
    is a two-entry fixture instead of the live one, so no test touches the
    network. */
 
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { existsSync, mkdtempSync, readdirSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type * as NodeOs from 'node:os';
 import type * as CoreLlm from '@core/llm';
 import type { CatalogueEntry } from '@core/llm';
@@ -91,7 +94,11 @@ vi.mock('../../src/main/ipc/runtime/llamacpp-autostart', () => ({
   ensureLlamaRunning: vi.fn(async () => undefined),
 }));
 
+/* Which template files the vault holds is the unit's input, not what it tests. */
+vi.mock('@core/agent/setup-status', () => ({ readSetupState: vi.fn() }));
+
 const { createGateway, createLlmBridge } = await import('../../src/main/llm-bridge');
+const { readSetupState } = await import('@core/agent/setup-status');
 const { ensureLlamaRunning } = await import('../../src/main/ipc/runtime/llamacpp-autostart');
 
 type Services = Parameters<typeof createLlmBridge>[0];
@@ -192,6 +199,7 @@ describe('withAutoStart waits only for a call routed to llama.cpp', () => {
         snapshot: () => ({ app: { machine: { llamaAutoStart: 'on-demand' } }, vault: null }),
       },
       keys: { get: () => 'key', set: () => undefined, remove: () => undefined },
+      vaultRoot: () => null,
     } as unknown as Services;
   }
 
@@ -226,5 +234,58 @@ describe('withAutoStart waits only for a call routed to llama.cpp', () => {
     await dispatch(LLAMACPP);
 
     expect(ensureLlamaRunning).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('testing an agent-routed task', () => {
+  const SKILL_PATH = '.claude/skills/gaston-jobs/SKILL.md';
+  let root: string;
+
+  beforeEach(() => {
+    root = mkdtempSync(join(tmpdir(), 'gaston-test-'));
+  });
+
+  afterEach(() => {
+    rmSync(root, { recursive: true, force: true });
+  });
+
+  async function testWith(status: 'current' | 'missing'): Promise<unknown> {
+    vi.mocked(readSetupState).mockResolvedValue({
+      files: [{ path: SKILL_PATH, status, installedVersion: null, shippedVersion: 1 }],
+    } as unknown as Awaited<ReturnType<typeof readSetupState>>);
+    const services = {
+      settings: {
+        vault: () => ({
+          providers: [],
+          routing: {
+            tasks: { 'title-tags': { providerId: 'agent', model: 'agent' } },
+            defaults: {},
+          },
+        }),
+        snapshot: () => ({ app: { machine: {} }, vault: null }),
+      },
+      keys: { get: () => null, set: () => undefined, remove: () => undefined },
+      vaultRoot: () => root,
+      requireStore: () => ({}),
+    } as unknown as Services;
+    return createLlmBridge(services).testTask('title-tags');
+  }
+
+  function filedJobs(): string[] {
+    const dir = join(root, '.secondbrain', 'agent', 'jobs');
+    return existsSync(dir) ? readdirSync(dir) : [];
+  }
+
+  it('reports the agent setup and files no job', async () => {
+    expect(await testWith('current')).toEqual({ ok: true, latencyMs: 0, sample: '' });
+    expect(filedJobs()).toEqual([]);
+
+    expect(await testWith('missing')).toEqual({
+      ok: false,
+      latencyMs: 0,
+      sample: '',
+      error: 'agent-setup-missing',
+    });
+    expect(filedJobs()).toEqual([]);
   });
 });

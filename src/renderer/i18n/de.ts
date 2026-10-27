@@ -5,9 +5,11 @@
    Flat keys, sentence case, no emoji. `en.ts` must carry the same key set —
    a test checks that. */
 
+import { deAgentScreen } from './de-agent-screen';
 import { deAgents } from './de-agents';
 import { deDashboard } from './de-dashboard';
 import { deGarden } from './de-garden';
+import { deGardenProposals } from './de-garden-proposals';
 import { deJournal } from './de-journal';
 import { deJournalCalendar } from './de-journal-calendar';
 import { deNotes } from './de-notes';
@@ -18,6 +20,8 @@ import { deSettings } from './de-settings';
 import { deChats } from './de-chats';
 import { deTasks } from './de-tasks';
 import { deUpdate } from './de-update';
+import { deModulesCondensed } from './de-modules-condensed';
+import { deSourcesAgent } from './de-sources-agent';
 import { deWiki } from './de-wiki';
 
 export const de = {
@@ -56,6 +60,24 @@ export const de = {
   'rail.settings': 'Einstellungen',
   'rail.journalOpenDays': 'Tagebuch, {count} offene Tage',
   'rail.tasksRunningAndWaiting': 'Aufgaben, {count} laufen oder warten',
+  'rail.gardenProposals': 'Pflege, {count} wartende Vorschläge',
+  'rail.agent': 'Agent',
+  'rail.agent.refused': 'Claude wurde nicht geöffnet.',
+  'rail.agent.settings': 'Agent-Einstellungen',
+  'rail.agent.opened.windows-terminal': 'In Windows Terminal geöffnet.',
+  'rail.agent.opened.powershell': 'In PowerShell geöffnet.',
+  'rail.agent.reason.no-vault': 'Es ist kein Vault geöffnet.',
+  'rail.agent.reason.cli-absent':
+    'Claude Code wurde auf diesem Rechner nicht gefunden, deshalb wird kein Terminal geöffnet.',
+  'rail.agent.reason.cli-unknown':
+    'Ob Claude Code installiert ist, ist unbekannt, deshalb wird kein Terminal geöffnet.',
+  'rail.agent.reason.unsupported-platform':
+    'Ein Terminal aus Gaston zu öffnen wird nur unter Windows unterstützt.',
+  'rail.agent.reason.no-terminal': 'Es konnte kein Terminal gestartet werden.',
+  'rail.agent.reason.no-terminal.detail': 'Es konnte kein Terminal gestartet werden ({code}).',
+  'rail.agent.error': 'Die Terminal-Anfrage ist fehlgeschlagen. Es wurde nichts geöffnet.',
+  'rail.agent.reason.setup-missing':
+    'Einrichtungsdateien fehlen. Installiere zuerst die Agent-Einrichtung unter Einstellungen, Agent.',
 
   'time.today': 'heute',
   'time.yesterday': 'gestern',
@@ -124,12 +146,20 @@ export const de = {
     'Für {provider} ist kein API-Schlüssel hinterlegt. Trag ihn unter Einstellungen → Modelle ein.',
   'error.code.llm-unavailable.provider-disabled':
     'Der Provider {provider} ist abgeschaltet. Schalte ihn unter Einstellungen → Modelle ein.',
+  'error.code.llm-unavailable.agent-pending':
+    'Die Aufgabe „{task}“ liegt als Auftrag beim Agenten. Lass ihn /gaston-jobs ausführen und versuch es danach noch einmal.',
+  'error.code.llm-unavailable.agent-failed':
+    'Der Agent hat den Auftrag für „{task}“ nicht erledigt: „{reason}“',
   'error.about.llm-unavailable.no-route':
     '„{subject}“ lässt sich nicht verarbeiten: Der Aufgabe „{task}“ ist kein Modell zugeordnet. Ordne unter Einstellungen → Modelle eines zu.',
   'error.about.llm-unavailable.no-key':
     '„{subject}“ lässt sich nicht verarbeiten: Für {provider} ist kein API-Schlüssel hinterlegt. Trag ihn unter Einstellungen → Modelle ein.',
   'error.about.llm-unavailable.provider-disabled':
     '„{subject}“ lässt sich nicht verarbeiten: Der Provider {provider} ist abgeschaltet. Schalte ihn unter Einstellungen → Modelle ein.',
+  'error.about.llm-unavailable.agent-pending':
+    '„{subject}“ liegt als Auftrag beim Agenten. Lass ihn /gaston-jobs ausführen und versuch es danach noch einmal.',
+  'error.about.llm-unavailable.agent-failed':
+    '„{subject}“ lässt sich nicht verarbeiten: Der Agent hat den Auftrag für „{task}“ nicht erledigt: „{reason}“',
   'error.about.invalid': '„{subject}“ passt nicht.',
   'error.about.io': '„{subject}“ ließ sich nicht öffnen — der Ordner ist nicht beschreibbar.',
   'error.about.cancelled': '„{subject}“ wurde abgebrochen.',
@@ -221,6 +251,9 @@ export const de = {
   'task.condense-project.label': 'Projekt verdichten',
   'task.condense-project.hint':
     'Liest Notizen, Todos und Tageseinträge eines Projekts und schreibt eine verdichtete Datei. Persönlicher Inhalt — ein lokales Modell ist ausdrücklich empfohlen.',
+  'task.condense-module.label': 'Modul verdichten',
+  'task.condense-module.hint':
+    'Liest die Wiki-Seiten eines Moduls und schreibt eine Übersicht: Entschiedenes, Offenes und Widersprüche. Arbeitet auf Modulinhalt, nicht auf Tagebuchinhalt — ein lokales Modell ist nicht nötig.',
 
   /* Hinweise des Aufnehmens. Der Kern kennt keine Sprache und schickt einen Code
      (`IngestNoteCode`); hier steht der Satz dazu. Jede Absage ist eine Aussage über
@@ -244,9 +277,12 @@ export const de = {
   'ingest.note.no-content': 'Aus dieser Quelle gibt es nichts zu verdichten.',
 
   ...deScreens,
+  ...deAgentScreen,
   ...deAgents,
   ...deDashboard,
   ...deGarden,
+  ...deGardenProposals,
+  ...deSourcesAgent,
   ...deJournal,
   ...deJournalCalendar,
   ...deNotes,
@@ -257,6 +293,7 @@ export const de = {
   ...deTasks,
   ...deUpdate,
   ...deWiki,
+  ...deModulesCondensed,
 } as const;
 
 export type TranslationKey = keyof typeof de;

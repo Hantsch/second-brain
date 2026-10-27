@@ -61,6 +61,7 @@ function fakeServices(provider: ProviderConfig): unknown {
       snapshot: () => ({ app: { machine: {} }, vault: null }),
     },
     keys: { get: () => null, set: () => undefined, remove: () => undefined },
+    vaultRoot: () => null,
   };
 }
 

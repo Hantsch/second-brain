@@ -11,13 +11,18 @@ import type { UpdateDownloadFailure, UpdateProgress } from '../../shared/types/u
 import type { AutoUpdaterLike } from './checker';
 import { classifyError, configureAutoUpdater, importUpdaterExport } from './checker';
 
-export type DownloadOutcome = { kind: 'done' } | { kind: 'failed'; reason: UpdateDownloadFailure };
+export type DownloadOutcome =
+  | { kind: 'done' }
+  | { kind: 'failed'; reason: UpdateDownloadFailure }
+  /** The feed now names another version than the announced one; nothing was fetched. */
+  | { kind: 'superseded' };
 
 export interface UpdateBackend {
   /** Never rejects; an aborted `signal` ends in `cancelled`. */
   download(
     signal: AbortSignal,
     onProgress: (progress: UpdateProgress) => void,
+    expectedVersion: string,
   ): Promise<DownloadOutcome>;
   /** Quits through `app.quit()`, so `before-quit` and the close guard see it like any quit. */
   quitAndInstall(): void;
@@ -26,7 +31,8 @@ export interface UpdateBackend {
 
 /** Used when no real backend may run (the e2e fixture, unit tests): nothing downloads, nothing installs. */
 export const UNAVAILABLE_UPDATE_BACKEND: UpdateBackend = {
-  download: () => Promise.resolve({ kind: 'failed', reason: 'unknown' }),
+  download: (_signal, _onProgress, _expectedVersion) =>
+    Promise.resolve({ kind: 'failed', reason: 'unknown' }),
   quitAndInstall: () => {
     throw new Error('no update backend');
   },
@@ -83,6 +89,7 @@ export function createUpdateBackend(): UpdateBackend {
   async function download(
     signal: AbortSignal,
     onProgress: (progress: UpdateProgress) => void,
+    expectedVersion: string,
   ): Promise<DownloadOutcome> {
     const listener = (info: ProgressInfo): void => onProgress(toProgress(info));
     let updater: DownloadingUpdaterLike | undefined;
@@ -92,15 +99,18 @@ export function createUpdateBackend(): UpdateBackend {
         'CancellationToken',
       )) as new () => CancellationTokenLike;
       /* The update info a download needs lives in this process only; an offer
-         restored from disk had no check here yet. Asking again also confirms
-         the release is still there. It may therefore fetch a newer version than
-         the one announced; the service does not detect that, the staged version
-         stays the announced one until the next check replaces the offer. */
-      const checked = (await updater.checkForUpdates()) as { isUpdateAvailable?: boolean } | null;
+         restored from disk had no check here yet. Asking again also confirms the
+         release is still there, and that it is the one that was announced: when
+         the feed has moved on, nothing is fetched and the service re-offers. */
+      const checked = (await updater.checkForUpdates()) as {
+        isUpdateAvailable?: boolean;
+        updateInfo?: { version?: string };
+      } | null;
       if (signal.aborted) return { kind: 'failed', reason: 'cancelled' };
       if (checked === null || checked.isUpdateAvailable !== true) {
         return { kind: 'failed', reason: 'unknown' };
       }
+      if (checked.updateInfo?.version !== expectedVersion) return { kind: 'superseded' };
       const token = new Token();
       signal.addEventListener('abort', () => token.cancel(), { once: true });
       updater.on('download-progress', listener);

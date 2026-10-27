@@ -31,7 +31,7 @@ export interface WikiPhrases {
   synthesis: string;
   decided: string;
   open: string;
-  /** Abschnitt von `wiki/overview.md`, in dem der Ingest neue Seiten verlinkt. */
+  /** Abschnitt des Katalogs `wiki/index.md`, in dem der Ingest neue Seiten auflistet. */
   pages: string;
   moduleIntro: string;
   moduleScope: string;
