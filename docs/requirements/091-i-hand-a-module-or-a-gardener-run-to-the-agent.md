@@ -36,11 +36,13 @@ completeness and contradictions.
 
 ## Open Questions
 
-- **Q1 — The curator checklist** (concept O11): anything beyond the four named points?
-- **Q2 — Help module.** Is "Hand to agent" offered on the help module ([[086]]), or hidden because
-  Gaston overwrites its pages?
+- ~~**Q1 — The curator checklist** (concept O11): anything beyond the four named points?~~ answered → Decisions (Sprint)
+- ~~**Q2 — Help module.** Is "Hand to agent" offered on the help module ([[086]]), or hidden because Gaston overwrites its pages?~~ answered → Decisions (Sprint)
 
 ## Decisions (Sprint)
+
+- **(User)** Curator checklist: only the four points the story names.
+- **(User)** Help module: "Hand to agent" is hidden on it.
 
 ## Plan
 

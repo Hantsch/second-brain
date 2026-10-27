@@ -25,11 +25,13 @@ links to Maintenance when proposals wait ([[088]]).
 
 ## Open Questions
 
-- **Q1 — Who writes the report.** The skill (the model can forget), or a CLI stop hook that writes
-  it deterministically from what changed?
-- **Q2 — Retention** (concept O3): keep every report, the last N, or the last N days?
+- ~~**Q1 — Who writes the report.** The skill (the model can forget), or a CLI stop hook that writes it deterministically from what changed?~~ answered → Decisions (Sprint)
+- ~~**Q2 — Retention** (concept O3): keep every report, the last N, or the last N days?~~ answered → Decisions (Sprint)
 
 ## Decisions (Sprint)
+
+- **(User)** Who writes the report: a CLI stop hook, deterministically from what changed.
+- **(User)** Retention: keep the last 50 reports.
 
 ## Plan
 

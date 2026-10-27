@@ -39,12 +39,13 @@ result format and the validation the other job kinds ([[091]], [[092]]) reuse.
 
 ## Open Questions
 
-- **Q1 — Formats** (concept O3): job and result frontmatter, file naming, retention of finished
-  jobs.
-- **Q2 — Withdrawing.** Can the user take a handed-over job back (and the source return to
-  `awaiting-llm`), or does it stay until the agent answers?
+- ~~**Q1 — Formats** (concept O3): job and result frontmatter, file naming, retention of finished jobs.~~ answered → Decisions (Sprint)
+- ~~**Q2 — Withdrawing.** Can the user take a handed-over job back (and the source return to `awaiting-llm`), or does it stay until the agent answers?~~ answered → Decisions (Sprint)
 
 ## Decisions (Sprint)
+
+- **(User)** Formats: Markdown + frontmatter, one file per job; finished jobs move to `done/` and are pruned after 30 days.
+- **(User)** Withdrawing: yes; the source returns to `awaiting-llm` and a late result is ignored.
 
 ## Plan
 

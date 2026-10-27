@@ -36,11 +36,11 @@ reject-with-reason as [[081]] (CND-37), not in Maintenance. Job format and valid
 
 ## Open Questions
 
-- **Q1 — Two pending condensations.** What happens when the user starts an in-app condensation
-  while a condense-module job for the same module is with the agent — block, replace, or allow
-  both and let the hash guard decide?
+- ~~**Q1 — Two pending condensations.** What happens when the user starts an in-app condensation while a condense-module job for the same module is with the agent — block, replace, or allow both and let the hash guard decide?~~ answered → Decisions (Sprint)
 
 ## Decisions (Sprint)
+
+- **(User)** Two pending condensations: block the in-app condensation with a clear message while a condense-module job for the module is with the agent.
 
 ## Plan
 

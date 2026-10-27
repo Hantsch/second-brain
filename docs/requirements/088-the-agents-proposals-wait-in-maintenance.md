@@ -42,14 +42,15 @@ an installed setup shows "outdated".
 
 ## Open Questions
 
-- **Q1 — Content form** (concept O3): full new content, section-wise diff, or both allowed?
-- **Q2 — Inbox filing** (concept O6): does a proposal to file a dump go through the existing filing
-  flow in `src/core/capture/` (as a filing proposal), or is it a plain "write this file, delete that
-  one" proposal?
-- **Q3 — Retention.** Are rejected and accepted proposals deleted, or moved aside for the run
-  report?
+- ~~**Q1 — Content form** (concept O3): full new content, section-wise diff, or both allowed?~~ answered → Decisions (Sprint)
+- ~~**Q2 — Inbox filing** (concept O6): does a proposal to file a dump go through the existing filing flow in `src/core/capture/` (as a filing proposal), or is it a plain "write this file, delete that one" proposal?~~ answered → Decisions (Sprint)
+- ~~**Q3 — Retention.** Are rejected and accepted proposals deleted, or moved aside for the run report?~~ answered → Decisions (Sprint)
 
 ## Decisions (Sprint)
+
+- **(User)** Content form: full new content; Maintenance shows a diff against the current file.
+- **(User)** Inbox filing: goes through the existing filing flow in `src/core/capture/` as a filing proposal.
+- **(User)** Retention: accepted and rejected proposals are moved aside under `.secondbrain/` and referenced by the run report.
 
 ## Plan
 
