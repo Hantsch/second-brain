@@ -7,6 +7,8 @@ All notable changes to Gaston are recorded here. The format follows
 
 <!-- Add changes as '- ...' bullets under '### Added' / '### Changed' / '### Fixed' / '### Removed' / '### Security'. -->
 
+## 0.3.0 — 2026-10-27
+
 ### Added
 
 - Models: a task can be routed to the agent as a job. Its reply waits for the next /gaston-jobs run
