@@ -295,3 +295,87 @@ describe('the startup update check', () => {
     }
   });
 });
+
+describe('a download that meets a different release than announced', () => {
+  it('a download that finds a newer release than announced fetches nothing and re-offers the newer one', async () => {
+    const newer = { ...OFFER, version: '1.4.0', notes: 'Newer.' };
+    const feed: UpdateCheckResult[] = [{ kind: 'available', ...OFFER }];
+    const { service } = start(() => Promise.resolve(feed.at(-1)!), {
+      backend: {
+        // The real backend re-checks the feed and stops when the version moved on.
+        download: vi.fn(async (_signal, _progress, expected) => {
+          feed.push({ kind: 'available', ...newer });
+          return expected === newer.version
+            ? ({ kind: 'done' } as const)
+            : ({ kind: 'superseded' } as const);
+        }),
+        quitAndInstall: vi.fn(),
+        autoInstallOnAppQuit: false,
+      },
+    });
+    await service.check(manual);
+
+    const result = await service.startDownload();
+
+    expect(result.state).toMatchObject({
+      phase: 'available',
+      progress: null,
+      downloadError: null,
+      update: { version: '1.4.0' },
+    });
+  });
+});
+
+describe('handing over to the installer', () => {
+  function installable(quitAndInstall: () => void, overrides: Partial<UpdateServiceOptions> = {}) {
+    const calls: string[] = [];
+    const authoriseQuit = vi.fn(() => {
+      calls.push('authorise');
+      return () => void calls.push('revoke');
+    });
+    const { service } = start(
+      { kind: 'available', ...OFFER },
+      {
+        authoriseQuit,
+        backend: {
+          download: vi.fn(async () => ({ kind: 'done' }) as const),
+          quitAndInstall: vi.fn(() => {
+            calls.push('quitAndInstall');
+            quitAndInstall();
+          }),
+          autoInstallOnAppQuit: false,
+        },
+        ...overrides,
+      },
+    );
+    return { service, calls };
+  }
+
+  it('install authorises the quit before handing over to the installer and revokes it when that throws', async () => {
+    const handedOver = installable(() => undefined);
+    await handedOver.service.check(manual);
+    await handedOver.service.startDownload();
+    expect(await handedOver.service.installAndRestart()).toMatchObject({ ok: true });
+    expect(handedOver.calls).toEqual(['authorise', 'quitAndInstall']);
+
+    const failed = installable(() => {
+      throw new Error('installer missing');
+    });
+    await failed.service.check(manual);
+    await failed.service.startDownload();
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    expect(await failed.service.installAndRestart()).toMatchObject({
+      ok: false,
+      error: 'update.error.installFailed',
+    });
+    expect(failed.calls).toEqual(['authorise', 'quitAndInstall', 'revoke']);
+  });
+
+  it('a refused install authorises nothing', async () => {
+    const blocked = installable(() => undefined, { restartBlocker: () => 'taskRunning' });
+    await blocked.service.check(manual);
+    await blocked.service.startDownload();
+    expect(await blocked.service.installAndRestart()).toMatchObject({ ok: false });
+    expect(blocked.calls).toEqual([]);
+  });
+});

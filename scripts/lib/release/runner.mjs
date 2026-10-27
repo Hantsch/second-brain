@@ -8,15 +8,13 @@
 import { spawnSync } from 'node:child_process';
 import {
   existsSync,
-  mkdtempSync,
   readFileSync,
   readdirSync,
   rmSync,
   writeFileSync,
 } from 'node:fs';
-import { createRequire } from 'node:module';
-import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { isAbsolute, join, relative, sep } from 'node:path';
+import { electronBuilderCli } from '../electron-builder-cli.mjs';
 import { checkBundleContents } from '../handoff-check.mjs';
 import { collectAssets, expectedAssets } from './artifacts.mjs';
 import { ReleaseRefused, planRelease } from './plan.mjs';
@@ -58,15 +56,6 @@ function describeFailure(result) {
   return result.error ? `did not start: ${result.error.message}` : `exited with code ${result.status}`;
 }
 
-/** The electron-builder CLI, resolved through its own manifest rather than a guessed path. */
-export function electronBuilderCli() {
-  const require = createRequire(import.meta.url);
-  const manifestPath = require.resolve('electron-builder/package.json');
-  const bin = JSON.parse(readFileSync(manifestPath, 'utf8')).bin?.['electron-builder'];
-  if (typeof bin !== 'string') throw new Error('electron-builder declares no bin');
-  return resolve(dirname(manifestPath), bin);
-}
-
 /** Real process runner. Never throws: a failed start comes back as `error`. */
 export function nodeExec(cmd, args, { cwd, shell = false, capture = false }) {
   const result = spawnSync(cmd, args, {
@@ -95,12 +84,6 @@ export const nodeFs = {
   exists: (path) => existsSync(path),
   remove: (path) => rmSync(path, { force: true }),
   listFiles: (dir) => listFilesUnder(dir),
-  // Outside the repo: the notes are a gh input and must not land in the release commit.
-  writeTempFile: (name, content) => {
-    const file = join(mkdtempSync(join(tmpdir(), 'gaston-release-')), name);
-    writeFileSync(file, content, 'utf8');
-    return file;
-  },
 };
 
 /**
@@ -236,7 +219,10 @@ export function runRelease({
     return 0;
   }
 
-  const notesPath = fs.writeTempFile('release-notes.md', plan.notes);
+  // dist/ is gitignored and `git add` names only the three release files, so the notes (a gh
+  // input) stay out of the release commit while remaining collectable as a CI artifact.
+  const notesPath = join(distDir, 'release-notes.md');
+  fs.writeFile(notesPath, plan.notes);
   // Same inputs, so the same plan; this pass only fills in the real notes file and asset paths.
   const final = planRelease({ ...input, notesPath, assets });
   for (const write of final.writes) fs.writeFile(join(cwd, write.path), write.content);
@@ -249,7 +235,11 @@ export function runRelease({
     if (index > pushIndex) {
       // The tag is public by now; a quiet exit would leave a tag without a release.
       log(`release: ${final.tag} is pushed but not published. Finish by hand with:`);
-      for (const remaining of final.commands.slice(index)) log(`  ${formatCommand(remaining)}`);
+      const rel = (arg) => (isAbsolute(arg) ? relative(cwd, arg).split(sep).join('/') : arg);
+      for (const remaining of final.commands.slice(index)) {
+        log(`  ${formatCommand({ cmd: remaining.cmd, args: remaining.args.map(rel) })}`);
+      }
+      if (isCi) log('the files are in the "release-files" artifact of this workflow run');
     } else {
       log('release: nothing was pushed or published.');
     }

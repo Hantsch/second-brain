@@ -54,7 +54,7 @@ vi.mock('../../src/main/work-queue', () => ({
   hasRunningTask: () => queue.tasks.some((task) => task.state === 'running'),
 }));
 
-const { CONFIRM_TIMEOUT_MS, attachCloseGuard, cancelClose, confirmClose } =
+const { CONFIRM_TIMEOUT_MS, attachCloseGuard, authoriseQuit, cancelClose, confirmClose } =
   await import('../../src/main/close-guard');
 
 /* One container for every harness, like the one `Services` of a real process.
@@ -451,5 +451,52 @@ describe('close guard with close-to-tray', () => {
     next.requestClose();
 
     expect(next.hide).toHaveBeenCalledTimes(1);
+  });
+});
+
+/* An update install asks its own question (the restart blocker) before it hands
+   over to the installer, which then quits the app a tick later. The guard must
+   not ask a second time in that tick, yet an authorisation for a hand-over that
+   failed must not outlive it. */
+describe('close guard around an update install', () => {
+  it("an update install's quit is not vetoed by a task that started after the restart check", () => {
+    queue.tasks = [];
+    const app = attachHarness();
+    authoriseQuit();
+    queue.tasks = [{ state: 'running', kind: 'ingest' }];
+
+    expect(requestQuit().prevented()).toBe(0);
+    /* What the quit does next: close the main window, which must not veto either. */
+    app.requestClose();
+    expect(app.prevented()).toBe(0);
+    expect(app.events()).toEqual([]);
+  });
+
+  it('a failed install leaves the next close guarded', () => {
+    queue.tasks = [];
+    const app = attachHarness();
+    const revoke = authoriseQuit();
+    revoke();
+    queue.tasks = [{ state: 'running' }];
+
+    expect(requestQuit().prevented()).toBe(1);
+    cancelClose();
+    app.requestClose();
+    expect(app.prevented()).toBe(1);
+    expect(app.events()).toEqual(['event:close-requested', 'event:close-requested']);
+    expect(electron.app.quit).not.toHaveBeenCalled();
+  });
+
+  it('a late revoke does not take back a close the user confirmed in the meantime', () => {
+    const revoke = authoriseQuit();
+    /* A fresh window drops the authorisation; the user then confirms a close of their own. */
+    const app = attachHarness();
+    app.requestClose();
+    confirmClose();
+    revoke();
+
+    app.requestClose();
+    expect(app.prevented()).toBe(1);
+    expect(app.events()).toEqual(['event:close-requested']);
   });
 });

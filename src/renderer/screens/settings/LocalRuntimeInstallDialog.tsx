@@ -21,6 +21,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import type { EngineBuildId, EngineBuildReason, RuntimeId, RuntimePlan } from '@shared/types';
 import { Button } from '../../atoms/Button';
 import { Dialog } from '../../atoms/Dialog';
+import { ProgressBar } from '../../atoms/ProgressBar';
 import { Select } from '../../atoms/Select';
 import { useLanguage, useT } from '../../i18n';
 import { bridge } from '../../lib/bridge';
@@ -298,17 +299,13 @@ export function LocalRuntimeInstallDialog({
         {phase === 'downloading' ? (
           <>
             <p>{t(runtimeKey('settings.runtime.dialog.downloading', runtime))}</p>
-            <div
-              className="sb-progress"
-              role="progressbar"
-              aria-label={t(runtimeKey('settings.runtime.dialog.downloading', runtime))}
-              aria-valuenow={pct}
-              aria-valuemin={0}
-              aria-valuemax={100}
-            >
-              <div className="sb-progress-track">
-                <div className="sb-progress-fill" style={{ width: `${pct}%` }} />
-              </div>
+            <div className="sb-progress">
+              <ProgressBar
+                value={pct}
+                label={t(runtimeKey('settings.runtime.dialog.downloading', runtime))}
+                className="sb-progress-track"
+                fillClassName="sb-progress-fill"
+              />
             </div>
             <p className="sb-mono">
               {t('settings.runtime.dialog.progress', {

@@ -2,7 +2,7 @@
 // arrives as an argument, so a plan can be produced and tested without a repository.
 import { notesFor, promote, readUnreleased, validateUnreleased } from './changelog.mjs';
 import { expectedAssets } from './artifacts.mjs';
-import { applyVersion, deriveBump, isPrerelease, isValidVersion, nextVersion } from './version.mjs';
+import { TOP_LEVEL_VERSION, applyVersion, deriveBump, isPrerelease, isValidVersion, nextVersion } from './version.mjs';
 
 const REPO = 'Hantsch/second-brain';
 const BUMPS = ['major', 'minor', 'patch'];
@@ -19,9 +19,10 @@ export class ReleaseRefused extends Error {
 
 /** @param {string} text */
 function currentVersion(text) {
-  const match = /"version":\s*"([^"]*)"/.exec(text);
+  const match = TOP_LEVEL_VERSION.exec(text);
   if (!match) throw new Error('no "version" field found in package.json text');
-  return match[1];
+  // The pattern's two groups wrap the value, so what lies between them is the version.
+  return match[0].slice(match[1].length, match[0].length - match[2].length);
 }
 
 /**

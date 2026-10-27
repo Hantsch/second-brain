@@ -26,8 +26,6 @@ export interface ReleaseFs {
   remove(path: string): void;
   /** Every file below `dir`, relative, `/`-separated, sorted. */
   listFiles(dir: string): string[];
-  /** Writes `content` into a fresh temp directory outside the repo; returns the file path. */
-  writeTempFile(name: string, content: string): string;
 }
 
 export interface ReleaseDeps {
@@ -42,8 +40,6 @@ export interface ReleaseDeps {
   /** Path of the electron-builder CLI script; defaults to resolving the installed package. */
   builderCli?: () => string;
 }
-
-export declare function electronBuilderCli(): string;
 
 export declare const nodeExec: Exec;
 

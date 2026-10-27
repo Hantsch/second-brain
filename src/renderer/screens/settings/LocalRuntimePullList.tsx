@@ -22,6 +22,7 @@
 
 import type { ModelRef, RecommendationSet } from '@shared/types';
 import { Button } from '../../atoms/Button';
+import { ProgressBar } from '../../atoms/ProgressBar';
 import { useLanguage, useT } from '../../i18n';
 import { formatBytes } from '../../lib/format';
 import { decodeIpcError } from '../../lib/ipc-error';
@@ -103,17 +104,13 @@ export function PullRow({
 
       {state && !state.error ? (
         <>
-          <div
-            className="sb-progress"
-            role="progressbar"
-            aria-label={t('settings.runtime.pull.progressAria', { model: modelId })}
-            aria-valuenow={pct(state)}
-            aria-valuemin={0}
-            aria-valuemax={100}
-          >
-            <div className="sb-progress-track">
-              <div className="sb-progress-fill" style={{ width: `${pct(state)}%` }} />
-            </div>
+          <div className="sb-progress">
+            <ProgressBar
+              value={pct(state)}
+              label={t('settings.runtime.pull.progressAria', { model: modelId })}
+              className="sb-progress-track"
+              fillClassName="sb-progress-fill"
+            />
           </div>
           <p className="sb-mono sb-routing-hint">
             {state.status}

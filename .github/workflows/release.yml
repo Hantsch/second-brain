@@ -89,6 +89,20 @@ jobs:
           fi
           node scripts/release.mjs "${ARGS[@]}"
 
+      # When publishing fails after the tag is pushed, the built assets would otherwise die with
+      # the runner; this keeps them so the release can be finished by hand.
+      - name: release-files
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-files
+          path: |
+            dist/*.exe
+            dist/*.blockmap
+            dist/latest.yml
+            dist/release-notes.md
+          if-no-files-found: ignore
+
       # After a release, main is one `release: x.y.z [skip ci]` commit (promoted CHANGELOG, version
       # bump) ahead of dev. A dev without it files its next entries under the already released
       # version when it is merged back. So dev follows the release commit here - only as a pure

@@ -15,6 +15,7 @@ import { useNavigate } from 'react-router-dom';
 import type { AgentJobView, IngestJob } from '@shared/types';
 import { Badge } from '../../atoms/Badge';
 import { Button } from '../../atoms/Button';
+import { ProgressBar } from '../../atoms/ProgressBar';
 import { useT } from '../../i18n';
 import { isJobRunning } from '../../lib/jobs';
 import { isSourceCondensedByAgent, openSourceJob } from '../../lib/queries/agent-jobs';
@@ -126,16 +127,12 @@ function JobRow({
       </div>
 
       {running ? (
-        <div
+        <ProgressBar
+          value={percent(job)}
+          label={t(`sources.stage.${job.stage}`)}
           className="sb-job-bar"
-          role="progressbar"
-          aria-label={t(`sources.stage.${job.stage}`)}
-          aria-valuenow={percent(job)}
-          aria-valuemin={0}
-          aria-valuemax={100}
-        >
-          <span className="sb-job-fill" style={{ width: `${percent(job)}%` }} />
-        </div>
+          fillClassName="sb-job-fill"
+        />
       ) : null}
 
       {job.stage === 'error' ? (

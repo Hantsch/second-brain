@@ -597,12 +597,14 @@
   width: 100%;
 }
 .sb-progress-track {
+  display: block;
   height: 6px;
   border-radius: var(--radius-full);
   background: var(--surface-sunken);
   overflow: hidden;
 }
 .sb-progress-fill {
+  display: block;
   height: 100%;
   border-radius: var(--radius-full);
   background: var(--accent);

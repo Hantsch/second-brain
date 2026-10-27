@@ -171,4 +171,15 @@ describe('about update check', () => {
     );
     expect(api.update.check).toHaveBeenCalledTimes(1);
   });
+
+  it('a manual check whose call fails shows the error line', async () => {
+    showUpdate({});
+    vi.mocked(api.update.check).mockRejectedValue(new Error('ipc down'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Check now' }));
+    await waitFor(() =>
+      expect(screen.getByTestId('about-update-outcome').textContent).toContain(
+        'Check failed: Unknown error.',
+      ),
+    );
+  });
 });

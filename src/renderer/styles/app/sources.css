@@ -159,6 +159,7 @@
   color: var(--text-muted);
 }
 .sb-job-bar {
+  display: block;
   height: 4px;
   border-radius: var(--radius-full);
   background: var(--surface-raised);

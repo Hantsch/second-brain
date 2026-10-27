@@ -45,3 +45,21 @@
 - 2026-10-27 16:33 · 095 · review 1 · started
 - 2026-10-27 16:34 · 095 · review 1 · done
 - 2026-10-27 16:34 · 095 · story · done
+- 2026-10-27T16:34:58 · 080 · build · started
+- 2026-10-27 16:35 · 080 · D1 release runner nits · started
+- 2026-10-27 16:37 · 080 · D1 release runner nits · done
+- 2026-10-27 16:37 · 080 · D2 service split + superseded · started
+- 2026-10-27 16:39 · 080 · D2 service split + superseded · done
+- 2026-10-27 16:39 · 080 · D3 authorised update quit (hard) · started
+- 2026-10-27 16:43 · 080 · D3 authorised update quit (hard) · done
+- 2026-10-27 16:43 · 080 · D4 update wiring tests · started
+- 2026-10-27 16:43 · 080 · D5 renderer check error, progress bar, timestamp · started
+- 2026-10-27 16:43 · 080 · D6 journal Enter test · started
+- 2026-10-27 16:46 · 080 · D4 update wiring tests · done
+- 2026-10-27 16:46 · 080 · D5 renderer check error, progress bar, timestamp · done
+- 2026-10-27 16:46 · 080 · D6 journal Enter test · done
+- 2026-10-27 16:46 · 080 · verify · started
+- 2026-10-27 16:49 · 080 · verify · done
+- 2026-10-27 16:49 · 080 · review 1 · started
+- 2026-10-27 16:51 · 080 · review 1 · done
+- 2026-10-27 16:51 · 080 · story · done

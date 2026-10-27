@@ -146,4 +146,12 @@ describe('planRelease', () => {
     const e = refusal(() => planRelease(input({ isCi: false })));
     expect(e.kind).toBe('outside-ci');
   });
+
+  it('the current version comes from the top-level field, not a nested one', () => {
+    const pkgText = '{\n  "config": {\n    "version": "9.9.9"\n  },\n  "version": "1.2.3"\n}\n';
+
+    const plan = planRelease(input({ pkgText, bump: 'patch' }));
+
+    expect(plan.version).toBe('1.2.4');
+  });
 });

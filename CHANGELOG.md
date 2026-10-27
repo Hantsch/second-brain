@@ -52,6 +52,10 @@ All notable changes to Gaston are recorded here. The format follows
 
 - Agent setup: a file from a newer Gaston is never overwritten, and a file that cannot be written
   is named while the rest is still written and recorded.
+- Updates: a download that finds a newer release than the one shown now offers that release
+  instead of fetching it unannounced.
+- Updates: install and restart is no longer interrupted by a task that starts in the same moment.
+- Updates: a manual update check that fails before it starts now says so in About.
 
 ## 0.2.0 — 2026-10-20
 

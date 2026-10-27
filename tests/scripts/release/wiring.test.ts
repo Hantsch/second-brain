@@ -49,6 +49,21 @@ describe('release workflow', () => {
     expect(at('scripts/release.mjs')).toBeGreaterThan(at('git config user.name'));
   });
 
+  it('a failed release run uploads its assets and notes', () => {
+    const upload = steps.find((s) => String(s.uses).startsWith('actions/upload-artifact@v4'));
+    expect(steps.indexOf(upload)).toBeGreaterThan(steps.indexOf(releaseStep));
+    expect(upload.if).toBe('failure()');
+    expect(upload.name).toBe('release-files');
+    expect(upload.with.name).toBe('release-files');
+    expect(String(upload.with.path).split('\n').map((l) => l.trim()).filter(Boolean)).toEqual([
+      'dist/*.exe',
+      'dist/*.blockmap',
+      'dist/latest.yml',
+      'dist/release-notes.md',
+    ]);
+    expect(upload.with['if-no-files-found']).toBe('ignore');
+  });
+
   it('maps push to --if-pending and the dispatch inputs to flags, through env vars', () => {
     const run: string = releaseStep.run;
     expect(run).toContain('--if-pending');

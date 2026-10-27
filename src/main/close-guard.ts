@@ -68,6 +68,14 @@ let pending: { proceed: () => void; timer: NodeJS.Timeout } | null = null;
 let confirmed = false;
 
 /**
+ * The authorisation `authoriseQuit` handed out, while `confirmed` is still its
+ * doing. Anything else that sets or resets `confirmed` (a confirmed veto, a
+ * fresh window) clears it, so a late revoke cannot take back a confirmation
+ * the user gave in the meantime.
+ */
+let grant: object | null = null;
+
+/**
  * "A quit is under way" (058, D-e) — the one thing that turns a close-to-tray
  * × back into a real close. A quit closes every window, and a main window that
  * hid itself instead would cancel the quit it is part of: the tray's "quit"
@@ -111,6 +119,7 @@ function letThrough(): void {
      be asked about. */
   if (!proceed) return;
   confirmed = true;
+  grant = null;
   proceed();
 }
 
@@ -192,6 +201,33 @@ export function cancelClose(): void {
   endCycle();
 }
 
+/**
+ * Authorise the next quit up front, for a caller that already did the asking
+ * itself: install-and-restart refuses while a task runs, and once it hands over
+ * to the installer that process is spawned one tick before `app.quit()`. A
+ * veto in that tick — a task that started in between — would leave the
+ * installer running against a live app. `will-quit`'s `cancelAll('shutdown')`
+ * stops whatever started in that tick, exactly as it does after a confirmed
+ * veto.
+ *
+ * Returns the revoke for a hand-over that failed and quits nothing: without it
+ * the authorisation would outlive the attempt and let a later close kill a run
+ * unasked. It only takes back its own grant — if a veto cycle or a fresh
+ * window took over `confirmed` since, that state is no longer this caller's.
+ */
+export function authoriseQuit(): () => void {
+  /* Already authorised by someone else: nothing of ours to take back later. */
+  if (confirmed) return () => undefined;
+  const token = {};
+  grant = token;
+  confirmed = true;
+  return () => {
+    if (grant !== token) return;
+    grant = null;
+    confirmed = false;
+  };
+}
+
 export interface CloseGuardOptions {
   /**
    * Asked on every window close that is not part of a quit: `true` hides the
@@ -216,6 +252,7 @@ export function attachCloseGuard(
      so neither the authorisation nor a half-answered prompt belongs to this
      window. */
   confirmed = false;
+  grant = null;
   quitting = false;
   if (pending) {
     clearTimeout(pending.timer);

@@ -88,7 +88,7 @@ export function updateFileFixtureFor(currentVersion: string): UpdateFileFixtureW
   };
 
   const backend: UpdateBackend = {
-    async download(signal, onProgress) {
+    async download(signal, onProgress, _expectedVersion) {
       const script = parseFileFixture(raw)?.download;
       if (script === undefined) return { kind: 'failed', reason: 'unknown' };
       for (let tick = 1; tick <= script.ticks; tick++) {

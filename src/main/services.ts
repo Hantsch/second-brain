@@ -29,6 +29,8 @@ import { ensureStructure, isVault } from './vault-layout';
 import { getWorkQueue } from './work-queue';
 import { getTaskResults } from './task-results';
 import { isDemoVault } from './demo';
+// close-guard imports `Services` as a type only, so this import forms no runtime cycle.
+import { authoriseQuit } from './close-guard';
 import { createUpdateBackend } from './update/backend';
 import { createUpdateChecker, detectDistribution } from './update/checker';
 import { restartBlocker } from './update/restart-blocker';
@@ -109,6 +111,7 @@ export class Services {
       // The fixture forbids the network, so with it active nothing real may download.
       backend: file?.backend ?? (fixture ? undefined : createUpdateBackend()),
       restartBlocker: () => restartBlocker(this),
+      authoriseQuit,
     });
     return this.updateService;
   }
