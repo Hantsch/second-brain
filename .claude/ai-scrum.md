@@ -9,7 +9,7 @@
   the commands read both.
 -->
 
-ai-scrum-version: 4.5.1
+ai-scrum-version: 4.6.0
 project: Gaston
 
 ## Verify

@@ -5,7 +5,7 @@ model: opus
 effort: high
 ---
 
-<!-- ai-scrum:managed 4.5.1 - plugin-owned, written by /ai-scrum:setup. Do not edit:
+<!-- ai-scrum:managed 4.6.0 - plugin-owned, written by /ai-scrum:setup. Do not edit:
      setup diffs this file on update and asks before replacing it. Project facts go in .claude/ai-scrum.md. -->
 
 Refine the story with ID **$1**.
@@ -165,6 +165,19 @@ into memory. Everything has to be reviewable in the repository.
        of that flow, and a criterion an existing flow already walks names that flow. A third
        new flow in one story needs a sentence on why its path cannot be a step of an
        existing one.
+     - **Speed is proven by cost, not by a clock.** A criterion about speed or load ("saving one
+       file stays cheap", "listing stays fast") maps to a test in `test` that counts what the
+       code does - bytes written, files read, calls made - which no machine changes. A
+       wall-clock budget is never the proof and never a line here: it belongs to the perf lane
+       of the project's `test-gates` rules (a perf file or category), which warns and does not
+       decide. If the story wants one, the deliverable's text names it - and only where the
+       project's test config already excludes the perf lane from `test`; otherwise that
+       exclusion is the deliverable's first step. Measured before this rule: a budget of 150 ms,
+       about 4.5x the locally measured 33 ms, blocked a release at 155 ms on the CI runner,
+       while the byte count that proved the criterion was green.
+     - **A new flow is not a release smoke test.** Which flows the release lane runs is the
+       project's lane map (`## Test lanes` in `CLAUDE.md`), decided by the architecture review;
+       a story's flows run in its own gate, the sprint gate and release prep.
      - **A missing trigger is a story gap, not a test problem.** If a user-facing action has no
        path through the real surface yet, plan that trigger as a deliverable.
      - **`manual residue`** (only if `manual-residue-allowed: true`) is for a criterion that

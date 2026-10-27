@@ -186,23 +186,27 @@ Neighbor repos this project deliberately draws from:
 - `../yougrab` — YouTube pipeline (yt-dlp + fallback provider, transcript preparation)
 - `../claude-control` — reading Claude Code sessions from `~/.claude/projects`
 
-<!-- tech-rules:managed:start 2.3.0 -->
+<!-- tech-rules:managed:start 2.4.0 -->
 
 ## House rules
 
 These rules live in this repository as project skills, so they apply to everyone who works here —
 no plugin needed. Installed and updated with `/tech-rules:setup` (plugin `tech-rules@hantsch`).
 
-| Read before                                      | Skill                                    |
-| ------------------------------------------------ | ---------------------------------------- |
-| any code change                                  | `/karpathy`                              |
-| touching `src/renderer/`                         | `/renderer-guidelines`, `/design-tokens` |
-| main / preload / renderer, IPC, `webPreferences` | `/electron-arch`, `/typed-ipc`           |
-| screenshotting or verifying the UI               | `/ui-verify`                             |
+| Read before                                                       | Skill                                    |
+| ----------------------------------------------------------------- | ---------------------------------------- |
+| any code change                                                   | `/karpathy`                              |
+| writing or moving a test, touching a test config or a CI workflow | `/test-gates`                            |
+| touching `src/renderer/`                                          | `/renderer-guidelines`, `/design-tokens` |
+| main / preload / renderer, IPC, `webPreferences`                  | `/electron-arch`, `/typed-ipc`           |
+| screenshotting or verifying the UI                                | `/ui-verify`                             |
+
+`/test-review` reviews the test suite and writes a report; `/release-prep` runs every test lane
+before a release. Which command is which lane is this project's `## Test lanes` table.
 
 Do not edit a skill to make it fit this project. A deviation is recorded **here**, with its
-reason, and wins over the skill; a deviation without a reason is a violation that has been
-written down.
+reason, and wins over the skill — one row per rule deviated from, listing the places, never one
+row per control; a deviation without a reason is a violation that has been written down.
 <!-- tech-rules:managed:end -->
 
 The `electron` group's one-time templates (`scripts/launch.js`, a self-healing JSON store) were

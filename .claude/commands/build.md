@@ -5,7 +5,7 @@ model: sonnet
 effort: medium
 ---
 
-<!-- ai-scrum:managed 4.5.1 - plugin-owned, written by /ai-scrum:setup. Do not edit:
+<!-- ai-scrum:managed 4.6.0 - plugin-owned, written by /ai-scrum:setup. Do not edit:
      setup diffs this file on update and asks before replacing it. Project facts go in .claude/ai-scrum.md. -->
 
 Implement the story with ID **$1**. If **$2** is `--full`, the full regression gate runs
@@ -174,6 +174,9 @@ finishes or quietly stops with nothing in the working tree to show for it.
        (`describe('story 045')` is rejected too); a file that does not exist yet is created
        next to the project's existing ones, in their shape. Fixtures, builders and fakes come
        from `test-support` first; when it is `none` or nothing there fits, the return says so.
+       A test in `test` never compares elapsed time against a number, never lowers a timeout
+       and never reads the real clock or zone: cost is counted (bytes, calls), and speed goes to
+       the perf lane's file or category, which `test` excludes.
      - the profile's `test-support` paths from `.claude/ai-scrum.md`, verbatim (`none`
        included),
      - for `deliverable-hard`, the risk justification from `## Model Hints`,
@@ -335,6 +338,8 @@ finishes or quietly stops with nothing in the working tree to show for it.
        (d) correctness bugs, removed validation or error handling, violations of the
            guardrails in `CLAUDE.md`, comments that narrate story or review history instead
            of stating an invariant, tests named after a story instead of a behaviour,
+           a test in a blocking lane that asserts elapsed time, lowers a timeout, retries, or
+           depends on the real clock, zone, temp path or a file a clean checkout lacks,
        (e) copied shapes: a block the diff adds that already exists elsewhere in the tree
            (search for its distinctive line) is a finding, with the existing location,
      - the agent proposes no fixes and changes no files — it returns a verdict
