@@ -20,6 +20,7 @@ import { EmptyState } from '../../components/EmptyState';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { useT } from '../../i18n';
 import { useGardenerProgress } from '../../lib/gardener-progress';
+import { useAgentJobMutations, useAgentJobs } from '../../lib/queries/agent-jobs';
 import { useTaskCancel, useTaskRemove, useTaskRetry } from '../../lib/queries/tasks';
 import { useWorkTasks, useWorkTasksLoaded } from '../../lib/tasks-store';
 import { buildTasksView } from '../../lib/tasks-view';
@@ -33,8 +34,10 @@ export function TasksScreen() {
   const cancel = useTaskCancel();
   const remove = useTaskRemove();
   const retry = useTaskRetry();
+  const agentJobs = useAgentJobs();
+  const { withdraw } = useAgentJobMutations();
 
-  const groups = buildTasksView(tasks, progress, t);
+  const groups = buildTasksView(tasks, progress, t, agentJobs.data);
   const showEmpty = loaded && groups.length === 0;
 
   return (
@@ -53,6 +56,8 @@ export function TasksScreen() {
               key={group.kind}
               kind={group.kind}
               tasks={group.tasks}
+              jobs={group.jobs}
+              onWithdrawJob={(id) => withdraw.mutate(id)}
               cancel={cancel}
               remove={remove}
               retry={retry}

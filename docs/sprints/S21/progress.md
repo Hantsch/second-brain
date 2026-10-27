@@ -46,3 +46,25 @@
 - 2026-10-27 11:34 · 089 · verify 3 · started
 - 2026-10-27 11:37 · 089 · verify 3 · done
 - 2026-10-27 11:37 · 089 · story · done
+- 11:37:28 · 090 · build · started
+- 2026-10-27 11:38 · 090 · D1 job and result file format · started
+- 2026-10-27 11:40 · 090 · D1 job and result file format · done
+- 2026-10-27 11:40 · 090 · D2 condense-source hand-over and validation · started
+- 2026-10-27 11:40 · 090 · D3 gaston-jobs skill v3 · started
+- 2026-10-27 11:46 · 090 · D2 condense-source hand-over and validation · done
+- 2026-10-27 11:46 · 090 · D3 gaston-jobs skill v3 · done
+- 2026-10-27 11:46 · 090 · D4 main and IPC · started
+- 2026-10-27 11:56 · 090 · D4 main and IPC · done
+- 2026-10-27 11:56 · 090 · D5 Sources hand over and withdraw · started
+- 2026-10-27 12:01 · 090 · D5 Sources hand over and withdraw · done
+- 2026-10-27 12:01 · 090 · D6 Tasks screen agent jobs · started
+- 2026-10-27 12:07 · 090 · D6 Tasks screen agent jobs · done
+- 2026-10-27 12:07 · 090 · verify · started
+- 2026-10-27 12:13 · 090 · verify · done
+- 2026-10-27 12:13 · 090 · review 1 · started
+- 2026-10-27 12:16 · 090 · review 1 · done
+- 2026-10-27 12:16 · 090 · review-fix 1 · started
+- 2026-10-27 12:27 · 090 · review-fix 1 · done
+- 2026-10-27 12:27 · 090 · verify 2 · started
+- 2026-10-27 12:32 · 090 · verify 2 · done
+- 2026-10-27 12:32 · 090 · story · done

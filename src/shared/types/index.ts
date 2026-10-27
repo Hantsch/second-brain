@@ -15,4 +15,5 @@ export * from './update';
 export * from './agent';
 export * from './agent-setup';
 export * from './agent-proposals';
+export * from './agent-jobs';
 export * from './agent-terminal';

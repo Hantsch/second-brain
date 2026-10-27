@@ -201,6 +201,9 @@ function renderScreen(extra: Handlers = {}) {
   return { sb, container };
 }
 
+/* jsdom has no `scrollIntoView`; `ErrorState` calls it when it appears. */
+Element.prototype.scrollIntoView = () => undefined;
+
 beforeEach(() => {
   setLanguage('de');
   document.documentElement.lang = 'de';
@@ -375,6 +378,94 @@ describe('Quellen: Aufträge', () => {
     expect(screen.queryByRole('progressbar')).toBeNull();
     /* Und wiederholen bleibt möglich, sobald ein Modell steht. */
     expect(screen.getByRole('button', { name: 'Wiederholen' })).toBeTruthy();
+  });
+
+  describe('Übergabe an den Agenten', () => {
+    const waiting = () =>
+      job({
+        stage: 'awaiting-llm',
+        progress: 1,
+        rawPath: 'raw/youtube/xOFkpf9KgKg',
+        finishedAt: NOW,
+      });
+    const HAND = 'An den Agenten geben';
+    const WAITING_TITLE = 'Quelle liegt im Vault, die Verdichtung braucht ein Modell';
+    /* The source list below the jobs offers the same button for its own rows. */
+    const jobRow = async () => {
+      const title = await screen.findByText(WAITING_TITLE);
+      return within(title.closest('li') as HTMLElement);
+    };
+
+    it('bietet die Übergabe an einer wartenden Quelle an', async () => {
+      renderScreen({ 'ingest:jobs': () => [waiting()], 'agent:jobs': () => [] });
+
+      expect((await jobRow()).getByRole('button', { name: HAND })).toBeTruthy();
+    });
+
+    it('bietet an einer Quelle, die der Agent schon verdichtet hat, keine Übergabe mehr an', async () => {
+      const { sb } = renderScreen({
+        'ingest:jobs': () => [waiting()],
+        'agent:jobs': () => [
+          {
+            id: 'condense-source-1',
+            kind: 'condense-source' as const,
+            subject: 'raw/youtube/xOFkpf9KgKg',
+            label: 'xOFkpf9KgKg',
+            module: MODULE,
+            state: 'done' as const,
+            reason: null,
+            createdAt: NOW,
+            finishedAt: NOW,
+          },
+        ],
+      });
+
+      const row = await jobRow();
+      await waitFor(() => expect(row.queryByRole('button', { name: HAND })).toBeNull());
+      expect(sb.calls.some(({ channel }) => channel === 'agent:jobs')).toBe(true);
+      expect(row.getByRole('button', { name: 'Modell einrichten' })).toBeTruthy();
+    });
+
+    it('zeigt eine abgelehnte Übergabe als sichtbaren Fehler', async () => {
+      renderScreen({
+        'ingest:jobs': () => [waiting()],
+        'agent:jobs': () => [],
+        'agent:handOverSource': () => {
+          throw Object.assign(new Error('This source is condensed already.'), { code: 'invalid' });
+        },
+      });
+
+      await userEvent.click((await jobRow()).getByRole('button', { name: HAND }));
+
+      expect(await screen.findByText('Diese Eingabe passt nicht.')).toBeTruthy();
+    });
+
+    it('zeigt ein gescheitertes Zurücknehmen als sichtbaren Fehler', async () => {
+      renderScreen({
+        'ingest:jobs': () => [waiting()],
+        'agent:jobs': () => [
+          {
+            id: 'condense-source-1',
+            kind: 'condense-source' as const,
+            subject: 'raw/youtube/xOFkpf9KgKg',
+            label: 'xOFkpf9KgKg',
+            module: MODULE,
+            state: 'with-agent' as const,
+            reason: null,
+            createdAt: NOW,
+            finishedAt: null,
+          },
+        ],
+        'agent:withdrawJob': () => {
+          throw Object.assign(new Error('gone'), { code: 'not-found' });
+        },
+      });
+
+      const row = await jobRow();
+      await userEvent.click(await row.findByRole('button', { name: 'Zurückziehen' }));
+
+      expect(await screen.findByText('Das Gesuchte gibt es nicht (mehr).')).toBeTruthy();
+    });
   });
 
   it('nennt einen Fehler im Klartext und hält das Technische hinter Details', async () => {

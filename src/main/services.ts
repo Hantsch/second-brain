@@ -23,6 +23,7 @@ import type {
 } from './contracts';
 import type { KeyStore } from './secrets';
 import type { SettingsService } from './settings';
+import { isAgentJobPath, settleAgentJobsQueued } from './agent-jobs-settle';
 import { fail, noVault } from './ipc/errors';
 import { ensureStructure, isVault } from './vault-layout';
 import { getWorkQueue } from './work-queue';
@@ -195,6 +196,8 @@ export class Services {
       );
     }
     await this.refreshIndexState();
+    // Answers that arrived while the app was closed are booked now, not at the next change.
+    void settleAgentJobsQueued(this);
     return this.status();
   }
 
@@ -388,6 +391,7 @@ export class Services {
      paths are remembered and folded into the next successful refresh's
      report, so nothing gets lost — only delayed. */
   private handleVaultChange(paths: string[], external: boolean): void {
+    if (paths.some(isAgentJobPath)) void settleAgentJobsQueued(this);
     const index = this.index();
     if (!index?.refresh) {
       this.sendEvent('event:vault-changed', { paths, external });

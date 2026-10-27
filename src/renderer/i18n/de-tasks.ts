@@ -17,6 +17,7 @@ export const deTasks = {
   'tasks.group.running': 'Läuft',
   'tasks.group.waiting': 'Wartet',
   'tasks.group.finished': 'Abgeschlossen',
+  'tasks.group.agent': 'Beim Agenten',
 
   'tasks.kind.condense': 'Verdichten',
   'tasks.kind.close-day': 'Tag abschließen',
@@ -36,4 +37,10 @@ export const deTasks = {
   'tasks.action.remove': 'Entfernen',
   'tasks.action.retry': 'Erneut versuchen',
   'tasks.action.viewResult': 'Ergebnis ansehen',
+
+  // ── Die Aufträge des Agenten (Story 090) ─────────────────────────────────
+  'tasks.agent.kind.condense-source': 'Quelle verdichten',
+  'tasks.agent.state.skipped': 'Übersprungen',
+  'tasks.agent.state.withdrawn': 'Zurückgezogen',
+  'tasks.agent.reason': 'Grund: {reason}',
 } as const;

@@ -21,6 +21,7 @@ import { enChats } from './en-chats';
 import { enTasks } from './en-tasks';
 import { enUpdate } from './en-update';
 import { enModulesCondensed } from './en-modules-condensed';
+import { enSourcesAgent } from './en-sources-agent';
 import { enWiki } from './en-wiki';
 
 export const en: Record<TranslationKey, string> = {
@@ -272,6 +273,7 @@ export const en: Record<TranslationKey, string> = {
   ...enDashboard,
   ...enGarden,
   ...enGardenProposals,
+  ...enSourcesAgent,
   ...enJournal,
   ...enJournalCalendar,
   ...enNotes,

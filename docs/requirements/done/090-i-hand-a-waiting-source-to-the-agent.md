@@ -1,7 +1,7 @@
 ---
 id: 090
 title: I hand a waiting source to the agent
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-10-22
 ---
 
@@ -22,19 +22,19 @@ result format and the validation the other job kinds ([[091]], [[092]]) reuse.
 
 ## Acceptance Criteria
 
-- [ ] **AC1** — A source in `awaiting-llm` offers "Hand to agent" in Sources and in the Tasks
+- [x] **AC1** — A source in `awaiting-llm` offers "Hand to agent" in Sources and in the Tasks
       screen; one click writes exactly one job file, and a second click on the same source writes
       none.
-- [ ] **AC2** — No job file exists for a source the user did not hand over.
-- [ ] **AC3** — A handed-over source shows as "with the agent" in the Tasks screen, also after a
+- [x] **AC2** — No job file exists for a source the user did not hand over.
+- [x] **AC3** — A handed-over source shows as "with the agent" in the Tasks screen, also after a
       restart.
-- [ ] **AC4** — After a valid result, `.ingest.json` carries `sourcePage` and `modules` as after a
+- [x] **AC4** — After a valid result, `.ingest.json` carries `sourcePage` and `modules` as after a
       digestion, and the source leaves `awaiting-llm`.
-- [ ] **AC5** — A result that fails validation (page missing, invalid frontmatter, page outside a
+- [x] **AC5** — A result that fails validation (page missing, invalid frontmatter, page outside a
       module's wiki, `.ingest.json` touched) shows the job as failed with the reason and changes
       no bookkeeping.
-- [ ] **AC6** — A result the agent marked failed or skipped shows that reason in the Tasks screen.
-- [ ] **AC7** — The installed job-queue skill describes the condense-source kind and the result
+- [x] **AC6** — A result the agent marked failed or skipped shows that reason in the Tasks screen.
+- [x] **AC7** — The installed job-queue skill describes the condense-source kind and the result
       format; the template test pins it.
 
 ## Open Questions
@@ -295,3 +295,40 @@ Order D1 → D2 → D3 → D4 → D5 → D6. D3 is independent of D2 and may run
 Coverage: AC1 D5+D6+D1+D4 · AC2 D4 · AC3 D4+D6 · AC4 D2+D5 · AC5 D2+D6 · AC6 D2+D6 · AC7 D3.
 
 ## Done
+
+A source in `awaiting-llm` can be handed to the agent per click (Sources row, `awaiting-llm` note, Tasks row).
+Gaston files one Markdown job under `.secondbrain/agent/jobs/`, settles the agent's result file (validate,
+then bookkeeping via the digestion helpers), and shows open and finished agent jobs in the Tasks screen
+and Sources; withdrawing is supported. Skill `gaston-jobs` (now v4) documents `condense-source`.
+
+Commit message: `090: hand a waiting source to the agent (job + result format, validation, Sources/Tasks UI, skill v4)`
+
+Verification (narrow gate): `npm run build`, `lint`, `typecheck`, scoped `prettier --check` green;
+`npx vitest run --changed HEAD` green (312 files, 4250 tests; known timing flakes passed alone on re-run);
+`npx playwright test tests/e2e/agent-source-job.spec.ts tests/e2e/agent-setup.spec.ts
+tests/e2e/agent-last-run.spec.ts tests/e2e/agent-protection.spec.ts` green (6/6). AC -> test as verified:
+AC1-AC3, AC6 e2e `agent-source-job.spec.ts` (both tests) + `job-files`, `agent-jobs-ipc` tests; AC4, AC5
+`condense-source-job.test.ts` + e2e + `agent-job-row.test.tsx`; AC7 `templates.test.ts`; withdraw decision
+`agent-jobs-ipc` + `condense-source-job` late-result tests (all passed). No manual residue. Review: stage 1
+(default) PASS, one fix cycle (no-protocol source refused and booking fails without a protocol, module slug
+stored in the job, condensed source offers no hand-over in the note, hand-over/withdraw errors visible,
+AC2 and withdraw IPC tests strengthened), narrow gate re-run green.
+
+Decisions: skill `gaston-jobs` was already v3 (089), so it went 3 -> 4. Job format names for 091/092:
+`src/core/agent/job-files.ts` (`createAgentJobFiles(vaultRoot, now)`: file/open/result/finish/finished/prune/
+orphanResults/discardLateResult; `agentJobId`), types `src/shared/types/agent-jobs.ts` (`AgentJobKind`
+union to extend), `src/core/agent/settler.ts` (`Settler`, `AgentJobDeps`, `AgentRefusal`), per-kind checker
+registry `AGENT_JOB_SETTLERS: Record<AgentJobKind, Settler>` in `settle-jobs.ts` (`settleAgentJobs(deps,
+settlers?)`), condense-source in `condense-source-job.ts` (`handOverSource`, `validateCondenseSource`,
+`bookCondenseSource`, `settleCondenseSource`, `CONDENSE_REFUSALS`), views `job-views.ts`, main
+`src/main/ipc/agent-jobs.ts` + `src/main/agent-jobs-settle.ts` (one serialised chain; settle on vault open and
+on `jobs/`/`results/` paths; `agentJobDeps(services)`), channels `agent:jobs|handOverSource|withdrawJob`,
+event `event:agent-jobs`. The watcher already reported `.secondbrain/agent/` paths, no dispatch from 088 existed.
+Added hand-over code `unknown-module`. Unfixed, deliberately: `finish` after a successful booking that then
+throws leaves the job open and a later settle fails it as `ingest-touched`; `finish` writes `done/` before
+removing the open job (a crash between lists it twice briefly); non-empty-string helper exists in four
+places; `condense-source-job.ts` is ~315 lines (hand-over, validation, booking); `(story 090)` pointers in
+comments. e2e test 2 relies on test 1's finished job (same app, in-order). Format red outside this story:
+`docs/requirements/*.md` story files fail `prettier --check`.
+
+tiers: D 6 / hard 1 · review default · cycles 1 · agents 10

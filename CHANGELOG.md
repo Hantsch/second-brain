@@ -9,6 +9,9 @@ All notable changes to Gaston are recorded here. The format follows
 
 ### Added
 
+- Sources: a source that waits for a model can be handed to the agent from Sources or Tasks. Tasks
+  lists what the agent holds and how each job ended, with the reason when it did not finish, and
+  you can withdraw an open job and hand the source over again.
 - Agent tab: a Last run section shows when the agent last finished, which skill ran and what it
   left behind, and counts the proposals waiting in Maintenance. A broken report is flagged, not
   guessed at.

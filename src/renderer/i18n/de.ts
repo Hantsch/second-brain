@@ -21,6 +21,7 @@ import { deChats } from './de-chats';
 import { deTasks } from './de-tasks';
 import { deUpdate } from './de-update';
 import { deModulesCondensed } from './de-modules-condensed';
+import { deSourcesAgent } from './de-sources-agent';
 import { deWiki } from './de-wiki';
 
 export const de = {
@@ -281,6 +282,7 @@ export const de = {
   ...deDashboard,
   ...deGarden,
   ...deGardenProposals,
+  ...deSourcesAgent,
   ...deJournal,
   ...deJournalCalendar,
   ...deNotes,

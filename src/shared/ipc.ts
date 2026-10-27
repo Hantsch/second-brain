@@ -18,6 +18,7 @@ import type {
   AgentCliStatus,
   AgentProtectionState,
   AgentSessionSummary,
+  AgentJobView,
   AgentProposalView,
   AgentSetupApplyRequest,
   AgentSetupApplyResult,
@@ -1309,6 +1310,15 @@ export interface IpcRoutes {
   };
   /** Archives a proposal unapplied. */
   'agent:proposalReject': { req: { id: string }; res: void };
+  /** The jobs handed to the agent: open ones first, then finished ones, newest first. */
+  'agent:jobs': { req: void; res: AgentJobView[] };
+  /** Files a condense-source job for a raw source; handing over twice answers `exists` with the open job. */
+  'agent:handOverSource': {
+    req: { rawPath: string; module: string | null };
+    res: { outcome: 'filed' | 'exists'; job: AgentJobView };
+  };
+  /** Takes an open job back; a page the agent already wrote stays, a late result books nothing. */
+  'agent:withdrawJob': { req: { id: string }; res: AgentJobView[] };
 
   // ── Settings ──────────────────────────────────────────────────────────────
   'settings:get': { req: void; res: SettingsSnapshot };
@@ -1543,6 +1553,9 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'agent:proposals',
   'agent:proposalAccept',
   'agent:proposalReject',
+  'agent:jobs',
+  'agent:handOverSource',
+  'agent:withdrawJob',
   'settings:get',
   'settings:setApp',
   'settings:setVault',
@@ -1645,6 +1658,8 @@ export interface IpcEvents {
   'event:work-tasks': WorkTask[];
   /** Every change of the update state, including the end of a check. */
   'event:update': UpdateState;
+  /** The agent's jobs, full list, after a settle changed any of them. */
+  'event:agent-jobs': AgentJobView[];
 }
 
 export type IpcEventName = keyof IpcEvents;
@@ -1663,6 +1678,7 @@ export const IPC_EVENTS: readonly IpcEventName[] = [
   'event:close-requested',
   'event:work-tasks',
   'event:update',
+  'event:agent-jobs',
 ];
 
 /** Errors that come back over IPC carry this shape. */

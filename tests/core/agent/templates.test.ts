@@ -113,6 +113,26 @@ describe('setup templates', () => {
     expect(template?.version).toBeGreaterThan(1);
   });
 
+  it('the jobs skill describes the condense-source job and the Markdown result Gaston reads', () => {
+    const template = SETUP_TEMPLATES.find((candidate) => candidate.id === 'skill-gaston-jobs');
+    expect(template).toBeDefined();
+    const body = template?.body ?? '';
+    for (const needle of [
+      '### `condense-source`',
+      'sourcePage',
+      'wiki/sources/',
+      `${AGENT_DIRS.jobs}/done/`,
+      'status: done',
+      'status: failed',
+      'status: skipped',
+      'type: source',
+    ]) {
+      expect(body, needle).toContain(needle);
+    }
+    // The ingest marker belongs to Gaston, and the skill has to keep saying so.
+    expect(body).toMatch(/^- Write `\.ingest\.json` files\.$/m);
+  });
+
   it('every Gaston skill opens with frontmatter naming it and saying when to use it', () => {
     for (const name of Object.values(AGENT_SKILLS)) {
       const template = SETUP_TEMPLATES.find((candidate) => candidate.id === `skill-${name}`);

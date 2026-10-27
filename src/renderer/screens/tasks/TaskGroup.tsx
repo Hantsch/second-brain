@@ -8,34 +8,51 @@
    itself (the caller, `TasksScreen`, only ever hands it non-empty groups). */
 
 import type { UseMutationResult } from '@tanstack/react-query';
-import type { WorkTask } from '@shared/types';
+import type { AgentJobView, WorkTask } from '@shared/types';
 import { Panel } from '../../components/Panel';
 import { useT } from '../../i18n';
 import type { TaskGroupKind } from '../../lib/tasks-view';
+import { AgentJobRow } from './AgentJobRow';
 import { TaskRow } from './TaskRow';
 
 const HEADING_KEY: Record<TaskGroupKind, string> = {
   running: 'tasks.group.running',
   waiting: 'tasks.group.waiting',
+  agent: 'tasks.group.agent',
   finished: 'tasks.group.finished',
 };
 
 export interface TaskGroupProps {
   kind: TaskGroupKind;
   tasks: readonly WorkTask[];
+  jobs?: readonly AgentJobView[];
+  onWithdrawJob: (id: string) => void;
   cancel: UseMutationResult<boolean, unknown, string>;
   remove: UseMutationResult<boolean, unknown, string>;
   retry: UseMutationResult<WorkTask | null, unknown, string>;
 }
 
-export function TaskGroup({ kind, tasks, cancel, remove, retry }: TaskGroupProps) {
+export function TaskGroup({
+  kind,
+  tasks,
+  jobs = [],
+  onWithdrawJob,
+  cancel,
+  remove,
+  retry,
+}: TaskGroupProps) {
   const t = useT();
   return (
-    <Panel title={t(HEADING_KEY[kind])} meta={String(tasks.length)}>
+    <Panel title={t(HEADING_KEY[kind])} meta={String(tasks.length + jobs.length)}>
       <ul className="sb-tlist">
         {tasks.map((task) => (
           <li key={task.id}>
             <TaskRow task={task} cancel={cancel} remove={remove} retry={retry} />
+          </li>
+        ))}
+        {jobs.map((job) => (
+          <li key={job.id}>
+            <AgentJobRow job={job} onWithdraw={onWithdrawJob} />
           </li>
         ))}
       </ul>

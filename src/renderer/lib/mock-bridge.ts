@@ -909,6 +909,22 @@ const RESPONSES: MockResponses = {
   'agent:proposals': () => [],
   'agent:proposalAccept': () => ({ undo: { via: 'gardener' as const, token: 'mock-undo-token' } }),
   'agent:proposalReject': () => undefined,
+  'agent:jobs': () => [],
+  'agent:handOverSource': ({ rawPath, module }) => ({
+    outcome: 'filed' as const,
+    job: {
+      id: 'condense-source-mock',
+      kind: 'condense-source' as const,
+      subject: rawPath,
+      label: rawPath,
+      module,
+      state: 'with-agent' as const,
+      reason: null,
+      createdAt: new Date(0).toISOString(),
+      finishedAt: null,
+    },
+  }),
+  'agent:withdrawJob': () => [],
 
   'settings:get': () => st.settingsSnapshot,
   'settings:setApp': () => st.settingsSnapshot,

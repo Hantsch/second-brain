@@ -674,6 +674,56 @@ the rules above, recorded in the same manifest. On top of that:
 | `resolved/`  | Gaston | Gaston | proposals after the user accepted or rejected them     |
 | `runs/`      | agent  | Gaston | a record of each agent run                             |
 
+#### Jobs and results
+
+A job is one `.md` file directly in `jobs/`, named `<kind>-<YYYYMMDDTHHmmss>-<hash>.md`: the kind,
+the hand-over time in UTC, and the first 8 hex characters of the sha256 of the subject. The agent
+answers with `results/<same name>.md`. A `.json` file in `jobs/` is an `llm-task` job and is not
+described here. Kinds so far: `condense-source`.
+
+```markdown
+---
+gaston: agent-job
+version: 1
+id: condense-source-20261027T091205-3fa9c1d2
+kind: condense-source
+created: 2026-10-27T09:12:05.000Z
+subject: raw/articles/bread.md
+---
+
+(English instructions: paths and what to do, never the source's content)
+```
+
+| Field     | Meaning                                                                                    |
+| --------- | ------------------------------------------------------------------------------------------ |
+| `gaston`  | always `agent-job`                                                                         |
+| `version` | always `1`                                                                                 |
+| `id`      | the file name without `.md`                                                                |
+| `kind`    | what is asked; the kind adds its own fields after `subject`                                |
+| `created` | ISO timestamp of the hand-over                                                             |
+| `subject` | what the job is about, usually a vault path; `kind` + `subject` are unique among open jobs |
+
+The result carries `job: <id>`, `status`, and the kind's own fields (for example `sourcePage`);
+the body is free text.
+
+| `status`  | Further fields                   |
+| --------- | -------------------------------- |
+| `done`    | the kind's fields                |
+| `failed`  | `reason`, one sentence, required |
+| `skipped` | `reason`, one sentence, required |
+
+A result whose frontmatter does not parse yet counts as not written (the agent may still be
+writing it). A parseable result without a valid `status`, or without `reason` for `failed` or
+`skipped`, is invalid and is shown with the rule it breaks.
+
+When a job ends, Gaston rewrites it into `jobs/done/<id>.md` with `outcome` (`done`, `failed`,
+`skipped` or `withdrawn`), `reason` (when there is one) and `finished` (ISO timestamp) added, moves
+its result to `jobs/done/<id>.result.md`, and deletes the originals. `jobs/done/` is Gaston's
+record, and the agent cannot write anywhere under `jobs/` (`internal-write`). A result that
+arrives for a job that is no longer open is late: it is moved to `jobs/done/<id>.result.md`
+without any further effect. Finished jobs whose `finished` is older than 30 days are deleted
+together with their result.
+
 ### Proposals
 
 A proposal is one `.md` file directly in `.secondbrain/agent/proposals/`, named

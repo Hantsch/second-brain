@@ -34,6 +34,7 @@ import {
   taskKindLabel,
   taskQueuePosition,
 } from '../../lib/tasks-view';
+import { TaskAgentHandOver, awaitingModelSource } from './TaskAgentHandOver';
 
 /** The three finished states — the subset of `WorkTaskState` this row's
     "outcome" branch handles (queued/running have their own branches above). */
@@ -177,6 +178,7 @@ export function TaskRow({ task, cancel, remove, retry }: TaskRowProps) {
      same `kind` (e.g. the tasks e2e fixture's synthetic ingest task) is
      genuinely retryable, which `kind` alone could not tell apart. */
   const canRetry = outcome === 'failed' && task.retryable;
+  const waitingSource = outcome === 'done' ? awaitingModelSource(task) : null;
   return (
     <div className="sb-trow">
       <div className="sb-trow-head">
@@ -209,6 +211,9 @@ export function TaskRow({ task, cancel, remove, retry }: TaskRowProps) {
             </Button>
           ) : null}
         </div>
+      ) : null}
+      {waitingSource !== null ? (
+        <TaskAgentHandOver source={waitingSource} subject={task.subject.label} />
       ) : null}
       {retry.error !== null && retry.variables === task.id ? (
         <ErrorState error={retry.error} subject={task.subject.label} variant="secondary" />

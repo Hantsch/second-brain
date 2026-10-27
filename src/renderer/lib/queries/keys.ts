@@ -154,6 +154,7 @@ export const qk = {
     protection: () => ['agent', 'protection'] as const,
     lastRun: () => ['agent', 'lastRun'] as const,
     proposals: () => ['agent', 'proposals'] as const,
+    jobs: () => ['agent', 'jobs'] as const,
   },
   settings: {
     snapshot: () => ['settings', 'snapshot'] as const,

@@ -292,6 +292,10 @@ export const api = {
     proposals: () => call('agent:proposals'),
     proposalAccept: (id: string) => call('agent:proposalAccept', { id }),
     proposalReject: (id: string) => call('agent:proposalReject', { id }),
+    jobs: () => call('agent:jobs'),
+    handOverSource: (rawPath: string, module: string | null) =>
+      call('agent:handOverSource', { rawPath, module }),
+    withdrawJob: (id: string) => call('agent:withdrawJob', { id }),
   },
   settings: {
     get: () => call('settings:get'),
