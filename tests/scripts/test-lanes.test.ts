@@ -8,6 +8,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import playwrightConfig from '../../playwright.config';
 import perfConfig from '../../vitest.perf.config';
+import shellConfig from '../../vitest.shell.config';
 import gateConfig from '../../vitest.config';
 import { laneRows, type LaneRow } from './lane-table';
 
@@ -85,6 +86,11 @@ const realClaims: Claim[] = [
     name: 'vitest-perf',
     include: perfConfig.test?.include ?? [],
     exclude: perfConfig.test?.exclude ?? [],
+  },
+  {
+    name: 'vitest-shell',
+    include: shellConfig.test?.include ?? [],
+    exclude: shellConfig.test?.exclude ?? [],
   },
   playwrightClaim(),
 ];

@@ -56,3 +56,19 @@
 - 08:17:59 · 100 · review 1 · started
 - 08:18:29 · 100 · review 1 · done
 - 08:18:33 · 100 · story · done
+- 08:18:41 · 101 · build · started
+- 2026-10-28 08:18 · 101 · D1 shell lane · started
+- 2026-10-28 08:19 · 101 · D1 shell lane · done
+- 2026-10-28 08:19 · 101 · D2 run-report split · started
+- 2026-10-28 08:20 · 101 · D2 run-report split · done
+- 2026-10-28 08:20 · 101 · D3 shell-guard split · started
+- 2026-10-28 08:21 · 101 · D3 shell-guard split · done
+- 2026-10-28 08:21 · 101 · D4 wiki-check split · started
+- 2026-10-28 08:22 · 101 · D4 wiki-check split · done
+- 2026-10-28 08:22 · 101 · D5 eol guard · started
+- 2026-10-28 08:23 · 101 · D5 eol guard · done
+- 2026-10-28 08:23 · 101 · verify · started
+- 2026-10-28 08:26 · 101 · verify · done
+- 2026-10-28 08:26 · 101 · review 1 · started
+- 2026-10-28 08:26 · 101 · review 1 · done
+- 2026-10-28 08:26 · 101 · story · done

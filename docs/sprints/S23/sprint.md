@@ -23,7 +23,7 @@ package or a late `file://` navigation turns something red instead of passing si
 - [x] 098 — CI stays PR-only, recorded as a deviation, and the PR lane reports its minutes
 - [x] 099 — The blocking lane stops waiting on real time
 - [x] 100 — e2e absence checks wait on a signal; the quit test gets its own spec
-- [ ] 101 — Hook tests keep one cheap case per hook in the PR lane; eol test fails honestly
+- [x] 101 — Hook tests keep one cheap case per hook in the PR lane; eol test fails honestly
 - [ ] 102 — Test and config drift drive-bys
 
 ## Notes

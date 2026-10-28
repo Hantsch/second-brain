@@ -160,13 +160,13 @@ Mandatory tests:
 
 ## Test lanes
 
-| Lane         | Runs                                                                      | Budget               | Blocks  |
-| ------------ | ------------------------------------------------------------------------- | -------------------- | ------- |
-| pr           | `npm run verify` in verify.yml on PRs into main                           | 6 min (warns), aim 4 | yes     |
-| release      | build + `npm run test:smoke` (lands with story 097)                       | TBD (story 098)      | yes     |
-| release-prep | `npm test` + `npm run test:e2e` + `npm run test:perf` + `npm run package` | none                 | by hand |
-| perf         | `npm run test:perf`                                                       | warns only           | no      |
-| ui-smoke     | `npm run shot`                                                            | none                 | no      |
+| Lane         | Runs                                                                                             | Budget               | Blocks  |
+| ------------ | ------------------------------------------------------------------------------------------------ | -------------------- | ------- |
+| pr           | `npm run verify` in verify.yml on PRs into main                                                  | 6 min (warns), aim 4 | yes     |
+| release      | build + `npm run test:smoke` (lands with story 097)                                              | TBD (story 098)      | yes     |
+| release-prep | `npm test` + `npm run test:e2e` + `npm run test:perf` + `npm run test:shell` + `npm run package` | none                 | by hand |
+| perf         | `npm run test:perf`                                                                              | warns only           | no      |
+| ui-smoke     | `npm run shot`                                                                                   | none                 | no      |
 
 Every Playwright spec runs under `npm run test:e2e` (release-prep); which specs the release lane runs is story 097's job.
 

@@ -66,6 +66,7 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:perf": "vitest run --config vitest.perf.config.ts",
+    "test:shell": "vitest run --config vitest.shell.config.ts",
     "test:e2e": "playwright test",
     "test:smoke": "playwright test --grep @smoke",
     "test:watch": "vitest",

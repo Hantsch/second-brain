@@ -10,6 +10,10 @@ import react from '@vitejs/plugin-react';
    gate blocks releases for the runner's speed, not for the code. */
 export const PERF_TESTS = 'tests/**/*.perf.test.ts';
 
+/* PowerShell-spawning hook cases: run in release prep (`npm run test:shell`,
+   vitest.shell.config.ts), kept out of the PR lane for spawn count. */
+export const SHELL_TESTS = 'tests/**/*.shell.test.ts';
+
 /* CI installs the Node in `.nvmrc` (setup-node `node-version-file`), which is the
    Node that Electron ships. A different local major is how "green here, red on
    GitHub" starts — both shims below exist because two majors disagreed. */
@@ -55,7 +59,7 @@ export default defineConfig({
     globals: true,
     setupFiles: ['tests/setup.ts'],
     include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx'],
-    exclude: [...configDefaults.exclude, PERF_TESTS],
+    exclude: [...configDefaults.exclude, PERF_TESTS, SHELL_TESTS],
     /* Timeouts catch hangs, they are not speed limits. Vitest's 5 s default is a
        hidden perf budget: tests that take 2–3 s here cross it on a loaded runner,
        and Windows file-system contention has stalled a 0.3 s test past 20 s.

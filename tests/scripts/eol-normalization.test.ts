@@ -1,69 +1,81 @@
-/* Guards the fix from story 041 D3: `.gitattributes` normalizes every
-   tracked file to LF on checkout (see the rationale block at the top of
-   .gitattributes). Without a test, a future edit that narrows or removes
-   the `* text=auto eol=lf` rule — or a file checked in with CRLF before
-   that rule existed — would silently let CRLF back into the index, and
-   `prettier --check` (which expects LF) would fail on machines with
-   `core.autocrlf=true` again, exactly the failure mode story 041 fixes. */
+/* Guards that `.gitattributes` normalizes every tracked file to LF on
+   checkout (see the rationale block at the top of .gitattributes). Without a
+   test, a future edit that narrows or removes the `* text=auto eol=lf` rule —
+   or a file checked in with CRLF before that rule existed — would silently let
+   CRLF back into the index, and `prettier --check` (which expects LF) would
+   fail on machines with `core.autocrlf=true`. */
 
-import { execSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
-import { describe, expect, it } from 'vitest';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterAll, describe, expect, it } from 'vitest';
+import { eolGuardPlan, indexEolLines } from '../helpers/git-checkout';
 
 const repoRoot = new URL('../../', import.meta.url);
 
-/* Both checks below need a real git checkout with git on PATH. Detected
-   once, at collection time, so both `it`s can skip via `skipIf` rather than
-   failing — this repo also ships as a downloaded zip (see the handoff
-   check in tests/scripts/handoff-check.test.ts) and CI/sandboxed
-   environments sometimes run without git on PATH; neither case is a real
-   regression in the eol rule. */
-function hasGitCheckout(): boolean {
-  try {
-    execSync('git rev-parse --is-inside-work-tree', {
-      cwd: repoRoot,
-      stdio: 'ignore',
-    });
-    return true;
-  } catch {
-    return false;
-  }
-}
+/* The repo also ships as a downloaded zip, which has no `.git` entry; that is
+   the only skip. A checkout where git is not runnable fails instead, so the
+   guard can never pass unchecked. */
+const plan = eolGuardPlan(repoRoot);
+const skipReason = plan.run ? '' : plan.reason;
 
-const gitAvailable = hasGitCheckout();
-
-describe('line-ending normalization', () => {
-  it.skipIf(!gitAvailable)('no tracked file has a CRLF or mixed index eol', () => {
-    const output = execSync('git ls-files --eol', {
-      cwd: repoRoot,
-      encoding: 'utf8',
-    });
-
-    const offenders: string[] = [];
-    for (const line of output.split('\n')) {
-      if (!line.trim()) continue;
-      // Format: "<index-eol> <worktree-eol>\t<path>", e.g. "i/lf w/lf\tpath/to/file".
-      const tabIndex = line.indexOf('\t');
-      if (tabIndex === -1) continue;
-      const eolPart = line.slice(0, tabIndex);
-      const path = line.slice(tabIndex + 1);
-      const indexEol = eolPart.split(/\s+/)[0];
-      if (indexEol === 'i/crlf' || indexEol === 'i/mixed') {
-        offenders.push(`${indexEol}\t${path}`);
+describe.skipIf(!plan.run)(
+  `line-ending normalization${skipReason ? ` (skipped: ${skipReason})` : ''}`,
+  () => {
+    it('no tracked file has a CRLF or mixed index eol', () => {
+      const offenders: string[] = [];
+      for (const line of indexEolLines(repoRoot)) {
+        // Format: "<index-eol> <worktree-eol>\t<path>", e.g. "i/lf w/lf\tpath/to/file".
+        const tabIndex = line.indexOf('\t');
+        if (tabIndex === -1) continue;
+        const eolPart = line.slice(0, tabIndex);
+        const path = line.slice(tabIndex + 1);
+        const indexEol = eolPart.split(/\s+/)[0];
+        if (indexEol === 'i/crlf' || indexEol === 'i/mixed') {
+          offenders.push(`${indexEol}\t${path}`);
+        }
       }
-    }
 
-    expect(
-      offenders,
-      `The following tracked files have a non-LF index eol, which means ` +
-        `.gitattributes' "* text=auto eol=lf" rule isn't normalizing them ` +
-        `(run "git add --renormalize ." to fix):\n${offenders.join('\n')}`,
-    ).toEqual([]);
+      expect(
+        offenders,
+        `The following tracked files have a non-LF index eol, which means ` +
+          `.gitattributes' "* text=auto eol=lf" rule isn't normalizing them ` +
+          `(run "git add --renormalize ." to fix):\n${offenders.join('\n')}`,
+      ).toEqual([]);
+    });
+
+    it('.gitattributes declares the repo-wide LF rule', () => {
+      const gitattributes = readFileSync(new URL('.gitattributes', repoRoot), 'utf8');
+
+      expect(gitattributes).toMatch(/\*\s+text=auto\s+eol=lf/);
+    });
+  },
+);
+
+describe('git checkout detection', () => {
+  const dirs: string[] = [];
+  const makeTmp = (): string => {
+    const dir = mkdtempSync(join(tmpdir(), 'eol-guard-'));
+    dirs.push(dir);
+    return dir;
+  };
+
+  afterAll(() => {
+    for (const dir of dirs) rmSync(dir, { recursive: true, force: true });
   });
 
-  it.skipIf(!gitAvailable)('.gitattributes declares the repo-wide LF rule', () => {
-    const gitattributes = readFileSync(new URL('.gitattributes', repoRoot), 'utf8');
+  it('a .git entry with git not runnable fails instead of skipping', () => {
+    const tmp = makeTmp();
+    mkdirSync(join(tmp, '.git'));
 
-    expect(gitattributes).toMatch(/\*\s+text=auto\s+eol=lf/);
+    expect(eolGuardPlan(tmp)).toEqual({ run: true });
+    expect(() => indexEolLines(tmp, 'git-missing-for-test')).toThrow();
+  });
+
+  it('no .git entry skips with a stated reason', () => {
+    const plan = eolGuardPlan(makeTmp());
+
+    expect(plan.run).toBe(false);
+    expect(plan.run ? '' : plan.reason).not.toBe('');
   });
 });
