@@ -1,6 +1,9 @@
 /* Without the fixture the e2e app is an unpackaged demo build: it never checks,
    and the panel says so. The suite-wide network guard stays active, so a check
-   that reached the network would fail this test. */
+   that reached the network would fail this test. The startup timer itself is
+   proven by tests/main/update/service.test.ts ("no check runs, automatic or
+   manual, when the build is unpackaged or in demo mode"); this spec proves the
+   built app's gate by calling the same check() entry point and reading state. */
 
 import { expect, test } from './fixtures/app';
 
@@ -16,8 +19,16 @@ test('an unpackaged demo build never checks and says so', async ({ app }) => {
     );
     await expect(page.getByRole('button', { name: 'Check now' })).toBeDisabled();
   });
-  await test.step('it still says so past the point a startup check would fire', async () => {
-    await page.waitForTimeout(4000);
+  await test.step('a check through the same gate as the startup check leaves the state untouched', async () => {
+    const idle = {
+      supported: false,
+      disabledReason: 'unpackaged',
+      status: 'idle',
+      lastCheckedAt: null,
+      update: null,
+    };
+    expect(await page.evaluate("window.sb.invoke('update:check')")).toMatchObject(idle);
+    expect(await page.evaluate("window.sb.invoke('update:state')")).toMatchObject(idle);
     await expect(page.locator('[data-testid="update-status"]')).toContainText(
       'Update checks are off in this build',
     );

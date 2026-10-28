@@ -41,3 +41,18 @@
 - 2026-10-28 08:09 · 099 · review 1 · started
 - 2026-10-28 08:10 · 099 · review 1 · done
 - 2026-10-28 08:10 · 099 · story · done
+- 08:10:15 · 100 · build · started
+- 2026-10-28 08:10 · 100 · D1 navigation-guard signal · started
+- 08:10:41 · 100 · D1 navigation-guard signal · started
+- 08:11:36 · 100 · D1 navigation-guard signal · done
+- 08:11:36 · 100 · D2 update-check state · started
+- 08:12:37 · 100 · D2 update-check state · done
+- 08:12:37 · 100 · D3 tray-quit split · started
+- 08:16:03 · 100 · D3 tray quit split · done
+- 08:16:03 · 100 · D4 start-minimized reason · started
+- 08:16:18 · 100 · D4 start-minimized reason · done
+- 08:16:18 · 100 · verify · started
+- 08:17:59 · 100 · verify · done
+- 08:17:59 · 100 · review 1 · started
+- 08:18:29 · 100 · review 1 · done
+- 08:18:33 · 100 · story · done

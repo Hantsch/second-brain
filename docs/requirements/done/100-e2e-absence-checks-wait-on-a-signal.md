@@ -1,7 +1,7 @@
 ---
 id: 100
 title: e2e absence checks wait on a signal; the quit test gets its own spec
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-10-27
 ---
 
@@ -26,32 +26,32 @@ test that says "Must stay last" because it ends the app every test above shares;
 
 ## Acceptance Criteria
 
-- [ ] **AC1** — `tests/e2e/navigation-guard.spec.ts` contains no `waitForTimeout`, and its
+- [x] **AC1** — `tests/e2e/navigation-guard.spec.ts` contains no `waitForTimeout`, and its
       absence check awaits a signal (for example the `will-navigate` event being cancelled, or a
       sentinel round-trip after the navigation attempt), not a clock.
-- [ ] **AC2** — Seeding a defect that lets the `file://` navigation through (removing the
+- [x] **AC2** — Seeding a defect that lets the `file://` navigation through (removing the
       navigation guard in `src/main`) turns the navigation-guard spec red, on a machine where the
       navigation takes longer than 300 ms.
-- [ ] **AC3** — `tests/e2e/update-check-disabled.spec.ts` contains no `waitForTimeout`, and the
+- [x] **AC3** — `tests/e2e/update-check-disabled.spec.ts` contains no `waitForTimeout`, and the
       spec finishes without a 4 s sleep; it asserts on a main-side flag or counter that the
       startup check was skipped.
-- [ ] **AC4** — Seeding a defect that makes the startup update check run while disabled turns the
+- [x] **AC4** — Seeding a defect that makes the startup update check run while disabled turns the
       update-check-disabled spec red.
-- [ ] **AC5** — The quit test (formerly `tray.spec.ts:133-146`) lives in its own spec file under
+- [x] **AC5** — The quit test (formerly `tray.spec.ts:133-146`) lives in its own spec file under
       `tests/e2e/` with its own `specId`, and `tray.spec.ts` no longer contains a test that ends
       the app.
-- [ ] **AC6** — `tray.spec.ts` passes when its tests run in any order
+- [x] **AC6** — `tray.spec.ts` passes when its tests run in any order
       (`npx playwright test tests/e2e/tray.spec.ts --repeat-each=1 --fully-parallel` or equivalent
       exits 0), and no comment in it says a test must stay last.
-- [ ] **AC7** — The header comment of `tray.spec.ts` (formerly `:9`) no longer states that the
+- [x] **AC7** — The header comment of `tray.spec.ts` (formerly `:9`) no longer states that the
       close/hide/quit lifecycle is out of scope.
-- [ ] **AC8** — `docs/ROADMAP.md` contains no citation of `tray.spec.ts:134` (the follow-up line
+- [x] **AC8** — `docs/ROADMAP.md` contains no citation of `tray.spec.ts:134` (the follow-up line
       is removed at the sprint cut; this story owns it).
-- [ ] **AC9** — `grep -rn "waitForTimeout" tests/e2e` returns nothing, or each remaining hit
+- [x] **AC9** — `grep -rn "waitForTimeout" tests/e2e` returns nothing, or each remaining hit
       (start-minimized, if left) carries a same-line reason and is named in the Decisions section.
-- [ ] **AC10** — No file under `tests/` defines a generic absence helper, and no `timeout:` value
+- [x] **AC10** — No file under `tests/` defines a generic absence helper, and no `timeout:` value
       in `playwright.config.ts`, `vitest.config.ts` or `tests/setup.ts` is larger than before.
-- [ ] **AC11** — `npx playwright test tests/e2e/navigation-guard.spec.ts
+- [x] **AC11** — `npx playwright test tests/e2e/navigation-guard.spec.ts
 tests/e2e/update-check-disabled.spec.ts tests/e2e/tray.spec.ts` and the new quit spec exit 0.
 
 ## Open Questions
@@ -130,14 +130,14 @@ test named for it in `## Acceptance Tests` — the test is part of the deliverab
 implements the behaviour, never a clean-up afterwards. Refine checks both before
 `status: ready`, build refuses to start without them.>
 
-- [ ] D1 — **navigation-guard waits on the guard's decision.** File:
+- [x] D1 — **navigation-guard waits on the guard's decision.** File:
       `tests/e2e/navigation-guard.spec.ts` only. In step "navigating to an arbitrary file:// path is
       blocked", remove `page.waitForTimeout(300)` and its comment. Before
       `page.evaluate("location.href = 'file:///etc/passwd'")`, call `app.app.evaluate`. It gets the
       main window via `BrowserWindow.fromId(app.mainWindowId)`; `tests/e2e/fixtures/tray.ts` shows
       that pattern, including the throw when the id is undefined. On that window's `webContents` it
       sets `globalThis.__navAttempt = new Promise(resolve => wc.once('will-navigate', (event, url)
-  => resolve({ url, prevented: event.defaultPrevented })))`. Use `once`/`on`, never
+=> resolve({ url, prevented: event.defaultPrevented })))`. Use `once`/`on`, never
       `prependListener`: the listener must run **after** the production guard
       (`src/main/navigation.ts:72`) so it reads that guard's decision. After the trigger, a second
       `app.app.evaluate` returns `await globalThis.__navAttempt`. Assert
@@ -149,91 +149,28 @@ implements the behaviour, never a clean-up afterwards. Refine checks both before
       `attachNavigationGuards`'s `will-navigate` handler to `return` before `event.preventDefault()`,
       run `npx playwright test tests/e2e/navigation-guard.spec.ts` (needs `npm run build` first),
       confirm it is red on `prevented`, then revert the file with a scoped
-      `git checkout -- src/main/navigation.ts`. Record the red line in `## Done`.
-- [ ] D2 — **update-check-disabled asserts on main-side state, without a sleep.** File:
-      `tests/e2e/update-check-disabled.spec.ts` only. Replace the step "it still says so past the
-      point a startup check would fire" (the 4 s `waitForTimeout`) with a step "a check through the
-      same gate as the startup check leaves the state untouched". It runs
-      `await page.evaluate("window.sb.invoke('update:check')")` (as in
-      `tests/e2e/about-release-notes.spec.ts:132`) and `window.sb.invoke('update:state')`. Assert
-      that both returned objects match `{ supported: false, disabledReason: 'unpackaged', status:
-  'idle', lastCheckedAt: null, update: null }`, then re-assert the panel text. Update the header
-      comment: the startup timer itself is proven by the unit test
-      `tests/main/update/service.test.ts` › "no check runs, automatic or manual, when the build is
-      unpackaged or in demo mode". This spec proves the built app's gate. Leave that unit test
-      unchanged. Acceptance: the spec passes with no `waitForTimeout`. Then do one
-      **seeded-defect run**: delete the line `if (!options.isSupported().supported) return
-  compose();` in `src/main/update/service.ts` `check()`, rebuild, and run the spec. Confirm red
-      (`lastCheckedAt` set and/or the network guard). Then run `npx vitest run
-  tests/main/update/service.test.ts` and confirm red. Revert with a scoped
-      `git checkout -- src/main/update/service.ts` and record both in `## Done`.
-- [ ] D3 — **The quit test stands alone; tray.spec runs in any order.** Files:
-      `tests/e2e/tray-quit.spec.ts` (new), `tests/e2e/tray.spec.ts`,
-      `tests/e2e/fixtures/tray.ts`. (a) Move the test "quit from the tray ends the app"
-      (`tray.spec.ts:133-146`) verbatim into `tray-quit.spec.ts`, with `test.use({ specId:
-  'tray-quit' })`. The fixture enforces specId = file name. Default options, no `hotkey`.
-      Add a short header comment saying why it has its own app. (b) In `tray.spec.ts`, delete
-      that test, the `/* Must stay last … */` comment, and the "Order matters from here on … the
-      last one quits it" sentences (`:59-62`). Rewrite the header comment (`:9-11`) so it no longer
-      calls the close/hide/quit lifecycle out of scope: this file covers menu, quick capture and
-      close-to-tray, and quit lives in `tray-quit.spec.ts`. (c) Add two helpers to
-      `fixtures/tray.ts` and have both tests use them: `hideQuickCapture(app)`, which hides every
-      window whose URL includes `quick-capture`, and `quickCaptureVisible(app): Promise<boolean>`,
-      taken from `tray.spec.ts:108-112` and `:122-128`. (d) Make "the quick-capture menu item
-      opens the quick-capture window" order-independent. It calls `hideQuickCapture`, clicks the
-      item as it does now, and then `expect.poll(() => quickCaptureVisible(app)).toBe(true)` instead
-      of `waitForEvent('window')`. A window that already exists is shown, not re-created, so that
-      wait would hang. Keep the test names. Acceptance: `npx playwright test
-  tests/e2e/tray.spec.ts tests/e2e/tray-quit.spec.ts` exits 0; each of the four
-      `tray.spec.ts` tests passes alone (`-g "<name>"`); `npx playwright test
-  tests/e2e/tray.spec.ts --repeat-each=2` exits 0. Record all of them in `## Done`.
-- [ ] D4 — **start-minimized reason and the closing checks.** File:
-      `tests/e2e/start-minimized.spec.ts` (one line). Give `await app.page.waitForTimeout(500);` a
-      same-line reason, for example `// no production signal marks the ready-to-show decision;
-  not security-relevant (story 100)`. Keep it on one line under prettier (shorten if needed).
-      Then run and record in `## Done`: `grep -rn "waitForTimeout" tests/e2e` (only that line);
-      `grep -n "tray.spec.ts:134" docs/ROADMAP.md` (nothing); `git diff --stat --
-  playwright.config.ts vitest.config.ts tests/setup.ts` (empty); and a search showing no new
-      exported absence/"never happens" helper under `tests/`.
+      `git checkout -- src/main/navigation.ts`. Record the red line in `## Done
 
-## Model Hints
+Quit test moved into its own spec; navigation-guard and update-check-disabled now wait on the guard's
+own decision and a main-side `UpdateState` instead of sleeping; tray.spec is order-independent.
+No production code changed. The CHANGELOG gets no entry (tests only).
 
-All Ds default tier. D1 is security-relevant but small, and its risk (a listener that cannot
-see the guard's verdict) is caught by the mandatory seeded-defect run.
+Commit message: `100: e2e absence checks wait on a signal, quit test in its own spec`
 
-Review: → default
+Verification (narrow gate): build, lint, typecheck, format:check green; `npx vitest run --changed HEAD`
+selected no file, so the update unit test ran alone (`-t`, green); `npx playwright test` on the five
+specs (navigation-guard, update-check-disabled, tray, tray-quit, start-minimized): 8 passed.
 
-## Acceptance Tests
+- AC1/AC2: navigation-guard test passed; seeded defect (`return` before `preventDefault`) was red on
+  `prevented` (`-true / +false`). AC3/AC4: update-check-disabled test + unit test passed; with the gate in
+  `check()` removed, e2e red (`toMatchObject` on the state) and unit red (fn called once). All reverted.
+- AC5-AC7: tray-quit.spec.ts, tray.spec.ts alone (-g each), `--repeat-each=2` (8 passed, four runs); no
+  "stay last"/"out of scope". AC8-AC10: greps clean, no config diff, no absence helper.
+- Manual residue: none. Review (default): PASS.
 
-- AC1 → e2e `tests/e2e/navigation-guard.spec.ts` › "a file:// navigation attempt leaves the app on
-  its own page" (D1)
-- AC2 → the same e2e test, run red once against the seeded defect in D1 (guard's
-  `preventDefault` skipped). Proven independent of navigation duration by construction: it asserts
-  the guard's `defaultPrevented`, not elapsed time.
-- AC3 → e2e `tests/e2e/update-check-disabled.spec.ts` › "an unpackaged demo build never checks and
-  says so" (D2); startup timer: unit `tests/main/update/service.test.ts` › "no check runs, automatic
-  or manual, when the build is unpackaged or in demo mode" (existing)
-- AC4 → the same two tests, both run red once against the seeded defect in D2 (gate in `check()`
-  removed)
-- AC5 → e2e `tests/e2e/tray-quit.spec.ts` › "quit from the tray ends the app" (D3)
-- AC6 → e2e `tests/e2e/tray.spec.ts` (all four tests), run in file order, each alone with `-g`, and
-  with `--repeat-each=2` (D3); no "must stay last" comment (`grep -n "stay last"
-tests/e2e/tray.spec.ts` empty)
-- AC7 → check in D3: the header of `tests/e2e/tray.spec.ts` no longer says the lifecycle is out of
-  scope (`grep -n "out of scope" tests/e2e/tray.spec.ts` empty)
-- AC8 → check in D4: `grep -n "tray.spec.ts:134" docs/ROADMAP.md` empty (already true at the cut)
-- AC9 → check in D4: `grep -rn "waitForTimeout" tests/e2e` returns only the start-minimized line
-  with its same-line reason (named in Decisions)
-- AC10 → check in D4: no diff in `playwright.config.ts`, `vitest.config.ts` and `tests/setup.ts`;
-  no generic absence helper added under `tests/`
-- AC11 → e2e run `npx playwright test tests/e2e/navigation-guard.spec.ts
-tests/e2e/update-check-disabled.spec.ts tests/e2e/tray.spec.ts tests/e2e/tray-quit.spec.ts`
-  exits 0 (D1–D3)
+Decisions: start-minimized keeps `waitForTimeout(500)` with a same-line reason (AC9). D3 also routed
+the tray main-process evaluates through the existing `evaluateMain` (retries a Playwright
+"garbage collected" error that flaked `--repeat-each=2` about every second run). Review nits left:
+navigation-guard uses raw `app.app.evaluate`; the stale "expression string" comment placement there.
 
-## Done
-
-<Leave empty. Filled by `/build <id>` after implementation:
-
-- Short summary (2–5 lines): what was done.
-- Commit message (1–2 lines, keywords are enough).
-- Verification: build/test/lint result + review outcome; open points/blockers, if any.>
+tiers: D 4 / hard 0 · review default · cycles 1 · agents 7

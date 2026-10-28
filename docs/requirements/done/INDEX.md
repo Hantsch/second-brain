@@ -299,3 +299,4 @@ second roadmap.
 - 096 — Lane map in CLAUDE.md and a guard that every test file has a lane · S23 · CLAUDE.md lists the five lanes and a test fails when a test file is claimed by no config or by more than one.
 - 098 — CI stays PR-only (recorded deviation) and the PR lane reports its minutes · S23 · verify.yml writes lane minutes vs a 6 min budget to the step summary and warns when over; CLAUDE.md lane map and deviation updated
 - 099 — The blocking lane stops waiting on real time · S23 · write stability runs on an own gate under fake timers, llamacpp counts probes instead of reading the clock
+- 100 — e2e absence checks wait on a signal; the quit test gets its own spec · S23 · navigation-guard reads the guard's defaultPrevented, update-check asserts UpdateState, tray-quit.spec.ts standalone, tray.spec order-independent

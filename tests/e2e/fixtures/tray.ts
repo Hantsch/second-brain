@@ -8,6 +8,7 @@
  * title-bar × fires (see `quit-during-run.spec.ts`). */
 
 import type { AppSession } from '../../../scripts/lib/app-harness.mjs';
+import { evaluateMain } from '../../../scripts/lib/app-harness.mjs';
 
 export type TrayItemId = 'open' | 'quick-capture' | 'quit';
 
@@ -27,7 +28,8 @@ export async function clickTrayItem(
   id: TrayItemId,
   { deferred = false }: { deferred?: boolean } = {},
 ): Promise<void> {
-  await app.app.evaluate(
+  await evaluateMain(
+    app.app,
     (_electron, args) => {
       const handle = (globalThis as { __SB_E2E_TRAY__?: { getMenu: () => Electron.Menu } })
         .__SB_E2E_TRAY__;
@@ -43,18 +45,44 @@ export async function clickTrayItem(
 
 /** A real close of the main window, as the title bar's × would request it. */
 export async function closeMainWindow(app: AppSession): Promise<void> {
-  await app.app.evaluate(({ BrowserWindow }, id) => {
-    BrowserWindow.fromId(id)?.close();
-  }, requireMainWindowId(app));
+  await evaluateMain(
+    app.app,
+    ({ BrowserWindow }, id) => {
+      BrowserWindow.fromId(id)?.close();
+    },
+    requireMainWindowId(app),
+  );
 }
 
 /** The main window's state: `alive` false once it is destroyed. */
 export async function mainWindowState(
   app: AppSession,
 ): Promise<{ alive: boolean; visible: boolean }> {
-  return app.app.evaluate(({ BrowserWindow }, id) => {
-    const window = BrowserWindow.fromId(id);
-    if (!window || window.isDestroyed()) return { alive: false, visible: false };
-    return { alive: true, visible: window.isVisible() };
-  }, requireMainWindowId(app));
+  return evaluateMain(
+    app.app,
+    ({ BrowserWindow }, id) => {
+      const window = BrowserWindow.fromId(id);
+      if (!window || window.isDestroyed()) return { alive: false, visible: false };
+      return { alive: true, visible: window.isVisible() };
+    },
+    requireMainWindowId(app),
+  );
+}
+
+/** Hides every quick-capture window, so a test can prove it opens (is shown) again. */
+export async function hideQuickCapture(app: AppSession): Promise<void> {
+  await evaluateMain(app.app, ({ BrowserWindow }) => {
+    for (const window of BrowserWindow.getAllWindows()) {
+      if (window.webContents.getURL().includes('quick-capture')) window.hide();
+    }
+  });
+}
+
+/** Whether a quick-capture window exists and is currently shown. */
+export async function quickCaptureVisible(app: AppSession): Promise<boolean> {
+  return evaluateMain(app.app, ({ BrowserWindow }) =>
+    BrowserWindow.getAllWindows().some(
+      (window) => window.webContents.getURL().includes('quick-capture') && window.isVisible(),
+    ),
+  );
 }

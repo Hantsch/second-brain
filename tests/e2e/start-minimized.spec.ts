@@ -31,7 +31,7 @@ test('with start in the tray the window stays hidden until the tray opens it, an
     await expect
       .poll(() => app.page.evaluate('document.querySelector(".sb-rail") !== null'))
       .toBe(true);
-    await app.page.waitForTimeout(500);
+    await app.page.waitForTimeout(500); // no production signal marks the ready-to-show decision; not security-relevant (story 100)
     expect(await mainWindowState(app)).toEqual({ alive: true, visible: false });
   });
 

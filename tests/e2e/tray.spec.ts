@@ -6,12 +6,18 @@
  * `app.evaluate` the same way `quit-during-run.spec.ts` drives a real
  * `BrowserWindow.close()`.
  *
- * The close/hide/quit-from-tray lifecycle (D3) is deliberately out of scope —
- * this file only proves the menu shape and the quick-capture action; a later
- * deliverable appends its own tests below without touching these. */
+ * This file covers the menu, quick capture and close-to-tray (on, like a real
+ * install, so the window's × hides the app). Quit lives in tray-quit.spec.ts. */
 
+import { evaluateMain } from '../../scripts/lib/app-harness.mjs';
 import { E2E_HOTKEY_CHORD, expect, test } from './fixtures/app';
-import { clickTrayItem, closeMainWindow, mainWindowState } from './fixtures/tray';
+import {
+  clickTrayItem,
+  closeMainWindow,
+  hideQuickCapture,
+  mainWindowState,
+  quickCaptureVisible,
+} from './fixtures/tray';
 
 test.use({ specId: 'tray', hotkey: true });
 
@@ -19,7 +25,7 @@ test('the tray menu offers open Gaston, quick capture and quit', async ({ app })
   let items: { id: string | undefined; label: string }[] = [];
 
   await test.step('read the live tray menu template via the e2e handle', async () => {
-    items = await app.app.evaluate(() => {
+    items = await evaluateMain(app.app, () => {
       const handle = (globalThis as { __SB_E2E_TRAY__?: { getMenu: () => Electron.Menu } })
         .__SB_E2E_TRAY__;
       if (!handle) throw new Error('no __SB_E2E_TRAY__ handle — is SB_E2E_TRAY set?');
@@ -36,10 +42,10 @@ test('the tray menu offers open Gaston, quick capture and quit', async ({ app })
 });
 
 test('the quick-capture menu item opens the quick-capture window', async ({ app }) => {
-  const opened = app.app.waitForEvent('window');
+  await hideQuickCapture(app);
 
   await test.step('click the quick-capture item via the e2e handle', async () => {
-    await app.app.evaluate(() => {
+    await evaluateMain(app.app, () => {
       const handle = (globalThis as { __SB_E2E_TRAY__?: { getMenu: () => Electron.Menu } })
         .__SB_E2E_TRAY__;
       if (!handle) throw new Error('no __SB_E2E_TRAY__ handle — is SB_E2E_TRAY set?');
@@ -50,16 +56,9 @@ test('the quick-capture menu item opens the quick-capture window', async ({ app 
   });
 
   await test.step('the quick-capture window opens', async () => {
-    const capturePage = await opened;
-    await capturePage.waitForLoadState('domcontentloaded');
-    expect(capturePage.url()).toContain('quick-capture');
+    await expect.poll(() => quickCaptureVisible(app)).toBe(true);
   });
 });
-
-/* 058, D3: the close/hide/quit lifecycle. Close-to-tray is on (the fixture's
-   default, like a real install), so the window's × hides the app instead of
-   quitting it. Order matters from here on: the tests share one app, and the
-   last one quits it. */
 
 /** The chord the fixture pins for a `hotkey: true` spec — not the seeded default,
    which the developer's own Gaston usually holds while the suite runs. */
@@ -88,7 +87,8 @@ test('with the window in the tray the quick-capture hotkey stays registered and 
   app,
 }) => {
   const isRegistered = (): Promise<boolean> =>
-    app.app.evaluate(
+    evaluateMain(
+      app.app,
       ({ globalShortcut }, chord) => globalShortcut.isRegistered(chord),
       QUICK_CAPTURE_CHORD,
     );
@@ -104,12 +104,7 @@ test('with the window in the tray the quick-capture hotkey stays registered and 
   await test.step('close the window to the tray, and put away quick capture from before', async () => {
     await closeMainWindow(app);
     await expect.poll(() => mainWindowState(app)).toEqual({ alive: true, visible: false });
-    /* The earlier test left quick capture open; hidden, it can prove it opens again. */
-    await app.app.evaluate(({ BrowserWindow }) => {
-      for (const window of BrowserWindow.getAllWindows()) {
-        if (window.webContents.getURL().includes('quick-capture')) window.hide();
-      }
-    });
+    await hideQuickCapture(app);
   });
 
   await test.step('the hotkey is still registered', async () => {
@@ -118,29 +113,6 @@ test('with the window in the tray the quick-capture hotkey stays registered and 
 
   await test.step('quick capture opens from the tray', async () => {
     await clickTrayItem(app, 'quick-capture');
-    await expect
-      .poll(() =>
-        app.app.evaluate(({ BrowserWindow }) =>
-          BrowserWindow.getAllWindows().some(
-            (window) => window.webContents.getURL().includes('quick-capture') && window.isVisible(),
-          ),
-        ),
-      )
-      .toBe(true);
-  });
-});
-
-/* Must stay last: it ends the app every test above shares. */
-test('quit from the tray ends the app', async ({ app }) => {
-  const exited = app.app.waitForEvent('close');
-
-  await test.step('click the tray item "quit"', async () => {
-    /* Deferred: nothing is running, so this quit is not vetoed and the process
-       ends — the evaluate has to return before it does. */
-    await clickTrayItem(app, 'quit', { deferred: true });
-  });
-
-  await test.step('the app process ends', async () => {
-    await exited;
+    await expect.poll(() => quickCaptureVisible(app)).toBe(true);
   });
 });
