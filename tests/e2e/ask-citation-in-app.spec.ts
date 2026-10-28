@@ -34,7 +34,7 @@ interface OpenPathRecorder {
   sbOpenPathCalls?: string[];
 }
 
-test('a citation opens in the app, not in the OS editor', async ({ app }) => {
+test('a citation opens in the app, not in the OS editor', { tag: '@smoke' }, async ({ app }) => {
   const { page } = app;
 
   await test.step('setup — record shell.openPath in the main process, never call it', async () => {

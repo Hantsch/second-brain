@@ -13,3 +13,9 @@
 - 2026-10-28 07:56 · 096 · review 1 · started
 - 2026-10-28 07:56 · 096 · review 1 · done
 - 2026-10-28 07:56 · 096 · story · done
+- 07:57:03 · 097 · build · started
+- 2026-10-28 07:57 · 097 · D1 Smoke tag + script · started
+- 2026-10-28 07:57 · 097 · D1 Smoke tag + script · done
+- 2026-10-28 07:57 · 097 · D2 Broken main fails launch · started
+- 2026-10-28 07:59 · 097 · D2 Broken main fails launch · blocked: Playwright strips NODE_OPTIONS, plan gap
+- 2026-10-28 07:59 · 097 · story · blocked: D2 plan gap (NODE_OPTIONS stripped by Playwright)

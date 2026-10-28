@@ -215,3 +215,20 @@ describe('the config sets a suite-wide time budget', () => {
     expect(value > 0, `globalTimeout must be a positive number, got "${raw}"`).toBe(true);
   });
 });
+
+describe('the smoke lane', () => {
+  it('exactly the five smoke specs carry the @smoke tag and test:smoke selects them by it', () => {
+    const tagged = readdirSync(join(repoRootPath, 'tests/e2e'))
+      .filter((name) => name.endsWith('.spec.ts'))
+      .filter((name) => read(`tests/e2e/${name}`).includes('@smoke'))
+      .sort();
+    expect(tagged).toEqual([
+      'ask-citation-in-app.spec.ts',
+      'journal-close.spec.ts',
+      'search-keyboard.spec.ts',
+      'smoke.spec.ts',
+      'task-no-model.spec.ts',
+    ]);
+    expect(packageJson.scripts?.['test:smoke']).toBe('playwright test --grep @smoke');
+  });
+});

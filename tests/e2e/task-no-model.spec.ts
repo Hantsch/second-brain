@@ -85,7 +85,7 @@ async function openTasksScreen(page: Page): Promise<void> {
   await expect(page.getByRole('heading', { name: 'Tasks', level: 1 })).toBeVisible();
 }
 
-test("a day's close survives leaving the journal", async ({ app }) => {
+test("a day's close survives leaving the journal", { tag: '@smoke' }, async ({ app }) => {
   const { page } = app;
 
   await test.step('close — open the seeded day and trigger the close-out', async () => {
@@ -130,14 +130,15 @@ test("a day's close survives leaving the journal", async ({ app }) => {
   });
 });
 
-test('with no model configured a condensation creates no task and keeps its honest dead end', async ({
-  app,
-}) => {
-  const { page } = app;
-  const AREA = { slug: 'kunden-und-team', title: 'Kunden und Team' };
+test(
+  'with no model configured a condensation creates no task and keeps its honest dead end',
+  { tag: '@smoke' },
+  async ({ app }) => {
+    const { page } = app;
+    const AREA = { slug: 'kunden-und-team', title: 'Kunden und Team' };
 
-  await test.step('condense — clear the routing (this test needs no model routed at all)', async () => {
-    /* This spec shares one app instance across both tests (see the file
+    await test.step('condense — clear the routing (this test needs no model routed at all)', async () => {
+      /* This spec shares one app instance across both tests (see the file
        header) — the fake provider and its per-tier defaults the first test
        needs stay configured on disk. `llm:setDefault({ ref: null })` is the
        same call the routing table's own "no model" option makes; clearing
@@ -150,69 +151,71 @@ test('with no model configured a condensation creates no task and keeps its hone
        regardless. A reload is what makes the renderer's own routing query
        see it — this call goes around `useMutation`, so nothing here
        invalidates the cache on its own. */
-    /* String form, not a typed function body: the tsconfig this file type-checks
+      /* String form, not a typed function body: the tsconfig this file type-checks
        under has no DOM lib (`tests/e2e/**` is Node-side under
        `tsconfig.node.json`), so a function referencing `window` would not
        compile — the same reason every other spec's own `location.hash`
        navigation already uses this form instead of a typed callback. */
-    for (const tier of ['cheap', 'balanced', 'strong']) {
-      await page.evaluate(`window.sb.invoke('llm:setDefault', { tier: '${tier}', ref: null })`);
-    }
-    await page.reload();
-  });
+      for (const tier of ['cheap', 'balanced', 'strong']) {
+        await page.evaluate(`window.sb.invoke('llm:setDefault', { tier: '${tier}', ref: null })`);
+      }
+      await page.reload();
+    });
 
-  await test.step('condense — open the condensed tab with no model routed', async () => {
-    await page.evaluate(`location.hash = "#/notes?a=${AREA.slug}&tab=condensed"`);
-    const panel = page
-      .locator('.sb-panel')
-      .filter({ has: page.locator('.sb-panel-title', { hasText: AREA.title }) });
-    await expect(panel.getByText('This step needs a model')).toBeVisible();
-    /* AC7's UI half, unchanged by this story: no trigger anywhere, not even
+    await test.step('condense — open the condensed tab with no model routed', async () => {
+      await page.evaluate(`location.hash = "#/notes?a=${AREA.slug}&tab=condensed"`);
+      const panel = page
+        .locator('.sb-panel')
+        .filter({ has: page.locator('.sb-panel-title', { hasText: AREA.title }) });
+      await expect(panel.getByText('This step needs a model')).toBeVisible();
+      /* AC7's UI half, unchanged by this story: no trigger anywhere, not even
        disabled — there is nothing here a click could "trigger" in the first
        place, which is itself part of the dead end being honest. */
-    await expect(panel.getByRole('button', { name: /^Condense/ })).toHaveCount(0);
-  });
+      await expect(panel.getByRole('button', { name: /^Condense/ })).toHaveCount(0);
+    });
 
-  await test.step('condense — the tasks screen never gained a row for it (AC7)', async () => {
-    await openTasksScreen(page);
-    await expect(rowsFor(page, AREA.slug)).toHaveCount(0);
-  });
-});
+    await test.step('condense — the tasks screen never gained a row for it (AC7)', async () => {
+      await openTasksScreen(page);
+      await expect(rowsFor(page, AREA.slug)).toHaveCount(0);
+    });
+  },
+);
 
-test('with no model configured the module view names condense-module and links to its model setting', async ({
-  app,
-  vaultPath,
-}) => {
-  const { page } = app;
-  const MODULE = 'second-brain-methodik';
-  const overview = join(vaultPath, 'modules', MODULE, 'wiki', 'overview.md');
-  const before = readFileSync(overview, 'utf8');
+test(
+  'with no model configured the module view names condense-module and links to its model setting',
+  { tag: '@smoke' },
+  async ({ app, vaultPath }) => {
+    const { page } = app;
+    const MODULE = 'second-brain-methodik';
+    const overview = join(vaultPath, 'modules', MODULE, 'wiki', 'overview.md');
+    const before = readFileSync(overview, 'utf8');
 
-  await test.step('module — open the condensed tab with no model routed', async () => {
-    /* The routing was cleared by the previous test on this shared app (see the
+    await test.step('module — open the condensed tab with no model routed', async () => {
+      /* The routing was cleared by the previous test on this shared app (see the
        file header); clearing again keeps this one independent of test order. */
-    for (const tier of ['cheap', 'balanced', 'strong']) {
-      await page.evaluate(`window.sb.invoke('llm:setDefault', { tier: '${tier}', ref: null })`);
-    }
-    await page.evaluate(`location.hash = "#/knowledge?m=${MODULE}&tab=condensed"`);
-    await page.reload();
-    await expect(page.getByRole('tab', { name: 'Condensed', selected: true })).toBeVisible();
-    await expect(page.getByText('This step needs a model')).toBeVisible();
-    await expect(page.getByText(/Condense module/)).toBeVisible();
-    /* No trigger anywhere, not even disabled. */
-    await expect(page.getByRole('button', { name: /^Condense/ })).toHaveCount(0);
-  });
+      for (const tier of ['cheap', 'balanced', 'strong']) {
+        await page.evaluate(`window.sb.invoke('llm:setDefault', { tier: '${tier}', ref: null })`);
+      }
+      await page.evaluate(`location.hash = "#/knowledge?m=${MODULE}&tab=condensed"`);
+      await page.reload();
+      await expect(page.getByRole('tab', { name: 'Condensed', selected: true })).toBeVisible();
+      await expect(page.getByText('This step needs a model')).toBeVisible();
+      await expect(page.getByText(/Condense module/)).toBeVisible();
+      /* No trigger anywhere, not even disabled. */
+      await expect(page.getByRole('button', { name: /^Condense/ })).toHaveCount(0);
+    });
 
-  await test.step('module — nothing was written to the overview page', async () => {
-    expect(readFileSync(overview, 'utf8')).toBe(before);
-  });
+    await test.step('module — nothing was written to the overview page', async () => {
+      expect(readFileSync(overview, 'utf8')).toBe(before);
+    });
 
-  await test.step('module — the link lands on the models tab, at the task’s own select', async () => {
-    await page.getByRole('button', { name: 'Set up routing' }).click();
-    await expect.poll(() => page.url().split('#')[1] ?? '').toBe('/settings?tab=models');
-    await expect(page.getByRole('tab', { name: 'Models', selected: true })).toBeVisible();
-    const select = page.locator('#routing-select-condense-module');
-    await expect(select).toBeVisible();
-    await expect(select).toBeEnabled();
-  });
-});
+    await test.step('module — the link lands on the models tab, at the task’s own select', async () => {
+      await page.getByRole('button', { name: 'Set up routing' }).click();
+      await expect.poll(() => page.url().split('#')[1] ?? '').toBe('/settings?tab=models');
+      await expect(page.getByRole('tab', { name: 'Models', selected: true })).toBeVisible();
+      const select = page.locator('#routing-select-condense-module');
+      await expect(select).toBeVisible();
+      await expect(select).toBeEnabled();
+    });
+  },
+);

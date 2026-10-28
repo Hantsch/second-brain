@@ -1,7 +1,7 @@
 ---
 id: 097
 title: The release starts the built app before it publishes
-status: ready # draft -> ready -> in-progress -> done
+status: in-progress # draft -> ready -> in-progress -> done
 created: 2026-10-27
 ---
 
@@ -80,7 +80,7 @@ in CI, release budget (098). No changelog entry (tests only).
 
 ## Deliverables
 
-- [ ] D1 — **Smoke tag + script.** Add `{ tag: '@smoke' }` (Playwright ≥1.42 test-details
+- [x] D1 — **Smoke tag + script.** Add `{ tag: '@smoke' }` (Playwright ≥1.42 test-details
       argument: `test('title', { tag: '@smoke' }, async (...) => …)`) to **every** `test(...)` in
       exactly these five files: `tests/e2e/smoke.spec.ts`, `tests/e2e/search-keyboard.spec.ts`,
       `tests/e2e/ask-citation-in-app.spec.ts`, `tests/e2e/journal-close.spec.ts`,
@@ -182,3 +182,7 @@ in CI, release budget (098). No changelog entry (tests only).
 - Short summary (2–5 lines): what was done.
 - Commit message (1–2 lines, keywords are enough).
 - Verification: build/test/lint result + review outcome; open points/blockers, if any.>
+
+## Blocker (build)
+
+D1 built and verified (10 tests in 5 files under `--grep @smoke`). D2 stopped on the plan's own stop condition: Playwright 1.62.1's `_electron.launch` runs `delete env.NODE_OPTIONS` before spawning Electron (node_modules/playwright-core/lib/coreBundle.js:44013), so `extraEnv.NODE_OPTIONS=--require <throwing module>` never reaches the main process and `launchApp` resolves. A probe confirmed it. The User decision (app-harness.mjs unchanged, no writes to out/) rules out the two fixes: (a) optional `mainEntry` in `launchApp` pointing at the temp throwing .cjs, (b) optional `args` prefix (`-r <module>`). Needs refine: pick (a) or lift the "harness unchanged" decision. Notes: use forward slashes in any quoted path on Windows; if the throw leaves Electron behind an error dialog, cleanup must find the process by `--user-data-dir`. D3-D5 not started.

@@ -56,87 +56,95 @@ async function openDay(page: Page, date: string): Promise<void> {
   await expect.poll(() => page.url().split('#')[1] ?? '').toBe(`/journal?d=${date}`);
 }
 
-test('the accepted change is on disk, not only in the DOM', async ({ app, vault }) => {
-  const { page } = app;
-  const path = dayPath(DAY_A);
+test(
+  'the accepted change is on disk, not only in the DOM',
+  { tag: '@smoke' },
+  async ({ app, vault }) => {
+    const { page } = app;
+    const path = dayPath(DAY_A);
 
-  await test.step('journal close — open seeded day entry', async () => {
-    await openDay(page, DAY_A);
-    await expect(page.getByRole('button', { name: 'Close the day' })).toBeVisible();
-  });
+    await test.step('journal close — open seeded day entry', async () => {
+      await openDay(page, DAY_A);
+      await expect(page.getByRole('button', { name: 'Close the day' })).toBeVisible();
+    });
 
-  await test.step('journal close — trigger close', async () => {
-    await page.getByRole('button', { name: 'Close the day' }).click();
-  });
+    await test.step('journal close — trigger close', async () => {
+      await page.getByRole('button', { name: 'Close the day' }).click();
+    });
 
-  await test.step('journal close — proposal visible, file unchanged', async () => {
-    await expect(page.getByRole('button', { name: 'Apply and close' })).toBeVisible();
-    /* The native checkbox is visually replaced by `.gs-check-box` (see
+    await test.step('journal close — proposal visible, file unchanged', async () => {
+      await expect(page.getByRole('button', { name: 'Apply and close' })).toBeVisible();
+      /* The native checkbox is visually replaced by `.gs-check-box` (see
        `atoms/Checkbox.tsx`), so it isn't itself painted — `toBeChecked`
        still proves the row for this exact todo text is there and kept. */
-    await expect(page.getByRole('checkbox', { name: TODO_A1 })).toBeChecked();
-    /* AC3: the disk, not the DOM, is the proof that nothing has been written
+      await expect(page.getByRole('checkbox', { name: TODO_A1 })).toBeChecked();
+      /* AC3: the disk, not the DOM, is the proof that nothing has been written
        yet — read directly through the vault fixture. */
-    expect(vault.frontmatter(path).closed ?? null).toBeNull();
-    expect(vault.readNote(path)).not.toContain('## Fakten');
-  });
+      expect(vault.frontmatter(path).closed ?? null).toBeNull();
+      expect(vault.readNote(path)).not.toContain('## Fakten');
+    });
 
-  await test.step('journal close — accept', async () => {
-    await page.getByRole('button', { name: 'Apply and close' }).click();
-    await expect(page.getByRole('button', { name: 'Apply and close' })).toBeHidden();
-  });
+    await test.step('journal close — accept', async () => {
+      await page.getByRole('button', { name: 'Apply and close' }).click();
+      await expect(page.getByRole('button', { name: 'Apply and close' })).toBeHidden();
+    });
 
-  await test.step('journal close — disk matches preview', async () => {
-    await expect.poll(() => vault.frontmatter(path).closed).toBe(DAY_A);
-    const body = vault.readNote(path);
-    expect(body).toContain('## Fakten');
-    expect(body).toContain(`- [ ] ${TODO_A1}`);
-    expect(body).toContain(`- [ ] ${TODO_A2}`);
-  });
-});
+    await test.step('journal close — disk matches preview', async () => {
+      await expect.poll(() => vault.frontmatter(path).closed).toBe(DAY_A);
+      const body = vault.readNote(path);
+      expect(body).toContain('## Fakten');
+      expect(body).toContain(`- [ ] ${TODO_A1}`);
+      expect(body).toContain(`- [ ] ${TODO_A2}`);
+    });
+  },
+);
 
-test('nothing is written before accept, exactly the preview after', async ({ app, vault }) => {
-  const { page } = app;
-  const path = dayPath(DAY_B);
+test(
+  'nothing is written before accept, exactly the preview after',
+  { tag: '@smoke' },
+  async ({ app, vault }) => {
+    const { page } = app;
+    const path = dayPath(DAY_B);
 
-  await test.step('journal close — open seeded day entry', async () => {
-    await openDay(page, DAY_B);
-    await expect(page.getByRole('button', { name: 'Close the day' })).toBeVisible();
-  });
+    await test.step('journal close — open seeded day entry', async () => {
+      await openDay(page, DAY_B);
+      await expect(page.getByRole('button', { name: 'Close the day' })).toBeVisible();
+    });
 
-  const before = vault.snapshot(path);
+    const before = vault.snapshot(path);
 
-  await test.step('journal close — trigger close', async () => {
-    await page.getByRole('button', { name: 'Close the day' }).click();
-  });
+    await test.step('journal close — trigger close', async () => {
+      await page.getByRole('button', { name: 'Close the day' }).click();
+    });
 
-  await test.step('journal close — proposal visible, file unchanged', async () => {
-    await expect(page.getByRole('button', { name: 'Apply and close' })).toBeVisible();
-    /* The checkbox's own accessible name IS the proposed todo text (see
+    await test.step('journal close — proposal visible, file unchanged', async () => {
+      await expect(page.getByRole('button', { name: 'Apply and close' })).toBeVisible();
+      /* The checkbox's own accessible name IS the proposed todo text (see
        `atoms/Checkbox.tsx`: `label` becomes the wrapping `<label>`'s text) —
        reading it here proves the card really previews this exact sentence,
        not a stand-in. The native input itself is visually replaced by
        `.gs-check-box`, so `toBeChecked` is the right assertion, not
        `toBeVisible`. */
-    await expect(page.getByRole('checkbox', { name: TODO_B1 })).toBeChecked();
-    /* AC4, half one: a byte-for-byte comparison against the snapshot taken
+      await expect(page.getByRole('checkbox', { name: TODO_B1 })).toBeChecked();
+      /* AC4, half one: a byte-for-byte comparison against the snapshot taken
        before the trigger — a stronger claim than "still exists" or "still
        parses", and the whole point of guardrail 2 (nothing moves before
        accept). */
-    expect(vault.snapshot(path).equals(before)).toBe(true);
-  });
+      expect(vault.snapshot(path).equals(before)).toBe(true);
+    });
 
-  await test.step('journal close — accept', async () => {
-    await page.getByRole('button', { name: 'Apply and close' }).click();
-    await expect(page.getByRole('button', { name: 'Apply and close' })).toBeHidden();
-  });
+    await test.step('journal close — accept', async () => {
+      await page.getByRole('button', { name: 'Apply and close' }).click();
+      await expect(page.getByRole('button', { name: 'Apply and close' })).toBeHidden();
+    });
 
-  await test.step('journal close — disk matches preview', async () => {
-    /* AC4, half two: what actually landed on disk is exactly the sentence
+    await test.step('journal close — disk matches preview', async () => {
+      /* AC4, half two: what actually landed on disk is exactly the sentence
        the card showed before accept — not a re-derived or re-run guess. */
-    await expect.poll(() => vault.frontmatter(path).closed).toBe(DAY_B);
-    const body = vault.readNote(path);
-    expect(body).toContain('## Fakten');
-    expect(body).toContain(`- [ ] ${TODO_B1}`);
-  });
-});
+      await expect.poll(() => vault.frontmatter(path).closed).toBe(DAY_B);
+      const body = vault.readNote(path);
+      expect(body).toContain('## Fakten');
+      expect(body).toContain(`- [ ] ${TODO_B1}`);
+    });
+  },
+);

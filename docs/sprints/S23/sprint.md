@@ -19,7 +19,7 @@ package or a late `file://` navigation turns something red instead of passing si
 <!-- Order = the order the build phase works through. Dependent stories go last. -->
 
 - [x] 096 — Lane map in CLAUDE.md and a guard that every test file has a lane
-- [ ] 097 — The release starts the built app before it publishes
+- [ ] 097 — The release starts the built app before it publishes (blocked: D2 needs an app-harness.mjs change, Playwright drops NODE_OPTIONS)
 - [ ] 098 — CI stays PR-only, recorded as a deviation, and the PR lane reports its minutes
 - [ ] 099 — The blocking lane stops waiting on real time
 - [ ] 100 — e2e absence checks wait on a signal; the quit test gets its own spec

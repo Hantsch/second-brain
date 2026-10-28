@@ -91,7 +91,7 @@ async function tabToAriaLabel(page: Page, label: string): Promise<void> {
   throw new Error(`could not reach an element labelled "${label}" via Tab`);
 }
 
-test('Ctrl+K to reading a hit without the mouse', async ({ app }) => {
+test('Ctrl+K to reading a hit without the mouse', { tag: '@smoke' }, async ({ app }) => {
   const { page } = app;
   const showAllLabel = `Show all results for ${SEARCH_TERM}`;
 
