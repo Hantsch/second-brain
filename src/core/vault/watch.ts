@@ -12,22 +12,27 @@
  * never flush. The max-wait timer starts once, on the first `add` into an empty batch,
  * and is not reset by later adds, so it guarantees a flush within `maxWaitMs`.
  *
- * chokidar's `awaitWriteFinish` holds back the `add`/`change` event until a file's size
- * has been stable for `writeStabilityMs` — OneDrive syncs and bulk copies write files in
- * chunks, and without this a still-growing file would be reported (and read) half-written.
+ * `add`/`change` events pass through our own write-stability gate (`write-stability.ts`)
+ * before they reach the batcher: it holds a file back until its size has been stable for
+ * `writeStabilityMs`, so a still-growing file (OneDrive sync, bulk copy) is never reported
+ * half-written. It replaces chokidar's `awaitWriteFinish` because a pure timer-driven gate
+ * can be proven under fake timers; chokidar's internal clock cannot. Every other event
+ * (unlink, addDir, ...) goes straight to the batcher, undelayed.
  */
 
+import { stat } from 'node:fs/promises';
+import { join } from 'node:path';
 import { watch } from 'chokidar';
 import { toVaultPath } from './paths';
+import { WATCH_WRITE_STABILITY_MS, createWriteStabilityGate } from './write-stability';
+
+export { WATCH_WRITE_STABILITY_MS };
 
 /** Trailing debounce in Millisekunden. */
 export const WATCH_DEBOUNCE_MS = 250;
 
 /** Obergrenze fuer die Wartezeit, siehe Kopfkommentar. */
 export const WATCH_MAX_WAIT_MS = 2000;
-
-/** Wie lange die Dateigroesse stabil sein muss, bevor eine Meldung rausgeht; siehe Kopfkommentar. */
-export const WATCH_WRITE_STABILITY_MS = 300;
 
 export interface WatchOptions {
   debounceMs?: number;
@@ -135,15 +140,20 @@ export function watchVault(
     options.debounceMs ?? WATCH_DEBOUNCE_MS,
     options.maxWaitMs ?? WATCH_MAX_WAIT_MS,
   );
+  const gate = createWriteStabilityGate(
+    (path) => batcher.add(path),
+    (path) =>
+      stat(join(root, path)).then(
+        (stats) => stats.size,
+        () => null,
+      ),
+    options.writeStabilityMs ?? WATCH_WRITE_STABILITY_MS,
+  );
   const watcher = watch(root, {
     cwd: root,
     ignoreInitial: true,
     persistent: true,
     ignored: (path: string) => isIgnoredPath(path),
-    awaitWriteFinish: {
-      stabilityThreshold: options.writeStabilityMs ?? WATCH_WRITE_STABILITY_MS,
-      pollInterval: 100,
-    },
   });
 
   const ready = new Promise<void>((resolve) => {
@@ -152,11 +162,12 @@ export function watchVault(
     });
   });
 
-  watcher.on('all', (_event, path) => {
+  watcher.on('all', (event, path) => {
     if (typeof path !== 'string' || path.length === 0) return;
     const relative = toVaultPath(path);
     if (relative.length === 0 || isIgnoredPath(relative)) return;
-    batcher.add(relative);
+    if (event === 'add' || event === 'change') gate.touch(relative);
+    else batcher.add(relative);
   });
 
   watcher.on('error', (error) => {
@@ -169,6 +180,8 @@ export function watchVault(
     whenReady: () => ready,
     flush: () => batcher.flush(),
     async dispose(): Promise<void> {
+      // Gate first: a stable report fired during teardown would re-arm the batcher.
+      gate.cancel();
       batcher.cancel();
       await watcher.close();
     },

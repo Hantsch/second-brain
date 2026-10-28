@@ -21,7 +21,7 @@ package or a late `file://` navigation turns something red instead of passing si
 - [x] 096 — Lane map in CLAUDE.md and a guard that every test file has a lane
 - [ ] 097 — The release starts the built app before it publishes (blocked: D2 needs an app-harness.mjs change, Playwright drops NODE_OPTIONS)
 - [x] 098 — CI stays PR-only, recorded as a deviation, and the PR lane reports its minutes
-- [ ] 099 — The blocking lane stops waiting on real time
+- [x] 099 — The blocking lane stops waiting on real time
 - [ ] 100 — e2e absence checks wait on a signal; the quit test gets its own spec
 - [ ] 101 — Hook tests keep one cheap case per hook in the PR lane; eol test fails honestly
 - [ ] 102 — Test and config drift drive-bys

@@ -634,17 +634,28 @@ describe('startLlamaEngine — classified failures', () => {
   });
 
   it('reports a child that dies during the poll at once, without waiting out the ceiling', async () => {
-    const spawn = fakeSpawn({ diesAfterSpawn: true });
+    let probes = 0;
+    let probesAtSpawn = 0;
+    const inner = fakeFetchOnPort(null);
+    const countingFetch: typeof inner = (...args) => {
+      probes += 1;
+      return inner(...args);
+    };
+    const spawn = fakeSpawn({
+      diesAfterSpawn: true,
+      onSpawn: () => {
+        probesAtSpawn = probes;
+      },
+    });
     // The production-sized ceiling on purpose: the point of the fix is that
     // this number is never reached when the process is already gone.
     const ceilingMs = 20_000;
     const deps = startDeps({
-      fetchImpl: fakeFetchOnPort(null),
+      fetchImpl: countingFetch,
       spawnFn: spawn.spawnFn,
       startTimeoutMs: ceilingMs,
       pollIntervalMs: 5,
     });
-    const startedAt = Date.now();
 
     const result = await startLlamaEngine(deps);
 
@@ -653,10 +664,8 @@ describe('startLlamaEngine — classified failures', () => {
       status: 'installed-stopped',
       reason: 'spawn-failed',
     });
-    // Half the ceiling it disproves, not a speed budget: only a wait for the
-    // ceiling crosses it, never a slow runner.
-    // eslint-disable-next-line no-restricted-syntax -- bound is relative to the 20 s ceiling, not to machine speed
-    expect(Date.now() - startedAt).toBeLessThan(ceilingMs / 2);
+    // One readiness probe, then the exit is seen; a wait for the ceiling would probe hundreds of times — far below ceilingMs / pollIntervalMs.
+    expect(probes - probesAtSpawn).toBeLessThanOrEqual(1);
   });
 
   it('still prefers the stderr cause over the generic one when the child dies', async () => {

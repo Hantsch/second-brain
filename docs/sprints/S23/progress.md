@@ -31,3 +31,13 @@
 - 2026-10-28 08:02 · 098 · review 1 · started
 - 2026-10-28 08:03 · 098 · review 1 · done
 - 2026-10-28 08:03 · 098 · story · done
+- 08:03:49 · 099 · build · started
+- 2026-10-28 08:04 · 099 · D1 write-stability gate · started
+- 2026-10-28 08:06 · 099 · D1 write-stability gate · done
+- 2026-10-28 08:06 · 099 · D2 llamacpp probe counter · started
+- 2026-10-28 08:06 · 099 · D2 llamacpp probe counter · done
+- 2026-10-28 08:06 · 099 · verify · started
+- 2026-10-28 08:09 · 099 · verify · done
+- 2026-10-28 08:09 · 099 · review 1 · started
+- 2026-10-28 08:10 · 099 · review 1 · done
+- 2026-10-28 08:10 · 099 · story · done

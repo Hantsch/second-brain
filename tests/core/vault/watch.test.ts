@@ -3,11 +3,16 @@
  * selbst in einem echten temporaeren Ordner mit kurzem Debounce.
  */
 
-import { appendFile, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { WATCH_DEBOUNCE_MS, createBatcher, isIgnoredPath, watchVault } from '@core/vault/watch';
+import {
+  WATCH_WRITE_POLL_MS,
+  WATCH_WRITE_STABILITY_MS,
+  createWriteStabilityGate,
+} from '@core/vault/write-stability';
 
 describe('createBatcher', () => {
   afterEach(() => {
@@ -142,7 +147,10 @@ describe('watchVault', () => {
     await mkdir(join(root, '.secondbrain', 'index'), { recursive: true });
 
     const batches: string[][] = [];
-    const watcher = watchVault(root, (paths) => batches.push(paths), { debounceMs: 80 });
+    const watcher = watchVault(root, (paths) => batches.push(paths), {
+      debounceMs: 80,
+      writeStabilityMs: 50,
+    });
     await watcher.whenReady();
 
     await writeFile(join(root, 'inbox', 'eins.md'), 'eins\n', 'utf8');
@@ -155,7 +163,7 @@ describe('watchVault', () => {
         expect(batches.length).toBeGreaterThan(0);
         expect(batches.flat()).toContain('inbox/zwei.md');
       },
-      { interval: 40 },
+      { interval: 40, timeout: 10_000 },
     );
 
     const seen = batches.flat();
@@ -171,53 +179,93 @@ describe('watchVault', () => {
     await new Promise((resolve) => setTimeout(resolve, 200));
     expect(batches.length).toBe(countAfterDispose);
   });
+});
+
+describe('createWriteStabilityGate', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
   it('reports a file written in chunks only once it is complete', async () => {
-    const root = await mkdtemp(join(tmpdir(), 'sb-watch-'));
-    roots.push(root);
-    await mkdir(join(root, 'inbox'), { recursive: true });
-    await mkdir(join(root, '.secondbrain', 'index'), { recursive: true });
-
-    const filePath = join(root, 'inbox', 'chunked.md');
+    vi.useFakeTimers();
+    const path = 'inbox/chunked.md';
     const chunks = ['erster teil\n', 'zweiter teil\n', 'dritter teil\n'];
-    const reportsForFile: string[][] = [];
+    let content = '';
+    const reportsForFile: string[] = [];
     const contentsWhenReported: string[] = [];
 
-    const watcher = watchVault(
-      root,
-      (paths) => {
-        if (paths.includes('inbox/chunked.md')) {
-          reportsForFile.push(paths);
-          void readFile(filePath, 'utf8').then((content) => {
-            contentsWhenReported.push(content);
-          });
-        }
+    // No window argument: the product default is what is proven here.
+    const gate = createWriteStabilityGate(
+      (reported) => {
+        reportsForFile.push(reported);
+        contentsWhenReported.push(content);
       },
-      { debounceMs: 50, writeStabilityMs: 400 },
+      () => Promise.resolve(content.length),
     );
-    await watcher.whenReady();
 
     for (const chunk of chunks) {
-      await appendFile(filePath, chunk, 'utf8');
-      await new Promise((resolve) => setTimeout(resolve, 150));
+      content += chunk;
+      gate.touch(path);
+      await vi.advanceTimersByTimeAsync(150);
     }
-
-    await vi.waitFor(
-      () => {
-        expect(reportsForFile.length).toBeGreaterThan(0);
-      },
-      { interval: 40 },
-    );
+    await vi.advanceTimersByTimeAsync(WATCH_WRITE_STABILITY_MS + 2 * WATCH_WRITE_POLL_MS);
 
     expect(reportsForFile).toHaveLength(1);
-    await vi.waitFor(
-      () => {
-        expect(contentsWhenReported).toHaveLength(1);
-      },
-      { interval: 20 },
-    );
     expect(contentsWhenReported[0]).toBe(chunks.join(''));
+  });
 
-    await watcher.dispose();
+  it('a file deleted while still being written is not reported', async () => {
+    vi.useFakeTimers();
+    let size: number | null = 12;
+    const reported: string[] = [];
+    const gate = createWriteStabilityGate(
+      (path) => reported.push(path),
+      () => Promise.resolve(size),
+    );
+
+    gate.touch('inbox/gone.md');
+    await vi.advanceTimersByTimeAsync(150);
+    size = null;
+    await vi.advanceTimersByTimeAsync(WATCH_WRITE_STABILITY_MS + 2 * WATCH_WRITE_POLL_MS);
+    expect(reported).toEqual([]);
+    expect(vi.getTimerCount()).toBe(0);
+
+    // The deleted path left the pending set, so a recreated file is tracked afresh.
+    size = 5;
+    gate.touch('inbox/gone.md');
+    await vi.advanceTimersByTimeAsync(WATCH_WRITE_STABILITY_MS + 2 * WATCH_WRITE_POLL_MS);
+    expect(reported).toEqual(['inbox/gone.md']);
+  });
+
+  it('nothing is reported after cancel', async () => {
+    vi.useFakeTimers();
+    const reported: string[] = [];
+    const heldStats: Array<(size: number) => void> = [];
+    let slowStats = 0;
+    const gate = createWriteStabilityGate(
+      (path) => reported.push(path),
+      (path) => {
+        if (path !== 'inbox/slow.md') return Promise.resolve(10);
+        slowStats += 1;
+        // The poll that would complete the window stays in flight across cancel().
+        if (slowStats < 4) return Promise.resolve(10);
+        return new Promise((resolve) => heldStats.push(resolve));
+      },
+    );
+
+    gate.touch('inbox/slow.md');
+    await vi.advanceTimersByTimeAsync(3 * WATCH_WRITE_POLL_MS);
+    gate.touch('inbox/fast.md');
+    await vi.advanceTimersByTimeAsync(WATCH_WRITE_POLL_MS);
+    expect(heldStats).toHaveLength(1);
+    expect(reported).toEqual([]);
+
+    gate.cancel();
+    expect(vi.getTimerCount()).toBe(0);
+
+    heldStats[0]?.(10);
+    await vi.advanceTimersByTimeAsync(10 * WATCH_WRITE_STABILITY_MS);
+    expect(reported).toEqual([]);
+    expect(vi.getTimerCount()).toBe(0);
   });
 });
