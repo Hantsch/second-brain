@@ -1,7 +1,7 @@
 ---
 sprint: S23
-status: planned # planned | in-progress | done
-branch: # set by /sprint
+status: in-progress # planned | in-progress | done
+branch: dev # user decision: commits directly on dev, no sprint branch
 milestone: M22 — Test lanes you can trust
 ---
 
