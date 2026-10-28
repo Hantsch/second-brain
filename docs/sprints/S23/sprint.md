@@ -1,6 +1,6 @@
 ---
 sprint: S23
-status: in-progress # planned | in-progress | done
+status: done # planned | in-progress | done
 branch: dev # user decision: commits directly on dev, no sprint branch
 milestone: M22 — Test lanes you can trust
 ---
@@ -41,4 +41,4 @@ package or a late `file://` navigation turns something red instead of passing si
 
 ## Regression gate
 
-<!-- Filled by `/sprint` phase 2b: the commands run, minutes taken, result, commit, and a verdict per failure. -->
+Ran on `dev` @ 4c5907d: `npm run build` green (0.15 min), `npm test` green (1.0 min, 405 files, 4938 tests), `npm run test:e2e` green (3.6 min, 122 passed). `e2e-all` is `none`. No failures, nothing quarantined.

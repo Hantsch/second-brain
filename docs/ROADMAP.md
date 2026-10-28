@@ -2,14 +2,13 @@
 
 The one source of status and planning: where we stand, what comes next, what is not planned yet.
 
-As of: 2026-10-27.
+As of: 2026-10-28.
 
 ## Where we stand
 
-- S22 done 2026-10-27 (M21 complete): 093, 094, 095 and 080 are built on `dev` — [S22 review](sprints/S22/review.md).
-- Waiting on the user: the adversarial pass on the shell guard (093 AC1, [testplan](sprints/S22/testplan.md)) before any release.
-- Waiting on the user: the `sprint/S17`–`S20` → `dev` merges and the first real release.
-- Next: `/sprint S23` — M22, all seven stories from the 2026-10-27 tests review (096–102).
+- S23 done 2026-10-28, committed straight on `dev` (no sprint branch): 096 and 098–102 are built, 097 is blocked on its D2 — [S23 review](sprints/S23/review.md).
+- Waiting on the user: whether 097's broken-start check may add a seam to `app-harness.mjs`, then `/refine 097`.
+- Waiting on the user: the adversarial pass on the shell guard (093 AC1, [testplan](sprints/S22/testplan.md)) and the `sprint/S17`–`S20` → `dev` merges before the first real release.
 
 Rules:
 
@@ -49,7 +48,7 @@ Rules:
 | M19 | Gaston ships and updates itself                                | done 2026-10-20 | [S19](sprints/done/S19/review.md)                                     |                                                            |
 | M20 | An agent curates the vault                                     | done 2026-10-27 | [S20](sprints/done/S20/review.md) · [S21](sprints/done/S21/review.md) |                                                            |
 | M21 | Release hardening                                              | done 2026-10-27 | [S22](sprints/S22/review.md)                                          | Adversarial guard pass by the user pending before release. |
-| M22 | Test lanes you can trust                                       | planned         | [S23](sprints/S23/sprint.md)                                          | Stories 096–102, tests and CI only.                        |
+| M22 | Test lanes you can trust                                       | in progress     | [S23](sprints/S23/review.md)                                          | 097 blocked: smoke wiring needs a harness seam.            |
 
 ## Open / unprioritised
 
@@ -63,6 +62,7 @@ Rules:
 
 ## Follow-ups worth doing
 
+- Tighten the small test nits S23 left: 098 budget assertions, 099 `watch.ts` wiring test and gate stat errors, 100 navigation-guard evaluate, 101 `git-checkout.ts` file URL, 102 transcript test — [S23 review](sprints/S23/review.md)
 - Close the guard gaps 093 left: relative paths with the cwd inside `modules/gaston-help/`, commands on the parent `modules/` (same for `raw/web`), regression rows for help-dir case / 8.3 / trailing-dot variants, and the .NET vs JS `\d` / `\s` Unicode edge in the wiki heading regex — [S22 review](sprints/S22/review.md)
 - Tighten 095's tests: concrete terms in the skill-content test, and let the llm-bridge test use a real `readSetupState` instead of a mock — [S22 review](sprints/S22/review.md)
 - Update install: revoke the quit grant after a successful `quitAndInstall`, treat a missing or differently formatted feed version as unknown rather than superseded, stop a stale `check.isError` overriding later event state, and bring `close-guard.ts` (~312 lines) under 300 — [S22 review](sprints/S22/review.md)
