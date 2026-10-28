@@ -1,7 +1,7 @@
 ---
 id: 102
 title: Test and config drift drive-bys
-status: draft # draft -> ready -> in-progress -> done
+status: ready # draft -> ready -> in-progress -> done
 created: 2026-10-27
 ---
 
@@ -58,65 +58,154 @@ tests/main/architecture-doc.test.ts` exits 0.
 
 ## Open Questions
 
-- Deleting the undici shim (`vitest.config.ts:18-24,:30,:70`) is a separate step and a policy
-  decision: it drops the support floor for developers on Node 20 and 22. Do that in this story,
-  in a follow-up story, or never? AC4 and AC5 do not require it.
-- F11 enforcement: is `engines.node` plus the existing `.nvmrc` warning enough, or should a test
-  pin the two to the same major? (A test that mirrors a config is what F10 removes.)
-- F10: drop the `win.target` assertion entirely, or replace it with a property (no space in
-  artifact names, as the test's title at `build-config.test.ts:36` suggests)?
-- F14: export each builder's cap and assert `<= CAP`, or drop the length check where a content
-  test already covers truncation? Some builders clamp with an inline literal (for example
-  `src/core/llm/prompts/condense-area.ts:124`); is exporting a constant in scope for the 3 sites?
-- The three F14 sites were checked by grep only; refine must confirm per builder that each cap
-  mirrors a constant before choosing between the two options.
+- ~~Undici shim: this story, a follow-up, or never?~~ Answered (User): keep it, see Decisions.
+- ~~F11 enforcement: `engines.node` plus the `.nvmrc` warning, or a test?~~ Answered: a test that
+  pins a relation (same major), not a value; see Decisions.
+- ~~F10: drop `win.target` or replace it with a property?~~ Answered: properties; see Decisions.
+- ~~F14: export each cap, or a content-level truncation check?~~ Answered: content-level; see
+  Decisions.
+- ~~Confirm per builder whether each cap mirrors a constant.~~ Confirmed: none is an exported
+  constant. `titleTagsPrompt` clamps with an inline `4000`
+  (`src/core/llm/prompts/title-tags.ts:43`), `summarizeSourcePrompt` with
+  `input.maxChars ?? 8000` (`src/core/llm/prompts/summarize-source.ts:128`), `buildParagraphs`
+  with the module-private `PROSE_DEFAULTS.hardMaxChars: 1600`
+  (`src/core/ingest/youtube/transcript.ts:29`).
 
 ## Decisions (Sprint)
 
-<Leave empty. Filled by `/sprint`'s clarification round and by `/refine <id>` when it runs
-inside a sprint: one line per decision the user made, with the answer and why. Empty outside
-a sprint.>
+- **(User)** Undici shim: keep it; deleting it is a separate later decision.
+- F11: `engines.node` becomes `>=24` and one test in `tests/scripts/ci-gate.test.ts` asserts its
+  floor major equals the `.nvmrc` major — it pins a relation between two sources, so a deliberate
+  Node bump edits both and stays green, unlike the value mirrors F10 removes.
+- F11: no `engine-strict`; AC4's "test or `npm install` check" is met by the test, and a hard
+  install block would contradict the kept shim that still supports older majors locally.
+- F10: the `win.target` literal (and the literal `package` script that repeats the same target
+  list) is replaced by properties — targets non-empty, each target's `artifactName` has no
+  whitespace, the `package` script builds exactly those targets with `--publish never` — because
+  the test title already promises the no-space property and a dropped assertion would leave an
+  empty target list unguarded.
+- F14: content-level truncation checks instead of exported caps — no builder exports its cap,
+  and exporting three constants only for tests would touch `src/` in a tests-only sprint; a tail
+  marker beyond any plausible cap proves truncation independent of the number.
+- F14 inputs sit far above the current caps (100 000 chars, 400 cues), so a retune of a cap
+  within an order of magnitude stays green.
+- The `it` "README.md mentions test:e2e in the development section" held only the assertion AC2
+  removes; it goes with it and is named in Done — AC9 is read as "nothing beyond what AC1/AC2
+  name is deleted", since AC2 mandates this one.
 
 ## Plan
 
-<Leave empty. Filled by `/refine <id>`: a short, precise overview — max. ~50 lines.
-Concrete steps, affected files, order. No essay.>
+Tests-only drive-by: three independent fixes, no `src/` change in the commit. Order D1 → D3, each
+verified with its own `npx vitest run <files>`.
+
+1. **F10 (D1)** — `tests/scripts/build-config.test.ts`: the `win.target` literal and the literal
+   `scripts.package` string become properties; `build.files`, `extraResources`, `nsis`,
+   `portable.artifactName` and `publish` assertions stay byte-identical.
+   `tests/scripts/e2e-wiring.test.ts`: drop the `readme` constant, the README `it`, and README
+   from the describe title and the header comment.
+2. **F11 (D2)** — `package.json` and `package-lock.json` (root `packages[""].engines`) to `>=24`;
+   one new `it` in the `.nvmrc` describe of `tests/scripts/ci-gate.test.ts`. `vitest.config.ts`
+   untouched (User decision: shim stays).
+3. **F14 (D3)** — three tests rewritten to tail-marker / no-text-lost assertions in
+   `tests/core/llm/prompts.test.ts`, `tests/core/wiki/prompts.test.ts`,
+   `tests/core/ingest/transcript.test.ts`; each proven red once by a temporary, uncommitted seed
+   in its builder.
+
+The Done section lists every removed assertion with its reason (AC9).
 
 ## Deliverables
 
-<Leave empty. Filled by `/refine <id>`: small pieces, each with its own acceptance
-(scrum-like) and the files it touches. `/build` implements them in order, in one go.
-Every acceptance criterion above must be covered by at least one deliverable **and** by the
-test named for it in `## Acceptance Tests` — the test is part of the deliverable that
-implements the behaviour, never a clean-up afterwards. Refine checks both before
-`status: ready`, build refuses to start without them.>
-
-- [ ] D1 — <smallest useful, individually acceptable result; names the files it touches>
-- [ ] D2 — ...
+- [ ] D1 — **F10: build-config and e2e-wiring tests stop pinning deliberate edits.** Files:
+      `tests/scripts/build-config.test.ts`, `tests/scripts/e2e-wiring.test.ts`, nothing else.
+      In `build-config.test.ts`, inside the `it` at line 36: remove
+      `expect(build.win.target).toEqual(['nsis', 'portable'])` and
+      `expect(scripts.package).toBe('npm run build && electron-builder --win nsis portable --publish never')`.
+      Add instead: `build.win.target` is a non-empty array of strings; for every target `t`,
+      `build[t].artifactName` is a string that does not match `/\s/` (this replaces the two
+      hard-coded `not.toMatch(/\s/)` lines; keep the "A space breaks the asset URL" comment); the
+      targets after `--win` in `scripts.package` (the tokens up to the next `--` flag) equal
+      `build.win.target` in order, and `scripts.package` contains `--publish never`. Rename the
+      `it` to what it now checks, e.g. "every win target has a space-free artifact name, the
+      package script builds exactly those targets without publishing, and releases publish to
+      Hantsch/second-brain". Do **not** change the `build.files` test (lines 22-24), the
+      `extraResources` test, the `build.artifactName` undefined check, the `nsis` /
+      `portable.artifactName` pins, or the `publish` pin (line 53).
+      In `e2e-wiring.test.ts`: delete `const readme = read('README.md');` (line 35) and the `it`
+      "README.md mentions test:e2e in the development section" (lines 153-155); rename the
+      describe at line 145 to "the profile sets e2e: npm run test:e2e"; in the header comment
+      (line 15) AC8's line becomes `the profile sets "e2e: npm run test:e2e".` — afterwards
+      `grep -n README tests/scripts/e2e-wiring.test.ts` returns nothing. Keep the `test:e2e`
+      invokes `playwright test` check (lines 38-42).
+      Acceptance: a temporary edit of `package.json` to `"target": []`, and separately a space in
+      `portable.artifactName`, each turns the renamed test red; revert both.
+      `npx vitest run tests/scripts/build-config.test.ts tests/scripts/e2e-wiring.test.ts tests/main/architecture-doc.test.ts`
+      exits 0; `git diff tests/main/architecture-doc.test.ts` is empty.
+- [ ] D2 — **F11: `engines.node` says what CI runs, and a test keeps it on the `.nvmrc` major.**
+      Files: `package.json` (`engines.node` → `">=24"`), `package-lock.json` (the root
+      `packages[""].engines.node`, around line 60, → `">=24"`; edit by hand, do not run
+      `npm install`), `tests/scripts/ci-gate.test.ts`. Do **not** touch `vitest.config.ts` or
+      `.nvmrc`. In `ci-gate.test.ts`, inside the existing describe "every workflow takes its Node
+      version from .nvmrc" (line 129), add one `it` "package.json engines.node has the .nvmrc
+      major as its floor": read `.nvmrc`, take its major (`trim().split('.')[0]`), read
+      `engines.node` from package.json (widen the `packageJson` type at line 16 with
+      `engines: { node: string }`), assert it matches `/^>=\s*(\d+)/` and that the captured major
+      equals the `.nvmrc` major. Add one sentence to the comment above that describe:
+      `engines.node` is the third place the Node major lives.
+      Acceptance: a temporary `engines.node` of `">=20.19"` turns the new test red; revert.
+      `npx vitest run tests/scripts/ci-gate.test.ts` exits 0; `git diff vitest.config.ts` empty.
+- [ ] D3 — **F14: truncation is proven by content, not by a copied cap.** Files:
+      `tests/core/llm/prompts.test.ts`, `tests/core/wiki/prompts.test.ts`,
+      `tests/core/ingest/transcript.test.ts`. No `src/` file in the commit. Keep the three test
+      names unchanged.
+      (a) `tests/core/llm/prompts.test.ts` › "kürzt sehr lange Texte" (lines 30-34): input
+      `'x'.repeat(100_000) + 'TEXTENDE'`; keep `toContain('gekürzt')`; replace
+      `toBeLessThan(4200)` with `expect(lastUserOf(turns)).not.toContain('TEXTENDE')`.
+      (b) `tests/core/wiki/prompts.test.ts` › "sagt beim Teilstueck, dass es eines ist, und kuerzt
+      lange Texte" (lines 95-104): text `'x'.repeat(100_000) + 'QUELLENENDE'`; keep the other
+      assertions; replace `toBeLessThan(9000)` with `not.toContain('QUELLENENDE')`.
+      (c) `tests/core/ingest/transcript.test.ts` › "zieht die Notbremse bei Captions ohne jede
+      Interpunktion" (lines 57-66): 400 cues instead of 40 (same punctuation-free text, still 1 s
+      apart so no pause break fires); keep `paragraphs.length > 1`; replace the per-paragraph
+      `toBeLessThan(1800)` loop with: the paragraph texts joined by `' '` equal the cue texts
+      joined by `' '` (nothing lost), and no single paragraph's text equals that whole joined
+      text.
+      Acceptance, each seed temporary and reverted before commit: for (a) and (b), make `clamp`
+      in `src/core/llm/prompts/shared.ts` return the trimmed text uncut → both tests red; for
+      (c), set `breakOnLength` in `src/core/ingest/youtube/transcript.ts` to `false` → test red.
+      `npx vitest run tests/core/llm/prompts.test.ts tests/core/wiki/prompts.test.ts tests/core/ingest/transcript.test.ts`
+      exits 0; `git diff --stat` shows nothing under `src/` and no change to
+      `tests/core/claude/jsonl.test.ts` or `tests/core/index/refresh-paths.test.ts`.
 
 ## Model Hints
 
-<Agent tier per deliverable. Default is the cheap tier with `/build`'s effort — leave
-unmarked. If a step needs more brainpower: "D3 (balancing formula) → deliverable-hard" (Opus +
-high effort, agent in `.claude/agents/`) plus a one-sentence risk justification.
-Plus one line for the code review, default: "Review: → default".>
+All Ds default tier: each is a bounded test edit with its seed check spelled out.
+
+Review: → default
 
 ## Acceptance Tests
 
-<Leave empty. Filled by `/refine <id>`: one line per acceptance criterion above, naming the
-automated test that proves it — level, file, and the test name it will carry. The tests are
-written by the deliverables, not afterwards; `/build` re-checks this mapping and that the
-tests pass before `status: done`. This section replaces the manual test plan: acceptance is
-the suite, not a click list.
-
-Example paths below; your real test layout and the commands that run it are in
-`.claude/ai-scrum.md` (`e2e-story`, `test-story`).
-
-- AC1 → e2e `tests/e2e/<flow>.spec.ts` › "<test name>" (real surface, per
-  `ui-acceptance-required`)
-- AC2 → unit `tests/core/<module>.test.ts` › "<test name>"
-- AC3 → **manual residue:** <the real reason it cannot be automated — an OS dialog, a
-  specific machine, a paid external service>. Goes into the sprint review; blocks nothing.>
+- AC1 → unit `tests/scripts/build-config.test.ts` › the renamed win-target `it` (D1); red with
+  `win.target: []` or a spaced `artifactName`.
+- AC2 → unit `tests/scripts/e2e-wiring.test.ts` › "package.json has a test:e2e script that runs
+  playwright" stays green, and `grep -n README tests/scripts/e2e-wiring.test.ts` is empty (D1).
+- AC3 → unit `tests/scripts/build-config.test.ts` › "ships exactly out/\*\* and package.json —
+  nothing wider" plus the publish assertion in the renamed `it`, and
+  `tests/main/architecture-doc.test.ts`, all green via the three-file `npx vitest run` in D1;
+  the diff leaves those lines untouched (D1).
+- AC4 → unit `tests/scripts/ci-gate.test.ts` › "package.json engines.node has the .nvmrc major as
+  its floor"; red with `>=20.19` (D2).
+- AC5 → `npm test` exits 0 in the sprint's regression gate; `git diff vitest.config.ts` empty
+  (D2).
+- AC6 → the three tests named under AC7 carry no `toBeLessThan(<literal>)` on length (D3).
+- AC7 → unit `tests/core/llm/prompts.test.ts` › "kürzt sehr lange Texte";
+  unit `tests/core/wiki/prompts.test.ts` › "sagt beim Teilstueck, dass es eines ist, und kuerzt
+  lange Texte"; unit `tests/core/ingest/transcript.test.ts` › "zieht die Notbremse bei Captions
+  ohne jede Interpunktion" — each red under its seed (D3).
+- AC8 → `git diff --stat` shows no change to `tests/core/claude/jsonl.test.ts` and
+  `tests/core/index/refresh-paths.test.ts`; checked by the review (D3).
+- AC9 → the Done section names each removed assertion with its reason (`win.target` literal,
+  `scripts.package` literal, the README `it`, three length literals); checked by the review
+  (D1-D3).
 
 ## Done
 

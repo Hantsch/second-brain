@@ -10,8 +10,8 @@ milestone: M22 — Test lanes you can trust
 ## Goal
 
 At the end of this sprint every test file belongs to a named lane that CLAUDE.md lists, the
-release starts the built app before it publishes, CI runs on every push to `dev` and reports the PR
-lane's minutes, and the blocking lane no longer waits on real time. A stray test file, a broken
+release starts the built app before it publishes, CI stays on pull requests into `main` (a recorded
+deviation) and reports the PR lane's minutes, and the blocking lane no longer waits on real time. A stray test file, a broken
 package or a late `file://` navigation turns something red instead of passing silently.
 
 ## Stories (in build order)
@@ -20,7 +20,7 @@ package or a late `file://` navigation turns something red instead of passing si
 
 - [ ] 096 — Lane map in CLAUDE.md and a guard that every test file has a lane
 - [ ] 097 — The release starts the built app before it publishes
-- [ ] 098 — CI runs on dev and the PR lane reports its minutes
+- [ ] 098 — CI stays PR-only, recorded as a deviation, and the PR lane reports its minutes
 - [ ] 099 — The blocking lane stops waiting on real time
 - [ ] 100 — e2e absence checks wait on a signal; the quit test gets its own spec
 - [ ] 101 — Hook tests keep one cheap case per hook in the PR lane; eol test fails honestly

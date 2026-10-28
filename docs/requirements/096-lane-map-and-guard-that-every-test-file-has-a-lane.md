@@ -1,7 +1,7 @@
 ---
 id: 096
 title: Lane map in CLAUDE.md and a guard that every test file has a lane
-status: draft # draft -> ready -> in-progress -> done
+status: ready # draft -> ready -> in-progress -> done
 created: 2026-10-27
 ---
 
@@ -34,56 +34,114 @@ command unnoticed. The 53 specs have no lane at all (run by hand).
 
 ## Open Questions
 
-- Should the guard also cover files outside `tests/` (for example `scripts/` specs), or is `tests/` the whole contract?
-- The review rated this P1 as prerequisite of 097 and 098, the judge P2 (the table alone is S, the guard is a cheap add-on). Split into two deliverables, or ship together?
-- The `release` row names `npm run test:smoke`, which only exists after 097. Name it now with AC7 deferred for that row, or land the row with 097?
+- ~~Should the guard also cover files outside `tests/` (for example `scripts/` specs), or is
+  `tests/` the whole contract?~~ Answered under Decisions: `tests/` is the contract.
+- ~~Split into two deliverables, or ship together?~~ Answered under Decisions: one story, two Ds.
+- ~~The `release` row names `npm run test:smoke`, which only exists after 097. Name it now with
+  AC7 deferred for that row, or land the row with 097?~~ Answered under Decisions: named now,
+  marked as landing with 097; AC7 covers only pr, release-prep and perf.
 
 ## Decisions (Sprint)
 
-<Leave empty. Filled by `/sprint`'s clarification round and by `/refine <id>` when it runs
-inside a sprint: one line per decision the user made, with the answer and why. Empty outside
-a sprint.>
+- The guard scans `tests/` only: every config's roots (vitest `tests/**`, Playwright
+  `testDir: tests/e2e`) and CLAUDE.md's layout put tests there, and AC3 defines the contract on `tests/`.
+- Table and guard ship in one story as two deliverables: the guard reads the table (AC7), so
+  separating them would leave one half untested, and both are small.
+- The `release` row names `npm run test:smoke` now with the note "lands with story 097"; AC7
+  deliberately checks only pr, release-prep and perf, and 097 adds `release` to that check when
+  it creates the script.
+- Lane cells follow the review's lane table (docs/reviews/2026-10-27-tests-review.md
+  `## Test lanes`), except budgets per AC2: pr and release "TBD (story 098)", release-prep and
+  ui-smoke "none", perf "warns only"; story 098 updates the cells and the asserted values.
+- Glob matching uses Node's built-in `path.posix.matchesGlob` (Node 24, braces supported), so no
+  new dependency is added for a guard; `picomatch`/`minimatch` are only transitive.
+- AC6's seeded defect is proven by feeding the guard's pure function the real file list plus
+  `tests/core/stray.test.mts`, not by writing a file into the repo, because a real file would
+  race the parallel vitest forks and could be left behind by a killed run.
 
 ## Plan
 
-<Leave empty. Filled by `/refine <id>`: a short, precise overview — max. ~50 lines.
-Concrete steps, affected files, order. No essay.>
+1. CLAUDE.md gets a `## Test lanes` section directly after `## Quality gates` (outside the
+   tech-rules managed block): one table, columns `Lane | Runs | Budget | Blocks`, rows pr,
+   release, release-prep, perf, ui-smoke. Commands in backticks so the guard can parse them.
+2. New guard `tests/scripts/test-lanes.test.ts` (runs in `npm test` via vitest's include):
+   - parses the `## Test lanes` table from CLAUDE.md; asserts the five lanes, their Blocks and
+     Budget cells, and that every `npm test` / `npm run <x>` named in the pr, release-prep and
+     perf rows is a script in package.json;
+   - imports the real config objects (`vitest.config.ts`, `vitest.perf.config.ts`,
+     `playwright.config.ts`) and derives one claim per config from `include`/`exclude`/
+     `testDir`/`testMatch` - no glob literal in the guard file;
+   - a pure `claimsOf(file, claims)` reports which configs claim a file; every file under
+     `tests/` matching `*.test.*` or `*.spec.*` must get exactly one;
+   - fed synthetic inputs, it names a stray `.test.mts` (unclaimed) and a doubly claimed file.
+3. No production code, no workflow and no config file changes.
 
 ## Deliverables
 
-<Leave empty. Filled by `/refine <id>`: small pieces, each with its own acceptance
-(scrum-like) and the files it touches. `/build` implements them in order, in one go.
-Every acceptance criterion above must be covered by at least one deliverable **and** by the
-test named for it in `## Acceptance Tests` — the test is part of the deliverable that
-implements the behaviour, never a clean-up afterwards. Refine checks both before
-`status: ready`, build refuses to start without them.>
+- [ ] D1 — `## Test lanes` table in CLAUDE.md plus its table guard. Files: `CLAUDE.md` (new
+      section right after `## Quality gates`, before `## QA rules`; do not touch the
+      `tech-rules:managed` block) and new `tests/scripts/test-lanes.test.ts`. Table columns
+      `Lane | Runs | Budget | Blocks`, rows exactly (Lane: Runs / Budget / Blocks):
+      pr: `npm run verify` / TBD (story 098) / yes;
+      release: build + `npm run test:smoke` (lands with story 097) / TBD (story 098) / yes;
+      release-prep: `npm test` + `npm run test:e2e` + `npm run test:perf` + `npm run package` /
+      none / by hand; perf: `npm run test:perf` / warns only / no;
+      ui-smoke: `npm run shot` / none / no.
+      One sentence under the table: every Playwright spec runs under `npm run test:e2e`
+      (release-prep); which specs the release lane runs is story 097's job. Guard: read
+      CLAUDE.md, slice from `## Test lanes` to the next `## ` heading, parse the table rows into
+      `{ lane, runs, budget, blocks }`, extract commands from backticked `npm test` /
+      `npm run <name>`. Read package.json scripts as `tests/scripts/ci-gate.test.ts:15` does.
+      Tests: "the test lanes table names every lane with its command, budget and whether it
+      blocks" (lane set, Blocks and Budget cells exactly as above, Runs non-empty) and "every
+      command the pr, release-prep and perf lanes name is a package.json script". Test names
+      carry behaviour, no story ids. `npx prettier --check CLAUDE.md` stays green.
 
-- [ ] D1 — <smallest useful, individually acceptable result; names the files it touches>
-- [ ] D2 — ...
+- [ ] D2 — Claim guard, a second `describe` in `tests/scripts/test-lanes.test.ts`. Import the
+      default exports of `../../vitest.config`, `../../vitest.perf.config` and
+      `../../playwright.config` (all three are in tsconfig.node.json's include). Build
+      `Claim = { name, include: string[], exclude: string[] }` per config: vitest
+      `test.include`/`test.exclude` as-is (repo-root relative); Playwright `testMatch` joined
+      onto `testDir` (string or string array; throw a clear error on a RegExp so a config change
+      cannot pass silently). Match with `path.posix.matchesGlob` on forward-slash repo-relative
+      paths (normalise backslashes for Windows). Walk `tests/` with
+      `readdirSync(dir, { recursive: true })`, keep files whose basename matches
+      `/\.(test|spec)\./`. Pure `claimsOf(file, claims): string[]`. No glob literal
+      (any string with `*`, e.g. `*.perf.test.ts`, `**/*.spec.ts`, `tests/**`) may appear in
+      the file - the only pattern is the basename regex; plain sample file paths are fine. Tests: "every test file under tests/ is claimed by exactly one config"
+      (real tree; the failure message lists each offending file with its claims), "a stray
+      .test.mts file is reported as claimed by no config" (real claims, file
+      `tests/core/stray.test.mts`, assert it is named with zero claims), "a file two configs
+      claim is reported with both names" (real claims plus a copy of the Playwright claim
+      under another name, file `tests/e2e/x.spec.ts`). No `Date.now`/`performance.now`/sleep.
 
 ## Model Hints
 
-<Agent tier per deliverable. Default is the cheap tier with `/build`'s effort — leave
-unmarked. If a step needs more brainpower: "D3 (balancing formula) → deliverable-hard" (Opus +
-high effort, agent in `.claude/agents/`) plus a one-sentence risk justification.
-Plus one line for the code review, default: "Review: → default".>
+D1, D2 default tier (the glob semantics are the only subtlety and are spelled out in D2).
+
+Review: → default
 
 ## Acceptance Tests
 
-<Leave empty. Filled by `/refine <id>`: one line per acceptance criterion above, naming the
-automated test that proves it — level, file, and the test name it will carry. The tests are
-written by the deliverables, not afterwards; `/build` re-checks this mapping and that the
-tests pass before `status: done`. This section replaces the manual test plan: acceptance is
-the suite, not a click list.
+No user-facing surface: every line is a unit test in `npm test`, no e2e.
 
-Example paths below; your real test layout and the commands that run it are in
-`.claude/ai-scrum.md` (`e2e-story`, `test-story`).
-
-- AC1 → e2e `tests/e2e/<flow>.spec.ts` › "<test name>" (real surface, per
-  `ui-acceptance-required`)
-- AC2 → unit `tests/core/<module>.test.ts` › "<test name>"
-- AC3 → **manual residue:** <the real reason it cannot be automated — an OS dialog, a
-  specific machine, a paid external service>. Goes into the sprint review; blocks nothing.>
+- AC1, AC2 → unit `tests/scripts/test-lanes.test.ts` › "the test lanes table names every lane
+  with its command, budget and whether it blocks" (D1)
+- AC3 → unit `tests/scripts/test-lanes.test.ts` › "every test file under tests/ is claimed by
+  exactly one config" (D2)
+- AC4 → unit `tests/scripts/test-lanes.test.ts` › "a file two configs claim is reported with
+  both names" (D2)
+- AC5 → unit `tests/scripts/test-lanes.test.ts` › "every test file under tests/ is claimed by
+  exactly one config" (D2; claims derive from the imported config objects) plus the review's
+  search of the guard file for a glob literal (`*.perf.test.ts`, `*.spec.ts`, `tests/**`), which
+  must return nothing
+- AC6 → unit `tests/scripts/test-lanes.test.ts` › "a stray .test.mts file is reported as
+  claimed by no config" (D2); the removed state is the real-tree test being green
+- AC7 → unit `tests/scripts/test-lanes.test.ts` › "every command the pr, release-prep and perf
+  lanes name is a package.json script" (D1)
+- AC8 → unit `tests/scripts/test-lanes.test.ts` › "every test file under tests/ is claimed by
+  exactly one config" (the guard file itself is in that list, claimed by the gate config =
+  `npm test`); no wall-clock assertion is enforced by `npm run lint` (`no-restricted-syntax`)
 
 ## Done
 
