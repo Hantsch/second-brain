@@ -296,3 +296,4 @@ second roadmap.
 - 094 — The agent setup apply never loses a result and never downgrades · S22 · edited newer files are left alone and a hard write error becomes a failed row while the rest is written and recorded
 - 095 — A task can be routed to the agent instead of a model · S22 · Tasks routed to the agent are filed as jobs, answered through results as proposals; Test on an agent row checks the agent setup.
 - 080 — Update and release follow-ups from S19 · S22 · Release hint names uploaded artifact, superseded downloads re-offer, update install quit authorised, one ProgressBar atom, wiring tests.
+- 096 — Lane map in CLAUDE.md and a guard that every test file has a lane · S23 · CLAUDE.md lists the five lanes and a test fails when a test file is claimed by no config or by more than one.

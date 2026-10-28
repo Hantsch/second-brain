@@ -1,7 +1,7 @@
 ---
 id: 096
 title: Lane map in CLAUDE.md and a guard that every test file has a lane
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-10-27
 ---
 
@@ -23,14 +23,14 @@ command unnoticed. The 53 specs have no lane at all (run by hand).
 
 ## Acceptance Criteria
 
-- [ ] **AC1** — CLAUDE.md contains a `## Test lanes` heading with a table of the lanes pr, release, release-prep, perf and ui-smoke, each with its command and whether it blocks.
-- [ ] **AC2** — The table's budget cells carry no invented number: the pr and release budgets read "TBD (story 098)" and the other lanes read "none" or "warns only".
-- [ ] **AC3** — A test in `tests/scripts/` fails when a file matching `*.test.*` or `*.spec.*` under `tests/` is claimed by none of vitest.config.ts, vitest.perf.config.ts and playwright.config.ts.
-- [ ] **AC4** — The same test fails when a file is claimed by more than one of them.
-- [ ] **AC5** — The guard reads include/exclude patterns from the imported real config objects; a search for a duplicated glob literal such as `*.perf.test.ts` in the guard file returns nothing.
-- [ ] **AC6** — Seeded defect: adding `tests/core/stray.test.mts` makes the guard red, naming the file; removing it makes it green.
-- [ ] **AC7** — The guard asserts that the commands named in the table's pr, release-prep and perf rows exist as scripts in package.json.
-- [ ] **AC8** — The guard runs in `npm test` and contains no wall-clock assertion.
+- [x] **AC1** — CLAUDE.md contains a `## Test lanes` heading with a table of the lanes pr, release, release-prep, perf and ui-smoke, each with its command and whether it blocks.
+- [x] **AC2** — The table's budget cells carry no invented number: the pr and release budgets read "TBD (story 098)" and the other lanes read "none" or "warns only".
+- [x] **AC3** — A test in `tests/scripts/` fails when a file matching `*.test.*` or `*.spec.*` under `tests/` is claimed by none of vitest.config.ts, vitest.perf.config.ts and playwright.config.ts.
+- [x] **AC4** — The same test fails when a file is claimed by more than one of them.
+- [x] **AC5** — The guard reads include/exclude patterns from the imported real config objects; a search for a duplicated glob literal such as `*.perf.test.ts` in the guard file returns nothing.
+- [x] **AC6** — Seeded defect: adding `tests/core/stray.test.mts` makes the guard red, naming the file; removing it makes it green.
+- [x] **AC7** — The guard asserts that the commands named in the table's pr, release-prep and perf rows exist as scripts in package.json.
+- [x] **AC8** — The guard runs in `npm test` and contains no wall-clock assertion.
 
 ## Open Questions
 
@@ -78,7 +78,7 @@ command unnoticed. The 53 specs have no lane at all (run by hand).
 
 ## Deliverables
 
-- [ ] D1 — `## Test lanes` table in CLAUDE.md plus its table guard. Files: `CLAUDE.md` (new
+- [x] D1 — `## Test lanes` table in CLAUDE.md plus its table guard. Files: `CLAUDE.md` (new
       section right after `## Quality gates`, before `## QA rules`; do not touch the
       `tech-rules:managed` block) and new `tests/scripts/test-lanes.test.ts`. Table columns
       `Lane | Runs | Budget | Blocks`, rows exactly (Lane: Runs / Budget / Blocks):
@@ -97,7 +97,7 @@ command unnoticed. The 53 specs have no lane at all (run by hand).
       command the pr, release-prep and perf lanes name is a package.json script". Test names
       carry behaviour, no story ids. `npx prettier --check CLAUDE.md` stays green.
 
-- [ ] D2 — Claim guard, a second `describe` in `tests/scripts/test-lanes.test.ts`. Import the
+- [x] D2 — Claim guard, a second `describe` in `tests/scripts/test-lanes.test.ts`. Import the
       default exports of `../../vitest.config`, `../../vitest.perf.config` and
       `../../playwright.config` (all three are in tsconfig.node.json's include). Build
       `Claim = { name, include: string[], exclude: string[] }` per config: vitest
@@ -145,8 +145,21 @@ No user-facing surface: every line is a unit test in `npm test`, no e2e.
 
 ## Done
 
-<Leave empty. Filled by `/build <id>` after implementation:
+Added the `## Test lanes` table to CLAUDE.md (pr, release, release-prep, perf, ui-smoke) and the guard
+`tests/scripts/test-lanes.test.ts`: it parses the table and checks its commands against package.json
+scripts, and derives one claim per config from the imported vitest, vitest-perf and Playwright
+configs so every `*.test.*`/`*.spec.*` file under `tests/` is claimed by exactly one of them.
 
-- Short summary (2–5 lines): what was done.
-- Commit message (1–2 lines, keywords are enough).
-- Verification: build/test/lint result + review outcome; open points/blockers, if any.>
+Commit message: `096: test lanes table in CLAUDE.md + guard that every test file has exactly one lane`
+
+Verification (narrow gate, `npx vitest run --changed HEAD`; no e2e, none mapped):
+- build, lint, typecheck green; changed-run vitest green (5/5 in test-lanes.test.ts).
+- AC1, AC2, AC7 table tests; AC3, AC5, AC8 real-tree test; AC4 double-claim test; AC6 stray test: all ran and passed.
+- Review (default tier): PASS, no findings to fix. No manual residue.
+- `format:check` is red only for docs/requirements/099-*.md and 100-*.md (other S23 stories' refine output),
+  not this story's files; left untouched, belongs to those stories.
+
+Decisions: a typecheck error pass (noUncheckedIndexedAccess) in the guard helpers was fixed after D2 with
+a `byLane(name)` helper that throws on a missing row. Local Node is 25.6.1 (.nvmrc says 24); `path.posix.matchesGlob` works on both.
+
+tiers: D 2 / hard 0 · review default · cycles 0 · agents 5

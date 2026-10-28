@@ -55,7 +55,7 @@ behind an eslint-disable with a same-line reason (:658).
 
 1. **Write-stability gate (product seam).** New `src/core/vault/write-stability.ts`:
    `createWriteStabilityGate(onStable, statSize, stabilityMs = WATCH_WRITE_STABILITY_MS,
-   pollMs = WATCH_WRITE_POLL_MS)` returning `{ touch(path), cancel() }`. Pure: only
+pollMs = WATCH_WRITE_POLL_MS)` returning `{ touch(path), cancel() }`. Pure: only
    `setTimeout`/`clearTimeout` and the injected `statSize`, so fake timers drive it fully.
 2. **Wire it into `watchVault`** (`src/core/vault/watch.ts`): chokidar loses
    `awaitWriteFinish`; `add`/`change` go `gate.touch` → `onStable` → `batcher.add`; all other

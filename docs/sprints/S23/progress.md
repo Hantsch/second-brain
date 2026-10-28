@@ -1,2 +1,15 @@
 - 07:43:42 · sprint · started on dev (no sprint branch)
 - 07:48:13 · refine · 096 097 098 099 100 101 102 · started
+- 07:52:48 · refine · done (7 ready)
+- 07:52:48 · 096 · build · started
+- 2026-10-28 07:53 · 096 · D1 lane table and table guard · started
+- 2026-10-28 07:53 · 096 · D1 lane table and table guard · done
+- 2026-10-28 07:53 · 096 · D2 claim guard · started
+- 2026-10-28 07:54 · 096 · D2 claim guard · done
+- 2026-10-28 07:54 · 096 · D1 typecheck fix · started
+- 2026-10-28 07:55 · 096 · D1 typecheck fix · done
+- 2026-10-28 07:55 · 096 · verify · started
+- 2026-10-28 07:56 · 096 · verify · done
+- 2026-10-28 07:56 · 096 · review 1 · started
+- 2026-10-28 07:56 · 096 · review 1 · done
+- 2026-10-28 07:56 · 096 · story · done

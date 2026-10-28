@@ -158,6 +158,18 @@ Mandatory tests:
 - **Answers without evidence**: the answer honestly says nothing was found.
 - Tests **never** call real LLM APIs or the network. Fakes live in `tests/fakes/`.
 
+## Test lanes
+
+| Lane         | Runs                                                                      | Budget          | Blocks  |
+| ------------ | ------------------------------------------------------------------------- | --------------- | ------- |
+| pr           | `npm run verify`                                                          | TBD (story 098) | yes     |
+| release      | build + `npm run test:smoke` (lands with story 097)                       | TBD (story 098) | yes     |
+| release-prep | `npm test` + `npm run test:e2e` + `npm run test:perf` + `npm run package` | none            | by hand |
+| perf         | `npm run test:perf`                                                       | warns only      | no      |
+| ui-smoke     | `npm run shot`                                                            | none            | no      |
+
+Every Playwright spec runs under `npm run test:e2e` (release-prep); which specs the release lane runs is story 097's job.
+
 ## QA rules (non-negotiable)
 
 - Never delete, skip, or weaken tests to make them pass. If a test fails: fix the
