@@ -28,9 +28,9 @@ describe('titleTagsPrompt', () => {
   });
 
   it('kürzt sehr lange Texte', () => {
-    const turns = titleTagsPrompt({ text: 'x'.repeat(5000) }, 'de');
+    const turns = titleTagsPrompt({ text: 'x'.repeat(100_000) + 'TEXTENDE' }, 'de');
     expect(lastUserOf(turns)).toContain('gekürzt');
-    expect(lastUserOf(turns).length).toBeLessThan(4200);
+    expect(lastUserOf(turns)).not.toContain('TEXTENDE');
   });
 
   it('hat ein Schema mit Titel und Tags', () => {

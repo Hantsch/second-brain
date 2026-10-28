@@ -301,3 +301,4 @@ second roadmap.
 - 099 — The blocking lane stops waiting on real time · S23 · write stability runs on an own gate under fake timers, llamacpp counts probes instead of reading the clock
 - 100 — e2e absence checks wait on a signal; the quit test gets its own spec · S23 · navigation-guard reads the guard's defaultPrevented, update-check asserts UpdateState, tray-quit.spec.ts standalone, tray.spec order-independent
 - 101 — Hook tests keep one cheap case per hook in the PR lane · S23 · other hook cases run in the new test:shell release-prep lane; eol guard fails instead of skipping when git is missing
+- 102 — Test and config drift drive-bys · S23 · win-target/README asserts replaced by properties, engines.node >=24 pinned to .nvmrc major, prompt caps proven by content

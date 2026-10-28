@@ -16,6 +16,7 @@ import { laneRows } from './lane-table';
 const packageJsonRaw = readFileSync(new URL('../../package.json', import.meta.url), 'utf8');
 const packageJson = JSON.parse(packageJsonRaw) as {
   devDependencies: Record<string, string>;
+  engines: { node: string };
 };
 
 describe('prettier is pinned to an exact version', () => {
@@ -126,13 +127,23 @@ describe('dependencies are cached — npm cache via setup-node and the electron 
 
 /* Local and CI run the same Node: every workflow reads `.nvmrc`, and vitest warns
    locally when the running major differs from it. A second, hand-written version
-   in a workflow is how the gate drifted to Node 20 while the machine ran 25. */
+   in a workflow is how the gate drifted to Node 20 while the machine ran 25.
+   engines.node is the third place the Node major lives. */
 describe('every workflow takes its Node version from .nvmrc', () => {
   const workflowDir = new URL('../../.github/workflows/', import.meta.url);
 
   it('.nvmrc names a major version', () => {
     const pinned = readFileSync(new URL('../../.nvmrc', import.meta.url), 'utf8').trim();
     expect(pinned).toMatch(/^\d+(\.\d+){0,2}$/);
+  });
+
+  it('package.json engines.node has the .nvmrc major as its floor', () => {
+    const nvmrcMajor = readFileSync(new URL('../../.nvmrc', import.meta.url), 'utf8')
+      .trim()
+      .split('.')[0];
+    const match = /^>=\s*(\d+)/.exec(packageJson.engines.node);
+    expect(match, `engines.node "${packageJson.engines.node}" is not a ">=N" floor`).toBeTruthy();
+    expect(match![1]).toBe(nvmrcMajor);
   });
 
   it.each(readdirSync(workflowDir).filter((name) => name.endsWith('.yml')))(

@@ -56,14 +56,17 @@ describe('buildParagraphs', () => {
   });
 
   it('zieht die Notbremse bei Captions ohne jede Interpunktion', () => {
-    const endless: Cue[] = Array.from({ length: 40 }, (_, index) => ({
+    const endless: Cue[] = Array.from({ length: 400 }, (_, index) => ({
       start: index,
       end: index + 1,
       text: 'und dann noch etwas ohne jeden Punkt am Ende der Aussage',
     }));
     const paragraphs = buildParagraphs(endless);
     expect(paragraphs.length).toBeGreaterThan(1);
-    for (const paragraph of paragraphs) expect(paragraph.text.length).toBeLessThan(1800);
+    // The brake must only split, never drop or duplicate text.
+    const whole = endless.map((cue) => cue.text).join(' ');
+    expect(paragraphs.map((paragraph) => paragraph.text).join(' ')).toBe(whole);
+    for (const paragraph of paragraphs) expect(paragraph.text).not.toBe(whole);
   });
 });
 

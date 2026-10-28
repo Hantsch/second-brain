@@ -12,7 +12,7 @@
    AC7  — the fixture configures no provider and passes no key env (the static half;
           the runtime half — no network call happens — is asserted by the auto-fixture
           in tests/e2e/fixtures/app.ts, checked for below).
-   AC8  — the profile sets "e2e: npm run test:e2e" and the README names it.
+   AC8  — the profile sets "e2e: npm run test:e2e".
    AC9  — every spec names its steps (test.step on every test) and the list reporter
           is configured.
    AC10 — the config sets a suite-wide time budget (globalTimeout). */
@@ -32,7 +32,6 @@ const packageJsonRaw = read('package.json');
 const packageJson = JSON.parse(packageJsonRaw) as { scripts?: Record<string, string> };
 const fixtureSource = read('tests/e2e/fixtures/app.ts');
 const aiScrumProfile = read('.claude/ai-scrum.md');
-const readme = read('README.md');
 
 describe('test:e2e is wired and the config fails on an empty or focused run', () => {
   it('package.json has a test:e2e script that runs playwright', () => {
@@ -142,16 +141,12 @@ describe('the e2e fixture configures no provider and passes no key env', () => {
   });
 });
 
-describe('the profile sets e2e: npm run test:e2e and the README names it', () => {
+describe('the profile sets e2e: npm run test:e2e', () => {
   it('.claude/ai-scrum.md names the e2e verify command', () => {
     expect(
       aiScrumProfile,
       '.claude/ai-scrum.md must set "e2e: npm run test:e2e" under ## Verify',
     ).toMatch(/^e2e:\s*npm run test:e2e\s*$/m);
-  });
-
-  it('README.md mentions test:e2e in the development section', () => {
-    expect(readme, 'README.md must mention "npm run test:e2e"').toMatch(/npm run test:e2e/);
   });
 });
 

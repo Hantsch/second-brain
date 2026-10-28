@@ -1,7 +1,7 @@
 ---
 id: 102
 title: Test and config drift drive-bys
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-10-27
 ---
 
@@ -29,31 +29,31 @@ Today ([review 2026-10-27](../reviews/2026-10-27-tests-review.md), F10, F11, F14
 
 ## Acceptance Criteria
 
-- [ ] **AC1** — `tests/scripts/build-config.test.ts` no longer contains the literal
+- [x] **AC1** — `tests/scripts/build-config.test.ts` no longer contains the literal
       `['nsis', 'portable']`; if the win target is still asserted, it asserts a property (for
       example that targets are non-empty, or no space in artifact names), and a test fails when
       that property is seeded broken.
-- [ ] **AC2** — `tests/scripts/e2e-wiring.test.ts` no longer asserts that README.md mentions
+- [x] **AC2** — `tests/scripts/e2e-wiring.test.ts` no longer asserts that README.md mentions
       `npm run test:e2e` (`grep -n "README" tests/scripts/e2e-wiring.test.ts` returns nothing
       about that sentence); the `test:e2e` invokes `playwright test` check (`:38-41`) stays.
-- [ ] **AC3** — The `build.files` assertion, the `publish` pin in `build-config.test.ts` and
+- [x] **AC3** — The `build.files` assertion, the `publish` pin in `build-config.test.ts` and
       `tests/main/architecture-doc.test.ts` are unchanged, and `npx vitest run
 tests/scripts/build-config.test.ts tests/scripts/e2e-wiring.test.ts
 tests/main/architecture-doc.test.ts` exits 0.
-- [ ] **AC4** — `package.json` `engines.node` is `>=24`, and a test or `npm install` check fails
+- [x] **AC4** — `package.json` `engines.node` is `>=24`, and a test or `npm install` check fails
       for a value whose major differs from the `.nvmrc` major (a seeded `>=20.19` turns it red).
-- [ ] **AC5** — `vitest.config.ts` still starts, `npm test` exits 0, and the Node 25 Web Storage
+- [x] **AC5** — `vitest.config.ts` still starts, `npm test` exits 0, and the Node 25 Web Storage
       flag (`:32-37`) is unchanged by this story.
-- [ ] **AC6** — Each of `tests/core/llm/prompts.test.ts:33`, `tests/core/wiki/prompts.test.ts:103`
+- [x] **AC6** — Each of `tests/core/llm/prompts.test.ts:33`, `tests/core/wiki/prompts.test.ts:103`
       and `tests/core/ingest/transcript.test.ts:66` no longer contains a bare numeric
       `toBeLessThan(<literal>)` on prompt length; each asserts against an exported cap constant of
       the builder, or is replaced by a content-level truncation assertion.
-- [ ] **AC7** — Truncation is still proven by content in each of the 3 files: a test fails when
+- [x] **AC7** — Truncation is still proven by content in each of the 3 files: a test fails when
       the builder is seeded to stop truncating long input (the output then contains the tail of the
       input that should have been cut).
-- [ ] **AC8** — `tests/core/claude/jsonl.test.ts` has no diff, and `refresh-paths.test.ts:79` has
+- [x] **AC8** — `tests/core/claude/jsonl.test.ts` has no diff, and `refresh-paths.test.ts:79` has
       no diff.
-- [ ] **AC9** — No test is deleted or skipped; every removed assertion is named, with the reason,
+- [x] **AC9** — No test is deleted or skipped; every removed assertion is named, with the reason,
       in the commit message or the Done section.
 
 ## Open Questions
@@ -115,7 +115,7 @@ The Done section lists every removed assertion with its reason (AC9).
 
 ## Deliverables
 
-- [ ] D1 — **F10: build-config and e2e-wiring tests stop pinning deliberate edits.** Files:
+- [x] D1 — **F10: build-config and e2e-wiring tests stop pinning deliberate edits.** Files:
       `tests/scripts/build-config.test.ts`, `tests/scripts/e2e-wiring.test.ts`, nothing else.
       In `build-config.test.ts`, inside the `it` at line 36: remove
       `expect(build.win.target).toEqual(['nsis', 'portable'])` and
@@ -140,7 +140,7 @@ The Done section lists every removed assertion with its reason (AC9).
       `portable.artifactName`, each turns the renamed test red; revert both.
       `npx vitest run tests/scripts/build-config.test.ts tests/scripts/e2e-wiring.test.ts tests/main/architecture-doc.test.ts`
       exits 0; `git diff tests/main/architecture-doc.test.ts` is empty.
-- [ ] D2 — **F11: `engines.node` says what CI runs, and a test keeps it on the `.nvmrc` major.**
+- [x] D2 — **F11: `engines.node` says what CI runs, and a test keeps it on the `.nvmrc` major.**
       Files: `package.json` (`engines.node` → `">=24"`), `package-lock.json` (the root
       `packages[""].engines.node`, around line 60, → `">=24"`; edit by hand, do not run
       `npm install`), `tests/scripts/ci-gate.test.ts`. Do **not** touch `vitest.config.ts` or
@@ -153,7 +153,7 @@ The Done section lists every removed assertion with its reason (AC9).
       `engines.node` is the third place the Node major lives.
       Acceptance: a temporary `engines.node` of `">=20.19"` turns the new test red; revert.
       `npx vitest run tests/scripts/ci-gate.test.ts` exits 0; `git diff vitest.config.ts` empty.
-- [ ] D3 — **F14: truncation is proven by content, not by a copied cap.** Files:
+- [x] D3 — **F14: truncation is proven by content, not by a copied cap.** Files:
       `tests/core/llm/prompts.test.ts`, `tests/core/wiki/prompts.test.ts`,
       `tests/core/ingest/transcript.test.ts`. No `src/` file in the commit. Keep the three test
       names unchanged.
@@ -209,8 +209,21 @@ Review: → default
 
 ## Done
 
-<Leave empty. Filled by `/build <id>` after implementation:
+Tests-only drive-by, no `src/` change. F10: `win.target` / `scripts.package` literals became properties
+(non-empty targets, space-free artifactName per target, package script builds exactly those targets with
+`--publish never`). F11: `engines.node` `>=24` (package.json + lock root), ci-gate test pins its major to `.nvmrc`.
+F14: three truncation tests assert by content (tail marker / nothing lost), no length literal.
 
-- Short summary (2–5 lines): what was done.
-- Commit message (1–2 lines, keywords are enough).
-- Verification: build/test/lint result + review outcome; open points/blockers, if any.>
+Commit message: `102: win-target + engines.node pinned by property, README e2e assert dropped, prompt caps proven by content`
+
+Verification (narrow gate): lint, format:check, typecheck, build green; `npx vitest run --changed HEAD` 405 files / 4938 tests green;
+no e2e mapped. Typecheck TS18048 in build-config.test.ts found by verify, fixed (`String(scripts.package)`), re-run green.
+AC -> test: AC1 build-config renamed win-target `it` (red with `target: []` / spaced artifactName, seeded); AC2 e2e-wiring, grep README empty;
+AC3 build-config files/publish + architecture-doc, no diff; AC4 ci-gate "engines.node has the .nvmrc major as its floor" (red with `>=20.19`, seeded);
+AC5 vitest.config.ts no diff; AC6/7 the three truncation tests (red under clamp / breakOnLength seeds); AC8/9 no diff on jsonl/refresh-paths. No manual residue.
+Removed assertions (AC9): `win.target` toEqual literal and `scripts.package` toBe literal (deliberate-edit mirrors, replaced by properties);
+the README `it` "mentions test:e2e in the development section" (AC2 mandates it); three `toBeLessThan(4200/9000/1800)` length literals (replaced by content checks).
+Review (default): PASS. Unfixed minor findings: redundant `not.toBe(whole)` in transcript test (cheap guard, kept); single-space join assumption in transcript test (current builder contract).
+Decisions: undici shim kept; no engine-strict; no exported caps (see Decisions section).
+
+tiers: D 3 / hard 0 · review default · cycles 0 · agents 5

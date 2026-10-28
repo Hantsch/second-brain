@@ -94,13 +94,13 @@ describe('summarizeSourcePrompt', () => {
 
   it('sagt beim Teilstueck, dass es eines ist, und kuerzt lange Texte', () => {
     const turns = summarizeSourcePrompt(
-      { ...input, text: 'x'.repeat(20_000), part: { index: 2, total: 5 } },
+      { ...input, text: 'x'.repeat(100_000) + 'QUELLENENDE', part: { index: 2, total: 5 } },
       'de',
     );
     expect(systemOf(turns)).toContain('Abschnitt 2 von 5');
     expect(userOf(turns)).toContain('Quelle, Abschnitt 2/5:');
     expect(userOf(turns)).toContain('gekürzt');
-    expect(userOf(turns).length).toBeLessThan(9000);
+    expect(userOf(turns)).not.toContain('QUELLENENDE');
   });
 
   it('mergeSummariesClampedChars zaehlt nur, was der Clamp tatsaechlich abschneidet', () => {

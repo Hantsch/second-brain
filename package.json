@@ -8,7 +8,7 @@
   "type": "module",
   "main": "out/main/index.cjs",
   "engines": {
-    "node": ">=20.19"
+    "node": ">=24"
   },
   "build": {
     "appId": "app.hantsch.gaston",
