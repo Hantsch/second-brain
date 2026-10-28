@@ -297,3 +297,4 @@ second roadmap.
 - 095 — A task can be routed to the agent instead of a model · S22 · Tasks routed to the agent are filed as jobs, answered through results as proposals; Test on an agent row checks the agent setup.
 - 080 — Update and release follow-ups from S19 · S22 · Release hint names uploaded artifact, superseded downloads re-offer, update install quit authorised, one ProgressBar atom, wiring tests.
 - 096 — Lane map in CLAUDE.md and a guard that every test file has a lane · S23 · CLAUDE.md lists the five lanes and a test fails when a test file is claimed by no config or by more than one.
+- 098 — CI stays PR-only (recorded deviation) and the PR lane reports its minutes · S23 · verify.yml writes lane minutes vs a 6 min budget to the step summary and warns when over; CLAUDE.md lane map and deviation updated

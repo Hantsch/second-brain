@@ -19,3 +19,15 @@
 - 2026-10-28 07:57 · 097 · D2 Broken main fails launch · started
 - 2026-10-28 07:59 · 097 · D2 Broken main fails launch · blocked: Playwright strips NODE_OPTIONS, plan gap
 - 2026-10-28 07:59 · 097 · story · blocked: D2 plan gap (NODE_OPTIONS stripped by Playwright)
+- 07:59:42 · 098 · build · started
+- 2026-10-28 08:00 · 098 · D1 Lane minutes report · started
+- 2026-10-28 08:00 · 098 · D1 Lane minutes report · done
+- 2026-10-28 08:00 · 098 · D2 verify.yml wiring · started
+- 2026-10-28 08:01 · 098 · D2 verify.yml wiring · done
+- 2026-10-28 08:01 · 098 · D3 deviation entry · started
+- 2026-10-28 08:01 · 098 · D3 deviation entry · done
+- 2026-10-28 08:01 · 098 · verify · started
+- 2026-10-28 08:02 · 098 · verify · done
+- 2026-10-28 08:02 · 098 · review 1 · started
+- 2026-10-28 08:03 · 098 · review 1 · done
+- 2026-10-28 08:03 · 098 · story · done

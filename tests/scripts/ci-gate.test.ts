@@ -8,9 +8,10 @@
    deliverables (D2/D3) are expected to add further `describe` blocks here rather
    than opening new files, so don't assume this is the only guard it will ever hold. */
 
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
+import { laneRows } from './lane-table';
 
 const packageJsonRaw = readFileSync(new URL('../../package.json', import.meta.url), 'utf8');
 const packageJson = JSON.parse(packageJsonRaw) as {
@@ -260,5 +261,48 @@ describe('the perf lane is advisory and outside every gate', () => {
     expect(scripts['test']).toBe('vitest run');
     expect(scripts['verify']).not.toMatch(/test:perf/);
     expect(scripts['test:perf']).toBe('vitest run --config vitest.perf.config.ts');
+  });
+});
+
+describe('the PR lane reports its minutes against one budget', () => {
+  type LaneStep = { name?: string; run?: string; if?: string };
+  const job = Object.values(verifyWorkflow.jobs ?? {})[0] as
+    { env?: Record<string, unknown>; steps?: LaneStep[] } | undefined;
+  const steps = job?.steps ?? [];
+  const budget = Number(job?.env?.LANE_BUDGET_MINUTES);
+
+  it('verify.yml sets LANE_BUDGET_MINUTES once and reports after npm run verify', () => {
+    expect(budget).toBeGreaterThan(0);
+    expect(verifyWorkflowRaw.match(/LANE_BUDGET_MINUTES/g)).toHaveLength(1);
+    const start = steps.findIndex((s) => s.run?.includes('lane-minutes.mjs start'));
+    const install = steps.findIndex((s) => s.run?.trim() === 'npm ci');
+    expect(start).toBeGreaterThanOrEqual(0);
+    expect(start).toBeLessThan(install);
+    const last = steps[steps.length - 1];
+    expect(last?.run).toContain('lane-minutes.mjs report');
+    expect(last?.if).toContain('!cancelled()');
+  });
+
+  it('the pr row of the lane map names the same budget as verify.yml', () => {
+    const row = laneRows().find((r) => r.lane === 'pr');
+    expect(row, 'pr row exists').toBeDefined();
+    expect(Number(/\d+/.exec(row?.budget ?? '')?.[0])).toBe(budget);
+  });
+});
+
+describe('CI stays on pull requests into main', () => {
+  it('CLAUDE.md records the test-gates deviation for PR-only CI', () => {
+    const claudeMd = readFileSync(new URL('../../CLAUDE.md', import.meta.url), 'utf8');
+    const lines = claudeMd.split('\n');
+    const start = lines.findIndex((line) => line.startsWith('`/test-gates` deviations'));
+    expect(start, 'CLAUDE.md has no "`/test-gates` deviations" line').toBeGreaterThanOrEqual(0);
+    const block: string[] = [];
+    for (const line of lines.slice(start + 1)) {
+      if (line.startsWith('## ')) break;
+      block.push(line);
+    }
+    const text = block.join('\n');
+    for (const name of ['verify.yml', 'ui-smoke.yml', 'perf.yml']) expect(text).toContain(name);
+    expect(existsSync(new URL('../../.githooks/pre-push', import.meta.url))).toBe(false);
   });
 });

@@ -16,6 +16,8 @@ jobs:
   verify:
     runs-on: windows-latest
     timeout-minutes: 30
+    env:
+      LANE_BUDGET_MINUTES: 6
     steps:
       - uses: actions/checkout@v4
 
@@ -23,6 +25,9 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
+
+      - name: Start lane clock
+        run: node scripts/lib/lane-minutes.mjs start
 
       - name: Cache Electron binaries
         uses: actions/cache@v4
@@ -37,3 +42,7 @@ jobs:
 
       - name: Verify
         run: npm run verify
+
+      - name: Report lane minutes
+        if: ${{ !cancelled() }}
+        run: node scripts/lib/lane-minutes.mjs report

@@ -160,13 +160,13 @@ Mandatory tests:
 
 ## Test lanes
 
-| Lane         | Runs                                                                      | Budget          | Blocks  |
-| ------------ | ------------------------------------------------------------------------- | --------------- | ------- |
-| pr           | `npm run verify`                                                          | TBD (story 098) | yes     |
-| release      | build + `npm run test:smoke` (lands with story 097)                       | TBD (story 098) | yes     |
-| release-prep | `npm test` + `npm run test:e2e` + `npm run test:perf` + `npm run package` | none            | by hand |
-| perf         | `npm run test:perf`                                                       | warns only      | no      |
-| ui-smoke     | `npm run shot`                                                            | none            | no      |
+| Lane         | Runs                                                                      | Budget               | Blocks  |
+| ------------ | ------------------------------------------------------------------------- | -------------------- | ------- |
+| pr           | `npm run verify` in verify.yml on PRs into main                           | 6 min (warns), aim 4 | yes     |
+| release      | build + `npm run test:smoke` (lands with story 097)                       | TBD (story 098)      | yes     |
+| release-prep | `npm test` + `npm run test:e2e` + `npm run test:perf` + `npm run package` | none                 | by hand |
+| perf         | `npm run test:perf`                                                       | warns only           | no      |
+| ui-smoke     | `npm run shot`                                                            | none                 | no      |
 
 Every Playwright spec runs under `npm run test:e2e` (release-prep); which specs the release lane runs is story 097's job.
 
@@ -237,3 +237,10 @@ versioned JSON persistence. Keep declining both templates on future setup runs.
   (`e2e-story`), and the full suite is the sprint gate. Each spec file gets its own app and a
   freshly seeded throwaway vault (`fixtures/app.ts`, `specId`), launched through the same
   `scripts/lib/app-harness.mjs` as the screen pass.
+
+`/test-gates` deviations:
+
+- CI runs only on pull requests into main: `verify.yml`, `ui-smoke.yml` and `perf.yml` have no
+  `push` trigger, and there is no `.githooks/pre-push`. It saves runner minutes and avoids noise
+  while working on dev; tests run at the PR, smoke tests at the release. It supersedes story 065
+  AC1 ("every push"), narrowed by commit e042b80.

@@ -9,41 +9,11 @@ import { describe, expect, it } from 'vitest';
 import playwrightConfig from '../../playwright.config';
 import perfConfig from '../../vitest.perf.config';
 import gateConfig from '../../vitest.config';
+import { laneRows, type LaneRow } from './lane-table';
 
-const claudeMd = readFileSync(new URL('../../CLAUDE.md', import.meta.url), 'utf8');
 const packageJson = JSON.parse(
   readFileSync(new URL('../../package.json', import.meta.url), 'utf8'),
 ) as { scripts: Record<string, string> };
-
-type LaneRow = { lane: string; runs: string; budget: string; blocks: string };
-
-function laneSection(): string {
-  const start = claudeMd.indexOf('\n## Test lanes');
-  expect(start, 'CLAUDE.md has a "## Test lanes" section').toBeGreaterThanOrEqual(0);
-  const rest = claudeMd.slice(start + 1);
-  const next = rest.indexOf('\n## ', 1);
-  return next === -1 ? rest : rest.slice(0, next);
-}
-
-function laneRows(): LaneRow[] {
-  return laneSection()
-    .split('\n')
-    .filter((line) => line.trimStart().startsWith('|'))
-    .map((line) =>
-      line
-        .trim()
-        .replace(/^\||\|$/g, '')
-        .split('|')
-        .map((cell) => cell.trim()),
-    )
-    .flatMap((cells): LaneRow[] => {
-      const [lane, runs, budget, blocks] = cells;
-      if (cells.length !== 4 || lane === undefined || runs === undefined) return [];
-      if (budget === undefined || blocks === undefined) return [];
-      if (lane === 'Lane' || /^-+$/.test(lane)) return [];
-      return [{ lane, runs, budget, blocks }];
-    });
-}
 
 function commandsOf(runs: string): string[] {
   return [...runs.matchAll(/`(npm test|npm run [\w:-]+)`/g)].flatMap((m) =>
@@ -62,7 +32,7 @@ describe('test lanes table', () => {
       if (!row) throw new Error(`lane "${name}" missing from the table`);
       return row;
     };
-    expect(byLane('pr').budget).toBe('TBD (story 098)');
+    expect(byLane('pr').budget).toBe('6 min (warns), aim 4');
     expect(byLane('pr').blocks).toBe('yes');
     expect(byLane('release').budget).toBe('TBD (story 098)');
     expect(byLane('release').blocks).toBe('yes');

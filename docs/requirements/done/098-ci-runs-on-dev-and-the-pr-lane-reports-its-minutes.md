@@ -1,7 +1,7 @@
 ---
 id: 098
 title: CI stays PR-only, recorded as a deviation, and the PR lane reports its minutes
-status: ready # draft -> ready -> in-progress -> done
+status: done # draft -> ready -> in-progress -> done
 created: 2026-10-27
 ---
 
@@ -24,12 +24,12 @@ the test-gates rules.
 
 ## Acceptance Criteria
 
-- [ ] **AC1** — verify.yml, perf.yml and ui-smoke.yml get no `push` trigger: CI stays on pull requests into main. The existing ci-gate.test.ts tests "triggers only on pull_request targeting main" and "does not trigger on push to any branch" stay green and unedited.
-- [ ] **AC2** — CLAUDE.md `## House rules` carries a `/test-gates` deviations entry: CI runs only on pull requests into main (no push trigger on dev, no `.githooks/pre-push`), with the reason (saves runner minutes, no noise while working on dev; tests run at the PR, smoke tests at the release), naming verify.yml, ui-smoke.yml and perf.yml and that it supersedes story 065 AC1 (commit e042b80). A test proves the entry exists and that no `.githooks/pre-push` exists.
-- [ ] **AC3** — verify.yml's last step writes the PR lane's elapsed minutes and its budget into `$GITHUB_STEP_SUMMARY`, and runs also when `npm run verify` failed (not when cancelled).
-- [ ] **AC4** — When the lane ran longer than its budget, that step emits exactly one `::warning` naming minutes and budget; within budget (including exactly at it) it emits none. Being slow never fails the job. The budget is one named value, `LANE_BUDGET_MINUTES`, in verify.yml.
-- [ ] **AC5** — The CLAUDE.md `## Test lanes` pr row (from story 096) names where it runs as PRs into main, and its budget cell replaces "TBD (story 098)" with the same number as `LANE_BUDGET_MINUTES`; a test compares the two.
-- [ ] **AC6** — No wall-clock in the new tests: the minutes logic is a pure function with both timestamps injected as literals, and no test measures elapsed time with `Date.now` or `performance.now` (the ESLint gate-test rule stays green).
+- [x] **AC1** — verify.yml, perf.yml and ui-smoke.yml get no `push` trigger: CI stays on pull requests into main. The existing ci-gate.test.ts tests "triggers only on pull_request targeting main" and "does not trigger on push to any branch" stay green and unedited.
+- [x] **AC2** — CLAUDE.md `## House rules` carries a `/test-gates` deviations entry: CI runs only on pull requests into main (no push trigger on dev, no `.githooks/pre-push`), with the reason (saves runner minutes, no noise while working on dev; tests run at the PR, smoke tests at the release), naming verify.yml, ui-smoke.yml and perf.yml and that it supersedes story 065 AC1 (commit e042b80). A test proves the entry exists and that no `.githooks/pre-push` exists.
+- [x] **AC3** — verify.yml's last step writes the PR lane's elapsed minutes and its budget into `$GITHUB_STEP_SUMMARY`, and runs also when `npm run verify` failed (not when cancelled).
+- [x] **AC4** — When the lane ran longer than its budget, that step emits exactly one `::warning` naming minutes and budget; within budget (including exactly at it) it emits none. Being slow never fails the job. The budget is one named value, `LANE_BUDGET_MINUTES`, in verify.yml.
+- [x] **AC5** — The CLAUDE.md `## Test lanes` pr row (from story 096) names where it runs as PRs into main, and its budget cell replaces "TBD (story 098)" with the same number as `LANE_BUDGET_MINUTES`; a test compares the two.
+- [x] **AC6** — No wall-clock in the new tests: the minutes logic is a pure function with both timestamps injected as literals, and no test measures elapsed time with `Date.now` or `performance.now` (the ESLint gate-test rule stays green).
 
 ## Open Questions
 
@@ -70,7 +70,7 @@ No trigger changes in any workflow. Order D1 → D2 → D3 (D3 independent).
 
 ## Deliverables
 
-- [ ] D1 — **Pure lane-minutes report with a CLI.** Create `scripts/lib/lane-minutes.mjs` and
+- [x] D1 — **Pure lane-minutes report with a CLI.** Create `scripts/lib/lane-minutes.mjs` and
       `scripts/lib/lane-minutes.d.mts` (mirror the shape of `scripts/lib/handoff-check.mjs` +
       `handoff-check.d.mts`: header comment saying why, pure functions, exact type declaration, no
       `any`). Export `laneReport({ startedAtMs, endedAtMs, budgetMinutes })` returning
@@ -89,7 +89,7 @@ No trigger changes in any workflow. Order D1 → D2 → D3 (D3 independent).
       one ::warning naming the minutes and the budget", "a run exactly at the budget does not warn",
       "a missing or non-numeric budget fails loudly". All timestamps are literals; no `Date.now` or
       `performance.now` in the test file.
-- [ ] D2 — **verify.yml reports its minutes against one budget.** Edit
+- [x] D2 — **verify.yml reports its minutes against one budget.** Edit
       `.github/workflows/verify.yml`: add `env: LANE_BUDGET_MINUTES: 6` on the `verify` job; add a
       step `name: Start lane clock`, `run: node scripts/lib/lane-minutes.mjs start` directly after
       the `actions/setup-node` step; add a last step `name: Report lane minutes`,
@@ -109,7 +109,7 @@ No trigger changes in any workflow. Order D1 → D2 → D3 (D3 independent).
       where-it-runs cell reads verify.yml on PRs into main. Do not edit the existing tests at
       ci-gate.test.ts:52-59 and :224-232. Files: verify.yml, ci-gate.test.ts, CLAUDE.md (+ the 096
       reader file only if an export is needed).
-- [ ] D3 — **The PR-only decision is a recorded deviation.** In `CLAUDE.md` `## House rules`,
+- [x] D3 — **The PR-only decision is a recorded deviation.** In `CLAUDE.md` `## House rules`,
       after the `/ui-verify deviations:` list, add a `/test-gates deviations:` list with one bullet:
       CI runs only on pull requests into main — verify.yml, ui-smoke.yml and perf.yml have no `push`
       trigger, and there is no `.githooks/pre-push` — because it saves runner minutes and avoids noise
@@ -138,8 +138,14 @@ Review: → default
 
 ## Done
 
-<Leave empty. Filled by `/build <id>` after implementation:
+Added `scripts/lib/lane-minutes.mjs` (+ `.d.mts`): pure `laneReport` plus a `start`/`report` CLI. verify.yml now has job-level `LANE_BUDGET_MINUTES: 6`, a start step after setup-node and a last `!cancelled()` report step. CLAUDE.md pr row names verify.yml on PRs into main with budget `6 min (warns), aim 4`; a `/test-gates` deviations entry records PR-only CI. No trigger changes.
 
-- Short summary (2–5 lines): what was done.
-- Commit message (1–2 lines, keywords are enough).
-- Verification: build/test/lint result + review outcome; open points/blockers, if any.>
+Commit message: `098: PR-only CI recorded as deviation, verify lane reports minutes vs 6 min budget`
+
+Verification: narrow gate (`npx vitest run --changed HEAD`, no e2e mapped) green: build, lint, typecheck, tests (40). Review 1 (default): PASS, no fixes needed. AC1-AC6 verified by the tests named in `## Acceptance Tests`, all ran and passed; AC6 by lint. No manual residue.
+
+- `format:check` is red only on `docs/requirements/100-...md` (another story's refine file, not touched here); all 098 files are prettier-clean.
+- Decisions: moved the lane-table reader from `test-lanes.test.ts` into `tests/scripts/lane-table.ts` (shared with ci-gate); `test-lanes.test.ts` pr budget assertion updated to the new value (release row stays TBD for 097). The where-it-runs text sits in the table's Runs column.
+- Unfixed minor review notes: `toContain('6')` in the warning test is loose; test-lanes.test.ts repeats the budget string that ci-gate compares; `endedAtMs` is not validated (CLI always passes `Date.now()`).
+
+tiers: D 3 / hard 0 · review default · cycles 0 · agents 5
