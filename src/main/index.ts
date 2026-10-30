@@ -15,6 +15,7 @@ import { stopOwnedLlamaEngineOnQuit } from './ipc/runtime/llamacpp-lifecycle';
 import { createMainWindow } from './window';
 import { syncQuickCaptureHotkey, unregisterHotkeys, watchQuickCaptureHotkey } from './hotkey';
 import { destroyQuickCapture } from './quick-capture';
+import { watchShortcutIcon } from './shortcut-icon';
 import { createAppTray } from './tray';
 import { showMainWindow } from './show-main-window';
 import { startGardenerAutorun } from './gardener-autorun';
@@ -151,6 +152,7 @@ async function start(): Promise<void> {
   runTasksFixture(services);
   syncQuickCaptureHotkey(services);
   watchQuickCaptureHotkey(services);
+  watchShortcutIcon(services);
   /* Due reminders as notifications: on open and once per hour, at most
      one bundled message, nothing twice on the same day. */
   reminderNotifier = startReminderNotifier(services);

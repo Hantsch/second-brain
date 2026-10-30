@@ -85,6 +85,7 @@ vi.mock('../../src/main/hotkey', () => ({
   triggerQuickCapture: vi.fn(),
 }));
 vi.mock('../../src/main/quick-capture', () => ({ destroyQuickCapture: vi.fn() }));
+vi.mock('../../src/main/shortcut-icon', () => ({ watchShortcutIcon: vi.fn() }));
 vi.mock('../../src/main/show-main-window', () => ({ showMainWindow: vi.fn() }));
 vi.mock('../../src/main/gardener-autorun', () => ({
   startGardenerAutorun: vi.fn(() => ({ stop: vi.fn() })),
